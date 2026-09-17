@@ -326,7 +326,13 @@ final class ClipboardStore {
         let item = ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID)
         // The blob write is multi-MB I/O; only the row insert returns to the main actor.
         Task.detached(priority: .utility) { [weak self] in
-            guard (try? data.write(to: url, options: .atomic)) != nil else { return }
+            do {
+                try data.write(to: url, options: .atomic)
+            } catch {
+                // A swallowed failure drops the copy from history as if it never happened.
+                NSLog("Tinycast: clipboard image write failed: %@", error.localizedDescription)
+                return
+            }
             await self?.insert(item)
         }
     }

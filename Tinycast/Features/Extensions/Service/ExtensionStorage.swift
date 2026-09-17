@@ -214,8 +214,17 @@ final class ExtensionStorage {
         let pending = dirty
         dirty.removeAll()
         for name in pending {
-            guard let store = stores[name], let data = try? JSONEncoder().encode(store) else { continue }
-            try? data.write(to: fileURL(for: name), options: .atomic)
+            guard let store = stores[name] else { continue }
+            do {
+                try JSONEncoder().encode(store)
+                    .write(to: fileURL(for: name), options: .atomic)
+            } catch {
+                // This file holds an extension's API keys and preferences; losing it silently
+                // logs the user out of every service the extension talks to. Keep the entry dirty
+                // so the next mutation retries; a retry loop here would spin on a full disk.
+                NSLog("Tinycast: could not write extension storage for %@: %@", name, error.localizedDescription)
+                dirty.insert(name)
+            }
         }
     }
 

@@ -8,6 +8,10 @@ final class ExtensionNodeShims: @unchecked Sendable {
     private let fileManager = FileManager.default
     private var fileHandles: [Int32: FileHandle] = [:]
 
+    /// Off until a user-initiated command starts, on only while one is mounted. A background tick
+    /// has no one to ask, so `sh: -c` and friends are refused there outright.
+    var allowsShellExec = false
+
     /// A lock flag like `O_EXLOCK` would block the JS queue with no way back.
     private static let openableFlags =
         O_RDONLY | O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_TRUNC | O_EXCL | O_NOFOLLOW
@@ -137,13 +141,24 @@ final class ExtensionNodeShims: @unchecked Sendable {
             return (value as NSString).expandingTildeInPath
         }
 
+        /// Reads stay open (see ExtensionPathGuard); writes cannot reach a shell profile or system path.
+        func writablePath(_ index: Int) throws -> String {
+            let target = try path(index)
+            guard !ExtensionPathGuard.isForbiddenWrite(at: target) else {
+                throw ShimError.failed(
+                    "EACCES: permission denied, \(method) '\(target)'", "EACCES")
+            }
+            return target
+        }
+
         switch method {
         case "open":
-            let target = try path(0)
+            let flags = (arguments[safe: 1] as? NSNumber)?.int32Value ?? O_RDONLY
+            let target = flags & (O_WRONLY | O_RDWR | O_APPEND | O_CREAT | O_TRUNC | O_EXCL) != 0
+                ? try writablePath(0) : try path(0)
             guard fileHandles.count < Self.openFileLimit else {
                 throw ShimError.failed("EMFILE: too many open files, open '\(target)'", "EMFILE")
             }
-            let flags = (arguments[safe: 1] as? NSNumber)?.int32Value ?? O_RDONLY
             let mode = (arguments[safe: 2] as? NSNumber)?.uint16Value ?? 0o666
             let descriptor = Darwin.open(
                 target, (flags & Self.openableFlags) | O_CLOEXEC, mode_t(mode))
@@ -162,7 +177,7 @@ final class ExtensionNodeShims: @unchecked Sendable {
             return data.base64EncodedString()
 
         case "writeFile":
-            let target = try path(0)
+            let target = try writablePath(0)
             let data = Data(base64Encoded: arguments[safe: 1] as? String ?? "") ?? Data()
             let append = arguments[safe: 2] as? Bool ?? false
             if append, let handle = FileHandle(forWritingAtPath: target) {
@@ -216,14 +231,14 @@ final class ExtensionNodeShims: @unchecked Sendable {
             }
 
         case "mkdir":
-            let target = try path(0)
+            let target = try writablePath(0)
             let recursive = arguments[safe: 1] as? Bool ?? false
             try fileManager.createDirectory(
                 atPath: target, withIntermediateDirectories: recursive)
             return recursive ? target : nil
 
         case "remove":
-            let target = try path(0)
+            let target = try writablePath(0)
             let force = arguments[safe: 2] as? Bool ?? false
             if !fileManager.fileExists(atPath: target) {
                 if force { return nil }
@@ -233,15 +248,15 @@ final class ExtensionNodeShims: @unchecked Sendable {
             return nil
 
         case "rename":
-            let from = try path(0)
-            let to = try path(1)
+            let from = try writablePath(0)
+            let to = try writablePath(1)
             if fileManager.fileExists(atPath: to) { try fileManager.removeItem(atPath: to) }
             try fileManager.moveItem(atPath: from, toPath: to)
             return nil
 
         case "copyFile":
             let from = try path(0)
-            let to = try path(1)
+            let to = try writablePath(1)
             if fileManager.fileExists(atPath: to) { try fileManager.removeItem(atPath: to) }
             try fileManager.copyItem(atPath: from, toPath: to)
             return nil
@@ -254,7 +269,7 @@ final class ExtensionNodeShims: @unchecked Sendable {
             return URL(fileURLWithPath: target).resolvingSymlinksInPath().path
 
         case "chmod":
-            let target = try path(0)
+            let target = try writablePath(0)
             guard let mode = arguments[safe: 1] as? NSNumber else {
                 throw ShimError.failed("fs.chmod needs a mode.", "EINVAL")
             }
@@ -266,7 +281,7 @@ final class ExtensionNodeShims: @unchecked Sendable {
 
         case "mkdtemp":
             // Node's contract: the prefix already includes the parent directory.
-            let prefix = try path(0)
+            let prefix = try writablePath(0)
             let target = prefix + String(UUID().uuidString.prefix(6))
             try fileManager.createDirectory(atPath: target, withIntermediateDirectories: true)
             return target
@@ -401,6 +416,12 @@ final class ExtensionNodeShims: @unchecked Sendable {
 
         let task = Process()
         if useShell {
+            // `sh -c` on a background tick is unattended code execution; only a visible run may ask.
+            guard allowsShellExec else {
+                throw ShimError.failed(
+                    "EPERM: shell execution is only allowed from an extension command you opened.",
+                    "EPERM")
+            }
             task.executableURL = URL(fileURLWithPath: "/bin/sh")
             task.arguments = ["-c", command]
         } else {
@@ -655,5 +676,40 @@ final class ExtensionNodeShims: @unchecked Sendable {
 extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
+    }
+}
+
+/// The one deny-list for every host-mediated write: the `fs` shims and `system.trash` share it, so a
+/// shell profile, a LaunchAgent or `/Applications` cannot be touched through either door.
+///
+/// Reads stay unrestricted on purpose — the host is unsigned and unsandboxed, so a path deny-list
+/// stops an overreaching extension's accident, not a motivated attacker. The JS queue is shared by
+/// every extension, so a per-run confirm would let one command wave through another's prompt;
+/// a constant deny-list cannot be talked past.
+enum ExtensionPathGuard {
+    private static let fileManager = FileManager.default
+
+    /// Relative to the user's home: profiles and credential stores a launcher has no reason to write.
+    private static let forbiddenHomeEntries = [
+        ".zshrc", ".zprofile", ".zshenv", ".zlogin", ".bashrc", ".bash_profile", ".bash_login",
+        ".profile", ".gitconfig", ".config/fish/config.fish", ".ssh", ".gnupg",
+        "Library/LaunchAgents",
+    ]
+
+    private static let forbiddenRoots = [
+        "/Applications", "/Library", "/System", "/usr", "/bin", "/sbin", "/etc", "/private/etc",
+    ]
+
+    static func isForbiddenWrite(at path: String) -> Bool {
+        let target = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+            .standardizedFileURL.path
+        let home = fileManager.homeDirectoryForCurrentUser.standardizedFileURL.path
+        if forbiddenRoots.contains(where: { target == $0 || target.hasPrefix($0 + "/") }) {
+            return true
+        }
+        return forbiddenHomeEntries.contains { entry in
+            let forbidden = home + "/" + entry
+            return target == forbidden || target.hasPrefix(forbidden + "/")
+        }
     }
 }

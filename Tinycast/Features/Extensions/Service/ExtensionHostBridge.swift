@@ -351,9 +351,14 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         case "trash":
             let paths = (arguments.first?.arrayValue ?? []).compactMap(\.stringValue)
             for path in paths {
-                try? FileManager.default.trashItem(
-                    at: URL(fileURLWithPath: (path as NSString).expandingTildeInPath),
-                    resultingItemURL: nil)
+                let target = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+                guard !ExtensionPathGuard.isForbiddenWrite(at: path) else { continue }
+                do {
+                    try FileManager.default.trashItem(at: target, resultingItemURL: nil)
+                } catch {
+                    // A silently swallowed failure lets an extension believe it deleted something.
+                    NSLog("Tinycast: extension trash failed for %@: %@", path, error.localizedDescription)
+                }
             }
             return nil
 

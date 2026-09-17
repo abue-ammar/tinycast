@@ -15,7 +15,8 @@ The mechanical bar, in one place so it cannot drift. All five pass before a chan
 | A clean build | `xcodebuild … -configuration Debug CODE_SIGNING_ALLOWED=NO`, zero **new** warnings |
 | Docs still true | any doc your change made wrong, fixed in the same commit |
 
-There is no CI: every item is on you, run locally. CodeRabbit reviews each PR, but it is a reviewer,
+`.github/workflows/ci.yml` runs the harnesses and lint on every PR. The build, the purity grep and
+the manual sweep are on you, run locally. CodeRabbit reviews each PR, but it is a reviewer,
 not a gate. Each is expanded below; the manual sweep at the end of this file is the sixth, judged by
 what you touched.
 

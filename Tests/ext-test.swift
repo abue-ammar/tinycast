@@ -180,6 +180,7 @@ struct ExtensionTests {
         actionIconChecks()
         oauthUnitChecks()
         deepLinkChecks()
+        pathGuardChecks()
         nodeShimChecks()
         await runtimeChecks()
         await searchAccessoryRuntimeChecks()
@@ -188,6 +189,52 @@ struct ExtensionTests {
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    static func pathGuardChecks() {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        check(
+            "a shell profile is off-limits",
+            ExtensionPathGuard.isForbiddenWrite(at: home + "/.zshrc"))
+        check(
+            "tilde form of a profile is caught too",
+            ExtensionPathGuard.isForbiddenWrite(at: "~/.zshrc"))
+        check(
+            "a LaunchAgent is off-limits",
+            ExtensionPathGuard.isForbiddenWrite(
+                at: home + "/Library/LaunchAgents/com.example.agent.plist"))
+        check(
+            "everything under /Applications is off-limits",
+            ExtensionPathGuard.isForbiddenWrite(at: "/Applications/Safari.app/Contents/MacOS/Safari"))
+        check(
+            "a scratch file under home is allowed",
+            !ExtensionPathGuard.isForbiddenWrite(at: home + "/Documents/notes.txt"))
+        check(
+            "a sibling prefix does not match",
+            !ExtensionPathGuard.isForbiddenWrite(at: home + "/.zshrc.bak"))
+
+        // The shim must refuse a guarded write the way Node reports a permission failure.
+        let shims = ExtensionNodeShims()
+        let payload = Data("evil".utf8).base64EncodedString()
+        let result = shims.perform(
+            api: "fs", method: "writeFile",
+            argsJSON: "[\"\(home)/.zshrc\",\"\(payload)\",false]")
+        check(
+            "fs.writeFile to a profile fails EACCES",
+            result.contains("\"EACCES\"") && result.contains("\"ok\":false"), result)
+
+        // `sh -c` is only open while a user-initiated command is mounted.
+        let gated = ExtensionNodeShims()
+        let spec = "[{\"shell\":true,\"command\":\"true\",\"args\":[]}]"
+        let refused = gated.perform(api: "proc", method: "run", argsJSON: spec)
+        check(
+            "shell exec is refused while unmounted",
+            refused.contains("\"EPERM\"") && refused.contains("\"ok\":false"), refused)
+        gated.allowsShellExec = true
+        let allowed = gated.perform(api: "proc", method: "run", argsJSON: spec)
+        check(
+            "shell exec runs once a user command is mounted",
+            allowed.contains("\"ok\":true"), allowed)
     }
 
     static func nodeShimChecks() {

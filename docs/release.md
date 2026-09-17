@@ -50,10 +50,11 @@ Removing that line would reintroduce exactly those three problems. See
 
 ## Pull request review
 
-There is no CI workflow. CodeRabbit reviews every PR against `.coderabbit.yaml`: it runs SwiftLint
-with `.swiftlint.yml`, annotates the diff and applies the pre-merge checks. It is a reviewer, not a
-gate — it neither runs the harnesses nor builds the app, so the whole bar in
-[testing.md](testing.md#definition-of-done) is run locally before a PR is opened.
+`.github/workflows/ci.yml` is the merge gate: it checks the committed pbxproj against `project.yml`,
+then runs the harnesses and lint on every PR. It does not build the app, so the rest of the bar in
+[testing.md](testing.md#definition-of-done) is run locally before a PR is opened. CodeRabbit reviews
+every PR against `.coderabbit.yaml`: it annotates the diff and applies the pre-merge checks. It is a
+reviewer, not a gate.
 
 ## Releasing
 

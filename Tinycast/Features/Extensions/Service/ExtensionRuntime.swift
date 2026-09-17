@@ -106,7 +106,9 @@ final class ExtensionRuntime: @unchecked Sendable {
         context launchContext: ExtensionLaunchContext
     ) async {
         let payload = launchContext.jsonString()
+        let allowsShell = launchContext.launchType == .userInitiated
         await onQueue { context in
+            self.nodeShims.allowsShellExec = allowsShell
             let compiled = context.objectForKeyedSubscript("__tinycast")
             _ = compiled?.invokeMethod(
                 "start",

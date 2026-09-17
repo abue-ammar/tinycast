@@ -33,9 +33,10 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
   Anyone may open the PR, not only the issue's author. Docs-only changes (`*.md`, `docs/`,
   `website/`) skip the check.
 - The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes — harnesses, lint,
-  purity, a clean build. Engine changes come with new cases. There is no CI, so **run
-  `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally**. CodeRabbit reviews every PR
-  and flags lint violations on the diff, but it does not run the harnesses or build the app.
+  purity, a clean build. Engine changes come with new cases. `.github/workflows/ci.yml` runs the
+  harnesses and lint on every PR, but it does not build the app — so **run
+  `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally** anyway. CodeRabbit reviews
+  every PR and flags lint violations on the diff, but it is a reviewer, not a gate.
 - Leak-tested and memory-measured. Numbers in the PR.
 - You actually used the app, on your path and the ones next to it.
 - Rebased on `main`, squashed into logical commits.
