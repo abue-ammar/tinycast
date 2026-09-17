@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 /// The one source of row order, so the palette's flat `selection` maps 1:1 onto visible rows.
-struct ExtensionScreen: Equatable {
+struct ExtensionScreen {
     struct SelectionChange: Equatable {
         let handler: String
         let itemID: String?
@@ -18,14 +18,14 @@ struct ExtensionScreen: Equatable {
     }
 
     /// `id` is the scroll target: an `.id()` inside a row exists only once it is realized.
-    struct Item: Equatable, Identifiable {
+    struct Item: Identifiable {
         let node: RenderNode
         let index: Int
 
         var id: String { "item:\(node.id)" }
     }
 
-    enum Row: Equatable, Identifiable {
+    enum Row: Identifiable {
         case header(title: String, subtitle: String?, id: String)
         case item(Item)
 
