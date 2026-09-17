@@ -289,10 +289,10 @@ enum IconCache {
     /// What an app icon paints: the reference for every other artwork.
     static let appIconExtent: CGFloat = 0.83
 
-    /// The caller chooses the extent; this only measures and rasterizes.
+    /// `source`'s whole canvas, aspect-fit into `extent`'s share of the tile and centered:
+    /// nothing is ever cropped, so a traced SVG's uneven padding just becomes uneven margin.
     static func fitted(_ source: NSImage, to extent: CGFloat) -> (NSImage, Int) {
-        let painted = paintedExtent(source) ?? appIconExtent
-        let side = displayPixel * extent / painted
+        let side = displayPixel * extent
         let inset = (displayPixel - side) / 2
         return rasterized(source, into: NSRect(x: inset, y: inset, width: side, height: side))
     }
@@ -402,44 +402,22 @@ enum IconCache {
         fitted(source, to: appIconExtent)
     }
 
-    /// The artwork's larger dimension, measured at 2×: a 1× grid over-reads the extent.
-    private static func paintedExtent(_ source: NSImage) -> CGFloat? {
-        let pixels = Int(displayPixel * 2)
-        guard
-            let rep = NSBitmapImageRep(
-                bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
-                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                bytesPerRow: 0, bitsPerPixel: 0),
-            let ctx = NSGraphicsContext(bitmapImageRep: rep)
-        else { return nil }
-        rep.size = NSSize(width: pixels, height: pixels)
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = ctx
-        source.draw(in: NSRect(x: 0, y: 0, width: pixels, height: pixels))
-        NSGraphicsContext.restoreGraphicsState()
-
-        var minX = pixels, maxX = -1, minY = pixels, maxY = -1
-        for y in 0..<pixels {
-            for x in 0..<pixels {
-                // A faint antialiased edge isn't artwork; 0.06 keeps a drop shadow from counting.
-                guard let colour = rep.colorAt(x: x, y: y), colour.alphaComponent > 0.06 else {
-                    continue
-                }
-                minX = min(minX, x)
-                maxX = max(maxX, x)
-                minY = min(minY, y)
-                maxY = max(maxY, y)
-            }
-        }
-        guard maxX >= 0 else { return nil }
-        let side = max(maxX - minX + 1, maxY - minY + 1)
-        return CGFloat(side) / CGFloat(pixels)
-    }
-
     /// Rasterize the multi-rep icon into one square bitmap, with its decoded byte cost.
     private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
         rasterized(
             source, into: NSRect(origin: .zero, size: NSSize(width: displayPixel, height: displayPixel)))
+    }
+
+    /// The rect `size` fills without distortion when centered inside `bounds`.
+    private static func aspectFit(_ size: NSSize, in bounds: NSRect) -> NSRect {
+        guard size.width > 0, size.height > 0 else { return bounds }
+        let scale = min(bounds.width / size.width, bounds.height / size.height)
+        let width = size.width * scale
+        let height = size.height * scale
+        return NSRect(
+            x: bounds.minX + (bounds.width - width) / 2,
+            y: bounds.minY + (bounds.height - height) / 2,
+            width: width, height: height)
     }
 
     /// Draws `source` into `frame` on a `displayPixel`-square canvas.
@@ -461,7 +439,7 @@ enum IconCache {
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = ctx
         ctx.imageInterpolation = .high
-        source.draw(in: frame)
+        source.draw(in: aspectFit(source.size, in: frame))
         NSGraphicsContext.restoreGraphicsState()
 
         let image = NSImage(size: rep.size)
