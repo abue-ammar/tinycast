@@ -123,11 +123,17 @@ final class AppCore {
         settings: settings, appIndex: appIndex, hotKeys: hotKeys, favorites: favorites,
         visibility: visibility, ranking: launcherRanking, aliases: aliases,
         paletteCoordinator: paletteCoordinator, core: self)
+    /// Window state, not a preference: it rides `UserDefaults` like the active note's filename.
+    private nonisolated static let noteFormattingBarKey = "notesFormattingBarExpanded"
     @ObservationIgnored private(set) lazy var notesCoordinator = NotesCoordinator(
         store: notesStore,
         settings: settings,
         appIndex: appIndex,
-        core: self)
+        core: self,
+        isFormattingBarExpanded: UserDefaults.standard.bool(forKey: Self.noteFormattingBarKey),
+        saveFormattingBarExpanded: {
+            UserDefaults.standard.set($0, forKey: Self.noteFormattingBarKey)
+        })
 
     @ObservationIgnored private(set) lazy var launcherCoordinator = LauncherCoordinator(
         ranking: launcherRanking, windowController: windowController,

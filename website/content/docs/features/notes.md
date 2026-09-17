@@ -79,6 +79,7 @@ too, shown in a fixed-width font with nothing styled inside them, so their colum
 | <kbd>⌘</kbd><kbd>E</kbd>                                         | Inline code          |
 | <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd>                             | Code block           |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>B</kbd>                             | Quote                |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>                             | Show the buttons     |
 | <kbd>⌘</kbd><kbd>K</kbd>                                         | Link                 |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd>                             | Numbered list        |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd>                             | Bullet list          |
@@ -89,8 +90,19 @@ too, shown in a fixed-width font with nothing styled inside them, so their colum
 Prefer to see the raw text? Turn off **Render Markdown** in **Settings → Notes**. The editor then shows
 every mark as typed, and Return, Tab and these keys behave like any plain text field.
 
+### The formatting bar
+
+Under the note is a round button. Click it, or press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>, and a
+button for each of those keys slides out, plus a heading menu. Click one to format the selection or
+the word at the caret; click a lit button to remove that formatting again. Hover a button to see its
+shortcut. Tinycast remembers whether you left it open. When the window is narrow, the character count
+makes room for the buttons.
+
+Don't want it? Turn off **Show Formatting Bar** in **Settings → Notes**. The keys keep working. The bar
+also stays hidden while Render Markdown is off.
+
 Typing, selection, copy and paste, Find, emoji, input methods and undo all behave like any Mac text
-field. An empty note shows **Start writing…**, and the footer counts characters.
+field. An empty note shows **Start writing…**, and the character count sits under the note.
 
 [Snippets](/docs/features/snippets) expand right into the editor, and undo takes them back.
 

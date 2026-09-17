@@ -14,6 +14,9 @@ struct NotesView: View {
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
         // The band above is the title bar; AppKit must not inset the content a second time.
         .ignoresSafeArea()
+        .onChange(of: notes.showsFormattingBar && notes.hasActiveNote) { _, shown in
+            if !shown { notes.closeHeadingMenu() }
+        }
     }
 
     /// The hosting view hides the real title bar, so this band drags the window itself.
@@ -53,12 +56,33 @@ struct NotesView: View {
                 rendersMarkdown: notes.rendersMarkdown,
                 onSourceChange: notes.updateSource,
                 onCharacterCountChange: notes.updateCharacterCount,
-                onFormattingChange: { _, _ in },
+                onFormattingChange: notes.updateFormatting,
                 onReady: notes.editorReady
             )
             .overlay(alignment: .topLeading) { placeholder }
-            footer
+            if notes.showsFormattingBar {
+                formattingBand
+            } else {
+                footer
+            }
         }
+    }
+
+    /// The count hides first, and the band keeps the offered width so the bar never widens a note.
+    private var formattingBand: some View {
+        HStack(spacing: Theme.Spacing.md) {
+            NoteFormattingBar()
+                .fixedSize()
+            ViewThatFits(in: .horizontal) {
+                characterCount
+                Color.clear.frame(width: 0, height: 0)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.leading, Theme.Spacing.md)
+        .padding(.trailing, Theme.Size.noteEditorInset)
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .frame(height: Theme.Size.bottomBarHeight)
     }
 
     @ViewBuilder
@@ -93,11 +117,16 @@ struct NotesView: View {
     }
 
     private var footer: some View {
+        characterCount
+            .frame(maxWidth: .infinity)
+            .frame(height: Theme.Size.noteFooterHeight)
+    }
+
+    private var characterCount: some View {
         Text(notes.characterCountLabel)
             .font(Theme.Typography.rowTrailing)
             .foregroundStyle(Theme.Colors.textTertiary)
-            .frame(maxWidth: .infinity)
-            .frame(height: Theme.Size.noteFooterHeight)
+            .lineLimit(1)
             .accessibilityLabel("\(notes.characterCountLabel) in this note")
     }
 }

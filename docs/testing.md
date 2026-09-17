@@ -497,6 +497,29 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, Undo, Redo, and Find preserve
   exact source
 - An empty note shows `Start writing…`; the footer count is right after typing, pasting and undoing
+- With Render Markdown and Show Formatting Bar on, the band under a note holds the round formatting
+  button on the left and the character count on the right; with either setting off, the old centred
+  count footer is back and nothing else moved
+- The bar starts collapsed, ⌥⌘T and the round button both expand and collapse it, the buttons slide out
+  from behind that button, and the state survives switching notes, hiding the window and a relaunch
+- Every bar button applies its formatting, undoes in one step with ⌘Z, and autosaves; clicking keeps the
+  caret where it was and the caret's line stays revealed
+- Buttons light for the selection: inside bold, on a list, quote, heading or code line; clicking a lit
+  button removes that formatting and the button goes dark
+- Hovering a button shows its name and shortcut above it, fully visible and not clipped by the capsule;
+  the heading button's tooltip does not show while its menu is open
+- The heading menu opens above the capsule, aligned to its left edge, shows the current level checked,
+  and applies a level on click; it closes on Escape, on a click anywhere in the note window (including
+  the heading button itself, which must not reopen it), on typing, on ⌘P, and when another app is clicked
+- At the smallest window size all eleven controls show and the count is hidden, the note's text keeps
+  its inset in both states, the heading menu still opens in full above the capsule, and widening the
+  window brings the count back
+- ⌥⌘C and ⇧⌘B toggle a code block and a quote; with Render Markdown off they do nothing special
+- Settings > Notes > Show Formatting Bar is disabled while Render Markdown is off, Settings search for
+  "formatting" lands on it, and a backup round trip restores it
+- With VoiceOver, the bar reads as "Formatting" with each button named, lit ones as selected, the round
+  button announcing Expanded or Collapsed, and the heading button its level; menu rows read their titles
+  and the current one as selected
 - Traffic lights sit top-left, the title is centred **on the window**, and the capsule is top-right, all
   on one line; the yellow light is disabled and green zooms
 - Each capsule button shows a hover capsule and a native tooltip, and fires its action

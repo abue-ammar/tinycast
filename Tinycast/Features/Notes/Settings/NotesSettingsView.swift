@@ -16,6 +16,11 @@ struct NotesSettingsView: View {
                     Text("Show formatting as you write. The line you are editing shows its Markdown.")
                 }
                 .settingsEnabled(settings.notesEnabled)
+                Toggle(isOn: $settings.notesShowsFormattingBar) {
+                    SettingsRowTitle(.notesNotes, "Show Formatting Bar")
+                    Text("Buttons for headings, styles and lists under the note.")
+                }
+                .settingsEnabled(settings.notesEnabled && settings.notesRendersMarkdown)
             } header: {
                 SettingsSectionHeader(.notesNotes)
             }

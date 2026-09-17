@@ -8,6 +8,7 @@ private enum TooltipLabel {
 /// A hover label in Tinycast's own vocabulary, replacing a system `.help()` tooltip.
 private struct TooltipModifier: ViewModifier {
     let label: TooltipLabel?
+    let alignment: HorizontalAlignment
     @Environment(\.metrics) private var metrics
     @State private var hovered = false
     @State private var visible = false
@@ -24,7 +25,7 @@ private struct TooltipModifier: ViewModifier {
                 guard !Task.isCancelled, hovered else { return }
                 withAnimation(.easeOut(duration: Theme.Duration.tooltip)) { visible = true }
             }
-            .overlay(alignment: .top) {
+            .overlay(alignment: Alignment(horizontal: alignment, vertical: .top)) {
                 if let label, visible { tile(label) }
             }
     }
@@ -66,11 +67,12 @@ private struct TooltipModifier: ViewModifier {
 
 extension View {
     /// What a control does, or — in the `keyCap` form — the shortcut it answers to.
-    func tooltip(_ text: String?) -> some View {
-        modifier(TooltipModifier(label: text.map(TooltipLabel.text)))
+    /// Align it leading or trailing when the control sits against a window edge.
+    func tooltip(_ text: String?, alignment: HorizontalAlignment = .center) -> some View {
+        modifier(TooltipModifier(label: text.map(TooltipLabel.text), alignment: alignment))
     }
 
     func tooltip(keyCap: String?) -> some View {
-        modifier(TooltipModifier(label: keyCap.map(TooltipLabel.keyCap)))
+        modifier(TooltipModifier(label: keyCap.map(TooltipLabel.keyCap), alignment: .center))
     }
 }

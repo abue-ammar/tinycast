@@ -52,6 +52,18 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         focusEditor(in: panel)
     }
 
+    /// The bar's buttons never take focus, but the editor is re-seated in case anything else did.
+    func format(_ action: NoteEditAction) {
+        guard let panel, panel.isVisible, let editor else { return }
+        if panel.firstResponder !== editor { panel.makeFirstResponder(editor) }
+        editor.format(action)
+    }
+
+    func presentHeadingMenu(_ menu: NoteHeadingMenuWindowController) {
+        guard let panel, panel.isVisible else { return }
+        menu.show(above: panel)
+    }
+
     /// Only this controller knows the host window, so handing it over stays its job.
     func presentSwitcher(_ switcher: NoteSwitcherWindowController) {
         guard let panel, panel.isVisible else { return }
@@ -63,6 +75,10 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     /// The red button and ⌘W both arrive here, so closing is one path and never destroys state.
     func windowWillClose(_ notification: Notification) {
         coordinator.hide()
+    }
+
+    func windowDidResignKey(_ notification: Notification) {
+        coordinator.closeHeadingMenu()
     }
 
     /// `contentMinSize` alone leaks frames below it; AppKit takes whatever this returns verbatim.
@@ -97,12 +113,16 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         panel.contentMinSize = Theme.Size.noteWindow
         panel.delegate = self
         panel.onEscape = { [weak coordinator] in coordinator?.handleEscape() }
+        panel.onMouseDown = { [weak coordinator] in coordinator?.noteWindowMouseDown() }
         panel.onDeleteChord = { [weak coordinator] in coordinator?.handleDeleteShortcut() ?? false }
         panel.commandChords = [
             "n": { [weak coordinator] in coordinator?.createNote() },
             "p": { [weak coordinator] in coordinator?.searchNotes() },
             "o": { [weak coordinator] in coordinator?.openNotesFolder() },
             "w": { [weak panel] in panel?.performClose(nil) }
+        ]
+        panel.optionCommandChords = [
+            "t": { [weak coordinator] in coordinator?.toggleFormattingBar() }
         ]
         panel.setFrameAutosaveName(Self.frameAutosaveName)
         if !panel.setFrameUsingName(Self.frameAutosaveName) { panel.center() }

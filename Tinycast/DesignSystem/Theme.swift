@@ -72,6 +72,9 @@ enum Theme {
         static let noteSwitcher = CGSize(width: 300, height: 240)
         static let noteSwitcherEmptyHeight: CGFloat = 96
         static let noteSwitcherDrop: CGFloat = 56
+        /// Fixed like every menu's width; the height is exactly four heading rows.
+        static let noteHeadingMenu = CGSize(
+            width: 220, height: menuRowHeight * 4 + menuRowSpacing * 3 + Spacing.sm * 2)
         static let noteFooterHeight: CGFloat = 28
         /// Holds the launcher's 36-point action capsule with the same margin its own bar gives it.
         static let noteTitlebar: CGFloat = 52

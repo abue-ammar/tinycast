@@ -18,6 +18,9 @@ commands and global shortcuts can show, search, or extend the collection.
 - **Styling never reaches undo.** Attribute passes bypass `shouldChangeText`; every edit a Markdown
   gesture makes goes through `NoteTextView.performEdit`.
 - **Render Markdown off is the literal editor**, with native Return, Tab and shortcuts and no parsing.
+- **The formatting bar is another way to press a shortcut.** Each button sends its chord's
+  `NoteEditAction` through `NoteTextView.format`, so it has the chord's gate, undo step and autosave,
+  and a button is lit exactly when its toggle would remove that formatting.
 - **Only the active note can be dirty.** Switching, creating, renaming, and deleting first flush it, so
   collection navigation cannot abandon an in-memory draft.
 - **Tinycast is the only writer.** There is no watcher and no revision check: a save replaces the file
@@ -225,6 +228,35 @@ characters and undo grouping. Copy yields raw Markdown and VoiceOver reads the s
 identity or editor epoch reinstalls and restyles the string and clears the previous document's undo
 history. Snippets expand through `insertText` and are styled like typed text.
 
+### The formatting bar
+
+While Render Markdown and Show Formatting Bar are both on, the band under the editor holds the
+formatting bar at its leading edge and the character count at its trailing edge. The bar is
+`NoteFormattingBar`, a frosted capsule in the title bar's recipe. It starts collapsed to one round
+`paintbrush` button; ⌥⌘T or a click expands it, and the buttons slide out from behind that button:
+a heading menu, Bold, Italic, Strikethrough, Inline Code and Link, then Code Block and Quote, then
+Numbered, Bullet and Task List. Hovering a button shows its name and shortcut. Each button is a
+28-point square, so the whole row fits the smallest window. The count hides when the row leaves it no
+lane, and the band never widens the note.
+
+Expanded or collapsed is window state, not a preference: `AppCore` reads and writes it under
+`notesFormattingBarExpanded` in `UserDefaults` and hands it to `NotesCoordinator`, the way it hands
+the store the active note's filename. It is deliberately not an `AppSettings` key, so no settings
+backup carries it. With Show Formatting Bar off there is no round button at all and the count returns
+to its own footer.
+
+`NoteEditorView` reports `NoteMarkdownEditing.formatting(source:selection:markdown:)` on every
+install, edit and selection change, and `NotesCoordinator` publishes it only when it changed. That
+function uses the same span and line rules as the toggles, so a lit button always undoes. A click goes
+`NotesCoordinator.format` → `NotesWindowController.format` → `NoteTextView.format`. The buttons never
+take focus, so the caret and its revealed line stay put.
+
+The heading button opens `NoteHeadingMenuView` (Heading 1 to 3 and Text, the current one checked) in a
+borderless child window that never becomes key, so it can extend past a short note window while the
+editor keeps its caret and chords. It closes on a choice, Escape, any mouse down in the note window,
+an edit, the note window losing key, and hiding. It is a copy of the popover menu's row look, because
+`PopoverMenu` depends on palette state.
+
 ### The setting
 
 Settings > Notes > **Render Markdown** is `AppSettings.notesRendersMarkdown`, on when absent and carried
@@ -232,9 +264,14 @@ by settings backups. `NotesCoordinator` exposes it and `NotesView` hands it to `
 gives the literal editor: one font and colour, native Return, Tab and shortcuts, and no parsing.
 Flipping it restyles the open note without touching its undo history or marking it dirty.
 
-An empty note shows a `Start writing…` placeholder aligned to the 16-point text container inset, and a
-footer under the editor reports the character count straight off `NSTextStorage.length`. Both belong to
-the editor surface, so neither appears when no note is active.
+Settings > Notes > **Show Formatting Bar** is `AppSettings.notesShowsFormattingBar`, on when absent and
+carried by settings backups. It only takes effect while Render Markdown is on, and its row is disabled
+otherwise.
+
+An empty note shows a `Start writing…` placeholder aligned to the 16-point text container inset. The
+character count comes straight off `NSTextStorage.length` and sits in a footer under the editor, or at
+the trailing end of the formatting bar's band while the bar shows. Both belong to the editor surface,
+so neither appears when no note is active.
 
 ## Autosave
 
@@ -259,8 +296,9 @@ edit plan, the formatting each selection reports and the reveal policy.
 `Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects. It runs the native
 Cut/Copy/Paste, Unicode and marked-text cases with rendering off and on, and covers undo isolation, an
 exact source after styling, hidden and revealed markers, restyling after edits and after undo, block
-decorations and layout fragments, list keys, chords, the task rule, checkbox toggles, link schemes and
-pasting a URL. `Tests/notes-editor-performance.swift` times install, typing and caret moves on a
+decorations and layout fragments, list keys, chords, the task rule, checkbox toggles, link schemes,
+pasting a URL, and the formatting reports and `format(_:)` the formatting bar uses.
+`Tests/notes-editor-performance.swift` times install, typing and caret moves on a
 100,000-character note; its budget is in `docs/testing.md`. Window chrome is not automated:
 the Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher, focus restoration,
 Finder, Trash recovery, and accessibility.

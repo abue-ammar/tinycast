@@ -37,6 +37,9 @@ enum BarButtonChrome {
 /// A palette bar control, bare until hover; hover lives here so its owner never re-renders.
 struct BarButton<Label: View>: View {
     var chrome: BarButtonChrome = .capsule
+    var isSelected = false
+    /// `sm` padding, so a 16-point glyph frame makes a square as tall as the bar.
+    var isCompact = false
     let action: () -> Void
     @ViewBuilder let label: Label
     @State private var hovered = false
@@ -46,13 +49,19 @@ struct BarButton<Label: View>: View {
         let shape = chrome.shape(metrics)
         return Button(action: action) {
             label
-                .padding(.horizontal, metrics.spacing.md)
+                .padding(.horizontal, isCompact ? metrics.spacing.sm : metrics.spacing.md)
                 .frame(height: metrics.size.barButtonHeight)
                 .contentShape(shape)
-                .background(shape.fill(hovered ? Theme.Colors.rowHover : Color.clear))
+                .background(shape.fill(fill))
         }
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
+    }
+
+    /// Selection beats hover, the rule every row follows.
+    private var fill: Color {
+        if isSelected { return Theme.Colors.selection }
+        return hovered ? Theme.Colors.rowHover : Color.clear
     }
 }
 
