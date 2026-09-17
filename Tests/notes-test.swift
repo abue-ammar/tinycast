@@ -160,6 +160,14 @@ struct NotesTests {
         check(
             "a wall of text is capped to one row",
             NoteTitle.firstLine(of: String(repeating: "a", count: 400))?.count == 120)
+        check("a task title drops its box", NoteTitle.firstLine(of: "- [ ] Buy milk") == "Buy milk")
+        check("a bullet title drops its marker", NoteTitle.firstLine(of: "  * errands\n") == "errands")
+        check("a quote title drops its marker", NoteTitle.firstLine(of: "> quoted words") == "quoted words")
+        check("a bold title drops its delimiters", NoteTitle.firstLine(of: "Buy **milk** now") == "Buy milk now")
+        check("a link title keeps only its label", NoteTitle.firstLine(of: "[Plan](https://a.com) v2") == "Plan v2")
+        check(
+            "rules and fences carry no title",
+            NoteTitle.firstLine(of: "---\n```swift\nlet x = 1\n```") == "let x = 1")
     }
 
     private static func testUnnamedNotesTitleThemselves() throws {

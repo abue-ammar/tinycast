@@ -20,26 +20,31 @@ enum NoteTitle {
             && digits.allSatisfy { $0.isASCII && $0.isNumber }
     }
 
-    /// The first line carrying visible text, without its heading markers and capped to one row.
+    /// The first line carrying visible text, without its Markdown markers and capped to one row.
     static func firstLine(of source: String) -> String? {
-        for line in source.prefix(scanLimit).split(whereSeparator: \.isNewline) {
-            let title = stripped(line)
+        let head = String(source.prefix(scanLimit))
+        let text = head as NSString
+        for line in NoteMarkdownParser.parse(head).lines {
+            let title = visibleText(of: line, in: text)
             guard !title.isEmpty else { continue }
             return String(title.prefix(displayLimit))
         }
         return nil
     }
 
-    private static func stripped(_ line: Substring) -> String {
-        if let task = NoteTask.parse(String(line)).first {
-            return (String(line) as NSString).substring(with: task.contentRange)
-                .trimmingCharacters(in: .whitespaces)
+    /// A line as it reads when rendered, with the setting on or off: syntax never titles a note.
+    private static func visibleText(of line: NoteMarkdown.Line, in text: NSString) -> String {
+        switch line.kind {
+        case .blank, .rule, .fenceOpen, .fenceClose: return ""
+        default: break
         }
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        let markers = trimmed.prefix { $0 == "#" }
-        guard !markers.isEmpty, markers.count <= 6 else { return trimmed }
-        let heading = trimmed.dropFirst(markers.count)
-        guard heading.first?.isWhitespace == true else { return trimmed }
-        return heading.trimmingCharacters(in: .whitespaces)
+        var visible = ""
+        var cursor = line.contentRange.location
+        for marker in line.inlines.flatMap(\.markerRanges).sorted(by: { $0.location < $1.location }) {
+            visible += text.substring(with: NSRange(cursor..<marker.location))
+            cursor = NSMaxRange(marker)
+        }
+        visible += text.substring(with: NSRange(cursor..<NSMaxRange(line.contentRange)))
+        return visible.trimmingCharacters(in: .whitespaces)
     }
 }

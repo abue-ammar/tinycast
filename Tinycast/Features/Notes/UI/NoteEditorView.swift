@@ -3,6 +3,7 @@ import SwiftUI
 
 struct NoteEditorView: NSViewRepresentable {
     let input: NoteEditorInput
+    let rendersMarkdown: Bool
     let onSourceChange: (String) -> Void
     let onCharacterCountChange: (NoteEditorInput, Int) -> Void
     let onReady: (NoteTextView) -> Void
@@ -35,20 +36,33 @@ struct NoteEditorView: NSViewRepresentable {
     func updateNSView(_ scrollView: NSScrollView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.update(input)
+        context.coordinator.setRendersMarkdown(rendersMarkdown)
     }
 
     @MainActor
-    final class Coordinator: NSObject, NSTextViewDelegate {
+    final class Coordinator: NSObject, NSTextViewDelegate, NoteTextViewEditing {
         var parent: NoteEditorView
-        weak var textView: NoteTextView?
+        weak var textView: NoteTextView? {
+            didSet { attach() }
+        }
         let editorUndoManager = UndoManager()
+        let renderer: NoteMarkdownRenderer
 
         private var input: NoteEditorInput
         private var isInstalling = false
+        /// Held here because the layout manager keeps its delegate weakly.
+        private let fragmentProvider = NoteLayoutFragmentProvider()
 
         init(parent: NoteEditorView) {
             self.parent = parent
             input = parent.input
+            renderer = NoteMarkdownRenderer(isEnabled: parent.rendersMarkdown)
+        }
+
+        private func attach() {
+            renderer.textView = textView
+            textView?.editing = self
+            textView?.textLayoutManager?.delegate = fragmentProvider
         }
 
         func install(_ input: NoteEditorInput, resetUndo: Bool) {
@@ -58,9 +72,9 @@ struct NoteEditorView: NSViewRepresentable {
                 textView.selectedRange().location,
                 (input.source as NSString).length)
             isInstalling = true
-            NoteEditorView.install(input.source, in: textView)
+            textView.string = input.source
             textView.setSelectedRange(NSRange(location: selectionLocation, length: 0))
-            textView.refreshTasks()
+            renderer.reset()
             isInstalling = false
             if resetUndo { editorUndoManager.removeAllActions() }
             reportCharacterCount()
@@ -76,14 +90,33 @@ struct NoteEditorView: NSViewRepresentable {
             install(next, resetUndo: true)
         }
 
+        func setRendersMarkdown(_ rendersMarkdown: Bool) {
+            guard rendersMarkdown != renderer.isEnabled else { return }
+            renderer.isEnabled = rendersMarkdown
+            renderer.reset()
+        }
+
         func textDidChange(_ notification: Notification) {
             guard !isInstalling, let textView else { return }
-            textView.updateTasks()
+            renderer.sourceDidChange()
             let source = textView.string
             guard source != input.source else { return }
             input = NoteEditorInput(id: input.id, source: source, epoch: input.epoch)
             parent.onSourceChange(source)
             reportCharacterCount()
+        }
+
+        func textViewDidChangeSelection(_ notification: Notification) {
+            guard !isInstalling else { return }
+            renderer.selectionDidChange()
+        }
+
+        func focusChanged() {
+            renderer.focusDidChange()
+        }
+
+        func appearanceChanged() {
+            renderer.reset()
         }
 
         /// `NSTextStorage.length` is maintained by TextKit, so the counter costs nothing per edit.
@@ -108,7 +141,7 @@ struct NoteEditorView: NSViewRepresentable {
             height: Theme.Size.noteEditorTopInset)
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.lineFragmentPadding = 0
-        textView.font = NSFont.preferredFont(forTextStyle: .body)
+        textView.font = NoteMarkdownTypography.body
         textView.textColor = NSColor(Theme.Colors.noteText)
         textView.insertionPointColor = NSColor(Theme.Colors.noteText)
         textView.selectedTextAttributes = [
@@ -123,21 +156,7 @@ struct NoteEditorView: NSViewRepresentable {
         textView.smartInsertDeleteEnabled = false
         textView.usesFindPanel = true
         textView.allowsUndo = true
-        textView.typingAttributes = baseAttributes
+        textView.linkTextAttributes = [.foregroundColor: NSColor.linkColor, .cursor: NSCursor.pointingHand]
+        textView.typingAttributes = NoteMarkdownStyler.literal
     }
-
-    private static func install(_ source: String, in textView: NSTextView) {
-        textView.string = source
-        guard let storage = textView.textStorage, storage.length > 0 else {
-            textView.typingAttributes = baseAttributes
-            return
-        }
-        storage.setAttributes(baseAttributes, range: NSRange(location: 0, length: storage.length))
-        textView.typingAttributes = baseAttributes
-    }
-
-    static let baseAttributes: [NSAttributedString.Key: Any] = [
-        .font: NSFont.preferredFont(forTextStyle: .body),
-        .foregroundColor: NSColor(Theme.Colors.noteText)
-    ]
 }

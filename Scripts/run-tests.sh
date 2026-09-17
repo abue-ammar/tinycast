@@ -358,9 +358,49 @@ run notes-editor-test      Tinycast/Platform/Signposts.swift \
                            Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
+                           Tinycast/Platform/NotificationToken.swift \
                            Tinycast/Features/TextInjection/Service/InjectableTextView.swift \
                            Tinycast/Features/Notes/Model/NoteDocument.swift \
-                           Tinycast/Features/Notes/Model/NoteTask.swift \
+                           Tinycast/Features/Notes/Model/NoteMarkdown.swift \
+                           Tinycast/Features/Notes/Model/NoteMarkdownParser.swift \
+                           Tinycast/Features/Notes/Model/NoteInlineScanner.swift \
+                           Tinycast/Features/Notes/Model/NoteEditPlan.swift \
+                           Tinycast/Features/Notes/Model/NoteEditAction.swift \
+                           Tinycast/Features/Notes/Model/NoteMarkdownEditing.swift \
+                           Tinycast/Features/Notes/Model/NoteRevealPolicy.swift \
+                           Tinycast/Features/Notes/UI/NoteMarkdownTypography.swift \
+                           Tinycast/Features/Notes/UI/NoteBlockDecoration.swift \
+                           Tinycast/Features/Notes/UI/NoteMarkdownStyler.swift \
+                           Tinycast/Features/Notes/UI/NoteMarkdownRenderer.swift \
+                           Tinycast/Features/Notes/UI/NoteCheckboxGeometry.swift \
+                           Tinycast/Features/Notes/UI/NoteBlockLayoutFragment.swift \
+                           Tinycast/Features/Notes/UI/NoteLayoutFragmentProvider.swift \
+                           Tinycast/Features/Notes/UI/NoteTextViewEditing.swift \
+                           Tinycast/Features/Notes/UI/NoteTextView.swift \
+                           Tinycast/Features/Notes/UI/NoteEditorView.swift
+run -O index notes-editor-performance \
+                           Tinycast/Platform/Signposts.swift \
+                           Tinycast/Platform/Appearance.swift \
+                           Tinycast/DesignSystem/Theme.swift \
+                           Tinycast/DesignSystem/InterfaceMetrics.swift \
+                           Tinycast/Platform/NotificationToken.swift \
+                           Tinycast/Features/TextInjection/Service/InjectableTextView.swift \
+                           Tinycast/Features/Notes/Model/NoteDocument.swift \
+                           Tinycast/Features/Notes/Model/NoteMarkdown.swift \
+                           Tinycast/Features/Notes/Model/NoteMarkdownParser.swift \
+                           Tinycast/Features/Notes/Model/NoteInlineScanner.swift \
+                           Tinycast/Features/Notes/Model/NoteEditPlan.swift \
+                           Tinycast/Features/Notes/Model/NoteEditAction.swift \
+                           Tinycast/Features/Notes/Model/NoteMarkdownEditing.swift \
+                           Tinycast/Features/Notes/Model/NoteRevealPolicy.swift \
+                           Tinycast/Features/Notes/UI/NoteMarkdownTypography.swift \
+                           Tinycast/Features/Notes/UI/NoteBlockDecoration.swift \
+                           Tinycast/Features/Notes/UI/NoteMarkdownStyler.swift \
+                           Tinycast/Features/Notes/UI/NoteMarkdownRenderer.swift \
+                           Tinycast/Features/Notes/UI/NoteCheckboxGeometry.swift \
+                           Tinycast/Features/Notes/UI/NoteBlockLayoutFragment.swift \
+                           Tinycast/Features/Notes/UI/NoteLayoutFragmentProvider.swift \
+                           Tinycast/Features/Notes/UI/NoteTextViewEditing.swift \
                            Tinycast/Features/Notes/UI/NoteTextView.swift \
                            Tinycast/Features/Notes/UI/NoteEditorView.swift
 run slow -O raycast-test   Tinycast/Features/Backup/Model/RaycastImportError.swift \

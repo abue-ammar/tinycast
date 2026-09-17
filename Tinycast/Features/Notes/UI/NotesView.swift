@@ -50,6 +50,7 @@ struct NotesView: View {
         VStack(spacing: 0) {
             NoteEditorView(
                 input: notes.editorInput,
+                rendersMarkdown: true,
                 onSourceChange: notes.updateSource,
                 onCharacterCountChange: notes.updateCharacterCount,
                 onReady: notes.editorReady
@@ -63,7 +64,7 @@ struct NotesView: View {
     private var placeholder: some View {
         if notes.isActiveNoteEmpty {
             Text("Start writing…")
-                .font(.body)
+                .font(.title3)
                 .foregroundStyle(Theme.Colors.textTertiary)
                 // Matches the text container inset exactly, so the caret sits on the placeholder.
                 .padding(.horizontal, Theme.Size.noteEditorInset)
