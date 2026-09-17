@@ -16,6 +16,7 @@ struct ExtensionDetailBody: View {
                 metadataPane(metadata)
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var markdownPane: some View {
