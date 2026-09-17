@@ -30,6 +30,11 @@ final class NoteTextView: NSTextView, InjectableTextView {
         breakUndoCoalescing()
     }
 
+    /// The formatting bar's way in: the same plan, gate and undo step as the matching chord.
+    func format(_ action: NoteEditAction) {
+        perform(action)
+    }
+
     // MARK: - Keys
 
     override func insertNewline(_ sender: Any?) {
@@ -97,6 +102,7 @@ final class NoteTextView: NSTextView, InjectableTextView {
             }
         case [.command, .shift]:
             if key == "x" { return .toggleInline(.strikethrough) }
+            if key == "b" { return .toggleQuote }
             switch Int(event.keyCode) {
             case kVK_ANSI_7: return .toggleList(.ordered)
             case kVK_ANSI_8: return .toggleList(.bullet)
@@ -104,6 +110,7 @@ final class NoteTextView: NSTextView, InjectableTextView {
             default: return nil
             }
         case [.command, .option]:
+            if key == "c" { return .toggleCodeBlock }
             switch Int(event.keyCode) {
             case kVK_ANSI_1: return .setHeading(level: 1)
             case kVK_ANSI_2: return .setHeading(level: 2)

@@ -195,6 +195,10 @@ reaches autosave.
   by four spaces. Backspace at an item's content start outdents it, then removes its marker. These
   edits renumber the ordered run they touch in the same undo step.
 - Typing `[] ` or `[ ] ` at the start of a paragraph makes `- [ ] `.
+- ⌥⌘C wraps the touched lines in a fenced block, or removes the fences of the block the selection is
+  in. On an empty line it opens an empty block with the caret inside.
+- ⇧⌘B adds `> ` to each touched line, or removes one `>` from each when all of them are quotes. Blank
+  lines inside a selection, code, tables and rules are left alone.
 - Pasting a single `http` or `https` URL over text selected on one line makes `[text](url)`.
 - Clicking a checkbox toggles `[ ]` and `[x]` without moving the caret. The hit test uses
   `NoteCheckboxGeometry`, the rect the fragment draws, grown by 3 points.
@@ -206,6 +210,8 @@ reaches autosave.
 | --- | --- |
 | ⌘B, ⌘I, ⌘E | bold, italic, inline code |
 | ⇧⌘X | strikethrough |
+| ⌥⌘C | code block |
+| ⇧⌘B | quote |
 | ⌘K | link |
 | ⇧⌘7, ⇧⌘8, ⇧⌘9 | numbered, bullet, task list |
 | ⌥⌘1, ⌥⌘2, ⌥⌘3 | heading 1, 2, 3 |
@@ -248,7 +254,7 @@ the window re-lists the folder before it presents anything.
 `Tests/notes-test.swift` compiles the shipped Notes model and service sources with the real fuzzy
 matcher. It covers repository safety, unique-name claiming, derived titles, search, selection,
 autosave, empty collections, switcher interaction, and cancellation, plus the Markdown parser, every
-edit plan and the reveal policy.
+edit plan, the formatting each selection reports and the reveal policy.
 
 `Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects. It runs the native
 Cut/Copy/Paste, Unicode and marked-text cases with rendering off and on, and covers undo isolation, an

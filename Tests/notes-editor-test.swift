@@ -21,6 +21,7 @@ struct NotesEditorTests {
         testTaskSpacing()
         testBlockDecorationsAndFragments()
         testListKeysAndChords()
+        testFormattingReports()
         testTaskRuleCheckboxesAndLinks()
         testTasks()
         testTaskEdits()
@@ -433,6 +434,23 @@ struct NotesEditorTests {
             with: keyDown("8", keyCode: kVK_ANSI_8, modifiers: [.command, .shift], in: editor.window))
         check("⇧⌘8 matches its digit by key code", editor.textView.string == "- make bold")
 
+        let block = NoteEditorInput(id: NoteID(rawValue: "Block.md"), source: "code", epoch: 4)
+        editor.coordinator.update(block)
+        editor.textView.setSelectedRange(NSRange(location: 2, length: 0))
+        check(
+            "⌥⌘C fences the line and claims the chord",
+            editor.textView.performKeyEquivalent(
+                with: keyDown("c", keyCode: kVK_ANSI_C, modifiers: [.command, .option], in: editor.window))
+                && editor.textView.string == "```\ncode\n```")
+        undo.undo()
+        check("⌥⌘C undoes in one step", editor.textView.string == "code")
+        check(
+            "⇧⌘B quotes the line and claims the chord",
+            editor.textView.performKeyEquivalent(
+                with: keyDown("B", keyCode: kVK_ANSI_B, modifiers: [.command, .shift], in: editor.window))
+                && editor.textView.string == "> code")
+        undo.undo()
+
         editor.coordinator.setRendersMarkdown(false)
         let literal = editor.textView.string
         editor.textView.setSelectedRange(NSRange(location: 2, length: 4))
@@ -441,6 +459,33 @@ struct NotesEditorTests {
         editor.textView.setSelectedRange(NSRange(location: (literal as NSString).length, length: 0))
         editor.textView.insertNewline(nil)
         check("with rendering off Return is native", editor.textView.string == literal + "\n")
+    }
+
+    private static func testFormattingReports() {
+        var reports: [(NoteEditorInput, NoteFormatting)] = []
+        let input = NoteEditorInput(id: NoteID(rawValue: "Formatting.md"), source: "plain **bold**", epoch: 1)
+        let editor = makeEditor(
+            input: input, rendersMarkdown: true, onFormattingChange: { reports.append(($0, $1)) })
+        check("install reports formatting", reports.last?.0.id == input.id)
+
+        editor.textView.setSelectedRange(NSRange(location: 10, length: 0))
+        check("a caret inside bold reports bold", reports.last?.1.inlineStyles == [.bold])
+        editor.textView.setSelectedRange(NSRange(location: 1, length: 0))
+        check(
+            "a caret in plain text reports a paragraph",
+            reports.last?.1.inlineStyles == [] && reports.last?.1.headingLevel == 0)
+
+        editor.textView.format(.toggleQuote)
+        check(
+            "format(_:) applies the plan and reports the result",
+            editor.textView.string == "> plain **bold**" && reports.last?.1.isQuote == true)
+        editor.coordinator.editorUndoManager.undo()
+        check("format(_:) undoes in one step", editor.textView.string == "plain **bold**")
+
+        editor.coordinator.setRendersMarkdown(false)
+        check("rendering off reports plain", reports.last?.1 == .plain)
+        editor.textView.format(.toggleQuote)
+        check("format(_:) does nothing with rendering off", editor.textView.string == "plain **bold**")
     }
 
     private static func testTaskRuleCheckboxesAndLinks() {
@@ -683,13 +728,15 @@ struct NotesEditorTests {
         input: NoteEditorInput,
         rendersMarkdown: Bool = false,
         onSourceChange: @escaping (String) -> Void = { _ in },
-        onCountChange: @escaping (NoteEditorInput, Int) -> Void = { _, _ in }
+        onCountChange: @escaping (NoteEditorInput, Int) -> Void = { _, _ in },
+        onFormattingChange: @escaping (NoteEditorInput, NoteFormatting) -> Void = { _, _ in }
     ) -> (coordinator: NoteEditorView.Coordinator, textView: NoteTextView, window: NSWindow) {
         let view = view(
             for: input,
             rendersMarkdown: rendersMarkdown,
             onSourceChange: onSourceChange,
-            onCountChange: onCountChange)
+            onCountChange: onCountChange,
+            onFormattingChange: onFormattingChange)
         let coordinator = NoteEditorView.Coordinator(parent: view)
         let textView = NoteTextView(usingTextLayoutManager: true)
         NoteEditorView.configure(textView)
@@ -714,13 +761,15 @@ struct NotesEditorTests {
         for input: NoteEditorInput,
         rendersMarkdown: Bool = false,
         onSourceChange: @escaping (String) -> Void = { _ in },
-        onCountChange: @escaping (NoteEditorInput, Int) -> Void = { _, _ in }
+        onCountChange: @escaping (NoteEditorInput, Int) -> Void = { _, _ in },
+        onFormattingChange: @escaping (NoteEditorInput, NoteFormatting) -> Void = { _, _ in }
     ) -> NoteEditorView {
         NoteEditorView(
             input: input,
             rendersMarkdown: rendersMarkdown,
             onSourceChange: onSourceChange,
             onCharacterCountChange: onCountChange,
+            onFormattingChange: onFormattingChange,
             onReady: { _ in })
     }
 

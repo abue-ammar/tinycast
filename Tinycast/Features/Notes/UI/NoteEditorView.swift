@@ -6,6 +6,7 @@ struct NoteEditorView: NSViewRepresentable {
     let rendersMarkdown: Bool
     let onSourceChange: (String) -> Void
     let onCharacterCountChange: (NoteEditorInput, Int) -> Void
+    let onFormattingChange: (NoteEditorInput, NoteFormatting) -> Void
     let onReady: (NoteTextView) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -80,6 +81,7 @@ struct NoteEditorView: NSViewRepresentable {
             isInstalling = false
             if resetUndo { editorUndoManager.removeAllActions() }
             reportCharacterCount()
+            reportFormatting()
         }
 
         func update(_ next: NoteEditorInput) {
@@ -96,11 +98,13 @@ struct NoteEditorView: NSViewRepresentable {
             guard rendersMarkdown != renderer.isEnabled else { return }
             renderer.isEnabled = rendersMarkdown
             renderer.reset()
+            reportFormatting()
         }
 
         func textDidChange(_ notification: Notification) {
             guard !isInstalling, let textView else { return }
             renderer.sourceDidChange()
+            reportFormatting()
             let source = textView.string
             guard source != input.source else { return }
             input = NoteEditorInput(id: input.id, source: source, epoch: input.epoch)
@@ -111,6 +115,7 @@ struct NoteEditorView: NSViewRepresentable {
         func textViewDidChangeSelection(_ notification: Notification) {
             guard !isInstalling else { return }
             renderer.selectionDidChange()
+            reportFormatting()
         }
 
         /// The `[] ` input rule; returning false drops the typed space the plan already replaced.
@@ -170,6 +175,17 @@ struct NoteEditorView: NSViewRepresentable {
         /// `NSTextStorage.length` is maintained by TextKit, so the counter costs nothing per edit.
         private func reportCharacterCount() {
             parent.onCharacterCountChange(input, textView?.textStorage?.length ?? 0)
+        }
+
+        /// With rendering off there is no parse to read, and the bar is hidden anyway.
+        private func reportFormatting() {
+            guard let textView else { return }
+            let formatting =
+                renderer.isEnabled
+                ? NoteMarkdownEditing.formatting(
+                    source: textView.string, selection: textView.selectedRange(), markdown: markdown)
+                : .plain
+            parent.onFormattingChange(input, formatting)
         }
     }
 

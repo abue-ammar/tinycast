@@ -53,6 +53,7 @@ struct NotesView: View {
                 rendersMarkdown: notes.rendersMarkdown,
                 onSourceChange: notes.updateSource,
                 onCharacterCountChange: notes.updateCharacterCount,
+                onFormattingChange: { _, _ in },
                 onReady: notes.editorReady
             )
             .overlay(alignment: .topLeading) { placeholder }

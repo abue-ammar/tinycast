@@ -77,6 +77,8 @@ too, shown in a fixed-width font with nothing styled inside them, so their colum
 | <kbd>⌘</kbd><kbd>I</kbd>                                         | Italic               |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>X</kbd>                             | Strikethrough        |
 | <kbd>⌘</kbd><kbd>E</kbd>                                         | Inline code          |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd>                             | Code block           |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>B</kbd>                             | Quote                |
 | <kbd>⌘</kbd><kbd>K</kbd>                                         | Link                 |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd>                             | Numbered list        |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd>                             | Bullet list          |
