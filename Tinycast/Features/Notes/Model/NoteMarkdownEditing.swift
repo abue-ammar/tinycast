@@ -18,10 +18,19 @@ enum NoteMarkdownEditing {
         case .toggleLink: return document.toggleLink(in: selection)
         case .setHeading(let level): return document.setHeading(level, in: selection)
         case .toggleList(let style): return document.toggleList(style, in: selection)
+        case .toggleCodeBlock: return document.toggleCodeBlock(in: selection)
+        case .toggleQuote: return document.toggleQuote(in: selection)
         case .toggleTask(let lineIndex): return document.toggleTask(lineIndex, keeping: selection)
         case .typedSpace: return document.typedSpace(at: selection)
         case .pasteURL(let string): return document.pasteURL(string, over: selection)
         }
+    }
+
+    /// Decided by the same span and line rules the toggles use, so a lit button always undoes.
+    static func formatting(source: String, selection: NSRange, markdown: NoteMarkdown) -> NoteFormatting {
+        let text = source as NSString
+        guard selection.location != NSNotFound, NSMaxRange(selection) <= text.length else { return .plain }
+        return Document(text: text, markdown: markdown).formatting(of: selection)
     }
 
     fileprivate typealias Line = NoteMarkdown.Line
@@ -205,30 +214,23 @@ enum NoteMarkdownEditing {
 
         func toggleInline(_ style: NoteEditAction.InlineStyle, in selection: NSRange) -> NoteEditPlan? {
             guard case let (line, range)? = styledLine(for: selection) else { return nil }
-            if range.length > 0 {
-                let trimmed = trimmingWhitespace(range)
-                guard trimmed.length > 0 else { return nil }
-                let existing = line.inlines.last {
-                    Self.matches($0.kind, style) && ($0.contentRange == trimmed || $0.range == trimmed)
+            guard range.length > 0 else {
+                if let span = removableSpan(style, at: range, in: line) {
+                    return unwrap(span, style, selection: range)
                 }
-                if let existing { return unwrap(existing, style, selection: trimmed) }
-                return wrap(trimmed, style, caret: nil)
+                return wrap(word(at: range.location, in: line), style, caret: range.location)
             }
-            let caret = range.location
-            let enclosing = line.inlines.last {
-                Self.matches($0.kind, style) && $0.contentRange.location <= caret
-                    && caret <= NSMaxRange($0.contentRange)
+            let trimmed = trimmingWhitespace(range)
+            guard trimmed.length > 0 else { return nil }
+            if let span = removableSpan(style, at: range, in: line) {
+                return unwrap(span, style, selection: trimmed)
             }
-            if let enclosing { return unwrap(enclosing, style, selection: range) }
-            return wrap(word(at: caret, in: line), style, caret: caret)
+            return wrap(trimmed, style, caret: nil)
         }
 
         func toggleLink(in selection: NSRange) -> NoteEditPlan? {
             guard case let (line, range)? = styledLine(for: selection) else { return nil }
-            let enclosing = line.inlines.last {
-                guard case .link = $0.kind else { return false }
-                return $0.range.location <= range.location && NSMaxRange(range) <= NSMaxRange($0.range)
-            }
+            let enclosing = removableLink(at: range, in: line)
             if let enclosing {
                 let edits = enclosing.markerRanges.map { Edit(range: $0, replacement: "") }
                 return plan(edits, selection: range)
@@ -262,6 +264,30 @@ enum NoteMarkdownEditing {
             return NoteEditPlan(
                 range: selection, replacement: replacement,
                 selection: NSRange(location: selection.location + replacement.utf16.count, length: 0))
+        }
+
+        /// The span `toggleInline` unwraps: exact for a selection, enclosing for a caret.
+        private func removableSpan(
+            _ style: NoteEditAction.InlineStyle, at range: NSRange, in line: Line
+        ) -> NoteMarkdown.Inline? {
+            guard range.length > 0 else {
+                return line.inlines.last {
+                    Self.matches($0.kind, style) && $0.contentRange.location <= range.location
+                        && range.location <= NSMaxRange($0.contentRange)
+                }
+            }
+            let trimmed = trimmingWhitespace(range)
+            guard trimmed.length > 0 else { return nil }
+            return line.inlines.last {
+                Self.matches($0.kind, style) && ($0.contentRange == trimmed || $0.range == trimmed)
+            }
+        }
+
+        private func removableLink(at range: NSRange, in line: Line) -> NoteMarkdown.Inline? {
+            line.inlines.last {
+                guard case .link = $0.kind else { return false }
+                return $0.range.location <= range.location && NSMaxRange(range) <= NSMaxRange($0.range)
+            }
         }
 
         private func unwrap(
@@ -326,6 +352,126 @@ enum NoteMarkdownEditing {
             while start < end, Unit.isWhitespace(text.character(at: start)) { start += 1 }
             while end > start, Unit.isWhitespace(text.character(at: end - 1)) { end -= 1 }
             return NSRange(start..<end)
+        }
+
+        // MARK: - Code blocks and quotes
+
+        func toggleQuote(in selection: NSRange) -> NoteEditPlan? {
+            let candidates = quoteCandidates(touchedLines(selection))
+            guard !candidates.isEmpty else { return nil }
+            let removing = candidates.allSatisfy { Self.isQuote(line($0).kind) }
+            let edits = candidates.compactMap { index -> Edit? in
+                let line = self.line(index)
+                let start = indentEnd(of: line)
+                guard removing else {
+                    guard !Self.isQuote(line.kind) else { return nil }
+                    return Edit(range: NSRange(location: start, length: 0), replacement: "> ")
+                }
+                let spaced = start + 1 < text.length && text.character(at: start + 1) == Unit.space
+                return Edit(range: NSRange(location: start, length: spaced ? 2 : 1), replacement: "")
+            }
+            return plan(edits, selection: selection)
+        }
+
+        func toggleCodeBlock(in selection: NSRange) -> NoteEditPlan? {
+            let indexes = touchedLines(selection)
+            if let block = enclosingFence(indexes) { return unfence(block, selection: selection) }
+            guard let first = indexes.first, let last = indexes.last,
+                indexes.allSatisfy({ !line($0).kind.isFenced })
+            else { return nil }
+            let opening = self.line(first)
+            let fence = "```"
+            if indexes.count == 1, opening.kind == .blank {
+                let at = opening.range.location
+                return NoteEditPlan(
+                    range: NSRange(location: at, length: 0), replacement: fence + "\n\n" + fence,
+                    selection: NSRange(location: at + fence.utf16.count + 1, length: 0))
+            }
+            let body = NSRange(opening.range.location..<NSMaxRange(self.line(last).contentRange))
+            let shift = fence.utf16.count + 1
+            let after =
+                selection.length == 0
+                ? NSRange(location: selection.location + shift, length: 0)
+                : NSRange(location: body.location + shift, length: body.length)
+            return NoteEditPlan(
+                range: body, replacement: fence + "\n" + text.substring(with: body) + "\n" + fence,
+                selection: after)
+        }
+
+        /// A closing fence on the last line has no newline, so it takes the one before it.
+        private func unfence(_ block: ClosedRange<Int>, selection: NSRange) -> NoteEditPlan? {
+            let open = markdown.lines[block.lowerBound]
+            let close = markdown.lines[block.upperBound]
+            guard block.upperBound > block.lowerBound, close.kind == .fenceClose else {
+                return plan([Edit(range: open.range, replacement: "")], selection: selection)
+            }
+            let terminated = NSMaxRange(close.contentRange) < NSMaxRange(close.range)
+            let closeRange =
+                terminated ? close.range : NSRange((close.range.location - 1)..<NSMaxRange(close.range))
+            guard closeRange.location >= NSMaxRange(open.range) else {
+                return plan(
+                    [Edit(range: NSRange(open.range.location..<NSMaxRange(close.range)), replacement: "")],
+                    selection: selection)
+            }
+            return plan(
+                [Edit(range: open.range, replacement: ""), Edit(range: closeRange, replacement: "")],
+                selection: selection)
+        }
+
+        /// Skips fenced, table and rule lines, and blank lines unless one is all that is touched.
+        private func quoteCandidates(_ indexes: [Int]) -> [Int] {
+            indexes.filter { index in
+                let kind = line(index).kind
+                if kind == .blank { return indexes.count == 1 }
+                return !kind.isFenced && kind != .rule && kind != .table
+            }
+        }
+
+        /// The fenced block holding every touched line; the virtual last line is never inside one.
+        private func enclosingFence(_ indexes: [Int]) -> ClosedRange<Int>? {
+            guard let first = indexes.first, let last = indexes.last else { return nil }
+            return markdown.fenceBlocks.first { $0.contains(first) && $0.contains(last) }
+        }
+
+        private static func isQuote(_ kind: Line.Kind) -> Bool {
+            if case .quote = kind { return true }
+            return false
+        }
+
+        // MARK: - Formatting
+
+        func formatting(of selection: NSRange) -> NoteFormatting {
+            let indexes = touchedLines(selection)
+            let lines = indexes.map(line)
+            var result = NoteFormatting.plain
+            result.headingLevel = sharedHeadingLevel(lines)
+            let listed = lines.count > 1 ? lines.filter { $0.kind != .blank } : lines
+            if let first = listed.first.flatMap({ Self.style(of: $0.kind) }),
+                listed.allSatisfy({ Self.style(of: $0.kind) == first }) {
+                result.list = first
+            }
+            let candidates = quoteCandidates(indexes)
+            result.isQuote = !candidates.isEmpty && candidates.allSatisfy { Self.isQuote(line($0).kind) }
+            result.isCodeBlock = enclosingFence(indexes) != nil
+            if case let (line, range)? = styledLine(for: selection) {
+                result.inlineStyles = Set(
+                    NoteEditAction.InlineStyle.allCases.filter { removableSpan($0, at: range, in: line) != nil })
+                result.isLink = removableLink(at: range, in: line) != nil
+            }
+            return result
+        }
+
+        /// Mirrors `setHeading`, which acts on heading and paragraph lines and skips the rest.
+        private func sharedHeadingLevel(_ lines: [Line]) -> Int? {
+            let levels = lines.compactMap { line -> Int? in
+                switch line.kind {
+                case .heading(let level): level
+                case .paragraph: 0
+                default: nil
+                }
+            }
+            guard let first = levels.first, levels.allSatisfy({ $0 == first }) else { return nil }
+            return first
         }
 
         // MARK: - Lines

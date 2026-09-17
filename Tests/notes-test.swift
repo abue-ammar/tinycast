@@ -10,6 +10,7 @@ struct NotesTests {
         testDerivedTitles()
         testMarkdownParser()
         testMarkdownEditing()
+        testMarkdownFormatting()
         testRevealPolicy()
         try testUnnamedNotesTitleThemselves()
         testSwitcherInteraction()
@@ -705,6 +706,85 @@ struct NotesTests {
         check(
             "pasting a URL inside code or a link is plain",
             edit(url, "`«code»`") == nil && edit(url, "[«label»](https://b.com)") == nil)
+
+        check("⌥⌘C fences the caret's line", edit(.toggleCodeBlock, "a|b") == "```\na|b\n```")
+        check("⌥⌘C fences whole selected lines", edit(.toggleCodeBlock, "x «one\ntw»o") == "```\n«x one\ntwo»\n```")
+        check("⌥⌘C in an empty note opens a block", edit(.toggleCodeBlock, "|") == "```\n|\n```")
+        check("⌥⌘C on the last empty line opens a block", edit(.toggleCodeBlock, "a\n|") == "a\n```\n|\n```")
+        check("⌥⌘C inside a block removes both fences", edit(.toggleCodeBlock, "```\nco|de\n```") == "co|de")
+        check("⌥⌘C keeps text after the block", edit(.toggleCodeBlock, "```swift\nx|\n```\nafter") == "x|\nafter")
+        check("⌥⌘C on an unclosed block removes its fence", edit(.toggleCodeBlock, "```\nco|de") == "co|de")
+        check("⌥⌘C on an empty block removes it", edit(.toggleCodeBlock, "a\n```|\n```") == "a\n|")
+        check("⌥⌘C across a fence does nothing", edit(.toggleCodeBlock, "«a\n```\nb»\n```") == nil)
+
+        check("⇧⌘B quotes the caret's line", edit(.toggleQuote, "a|") == "> a|")
+        check("⇧⌘B quotes every selected line", edit(.toggleQuote, "«a\nb»") == "> «a\n> b»")
+        check("⇧⌘B skips blank lines in a selection", edit(.toggleQuote, "«a\n\nb»") == "> «a\n\n> b»")
+        check("⇧⌘B quotes an empty line", edit(.toggleQuote, "|") == "> |")
+        check("⇧⌘B unquotes one level", edit(.toggleQuote, "> > a|") == "> a|")
+        check("⇧⌘B unquotes a line", edit(.toggleQuote, "> a|") == "a|")
+        check("⇧⌘B completes a mixed selection", edit(.toggleQuote, "«> a\nb»") == "«> a\n> b»")
+        check("⇧⌘B keeps indentation", edit(.toggleQuote, "  a|") == "  > a|")
+        check("⇧⌘B leaves code alone", edit(.toggleQuote, "```\nx|\n```") == nil)
+    }
+
+    private static func testMarkdownFormatting() {
+        check("an empty note carries nothing", formatting("|") == .plain)
+        var paragraph = NoteFormatting.plain
+        paragraph.headingLevel = 0
+        check("a paragraph reports only its level", formatting("pl|ain") == paragraph)
+        check("a heading reports its level", formatting("## Ti|tle").headingLevel == 2)
+        check("a heading and a paragraph share no level", formatting("«# a\nb»").headingLevel == nil)
+        check("a caret in bold reports bold", formatting("**bo|ld**").inlineStyles == [.bold])
+        check("bold italic reports both", formatting("***b|i***").inlineStyles == [.bold, .italic])
+        check(
+            "a selection of the whole span or its content reports bold",
+            formatting("a «**bold**» b").inlineStyles == [.bold]
+                && formatting("a **«bold»** b").inlineStyles == [.bold])
+        check("part of a bold span is not bold", formatting("a **b«ol»d** b").inlineStyles == [])
+        check("strikethrough reports", formatting("~~st|rike~~").inlineStyles == [.strikethrough])
+        check("inline code reports", formatting("`co|de`").inlineStyles == [.code])
+        check("a link reports", formatting("[la|bel](https://example.com)").isLink)
+        check(
+            "a bullet reports its list and no level",
+            formatting("- item|").list == .bullet && formatting("- item|").headingLevel == nil)
+        check("a list with a blank line between reports", formatting("«- a\n\n- b»").list == .bullet)
+        check("mixed lists report none", formatting("«- a\n1. b»").list == nil)
+        check("a task reports", formatting("- [ ] t|").list == .task)
+        check("a quote reports", formatting("> q|").isQuote)
+        check("a partly quoted selection is not a quote", !formatting("«> a\nb»").isQuote)
+        check(
+            "a code line reports the block and no inline styles",
+            formatting("```\nc|\n```").isCodeBlock && formatting("```\nc|\n```").inlineStyles == [])
+
+        let lit = [
+            "**bo|ld**", "_it|al_", "~~st|rike~~", "`co|de`", "[la|bel](https://example.com)", "- it|em",
+            "1. it|em", "- [ ] ta|sk", "> quo|te", "```\nco|de\n```", "## hea|ding"
+        ]
+        for marked in lit {
+            let (source, selection) = unmark(marked)
+            let actions = litActions(formatting(marked))
+            check("\(marked) lights something", !actions.isEmpty)
+            for action in actions {
+                check(
+                    "a lit \(action) removes syntax from \(marked)",
+                    apply(action, source, selection: selection).map { $0.0.utf16.count < source.utf16.count }
+                        == true)
+            }
+        }
+
+        let plain = "plain wo|rd"
+        let (source, selection) = unmark(plain)
+        check("plain text lights nothing", litActions(formatting(plain)).isEmpty)
+        let adding: [NoteEditAction] =
+            NoteEditAction.InlineStyle.allCases.map { .toggleInline($0) }
+            + [.toggleLink, .toggleList(.bullet), .toggleList(.ordered), .toggleList(.task)]
+            + [.toggleQuote, .toggleCodeBlock, .setHeading(level: 1)]
+        for action in adding {
+            check(
+                "an unlit \(action) adds syntax to plain text",
+                apply(action, source, selection: selection).map { $0.0.utf16.count > source.utf16.count } == true)
+        }
     }
 
     private static func testRevealPolicy() {
@@ -743,6 +823,19 @@ struct NotesTests {
 
     /// Applies an action to a source whose selection is marked `|` or `«…»`; marks the result.
     private static func edit(_ action: NoteEditAction, _ marked: String) -> String? {
+        let (source, selection) = unmark(marked)
+        guard case let (result, after)? = apply(action, source, selection: selection) else { return nil }
+        let text = NSMutableString(string: result)
+        if after.length == 0 {
+            text.insert("|", at: after.location)
+        } else {
+            text.insert("»", at: NSMaxRange(after))
+            text.insert("«", at: after.location)
+        }
+        return text as String
+    }
+
+    private static func unmark(_ marked: String) -> (String, NSRange) {
         var source = marked
         var selection = NSRange(location: 0, length: 0)
         if let caret = source.range(of: "|") {
@@ -757,15 +850,28 @@ struct NotesTests {
                 source.removeSubrange(close)
             }
         }
-        guard case let (result, after)? = apply(action, source, selection: selection) else { return nil }
-        let text = NSMutableString(string: result)
-        if after.length == 0 {
-            text.insert("|", at: after.location)
-        } else {
-            text.insert("»", at: NSMaxRange(after))
-            text.insert("«", at: after.location)
+        return (source, selection)
+    }
+
+    private static func formatting(_ marked: String) -> NoteFormatting {
+        let (source, selection) = unmark(marked)
+        return NoteMarkdownEditing.formatting(
+            source: source, selection: selection, markdown: NoteMarkdownParser.parse(source))
+    }
+
+    /// The toggles a formatting's lit flags promise to undo.
+    private static func litActions(_ formatting: NoteFormatting) -> [NoteEditAction] {
+        var actions = NoteEditAction.InlineStyle.allCases
+            .filter(formatting.inlineStyles.contains)
+            .map { NoteEditAction.toggleInline($0) }
+        if formatting.isLink { actions.append(.toggleLink) }
+        if let list = formatting.list { actions.append(.toggleList(list)) }
+        if formatting.isQuote { actions.append(.toggleQuote) }
+        if formatting.isCodeBlock { actions.append(.toggleCodeBlock) }
+        if let level = formatting.headingLevel, (1...6).contains(level) {
+            actions.append(.setHeading(level: level))
         }
-        return text as String
+        return actions
     }
 
     private static func plan(_ action: NoteEditAction, _ source: String, caret: Int) -> NoteEditPlan? {
