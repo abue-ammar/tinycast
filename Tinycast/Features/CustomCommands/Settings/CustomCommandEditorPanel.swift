@@ -189,25 +189,7 @@ struct CustomCommandEditorPanel: View {
                 Button("Add") { arguments.append(ArgumentDraft(name: "", isOptional: false)) }
                     .controlSize(.small)
             }
-            ForEach($arguments) { $argument in
-                HStack(spacing: Theme.Spacing.sm) {
-                    Text("$\(position(of: argument.id))")
-                        .font(.callout.monospaced())
-                        .foregroundStyle(.secondary)
-                        .frame(width: Self.positionWidth, alignment: .leading)
-                    TextField("Argument name", text: $argument.name)
-                        .settingsEditorTextField()
-                    Toggle("Optional", isOn: $argument.isOptional)
-                        .toggleStyle(.checkbox)
-                    Button {
-                        arguments.removeAll { $0.id == argument.id }
-                    } label: {
-                        Image(systemName: "minus.circle")
-                    }
-                    .buttonStyle(.borderless)
-                    .help("Remove this argument")
-                }
-            }
+            argumentRows
             Text(
                 arguments.isEmpty
                     ? "Add one to be asked for a value before the command runs."
@@ -218,7 +200,44 @@ struct CustomCommandEditorPanel: View {
         }
     }
 
+    @ViewBuilder private var argumentRows: some View {
+        let rows = VStack(spacing: Theme.Spacing.sm) {
+            ForEach($arguments) { $argument in argumentRow($argument) }
+        }
+        if arguments.count > Self.visibleArgumentRows {
+            ScrollView { rows }
+                .frame(height: Self.argumentRowsHeight)
+        } else {
+            rows
+        }
+    }
+
+    private func argumentRow(_ argument: Binding<ArgumentDraft>) -> some View {
+        let id = argument.wrappedValue.id
+        return HStack(spacing: Theme.Spacing.sm) {
+            Text("$\(position(of: id))")
+                .font(.callout.monospaced())
+                .foregroundStyle(.secondary)
+                .frame(width: Self.positionWidth, alignment: .leading)
+            TextField("Argument name", text: argument.name)
+                .settingsEditorTextField()
+            Toggle("Optional", isOn: argument.isOptional)
+                .toggleStyle(.checkbox)
+            Button {
+                arguments.removeAll { $0.id == id }
+            } label: {
+                Image(systemName: "minus.circle")
+            }
+            .buttonStyle(.borderless)
+            .help("Remove this argument")
+        }
+    }
+
     private static let positionWidth: CGFloat = 22
+    private static let visibleArgumentRows = 4
+    private static let argumentRowsHeight =
+        CGFloat(visibleArgumentRows) * Theme.Size.dialogButtonHeight
+        + CGFloat(visibleArgumentRows - 1) * Theme.Spacing.sm
 
     /// The shell variable the row's value lands in; blank names are dropped, but only on save.
     private func position(of id: UUID) -> Int {

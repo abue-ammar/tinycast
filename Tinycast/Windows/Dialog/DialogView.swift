@@ -147,7 +147,7 @@ private struct DialogButton: View {
                 .multilineTextAlignment(.center)
         }
         .buttonStyle(.modalAction(role))
-        .dialogShortcutTooltip(keyCap)
+        .tooltip(keyCap: keyCap)
     }
 
     private var role: ModalActionButtonStyle.Role {
@@ -157,61 +157,5 @@ private struct DialogButton: View {
         case .destructive: .destructive
         case .cancel: .cancel
         }
-    }
-}
-
-private struct DialogShortcutTooltip: ViewModifier {
-    @Environment(\.metrics) private var metrics
-    let shortcut: String?
-    @State private var hovered = false
-    @State private var visible = false
-
-    func body(content: Content) -> some View {
-        content
-            .onHover {
-                hovered = shortcut != nil && $0
-                if !hovered { visible = false }
-            }
-            .task(id: hovered) {
-                guard hovered else { return }
-                try? await Task.sleep(for: .milliseconds(450))
-                guard !Task.isCancelled, hovered else { return }
-                withAnimation(.easeOut(duration: Theme.Duration.tooltip)) { visible = true }
-            }
-            .overlay(alignment: .top) {
-                if let shortcut, visible {
-                    KeyCapChip(text: shortcut, style: .outline)
-                        .padding(metrics.spacing.xs)
-                        .background(
-                            RoundedRectangle(
-                                cornerRadius: metrics.radius.dialogSymbol / 2, style: .continuous
-                            )
-                            .fill(Color(nsColor: .windowBackgroundColor))
-                            .overlay {
-                                RoundedRectangle(
-                                    cornerRadius: metrics.radius.dialogSymbol / 2,
-                                    style: .continuous
-                                )
-                                .fill(Theme.Colors.controlSurface)
-                            }
-                        )
-                        .shadow(
-                            color: Theme.Colors.dialogTooltipShadow,
-                            radius: metrics.spacing.xs, y: metrics.spacing.xxs
-                        )
-                        .fixedSize()
-                        .offset(
-                            y: -metrics.size.keyCap - metrics.spacing.xl - metrics.spacing.xxs
-                        )
-                        .transition(.opacity)
-                        .allowsHitTesting(false)
-                }
-            }
-    }
-}
-
-private extension View {
-    func dialogShortcutTooltip(_ shortcut: String?) -> some View {
-        modifier(DialogShortcutTooltip(shortcut: shortcut))
     }
 }

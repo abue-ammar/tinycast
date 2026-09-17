@@ -47,7 +47,7 @@ struct AppearanceTests {
         print("# dark branches are the shipped literals")
         dark("panelScrim", c.panelScrim, is: Color.black.opacity(0.4))
         dark("dialogDimming", c.dialogDimming, is: Color.black.opacity(0.34))
-        dark("dialogTooltipShadow", c.dialogTooltipShadow, is: Color.black.opacity(0.18))
+        dark("tooltipShadow", c.tooltipShadow, is: Color.black.opacity(0.18))
         dark("selection", c.selection, is: Color.white.opacity(0.10))
         dark("rowHover", c.rowHover, is: Color.white.opacity(0.05))
         dark("menuHover", c.menuHover, is: Color.white.opacity(0.10))

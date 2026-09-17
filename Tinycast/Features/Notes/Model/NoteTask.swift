@@ -26,9 +26,12 @@ struct NoteTask: Sendable {
                 let count = trimmed.prefix(while: { $0 == character }).count
                 if let active = fence {
                     if character == active.character, count >= active.count,
-                        trimmed.dropFirst(count).allSatisfy({ $0.isWhitespace }) {
-                        codeRanges.append(NSRange(location: codeStart,
-                                                  length: NSMaxRange(lineRange) - codeStart))
+                        trimmed.dropFirst(count).allSatisfy({ $0.isWhitespace })
+                    {
+                        codeRanges.append(
+                            NSRange(
+                                location: codeStart,
+                                length: NSMaxRange(lineRange) - codeStart))
                         fence = nil
                     }
                 } else if count >= 3 {
@@ -59,8 +62,10 @@ struct NoteTask: Sendable {
     private static func parseLine(_ line: String, offset: Int) -> NoteTask? {
         let indentation = String(line.prefix(while: { $0 == " " || $0 == "\t" }))
         let body = String(line.dropFirst(indentation.count))
-        let prefixes = ["- [ ] ", "- [x] ", "- [X] ", "* [ ] ", "* [x] ", "* [X] ",
-                        "+ [ ] ", "+ [x] ", "+ [X] "]
+        let prefixes = [
+            "- [ ] ", "- [x] ", "- [X] ", "* [ ] ", "* [x] ", "* [X] ",
+            "+ [ ] ", "+ [x] ", "+ [X] "
+        ]
         guard let prefix = prefixes.first(where: { body.hasPrefix($0) }) else { return nil }
         let start = offset + (indentation as NSString).length
         let bracket = (prefix as NSString).range(of: "[").location

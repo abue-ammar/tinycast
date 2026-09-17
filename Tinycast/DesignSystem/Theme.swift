@@ -51,6 +51,7 @@ enum Theme {
         static let keyCap: CGFloat = 6
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 4
+        static let tooltip: CGFloat = 8
     }
 
     enum Blur {
@@ -254,8 +255,9 @@ enum Theme {
         /// A dialog moves with its launcher dimming; its fade-in is a shorter sub-beat.
         static let dialogEnter: TimeInterval = 0.12
         static let dialogExit: TimeInterval = 0.10
-        /// Fade-in/out for a hover `Tooltip`.
+        /// Fade-in/out for a hover `Tooltip`, after a wait only a deliberate hover outlasts.
         static let tooltip: TimeInterval = 0.15
+        static let tooltipDelay: TimeInterval = 0.45
         /// A control lighting up under the pointer; short enough to feel like a response.
         static let hover: TimeInterval = 0.12
         /// A pop-up chevron turning between its closed and open directions.
@@ -345,7 +347,7 @@ enum Theme {
         /// Modal separation inside Tinycast: the launcher recedes while its dialog is in front.
         static let dialogDimming = adaptive(
             dark: .srgbInk(0, alpha: 0.34), light: .srgbInk(0, alpha: 0.34))
-        static let dialogTooltipShadow = adaptive(
+        static let tooltipShadow = adaptive(
             dark: .srgbInk(0, alpha: 0.18), light: .srgbInk(0, alpha: 0.18))
 
         static func panelScrim(transparency: Int) -> Color {

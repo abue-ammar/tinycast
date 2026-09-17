@@ -141,8 +141,9 @@ struct NotesTests {
         check(
             "a heading marker is not part of the derived title",
             NoteTitle.firstLine(of: "#  Groceries \n\nmilk") == "Groceries")
-        check("task titles omit checkbox syntax",
-              NoteTitle.firstLine(of: "- [ ] Groceries\n- [x] milk") == "Groceries")
+        check(
+            "task titles omit checkbox syntax",
+            NoteTitle.firstLine(of: "- [ ] Groceries\n- [x] milk") == "Groceries")
         check(
             "leading blank lines are skipped",
             NoteTitle.firstLine(of: "\n \t \n  café snow\nmore") == "café snow")

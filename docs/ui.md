@@ -47,7 +47,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **No `NSAlert` or system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
 - **A dialog has three independent axes; never let one infer another.** The **icon** (`DialogRequest.symbol`, required) is always the *subject's* own glyph — a command being confirmed uses its `SystemAction.sfSymbol`, so the Restart dialog shows the same icon as the Restart row. Tone never picks an icon. The **tone** (`DialogTone`: `.neutral` / `.success` / `.danger`) tints only that glyph. The **button** takes its color from `DialogAction.Role` (`.standard` white / `.destructive` red / `.cancel` secondary), so a red-glyph security warning can still carry a plain white button — as "Import executable commands?" does.
 - **Resolve every glyph through `SymbolImage`, not `Image(systemName:)`.** Some catalog symbols are bundled assets in `Assets.xcassets` (`toggleBluetooth`), and `Image(systemName:)` silently renders nothing for those.
-- **↵ runs the primary action, Escape cancels, and Cancel always renders leading** (the left button), matching macOS convention. A button never prints its key cap; a deliberate hover reveals its outlined `KeyCapChip` in a dialog-local tooltip.
+- **↵ runs the primary action, Escape cancels, and Cancel always renders leading** (the left button), matching macOS convention. A button never prints its key cap; a deliberate hover reveals its outlined `KeyCapChip` in a `Tooltip`.
 - **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose trailing glyph *is* its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it — and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
 - **Glass is for floating controls, with dialogs as the deliberate modal exception.** The action capsule, menu circle and `PopoverMenu` use it inside the palette; dialogs apply one system `.glassEffect(.regular)` to their root surface. Dialog buttons stay matte so their roles remain legible. Both HUDs keep the lighter `panelScrim` → `VisualEffectView()` → `clipShape` recipe.
 
@@ -422,11 +422,10 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   the non-pill `row 10` radius.
 - **Keys.** `DialogPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
   `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons don't print
-  a key cap; after a 0.45-second deliberate hover, `DialogShortcutTooltip` fades in an opaque,
-  shadowed rounded square containing the existing outlined `KeyCapChip` for the key the panel actually
-  handles (`↵`, `⎋`). It stays dialog-local, so unrelated tooltips keep their established behavior and
-  a shown cap cannot drift from dialog behavior. **↵ runs the dialog's primary action; Escape
-  cancels**, on every dialog including destructive ones.
+  a key cap; after `tooltipDelay` of deliberate hover, `.tooltip(keyCap:)` fades in the shared
+  `Tooltip` tile holding an outlined `KeyCapChip` for the key the panel actually handles (`↵`, `⎋`).
+  Only those two keys are ever advertised, so a shown cap cannot drift from dialog behavior.
+  **↵ runs the dialog's primary action; Escape cancels**, on every dialog including destructive ones.
   Arrow keys walk the volume slider along the same 5% grid the volume commands use (`DialogPanel`
   reports `.increment` / `.decrement` and `DialogController` applies `VolumeLevel.stepped`, so the
   panel never learns what a volume step is); click-away resolves as a dismissal.
@@ -592,8 +591,10 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   surface, 3pt/8% entrance and matte action buttons. A blocking child covers and dims the whole parent,
   including its titlebar; nested editors form one stack owned by the Settings-window session. The
   presenting binding remains the dismissal source of truth, while launcher handoffs are consumed into
-  pane-local state so opening an editor does not repaint the split view. Extension editor visuals stay
-  inside `Features/Extensions/`; the shared presenter treats them as opaque content.
+  pane-local state so opening an editor does not repaint the split view. A list that can keep growing
+  scrolls at a stated row count instead — Custom Commands caps its arguments at `visibleArgumentRows` —
+  so a panel's height stays a property of the editor, not of what has been typed into it. Extension
+  editor visuals stay inside `Features/Extensions/`; the shared presenter treats them as opaque content.
 - **The sidebar searches every pane *and* its rows.** `SettingsSearchField` sits above the list and
   swaps it for a flat, ranked result list; each result carries the pane's `systemImage`, the row's
   title and a `Pane › Section` breadcrumb, and arrowing through them moves the pane, as System

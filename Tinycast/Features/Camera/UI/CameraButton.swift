@@ -29,6 +29,6 @@ struct CameraButton: View {
         .buttonStyle(.plain)
         .onHover { hovered = $0 }
         .frosted(in: Capsule())
-        .tooltip(keyCap)
+        .tooltip(keyCap: keyCap)
     }
 }

@@ -50,6 +50,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var attachmentChip: CGFloat { scaledPoints(Theme.Radius.attachmentChip, scale) }
         var card: CGFloat { scaledPoints(Theme.Radius.card, scale) }
         var keyCap: CGFloat { scaledPoints(Theme.Radius.keyCap, scale) }
+        var tooltip: CGFloat { scaledPoints(Theme.Radius.tooltip, scale) }
     }
 
     struct Size: Equatable, Sendable {
