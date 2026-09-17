@@ -129,15 +129,8 @@ final class SettingsEditorPresenter: NSObject {
         override var canBecomeKey: Bool { true }
         override var canBecomeMain: Bool { false }
 
+        /// The fallback: a panel whose content declares `.cancelAction` handles Escape itself.
         override func cancelOperation(_ sender: Any?) {
-            cancelHandler?()
-        }
-
-        override func sendEvent(_ event: NSEvent) {
-            guard event.type == .keyDown, event.keyCode == 53 else {
-                super.sendEvent(event)
-                return
-            }
             cancelHandler?()
         }
 
