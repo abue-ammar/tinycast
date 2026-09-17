@@ -39,7 +39,7 @@ controller and footer are all that stay in [calendar.md](calendar.md).
 | `UI/CameraView.swift` | the standalone surface: stage over a footer of controls |
 | `UI/CameraStage.swift` | the shared stage — the hosted preview layer, or why there is no video |
 | `UI/CameraPanel.swift` | the shared borderless panel: ↵ and Esc, and cursor-screen centring |
-| `UI/CameraButton.swift` | the shared capsule button both footers use |
+| `UI/CameraButton.swift` | both footers' button: `ModalActionButtonStyle` plus a key-cap tooltip |
 
 `Purpose` is the session's one knob. `.preview` is the cheap one Calendar takes — a `.medium` preset
 and no output. `.capture` raises the preset to `.photo` and adds an `AVCapturePhotoOutput`, which is

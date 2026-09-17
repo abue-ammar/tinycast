@@ -1,7 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// One stack per Settings window: bindings own presentation state, this type owns only AppKit edges.
+/// One stack per Settings window: bindings own presentation state, this owns only AppKit edges.
 @MainActor
 final class SettingsEditorPresenter: NSObject {
     struct DismissAction {
@@ -208,21 +208,20 @@ final class SettingsEditorPresenter: NSObject {
     func attach(to window: NSWindow?) {
         guard let window, parentWindow !== window else { return }
         if let parentWindow {
-            NotificationCenter.default.removeObserver(
-                self, name: NSWindow.willCloseNotification, object: parentWindow)
+            NotificationCenter.default.removeObserver(self, name: nil, object: parentWindow)
         }
         parentWindow = window
         NotificationCenter.default.addObserver(
             self, selector: #selector(parentWillClose(_:)),
             name: NSWindow.willCloseNotification, object: window)
+        observeResize(of: window)
         flushPending()
     }
 
     @objc private func parentWillClose(_ notification: Notification) {
         guard notification.object as? NSWindow === parentWindow else { return }
         dismissAll()
-        NotificationCenter.default.removeObserver(
-            self, name: NSWindow.willCloseNotification, object: parentWindow)
+        NotificationCenter.default.removeObserver(self, name: nil, object: parentWindow)
         parentWindow = nil
     }
 
@@ -286,7 +285,8 @@ final class SettingsEditorPresenter: NSObject {
             id: request.id, parent: parent, panel: panel, blocker: blocker,
             onDismiss: request.onDismiss)
         presentations.append(presentation)
-        observeResize(of: parent)
+        // Its own resize too: the content sizes the panel, so a growing form must re-centre it.
+        observeResize(of: panel)
         layout(presentation)
         panel.alphaValue = 0
         parent.addChildWindow(blocker, ordered: .above)
@@ -323,17 +323,15 @@ final class SettingsEditorPresenter: NSObject {
         }
     }
 
-    private func observeResize(of parent: NSWindow) {
+    private func observeResize(of window: NSWindow) {
         NotificationCenter.default.addObserver(
-            self, selector: #selector(parentDidResize(_:)),
-            name: NSWindow.didResizeNotification, object: parent)
+            self, selector: #selector(hostDidResize(_:)),
+            name: NSWindow.didResizeNotification, object: window)
     }
 
-    @objc private func parentDidResize(_ notification: Notification) {
-        guard let parent = notification.object as? NSWindow else { return }
-        for presentation in presentations where presentation.parent === parent {
-            layout(presentation)
-        }
+    /// Outermost first, so a nested panel centres on a parent that has already settled.
+    @objc private func hostDidResize(_ notification: Notification) {
+        presentations.forEach(layout)
     }
 
     private func layout(_ presentation: Presentation) {
@@ -354,9 +352,9 @@ final class SettingsEditorPresenter: NSObject {
 
     private func dismissLast(notifying: Bool) {
         let presentation = presentations.removeLast()
+        NotificationCenter.default.removeObserver(
+            self, name: NSWindow.didResizeNotification, object: presentation.panel)
         if let parent = presentation.parent {
-            NotificationCenter.default.removeObserver(
-                self, name: NSWindow.didResizeNotification, object: parent)
             parent.removeChildWindow(presentation.panel)
             presentation.blocker.fadeOut(duration: Theme.Duration.dialogExit) {
                 parent.removeChildWindow(presentation.blocker)
@@ -380,7 +378,7 @@ extension EnvironmentValues {
 }
 
 extension View {
-    /// Presents editor content in Tinycast's activating child panel instead of an opaque macOS sheet.
+    /// Presents editor content in Tinycast's activating child panel, not an opaque macOS sheet.
     func settingsEditorPanel<PanelContent: View>(
         isPresented: Binding<Bool>, @ViewBuilder content: @escaping () -> PanelContent
     ) -> some View {

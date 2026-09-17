@@ -172,9 +172,9 @@ the panel. System Settings has no anchor for the sheet itself, so the last click
 `QuickActionPanel` is Tinycast's **fourth borderless surface**, beside the dialog, the notes panel
 and the join preview. It takes the same recipe — `panelScrim`, then `VisualEffectView`, then the
 clip — and sits at `.floating` like the join preview, so a failure report still lands on top of it.
-Its buttons are the system's own — `Button` with `.borderedProminent` on Replace — not a copy of
-`DialogButton`. A dialog asks a question and styles its answers; this panel presents a result, and
-standard controls are what a reader expects to act on one with.
+Its footer speaks the same button language as a dialog's — `ModalActionButtonStyle`, with Replace
+as the `.primary` role — so every borderless surface answers in one voice rather than dropping Aqua
+controls onto vibrancy.
 
 It could not have been built on `HUDPresenter`: `HUDPanel` sets `ignoresMouseEvents` and returns
 `false` from `canBecomeKey`, so it is click-through and hosts no buttons. Nor on `DialogAccessory`,

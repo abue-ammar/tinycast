@@ -257,7 +257,7 @@ enum Theme {
         static let dialogExit: TimeInterval = 0.10
         /// Fade-in/out for a hover `Tooltip`, after a wait only a deliberate hover outlasts.
         static let tooltip: TimeInterval = 0.15
-        static let tooltipDelay: TimeInterval = 0.45
+        static let tooltipDelay: TimeInterval = 0.4
         /// A control lighting up under the pointer; short enough to feel like a response.
         static let hover: TimeInterval = 0.12
         /// A pop-up chevron turning between its closed and open directions.
