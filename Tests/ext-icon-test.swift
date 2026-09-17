@@ -14,9 +14,11 @@ struct ExtensionIconTests {
         }
     }
 
-    /// Artwork is normalized, so a source's transparent margin cannot change its size.
-    static func artworkIsNormalized() {
-        guard let bleed = writePNG("bleed", inset: 0), let padded = writePNG("padded", inset: 96)
+    /// A source's transparent margin is never cropped or measured away: it survives as visible
+    /// margin, so padded artwork draws its ink smaller by exactly the padding's share of the canvas.
+    static func paddingBecomesMargin() {
+        let side = 512, inset = 96
+        guard let bleed = writePNG("bleed", inset: 0), let padded = writePNG("padded", inset: inset)
         else { return expect(false, "the fixtures write") }
         defer {
             try? FileManager.default.removeItem(at: bleed.deletingLastPathComponent())
@@ -27,7 +29,14 @@ struct ExtensionIconTests {
             let margin = inkExtent(ExtensionIconCache.icon(atPath: padded.path))
         else { return expect(false, "both fixtures rasterize") }
 
-        expect(abs(full - margin) <= 0.03, "padding can't change the drawn size: \(full) vs \(margin)")
+        expect(
+            abs(full - ExtensionIconCache.extent) <= 0.03,
+            "a full-bleed source fills its extent: \(full) vs \(ExtensionIconCache.extent)")
+        let contentShare = CGFloat(side - inset * 2) / CGFloat(side)
+        let expectedMargin = ExtensionIconCache.extent * contentShare
+        expect(
+            abs(margin - expectedMargin) <= 0.03,
+            "padding becomes margin instead of being normalized away: \(margin) vs \(expectedMargin)")
         expect(
             full < IconCache.appIconExtent - 0.03,
             "artwork draws below an app icon's \(IconCache.appIconExtent): \(full)")
@@ -218,7 +227,7 @@ struct ExtensionIconTests {
     }
 
     static func main() async {
-        artworkIsNormalized()
+        paddingBecomesMargin()
         missingFileFallsBack()
         await inlineDataURLsDecode()
         await paletteColorsInSVGResolve()
