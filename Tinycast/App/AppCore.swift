@@ -186,8 +186,15 @@ final class AppCore {
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
+    private(set) var isShowingDialog = false
+    var isDimmingPaletteForDialog: Bool { isShowingDialog && windowController.isVisible }
     /// Every confirmation, report and prompt; it also stops a held hotkey stacking them.
-    @ObservationIgnored private lazy var dialogs = DialogController(settings: settings)
+    @ObservationIgnored private lazy var dialogs = DialogController(
+        settings: settings,
+        onPresentationChanged: { [weak self] isPresenting in
+            guard let self else { return }
+            isShowingDialog = isPresenting
+        })
     private let healthTicker = HealthTicker()
 
     private init() {
@@ -644,9 +651,6 @@ final class AppCore {
     func showNotice(title: String, message: String, symbol: String, tone: DialogTone) async {
         await dialogs.notice(title: title, message: message, symbol: symbol, tone: tone)
     }
-
-    /// True while a dialog is up, so a surface behind one can tell it apart from losing focus.
-    var isShowingDialog: Bool { dialogs.isPresenting }
 
     /// `tone` styles the glyph, `confirmRole` the button; separate on purpose.
     func confirm(

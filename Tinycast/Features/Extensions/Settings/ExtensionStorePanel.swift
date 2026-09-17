@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// One list over every registry; where a result comes from changes only its badge.
-struct ExtensionStoreSheet: View {
+struct ExtensionStorePanel: View {
     let onClose: () -> Void
     @Environment(AppCore.self) private var core
 
@@ -18,7 +18,7 @@ struct ExtensionStoreSheet: View {
 
     private var registries: [ExtensionRegistry] { core.settings.extensionRegistries }
 
-    /// The sheet cannot reach the pane's registry settings, so it at least names them.
+    /// The panel cannot reach the pane's registry settings, so it at least names them.
     private var searchingSummary: String {
         let on = registries.filter(\.isEnabled)
         guard !on.isEmpty else {
@@ -38,13 +38,14 @@ struct ExtensionStoreSheet: View {
             Divider()
             footer
         }
-        .padding(Theme.Spacing.xxl)
+        .padding(Theme.Spacing.dialogInset)
         .frame(width: 620, height: 560)
+        .extensionSettingsEditorPanelSurface()
         .onChange(of: query) { _, value in scheduleSearch(value) }
         // Re-run against whatever the registries now are, so the results match the header again.
         .onChange(of: core.settings.extensionRegistries) { _, _ in scheduleSearch(query) }
-        .sheet(isPresented: $editingRegistries) {
-            ExtensionRegistriesSheet(onClose: { editingRegistries = false })
+        .settingsEditorPanel(isPresented: $editingRegistries) {
+            ExtensionRegistriesPanel(onClose: { editingRegistries = false })
         }
         .onDisappear { searchTask?.cancel() }
     }
@@ -53,14 +54,14 @@ struct ExtensionStoreSheet: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
             // Named for the row that opens it, and it names the registries, not their count.
             HStack(alignment: .firstTextBaseline) {
-                Text("Search Extensions").font(.title2.weight(.bold))
+                Text("Search Extensions").font(Theme.Typography.panelTitle)
                 Spacer()
                 // Changing what is searched belongs in the flow, not back out in the pane.
                 Button("Registries…") { editingRegistries = true }
             }
             Text(searchingSummary)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(Theme.Typography.rowTitle)
+                .foregroundStyle(Theme.Colors.textSecondary)
         }
     }
 
@@ -98,7 +99,7 @@ struct ExtensionStoreSheet: View {
         }
     }
 
-    /// Not a bare line of text in a tall empty sheet: says what to do and what it will search.
+    /// Not a bare line of text in a tall empty panel: says what to do and what it will search.
     private var emptyState: some View {
         VStack(spacing: Theme.Spacing.md) {
             Image(systemName: "magnifyingglass")
@@ -151,6 +152,9 @@ struct ExtensionStoreSheet: View {
             Spacer()
             // Escape, not Return: Return belongs to the search field while typing.
             Button("Done", action: onClose)
+                .buttonStyle(
+                    ExtensionSettingsEditorButtonStyle(role: .cancel, fillsWidth: false)
+                )
                 .keyboardShortcut(.cancelAction)
         }
     }

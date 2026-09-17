@@ -1,7 +1,7 @@
 import SwiftUI
 
 extension DialogTone {
-    /// Tints the leading glyph only; buttons take their color from `DialogAction.Role`.
+    /// Tints the subject glyph only; buttons take their color from `DialogAction.Role`.
     var tint: Color {
         switch self {
         case .neutral: return .secondary
@@ -9,63 +9,93 @@ extension DialogTone {
         case .danger: return Theme.Colors.destructive
         }
     }
+
+    var tileFill: Color {
+        switch self {
+        case .neutral: return tint.opacity(0.12)
+        case .success, .danger: return tint.opacity(0.18)
+        }
+    }
 }
 
-/// A dialog: the palette's surface recipe at dialog size, glass only on the buttons.
+/// Tinycast's Liquid Glass dialog, compact unless a native control needs more room.
 struct DialogView: View {
+    @Environment(\.metrics) private var metrics
     let request: DialogRequest
+    let width: CGFloat
     let onChoose: (Int) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xxl) {
-            HStack(alignment: .top, spacing: Theme.Spacing.lg) {
+        let shape = RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
+        VStack(alignment: .leading, spacing: metrics.spacing.xxl) {
+            VStack(alignment: .leading, spacing: metrics.spacing.xxl) {
                 if let symbol = request.symbol {
-                    SymbolImage(name: symbol, size: Theme.Size.dialogIcon)
-                        .foregroundStyle(request.tone.tint)
-                        .frame(width: Theme.Size.dialogIcon)
+                    DialogSymbol(name: symbol, tone: request.tone)
                 }
-                VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+
+                VStack(alignment: .leading, spacing: metrics.spacing.sm) {
                     Text(request.title)
-                        .font(.headline)
+                        .font(metrics.typography.panelTitle)
                     if let message = request.message {
                         Text(message)
-                            .font(Theme.Typography.rowTrailing)
+                            .font(metrics.typography.rowTitle)
                             .foregroundStyle(Theme.Colors.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                Spacer(minLength: 0)
-            }
 
-            switch request.accessory {
-            case .volume(let volume): VolumeSlider(state: volume)
-            case .eventDraft(let draft): EventDraftFields(state: draft)
-            case .snippetArguments(let arguments): SnippetArgumentFields(state: arguments)
-            case nil: EmptyView()
-            }
-
-            HStack(spacing: Theme.Spacing.md) {
-                Spacer(minLength: 0)
-                ForEach(visualOrder, id: \.self) { index in
-                    DialogButton(
-                        action: request.actions[index],
-                        keyCap: keyCap(for: index),
-                        onActivate: { onChoose(index) }
-                    )
+                switch request.accessory {
+                case .volume(let volume): VolumeSlider(state: volume)
+                case .eventDraft(let draft): EventDraftFields(state: draft)
+                case .snippetArguments(let arguments): SnippetArgumentFields(state: arguments)
+                case nil: EmptyView()
                 }
             }
+            .padding(.horizontal, metrics.spacing.xs)
+            .padding(.top, metrics.spacing.xs)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            actions
         }
-        .padding(Theme.Spacing.xxl)
-        .frame(width: Theme.Size.dialogWidth, alignment: .leading)
-        .background(Theme.Colors.panelScrim)
-        .background(VisualEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
-        .panelEntrance()
+        .padding(metrics.spacing.dialogInset)
+        .frame(width: width, alignment: .leading)
+        .background(Theme.Colors.panelScrim, in: shape)
+        .glassEffect(.regular, in: shape)
     }
 
-    /// Cancel renders leading; `onChoose` still dispatches against the original order.
+    @ViewBuilder private var actions: some View {
+        if request.actions.count == 2 {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: metrics.spacing.md) { actionButtons(singleLine: true) }
+                VStack(spacing: metrics.spacing.md) { actionButtons(singleLine: false) }
+            }
+        } else if request.actions.count > 2 {
+            VStack(spacing: metrics.spacing.md) { actionButtons }
+        } else {
+            HStack(spacing: metrics.spacing.md) { actionButtons }
+        }
+    }
+
+    private var actionButtons: some View {
+        actionButtons(singleLine: false)
+    }
+
+    private func actionButtons(singleLine: Bool) -> some View {
+        ForEach(visualOrder, id: \.self) { index in
+            DialogButton(
+                action: request.actions[index],
+                isDefault: index == request.defaultIndex,
+                keyCap: keyCap(for: index),
+                singleLine: singleLine,
+                onActivate: { onChoose(index) }
+            )
+        }
+    }
+
+    /// Cancel leads a horizontal pair; a vertical choice keeps the caller's semantic order.
     private var visualOrder: [Int] {
-        request.actions.indices.sorted { rank(of: $0) < rank(of: $1) }
+        guard request.actions.count < 3 else { return Array(request.actions.indices) }
+        return request.actions.indices.sorted { rank(of: $0) < rank(of: $1) }
     }
 
     private func rank(of index: Int) -> Int {
@@ -75,38 +105,113 @@ struct DialogView: View {
     /// Only the two keys the panel handles are advertised, so a tooltip can't drift.
     private func keyCap(for index: Int) -> String? {
         if index == request.defaultIndex { return "↵" }
-        if index == request.cancelIndex { return "esc" }
+        if index == request.cancelIndex { return "⎋" }
         return nil
+    }
+}
+
+private struct DialogSymbol: View {
+    @Environment(\.metrics) private var metrics
+    let name: String
+    let tone: DialogTone
+
+    var body: some View {
+        SymbolImage(name: name, size: metrics.size.dialogSymbol, monochrome: true)
+            .foregroundStyle(symbolTint)
+            .frame(
+                width: metrics.size.dialogSymbolContainer,
+                height: metrics.size.dialogSymbolContainer
+            )
+            .background(
+                RoundedRectangle(cornerRadius: metrics.radius.dialogSymbol, style: .continuous)
+                    .fill(tone.tileFill))
+    }
+
+    /// Neutral glyphs need the same legibility as a key-cap symbol; semantic colours stay intact.
+    private var symbolTint: Color {
+        tone == .neutral ? Theme.Colors.textSecondary : tone.tint
     }
 }
 
 private struct DialogButton: View {
     let action: DialogAction
+    let isDefault: Bool
     let keyCap: String?
+    var singleLine = false
     let onActivate: () -> Void
-    @State private var hovered = false
 
     var body: some View {
         Button(action: onActivate) {
             Text(action.title)
-                .font(Theme.Typography.bar)
-                .foregroundStyle(labelColor)
-                .padding(.horizontal, Theme.Spacing.xl)
-                .frame(height: Theme.Size.menuButton)
-                .contentShape(Capsule())
-                .background(Capsule().fill(hovered ? Theme.Colors.menuHover : Color.clear))
+                .fixedSize(horizontal: singleLine, vertical: false)
+                .multilineTextAlignment(.center)
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .frosted(in: Capsule())
-        .tooltip(keyCap)
+        .buttonStyle(.modalAction(role))
+        .dialogShortcutTooltip(keyCap)
     }
 
-    private var labelColor: Color {
-        switch action.role {
-        case .standard: return .primary
-        case .destructive: return Theme.Colors.destructive
-        case .cancel: return Theme.Colors.textSecondary
+    private var role: ModalActionButtonStyle.Role {
+        if isDefault, action.role == .standard { return .primary }
+        return switch action.role {
+        case .standard: .standard
+        case .destructive: .destructive
+        case .cancel: .cancel
         }
+    }
+}
+
+private struct DialogShortcutTooltip: ViewModifier {
+    @Environment(\.metrics) private var metrics
+    let shortcut: String?
+    @State private var hovered = false
+    @State private var visible = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover {
+                hovered = shortcut != nil && $0
+                if !hovered { visible = false }
+            }
+            .task(id: hovered) {
+                guard hovered else { return }
+                try? await Task.sleep(for: .milliseconds(450))
+                guard !Task.isCancelled, hovered else { return }
+                withAnimation(.easeOut(duration: Theme.Duration.tooltip)) { visible = true }
+            }
+            .overlay(alignment: .top) {
+                if let shortcut, visible {
+                    KeyCapChip(text: shortcut, style: .outline)
+                        .padding(metrics.spacing.xs)
+                        .background(
+                            RoundedRectangle(
+                                cornerRadius: metrics.radius.dialogSymbol / 2, style: .continuous
+                            )
+                            .fill(Color(nsColor: .windowBackgroundColor))
+                            .overlay {
+                                RoundedRectangle(
+                                    cornerRadius: metrics.radius.dialogSymbol / 2,
+                                    style: .continuous
+                                )
+                                .fill(Theme.Colors.controlSurface)
+                            }
+                        )
+                        .shadow(
+                            color: Color.black.opacity(0.18),
+                            radius: metrics.spacing.xs, y: metrics.spacing.xxs
+                        )
+                        .fixedSize()
+                        .offset(
+                            y: -metrics.size.keyCap - metrics.spacing.xl - metrics.spacing.xxs
+                        )
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                }
+            }
+    }
+}
+
+private extension View {
+    func dialogShortcutTooltip(_ shortcut: String?) -> some View {
+        modifier(DialogShortcutTooltip(shortcut: shortcut))
     }
 }

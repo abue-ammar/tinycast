@@ -7,13 +7,13 @@ struct CustomWindowSizeEditRequest: Identifiable {
     var size: CustomWindowSize?
 }
 
-/// Add / edit sheet for one custom size, presented from the Window Management pane.
-struct CustomWindowSizeEditorSheet: View {
+/// Add / edit panel for one custom size, presented from the Window Management pane.
+struct CustomWindowSizeEditorPanel: View {
     private let isNew: Bool
     /// What a unit switch converts against; a run measures the window's own display.
     private let reference: CGSize
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.settingsEditorDismiss) private var dismiss
     @Environment(CustomWindowSizeCoordinator.self) private var coordinator
     @State private var size: CustomWindowSize
     @State private var errorMessage: String?
@@ -26,15 +26,13 @@ struct CustomWindowSizeEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(isNew ? "New Custom Size" : "Edit Custom Size")
-                .font(.title2.weight(.bold))
-
-            Text("Resizes the window you were last in, on the display it is already on.")
-                .foregroundStyle(.secondary)
+            SettingsEditorHeader(
+                title: isNew ? "New Custom Size" : "Edit Custom Size",
+                subtitle: "Resizes the window you were last in, on the display it is already on.")
 
             field("Name") {
                 TextField("Wide Center", text: $size.name)
-                    .textFieldStyle(.roundedBorder)
+                    .settingsEditorTextField()
             }
 
             field("Size") {
@@ -58,17 +56,19 @@ struct CustomWindowSizeEditorSheet: View {
                     .foregroundStyle(Theme.Colors.destructive)
             }
 
-            HStack {
-                Spacer()
+            HStack(spacing: Theme.Spacing.md) {
                 Button("Cancel") { dismiss() }
+                    .buttonStyle(.modalAction(.cancel))
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: save)
+                    .buttonStyle(.modalAction(.primary))
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
             }
         }
-        .padding(Theme.Spacing.xxl)
+        .padding(Theme.Spacing.dialogInset)
         .frame(width: Theme.Size.editorSheetWidth)
+        .settingsEditorPanelSurface()
     }
 
     private func field(_ title: String, @ViewBuilder content: () -> some View) -> some View {
@@ -104,6 +104,8 @@ struct CustomWindowSizeEditorSheet: View {
             }
             .labelsHidden()
             .pickerStyle(.segmented)
+            .controlSize(.large)
+            .buttonBorderShape(.roundedRectangle(radius: Theme.Radius.barControl))
             .fixedSize()
         }
     }

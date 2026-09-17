@@ -19,7 +19,7 @@ struct WindowLayoutInspector: View {
     ]
 
     var body: some View {
-        // Insurance only: at any normal text size every group fits the sheet's stated height.
+        // Insurance only: at any normal text size every group fits the panel's stated height.
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                 nameField

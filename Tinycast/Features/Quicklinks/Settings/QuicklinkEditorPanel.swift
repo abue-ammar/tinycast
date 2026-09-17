@@ -7,11 +7,11 @@ struct QuicklinkEditRequest: Identifiable {
     var quicklink: Quicklink?
 }
 
-/// Add / edit sheet for a single quicklink, presented from the Quicklinks pane.
-struct QuicklinkEditorSheet: View {
+/// Add / edit panel for a single quicklink, presented from the Quicklinks pane.
+struct QuicklinkEditorPanel: View {
     let quicklink: Quicklink?
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.settingsEditorDismiss) private var dismiss
     @Environment(AppIndex.self) private var appIndex
     @Environment(AppCore.self) private var core
     @State private var name: String
@@ -36,14 +36,13 @@ struct QuicklinkEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(quicklink == nil ? "Add Quicklink" : "Edit Quicklink")
-                .font(.title2.weight(.bold))
+            SettingsEditorHeader(title: quicklink == nil ? "Add Quicklink" : "Edit Quicklink")
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Name")
                     .font(.callout.weight(.medium))
                 TextField("Search GitHub", text: $name)
-                    .textFieldStyle(.roundedBorder)
+                    .settingsEditorTextField()
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -54,7 +53,7 @@ struct QuicklinkEditorSheet: View {
                     insertMenu
                 }
                 TextField("https://github.com/search?q={argument}", text: $link)
-                    .textFieldStyle(.roundedBorder)
+                    .settingsEditorTextField()
                     .font(.body.monospaced())
                 destinationPreview
             }
@@ -79,17 +78,19 @@ struct QuicklinkEditorSheet: View {
                     .foregroundStyle(.orange)
             }
 
-            HStack {
-                Spacer()
+            HStack(spacing: Theme.Spacing.md) {
                 Button("Cancel") { dismiss() }
+                    .buttonStyle(.modalAction(.cancel))
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: save)
+                    .buttonStyle(.modalAction(.primary))
                     .keyboardShortcut(.defaultAction)
                     .disabled(trimmed(name).isEmpty || trimmed(link).isEmpty)
             }
         }
-        .padding(Theme.Spacing.xxl)
+        .padding(Theme.Spacing.dialogInset)
         .frame(width: Theme.Size.editorSheetWidth)
+        .settingsEditorPanelSurface()
     }
 
     // MARK: - Fields

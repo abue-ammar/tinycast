@@ -5,15 +5,15 @@ import SwiftUI
 struct WindowLayoutEditRequest: Identifiable {
     let id = UUID()
     var layout: WindowLayout?
-    /// Set by capture, so the sheet says what it is showing.
+    /// Set by capture, so the panel says what it is showing.
     var isCapture = false
 }
 
-/// Add / edit sheet for one layout, presented from the Window Management pane.
-struct WindowLayoutEditorSheet: View {
+/// Add / edit panel for one layout, presented from the Window Management pane.
+struct WindowLayoutEditorPanel: View {
     let request: WindowLayoutEditRequest
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.settingsEditorDismiss) private var dismiss
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
     @State private var draft: WindowLayoutDraft
@@ -38,12 +38,13 @@ struct WindowLayoutEditorSheet: View {
                 WindowLayoutInspector(draft: draft, displays: screens.map(\.display))
                     .frame(width: Theme.Size.layoutInspectorColumn)
             }
-            // Stated, never intrinsic: a sheet that grew as fields appeared would jump.
+            // Stated, never intrinsic: a panel that grew as fields appeared would jump.
             .frame(height: Theme.Size.layoutEditorSheet.height)
             Divider()
             footer
         }
         .frame(width: Theme.Size.layoutEditorSheet.width)
+        .settingsEditorPanelSurface()
         .task {
             // A display can be unplugged mid-edit; the canvas must not draw geometry that is gone.
             for await _ in NotificationCenter.default.notifications(
@@ -57,7 +58,7 @@ struct WindowLayoutEditorSheet: View {
     private var previewColumn: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
             Text(title)
-                .font(.title2.weight(.bold))
+                .font(Theme.Typography.panelTitle)
             WindowLayoutPreview(draft: draft, screens: screens, gap: previewGap)
         }
         .padding(Theme.Spacing.xxl)
@@ -77,7 +78,7 @@ struct WindowLayoutEditorSheet: View {
         draft.usesPreferredGap ? CGFloat(settings.windowGap) : 0
     }
 
-    /// The error sits here rather than above the footer, so reporting one cannot resize the sheet.
+    /// The error sits here rather than above the footer, so reporting one cannot resize the panel.
     private var footer: some View {
         HStack(spacing: Theme.Spacing.xl) {
             if let errorMessage {
@@ -88,6 +89,7 @@ struct WindowLayoutEditorSheet: View {
             }
             Spacer(minLength: 0)
             Button("Cancel") { dismiss() }
+                .buttonStyle(.modalAction(.cancel, fillsWidth: false))
                 .keyboardShortcut(.cancelAction)
             Button(action: save) {
                 HStack(spacing: Theme.Spacing.sm) {
@@ -98,6 +100,7 @@ struct WindowLayoutEditorSheet: View {
                     }
                 }
             }
+            .buttonStyle(.modalAction(.primary, fillsWidth: false))
             // Not `.defaultAction`: plain ↵ belongs to whichever field has focus.
             .keyboardShortcut(.return, modifiers: .command)
             .disabled(!draft.canSave)

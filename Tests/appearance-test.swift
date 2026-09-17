@@ -46,6 +46,7 @@ struct AppearanceTests {
 
         print("# dark branches are the shipped literals")
         dark("panelScrim", c.panelScrim, is: Color.black.opacity(0.4))
+        dark("dialogDimming", c.dialogDimming, is: Color.black.opacity(0.34))
         dark("selection", c.selection, is: Color.white.opacity(0.10))
         dark("rowHover", c.rowHover, is: Color.white.opacity(0.05))
         dark("menuHover", c.menuHover, is: Color.white.opacity(0.10))
@@ -65,7 +66,7 @@ struct AppearanceTests {
         dark("iconPlaceholder", c.iconPlaceholder, is: Color.white.opacity(0.06))
         dark("sheen", c.sheen, is: Color.white.opacity(0.04))
         dark("textPrimary", c.textPrimary, is: Color.white)
-        // VolumeSlider drew white 0.85; textPrimary is alpha 1, so `.opacity` has to reproduce it.
+        // VolumeHUDView draws white 0.85; textPrimary is alpha 1, so opacity must reproduce it.
         dark("textPrimary at 0.85", c.textPrimary.opacity(0.85), is: Color.white.opacity(0.85))
 
         print("# every surface token resolves per appearance")

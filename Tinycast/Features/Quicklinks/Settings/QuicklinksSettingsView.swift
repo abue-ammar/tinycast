@@ -6,10 +6,10 @@ struct QuicklinksSettingsView: View {
     @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
     @State private var query = ""
+    @State private var editor: QuicklinkEditRequest?
     @State private var pendingDeletion: Quicklink?
 
     var body: some View {
-        @Bindable var core = core
         @Bindable var settings = settings
         return Form {
             FeatureSwitchSection(
@@ -32,9 +32,13 @@ struct QuicklinksSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.quicklinks)
-        // Presented from the pane, so "Create Quicklink" can open it from the palette.
-        .sheet(item: $core.pendingQuicklinkEdit) { request in
-            QuicklinkEditorSheet(quicklink: request.quicklink)
+        .settingsEditorPanel(item: $editor) { request in
+            QuicklinkEditorPanel(quicklink: request.quicklink)
+        }
+        .onChange(of: core.pendingQuicklinkEdit?.id, initial: true) { _, _ in
+            guard let request = core.pendingQuicklinkEdit else { return }
+            editor = request
+            core.pendingQuicklinkEdit = nil
         }
         .alert(item: $pendingDeletion) { quicklink in
             Alert(
@@ -84,12 +88,12 @@ struct QuicklinksSettingsView: View {
                             set: {
                                 core.quicklinkCoordinator.setQuicklinkEnabled($0, id: quicklink.id)
                             }),
-                        onEdit: { core.quicklinkCoordinator.editQuicklink(quicklink) },
+                        onEdit: { editor = QuicklinkEditRequest(quicklink: quicklink) },
                         onDelete: { pendingDeletion = quicklink })
                 }
             }
             Button {
-                core.quicklinkCoordinator.editQuicklink(nil)
+                editor = QuicklinkEditRequest(quicklink: nil)
             } label: {
                 SettingsRowTitle(.quicklinksQuicklinks, "Add Quicklink")
             }

@@ -15,7 +15,7 @@ final class DialogPanel: NSPanel {
     /// Arrows are a control's keys, not the panel's; a text field needs them for its caret.
     var handlesArrowKeys = false
 
-    init(content: NSView) {
+    init(content: NSView, cornerRadius: CGFloat) {
         super.init(
             contentRect: NSRect(origin: .zero, size: content.frame.size),
             styleMask: [.borderless, .fullSizeContentView, .nonactivatingPanel],
@@ -34,6 +34,10 @@ final class DialogPanel: NSPanel {
         // Suppresses AppKit's own window animation; `fadeIn`/`fadeOut` replace it.
         animationBehavior = .none
         isReleasedWhenClosed = false
+        content.wantsLayer = true
+        content.layer?.cornerRadius = cornerRadius
+        content.layer?.cornerCurve = .continuous
+        content.layer?.masksToBounds = true
         contentView = content
     }
 

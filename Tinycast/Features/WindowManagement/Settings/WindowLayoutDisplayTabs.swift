@@ -63,18 +63,31 @@ struct WindowLayoutPositionGrid: View {
         let isSelected = anchor == selection
         let outline = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
         let glyph = Theme.Size.layoutPositionGlyph
+        let fillInset = Theme.Spacing.xxs
+        let fillSize = CGSize(
+            width: glyph.width - fillInset * 2,
+            height: glyph.height - fillInset * 2)
         let seat = RoundedRectangle(cornerRadius: Theme.Radius.barControl, style: .continuous)
         return Button {
             onSelect(anchor)
         } label: {
-            ZStack(alignment: anchor.alignment) {
+            ZStack {
                 outline.stroke(lineWidth: Theme.Size.layoutPositionStroke)
-                RoundedRectangle(cornerRadius: Theme.Radius.glyph, style: .continuous)
-                    .frame(
-                        width: glyph.width * anchor.coverage.width,
-                        height: glyph.height * anchor.coverage.height
-                    )
-                    .padding(Theme.Spacing.xxs)
+                if anchor == .center {
+                    RoundedRectangle(cornerRadius: Theme.Radius.glyph, style: .continuous)
+                        .frame(
+                            width: fillSize.width * anchor.coverage.width,
+                            height: fillSize.height * anchor.coverage.height)
+                } else {
+                    outline
+                        .inset(by: fillInset)
+                        .mask(alignment: anchor.alignment) {
+                            Rectangle()
+                                .frame(
+                                    width: glyph.width * anchor.coverage.width,
+                                    height: glyph.height * anchor.coverage.height)
+                        }
+                }
             }
             .frame(width: glyph.width, height: glyph.height)
             .foregroundStyle(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textTertiary)

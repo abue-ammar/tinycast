@@ -10,6 +10,8 @@ enum Theme {
         static let md: CGFloat = 8
         static let lg: CGFloat = 10
         static let xl: CGFloat = 12
+        /// Outer inset of Tinycast's dialog content.
+        static let dialogInset: CGFloat = 18
         static let xxl: CGFloat = 20
         /// Calculator answer card's roomier vertical breathing room.
         static let xxxl: CGFloat = 28
@@ -36,6 +38,8 @@ enum Theme {
         /// A header pop-up button; the footer's action pills stay capsules.
         static let barControl: CGFloat = 8
         static let menuPanel: CGFloat = 16
+        /// Subject tile inside the more rounded dialog panel.
+        static let dialogSymbol: CGFloat = 16
         /// The dialog and HUD surface, so a dialog reads as a sibling of the palette.
         static let dialog: CGFloat = 20
         static let thumbnail: CGFloat = 6
@@ -182,7 +186,7 @@ enum Theme {
         static let settingsSearchField: CGFloat = 28
         /// One density preview; five fit across the Emoji settings detail pane.
         static let emojiSettingsGridPreview: CGFloat = 72
-        /// The layout editor. Height is stated so selecting an entry cannot resize the sheet.
+        /// The layout editor. Height is stated so selecting an entry cannot resize the panel.
         static let layoutEditorSheet = CGSize(width: 900, height: 660)
         /// The inspector column; the preview takes the rest, keeping the split two-to-one.
         static let layoutInspectorColumn: CGFloat = 300
@@ -202,14 +206,20 @@ enum Theme {
         static let layoutPositionCell: CGFloat = 34
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
-        /// The multi-line box inside those modals; it scrolls rather than grows the sheet.
+        /// The multi-line box inside those modals; it scrolls rather than grows the panel.
         static let editorTextHeight: CGFloat = 120
         /// The confirmation HUD's width ceiling, and its distance above the screen bottom.
         static let hudMaxWidth: CGFloat = 420
         static let hudEdgeOffset: CGFloat = 48
-        /// Tinycast's own dialog: fixed width, height measured from the SwiftUI content.
+        /// Questions and notices stay compact; controls keep the room their native widgets need.
+        static let dialogCompactWidth: CGFloat = 290
+        /// Tinycast's own control dialog: fixed width, height measured from its SwiftUI content.
         static let dialogWidth: CGFloat = 420
-        /// A dialog's leading glyph, larger than a row icon: it carries the subject.
+        static let dialogButtonHeight: CGFloat = menuButton - 2
+        /// Subject glyph and its fixed tile at the top of a dialog.
+        static let dialogSymbol: CGFloat = 28
+        static let dialogSymbolContainer: CGFloat = 52
+        /// Shared measurement for dialog accessories and the volume-HUD glyph.
         static let dialogIcon: CGFloat = 32
         /// 16:9 at the dialog's own width, so the two surfaces read as siblings.
         static let cameraPreview = CGSize(width: 420, height: 236)
@@ -228,9 +238,8 @@ enum Theme {
         /// Transient volume HUD shown after any volume or mute command.
         static let hudWidth: CGFloat = 200
         static let hudHeight: CGFloat = 100
-        /// Volume slider geometry, shared by the Set Volume dialog and the HUD's read-only bar.
+        /// Read-only volume bar geometry used by the HUD.
         static let volumeTrackHeight: CGFloat = 6
-        static let volumeKnob: CGFloat = 16
         /// Fixed slot for the level readout, sized to the widest string it ever holds.
         static let volumeReadout: CGFloat = 38
     }
@@ -242,6 +251,9 @@ enum Theme {
         /// How a borderless surface arrives and leaves; the exit is shorter, so it feels quick.
         static let enter: TimeInterval = 0.18
         static let exit: TimeInterval = 0.12
+        /// A dialog moves with its launcher dimming; its fade-in is a shorter sub-beat.
+        static let dialogEnter: TimeInterval = 0.12
+        static let dialogExit: TimeInterval = 0.10
         /// Fade-in/out for a hover `Tooltip`.
         static let tooltip: TimeInterval = 0.15
         /// A control lighting up under the pointer; short enough to feel like a response.
@@ -254,6 +266,11 @@ enum Theme {
         static let settingsReveal: TimeInterval = 0.28
         static let settingsFlash: TimeInterval = 2.0
         static let settingsFlashOut: TimeInterval = 0.6
+    }
+
+    enum DialogMotion {
+        static let offset: CGFloat = 3
+        static let initialOpacity: CGFloat = 0.08
     }
 
     /// Motion owned by Tinycast's menus; extension-provided panels keep their own behavior.
@@ -325,6 +342,9 @@ enum Theme {
 
         /// The ramp's inverse: the scrim darkens the dark surface and lightens the light one.
         static let panelScrim = adaptive(dark: .srgbInk(0, alpha: 0.40), light: .srgbInk(1, alpha: 0.55))
+        /// Modal separation inside Tinycast: the launcher recedes while its dialog is in front.
+        static let dialogDimming = adaptive(
+            dark: .srgbInk(0, alpha: 0.34), light: .srgbInk(0, alpha: 0.34))
 
         static func panelScrim(transparency: Int) -> Color {
             guard transparency != 0 else { return panelScrim }
@@ -401,6 +421,8 @@ enum Theme {
         /// The palette's drop guides while dragging, and once a release would snap it home.
         static let dropGuide = ramp(dark: 0.35, light: 0.35)
         static let dropGuideArmed = Color.blue
+        /// A dialog's standard default action; destructive defaults keep their semantic red.
+        static let primaryAction = Color.blue
         /// Destructive tint: a destructive label, and a `.danger` dialog's glyph.
         static let destructive = Color.red
         /// Success tint: the leading glyph of a `.success` dialog.

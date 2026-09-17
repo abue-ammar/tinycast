@@ -52,8 +52,8 @@ struct QuickActionsSettingsView: View {
         .formStyle(.grouped)
         .settingsScrollTarget(.quickActions)
         .onReceive(refreshTimer) { _ in isTrusted = Permissions.isAccessibilityTrusted() }
-        .sheet(item: $editingAction) { action in
-            InstructionsEditorSheet(
+        .settingsEditorPanel(item: $editingAction) { action in
+            InstructionsEditorPanel(
                 action: action,
                 instructionOverride: store.settings.instructionOverride(for: action),
                 modelOverride: store.modelOverride(for: .builtIn(action))
@@ -62,8 +62,8 @@ struct QuickActionsSettingsView: View {
                 store.setModelOverride(modelOverride, for: .builtIn(action))
             }
         }
-        .sheet(item: $customEditing) { request in
-            CustomQuickActionEditorSheet(
+        .settingsEditorPanel(item: $customEditing) { request in
+            CustomQuickActionEditorPanel(
                 request: request,
                 model: request.action.flatMap { store.modelOverride(for: .custom($0)) })
         }
@@ -292,8 +292,8 @@ struct QuickActionsSettingsView: View {
             fallback: aiSettings.defaultModel)
     }
 
-    private struct InstructionsEditorSheet: View {
-        @Environment(\.dismiss) private var dismiss
+    private struct InstructionsEditorPanel: View {
+        @Environment(\.settingsEditorDismiss) private var dismiss
         @State private var instructions: String
         @State private var model: AIModelSelection?
 
@@ -316,43 +316,36 @@ struct QuickActionsSettingsView: View {
 
         var body: some View {
             VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                Text("Customize \(action.title)")
-                    .font(.title2.weight(.bold))
-
-                Text("Tell Tinycast how you want \(action.title) to handle your selected text.")
-                    .foregroundStyle(.secondary)
+                SettingsEditorHeader(
+                    title: "Customize \(action.title)",
+                    subtitle: "Tell Tinycast how you want \(action.title) to handle your selected text."
+                )
 
                 TextEditor(text: $instructions)
                     .font(.body)
-                    .scrollContentBackground(.hidden)
-                    .padding(Theme.Spacing.sm)
-                    .frame(height: Theme.Size.editorTextHeight * 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                            .fill(Theme.Colors.cardFill)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-                    )
+                    .settingsEditorTextArea(height: Theme.Size.editorTextHeight * 2)
 
                 QuickActionModelPicker(selection: $model)
 
-                HStack {
+                HStack(spacing: Theme.Spacing.md) {
                     Button("Use Default") { instructions = builtIn }
+                        .buttonStyle(.modalAction(.standard, fillsWidth: false))
                         .disabled(instructions == builtIn)
                     Spacer()
                     Button("Cancel") { dismiss() }
+                        .buttonStyle(.modalAction(.cancel))
                         .keyboardShortcut(.cancelAction)
                     Button("Save") {
                         onSave(instructions == builtIn ? nil : instructions, model)
                         dismiss()
                     }
+                    .buttonStyle(.modalAction(.primary))
                     .keyboardShortcut(.defaultAction)
                 }
             }
-            .padding(Theme.Spacing.xxl)
+            .padding(Theme.Spacing.dialogInset)
             .frame(width: Theme.Size.editorSheetWidth)
+            .settingsEditorPanelSurface()
         }
     }
 }

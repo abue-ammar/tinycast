@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A registry decides what search can find, so it belongs where searching is asked.
-struct ExtensionRegistriesSheet: View {
+struct ExtensionRegistriesPanel: View {
     let onClose: () -> Void
 
     @Environment(AppCore.self) private var core
@@ -13,14 +13,12 @@ struct ExtensionRegistriesSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Registries").font(.title2.weight(.bold))
-                Text("Where Tinycast looks when you search for an extension to install.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, Theme.Spacing.xxl)
-            .padding(.top, Theme.Spacing.xxl)
+            ExtensionSettingsEditorHeader(
+                title: "Registries",
+                subtitle: "Where Tinycast looks when you search for an extension to install."
+            )
+            .padding(.horizontal, Theme.Spacing.dialogInset)
+            .padding(.top, Theme.Spacing.dialogInset)
 
             Form {
                 // The store only switches on or off; a GitHub registry serves source to build.
@@ -69,20 +67,22 @@ struct ExtensionRegistriesSheet: View {
 
             }
             .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
 
-            HStack {
-                Spacer()
+            HStack(spacing: Theme.Spacing.md) {
                 Button("Done", action: onClose)
+                    .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .primary))
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(Theme.Spacing.xxl)
+            .padding(Theme.Spacing.dialogInset)
         }
-        .frame(width: Theme.Size.editorSheetWidth, height: 600)
+        .frame(width: Theme.Size.editorSheetWidth, height: 540)
+        .extensionSettingsEditorPanelSurface()
         .onAppear {
             customSearchPathsText = settings.extensionCustomSearchPaths.joined(separator: ":")
         }
-        .sheet(isPresented: $addingRegistry) {
-            RegistryEditorSheet(
+        .settingsEditorPanel(isPresented: $addingRegistry) {
+            RegistryEditorPanel(
                 onAdd: { registry in
                     settings.extensionRegistries.append(registry)
                     addingRegistry = false
@@ -218,7 +218,7 @@ struct ExtensionRegistriesSheet: View {
 }
 
 /// Adds a GitHub registry from a URL, which is what someone has when they want one.
-struct RegistryEditorSheet: View {
+struct RegistryEditorPanel: View {
     let onAdd: (ExtensionRegistry) -> Void
     let onCancel: () -> Void
 
@@ -229,27 +229,27 @@ struct RegistryEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Add Registry").font(.title2.weight(.bold))
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Add Registry").font(Theme.Typography.panelTitle)
                 Text(
                     "A GitHub repository holding one folder per extension, laid out like "
                         + "raycast/extensions."
                 )
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(Theme.Typography.rowTitle)
+                .foregroundStyle(Theme.Colors.textSecondary)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Repository").font(.callout.weight(.medium))
                 TextField("", text: $url, prompt: Text("owner/repo, or a link to the folder"))
-                    .textFieldStyle(.roundedBorder)
+                    .extensionSettingsEditorTextField()
                     .pointerStyle(.horizontalText)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 Text("Name").font(.callout.weight(.medium))
                 TextField("", text: $name, prompt: Text(parsed?.name ?? "Optional"))
-                    .textFieldStyle(.roundedBorder)
+                    .extensionSettingsEditorTextField()
                     .pointerStyle(.horizontalText)
             }
 
@@ -273,19 +273,116 @@ struct RegistryEditorSheet: View {
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
 
-            HStack {
-                Spacer()
+            HStack(spacing: Theme.Spacing.md) {
                 Button("Cancel", action: onCancel)
+                    .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .cancel))
                     .keyboardShortcut(.cancelAction)
                 Button("Add") {
                     guard let parsed else { return }
                     onAdd(parsed)
                 }
+                .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .primary))
                 .keyboardShortcut(.defaultAction)
                 .disabled(parsed == nil)
             }
         }
-        .padding(Theme.Spacing.xxl)
+        .padding(Theme.Spacing.dialogInset)
         .frame(width: Theme.Size.editorSheetWidth)
+        .extensionSettingsEditorPanelSurface()
     }
+}
+
+extension View {
+    /// Extension-owned surface; the Settings shell only hosts it as an opaque box.
+    func extensionSettingsEditorPanelSurface() -> some View {
+        modifier(ExtensionSettingsEditorPanelSurface())
+    }
+
+    func extensionSettingsEditorTextField() -> some View {
+        textFieldStyle(.plain)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .frame(height: Theme.Size.dialogButtonHeight)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                    .fill(Theme.Colors.controlSurface))
+    }
+}
+
+private struct ExtensionSettingsEditorPanelSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous)
+        content
+            .background(Theme.Colors.panelScrim, in: shape)
+            .glassEffect(.regular, in: shape)
+    }
+}
+
+struct ExtensionSettingsEditorHeader: View {
+    let title: String
+    var subtitle: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text(title).font(Theme.Typography.panelTitle)
+            if let subtitle {
+                Text(subtitle)
+                    .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+struct ExtensionSettingsEditorButtonStyle: ButtonStyle {
+    enum Role { case standard, primary, cancel }
+
+    let role: Role
+    var fillsWidth = true
+
+    func makeBody(configuration: Configuration) -> some View {
+        ExtensionSettingsEditorButtonBody(
+            configuration: configuration, role: role, fillsWidth: fillsWidth)
+    }
+}
+
+private struct ExtensionSettingsEditorButtonBody: View {
+    let configuration: ButtonStyleConfiguration
+    let role: ExtensionSettingsEditorButtonStyle.Role
+    let fillsWidth: Bool
+
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovered = false
+
+    var body: some View {
+        configuration.label
+            .font(Theme.Typography.rowTrailing)
+            .foregroundStyle(labelColor)
+            .padding(.horizontal, Theme.Spacing.xl)
+            .frame(maxWidth: fillsWidth ? .infinity : nil)
+            .frame(height: Theme.Size.dialogButtonHeight)
+            .contentShape(Capsule())
+            .background(Capsule().fill(fill))
+            .opacity(isEnabled ? 1 : 0.45)
+            .onHover { hovered = $0 }
+    }
+
+    private var fill: Color {
+        switch role {
+        case .primary:
+            Theme.Colors.primaryAction.opacity(isHighlighted ? 0.28 : 0.20)
+        case .standard, .cancel:
+            isHighlighted ? Theme.Colors.selection : Theme.Colors.controlSurface
+        }
+    }
+
+    private var labelColor: Color {
+        switch role {
+        case .standard: .primary
+        case .primary: Theme.Colors.primaryAction
+        case .cancel: Theme.Colors.textSecondary
+        }
+    }
+
+    private var isHighlighted: Bool { hovered || configuration.isPressed }
 }

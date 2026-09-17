@@ -5,8 +5,8 @@ struct CustomQuickActionEditRequest: Identifiable {
     let action: CustomQuickAction?
 }
 
-struct CustomQuickActionEditorSheet: View {
-    @Environment(\.dismiss) private var dismiss
+struct CustomQuickActionEditorPanel: View {
+    @Environment(\.settingsEditorDismiss) private var dismiss
     @Environment(AppCore.self) private var core
 
     private let existing: CustomQuickAction?
@@ -39,11 +39,10 @@ struct CustomQuickActionEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(existing == nil ? "New Quick Action" : "Edit \(existing?.name ?? "")")
-                .font(.title2.weight(.bold))
-
-            Text("Tinycast sends your selected text to the model with these instructions.")
-                .foregroundStyle(.secondary)
+            SettingsEditorHeader(
+                title: existing == nil ? "New Quick Action" : "Edit \(existing?.name ?? "")",
+                subtitle: "Tinycast sends your selected text to the model with these instructions."
+            )
 
             HStack(alignment: .bottom, spacing: Theme.Spacing.lg) {
                 nameField
@@ -60,23 +59,27 @@ struct CustomQuickActionEditorSheet: View {
                     .foregroundStyle(Theme.Colors.destructive)
             }
 
-            HStack {
+            HStack(spacing: Theme.Spacing.md) {
                 if let existing {
                     Button("Delete", role: .destructive) {
                         dismiss()
                         Task { await core.quickActionCoordinator.deleteCustomQuickAction(id: existing.id) }
                     }
+                    .buttonStyle(.modalAction(.destructive, fillsWidth: false))
                 }
                 Spacer()
                 Button("Cancel") { dismiss() }
+                    .buttonStyle(.modalAction(.cancel))
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: save)
+                    .buttonStyle(.modalAction(.primary))
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canSave)
             }
         }
-        .padding(Theme.Spacing.xxl)
+        .padding(Theme.Spacing.dialogInset)
         .frame(width: Theme.Size.editorSheetWidth)
+        .settingsEditorPanelSurface()
     }
 
     private var nameField: some View {
@@ -84,7 +87,7 @@ struct CustomQuickActionEditorSheet: View {
             Text("Name")
                 .font(.callout.weight(.medium))
             TextField("Make Concise", text: $name)
-                .textFieldStyle(.roundedBorder)
+                .settingsEditorTextField()
         }
     }
 
@@ -120,17 +123,7 @@ struct CustomQuickActionEditorSheet: View {
                 .font(.callout.weight(.medium))
             TextEditor(text: $instructions)
                 .font(.body)
-                .scrollContentBackground(.hidden)
-                .padding(Theme.Spacing.sm)
-                .frame(height: Theme.Size.editorTextHeight * 2)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                        .fill(Theme.Colors.cardFill)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                        .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-                )
+                .settingsEditorTextArea(height: Theme.Size.editorTextHeight * 2)
                 .overlay(alignment: .topLeading) {
                     if instructions.isEmpty {
                         Text(Self.placeholder)

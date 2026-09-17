@@ -5,15 +5,14 @@ import SwiftUI
 @MainActor
 final class DialogController: NSObject, NSWindowDelegate {
     private let settings: AppSettings
+    private let onPresentationChanged: (Bool) -> Void
     private var panel: DialogPanel?
     private var continuation: CheckedContinuation<Int, Never>?
 
-    init(settings: AppSettings) {
+    init(settings: AppSettings, onPresentationChanged: @escaping (Bool) -> Void) {
         self.settings = settings
+        self.onPresentationChanged = onPresentationChanged
     }
-
-    /// The palette reads this so its own dialog taking key isn't a click-away.
-    var isPresenting: Bool { continuation != nil }
 
     func confirm(
         title: String, message: String?, symbol: String?, tone: DialogTone, confirmTitle: String,
@@ -112,15 +111,21 @@ final class DialogController: NSObject, NSWindowDelegate {
         guard continuation == nil else { return request.cancelIndex }
         return await withCheckedContinuation { continuation in
             self.continuation = continuation
+            onPresentationChanged(true)
+            let width =
+                switch request.accessory {
+                case nil, .volume: metrics.size.dialogCompactWidth
+                case .eventDraft, .snippetArguments: metrics.size.dialogWidth
+                }
             let content = hostingView(
                 DialogView(
-                    request: request,
+                    request: request, width: width,
                     onChoose: { [weak self] index in
                         guard Self.accepts(index, for: request) else { return }
                         self?.finish(index)
                     }),
-                width: metrics.size.dialogWidth, minHeight: 0)
-            let panel = DialogPanel(content: content)
+                width: width, minHeight: 0)
+            let panel = DialogPanel(content: content, cornerRadius: metrics.radius.panel)
             panel.handlesArrowKeys = request.accessory?.claimsArrowKeys ?? false
             panel.delegate = self
             panel.onKey = { [weak self] key in
@@ -139,11 +144,26 @@ final class DialogController: NSObject, NSWindowDelegate {
             }
             self.panel = panel
             place(panel)
-            // Non-activating like the palette: key focus without pulling the user out.
-            panel.fadeIn(duration: Theme.Duration.enter) {
-                panel.makeKeyAndOrderFront(nil)
-                panel.orderFrontRegardless()
-            }
+            show(panel)
+        }
+    }
+
+    /// Moves the full-size glass panel, avoiding the transient rim caused by scaling its content.
+    private func show(_ panel: NSPanel) {
+        let destination = panel.frame
+        panel.alphaValue = Theme.DialogMotion.initialOpacity
+        panel.setFrameOrigin(
+            NSPoint(x: destination.minX, y: destination.minY - Theme.DialogMotion.offset))
+        // Non-activating like the palette: key focus without pulling the user out.
+        panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = Theme.Duration.dialogEnter
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            // Moving a cached surface avoids redrawing the glass at each whole-point frame step.
+            panel.animator().setFrame(destination, display: false)
+            panel.animator().alphaValue = 1
         }
     }
 
@@ -159,12 +179,13 @@ final class DialogController: NSObject, NSWindowDelegate {
     private func finish(_ index: Int) {
         guard let continuation else { return }
         self.continuation = nil
+        onPresentationChanged(false)
         let closing = panel
         panel = nil
         closing?.delegate = nil
         closing?.onKey = nil
         continuation.resume(returning: index)
-        closing?.fadeOut(duration: Theme.Duration.exit)
+        closing?.fadeOut(duration: Theme.Duration.dialogExit)
     }
 
     private var metrics: InterfaceMetrics { settings.interfaceSize.metrics }
@@ -189,7 +210,6 @@ final class DialogController: NSObject, NSWindowDelegate {
 
     /// Optical centering: an exactly centred dialog reads low, as the palette would.
     private static let centerLift: CGFloat = 0.08
-
     // MARK: - NSWindowDelegate
 
     /// Click-away resolves as a dismissal rather than leaving an orphaned dialog behind.

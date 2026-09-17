@@ -1,11 +1,11 @@
 import AppKit
 import SwiftUI
 
-/// Add / edit sheet for a single custom command, presented from the Commands pane.
-struct CustomCommandEditorSheet: View {
+/// Add / edit panel for a single custom command, presented from the Commands pane.
+struct CustomCommandEditorPanel: View {
     let command: CustomCommand?
 
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.settingsEditorDismiss) private var dismiss
     @Environment(AppCore.self) private var core
     @State private var name: String
     @State private var shellCommand: String
@@ -44,15 +44,15 @@ struct CustomCommandEditorSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            Text(command == nil ? "Add Custom Command" : "Edit Custom Command")
-                .font(.title2.weight(.bold))
+            SettingsEditorHeader(
+                title: command == nil ? "Add Custom Command" : "Edit Custom Command")
 
             HStack(alignment: .bottom, spacing: Theme.Spacing.lg) {
                 VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                     Text("Name")
                         .font(.callout.weight(.medium))
                     TextField("Sleep Displays", text: $name)
-                        .textFieldStyle(.roundedBorder)
+                        .settingsEditorTextField()
                 }
                 iconField
             }
@@ -62,17 +62,7 @@ struct CustomCommandEditorSheet: View {
                     .font(.callout.weight(.medium))
                 TextEditor(text: $shellCommand)
                     .font(.body.monospaced())
-                    .scrollContentBackground(.hidden)
-                    .padding(Theme.Spacing.sm)
-                    .frame(height: Theme.Size.editorTextHeight)
-                    .background(
-                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                            .fill(Theme.Colors.cardFill)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-                    )
+                    .settingsEditorTextArea(height: Theme.Size.editorTextHeight)
             }
 
             Text("Example: /usr/bin/pmset displaysleepnow")
@@ -104,19 +94,21 @@ struct CustomCommandEditorSheet: View {
                     .foregroundStyle(.orange)
             }
 
-            HStack {
-                Spacer()
+            HStack(spacing: Theme.Spacing.md) {
                 Button("Cancel") { dismiss() }
+                    .buttonStyle(.modalAction(.cancel))
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: save)
+                    .buttonStyle(.modalAction(.primary))
                     .keyboardShortcut(.defaultAction)
                     .disabled(
                         name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                             || shellCommand.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .padding(Theme.Spacing.xxl)
+        .padding(Theme.Spacing.dialogInset)
         .frame(width: Theme.Size.editorSheetWidth)
+        .settingsEditorPanelSurface()
     }
 
     private static let iconSymbols = [
@@ -162,7 +154,7 @@ struct CustomCommandEditorSheet: View {
                 .font(.callout.weight(.medium))
             HStack(spacing: Theme.Spacing.sm) {
                 TextField("Home folder", text: $workingDirectory)
-                    .textFieldStyle(.roundedBorder)
+                    .settingsEditorTextField()
                 Button("Choose…", action: chooseWorkingDirectory)
             }
             Text("The folder the command starts in. Leave empty for your home folder.")
@@ -204,7 +196,7 @@ struct CustomCommandEditorSheet: View {
                         .foregroundStyle(.secondary)
                         .frame(width: Self.positionWidth, alignment: .leading)
                     TextField("Argument name", text: $argument.name)
-                        .textFieldStyle(.roundedBorder)
+                        .settingsEditorTextField()
                     Toggle("Optional", isOn: $argument.isOptional)
                         .toggleStyle(.checkbox)
                     Button {

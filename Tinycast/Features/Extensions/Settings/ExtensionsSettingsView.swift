@@ -52,9 +52,9 @@ struct ExtensionsSettingsView: View {
         .onChange(of: settings.extensionsShowInLauncher) {
             core.extensionCoordinator.applyExtensionsLauncherPresence()
         }
-        // By item: `isPresented` builds the sheet from a snapshot taken before the write.
-        .sheet(item: $importCandidates) { candidates in
-            ExtensionImportSheet(
+        // By item: `isPresented` builds the panel from a snapshot taken before the write.
+        .settingsEditorPanel(item: $importCandidates) { candidates in
+            ExtensionImportPanel(
                 candidates: candidates.entries,
                 onImport: { chosen in
                     importCandidates = nil
@@ -62,11 +62,11 @@ struct ExtensionsSettingsView: View {
                 },
                 onCancel: { importCandidates = nil })
         }
-        .sheet(isPresented: $browsingStore) {
-            ExtensionStoreSheet(onClose: { browsingStore = false })
+        .settingsEditorPanel(isPresented: $browsingStore) {
+            ExtensionStorePanel(onClose: { browsingStore = false })
         }
-        .sheet(isPresented: $editingRegistries) {
-            ExtensionRegistriesSheet(onClose: { editingRegistries = false })
+        .settingsEditorPanel(isPresented: $editingRegistries) {
+            ExtensionRegistriesPanel(onClose: { editingRegistries = false })
         }
         .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectExtension)) { note in
             if let name = note.object as? String { expanded = name }
@@ -772,14 +772,14 @@ struct RaycastImportCandidate: Identifiable {
     var id: String { installed.id }
 }
 
-/// One scan of the local Raycast install, carried as the import sheet's presentation item.
+/// One scan of the local Raycast install, carried as the import panel's presentation item.
 private struct ImportCandidates: Identifiable {
     let id = UUID()
     let entries: [RaycastImportCandidate]
 }
 
 /// Anything not already built starts selected, so the common case is one press.
-private struct ExtensionImportSheet: View {
+private struct ExtensionImportPanel: View {
     let candidates: [RaycastImportCandidate]
     let onImport: ([InstalledExtension]) -> Void
     let onCancel: () -> Void
@@ -799,12 +799,7 @@ private struct ExtensionImportSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("Import from Raycast").font(.title2.weight(.bold))
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            ExtensionSettingsEditorHeader(title: "Import from Raycast", subtitle: subtitle)
 
             if candidates.count > 6 {
                 SettingsFilterField(prompt: "Filter…", query: $filter)
@@ -845,20 +840,26 @@ private struct ExtensionImportSheet: View {
                 Button(allChosen ? "Deselect All" : "Select All") {
                     chosen = allChosen ? [] : Set(candidates.map(\.installed.manifest.name))
                 }
+                .buttonStyle(
+                    ExtensionSettingsEditorButtonStyle(role: .standard, fillsWidth: false)
+                )
                 .disabled(candidates.isEmpty)
                 Spacer()
                 Button("Cancel", action: onCancel)
+                    .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .cancel))
                     .keyboardShortcut(.cancelAction)
                 Button("Import \(chosen.isEmpty ? "" : "(\(chosen.count))")") {
                     onImport(
                         candidates.map(\.installed).filter { chosen.contains($0.manifest.name) })
                 }
+                .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .primary))
                 .keyboardShortcut(.defaultAction)
                 .disabled(chosen.isEmpty)
             }
         }
-        .padding(Theme.Spacing.xxl)
+        .padding(Theme.Spacing.dialogInset)
         .frame(width: Theme.Size.editorSheetWidth)
+        .extensionSettingsEditorPanelSurface()
         .onAppear {
             // Once: re-seeding on every render would fight the user's own deselection.
             guard !seeded else { return }

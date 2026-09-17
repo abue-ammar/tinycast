@@ -45,13 +45,13 @@ resolution-independent by construction.
 | `Model/WindowLayoutGeometry.swift` | Foundation + CoreGraphics | **Pure.** `resolve` and its inverse |
 | `Model/WindowLayoutPlan.swift` | Foundation + CoreGraphics | **Pure.** What a run will do, decided before any write |
 | `Model/WindowLayoutStore.swift` | Foundation | The library, as JSON in `UserDefaults` |
-| `Model/WindowLayoutDraft.swift` | Foundation + CoreGraphics | One in-flight edit, owned by the sheet |
+| `Model/WindowLayoutDraft.swift` | Foundation + CoreGraphics | One in-flight edit, owned by the panel |
 | `Service/AXWindowAccess.swift` | AppKit + ApplicationServices | Every `AXUIElement` call, shared with the mover |
 | `Service/AXScreens.swift` | AppKit + ColorSync | `AXGeometry`, and displays with their UUIDs |
 | `Service/WindowInventory.swift` | AppKit + ApplicationServices | What is on screen, read once per gesture |
 | `Service/WindowLayoutRunner.swift` | AppKit | Applies a plan; opens what isn't running |
 | `UI/WindowLayoutCoordinator.swift` | AppKit | The one run funnel, the library, the editor handoff |
-| `Settings/WindowLayout*.swift` | SwiftUI | The pane's section and the editor sheet |
+| `Settings/WindowLayout*.swift` | SwiftUI | The pane's section and the editor panel |
 
 The first seven compile into `Tests/window-layout-test.swift`, so none of them may gain an AppKit,
 SwiftUI or `NSScreen` dependency.
@@ -139,7 +139,7 @@ invariant true for every frame in the pass.
 
 **Create Layout from Current Windows** is `describe` applied to the desktop. It reads every window
 that is `AXStandardWindow`, not minimized, not natively fullscreen, reports geometry, and is
-positionable — a stricter filter than the mover's, because a Save sheet must never become an entry.
+positionable — a stricter filter than the mover's, because a Save panel must never become an entry.
 Candidates come from `AppLauncher.quitAllTargets()`'s rule, excluded **by pid** rather than by
 activation policy, since opening About flips Tinycast itself to `.regular`.
 
@@ -153,12 +153,12 @@ Capture never saves silently — the draft opens in the editor so it can be seen
 
 ## The editor
 
-A settings sheet at `Theme.Size.layoutEditorSheet`, presented from the Window Management pane so the
+A Settings editor panel at `Theme.Size.layoutEditorSheet`, presented from Window Management so the
 two launcher commands can open it too. Two columns split two to one: a read-only preview, and the
 inspector. Both the width and the height are stated — the inspector reveals four field groups the
-moment an app is picked, and a sheet sized to its content would resize under the pointer.
+moment an app is picked, and a panel sized to its content would resize under the pointer.
 
-- **The preview is handed its screens once** by the sheet and re-reads them only on
+- **The preview is handed its screens once** by the panel and re-reads them only on
   `didChangeScreenParameters`. Resolving displays inside `body` would cost an AX round trip per
   keystroke.
 - **The plate is the display**, drawn at its own aspect ratio and letterboxed inside the box — fit,

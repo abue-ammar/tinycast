@@ -7,7 +7,7 @@ struct AIConnectionEditorTarget: Identifiable {
     var id: UUID { connection.id }
 }
 
-struct AIConnectionEditorSheet: View {
+struct AIConnectionEditorPanel: View {
     let target: AIConnectionEditorTarget
     let onSave: (AIConnection, String, Bool) -> String?
     let onCancel: () -> Void
@@ -34,11 +34,21 @@ struct AIConnectionEditorSheet: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            SettingsEditorHeader(
+                title: target.isNew ? "Add API Connection" : "Edit API Connection"
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.dialogInset)
+            .padding(.top, Theme.Spacing.dialogInset)
+            .padding(.bottom, Theme.Spacing.xl)
+
             Form {
                 Section {
                     editorField("Name") {
                         TextField(
-                            "Name", text: $connection.name, prompt: Text("Optional label"))
+                            "Name", text: $connection.name, prompt: Text("Optional label")
+                        )
+                        .settingsEditorTextField()
                     }
                     editorField("Provider") {
                         Picker("Provider", selection: $connection.provider) {
@@ -51,11 +61,15 @@ struct AIConnectionEditorSheet: View {
                     editorField("Base URL") {
                         TextField(
                             "Base URL", text: $connection.baseURL,
-                            prompt: Text(connection.provider.defaultBaseURL))
+                            prompt: Text(connection.provider.defaultBaseURL)
+                        )
+                        .settingsEditorTextField()
                     }
                     editorField("API Key") {
                         SecureField(
-                            "API Key", text: $key, prompt: Text(apiKeyPlaceholder))
+                            "API Key", text: $key, prompt: Text(apiKeyPlaceholder)
+                        )
+                        .settingsEditorTextField()
                     }
                     if storedKeyMatchesTarget {
                         Label("A key is already stored in Keychain", systemImage: "lock.fill")
@@ -73,8 +87,6 @@ struct AIConnectionEditorSheet: View {
                     if let error {
                         Text(error).foregroundStyle(.orange)
                     }
-                } header: {
-                    Text(target.isNew ? "Add API Connection" : "Edit API Connection")
                 }
 
                 Section {
@@ -100,16 +112,21 @@ struct AIConnectionEditorSheet: View {
                 }
             }
             .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
 
             Divider()
-            HStack(spacing: Theme.Spacing.lg) {
-                Spacer()
-                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
-                Button("Save", action: save).keyboardShortcut(.defaultAction)
+            HStack(spacing: Theme.Spacing.md) {
+                Button("Cancel", action: onCancel)
+                    .buttonStyle(.modalAction(.cancel))
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: save)
+                    .buttonStyle(.modalAction(.primary))
+                    .keyboardShortcut(.defaultAction)
             }
-            .padding(Theme.Spacing.xl)
+            .padding(Theme.Spacing.dialogInset)
         }
         .frame(width: 620, height: 540)
+        .settingsEditorPanelSurface()
         .task(id: discoveryRevision) {
             try? await Task.sleep(for: .milliseconds(450))
             guard !Task.isCancelled else { return }
@@ -156,6 +173,7 @@ struct AIConnectionEditorSheet: View {
                         "Find a model", text: $modelQuery,
                         prompt: Text(modelSearchPlaceholder)
                     )
+                    .settingsEditorTextField()
                     .onSubmit { addExactMatch(from: models) }
                 }
                 modelSearchResults(models)
@@ -222,6 +240,7 @@ struct AIConnectionEditorSheet: View {
     private var manualModelField: some View {
         editorField("Model ID") {
             TextField("Model ID", text: $modelQuery, prompt: Text(modelPlaceholder))
+                .settingsEditorTextField()
                 .onSubmit(addManualModel)
         }
     }
@@ -232,7 +251,6 @@ struct AIConnectionEditorSheet: View {
         LabeledContent {
             content()
                 .labelsHidden()
-                .textFieldStyle(.roundedBorder)
                 // LabeledContent right-aligns its value text, caret and all; a field reads left.
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .trailing)

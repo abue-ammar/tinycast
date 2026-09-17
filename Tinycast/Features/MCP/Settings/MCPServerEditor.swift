@@ -6,7 +6,7 @@ struct MCPServerEditorTarget: Identifiable {
     var id: UUID { server.id }
 }
 
-/// Adds or edits one server, and can prove it connects before the sheet is dismissed.
+/// Adds or edits one server, and can prove it connects before the panel is dismissed.
 struct MCPServerEditor: View {
     let target: MCPServerEditorTarget
     let onSave: (MCPServer, MCPSecretStore.Secrets) -> String?
@@ -75,10 +75,19 @@ struct MCPServerEditor: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            SettingsEditorHeader(
+                title: target.isNew ? "Add MCP Server" : "Edit MCP Server"
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Theme.Spacing.dialogInset)
+            .padding(.top, Theme.Spacing.dialogInset)
+            .padding(.bottom, Theme.Spacing.xl)
+
             Form {
                 Section {
                     field("Name") {
                         TextField("Name", text: $name, prompt: Text("GitHub"))
+                            .settingsEditorTextField()
                     }
                     field("Handle") {
                         Text("@\(MCPSlug.normalize(name.isEmpty ? target.server.slug : name))")
@@ -94,32 +103,38 @@ struct MCPServerEditor: View {
                     if kind == .http {
                         field("URL") {
                             TextField("URL", text: $url, prompt: Text("https://example.com/mcp"))
+                                .settingsEditorTextField()
                         }
                         field("Header") {
                             TextField("Header", text: $headerName, prompt: Text("Authorization"))
+                                .settingsEditorTextField()
                         }
                         field("Value") {
                             SecureField("Value", text: $headerValue, prompt: Text("Bearer …"))
+                                .settingsEditorTextField()
                         }
                     } else {
                         field("Command") {
                             TextField("Command", text: $command, prompt: Text("npx"))
+                                .settingsEditorTextField()
                         }
                         field("Arguments") {
                             TextField(
                                 "Arguments", text: $argumentText,
-                                prompt: Text("-y @modelcontextprotocol/server-filesystem ~/Desktop"))
+                                prompt: Text("-y @modelcontextprotocol/server-filesystem ~/Desktop")
+                            )
+                            .settingsEditorTextField()
                         }
                         field("Environment") {
                             TextField(
                                 "Environment", text: $environmentText,
                                 prompt: Text("GITHUB_TOKEN=…"), axis: .vertical
                             )
+                            .textFieldStyle(.plain)
                             .lineLimit(2...5)
+                            .settingsEditorTextArea(height: 72)
                         }
                     }
-                } header: {
-                    Text(target.isNew ? "Add MCP Server" : "Edit MCP Server")
                 } footer: {
                     Text(
                         kind == .http
@@ -158,16 +173,21 @@ struct MCPServerEditor: View {
                 }
             }
             .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
 
             Divider()
-            HStack(spacing: Theme.Spacing.lg) {
-                Spacer()
-                Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
-                Button("Save", action: save).keyboardShortcut(.defaultAction)
+            HStack(spacing: Theme.Spacing.md) {
+                Button("Cancel", action: onCancel)
+                    .buttonStyle(.modalAction(.cancel))
+                    .keyboardShortcut(.cancelAction)
+                Button("Save", action: save)
+                    .buttonStyle(.modalAction(.primary))
+                    .keyboardShortcut(.defaultAction)
             }
-            .padding(Theme.Spacing.xl)
+            .padding(Theme.Spacing.dialogInset)
         }
         .frame(width: 620, height: 560)
+        .settingsEditorPanelSurface()
     }
 
     @ViewBuilder private var probeLabel: some View {
@@ -188,7 +208,12 @@ struct MCPServerEditor: View {
     }
 
     private func field(_ label: String, @ViewBuilder content: () -> some View) -> some View {
-        LabeledContent(label) { content() }
+        LabeledContent(label) {
+            content()
+                .labelsHidden()
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
     }
 
     private var draft: (server: MCPServer, secrets: MCPSecretStore.Secrets) {

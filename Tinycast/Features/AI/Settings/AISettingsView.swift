@@ -48,8 +48,8 @@ struct AISettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.ai)
-        .sheet(isPresented: $providersPresented) {
-            providersSheet
+        .settingsEditorPanel(isPresented: $providersPresented) {
+            providersPanel
         }
         .onAppear {
             core.applyInstalledAILifecycle()
@@ -195,34 +195,34 @@ struct AISettingsView: View {
         }
     }
 
-    private var providersSheet: some View {
+    private var providersPanel: some View {
         @Bindable var settings = settings
         return VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text("AI Providers").font(.title2.weight(.bold))
-                Text("Use an installed account or connect an API endpoint.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, Theme.Spacing.xxl)
-            .padding(.top, Theme.Spacing.xxl)
+            SettingsEditorHeader(
+                title: "AI Providers",
+                subtitle: "Use an installed account or connect an API endpoint."
+            )
+            .padding(.horizontal, Theme.Spacing.dialogInset)
+            .padding(.top, Theme.Spacing.dialogInset)
 
             Form {
                 installedAISection
                 apiConnectionsSection
             }
             .formStyle(.grouped)
+            .scrollContentBackground(.hidden)
 
-            HStack {
-                Spacer()
+            HStack(spacing: Theme.Spacing.md) {
                 Button("Done") { providersPresented = false }
+                    .buttonStyle(.modalAction(.primary))
                     .keyboardShortcut(.defaultAction)
             }
-            .padding(Theme.Spacing.xxl)
+            .padding(Theme.Spacing.dialogInset)
         }
         .frame(width: Theme.Size.editorSheetWidth, height: 600)
-        .sheet(item: $editor) { target in
-            AIConnectionEditorSheet(
+        .settingsEditorPanelSurface()
+        .settingsEditorPanel(item: $editor) { target in
+            AIConnectionEditorPanel(
                 target: target,
                 onSave: saveConnection,
                 onCancel: { editor = nil })

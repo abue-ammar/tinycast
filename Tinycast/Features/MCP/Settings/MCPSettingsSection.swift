@@ -48,7 +48,7 @@ struct MCPSettingsSection: View {
             .font(.caption)
             .foregroundStyle(.secondary)
         }
-        .sheet(item: $editor) { target in
+        .settingsEditorPanel(item: $editor) { target in
             MCPServerEditor(target: target, onSave: save, onCancel: { editor = nil })
         }
         .confirmationDialog(
@@ -65,7 +65,7 @@ struct MCPSettingsSection: View {
         Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } })
     }
 
-    /// A returned message is shown in the sheet; nil closes it.
+    /// A returned message is shown in the panel; nil closes it.
     private func save(_ server: MCPServer, _ secrets: MCPSecretStore.Secrets) -> String? {
         do {
             try MCPSecretStore().save(secrets, for: server.id)

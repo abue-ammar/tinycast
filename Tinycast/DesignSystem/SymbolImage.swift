@@ -4,17 +4,26 @@ import SwiftUI
 struct SymbolImage: View {
     let name: String
     let size: CGFloat
+    var monochrome = false
 
     var body: some View {
         if NSImage(systemSymbolName: name, accessibilityDescription: nil) == nil {
-            Image(name)
-                .resizable()
-                .scaledToFit()
-                .frame(width: size, height: size)
+            if monochrome {
+                Image(name)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size, height: size)
+            } else {
+                Image(name)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size, height: size)
+            }
         } else {
             Image(systemName: name)
                 .font(.system(size: size, weight: .regular))
-                .symbolRenderingMode(.hierarchical)
+                .symbolRenderingMode(monochrome ? .monochrome : .hierarchical)
         }
     }
 }

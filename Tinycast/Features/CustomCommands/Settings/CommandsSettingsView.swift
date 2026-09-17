@@ -67,8 +67,8 @@ struct CommandsSettingsView: View {
         .formStyle(.grouped)
         .settingsScrollTarget(.commands)
         .releasesFocusOnOutsideClick()
-        .sheet(item: $editor) { target in
-            CustomCommandEditorSheet(command: target.command)
+        .settingsEditorPanel(item: $editor) { target in
+            CustomCommandEditorPanel(command: target.command)
         }
         .alert(item: $pendingDeletion) { command in
             Alert(

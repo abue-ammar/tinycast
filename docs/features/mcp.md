@@ -110,7 +110,7 @@ that must arrive as **one** user turn however many of them there are.
 
 `MCPSettingsSection` is a section inside Settings → AI, the way `AICommandSection` is. Each row leads
 with the handle, because that is the half a reader has to type, then the live status and the
-transport. `MCPServerEditor` is the sheet: name, HTTP or command, the credential, enabled, trust, and
+transport. `MCPServerEditor` is the editor panel: name, HTTP or command, the credential, enabled, trust, and
 a Test Connection button that runs a real handshake so a typo is caught there rather than in the
 middle of a conversation.
 

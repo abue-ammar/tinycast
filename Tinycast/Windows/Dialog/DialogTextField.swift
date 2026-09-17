@@ -16,9 +16,9 @@ private struct DialogTextField: ViewModifier {
             .labelsHidden()
             .font(metrics.typography.rowTitle)
             .padding(.horizontal, metrics.spacing.lg)
-            .frame(height: metrics.size.barButtonHeight)
+            .frame(height: metrics.size.dialogButtonHeight)
             .background(
-                RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                     .fill(Theme.Colors.controlSurface))
     }
 }

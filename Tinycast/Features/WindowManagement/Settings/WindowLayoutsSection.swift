@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The layout library, inside the Window Management pane: layouts belong to window management.
 struct WindowLayoutsSection: View {
+    let onEdit: (WindowLayout?) -> Void
     let onDelete: (WindowLayout) -> Void
 
     @Environment(WindowLayoutStore.self) private var store
@@ -29,12 +30,15 @@ struct WindowLayoutsSection: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(results) { layout in
-                    WindowLayoutSettingsRow(layout: layout, onDelete: { onDelete(layout) })
+                    WindowLayoutSettingsRow(
+                        layout: layout,
+                        onEdit: { onEdit(layout) },
+                        onDelete: { onDelete(layout) })
                 }
             }
 
             Button {
-                core.windowLayoutCoordinator.editWindowLayout(nil)
+                onEdit(nil)
             } label: {
                 SettingsRowTitle(.windowManagementLayouts, "New Layout")
             }
@@ -65,6 +69,7 @@ struct WindowLayoutsSection: View {
 /// One layout's shortcut, launcher checkbox and actions, shaped like the window-command row.
 private struct WindowLayoutSettingsRow: View {
     let layout: WindowLayout
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     @Environment(AppCore.self) private var core
@@ -85,9 +90,7 @@ private struct WindowLayoutSettingsRow: View {
             .help("Run this layout")
             .accessibilityLabel("Run \(layout.name)")
 
-            Button {
-                core.windowLayoutCoordinator.editWindowLayout(layout)
-            } label: {
+            Button(action: onEdit) {
                 Image(systemName: "pencil")
             }
             .buttonStyle(.plain)

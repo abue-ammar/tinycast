@@ -46,6 +46,7 @@ struct InterfaceSizeTests {
         expect(m.spacing.md, Theme.Spacing.md, "spacing.md")
         expect(m.spacing.lg, Theme.Spacing.lg, "spacing.lg")
         expect(m.spacing.xl, Theme.Spacing.xl, "spacing.xl")
+        expect(m.spacing.dialogInset, Theme.Spacing.dialogInset, "spacing.dialogInset")
         expect(m.spacing.xxl, Theme.Spacing.xxl, "spacing.xxl")
         expect(m.spacing.xxxl, Theme.Spacing.xxxl, "spacing.xxxl")
         expect(
@@ -69,6 +70,7 @@ struct InterfaceSizeTests {
         expect(m.radius.menuRow, Theme.Radius.menuRow, "radius.menuRow")
         expect(m.radius.barControl, Theme.Radius.barControl, "radius.barControl")
         expect(m.radius.menuPanel, Theme.Radius.menuPanel, "radius.menuPanel")
+        expect(m.radius.dialogSymbol, Theme.Radius.dialogSymbol, "radius.dialogSymbol")
         expect(m.radius.dialog, Theme.Radius.dialog, "radius.dialog")
         expect(m.radius.thumbnail, Theme.Radius.thumbnail, "radius.thumbnail")
         expect(m.radius.glyph, Theme.Radius.glyph, "radius.glyph")
@@ -135,13 +137,22 @@ struct InterfaceSizeTests {
         expect(
             m.size.quickActionPanelMinBody, Theme.Size.quickActionPanelMinBody,
             "size.quickActionPanelMinBody")
+        expect(
+            m.size.dialogCompactWidth, Theme.Size.dialogCompactWidth,
+            "size.dialogCompactWidth")
         expect(m.size.dialogWidth, Theme.Size.dialogWidth, "size.dialogWidth")
+        expect(
+            m.size.dialogButtonHeight, Theme.Size.dialogButtonHeight,
+            "size.dialogButtonHeight")
+        expect(m.size.dialogSymbol, Theme.Size.dialogSymbol, "size.dialogSymbol")
+        expect(
+            m.size.dialogSymbolContainer, Theme.Size.dialogSymbolContainer,
+            "size.dialogSymbolContainer")
         expect(m.size.dialogIcon, Theme.Size.dialogIcon, "size.dialogIcon")
         expect(m.size.hudMaxWidth, Theme.Size.hudMaxWidth, "size.hudMaxWidth")
         expect(m.size.hudWidth, Theme.Size.hudWidth, "size.hudWidth")
         expect(m.size.hudHeight, Theme.Size.hudHeight, "size.hudHeight")
         expect(m.size.volumeTrackHeight, Theme.Size.volumeTrackHeight, "size.volumeTrackHeight")
-        expect(m.size.volumeKnob, Theme.Size.volumeKnob, "size.volumeKnob")
         expect(m.size.volumeReadout, Theme.Size.volumeReadout, "size.volumeReadout")
 
         expect(m.typography.searchFieldSize, Theme.Typography.searchFieldSize, "typography.searchField")
@@ -223,6 +234,11 @@ struct InterfaceSizeTests {
             expect(
                 m.size.menuRowHeight, m.size.menuIcon + m.spacing.md * 2,
                 "a menu row is its glyph slot plus breathing room at \(size.rawValue)")
+            let dialogButtonReduction =
+                ((Theme.Size.menuButton - Theme.Size.dialogButtonHeight) * size.scale).rounded()
+            expect(
+                m.size.dialogButtonHeight, m.size.menuButton - dialogButtonReduction,
+                "a dialog button stays the scaled reduction below a menu button at \(size.rawValue)")
 
             let form = ExtensionFormMetrics(scale: size.scale)
             expect(
@@ -247,6 +263,7 @@ struct InterfaceSizeTests {
             ("spacing.xxs", m.spacing.xxs), ("spacing.xs", m.spacing.xs),
             ("spacing.sm", m.spacing.sm), ("spacing.md", m.spacing.md),
             ("spacing.lg", m.spacing.lg), ("spacing.xl", m.spacing.xl),
+            ("spacing.dialogInset", m.spacing.dialogInset),
             ("spacing.xxl", m.spacing.xxl), ("spacing.xxxl", m.spacing.xxxl),
             ("spacing.sectionHeaderBottom", m.spacing.sectionHeaderBottom),
             ("spacing.sectionSpacing", m.spacing.sectionSpacing),
@@ -257,6 +274,7 @@ struct InterfaceSizeTests {
             ("radius.emojiCell", m.radius.emojiCell), ("radius.menu", m.radius.menu),
             ("radius.menuRow", m.radius.menuRow),
             ("radius.barControl", m.radius.barControl), ("radius.menuPanel", m.radius.menuPanel),
+            ("radius.dialogSymbol", m.radius.dialogSymbol),
             ("radius.dialog", m.radius.dialog), ("radius.thumbnail", m.radius.thumbnail),
             ("radius.glyph", m.radius.glyph), ("radius.attachmentChip", m.radius.attachmentChip),
             ("radius.card", m.radius.card), ("radius.keyCap", m.radius.keyCap),
@@ -295,11 +313,16 @@ struct InterfaceSizeTests {
             ("size.quickActionScrollFade", m.size.quickActionScrollFade),
             ("size.quickActionPanelBody", m.size.quickActionPanelBody),
             ("size.quickActionPanelMinBody", m.size.quickActionPanelMinBody),
-            ("size.dialogWidth", m.size.dialogWidth), ("size.dialogIcon", m.size.dialogIcon),
+            ("size.dialogCompactWidth", m.size.dialogCompactWidth),
+            ("size.dialogWidth", m.size.dialogWidth),
+            ("size.dialogButtonHeight", m.size.dialogButtonHeight),
+            ("size.dialogSymbol", m.size.dialogSymbol),
+            ("size.dialogSymbolContainer", m.size.dialogSymbolContainer),
+            ("size.dialogIcon", m.size.dialogIcon),
             ("size.hudMaxWidth", m.size.hudMaxWidth), ("size.hudWidth", m.size.hudWidth),
             ("size.hudHeight", m.size.hudHeight),
             ("size.volumeTrackHeight", m.size.volumeTrackHeight),
-            ("size.volumeKnob", m.size.volumeKnob), ("size.volumeReadout", m.size.volumeReadout)
+            ("size.volumeReadout", m.size.volumeReadout)
         ]
     }
 }

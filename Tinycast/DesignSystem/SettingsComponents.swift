@@ -1,6 +1,6 @@
 import SwiftUI
 
-// The few pieces more than one Settings pane needs; everything else is a stock `Form` section.
+// The few pieces more than one Settings pane or editor needs; everything else stays feature-owned.
 
 /// Not `LabeledContent`: its selectable text field eats the taps a `ShortcutRecorder` needs.
 struct SettingsRow<Icon: View, Trailing: View>: View {
@@ -57,6 +57,71 @@ extension View {
     /// Dims as well as disables; `.disabled` alone leaves the title at full strength.
     func settingsEnabled(_ isEnabled: Bool) -> some View {
         disabled(!isEnabled).opacity(isEnabled ? 1 : 0.45)
+    }
+
+    func settingsEditorTextField() -> some View {
+        modifier(SettingsEditorTextField())
+    }
+
+    func settingsEditorTextArea(height: CGFloat) -> some View {
+        modifier(SettingsEditorTextArea(height: height))
+    }
+
+    func settingsEditorPanelSurface() -> some View {
+        modifier(SettingsEditorPanelSurface())
+    }
+}
+
+struct SettingsEditorHeader: View {
+    let title: String
+    var subtitle: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+            Text(title)
+                .font(Theme.Typography.panelTitle)
+            if let subtitle {
+                Text(subtitle)
+                    .font(Theme.Typography.rowTitle)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+private struct SettingsEditorTextField: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .textFieldStyle(.plain)
+            .padding(.horizontal, Theme.Spacing.lg)
+            .frame(height: Theme.Size.dialogButtonHeight)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                    .fill(Theme.Colors.controlSurface))
+    }
+}
+
+private struct SettingsEditorTextArea: ViewModifier {
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .scrollContentBackground(.hidden)
+            .padding(Theme.Spacing.sm)
+            .frame(height: height)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                    .fill(Theme.Colors.controlSurface))
+    }
+}
+
+private struct SettingsEditorPanelSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous)
+        content
+            .background(Theme.Colors.panelScrim, in: shape)
+            .glassEffect(.regular, in: shape)
     }
 }
 

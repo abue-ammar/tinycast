@@ -36,7 +36,7 @@ bundle-scoped `UserDefaults`. Each command has a stable UUID. Its launcher entry
 `hotkey.customCommand.<uuid>` plus the `boundCustomCommandIDs` index.
 
 Editing preserves the UUID and therefore its alias, favorite, visibility, and hotkey references. The row's
-**Enabled** checkbox is the only writer of `isEnabled`, so the editor sheet carries the flag through a
+**Enabled** checkbox is the only writer of `isEnabled`, so the editor panel carries the flag through a
 save rather than offering a second control for it. Deleting
 goes through `AppCore`, which unregisters the hotkey and clears those references before removing the
 command. Native settings backups include both commands and bindings; import warns before accepting

@@ -23,6 +23,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var md: CGFloat { scaledPoints(Theme.Spacing.md, scale) }
         var lg: CGFloat { scaledPoints(Theme.Spacing.lg, scale) }
         var xl: CGFloat { scaledPoints(Theme.Spacing.xl, scale) }
+        var dialogInset: CGFloat { scaledPoints(Theme.Spacing.dialogInset, scale) }
         var xxl: CGFloat { scaledPoints(Theme.Spacing.xxl, scale) }
         var xxxl: CGFloat { scaledPoints(Theme.Spacing.xxxl, scale) }
         var sectionHeaderBottom: CGFloat { scaledPoints(Theme.Spacing.sectionHeaderBottom, scale) }
@@ -42,6 +43,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var menuRow: CGFloat { scaledPoints(Theme.Radius.menuRow, scale) }
         var barControl: CGFloat { scaledPoints(Theme.Radius.barControl, scale) }
         var menuPanel: CGFloat { scaledPoints(Theme.Radius.menuPanel, scale) }
+        var dialogSymbol: CGFloat { scaledPoints(Theme.Radius.dialogSymbol, scale) }
         var dialog: CGFloat { scaledPoints(Theme.Radius.dialog, scale) }
         var thumbnail: CGFloat { scaledPoints(Theme.Radius.thumbnail, scale) }
         var glyph: CGFloat { scaledPoints(Theme.Radius.glyph, scale) }
@@ -105,13 +107,21 @@ struct InterfaceMetrics: Equatable, Sendable {
         var quickActionPanelBody: CGFloat { scaledPoints(Theme.Size.quickActionPanelBody, scale) }
         var quickActionPanelMinBody: CGFloat { scaledPoints(Theme.Size.quickActionPanelMinBody, scale) }
 
+        var dialogCompactWidth: CGFloat { scaledPoints(Theme.Size.dialogCompactWidth, scale) }
         var dialogWidth: CGFloat { scaledPoints(Theme.Size.dialogWidth, scale) }
+        var dialogButtonHeight: CGFloat {
+            menuButton
+                - scaledPoints(Theme.Size.menuButton - Theme.Size.dialogButtonHeight, scale)
+        }
+        var dialogSymbol: CGFloat { scaledPoints(Theme.Size.dialogSymbol, scale) }
+        var dialogSymbolContainer: CGFloat {
+            scaledPoints(Theme.Size.dialogSymbolContainer, scale)
+        }
         var dialogIcon: CGFloat { scaledPoints(Theme.Size.dialogIcon, scale) }
         var hudMaxWidth: CGFloat { scaledPoints(Theme.Size.hudMaxWidth, scale) }
         var hudWidth: CGFloat { scaledPoints(Theme.Size.hudWidth, scale) }
         var hudHeight: CGFloat { scaledPoints(Theme.Size.hudHeight, scale) }
         var volumeTrackHeight: CGFloat { scaledPoints(Theme.Size.volumeTrackHeight, scale) }
-        var volumeKnob: CGFloat { scaledPoints(Theme.Size.volumeKnob, scale) }
         var volumeReadout: CGFloat { scaledPoints(Theme.Size.volumeReadout, scale) }
     }
 
