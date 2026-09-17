@@ -484,6 +484,31 @@ struct ExtensionTests {
             "a loose action ahead of any submenu keeps the primary a direct action",
             looseActions.first?.enclosingSubmenuTitle == nil,
             String(describing: looseActions.first?.enclosingSubmenuTitle))
+
+        // Mirrors ExtensionCommandScreen.primaryActionTitle/activate(at:), unreachable from here.
+        func primaryActionOutcome(_ actions: [ExtensionAction]) -> (title: String, opensPanel: Bool)
+        {
+            guard let primary = actions.first else { return ("Run", false) }
+            return (
+                primary.enclosingSubmenuTitle ?? primary.title,
+                primary.enclosingSubmenuTitle != nil)
+        }
+
+        let submenuOutcome = primaryActionOutcome(actions)
+        check(
+            "a submenu-backed primary's title is the submenu's, not the leaf's",
+            submenuOutcome.title == "Open…", submenuOutcome.title)
+        check(
+            "⏎ on a submenu-backed primary opens the actions panel instead of dispatching",
+            submenuOutcome.opensPanel, "\(submenuOutcome)")
+
+        let looseOutcome = primaryActionOutcome(looseActions)
+        check(
+            "a loose primary's title is its own leaf's",
+            looseOutcome.title == "A2", looseOutcome.title)
+        check(
+            "⏎ on a loose primary dispatches directly, since it never opens the panel",
+            !looseOutcome.opensPanel, "\(looseOutcome)")
     }
 
     static func screenChecks() {
