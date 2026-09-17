@@ -10,8 +10,7 @@ private struct HeaderMenuSymbol: View {
         if let image = NSImage(
             systemSymbolName: SystemSymbolName.resolve(name), accessibilityDescription: nil
         )?
-            .withSymbolConfiguration(configuration)
-        {
+        .withSymbolConfiguration(configuration) {
             Image(nsImage: image)
                 .renderingMode(.template)
                 .frame(width: size, height: size)

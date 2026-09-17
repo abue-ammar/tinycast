@@ -430,9 +430,8 @@ struct RootPaletteView: View {
             .onChange(of: vm.favoriteSlotToken) {
                 if let index = vm.favoriteSlotIndex { performShortcut(.favoriteSlot(index)) }
             }
-            // One optional makes "exactly one menu" structural; this only mirrors it for the panel.
+            // One optional makes "exactly one menu" structural; this only presents it.
             .onChange(of: openMenu) {
-                vm.menuOpen = menuOpen
                 guard menuOpen else { return }
                 syncMenuPanel(presenting: true)
             }
@@ -1028,6 +1027,7 @@ struct RootPaletteView: View {
         menuSelection = row
         vm.noteMenuPresentation()
         openMenu = menu
+        vm.menuOpen = true
     }
 
     private func closeMenus() {
@@ -1035,6 +1035,8 @@ struct RootPaletteView: View {
         openMenu = nil
         argumentOptionsField = nil
         vm.menuQuery = ""
+        // Stated here rather than mirrored later: the window delegate reads it during this turn.
+        vm.menuOpen = false
     }
 
     private func menuQueryChanged() {
@@ -1233,10 +1235,11 @@ struct RootPaletteView: View {
     private func activateMenuItem(_ index: Int) {
         guard let content = menuContent, (0..<content.rowCount).contains(index) else { return }
         guard content.isSelectable(index) else { return }
-        content.activate(index)
+        // Before the action: one opening a window must find the palette key again, or nothing hides it.
         closeMenus()
         // A mouse click on a row takes the caret with it; menus close back into the field.
         if argumentFocused == nil { searchFocused = true }
+        content.activate(index)
     }
 
     /// For the chords the panel hands over as tokens, which work while a menu is open.
