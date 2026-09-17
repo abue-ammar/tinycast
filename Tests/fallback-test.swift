@@ -22,6 +22,7 @@ struct FallbackTests {
         ordering()
         headers()
         verbs()
+        defineFallback()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -124,5 +125,22 @@ struct FallbackTests {
         verbs.append(Fallback.quicklink(UUID()).openVerb)
         check("every fallback names its own action", verbs.allSatisfy { !$0.isEmpty })
         check("the verbs are distinct", Set(verbs).count == verbs.count, "got \(verbs)")
+    }
+
+    static func defineFallback() {
+        let define = Fallback.builtin(.define)
+        check(
+            "define is a query-driven fallback",
+            Fallback(id: "command:define") == define)
+        check("define accepts a word", define.matches(query: "define hello"))
+        check("define is case insensitive", define.matches(query: "DEFINE hello"))
+        check("define rejects a bare keyword", !define.matches(query: "define"))
+        check("define rejects a prefix match", !define.matches(query: "definition hello"))
+        check(
+            "define extracts the whole lookup",
+            DictionaryLookup.word(in: "define hello world") == "hello world")
+        check(
+            "define encodes its lookup URL",
+            DictionaryLookup.url(for: "hello world")?.absoluteString == "dict://hello%20world")
     }
 }

@@ -22,7 +22,7 @@ final class FallbackCoordinator {
     /// The launcher's rows. An empty query is nobody's input, so it earns no section at all.
     func entries(for query: String) -> [(fallback: Fallback, entry: AppEntry)] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
-        return available.filter(store.isEnabled).compactMap { fallback in
+        return available.filter { store.isEnabled($0) && $0.matches(query: query) }.compactMap { fallback in
             entry(for: fallback).map { (fallback, $0) }
         }
     }
@@ -41,6 +41,12 @@ final class FallbackCoordinator {
         case .builtin(.aiChat): core.aiChatCoordinator.ask(query)
         case .builtin(.searchFiles): core.fileSearchCoordinator.show(query: query)
         case .builtin(.runShellCommand): core.customCommandCoordinator.runShellCommand(query)
+        case .builtin(.define):
+            guard let word = DictionaryLookup.word(in: query),
+                let url = DictionaryLookup.url(for: word)
+            else { return }
+            core.paletteCoordinator.hidePalette(restoreFocus: false)
+            AppLauncher.open(url)
         case .quicklink(let id): core.quicklinkCoordinator.openQuicklink(id: id, filling: query)
         }
     }
@@ -68,6 +74,7 @@ final class FallbackCoordinator {
         case .searchFiles: return settings.fileSearchEnabled
         // Its own capability: this shell is not the custom-command library's switch to hold.
         case .runShellCommand: return true
+        case .define: return true
         }
     }
 }

@@ -268,12 +268,12 @@ can't say what it acts on.
 ### Fallbacks
 
 A **fallback** is the other half of the query-driven idea: a command the query is the input for,
-offered under a `Use “…” with…` header **below every result**, whatever the query says. A contextual
-row leads because it recognised the query; a fallback trails because nothing did.
+offered under a `Use “…” with…` header below every result when its query rule matches. A contextual row
+leads because it recognised the query; a fallback trails because nothing did.
 
-`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the three shipped
+`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the four shipped
 destinations and `.quicklink(UUID)` for a user's own. `Builtin` exists rather than a bare `CommandID`
-so `FallbackCoordinator.run` is **exhaustive**: a fourth built-in cannot compile without saying where
+so `FallbackCoordinator.run` is **exhaustive**: a fifth built-in cannot compile without saying where
 its query goes. `Fallback.id` is deliberately the row's own `AppEntry.id`, which is what lets a stored
 order name a live row across a rename or a reinstall.
 
@@ -282,7 +282,12 @@ order name a live row across a rename or a reinstall.
 | AI Chat | a fresh chat, question already sent (`AIChatCoordinator.ask`) | `aiEnabled` |
 | Search Files | the file-search screen, already narrowed | `fileSearchEnabled` |
 | Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
+| Define | macOS Dictionary via its `dict://` URL | query starts with `define ` and has text |
 | a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |
+
+**Define accepts the full text after `define`**, including spaces, and opens the system Dictionary app.
+It uses the app's local dictionaries, so it needs no network request or bundled word list. Translation
+and inline definitions are outside this command's scope.
 
 **A quicklink earns a fallback row by declaring a placeholder**, nothing else —
 `QuicklinkDestination.containsPlaceholder`. `openQuicklink(id:filling:)` assigns the query to the
