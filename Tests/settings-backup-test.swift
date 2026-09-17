@@ -54,6 +54,9 @@ struct SettingsBackupTest {
             mirrored["fileSearchIgnorePatterns"] == .fileSearchIgnorePatterns)
         check("notes enablement rides the settings backup", mirrored["notesEnabled"] == .notesEnabled)
         check(
+            "Markdown rendering rides the settings backup",
+            mirrored["notesRendersMarkdown"] == .notesRendersMarkdown)
+        check(
             "clipboard enablement rides the settings backup",
             mirrored["clipboardEnabled"] == .clipboardEnabled)
         check(

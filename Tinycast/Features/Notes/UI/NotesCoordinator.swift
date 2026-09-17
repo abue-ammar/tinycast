@@ -65,6 +65,7 @@ final class NotesCoordinator {
     }
 
     var activeTitle: String { store.activeTitle }
+    var rendersMarkdown: Bool { settings.notesRendersMarkdown }
     var isSearching: Bool { store.isSearching }
     var visibleNotes: [NoteSummary] {
         store.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty

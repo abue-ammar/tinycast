@@ -11,6 +11,11 @@ struct NotesSettingsView: View {
                     SettingsRowTitle(.notesNotes, "Enable Notes")
                     Text("Keep plain Markdown notes in a floating editor, loaded only when needed.")
                 }
+                Toggle(isOn: $settings.notesRendersMarkdown) {
+                    SettingsRowTitle(.notesNotes, "Render Markdown")
+                    Text("Show formatting as you write. The line you are editing shows its Markdown.")
+                }
+                .settingsEnabled(settings.notesEnabled)
             } header: {
                 SettingsSectionHeader(.notesNotes)
             }
