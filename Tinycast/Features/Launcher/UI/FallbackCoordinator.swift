@@ -1,3 +1,4 @@
+import CoreServices
 import Foundation
 
 /// Owns the launcher's fallback section: what it offers for a query, and where running one goes.
@@ -6,7 +7,7 @@ final class FallbackCoordinator {
     private let store: FallbackStore
     private let quicklinks: QuicklinkStore
     private let settings: AppSettings
-    /// The four destinations a fallback hands its query to; nothing here is this type's own state.
+    /// The three destinations a fallback hands its query to; nothing here is this type's own state.
     private unowned let core: AppCore
 
     init(store: FallbackStore, quicklinks: QuicklinkStore, settings: AppSettings, core: AppCore) {
@@ -22,7 +23,7 @@ final class FallbackCoordinator {
     /// The launcher's rows. An empty query is nobody's input, so it earns no section at all.
     func entries(for query: String) -> [(fallback: Fallback, entry: AppEntry)] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
-        return available.filter { store.isEnabled($0) && $0.matches(query: query) }.compactMap { fallback in
+        return available.filter(store.isEnabled).compactMap { fallback in
             entry(for: fallback).map { (fallback, $0) }
         }
     }
@@ -41,14 +42,19 @@ final class FallbackCoordinator {
         case .builtin(.aiChat): core.aiChatCoordinator.ask(query)
         case .builtin(.searchFiles): core.fileSearchCoordinator.show(query: query)
         case .builtin(.runShellCommand): core.customCommandCoordinator.runShellCommand(query)
-        case .builtin(.define):
-            guard let word = DictionaryLookup.word(in: query),
-                let url = DictionaryLookup.url(for: word)
-            else { return }
-            core.paletteCoordinator.hidePalette(restoreFocus: false)
-            AppLauncher.open(url)
         case .quicklink(let id): core.quicklinkCoordinator.openQuicklink(id: id, filling: query)
         }
+    }
+
+    func definition(for query: String) -> DictionaryDefinition? {
+        guard let word = DictionaryLookup.word(in: query) else { return nil }
+        let term = word as NSString
+        let text =
+            DCSCopyTextDefinition(
+                nil, term as CFString, CFRange(location: 0, length: term.length))?
+            .takeRetainedValue() as String?
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return DictionaryDefinition(word: word, text: trimmed?.isEmpty == false ? trimmed : nil)
     }
 
     /// The section's gear and the row's own action; the palette closes behind the pane.
@@ -74,7 +80,6 @@ final class FallbackCoordinator {
         case .searchFiles: return settings.fileSearchEnabled
         // Its own capability: this shell is not the custom-command library's switch to hold.
         case .runShellCommand: return true
-        case .define: return true
         }
     }
 }

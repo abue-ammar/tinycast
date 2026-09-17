@@ -22,7 +22,7 @@ struct FallbackTests {
         ordering()
         headers()
         verbs()
-        defineFallback()
+        dictionaryQuery()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -127,20 +127,22 @@ struct FallbackTests {
         check("the verbs are distinct", Set(verbs).count == verbs.count, "got \(verbs)")
     }
 
-    static func defineFallback() {
-        let define = Fallback.builtin(.define)
+    static func dictionaryQuery() {
         check(
-            "define is a query-driven fallback",
-            Fallback(id: "command:define") == define)
-        check("define accepts a word", define.matches(query: "define hello"))
-        check("define is case insensitive", define.matches(query: "DEFINE hello"))
-        check("define rejects a bare keyword", !define.matches(query: "define"))
-        check("define rejects a prefix match", !define.matches(query: "definition hello"))
+            "define is a core command, not a fallback",
+            !CommandID.define.isQueryDriven && Fallback(id: "command:define") == nil)
+        check("define accepts a word", DictionaryLookup.word(in: "define hello") == "hello")
+        check("define is case insensitive", DictionaryLookup.word(in: "DEFINE hello") == "hello")
+        check("define rejects a bare keyword", DictionaryLookup.word(in: "define") == nil)
+        check("define rejects a prefix match", DictionaryLookup.word(in: "definition hello") == nil)
         check(
             "define extracts the whole lookup",
             DictionaryLookup.word(in: "define hello world") == "hello world")
         check(
-            "define encodes its lookup URL",
-            DictionaryLookup.url(for: "hello world")?.absoluteString == "dict://hello%20world")
+            "a definition with text is actionable",
+            DictionaryDefinition(word: "hello", text: "a greeting").isActionable)
+        check(
+            "a missing definition is not actionable",
+            !DictionaryDefinition(word: "unknown", text: nil).isActionable)
     }
 }

@@ -1,13 +1,12 @@
 import Foundation
 
-/// A launcher fallback: the typed query is its input, subject to the fallback's query rule.
+/// A launcher fallback: the typed query is its input.
 enum Fallback: Hashable, Sendable {
     /// The shipped destinations, in the order a fresh install offers them.
     enum Builtin: String, CaseIterable, Sendable {
         case aiChat
         case searchFiles
         case runShellCommand
-        case define
 
         /// Where its name and glyph come from, so a fallback row reads like the command it runs.
         var command: CommandID {
@@ -15,27 +14,12 @@ enum Fallback: Hashable, Sendable {
             case .aiChat: return .aiChat
             case .searchFiles: return .searchFiles
             case .runShellCommand: return .runShellCommand
-            case .define: return .define
-            }
-        }
-
-        func matches(query: String) -> Bool {
-            switch self {
-            case .define: return DictionaryLookup.word(in: query) != nil
-            default: return true
             }
         }
     }
 
     case builtin(Builtin)
     case quicklink(UUID)
-
-    func matches(query: String) -> Bool {
-        switch self {
-        case .builtin(let builtin): return builtin.matches(query: query)
-        case .quicklink: return true
-        }
-    }
 
     /// The row's `AppEntry` id, so a stored order outlives a rename and survives a reinstall.
     var id: String {
@@ -63,7 +47,6 @@ enum Fallback: Hashable, Sendable {
         case .builtin(.aiChat): return "Ask AI Chat"
         case .builtin(.searchFiles): return "Search Files"
         case .builtin(.runShellCommand): return "Run Shell Command"
-        case .builtin(.define): return "Define"
         case .quicklink: return "Open Quicklink"
         }
     }
@@ -91,11 +74,11 @@ enum DictionaryLookup {
         else { return nil }
         return String(parts[1])
     }
+}
 
-    static func url(for word: String) -> URL? {
-        guard !word.isEmpty,
-            let encoded = word.addingPercentEncoding(withAllowedCharacters: .urlHostAllowed)
-        else { return nil }
-        return URL(string: "dict://\(encoded)")
-    }
+struct DictionaryDefinition: Equatable, Sendable {
+    let word: String
+    let text: String?
+
+    var isActionable: Bool { text != nil }
 }
