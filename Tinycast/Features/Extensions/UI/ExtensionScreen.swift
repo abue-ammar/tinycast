@@ -238,23 +238,27 @@ struct ExtensionScreen: Equatable {
         var result: [ExtensionAction] = []
         // By node, not title: untitled sections are the common case and must still separate.
         var previousSection: RenderNode.ID?
-        func walk(_ node: RenderNode, section: RenderNode.ID?) {
+        // submenuTitle: the outermost submenu an action sits under, so ⏎ can open it instead.
+        func walk(_ node: RenderNode, section: RenderNode.ID?, submenuTitle: String?) {
             for child in node.children {
                 switch child.type {
                 case "Action":
                     let startsSection = !result.isEmpty && section != previousSection
-                    result.append(ExtensionAction(node: child, startsSection: startsSection))
+                    result.append(
+                        ExtensionAction(
+                            node: child, startsSection: startsSection,
+                            enclosingSubmenuTitle: submenuTitle))
                     previousSection = section
                 case "ActionPanel.Section":
-                    walk(child, section: child.id)
+                    walk(child, section: child.id, submenuTitle: submenuTitle)
                 case "ActionPanel.Submenu":
-                    walk(child, section: section)
+                    walk(child, section: section, submenuTitle: submenuTitle ?? child.string("title"))
                 default:
                     break
                 }
             }
         }
-        walk(panel, section: nil)
+        walk(panel, section: nil, submenuTitle: nil)
         return result
     }
 }
@@ -264,6 +268,8 @@ struct ExtensionAction: Equatable, Identifiable {
     let node: RenderNode
     /// True for the first action after a section boundary, so the menu draws a separator above it.
     let startsSection: Bool
+    /// The outermost enclosing submenu's title, if any, so ⏎ can open it instead of firing.
+    let enclosingSubmenuTitle: String?
 
     var id: Int { node.id }
     var title: String { node.string("title") ?? "Action" }

@@ -72,8 +72,10 @@ struct ExtensionCommandScreen: PaletteScreen {
         ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).first
     }
 
+    /// A submenu reached first is a grouping device, so its title stands in for the leaf's.
     var primaryActionTitle: String {
-        primaryAction(at: vm.selection)?.title ?? "Run"
+        let primary = primaryAction(at: vm.selection)
+        return primary?.enclosingSubmenuTitle ?? primary?.title ?? "Run"
     }
 
     func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }
@@ -125,7 +127,13 @@ struct ExtensionCommandScreen: PaletteScreen {
     }
 
     func activate(at selection: Int) {
-        guard let handler = primaryAction(at: selection)?.handler else { return }
+        guard let primary = primaryAction(at: selection) else { return }
+        if primary.enclosingSubmenuTitle != nil {
+            vm.selection = selection
+            openActions()
+            return
+        }
+        guard let handler = primary.handler else { return }
         extensions.dispatch(handler: handler)
     }
 
