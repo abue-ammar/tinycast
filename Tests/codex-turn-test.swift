@@ -17,11 +17,26 @@ struct CodexTurnTests {
     }
 
     static func main() async {
+        await configuredAPIWithoutAccountConnects()
         await stopBeforeTurnStartedStillInterrupts()
         await aTurnNamedTwiceIsInterruptedOnce()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
+    }
+
+    static func configuredAPIWithoutAccountConnects() async {
+        guard let server = StubServer(mode: "api-auth") else {
+            expect(false, "the stub app-server installs for configured API authentication")
+            return
+        }
+        defer { server.tearDown() }
+
+        let manager = ChatGPTSubscriptionManager(supportDirectory: server.root)
+        await manager.refresh().value
+
+        expect(manager.isConnected, "Codex connects when its configured API credentials need no login")
+        expect(manager.account == nil, "configured API credentials do not invent a Codex account")
     }
 
     /// Stop arrives before anything names the turn, and `turn/start` never answers.

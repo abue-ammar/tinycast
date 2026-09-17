@@ -66,6 +66,12 @@ for (const line of lines()) {
 
     if (method === "thread/start") {
         emit({ id: requestID, result: { thread: { id: THREAD } } });
+    } else if (MODE === "api-auth" && method === "account/read") {
+        emit({ id: requestID, result: { requiresOpenaiAuth: false } });
+    } else if (MODE === "api-auth" && method === "model/list") {
+        emit({ id: requestID, result: { data: [] } });
+    } else if (MODE === "api-auth" && method === "account/rateLimits/read") {
+        emit({ id: requestID, result: {} });
     } else if (method === "turn/start") {
         record(`turn-params:${JSON.stringify(message.params ?? {})}`);
         mark("turn-start-received");

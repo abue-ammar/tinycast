@@ -313,6 +313,16 @@ struct AISettingsView: View {
                         Text(
                             account.planTitle == "API key" ? "Codex API key" : "ChatGPT \(account.planTitle)")
                     }
+                } else {
+                    LabeledContent {
+                        providerActions {
+                            Button("Refresh") { subscription.refresh() }
+                            providerToggle(.codex)
+                        }
+                    } label: {
+                        Text("Codex · Ready")
+                        Text("Uses the API credentials configured in Codex.")
+                    }
                 }
             case .unavailable(let message):
                 LabeledContent {

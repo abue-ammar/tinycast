@@ -39,7 +39,7 @@ final class ChatGPTSubscriptionManager {
         }
     }
 
-    var isConnected: Bool { account != nil && phase == .connected }
+    var isConnected: Bool { phase == .connected }
 
     @discardableResult
     func refresh() -> Task<Void, Never> {
@@ -179,7 +179,7 @@ final class ChatGPTSubscriptionManager {
             method: "account/read", params: ["refreshToken": false])
         guard let rawAccount = response["account"]?.objectValue else {
             forget()
-            return false
+            return response["requiresOpenaiAuth"]?.boolValue == false
         }
         let type = rawAccount["type"]?.stringValue ?? "unknown"
         account = ChatGPTSubscription.Account(

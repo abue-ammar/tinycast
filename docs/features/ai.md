@@ -135,7 +135,7 @@ as `.codex`, so an existing selection survives the rename.
 | Setting | Transport | Default base URL |
 | --- | --- | --- |
 | Apple Intelligence | Foundation Models, on device | none |
-| Codex | installed `codex app-server` | user's Codex account |
+| Codex | installed `codex app-server` | user's configured Codex authentication |
 | Claude | installed `claude -p` | user's Claude login |
 | OpenCode | installed `opencode run` | providers already configured in OpenCode |
 | OpenAI API | OpenAI Chat Completions | `https://api.openai.com/v1` |
@@ -316,7 +316,8 @@ status gates three model aliases; a successful OpenCode model list is both its a
 
 `ChatGPTSubscriptionManager` retains its historical type name but now owns only the installed Codex
 app-server lifecycle and discovered account metadata. Production never sets `CODEX_HOME`, so the
-server uses the same login and credential store as the user's normal Codex command. Tinycast supplies
+server uses the same login and credential store as the user's normal Codex command. A configured API
+route that reports `requiresOpenaiAuth: false` is ready without an account object. Tinycast supplies
 only a private working directory. The server stops after ten idle minutes, when AI is switched off or
 when the app terminates, and restarts on demand. Account state, model availability and rate-limit
 windows come from the supported app-server protocol.
