@@ -14,14 +14,11 @@ import {
   type SharedProps,
 } from "fumadocs-ui/components/dialog/search";
 import { useMemo } from "react";
-import { asset } from "../lib/asset";
 
 // Static search: the whole index ships as a file and the query runs in the
 // browser, because a static export has nothing to ask on the server.
 export default function StaticSearchDialog(props: SharedProps) {
-  // The index is a plain file under the deployed subpath, so the default
-  // "/api/search" would miss it entirely.
-  const client = useMemo(() => staticClient({ from: asset("api/search") }), []);
+  const client = useMemo(() => staticClient({ from: "/api/search" }), []);
   const { search, setSearch, query } = useDocsSearch({ client });
 
   return (

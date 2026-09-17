@@ -5,7 +5,10 @@ export const site = {
   name: "Tinycast",
   tagline: "The essentials, without the bloat.",
   repo: "https://github.com/abue-ammar/tinycast",
-  url: "https://abue-ammar.github.io/tinycast",
+  url: "https://tinycast.dev",
+  // The R2 bucket behind cdn.tinycast.dev. Anything over Workers' 25 MiB
+  // per-asset cap lives here instead of `public/` — see website/README.md.
+  cdn: "https://cdn.tinycast.dev",
   // Shown only until the build-time release lookup resolves, and if it fails.
   fallbackVersion: "v0.9.7",
   platform: "macOS 26+",

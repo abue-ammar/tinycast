@@ -74,13 +74,12 @@ release feed the website already reads is the feed the app reads.
 
 `AppVersion` parses `MAJOR.MINOR.PATCH` and `MAJOR.MINOR.PATCH-beta.N` with semver precedence: a
 prerelease sorts below the release it leads to, and `beta.10` above `beta.9`. Everything else parses
-to nil, which is deliberate — the repo also publishes `v0.9.7-sequoia` for the macOS 15 cask, and
-rejecting the tag is what keeps a beta install from drifting onto the Sequoia build. A release whose
-tag disagrees with its `prerelease` flag is treated as mis-published and skipped.
+to nil, so an off-shape tag can never be offered as an update. A release whose tag disagrees with
+its `prerelease` flag is treated as mis-published and skipped.
 
 The Intel build is *not* a channel. It shares the stable tag, version, bundle id and signature, so it
 resolves to `.stable` like any other; `ReleaseArchitecture` picks its asset, and nothing about
-identity changes. That is why it needed none of the machinery the Sequoia channel did.
+identity changes.
 
 ## Checking
 

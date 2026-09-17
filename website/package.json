@@ -9,7 +9,9 @@
     "start": "next start",
     "lint": "oxlint",
     "format": "prettier --write .",
-    "postinstall": "fumadocs-mdx"
+    "postinstall": "fumadocs-mdx",
+    "deploy": "wrangler deploy",
+    "upload-media": "../Scripts/upload-website-media.sh"
   },
   "dependencies": {
     "clsx": "^2.1.1",
@@ -35,6 +37,7 @@
     "oxlint": "^1.71.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.3.3",
-    "typescript": "~6.0.2"
+    "typescript": "~6.0.2",
+    "wrangler": "^4.134.0"
   }
 }

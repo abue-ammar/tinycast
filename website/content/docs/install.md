@@ -3,8 +3,7 @@ title: Install
 description: Homebrew, the release channels, updates, and the one manual step a direct download needs.
 ---
 
-Tinycast needs **macOS 26 or later**, on Apple silicon or Intel. There is a separate cask for
-macOS 15 Sequoia; see [Older macOS](#older-macos).
+Tinycast needs **macOS 26 or later**, on Apple silicon or Intel.
 
 ## Homebrew
 
@@ -50,16 +49,6 @@ brew install --cask abue-ammar/tinycast/tinycast@beta
 The beta does not share settings with stable. To move your setup across, use
 [Backup](/docs/reference/backup). The two stable casks are the _same_ app, so you can only have one
 of them installed.
-
-### Older macOS
-
-Tinycast also runs on macOS 15 Sequoia through its own cask:
-
-```bash
-brew install --cask abue-ammar/tinycast/tinycast-sequoia
-```
-
-macOS 26 is the main target and gets new features first.
 
 ## Downloading directly
 

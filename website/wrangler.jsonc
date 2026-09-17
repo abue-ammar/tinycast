@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tinycast-website",
+  "compatibility_date": "2026-09-17",
+  // No `main`: an assets-only Worker serves `out/` directly, with no code in the request path.
+  "assets": {
+    "directory": "./out",
+    // `trailingSlash: true` exports every route as a directory index, so /docs/install/ resolves.
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page",
+  },
+  // The apex only. www is a redirect rule in the Cloudflare dashboard, not a second origin.
+  "routes": [{ "pattern": "tinycast.dev", "custom_domain": true }],
+}

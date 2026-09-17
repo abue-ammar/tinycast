@@ -30,7 +30,7 @@ else
 fi
 PREVIOUS="$(gh release list --repo "$REPO" --limit 200 --json tagName,isDraft --jq \
     "[.[] | select(.isDraft | not) | .tagName
-      | select(test(\"-sequoia\") | not) | select(. != \"${TAG}\") | select(${CHANNEL_FILTER})] | first // empty")"
+      | select(. != \"${TAG}\") | select(${CHANNEL_FILTER})] | first // empty")"
 
 # The tag does not exist yet — this runs before `gh release create` makes it.
 NOTES_ARGS=(-f "tag_name=${TAG}" -f "target_commitish=${SHA}")

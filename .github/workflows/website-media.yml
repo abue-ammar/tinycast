@@ -1,0 +1,39 @@
+name: Website media
+
+# Mirrors website/media/ to the R2 bucket behind cdn.tinycast.dev. Anything there is too big for
+# Workers' 25 MiB per-asset cap, so it never ships in the Next.js export. Kept out of the Website
+# workflow on purpose: GitHub's path filter is what stops a docs typo re-uploading tens of megabytes.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/media/**"
+      - "Scripts/upload-website-media.sh"
+      - ".github/workflows/website-media.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: website-media
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install
+        working-directory: website
+        run: npm install
+      # The same script the maintainer runs locally, so there is one upload path and not two.
+      - name: Upload to R2
+        working-directory: website
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npm run upload-media

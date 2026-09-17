@@ -84,11 +84,10 @@ brew tap abue-ammar/tinycast
 
 Then run the one line that matches your Mac:
 
-| Your Mac                                           | Install                                  |
-| -------------------------------------------------- | ---------------------------------------- |
-| Apple silicon, macOS 26 or newer                   | `brew install --cask tinycast`           |
-| Intel, macOS 26                                    | `brew install --cask tinycast-universal` |
-| macOS 15 Sequoia <sub>(no longer maintained)</sub> | `brew install --cask tinycast-sequoia`   |
+| Your Mac                         | Install                                  |
+| -------------------------------- | ---------------------------------------- |
+| Apple silicon, macOS 26 or newer | `brew install --cask tinycast`           |
+| Intel, macOS 26                  | `brew install --cask tinycast-universal` |
 
 Not sure which you have? **Apple menu → About This Mac.** Homebrew checks too, and refuses the
 wrong one.

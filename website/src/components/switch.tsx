@@ -1,7 +1,6 @@
 import { ArrowRight, Info } from "lucide-react";
 import Image from "next/image";
 import { migration } from "../data/migration";
-import { asset } from "../lib/asset";
 import { Link } from "./ui/link";
 import { Section } from "./ui/section";
 
@@ -35,7 +34,7 @@ export function Switch() {
 
         <div className="overflow-hidden rounded-2xl ring-1 ring-border">
           <Image
-            src={asset("import.png")}
+            src="/import.png"
             width={1800}
             height={1192}
             alt="Tinycast's Backup settings pane with a Raycast export selected and a list of categories to import."

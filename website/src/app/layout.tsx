@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { Providers } from "../components/providers";
 import { site } from "../data/site";
-import { asset } from "../lib/asset";
 
 // next/font self-hosts these at build time and generates a metric-matched
 // fallback for each, so there is no third-party request and no layout shift.
@@ -57,7 +56,7 @@ export const metadata: Metadata = {
     images: ["/og.png"],
   },
   robots: { index: true, follow: true },
-  icons: { icon: asset("favicon.svg") },
+  icons: { icon: "/favicon.svg" },
 };
 
 const structuredData = {

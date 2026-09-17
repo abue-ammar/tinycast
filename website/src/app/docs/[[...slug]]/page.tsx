@@ -25,7 +25,9 @@ export default async function Page(props: PageProps<"/docs/[[...slug]]">) {
       <DocsTitle>{page.data.title}</DocsTitle>
       {/* The default `mb-8` leaves the actions floating a long way under the
           description; they belong with the heading block, not adrift from it. */}
-      <DocsDescription className="mb-4">{page.data.description}</DocsDescription>
+      <DocsDescription className="mb-4">
+        {page.data.description}
+      </DocsDescription>
       <div className="flex flex-row items-center gap-2 border-b pb-4">
         <MarkdownCopyButton markdownUrl={markdown} />
         <ViewOptionsPopover
@@ -49,8 +51,17 @@ export async function generateMetadata(props: PageProps<"/docs/[[...slug]]">) {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  // `trailingSlash` is what the host actually serves, so the canonical has to carry it too.
+  const canonical = `${page.url}/`;
+
   return {
     title: page.data.title,
     description: page.data.description,
+    alternates: { canonical },
+    openGraph: {
+      url: canonical,
+      title: page.data.title,
+      description: page.data.description,
+    },
   };
 }

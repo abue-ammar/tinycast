@@ -1,7 +1,6 @@
 # Tinycast website
 
-The marketing page and documentation for Tinycast, at
-<https://abue-ammar.github.io/tinycast/>.
+The marketing page and documentation for Tinycast, at <https://tinycast.dev>.
 
 Next.js (App Router) with a **static export** — there is no server behind the deployed site. Tailwind
 v4 for styling, [Fumadocs](https://fumadocs.dev) for the documentation section.
@@ -10,7 +9,7 @@ v4 for styling, [Fumadocs](https://fumadocs.dev) for the documentation section.
 
 ```sh
 npm install
-npm run dev      # http://localhost:3000/tinycast
+npm run dev      # http://localhost:3000
 ```
 
 `npm install` runs `fumadocs-mdx`, which generates `.source/` from `content/docs/`. That directory is
@@ -60,24 +59,45 @@ use `<kbd>`, which renders through the same keycap component as the marketing pa
 
 ## Deploy
 
-Pushes to `main` touching `website/**` are built and published to GitHub Pages by
-`.github/workflows/website.yml`.
+Pushes to `main` touching `website/**` run `.github/workflows/website.yml`, which does two
+independent things.
 
-Two things are load-bearing and easy to break:
+**Cloudflare — the live site.** `npm run build` exports to `out/`, and `wrangler deploy` publishes it
+as an assets-only Worker (`wrangler.jsonc`): no `main`, so nothing runs in the request path. The
+apex `tinycast.dev` is the Worker's only custom domain; `www` is a redirect rule in the Cloudflare
+dashboard rather than a second origin. The workflow needs `CLOUDFLARE_API_TOKEN` and
+`CLOUDFLARE_ACCOUNT_ID` repo secrets.
 
-- **`public/.nojekyll` must exist.** GitHub Pages runs Jekyll, which ignores directories starting
-  with `_`. Without it, everything under `_next/` 404s and the site renders unstyled.
-- **The workflow uploads `website/out`**, which is where a Next.js export lands.
+**GitHub Pages — the forwarder.** The site used to live at `abue-ammar.github.io/tinycast/`, and
+`redirect/` is what is published there now: a `CNAME` file and nothing else. A custom domain on a
+project site makes GitHub 301 `abue-ammar.github.io/tinycast/<path>` to `tinycast.dev/<path>` from
+its own edge — the repo prefix stripped, the rest of the path, query and fragment carried across,
+and no HTML parsed or JavaScript run. GitHub's `Location` names `http://`, which costs nothing: the
+whole `.dev` TLD is HSTS-preloaded, so browsers upgrade it before the request leaves. **Settings →
+Pages → Custom domain must read `tinycast.dev`**; the file alone is not enough, and GitHub will
+warn that the DNS does not point at Pages, which is correct and can be ignored — the redirect is
+served from `github.io`, not from the custom domain. That job is deliberately separate from the
+Cloudflare one: a failed deploy must not take the forwarder down with it.
 
-The site is served from the `/tinycast/` subpath, set as `basePath` in `next.config.mjs`. `next/link`
-and `next/image` prefix it automatically; a raw URL string does not, which is what `src/lib/asset.ts`
-is for.
+**R2 — big media.** Workers refuses any single asset over 25 MiB, which the 26.5 MiB tour video
+breaks. Media that size lives in `media/` rather than `public/`, so `next build` never copies it
+into `out/`, and is served from the `tinycast-cdn` R2 bucket behind `cdn.tinycast.dev` — a public
+bucket on a custom domain, so nothing runs in the request path there either. `site.cdn` is the only
+place that host is written.
 
-To test the real deployed shape rather than the dev server:
+`.github/workflows/website-media.yml` mirrors the folder on every push that touches it, running the
+same `Scripts/upload-website-media.sh` you can run locally with `npm run upload-media`. It is a
+separate workflow so GitHub's path filter can stop a docs typo from re-uploading tens of megabytes.
+
+**To add a video:** drop it in `media/`, point a `galleryItems` entry at
+`` `${site.cdn}/<name>` ``, push. If its extension is new, add the content type to the script — it
+stops rather than guess, because R2 would otherwise serve it as `octet-stream` and `<video>` would
+refuse to play it.
+
+The site is served from the domain root, so there is no `basePath` and a file in `public/` is
+referenced as `/name.png` directly. To test the exported shape rather than the dev server:
 
 ```sh
 npm run build
-mkdir -p /tmp/pages && cp -r out /tmp/pages/tinycast
-cd /tmp/pages && python3 -m http.server 4321
-# http://localhost:4321/tinycast/
+cd out && python3 -m http.server 4321   # http://localhost:4321/
 ```

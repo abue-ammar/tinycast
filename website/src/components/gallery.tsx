@@ -6,7 +6,6 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Slide } from "yet-another-react-lightbox";
 import { galleryItems, type GalleryItem } from "../data/gallery";
-import { asset } from "../lib/asset";
 import { cn } from "../lib/cn";
 import { Section } from "./ui/section";
 
@@ -14,13 +13,8 @@ import { Section } from "./ui/section";
 const GalleryLightbox = dynamic(() => import("./gallery-lightbox"));
 
 // The grid thumbnail: an explicit thumb, else a video's poster, else the image.
-// `unoptimized` images keep their src verbatim, so `basePath` has to be added
-// here — next/image only prefixes it when the optimizer is in play.
 const tileImage = (item: GalleryItem) =>
-  asset(
-    item.thumb ??
-      (item.type === "video" ? (item.poster ?? item.src) : item.src),
-  );
+  item.thumb ?? (item.type === "video" ? (item.poster ?? item.src) : item.src);
 
 // One gallery item → one lightbox slide. Images carry title/description for the
 // Captions plugin; videos use the Video plugin's `sources` shape.
@@ -28,16 +22,16 @@ function toSlide(item: GalleryItem): Slide {
   if (item.type === "video") {
     return {
       type: "video",
-      poster: item.poster ? asset(item.poster) : undefined,
+      poster: item.poster,
       width: item.width,
       height: item.height,
       title: item.title,
       description: item.caption,
-      sources: [{ src: asset(item.src), type: "video/mp4" }],
+      sources: [{ src: item.src, type: "video/mp4" }],
     };
   }
   return {
-    src: asset(item.src),
+    src: item.src,
     title: item.title,
     description: item.caption,
     width: item.width,

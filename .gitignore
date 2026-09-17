@@ -58,10 +58,11 @@ node_modules/
 *.tmp
 *.orig
 # Website (Next.js). `out/` is the static export, `.source/` is generated from
-# content/docs by fumadocs-mdx on install and build.
+# content/docs by fumadocs-mdx on install and build, `.wrangler/` is local deploy state.
 website/.next/
 website/out/
 website/.source/
+website/.wrangler/
 
 # Real Raycast exports carry the author's clipboard history; the harness builds its own fixtures.
 *.rayconfig

@@ -38,8 +38,7 @@ Three things a release must keep true, or the updater skips it:
 - **It carries a `.zip` asset this Mac can run.** A DMG-only release is not installable and is not
   offered, and an Intel build is offered nothing rather than a thin arm64 zip.
 - **The tag parses as `vMAJOR.MINOR.PATCH` or `vMAJOR.MINOR.PATCH-beta.N`,** and agrees with the
-  `prerelease` flag. `v0.9.7-sequoia` deliberately parses as neither, which is what keeps beta
-  installs off the macOS 15 build.
+  `prerelease` flag. A tag of any other shape is treated as mis-published and skipped.
 - **It is not a draft.**
 
 **Both casks declare `auto_updates true`.** That is Homebrew's flag for an app that manages its own
@@ -115,21 +114,28 @@ read/write** on the tap repo. Without the secret the step logs a warning and ski
 publishes. The `sed` is anchored to `^  version` / `^  sha256`, so a cask's two-space indent on those
 lines is load-bearing.
 
-The three macOS 26 / macOS 15 casks all install `Tinycast.app` under `com.tinycast.app`, so they
-`conflicts_with` one another and Homebrew routes each Mac by `depends_on`: `tinycast` requires
-`arch: :arm64`, `tinycast-universal` takes the Intel Macs, and `tinycast-sequoia` covers macOS 15.
+Both stable casks install `Tinycast.app` under `com.tinycast.app`, so they `conflicts_with` one
+another and Homebrew routes each Mac by `depends_on`: `tinycast` requires `arch: :arm64`, and
+`tinycast-universal` takes the Intel Macs.
 
 ## Website
 
 `.github/workflows/website.yml` builds `website/` (Next.js static export + Tailwind, with Fumadocs for
-the docs section) and deploys it to GitHub Pages at `https://abue-ammar.github.io/tinycast/` on every
-push to `main` that touches `website/`. Enable it once via
-**Settings → Pages → Source = GitHub Actions**.
+the docs section) and deploys it to Cloudflare at `https://tinycast.dev/` on every push to `main`
+that touches `website/`. It needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets.
+
+A second job publishes `website/redirect/` — a lone `CNAME` file — to GitHub Pages, which is what
+makes GitHub 301 every `https://abue-ammar.github.io/tinycast/<path>` to `https://tinycast.dev/<path>`
+at its own edge. Enable it once via **Settings → Pages → Source = GitHub Actions** and
+**Custom domain = tinycast.dev**. See [website/README.md](../website/README.md).
 
 ```sh
 cd website && npm install && npm run dev     # local preview
 ```
 
-The workflow uploads `website/out` — a Next.js export lands there, not in `dist/`. `public/.nojekyll`
-must stay: GitHub Pages runs Jekyll, which ignores `_`-prefixed directories, so without it every
-asset under `_next/` 404s. See [website/README.md](../website/README.md).
+`wrangler deploy` uploads `website/out` — a Next.js export lands there, not in `dist/`. Media over
+Workers' 25 MiB per-asset cap is the exception: it lives in `website/media/`, is served from an R2
+bucket behind `cdn.tinycast.dev`, and is mirrored by its own
+[`website-media.yml`](../.github/workflows/website-media.yml) so this workflow never carries it.
+Both need the same two Cloudflare secrets, and the API token needs **R2 Storage: Edit** on top of
+**Workers Scripts: Edit**.

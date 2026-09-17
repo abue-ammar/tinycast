@@ -3,9 +3,6 @@ description: Suggest an idea
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
-  - type: markdown
-    attributes:
-      value: <sub>⚠️ macOS 15 Sequoia is no longer maintained.</sub>
   - type: textarea
     id: what
     attributes:
