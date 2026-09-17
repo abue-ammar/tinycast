@@ -248,15 +248,7 @@ struct AIConnectionEditorPanel: View {
     private func editorField<Content: View>(
         _ title: String, @ViewBuilder content: () -> Content
     ) -> some View {
-        LabeledContent {
-            content()
-                .labelsHidden()
-                // LabeledContent right-aligns its value text, caret and all; a field reads left.
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        } label: {
-            Text(title).font(.callout.weight(.medium))
-        }
+        SettingsEditorField(title, labelFont: .callout.weight(.medium), content: content)
     }
 
     private func selectedModelRow(_ model: String) -> some View {

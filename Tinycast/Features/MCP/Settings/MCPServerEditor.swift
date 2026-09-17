@@ -132,7 +132,7 @@ struct MCPServerEditor: View {
                             )
                             .textFieldStyle(.plain)
                             .lineLimit(2...5)
-                            .settingsEditorTextArea(height: 72)
+                            .settingsEditorTextArea(height: Theme.Size.editorTextHeight)
                         }
                     }
                 } footer: {
@@ -207,13 +207,10 @@ struct MCPServerEditor: View {
         }
     }
 
-    private func field(_ label: String, @ViewBuilder content: () -> some View) -> some View {
-        LabeledContent(label) {
-            content()
-                .labelsHidden()
-                .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-        }
+    private func field<Content: View>(
+        _ label: String, @ViewBuilder content: () -> Content
+    ) -> some View {
+        SettingsEditorField(label, content: content)
     }
 
     private var draft: (server: MCPServer, secrets: MCPSecretStore.Secrets) {

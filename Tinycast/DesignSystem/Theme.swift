@@ -345,6 +345,8 @@ enum Theme {
         /// Modal separation inside Tinycast: the launcher recedes while its dialog is in front.
         static let dialogDimming = adaptive(
             dark: .srgbInk(0, alpha: 0.34), light: .srgbInk(0, alpha: 0.34))
+        static let dialogTooltipShadow = adaptive(
+            dark: .srgbInk(0, alpha: 0.18), light: .srgbInk(0, alpha: 0.18))
 
         static func panelScrim(transparency: Int) -> Color {
             guard transparency != 0 else { return panelScrim }

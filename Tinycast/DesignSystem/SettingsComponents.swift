@@ -90,6 +90,32 @@ struct SettingsEditorHeader: View {
     }
 }
 
+struct SettingsEditorField<Content: View>: View {
+    let title: String
+    var labelFont: Font?
+    @ViewBuilder var content: Content
+
+    init(
+        _ title: String, labelFont: Font? = nil,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.title = title
+        self.labelFont = labelFont
+        self.content = content()
+    }
+
+    var body: some View {
+        LabeledContent {
+            content
+                .labelsHidden()
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        } label: {
+            Text(title).font(labelFont)
+        }
+    }
+}
+
 private struct SettingsEditorTextField: ViewModifier {
     func body(content: Content) -> some View {
         content

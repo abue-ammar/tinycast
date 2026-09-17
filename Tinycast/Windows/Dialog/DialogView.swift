@@ -196,7 +196,7 @@ private struct DialogShortcutTooltip: ViewModifier {
                             }
                         )
                         .shadow(
-                            color: Color.black.opacity(0.18),
+                            color: Theme.Colors.dialogTooltipShadow,
                             radius: metrics.spacing.xs, y: metrics.spacing.xxs
                         )
                         .fixedSize()
