@@ -58,6 +58,12 @@ final class NoteMarkdownRenderer {
         selectionDidChange()
     }
 
+    /// The parse of the source as it is right now, for edit plans that must not act on a stale one.
+    func syncedMarkdown() -> NoteMarkdown {
+        syncSource()
+        return markdown
+    }
+
     // MARK: - Edits
 
     /// Undo and marked text change storage without `textDidChange`, so every callback checks here.

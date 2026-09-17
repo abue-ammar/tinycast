@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import Foundation
 import SwiftUI
 
@@ -19,6 +20,10 @@ struct NotesEditorTests {
         testRenderingOffIsLiteral()
         testTaskSpacing()
         testBlockDecorationsAndFragments()
+        testListKeysAndChords()
+        testTaskRuleCheckboxesAndLinks()
+        testTasks()
+        testTaskEdits()
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)
     }
@@ -388,6 +393,241 @@ struct NotesEditorTests {
         } else {
             check("the checkbox lies inside the task's drawing surface", false)
         }
+    }
+
+    private static func testListKeysAndChords() {
+        var changes: [String] = []
+        let input = NoteEditorInput(id: NoteID(rawValue: "Keys.md"), source: "- item", epoch: 1)
+        let editor = makeEditor(input: input, rendersMarkdown: true, onSourceChange: { changes.append($0) })
+        let undo = editor.coordinator.editorUndoManager
+        editor.textView.setSelectedRange(NSRange(location: 6, length: 0))
+        editor.textView.insertNewline(nil)
+        check(
+            "Return continues a list in one published edit",
+            editor.textView.string == "- item\n- " && changes == ["- item\n- "]
+                && editor.textView.selectedRange() == NSRange(location: 9, length: 0))
+        undo.undo()
+        check("one Undo step removes the continuation", editor.textView.string == "- item")
+        undo.redo()
+
+        editor.textView.insertTab(nil)
+        check("Tab nests a list line", editor.textView.string == "- item\n    - ")
+        editor.textView.setSelectedRange(NSRange(location: 0, length: 0))
+        let paragraph = NoteEditorInput(id: NoteID(rawValue: "Tab.md"), source: "plain", epoch: 2)
+        editor.coordinator.update(paragraph)
+        editor.textView.setSelectedRange(NSRange(location: 5, length: 0))
+        editor.textView.insertTab(nil)
+        check("Tab in a paragraph inserts a tab", editor.textView.string == "plain\t")
+
+        let chord = NoteEditorInput(id: NoteID(rawValue: "Chord.md"), source: "make bold", epoch: 3)
+        editor.coordinator.update(chord)
+        editor.textView.setSelectedRange(NSRange(location: 5, length: 4))
+        check(
+            "⌘B wraps the selection and claims the chord",
+            editor.textView.performKeyEquivalent(with: keyDown("b", keyCode: kVK_ANSI_B, in: editor.window))
+                && editor.textView.string == "make **bold**")
+        undo.undo()
+        check("⌘B undoes in one step", editor.textView.string == "make bold")
+        editor.textView.setSelectedRange(NSRange(location: 0, length: 4))
+        _ = editor.textView.performKeyEquivalent(
+            with: keyDown("8", keyCode: kVK_ANSI_8, modifiers: [.command, .shift], in: editor.window))
+        check("⇧⌘8 matches its digit by key code", editor.textView.string == "- make bold")
+
+        editor.coordinator.setRendersMarkdown(false)
+        let literal = editor.textView.string
+        editor.textView.setSelectedRange(NSRange(location: 2, length: 4))
+        let claimed = editor.textView.performKeyEquivalent(with: keyDown("b", keyCode: kVK_ANSI_B, in: editor.window))
+        check("with rendering off ⌘B is not a formatting chord", !claimed && editor.textView.string == literal)
+        editor.textView.setSelectedRange(NSRange(location: (literal as NSString).length, length: 0))
+        editor.textView.insertNewline(nil)
+        check("with rendering off Return is native", editor.textView.string == literal + "\n")
+    }
+
+    private static func testTaskRuleCheckboxesAndLinks() {
+        var changes: [String] = []
+        let input = NoteEditorInput(id: NoteID(rawValue: "Tasks.md"), source: "[]", epoch: 1)
+        let editor = makeEditor(input: input, rendersMarkdown: true, onSourceChange: { changes.append($0) })
+        editor.textView.setSelectedRange(NSRange(location: 2, length: 0))
+        editor.textView.insertText(" ", replacementRange: editor.textView.selectedRange())
+        check("a space after [] makes a task", editor.textView.string == "- [ ] " && changes.last == "- [ ] ")
+
+        let source = "- [ ] first\n- [ ] second\nend"
+        let tasks = NoteEditorInput(id: NoteID(rawValue: "Boxes.md"), source: source, epoch: 2)
+        editor.coordinator.update(tasks)
+        let caret = NSRange(location: (source as NSString).length, length: 0)
+        editor.textView.setSelectedRange(caret)
+        let secondStart = (source as NSString).range(of: "- [ ] second").location
+        guard let box = checkboxCenter(in: editor.textView, lineStart: secondStart) else {
+            return check("the second task lays out a checkbox", false)
+        }
+        check("clicking a checkbox toggles it", editor.textView.toggleTask(atContainerPoint: box))
+        check(
+            "the toggle changes one character and leaves the caret and reveal alone",
+            editor.textView.string == "- [ ] first\n- [x] second\nend"
+                && editor.textView.selectedRange() == caret
+                && !editor.coordinator.renderer.revealed.contains(1))
+        editor.coordinator.editorUndoManager.undo()
+        check("Undo restores the checkbox", editor.textView.string == source)
+        check(
+            "a click beside the box is not a toggle",
+            !editor.textView.toggleTask(atContainerPoint: CGPoint(x: box.x + 60, y: box.y)))
+
+        var opened: [URL] = []
+        editor.coordinator.openURL = { opened.append($0) }
+        let file = URL(fileURLWithPath: "/etc/hosts")
+        _ = editor.coordinator.textView(editor.textView, clickedOnLink: file, at: 0)
+        check("a file link never opens", opened.isEmpty)
+        let web = URL(string: "https://example.com")
+        _ = web.map { editor.coordinator.textView(editor.textView, clickedOnLink: $0, at: 0) }
+        check("a web link opens", opened == [web].compactMap { $0 })
+
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+        let linkInput = NoteEditorInput(id: NoteID(rawValue: "Paste.md"), source: "see docs", epoch: 3)
+        editor.coordinator.update(linkInput)
+        editor.textView.setSelectedRange(NSRange(location: 4, length: 4))
+        pasteboard.clearContents()
+        pasteboard.setString("https://a.com", forType: .string)
+        check(
+            "pasting a URL over a selection makes a link",
+            editor.textView.pasteLink(from: pasteboard) && editor.textView.string == "see [docs](https://a.com)")
+        pasteboard.clearContents()
+        pasteboard.setString("plain words", forType: .string)
+        check("pasting other text is not a link", !editor.textView.pasteLink(from: pasteboard))
+
+        let marked = NoteEditorInput(id: NoteID(rawValue: "Marked.md"), source: "**bold**\n- item ", epoch: 4)
+        editor.coordinator.update(marked)
+        let end = NSRange(location: (marked.source as NSString).length, length: 0)
+        editor.textView.setSelectedRange(end)
+        editor.textView.setMarkedText(
+            "語", selectedRange: NSRange(location: 1, length: 0),
+            replacementRange: NSRange(location: NSNotFound, length: 0))
+        editor.textView.unmarkText()
+        check(
+            "marked text beside a rendered line commits exactly",
+            editor.textView.string == "**bold**\n- item 語" && changes.last == editor.textView.string
+                && font(in: editor.textView, at: 0)?.pointSize == 0.01)
+        editor.textView.setMarkedText(
+            "語", selectedRange: NSRange(location: 1, length: 0),
+            replacementRange: NSRange(location: NSNotFound, length: 0))
+        editor.textView.insertNewline(nil)
+        check("Return stands down while text is marked", !editor.textView.string.hasSuffix("- "))
+    }
+
+    private static func testTasks() {
+        let source = "- [ ] 🧑🏽‍💻 first\n* [X] done\n```md\n- [ ] code\n```\n~~~\n- [x] code\n~~~"
+        let lines = NoteMarkdownParser.parse(source).lines
+        let taskLines = lines.filter { if case .task = $0.kind { true } else { false } }
+        check("fenced tasks remain literal", taskLines.count == 2)
+        check("uppercase X is checked", taskLines.last?.kind == .task(checked: true))
+        check(
+            "inline syntax and incomplete markers stay literal",
+            NoteMarkdownParser.parse("inline - [ ] task\n- [] task\n- [q] task").lines.allSatisfy {
+                if case .task = $0.kind { false } else { true }
+            })
+        let indented = NoteMarkdownParser.parse("hello\r\n  + [ ] task\r\n").lines
+        check(
+            "indented CRLF tasks preserve offsets",
+            indented.count == 2 && indented[1].checkboxRange == NSRange(location: 11, length: 3))
+        check(
+            "task content ranges preserve Unicode",
+            (source as NSString).substring(with: taskLines[0].contentRange) == "🧑🏽‍💻 first")
+
+        var changes: [String] = []
+        let editor = makeEditor(
+            input: NoteEditorInput(id: NoteID(rawValue: "Tasks.md"), source: source, epoch: 1),
+            rendersMarkdown: true, onSourceChange: { changes.append($0) })
+        check("rendering does not rewrite source", editor.textView.string == source)
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+        editor.textView.selectAll(nil)
+        copySelection(of: editor.textView, to: pasteboard)
+        check("copying tasks preserves Markdown", pasteboard.string(forType: .string) == source)
+
+        let caret = NSRange(location: NSMaxRange(taskLines[1].contentRange), length: 0)
+        editor.textView.setSelectedRange(caret)
+        guard let box = checkboxCenter(in: editor.textView, lineStart: 0) else {
+            return check("the first task lays out a checkbox", false)
+        }
+        check("clicking a checkbox is handled", editor.textView.toggleTask(atContainerPoint: box))
+        check("clicking saves checked Markdown", changes.last?.hasPrefix("- [x] ") == true)
+        check("clicking preserves the caret", editor.textView.selectedRange() == caret)
+        editor.coordinator.editorUndoManager.undo()
+        check("checkbox toggle is undoable", editor.textView.string == source)
+        editor.coordinator.editorUndoManager.redo()
+        check("checkbox toggle is redoable", editor.textView.string.hasPrefix("- [x] "))
+        editor.textView.setSelectedRange(NSRange(location: NSMaxRange(taskLines[0].contentRange), length: 0))
+        editor.textView.insertNewline(nil)
+        check("Return continues with an unchecked task", editor.textView.string.contains("first\n- [ ] \n"))
+        editor.textView.insertNewline(nil)
+        check("Return on an empty task exits the list", editor.textView.string.contains("first\n\n"))
+
+        editor.textView.selectAll(nil)
+        editor.textView.insertText("[]", replacementRange: editor.textView.selectedRange())
+        editor.textView.insertText(" ", replacementRange: editor.textView.selectedRange())
+        check("bracket-space shortcut creates Markdown", editor.textView.string == "- [ ] ")
+        editor.textView.insertText("new", replacementRange: editor.textView.selectedRange())
+        check(
+            "typing after a checkbox stays visible",
+            color(in: editor.textView, at: 6) == NoteMarkdownStyler.literal[.foregroundColor] as? NSColor)
+        editor.textView.selectAll(nil)
+        editor.textView.insertText("```\n[]", replacementRange: editor.textView.selectedRange())
+        editor.textView.insertText(" ", replacementRange: editor.textView.selectedRange())
+        check("bracket shortcuts stay literal in code", editor.textView.string == "```\n[] ")
+        let replacement = NoteEditorInput(id: NoteID(rawValue: "Other.md"), source: "plain", epoch: 2)
+        editor.coordinator.update(replacement)
+        check("switching notes clears task undo", !editor.coordinator.editorUndoManager.canUndo)
+    }
+
+    private static func testTaskEdits() {
+        let source = "- [ ] first\n- [ ]    \n```\n- [ ] literal\n```\n- [x] last"
+        let editor = makeEditor(
+            input: NoteEditorInput(id: NoteID(rawValue: "Edits.md"), source: source, epoch: 1),
+            rendersMarkdown: true)
+        let text = { editor.textView.string as NSString }
+        func isTask(_ needle: String) -> Bool {
+            let start = text().lineRange(for: text().range(of: needle)).location
+            if case .task = decoration(in: editor.textView, at: start)?.shape { return true }
+            return false
+        }
+        editor.textView.setSelectedRange(NSRange(location: 11, length: 0))
+        editor.textView.insertText(" longer", replacementRange: editor.textView.selectedRange())
+        editor.textView.setSelectedRange(NSRange(location: text().length, length: 0))
+        check("typing keeps the other tasks rendered", isTask("- [ ]    ") && !isTask("literal"))
+        let literal = text().range(of: "literal")
+        editor.textView.insertText("code", replacementRange: literal)
+        check("editing fenced text keeps it literal", !isTask("- [ ] code"))
+        editor.coordinator.editorUndoManager.undo()
+        check("undo preserves fenced text", editor.textView.string.contains("literal"))
+        let fence = text().range(of: "```")
+        editor.textView.insertText("plain", replacementRange: fence)
+        editor.textView.setSelectedRange(NSRange(location: 0, length: 0))
+        check("changing a fence reparses subsequent tasks", isTask("- [ ] literal"))
+        editor.coordinator.editorUndoManager.undo()
+        editor.textView.setSelectedRange(NSRange(location: 0, length: 0))
+        check("undoing a fence restores subsequent tasks as code", !isTask("- [ ] literal"))
+        editor.textView.selectAll(nil)
+        editor.textView.insertText("```\n", replacementRange: editor.textView.selectedRange())
+        editor.textView.insertText("- [ ] hidden", replacementRange: editor.textView.selectedRange())
+        editor.textView.setSelectedRange(NSRange(location: 0, length: 0))
+        check("typing at the end of an open fence stays literal", !isTask("hidden"))
+    }
+
+    private static func keyDown(
+        _ characters: String, keyCode: Int, modifiers: NSEvent.ModifierFlags = [.command], in window: NSWindow
+    ) -> NSEvent {
+        NSEvent.keyEvent(
+            with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0,
+            windowNumber: window.windowNumber, context: nil, characters: characters,
+            charactersIgnoringModifiers: characters, isARepeat: false, keyCode: UInt16(keyCode)) ?? NSEvent()
+    }
+
+    private static func checkboxCenter(in textView: NSTextView, lineStart: Int) -> CGPoint? {
+        guard let fragment = layoutFragments(in: textView)[lineStart] as? NoteBlockLayoutFragment else { return nil }
+        let firstLine = fragment.textLineFragments.first?.typographicBounds ?? .zero
+        let box = NoteCheckboxGeometry.rect(
+            level: 0, firstLineHeight: firstLine.height, bodyPointSize: NoteMarkdownTypography.body.pointSize)
+        return CGPoint(x: box.midX, y: fragment.layoutFragmentFrame.minY + firstLine.minY + box.midY)
     }
 
     /// Every laid-out fragment, keyed by the source location its paragraph starts at.

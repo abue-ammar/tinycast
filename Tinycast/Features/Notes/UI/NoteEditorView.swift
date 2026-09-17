@@ -47,6 +47,8 @@ struct NoteEditorView: NSViewRepresentable {
         }
         let editorUndoManager = UndoManager()
         let renderer: NoteMarkdownRenderer
+        /// Replaced by the harness, which records a link instead of opening a browser.
+        var openURL: (URL) -> Void = { NSWorkspace.shared.open($0) }
 
         private var input: NoteEditorInput
         private var isInstalling = false
@@ -111,12 +113,58 @@ struct NoteEditorView: NSViewRepresentable {
             renderer.selectionDidChange()
         }
 
+        /// The `[] ` input rule; returning false drops the typed space the plan already replaced.
+        func textView(
+            _ textView: NSTextView, shouldChangeTextIn range: NSRange, replacementString: String?
+        ) -> Bool {
+            guard renderer.isEnabled, replacementString == " ", range.length == 0, !textView.hasMarkedText(),
+                let noteView = textView as? NoteTextView
+            else { return true }
+            let plan = NoteMarkdownEditing.plan(
+                .typedSpace, source: textView.string, selection: range, markdown: markdown)
+            guard let plan else { return true }
+            noteView.performEdit(plan)
+            return false
+        }
+
+        func textView(
+            _ textView: NSTextView, shouldChangeTypingAttributes oldTypingAttributes: [String: Any],
+            toAttributes newTypingAttributes: [NSAttributedString.Key: Any]
+        ) -> [NSAttributedString.Key: Any] {
+            renderer.isEnabled ? NoteMarkdownStyler.literal : newTypingAttributes
+        }
+
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            let url = link as? URL ?? (link as? String).flatMap { URL(string: $0) }
+            guard let url, let scheme = url.scheme?.lowercased(), Self.openableSchemes.contains(scheme) else {
+                return true
+            }
+            if let noteView = textView as? NoteTextView, let event = NSApp.currentEvent,
+                let edge = noteView.linkEdge(
+                    ofLinkAt: charIndex, clickedAt: noteView.containerPoint(for: event)) {
+                textView.setSelectedRange(NSRange(location: edge, length: 0))
+                return true
+            }
+            openURL(url)
+            return true
+        }
+
+        private static let openableSchemes: Set<String> = ["http", "https", "mailto"]
+
+        var rendersMarkdown: Bool { renderer.isEnabled }
+
+        var markdown: NoteMarkdown { renderer.syncedMarkdown() }
+
         func focusChanged() {
             renderer.focusDidChange()
         }
 
         func appearanceChanged() {
             renderer.reset()
+        }
+
+        func dragSelectionEnded() {
+            renderer.selectionDidChange()
         }
 
         /// `NSTextStorage.length` is maintained by TextKit, so the counter costs nothing per edit.
