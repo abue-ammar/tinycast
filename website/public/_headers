@@ -1,0 +1,10 @@
+# Raw Markdown an LLM can read, so it stays fetchable — it just must not compete in search with
+# the HTML page it mirrors.
+/llms.md/*
+  X-Robots-Tag: noindex
+
+# The static search index: 2 MB of every doc at once, and extensionless, so it is served as
+# octet-stream unless the type is stated here.
+/api/search
+  Content-Type: application/json
+  X-Robots-Tag: noindex

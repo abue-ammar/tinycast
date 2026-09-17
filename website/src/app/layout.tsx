@@ -3,7 +3,7 @@ import "../index.css";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import { Providers } from "../components/providers";
-import { site } from "../data/site";
+import { pageTitle, site, summary } from "../data/site";
 
 // next/font self-hosts these at build time and generates a metric-matched
 // fallback for each, so there is no third-party request and no layout shift.
@@ -21,16 +21,13 @@ const instrumentSerif = Instrument_Serif({
   variable: "--font-instrument-serif",
 });
 
-const description =
-  "Tinycast is a tiny, fully native macOS launcher: fuzzy app search, an inline calculator, clipboard history, snippets, notes, window management and global hotkeys, with no Electron, no account and no telemetry.";
-
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: "Tinycast — a tiny, native macOS launcher",
+    default: pageTitle,
     template: "%s — Tinycast",
   },
-  description,
+  description: summary,
   applicationName: site.name,
   alternates: { canonical: "/" },
   openGraph: {
@@ -38,8 +35,8 @@ export const metadata: Metadata = {
     siteName: site.name,
     url: site.url,
     locale: "en_US",
-    title: "Tinycast — a tiny, native macOS launcher",
-    description,
+    title: pageTitle,
+    description: summary,
     images: [
       {
         url: "/og.png",
@@ -51,8 +48,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tinycast — a tiny, native macOS launcher",
-    description,
+    title: pageTitle,
+    description: summary,
     images: ["/og.png"],
   },
   robots: { index: true, follow: true },
@@ -63,7 +60,7 @@ const structuredData = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: site.name,
-  description,
+  description: summary,
   url: site.url,
   image: `${site.url}/og.png`,
   applicationCategory: "UtilitiesApplication",

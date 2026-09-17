@@ -3,7 +3,8 @@ name: Website
 # Builds the Next.js site in website/ and deploys it to Cloudflare at https://tinycast.dev/.
 # The old GitHub Pages URL stays alive purely to 301 to it — see the `redirect` job.
 # Requires: CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID secrets, repo Settings → Pages →
-# Source = "GitHub Actions", and Custom domain = tinycast.dev (all one-time setup).
+# Source = "GitHub Actions", and Custom domain = tinycast.dev (all one-time setup). None of which a
+# fork has, so both jobs check the repository first rather than failing in someone else's Actions tab.
 on:
   push:
     branches: [main]
@@ -26,6 +27,7 @@ concurrency:
 
 jobs:
   cloudflare:
+    if: github.repository == 'abue-ammar/tinycast'
     runs-on: ubuntu-latest
     environment:
       name: cloudflare
@@ -52,6 +54,7 @@ jobs:
   # to tinycast.dev/* at its own edge — no HTML, no meta refresh. Independent of the Cloudflare
   # job on purpose: a failed deploy there must not take the forwarder down with it.
   redirect:
+    if: github.repository == 'abue-ammar/tinycast'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

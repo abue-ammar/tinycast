@@ -3,6 +3,7 @@ name: Website media
 # Mirrors website/media/ to the R2 bucket behind cdn.tinycast.dev. Anything there is too big for
 # Workers' 25 MiB per-asset cap, so it never ships in the Next.js export. Kept out of the Website
 # workflow on purpose: GitHub's path filter is what stops a docs typo re-uploading tens of megabytes.
+# Gated on the repository too — a fork has no R2 bucket and no secrets to reach one with.
 on:
   push:
     branches: [main]
@@ -21,6 +22,7 @@ concurrency:
 
 jobs:
   upload:
+    if: github.repository == 'abue-ammar/tinycast'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
