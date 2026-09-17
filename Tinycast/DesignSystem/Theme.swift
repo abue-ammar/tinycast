@@ -135,8 +135,6 @@ enum Theme {
         static let clipboardListWidth: CGFloat = 290
         /// Symmetric clearance between the emoji grid and both panel edges.
         static let emojiGridInset: CGFloat = 16
-        /// A `Detail.Metadata` sidebar's fixed width; the markdown pane takes what's left.
-        static let extensionDetailMetadataWidth: CGFloat = 240
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
         static let actionMenuWidth: CGFloat = 320

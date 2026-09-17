@@ -1,7 +1,6 @@
 import SwiftUI
 
 /// The `Detail` screen, and the pane a `List` shows when `isShowingDetail` is on.
-/// `Detail.Metadata` is a right-hand sidebar, not a block stacked under the markdown.
 struct ExtensionDetailBody: View {
     @Environment(\.metrics) private var metrics
     let markdown: String?
@@ -39,6 +38,9 @@ struct ExtensionDetailBody: View {
         .thinScrollbar()
     }
 
+    /// A `Detail.Metadata` sidebar's fixed width; the markdown pane takes what's left.
+    private static let metadataWidth: CGFloat = 240
+
     private func metadataPane(_ metadata: RenderNode) -> some View {
         ScrollView {
             ExtensionMetadataView(metadata: metadata, assetsPath: assetsPath)
@@ -47,7 +49,7 @@ struct ExtensionDetailBody: View {
                 .padding(.vertical, metrics.spacing.md)
                 .hideNativeScrollers()
         }
-        .frame(width: metrics.size.extensionDetailMetadataWidth)
+        .frame(width: metrics.scaled(Self.metadataWidth))
         .edgeDissolve()
         .thinScrollbar()
     }
