@@ -42,10 +42,9 @@ struct SymbolTint: Hashable, Sendable {
 }
 
 enum SystemSymbolName {
-    static func resolve(_ name: String, isDark: Bool) -> String {
-        guard isDark else { return name }
-        // The target SF Symbols runtime renders this base name as its inverse in Dark Aqua.
-        return switch name {
+    // This pair renders opposite to its name on the target SF Symbols runtime, in both appearances.
+    static func resolve(_ name: String) -> String {
+        switch name {
         case "face.smiling": "face.smiling.inverse"
         default: name
         }
@@ -263,7 +262,7 @@ enum IconCache {
 
             // A tinted tile keeps white ink in both appearances; the tint carries the contrast.
             let ink = tint == nil ? NSColor.srgbInk(plainInk, alpha: 0.85) : .white
-            guard let symbol = glyph(named: name, tint: ink, isDark: isDark)
+            guard let symbol = glyph(named: name, tint: ink)
             else { return true }
             let size = symbol.size
             symbol.draw(
@@ -278,12 +277,11 @@ enum IconCache {
     }
 
     /// Symbols where they exist; the names SF Symbols lacks fall back to template assets.
-    private static func glyph(named name: String, tint: NSColor, isDark: Bool) -> NSImage? {
+    private static func glyph(named name: String, tint: NSColor) -> NSImage? {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
             .applying(.init(paletteColors: [tint]))
         if let symbol = NSImage(
-            systemSymbolName: SystemSymbolName.resolve(name, isDark: isDark),
-            accessibilityDescription: nil
+            systemSymbolName: SystemSymbolName.resolve(name), accessibilityDescription: nil
         )?
         .withSymbolConfiguration(config) {
             return symbol

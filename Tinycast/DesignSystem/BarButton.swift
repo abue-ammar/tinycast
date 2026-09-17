@@ -7,7 +7,9 @@ private struct HeaderMenuSymbol: View {
 
     var body: some View {
         let configuration = NSImage.SymbolConfiguration(pointSize: size, weight: .medium)
-        if let image = NSImage(systemSymbolName: name, accessibilityDescription: nil)?
+        if let image = NSImage(
+            systemSymbolName: SystemSymbolName.resolve(name), accessibilityDescription: nil
+        )?
             .withSymbolConfiguration(configuration)
         {
             Image(nsImage: image)

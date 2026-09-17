@@ -37,12 +37,9 @@ struct IconCacheTests {
 
     static func semanticSymbolNames() {
         expect(
-            SystemSymbolName.resolve("face.smiling", isDark: false) == "face.smiling",
-            "Aqua preserves the semantic smiley")
-        expect(
-            SystemSymbolName.resolve("face.smiling", isDark: true) == "face.smiling.inverse",
-            "Dark Aqua compensates for the swapped smiley pair")
-        expect(SystemSymbolName.resolve("star", isDark: true) == "star", "other symbols stay unchanged")
+            SystemSymbolName.resolve("face.smiling") == "face.smiling.inverse",
+            "the swapped smiley pair is compensated in both appearances")
+        expect(SystemSymbolName.resolve("star") == "star", "other symbols stay unchanged")
     }
 
     /// A restyle has to both drop what is cached and move the generation views key their fetch on.
