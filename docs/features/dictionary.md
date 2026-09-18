@@ -1,15 +1,16 @@
 # Dictionary
 
-`Define` is a launcher fallback: whatever was typed goes to the dictionary screen (`.dictionary`), which
-shows that term's entry across the palette. The search field stays the term, so a different word is
+`Define` is a launcher command and a fallback. The command opens the dictionary screen (`.dictionary`)
+empty; the fallback opens it on whatever was typed, showing that term's entry across the palette. The search field stays the term, so a different word is
 one edit away. It reads the dictionaries enabled in Dictionary.app through Dictionary Services — no
 network, no bundled word list.
 
 ## Invariants
 
-- **Define is query-driven and never listed.** `CommandID.define` is `isQueryDriven`, so it has no
-  launcher row, no Settings › Commands row and no hotkey; the only way in is the fallback, and the
-  fallback's checkbox in Settings › Fallbacks is its switch.
+- **The command gates the fallback, never the reverse.** Define has no feature pane, so Settings ›
+  Commands is its switch: while the command is hidden there — itself or the whole Commands category —
+  `FallbackCoordinator` offers no Define fallback and Settings › Fallbacks does not list it. While it is
+  visible, the fallback's own checkbox hides just the fallback, leaving the command searchable.
 - **The copy is the dictionary's own text.** `DictionaryEntry` splits the plain text for display
   only — the first `| … |` span as the pronunciation, each `•` as a new sense — and keeps `text`
   untouched, so ↵ never copies a layout the parser invented.

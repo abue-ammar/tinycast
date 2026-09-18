@@ -145,7 +145,8 @@ final class AppCore {
         calendarCoordinator: calendarCoordinator,
         core: self)
     @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
-        store: fallbacks, quicklinks: quicklinks, settings: settings, core: self)
+        store: fallbacks, quicklinks: quicklinks, settings: settings, visibility: visibility,
+        core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, clipboardManager: clipboardManager, settings: settings,
         appIndex: appIndex, palette: palette, windowController: windowController,

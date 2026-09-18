@@ -6,13 +6,18 @@ final class FallbackCoordinator {
     private let store: FallbackStore
     private let quicklinks: QuicklinkStore
     private let settings: AppSettings
+    private let visibility: VisibilityStore
     /// The five destinations a fallback hands its query to; nothing here is this type's own state.
     private unowned let core: AppCore
 
-    init(store: FallbackStore, quicklinks: QuicklinkStore, settings: AppSettings, core: AppCore) {
+    init(
+        store: FallbackStore, quicklinks: QuicklinkStore, settings: AppSettings,
+        visibility: VisibilityStore, core: AppCore
+    ) {
         self.store = store
         self.quicklinks = quicklinks
         self.settings = settings
+        self.visibility = visibility
         self.core = core
     }
 
@@ -68,7 +73,9 @@ final class FallbackCoordinator {
         case .aiChat: return settings.aiEnabled
         case .searchFiles: return settings.fileSearchEnabled
         // Its own capability: this shell is not the custom-command library's switch to hold.
-        case .runShellCommand, .define: return true
+        case .runShellCommand: return true
+        // Settings › Commands is Define's only switch, so hiding the command there hides this too.
+        case .define: return visibility.isVisible(CommandCatalog.makeEntry(.define))
         }
     }
 }

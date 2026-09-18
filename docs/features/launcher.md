@@ -282,7 +282,7 @@ order name a live row across a rename or a reinstall.
 | AI Chat | a fresh chat, question already sent (`AIChatCoordinator.ask`) | `aiEnabled` |
 | Search Files | the file-search screen, already narrowed | `fileSearchEnabled` |
 | Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
-| Define | the dictionary screen, already showing the entry (see [dictionary.md](dictionary.md)) | always |
+| Define | the dictionary screen, already showing the entry (see [dictionary.md](dictionary.md)) | the Define command is visible in Settings › Commands |
 | a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |
 
 **A quicklink earns a fallback row by declaring a placeholder**, nothing else —
