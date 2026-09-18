@@ -402,6 +402,7 @@ struct ExtensionTests {
         check("a section after loose actions starts one", actions.last?.startsSection == true)
         check("destructive style", actions.last?.isDestructive == true)
         sectionBoundaryChecks()
+        submenuPrimaryActionChecks()
     }
 
     /// Boundaries follow section nodes: Raycast authors mostly leave sections untitled.
@@ -431,6 +432,83 @@ struct ExtensionTests {
         check(
             "separators follow section nodes, not titles",
             starts == [false, false, false, true, true, true, true], "\(starts)")
+    }
+
+    /// A submenu reached first must not become ⏎'s target as though it were its own child. #783.
+    static func submenuPrimaryActionChecks() {
+        func action(_ id: Int) -> String {
+            #"{"id":\#(id),"type":"Action","props":{"title":"A\#(id)"},"children":[]}"#
+        }
+        let json = """
+            {"id":1,"type":"ActionPanel","props":{},"children":[
+              {"id":2,"type":"ActionPanel.Submenu","props":{"title":"Open…"},"children":[
+                \(action(3)),
+                \(action(4))]},
+              {"id":5,"type":"ActionPanel.Section","props":{"title":"Other"},"children":[\(action(6))]}]}
+            """
+        guard let object = try? JSONSerialization.jsonObject(with: Data(json.utf8)) as? [String: Any],
+            let panel = RenderNode(json: object)
+        else {
+            check("submenu fixture decodes", false)
+            return
+        }
+        let actions = ExtensionScreen.actions(in: panel)
+        check(
+            "an action reached through a submenu carries its title",
+            actions.first?.enclosingSubmenuTitle == "Open…",
+            String(describing: actions.first?.enclosingSubmenuTitle))
+        check(
+            "the submenu's own leaves still flatten into the palette",
+            actions.map(\.title) == ["A3", "A4", "A6"], "\(actions.map(\.title))")
+        check(
+            "an action outside any submenu carries no submenu title",
+            actions.last?.enclosingSubmenuTitle == nil,
+            String(describing: actions.last?.enclosingSubmenuTitle))
+
+        // A loose action reached without ever entering a submenu is unaffected: primary fires it.
+        let looseFirstJSON = """
+            {"id":1,"type":"ActionPanel","props":{},"children":[
+              \(action(2)),
+              {"id":3,"type":"ActionPanel.Submenu","props":{"title":"Share"},"children":[\(action(4))]}]}
+            """
+        guard
+            let looseObject = try? JSONSerialization.jsonObject(with: Data(looseFirstJSON.utf8))
+                as? [String: Any],
+            let loosePanel = RenderNode(json: looseObject)
+        else {
+            check("loose-first fixture decodes", false)
+            return
+        }
+        let looseActions = ExtensionScreen.actions(in: loosePanel)
+        check(
+            "a loose action ahead of any submenu keeps the primary a direct action",
+            looseActions.first?.enclosingSubmenuTitle == nil,
+            String(describing: looseActions.first?.enclosingSubmenuTitle))
+
+        // Mirrors ExtensionCommandScreen.primaryActionTitle/activate(at:), unreachable from here.
+        func primaryActionOutcome(_ actions: [ExtensionAction]) -> (title: String, opensPanel: Bool)
+        {
+            guard let primary = actions.first else { return ("Run", false) }
+            return (
+                primary.enclosingSubmenuTitle ?? primary.title,
+                primary.enclosingSubmenuTitle != nil)
+        }
+
+        let submenuOutcome = primaryActionOutcome(actions)
+        check(
+            "a submenu-backed primary's title is the submenu's, not the leaf's",
+            submenuOutcome.title == "Open…", submenuOutcome.title)
+        check(
+            "⏎ on a submenu-backed primary opens the actions panel instead of dispatching",
+            submenuOutcome.opensPanel, "\(submenuOutcome)")
+
+        let looseOutcome = primaryActionOutcome(looseActions)
+        check(
+            "a loose primary's title is its own leaf's",
+            looseOutcome.title == "A2", looseOutcome.title)
+        check(
+            "⏎ on a loose primary dispatches directly, since it never opens the panel",
+            !looseOutcome.opensPanel, "\(looseOutcome)")
     }
 
     static func screenChecks() {
