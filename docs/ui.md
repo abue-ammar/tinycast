@@ -293,8 +293,8 @@ tooltip does not appear while the app is inactive behind this non-activating pan
 `background`, never a wrapper, and nothing clips the row, because either one swallows that tooltip. The
 round button aligns its tooltip trailing and the heading button leading, so neither runs past the
 window edge. The heading menu is a borderless child window like the switcher, `noteHeadingMenu` in
-size, aligned to the capsule's trailing edge and `xs` above it, drawn with `PopoverMenuRow`'s metrics
-on `menuPanel` glass.
+size, hung off the heading button's own reported frame and `xs` above it, drawn with
+`PopoverMenuRow`'s metrics on `menuPanel` glass.
 
 The switcher is its own glass panel over the editor, sized to its list up to a 240-point ceiling and
 never resizing the note window. Its plain search field and

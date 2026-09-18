@@ -479,6 +479,13 @@ enum NoteMarkdownEditing {
 
         // MARK: - Lines
 
+        /// A marker's digit run as the source writes it, which `007.` makes wider than its value.
+        private func digitsEnd(from start: Int) -> Int {
+            var index = start
+            while index < text.length, Unit.isDigit(text.character(at: index)) { index += 1 }
+            return index
+        }
+
         private func indentEnd(of line: Line) -> Int {
             var index = line.range.location
             while index < NSMaxRange(line.contentRange), Unit.isSpaceOrTab(text.character(at: index)) {
@@ -502,8 +509,7 @@ enum NoteMarkdownEditing {
             let start = indentEnd(of: line)
             switch line.kind {
             case .ordered(let number):
-                let digits = String(number).utf16.count
-                let delimiter = text.substring(with: NSRange(location: start + digits, length: 1))
+                let delimiter = text.substring(with: NSRange(location: digitsEnd(from: start), length: 1))
                 return "\(number + 1)\(delimiter) "
             case .task:
                 return text.substring(with: NSRange(location: start, length: 1)) + " [ ] "
@@ -573,7 +579,8 @@ enum NoteMarkdownEditing {
                     let expected = nextNumber[line.level] ?? number
                     nextNumber[line.level] = expected + 1
                     guard expected != number else { continue }
-                    let digits = NSRange(location: indentEnd(of: line), length: String(number).utf16.count)
+                    let first = indentEnd(of: line)
+                    let digits = NSRange(first..<digitsEnd(from: first))
                     edits.append(Edit(range: digits, replacement: String(expected)))
                 default:
                     nextNumber.removeAll()

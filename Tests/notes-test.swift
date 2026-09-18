@@ -445,6 +445,10 @@ struct NotesTests {
             "rules win over lists, and hashtags stay paragraphs",
             kinds("- - -\n***\n___\n#hashtag\n####### seven\n3.14 pi\n-\n#")
                 == [.rule, .rule, .rule, .paragraph, .paragraph, .paragraph, .bullet, .heading(level: 1)])
+        check(
+            "four spaces keep a rule literal, as they already do a heading and a quote",
+            kinds("   ---\n    ---\n    # not a heading\n    > not a quote")
+                == [.rule, .paragraph, .paragraph, .paragraph])
         check("quote nesting counts every marker", kinds("> > nested") == [.quote(depth: 2)])
 
         let heading = NoteMarkdownParser.parse("## Title ##").lines[0]
@@ -644,6 +648,12 @@ struct NotesTests {
         check(
             "renumbering crosses blank lines",
             edit(.newline, "1. a|\n\n2. b") == "1. a\n2. |\n\n3. b")
+        check(
+            "a leading-zero marker continues from its own delimiter",
+            edit(.newline, "007. a|") == "007. a\n8. |")
+        check(
+            "renumbering replaces a leading-zero marker whole",
+            edit(.newline, "1. a|\n007. b") == "1. a\n2. |\n3. b")
 
         check("⌘B wraps a selection", edit(.toggleInline(.bold), "a «bold» b") == "a **«bold»** b")
         check("⌘B trims whitespace before wrapping", edit(.toggleInline(.bold), "a« bold »b") == "a **«bold»** b")

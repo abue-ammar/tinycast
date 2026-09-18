@@ -497,8 +497,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Marked-text input, emoji, combining marks, Copy, Cut, Paste, Select All, Undo, Redo, and Find preserve
   exact source
 - An empty note shows `Start writing…`; the footer count is right after typing, pasting and undoing
-- With Render Markdown and Show Formatting Bar on, the band under a note holds the round formatting
-  button on the left and the character count on the right; with either setting off, the old centred
+- With Render Markdown and Show Formatting Bar on, the band under a note holds the character count on
+  the left and the round formatting button on the right; with either setting off, the old centred
   count footer is back and nothing else moved
 - The bar starts collapsed, ⌥⌘T and the round button both expand and collapse it, the buttons slide out
   from behind that button, and the state survives switching notes, hiding the window and a relaunch

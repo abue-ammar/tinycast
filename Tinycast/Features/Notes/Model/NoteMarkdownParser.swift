@@ -272,7 +272,7 @@ enum NoteMarkdownParser {
             if units[start..<end].allSatisfy(Unit.isSpaceOrTab) {
                 return plain(.blank, range: lineRange, contentStart: start)
             }
-            if isRule {
+            if indentColumns <= 3, isRule {
                 return wholeLine(.rule, range: range)
             }
             let first = indentEnd
