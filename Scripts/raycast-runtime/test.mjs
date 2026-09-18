@@ -21,6 +21,7 @@ import {
   randomUUID,
 } from "node:crypto";
 import { cpus, freemem, homedir, loadavg, tmpdir, uptime } from "node:os";
+import { lookup } from "node:dns/promises";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
 
@@ -340,6 +341,11 @@ async function stubHostCall(api, method, args) {
     // Node's own WebSocket stands in for `URLSessionWebSocketTask`: same one-message-at-a-time read.
     case "websocket.open":
       return openSocket(args[0]);
+    case "dns.resolve":
+      return lookup(args[0], { all: true, family: 4 }).then(
+        (found) => found.map((entry) => entry.address),
+        () => [],
+      );
     case "websocket.receive": {
       const entry = openSockets.get(args[0]);
       if (!entry) throw new Error("harness: no socket");

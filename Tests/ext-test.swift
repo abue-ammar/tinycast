@@ -41,6 +41,9 @@ struct ExtensionTests {
                 return ExtensionRuntime.jsonString(
                     from: try await sockets.perform(method: method, arguments: arguments))
             }
+            if api == "dns" {
+                return ExtensionRuntime.jsonString(from: await ExtensionNameResolver.resolve(arguments.first))
+            }
             switch "\(api).\(method)" {
             case "feedback.showToast":
                 toasts.append(arguments.first?.objectValue?["title"]?.stringValue ?? "")

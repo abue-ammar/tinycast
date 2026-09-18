@@ -23,6 +23,7 @@ import { ReadableStream, TransformStream, WritableStream } from "./web-streams.j
 import { fileURLToPath, pathToFileURL, URL, URLSearchParams } from "./url.js";
 import { punycode } from "./punycode.js";
 import { upgradeToWebSocket } from "./websocket.js";
+import { dgram } from "./dgram.js";
 
 // ─── path ───────────────────────────────────────────────────────────
 
@@ -1647,6 +1648,7 @@ export const nodeModules = {
   perf_hooks: { performance: globalThis.performance },
   http: httpLike("http"),
   https: httpLike("https"),
+  dgram,
   net: unsupportedModule("net"),
   tls: unsupportedModule("tls"),
   dns: unsupportedModule("dns"),
@@ -1670,10 +1672,10 @@ function requireStub(name) {
 }
 
 // Every remaining Node builtin resolves to a refuse-on-use stub. Bundles reference the whole
-// long tail (dgram, http2, domain, repl, …) from dependencies that only touch them on paths an
+// long tail (http2, domain, repl, …) from dependencies that only touch them on paths an
 // extension never reaches, so a require-time throw would fail extensions that actually work.
 const REMAINING_BUILTINS = [
-  "assert/strict", "console", "dgram", "diagnostics_channel", "dns/promises", "domain", "http2",
+  "assert/strict", "console", "diagnostics_channel", "dns/promises", "domain", "http2",
   "inspector/promises", "path/posix", "path/win32", "readline/promises", "repl",
   "stream/consumers", "sys", "trace_events", "util/types", "wasi", "sea", "sqlite", "test",
   "test/reporters",

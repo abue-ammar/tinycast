@@ -94,6 +94,7 @@ same arrangement as `EmojiData.generated.swift`: building Tinycast never needs N
 | `src/api/enums.generated.js` | Icon / Color / Toast.Style / … extracted from the real `@raycast/api` types |
 | `src/node-shims.js` | `path`, `fs`, `os`, `child_process`, `crypto`, `zlib`, `util`, `events`, `buffer`, `punycode`, … |
 | `src/websocket.js` | the `WebSocket` global, and the raw socket a bundled `ws` attaches to |
+| `src/dgram.js` | a UDP socket that answers one thing: an mDNS lookup of a `.local` name |
 | `src/url.js`, `src/punycode.js`, `src/buffer.js` | web/Node primitives JavaScriptCore lacks |
 
 Two host-call flavours:
@@ -116,6 +117,7 @@ Two host-call flavours:
 | `Service/ExtensionNodeShims.swift` | the synchronous `fs` / `os` / `child_process` / `crypto` / `zlib` services |
 | `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus collecting async `exec` children and the shared PATH resolver |
 | `Service/ExtensionWebSocketBridge.swift` | `URLSessionWebSocketTask` connections, opened and read from JS |
+| `Service/ExtensionNameResolver.swift` | `getaddrinfo`, which is how a `.local` name resolves |
 | `Service/ExtensionOAuthKeychain.swift` | secure OAuth token storage backed by macOS Keychain |
 | `Service/ExtensionOAuthSession.swift` | PKCE state tracking, browser launch, and callback redirect resolution |
 | `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
@@ -578,7 +580,7 @@ directions), `http`/`https` (`request`, `get` and `Agent`, buffered over the sam
 as `fetch`), `stream` (`Readable`, `Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`,
 `finished`, plus `stream/promises` and `stream/web`), `util`, `events`, `buffer`, `url`, `querystring`, `punycode`, `assert`,
 `string_decoder`, `timers`. Every other built-in resolves to a stub that throws only when used, so a
-bundle that merely references `dgram` or `http2` still loads.
+bundle that merely references `http2` or `domain` still loads.
 
 **Streams** — the stream core is Node's real contract, not a stand-in: an extension that ships
 `stream-chain` and `stream-json` to walk a package index builds object-mode pipelines out of it, and
@@ -629,6 +631,13 @@ connection. Home Assistant is the reference case: it authenticates, subscribes, 
 every state push over that socket. The scheme rides with the module for the same reason: `ws` hands
 `https.request` an options bag with no protocol in it, and a `wss:` URL that went out as `ws:` would
 never connect.
+
+**`.local` names** — Home Assistant's default URL is `homeassistant.local`, and the extension resolves
+it itself with `multicast-dns` because Node cannot. macOS can: mDNSResponder answers `.local` through
+`getaddrinfo` like any other name. So `dgram` hands out a socket that never reaches the network — it
+decodes the query, asks the system resolver, and emits an answer packet back. Nothing joins a
+multicast group, so no multicast entitlement and no Local Network prompt of our own. It answers an
+address question and nothing else: a service enumeration, or anything sent to another port, throws.
 
 **Bundled helpers** — compiled Mach-O files and shebang scripts live in `assets/`. GitHub's raw-file
 downloads and some store zips lose their executable mode, so installation preserves Git tree mode

@@ -395,6 +395,38 @@ export default async function Command() {
 // Hide My Email hands axios a cookie jar through axios-cookiejar-support, whose http-cookie-agent
 // extends `http.Agent` at load time and hooks each request in `addRequest` — the same way this does.
 // A bundled `ws` reaches the network the way this does: upgrade, then raw frames on the socket.
+// multicast-dns drives `dgram` the way this does, down to the packet it writes.
+const dgramSource = `
+import dgram from "node:dgram";
+
+function query(name) {
+  const labels = name.split(".");
+  const packet = Buffer.alloc(12 + labels.reduce((total, label) => total + label.length + 1, 1) + 4);
+  packet.writeUInt16BE(0x1234, 0);
+  packet.writeUInt16BE(1, 4);
+  let offset = 12;
+  for (const label of labels) {
+    packet[offset] = label.length;
+    packet.write(label, offset + 1);
+    offset += label.length + 1;
+  }
+  packet.writeUInt16BE(1, offset + 1);
+  packet.writeUInt16BE(1, offset + 3);
+  return packet;
+}
+
+export default async function Command() {
+  const socket = dgram.createSocket({ type: "udp4" });
+  globalThis.__dgram = await new Promise((resolve) => {
+    socket.on("message", (message, rinfo) => resolve({ hex: message.toString("hex"), port: rinfo.port }));
+    socket.bind(5353, undefined, () => {
+      const packet = query("homeassistant.local");
+      socket.send(packet, 0, packet.length, 5353, "224.0.0.251");
+    });
+  });
+}
+`;
+
 const websocketSource = `
 import https from "node:https";
 
@@ -934,6 +966,28 @@ export async function runFixtures() {
   );
 
   const socketOpens = [];
+  const lookups = [];
+  await run(
+    "dgram answers an mDNS query out of the resolver",
+    dgramSource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__dgram");
+      check("resolves the name the query asked for", lookups[0] === "homeassistant.local", String(lookups[0]));
+      check("answers the query it was sent", result?.hex?.startsWith("123484000001000100000000"), String(result?.hex));
+      check("names the host in the answer", result?.hex?.includes("0d686f6d65617373697374616e74056c6f63616c00"), String(result?.hex));
+      check("carries the address as an A record", result?.hex?.endsWith("00010001000000780004c0a801e2"), String(result?.hex));
+    },
+    {
+      stubs: {
+        "dns.resolve": (args) => {
+          lookups.push(args[0]);
+          return ["192.168.1.226"];
+        },
+      },
+    },
+  );
+
   const socketSends = [];
   let socketReads = 0;
   await run(
