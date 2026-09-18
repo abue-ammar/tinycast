@@ -59,6 +59,7 @@ final class ExtensionStorage {
             case .string(let value): self = .string(value)
             case .number(let value): self = .number(value)
             case .bool(let value): self = .bool(value)
+            case .application(let path): self = .string(path)
             }
         }
 
@@ -159,7 +160,7 @@ final class ExtensionStorage {
     ) -> [String: ExtensionPreferenceValue] {
         var resolved: [String: ExtensionPreferenceValue] = [:]
         for schema in schemas {
-            resolved[schema.name] = preference(extension: name, key: schema.name) ?? schema.effectiveDefault
+            resolved[schema.name] = schema.runtimeValue(preference(extension: name, key: schema.name))
         }
         return resolved
     }

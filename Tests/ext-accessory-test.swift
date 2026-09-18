@@ -13,6 +13,7 @@ enum ExtensionPreferenceValue: Equatable {
     case string(String)
     case number(Double)
     case bool(Bool)
+    case application(String)
 }
 
 struct ExtensionPreferenceSchema {
@@ -21,6 +22,10 @@ struct ExtensionPreferenceSchema {
     let effectiveDefault: ExtensionPreferenceValue
 
     var displayTitle: String { name }
+
+    func runtimeValue(_ stored: ExtensionPreferenceValue?) -> ExtensionPreferenceValue? {
+        stored ?? effectiveDefault
+    }
 }
 
 /// The search-bar dropdown's pure rules: how its choices are read, and which one it starts on.

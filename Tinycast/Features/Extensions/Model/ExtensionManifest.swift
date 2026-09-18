@@ -55,6 +55,14 @@ struct ExtensionPreferenceSchema: Sendable, Hashable {
         defaultValue ?? (kind == .checkbox ? .bool(false) : .string(""))
     }
 
+    /// An app picker reaches JS as an Application object, and an unset one as no key at all.
+    func runtimeValue(_ stored: ExtensionPreferenceValue?) -> ExtensionPreferenceValue? {
+        let value = stored ?? effectiveDefault
+        guard kind == .appPicker else { return value }
+        let path = value.stringValue
+        return path.isEmpty ? nil : .application(path)
+    }
+
     var displayTitle: String { title ?? label ?? name }
 
     init?(json: Any) {
@@ -79,12 +87,20 @@ enum ExtensionPreferenceValue: Sendable, Hashable {
     case string(String)
     case bool(Bool)
     case number(Double)
+    case application(String)
 
     var jsonValue: Any {
         switch self {
         case .string(let value): return value
         case .bool(let value): return value
         case .number(let value): return value
+        case .application(let path):
+            let url = URL(filePath: path)
+            let bundle = Bundle(url: url)
+            return [
+                "name": bundle?.installedAppName ?? url.deletingPathExtension().lastPathComponent,
+                "path": path, "bundleId": bundle?.bundleIdentifier as Any? ?? NSNull()
+            ]
         }
     }
 
@@ -93,6 +109,7 @@ enum ExtensionPreferenceValue: Sendable, Hashable {
         case .string(let value): return value
         case .bool(let value): return value ? "true" : "false"
         case .number(let value): return value == value.rounded() ? String(Int(value)) : String(value)
+        case .application(let path): return path
         }
     }
 
@@ -101,6 +118,7 @@ enum ExtensionPreferenceValue: Sendable, Hashable {
         case .string(let value): return value == "true"
         case .bool(let value): return value
         case .number(let value): return value != 0
+        case .application(let path): return !path.isEmpty
         }
     }
 

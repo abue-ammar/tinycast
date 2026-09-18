@@ -267,7 +267,12 @@ struct ExtensionTests {
                 [
                     "name": "mode", "type": "dropdown", "default": "b",
                     "data": [["title": "A", "value": "a"], ["title": "B", "value": "b"]]
-                ]
+                ],
+                [
+                    "name": "editor", "type": "appPicker",
+                    "default": "/System/Applications/Utilities/Terminal.app"
+                ],
+                ["name": "browser", "type": "appPicker"]
             ],
             "commands": [
                 ["name": "search", "title": "Search", "mode": "view", "keywords": ["find"]],
@@ -323,6 +328,14 @@ struct ExtensionTests {
             String(describing: prefs["flag"]?.effectiveDefault))
         check("dropdown options", prefs["mode"]?.options.count == 2)
         check("dropdown default", prefs["mode"]?.effectiveDefault == .string("b"))
+
+        // Raycast dereferences `preference.name` unconditionally, so a bare path crashes the command.
+        let picked = prefs["editor"]?.runtimeValue(nil)?.jsonValue as? [String: Any]
+        check("an app picker resolves to an Application", picked?["name"] as? String == "Terminal",
+            String(describing: picked))
+        check("an app picker carries its bundle id",
+            picked?["bundleId"] as? String == "com.apple.Terminal", String(describing: picked))
+        check("an unset app picker is absent", prefs["browser"]?.runtimeValue(nil) == nil)
 
         // A manifest with no commands isn't an extension Tinycast can run.
         check("rejects a manifest with no commands", ExtensionManifest(json: ["name": "x"]) == nil)
