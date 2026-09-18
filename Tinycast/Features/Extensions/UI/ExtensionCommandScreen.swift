@@ -39,8 +39,8 @@ struct ExtensionCommandScreen: PaletteScreen {
     /// A form owns the whole keyboard: its fields are the text, so the search field steps aside.
     var hidesSearchField: Bool { isForm }
 
-    /// A form's primary action stands even with no field to land on.
-    var actsWithoutRows: Bool { isForm }
+    /// A form or rowless Detail's primary action stands even with no row to land on.
+    var actsWithoutRows: Bool { isForm || screen.kind == .detail }
 
     /// A text area edits with ↑/↓ itself, so only ⇥ leaves it.
     func ownsVerticalKeys(at selection: Int) -> Bool {

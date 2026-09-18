@@ -647,10 +647,22 @@ struct ExtensionTests {
             "a text area keeps the vertical keys",
             ExtensionFormField(type: "Form.TextArea").ownsVerticalKeys)
         let detail = ExtensionScreen(
-            // Doubled delimiters: the heading contains `"#`, which closes a single-# string.
-            tree: tree(##"{"id":2,"type":"Detail","props":{"markdown":"# Hi"},"children":[]}"##),
+            tree: tree(
+                """
+                {"id":2,"type":"Detail","props":{"markdown":"# Hi","actions":
+                  {"id":7,"type":"ActionPanel","props":{},"children":[
+                    {"id":8,"type":"Action","props":{"title":"Open",
+                      "onAction":{"$fn":"8:onAction"}},"children":[]}]}},"children":[]}
+                """),
             query: "")
         check("kind is detail", detail.kind == .detail)
+        check("rowless detail has no rows", detail.rows.isEmpty)
+        check(
+            "rowless detail falls back to screen actions",
+            detail.actionPanel(forItemAt: 0)?.id == 7)
+        let detailActions = ExtensionScreen.actions(in: detail.actionPanel(forItemAt: 0))
+        check("rowless detail keeps action title", detailActions.first?.title == "Open")
+        check("rowless detail keeps action handler", detailActions.first?.handler == "8:onAction")
 
         let unsupported = ExtensionScreen(
             tree: tree(#"{"id":2,"type":"MenuBarExtra","props":{},"children":[]}"#), query: "")
