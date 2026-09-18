@@ -359,6 +359,13 @@ well as `makeFirstResponder`: a key transition can commit or drop marked text wi
 anything, and a re-summon inside the Pop to Root window skips `prepare(mode:)` and never moves first
 responder, so neither of the other two paths would fire.
 
+Before routing a key to palette navigation, `PalettePanel.sendEvent` reads `hasMarkedText()` directly
+from the focused editor and gives its `NSTextInputContext` first refusal. A consumed event stops there:
+Tab and Shift-Tab select IME candidates without changing screens or argument focus, arrows stay with
+the candidate list, and Return or Escape can finish composition without also activating or dismissing
+the palette. The original event reaches the IME before Emacs chords are rewritten. Keys the input
+context declines, and keys typed without marked text, keep the normal palette dispatch path.
+
 ## The panel settles the pointer itself
 
 `PalettePanel.applyCursorPolicy` sets the cursor after every mouse event: the I-beam inside the search
@@ -534,8 +541,8 @@ None of them reach `onKeyPress` on their own: AppKit's key-binding table hands t
 `moveDown:` / `moveUp:` / `moveForward:` / `moveBackward:` first, and in a one-line field the vertical
 pair walks the caret to the end or the start rather than moving anything.
 
-`PalettePanel.sendEvent` therefore rewrites each chord into its arrow and re-dispatches, ahead of every
-other rule it applies. Nothing else changes: the arrow handlers in `RootPaletteView` are the only
+`PalettePanel.sendEvent` therefore rewrites each chord into its arrow and re-dispatches, after an active
+IME has had first refusal. Nothing else changes: the arrow handlers in `RootPaletteView` are the only
 navigation code, so the compact bar's expand-on-↓, the grid's row and column steps, menu highlight
 movement and the scroll-into-view intent all follow for free. The caret keeps ⌃F/⌃B off the grid
 because `moveHorizontally` leaves →/← `.ignored` there, and the field editor then moves by a character

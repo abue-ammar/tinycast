@@ -163,7 +163,12 @@ final class PalettePanel: NSPanel {
         default: break
         }
         defer { applyCursorPolicy(for: event) }
-        // Before every other rule, so the arrows' own policies apply to the chords too.
+        if event.type == .keyDown,
+            fieldEditor?.hasMarkedText() == true,
+            fieldEditorContext?.handleEvent(event) == true
+        {
+            return
+        }
         if event.type == .keyDown, let arrow = Self.emacsArrow(for: event) {
             sendEvent(arrow)
             return
