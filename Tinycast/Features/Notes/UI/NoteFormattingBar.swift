@@ -38,7 +38,8 @@ struct NoteFormattingBar: View {
     ]
 
     private static let lists = [
-        Control(symbol: "list.number", title: "Numbered List", shortcut: "⇧⌘7", action: .toggleList(.ordered)) {
+        Control(symbol: "list.number", title: "Numbered List", shortcut: "⇧⌘7", action: .toggleList(.ordered))
+        {
             $0.list == .ordered
         },
         Control(symbol: "list.bullet", title: "Bullet List", shortcut: "⇧⌘8", action: .toggleList(.bullet)) {
@@ -141,7 +142,11 @@ private struct NoteHeadingButton: View {
             }
         }
         // Its menu hangs off this frame, which only the laid-out view knows.
-        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { onFrameChange($0) }
+        .onGeometryChange(for: CGRect.self) {
+            $0.frame(in: .global)
+        } action: {
+            onFrameChange($0)
+        }
         .focusable(false)
         .accessibilityLabel("Heading")
         .accessibilityValue(accessibilityValue)

@@ -449,7 +449,8 @@ enum NoteMarkdownEditing {
             result.headingLevel = sharedHeadingLevel(lines)
             let listed = lines.count > 1 ? lines.filter { $0.kind != .blank } : lines
             if let first = listed.first.flatMap({ Self.style(of: $0.kind) }),
-                listed.allSatisfy({ Self.style(of: $0.kind) == first }) {
+                listed.allSatisfy({ Self.style(of: $0.kind) == first })
+            {
                 result.list = first
             }
             let candidates = quoteCandidates(indexes)
@@ -458,7 +459,9 @@ enum NoteMarkdownEditing {
             result.isCodeBlock = enclosingFence(indexes) != nil
             if case let (line, range)? = styledLine(for: selection) {
                 result.inlineStyles = Set(
-                    NoteEditAction.InlineStyle.allCases.filter { removableSpan($0, at: range, in: line) != nil })
+                    NoteEditAction.InlineStyle.allCases.filter {
+                        removableSpan($0, at: range, in: line) != nil
+                    })
                 result.isLink = removableLink(at: range, in: line) != nil
             }
             return result

@@ -48,9 +48,10 @@ bundle, stored tilde-abbreviated so the UI reads cleanly and a settings backup s
 Enumeration descends **one subfolder deep** — a scope's own `.app` children, plus any inside an
 immediate subfolder, are indexed. That catches vendor-folder installs like
 `/Applications/Blackmagic Design/DaVinci Resolve.app` without the folder needing its own scope
-(#256). The walk stays bounded rather than fully recursive: it never opens an `.app` bundle's own
-`Contents/` tree, because `.app` is treated as a leaf, and a subfolder nested deeper than one level
-still needs its own scope.
+(#256). The walk stays bounded rather than fully recursive: an `.app` bundle is a leaf except for
+its `Contents/Applications` and `Contents/Developer/Applications` folders, where Xcode ships
+Instruments, Icon Composer and Simulator, and a subfolder nested deeper than one level still needs
+its own scope.
 
 The defaults cover `/Applications` and `/System/Applications` plus their `Utilities` folders,
 `/System/Library/CoreServices/Applications`, the cryptex apps under

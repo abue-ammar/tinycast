@@ -40,7 +40,8 @@ struct NoteInlineScanner {
         while index < content.upperBound {
             let unit = units[index]
             if unit == Unit.backslash, index + 1 < content.upperBound,
-                Unit.isASCIIPunctuation(units[index + 1]) {
+                Unit.isASCIIPunctuation(units[index + 1])
+            {
                 block(index..<index + 2)
                 index += 2
             } else if unit == Unit.backtick {
@@ -149,11 +150,13 @@ struct NoteInlineScanner {
     private func autolinkEnd(at start: Int, in content: Range<Int>) -> Int? {
         guard units[start] | 0x20 == 0x68 else { return nil }
         if start > content.lowerBound, Unit.isAlphanumeric(units[start - 1]) { return nil }
-        guard let schemeEnd = Self.webPrefixes.lazy.compactMap({
-            matchesIgnoringCase($0, at: start, in: content)
-        }).first
+        guard
+            let schemeEnd = Self.webPrefixes.lazy.compactMap({
+                matchesIgnoringCase($0, at: start, in: content)
+            }).first
         else { return nil }
-        var end = units[schemeEnd..<content.upperBound].firstIndex(where: Unit.isWhitespace)
+        var end =
+            units[schemeEnd..<content.upperBound].firstIndex(where: Unit.isWhitespace)
             ?? content.upperBound
         while end > schemeEnd {
             let last = units[end - 1]
@@ -230,7 +233,8 @@ struct NoteInlineScanner {
                 if canOpen { run.start = run.end - 3 } else { run.end = run.start + 3 }
             }
             while canClose, run.length > 0,
-                let openerIndex = openers.lastIndex(where: { $0.marker == marker }) {
+                let openerIndex = openers.lastIndex(where: { $0.marker == marker })
+            {
                 var opener = openers[openerIndex]
                 let use = marker == Unit.tilde ? 2 : min(opener.length, run.length, 3)
                 let open = (opener.end - use)..<opener.end

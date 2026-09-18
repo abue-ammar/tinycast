@@ -200,7 +200,8 @@ struct NotesEditorTests {
         let typing = editor.textView.typingAttributes
         check(
             "typing attributes return to the body style after leaving a heading",
-            typing[.font] as? NSFont == NoteMarkdownTypography.body && typing.count == NoteMarkdownStyler.literal.count)
+            typing[.font] as? NSFont == NoteMarkdownTypography.body
+                && typing.count == NoteMarkdownStyler.literal.count)
 
         editor.window.makeFirstResponder(nil)
         check(
@@ -234,7 +235,8 @@ struct NotesEditorTests {
 
         editor.textView.setSelectedRange(NSRange(location: 0, length: 0))
         editor.textView.insertText("- ", replacementRange: NSRange(location: 0, length: 0))
-        editor.textView.setSelectedRange(NSRange(location: (editor.textView.string as NSString).length, length: 0))
+        editor.textView.setSelectedRange(
+            NSRange(location: (editor.textView.string as NSString).length, length: 0))
         check("a new list line renders once the caret leaves", decoration(in: editor.textView, at: 0) != nil)
         editor.coordinator.editorUndoManager.undo()
         check(
@@ -267,7 +269,8 @@ struct NotesEditorTests {
         var literal = true
         let storage = editor.textView.textStorage ?? NSTextStorage()
         storage.enumerateAttributes(in: NSRange(location: 0, length: storage.length)) { attributes, _, _ in
-            literal = literal && attributes.count == 2
+            literal =
+                literal && attributes.count == 2
                 && attributes[.font] as? NSFont == NoteMarkdownTypography.body
                 && attributes[.noteBlockDecoration] == nil
         }
@@ -293,7 +296,8 @@ struct NotesEditorTests {
             let box = { (fragment: NSTextLayoutFragment) -> CGRect in
                 let line = fragment.textLineFragments.first?.typographicBounds ?? .zero
                 return NoteCheckboxGeometry.rect(
-                    level: 0, firstLineHeight: line.height, bodyPointSize: NoteMarkdownTypography.body.pointSize
+                    level: 0, firstLineHeight: line.height,
+                    bodyPointSize: NoteMarkdownTypography.body.pointSize
                 ).offsetBy(dx: 0, dy: fragment.layoutFragmentFrame.minY + line.minY)
             }
             check("task checkboxes have breathing room", box(bottom).minY - box(top).maxY >= Theme.Spacing.md)
@@ -301,7 +305,9 @@ struct NotesEditorTests {
             check("task checkboxes have breathing room", false)
         }
         for location in [0, second] {
-            check("task spacing belongs to its paragraph", style(at: location)?.paragraphSpacing == Theme.Spacing.md)
+            check(
+                "task spacing belongs to its paragraph",
+                style(at: location)?.paragraphSpacing == Theme.Spacing.md)
             check("wrapped task lines retain native spacing", style(at: location)?.lineSpacing == 0)
         }
         let lists = "- one\n- two\n1. three\n2. four"
@@ -310,7 +316,8 @@ struct NotesEditorTests {
         check(
             "bullets and numbered items get the same spacing as tasks",
             [0, 6, 12].allSatisfy { style(at: $0)?.paragraphSpacing == Theme.Spacing.md })
-        editor.coordinator.update(NoteEditorInput(id: NoteID(rawValue: "Spacing.md"), source: source, epoch: 3))
+        editor.coordinator.update(
+            NoteEditorInput(id: NoteID(rawValue: "Spacing.md"), source: source, epoch: 3))
         editor.textView.setSelectedRange(NSRange(location: text.length, length: 0))
         check(
             "non-list paragraphs retain native spacing",
@@ -454,8 +461,10 @@ struct NotesEditorTests {
         editor.coordinator.setRendersMarkdown(false)
         let literal = editor.textView.string
         editor.textView.setSelectedRange(NSRange(location: 2, length: 4))
-        let claimed = editor.textView.performKeyEquivalent(with: keyDown("b", keyCode: kVK_ANSI_B, in: editor.window))
-        check("with rendering off ⌘B is not a formatting chord", !claimed && editor.textView.string == literal)
+        let claimed = editor.textView.performKeyEquivalent(
+            with: keyDown("b", keyCode: kVK_ANSI_B, in: editor.window))
+        check(
+            "with rendering off ⌘B is not a formatting chord", !claimed && editor.textView.string == literal)
         editor.textView.setSelectedRange(NSRange(location: (literal as NSString).length, length: 0))
         editor.textView.insertNewline(nil)
         check("with rendering off Return is native", editor.textView.string == literal + "\n")
@@ -535,7 +544,8 @@ struct NotesEditorTests {
         pasteboard.setString("https://a.com", forType: .string)
         check(
             "pasting a URL over a selection makes a link",
-            editor.textView.pasteLink(from: pasteboard) && editor.textView.string == "see [docs](https://a.com)")
+            editor.textView.pasteLink(from: pasteboard)
+                && editor.textView.string == "see [docs](https://a.com)")
         pasteboard.clearContents()
         pasteboard.setString("plain words", forType: .string)
         check("pasting other text is not a link", !editor.textView.pasteLink(from: pasteboard))
@@ -668,7 +678,9 @@ struct NotesEditorTests {
     }
 
     private static func checkboxCenter(in textView: NSTextView, lineStart: Int) -> CGPoint? {
-        guard let fragment = layoutFragments(in: textView)[lineStart] as? NoteBlockLayoutFragment else { return nil }
+        guard let fragment = layoutFragments(in: textView)[lineStart] as? NoteBlockLayoutFragment else {
+            return nil
+        }
         let firstLine = fragment.textLineFragments.first?.typographicBounds ?? .zero
         let box = NoteCheckboxGeometry.rect(
             level: 0, firstLineHeight: firstLine.height, bodyPointSize: NoteMarkdownTypography.body.pointSize)
@@ -677,10 +689,13 @@ struct NotesEditorTests {
 
     /// Every laid-out fragment, keyed by the source location its paragraph starts at.
     private static func layoutFragments(in textView: NSTextView) -> [Int: NSTextLayoutFragment] {
-        guard let layout = textView.textLayoutManager, let content = textView.textContentStorage else { return [:] }
+        guard let layout = textView.textLayoutManager, let content = textView.textContentStorage else {
+            return [:]
+        }
         var fragments: [Int: NSTextLayoutFragment] = [:]
         layout.enumerateTextLayoutFragments(from: content.documentRange.location, options: [.ensuresLayout]) {
-            let location = content.offset(from: content.documentRange.location, to: $0.rangeInElement.location)
+            let location = content.offset(
+                from: content.documentRange.location, to: $0.rangeInElement.location)
             fragments[location] = $0
             return true
         }
@@ -696,7 +711,8 @@ struct NotesEditorTests {
     }
 
     private static func paragraphStyle(in textView: NSTextView, at location: Int) -> NSParagraphStyle? {
-        textView.textStorage?.attribute(.paragraphStyle, at: location, effectiveRange: nil) as? NSParagraphStyle
+        textView.textStorage?.attribute(.paragraphStyle, at: location, effectiveRange: nil)
+            as? NSParagraphStyle
     }
 
     private static func decoration(in textView: NSTextView, at location: Int) -> NoteBlockDecoration? {

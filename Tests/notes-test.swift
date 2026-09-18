@@ -164,8 +164,12 @@ struct NotesTests {
         check("a task title drops its box", NoteTitle.firstLine(of: "- [ ] Buy milk") == "Buy milk")
         check("a bullet title drops its marker", NoteTitle.firstLine(of: "  * errands\n") == "errands")
         check("a quote title drops its marker", NoteTitle.firstLine(of: "> quoted words") == "quoted words")
-        check("a bold title drops its delimiters", NoteTitle.firstLine(of: "Buy **milk** now") == "Buy milk now")
-        check("a link title keeps only its label", NoteTitle.firstLine(of: "[Plan](https://a.com) v2") == "Plan v2")
+        check(
+            "a bold title drops its delimiters", NoteTitle.firstLine(of: "Buy **milk** now") == "Buy milk now"
+        )
+        check(
+            "a link title keeps only its label",
+            NoteTitle.firstLine(of: "[Plan](https://a.com) v2") == "Plan v2")
         check(
             "rules and fences carry no title",
             NoteTitle.firstLine(of: "---\n```swift\nlet x = 1\n```") == "let x = 1")
@@ -549,7 +553,9 @@ struct NotesTests {
         check(
             "bare URLs never link inside code, a link or a word",
             spans("`https://a.com` [https://b.com](https://c.com) xhttps://d.com")
-                == [.init(.code, "https://a.com"), .init(.link(destination: "https://c.com"), "https://b.com")])
+                == [
+                    .init(.code, "https://a.com"), .init(.link(destination: "https://c.com"), "https://b.com")
+                ])
 
         let table = "| Folder | Holds |\n| --- | :---: |\n| `App/` | **root** |\nnot | a row\n\n| after |"
         check(
@@ -608,7 +614,9 @@ struct NotesTests {
                 && edit(.newline, "- «item»") == nil)
         check("Return is native inside a marker", edit(.newline, "-| item") == nil)
 
-        check("Backspace at content start outdents a nested item", edit(.deleteBackward, "- a\n  - |b") == "- a\n- |b")
+        check(
+            "Backspace at content start outdents a nested item",
+            edit(.deleteBackward, "- a\n  - |b") == "- a\n- |b")
         check("Backspace at content start removes a top marker", edit(.deleteBackward, "- [ ] |b") == "|b")
         check("Backspace removes a quote marker", edit(.deleteBackward, "> |q") == "|q")
         check("Backspace is native past content start", edit(.deleteBackward, "- b|c") == nil)
@@ -656,11 +664,15 @@ struct NotesTests {
             edit(.newline, "1. a|\n007. b") == "1. a\n2. |\n3. b")
 
         check("⌘B wraps a selection", edit(.toggleInline(.bold), "a «bold» b") == "a **«bold»** b")
-        check("⌘B trims whitespace before wrapping", edit(.toggleInline(.bold), "a« bold »b") == "a **«bold»** b")
+        check(
+            "⌘B trims whitespace before wrapping",
+            edit(.toggleInline(.bold), "a« bold »b") == "a **«bold»** b")
         check("⌘B unwraps exact content", edit(.toggleInline(.bold), "a **«bold»** b") == "a «bold» b")
         check("⌘B unwraps a selected span", edit(.toggleInline(.bold), "a «**bold**» b") == "a «bold» b")
         check("⌘B unwraps from the caret", edit(.toggleInline(.bold), "**bo|ld**") == "bo|ld")
-        check("⌘I wraps the word at the caret", edit(.toggleInline(.italic), "say wo|rd now") == "say _wo|rd_ now")
+        check(
+            "⌘I wraps the word at the caret",
+            edit(.toggleInline(.italic), "say wo|rd now") == "say _wo|rd_ now")
         check("⌘E inserts a pair", edit(.toggleInline(.code), "a | b") == "a `|` b")
         check("⇧⌘X strikes through", edit(.toggleInline(.strikethrough), "«gone»") == "~~«gone»~~")
         check(
@@ -670,9 +682,13 @@ struct NotesTests {
         check("⌘E pads a span holding a backtick", edit(.toggleInline(.code), "«a`b»") == "`` «a`b» ``")
         check("⌘B across lines does nothing", edit(.toggleInline(.bold), "«a\nb»") == nil)
         check("⌘B on an empty note inserts a pair", edit(.toggleInline(.bold), "|") == "**|**")
-        check("⌘B on the row after a final newline stays there", edit(.toggleInline(.bold), "# T\n|") == "# T\n**|**")
+        check(
+            "⌘B on the row after a final newline stays there",
+            edit(.toggleInline(.bold), "# T\n|") == "# T\n**|**")
         check("⌘B inside a code block does nothing", edit(.toggleInline(.bold), "```\nco|de\n```") == nil)
-        check("⌘B inside a table does nothing", plan(.toggleInline(.bold), "a | b\n--- | ---\nc | d", caret: 17) == nil)
+        check(
+            "⌘B inside a table does nothing",
+            plan(.toggleInline(.bold), "a | b\n--- | ---\nc | d", caret: 17) == nil)
 
         check("⌘K wraps text and selects the URL", edit(.toggleLink, "see «docs»") == "see [docs](«url»)")
         check(
@@ -714,7 +730,9 @@ struct NotesTests {
                 && edit(.typedSpace, "[x]|") == nil)
 
         let url = NoteEditAction.pasteURL(" https://a.com/x \n")
-        check("pasting a URL over text links it", edit(url, "see «docs» now") == "see [docs](https://a.com/x)| now")
+        check(
+            "pasting a URL over text links it",
+            edit(url, "see «docs» now") == "see [docs](https://a.com/x)| now")
         check(
             "pasting links only a URL over a one-line selection",
             edit(.pasteURL("not a url"), "«docs»") == nil && edit(url, "«a\nb»") == nil
@@ -724,11 +742,15 @@ struct NotesTests {
             edit(url, "`«code»`") == nil && edit(url, "[«label»](https://b.com)") == nil)
 
         check("⌥⌘C fences the caret's line", edit(.toggleCodeBlock, "a|b") == "```\na|b\n```")
-        check("⌥⌘C fences whole selected lines", edit(.toggleCodeBlock, "x «one\ntw»o") == "```\n«x one\ntwo»\n```")
+        check(
+            "⌥⌘C fences whole selected lines",
+            edit(.toggleCodeBlock, "x «one\ntw»o") == "```\n«x one\ntwo»\n```")
         check("⌥⌘C in an empty note opens a block", edit(.toggleCodeBlock, "|") == "```\n|\n```")
         check("⌥⌘C on the last empty line opens a block", edit(.toggleCodeBlock, "a\n|") == "a\n```\n|\n```")
         check("⌥⌘C inside a block removes both fences", edit(.toggleCodeBlock, "```\nco|de\n```") == "co|de")
-        check("⌥⌘C keeps text after the block", edit(.toggleCodeBlock, "```swift\nx|\n```\nafter") == "x|\nafter")
+        check(
+            "⌥⌘C keeps text after the block",
+            edit(.toggleCodeBlock, "```swift\nx|\n```\nafter") == "x|\nafter")
         check("⌥⌘C on an unclosed block removes its fence", edit(.toggleCodeBlock, "```\nco|de") == "co|de")
         check("⌥⌘C on an empty block removes it", edit(.toggleCodeBlock, "a\n```|\n```") == "a\n|")
         check("⌥⌘C across a fence does nothing", edit(.toggleCodeBlock, "«a\n```\nb»\n```") == nil)
@@ -799,7 +821,8 @@ struct NotesTests {
         for action in adding {
             check(
                 "an unlit \(action) adds syntax to plain text",
-                apply(action, source, selection: selection).map { $0.0.utf16.count > source.utf16.count } == true)
+                apply(action, source, selection: selection).map { $0.0.utf16.count > source.utf16.count }
+                    == true)
         }
     }
 
@@ -830,13 +853,16 @@ struct NotesTests {
         let revealedSet = IndexSet([1, 4])
         check(
             "a line inserted above shifts the revealed lines",
-            NoteRevealPolicy.shifted(revealedSet, editedOldLines: 0..<1, editedNewLines: 0..<2) == IndexSet([0, 1, 2, 5]))
+            NoteRevealPolicy.shifted(revealedSet, editedOldLines: 0..<1, editedNewLines: 0..<2)
+                == IndexSet([0, 1, 2, 5]))
         check(
             "deleted lines drop out",
-            NoteRevealPolicy.shifted(revealedSet, editedOldLines: 1..<3, editedNewLines: 1..<2) == IndexSet([1, 3]))
+            NoteRevealPolicy.shifted(revealedSet, editedOldLines: 1..<3, editedNewLines: 1..<2)
+                == IndexSet([1, 3]))
         check(
             "one line replaced by three reveals all three",
-            NoteRevealPolicy.shifted(IndexSet([1]), editedOldLines: 1..<2, editedNewLines: 1..<4) == IndexSet([1, 2, 3]))
+            NoteRevealPolicy.shifted(IndexSet([1]), editedOldLines: 1..<2, editedNewLines: 1..<4)
+                == IndexSet([1, 2, 3]))
     }
 
     /// Applies an action to a source whose selection is marked `|` or `«…»`; marks the result.
@@ -903,7 +929,8 @@ struct NotesTests {
     ) -> (String, NSRange)? {
         let markdown = NoteMarkdownParser.parse(source)
         guard
-            let plan = NoteMarkdownEditing.plan(action, source: source, selection: selection, markdown: markdown)
+            let plan = NoteMarkdownEditing.plan(
+                action, source: source, selection: selection, markdown: markdown)
         else { return nil }
         let result = (source as NSString).replacingCharacters(in: plan.range, with: plan.replacement)
         return (result, plan.selection)

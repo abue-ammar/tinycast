@@ -12,6 +12,12 @@ enum SettingsPaneScanner {
         "com.apple.HeadphoneSettings": "Headphones"
     ]
 
+    /// Panes whose bundle icon is ExtensionKit's placeholder brick; keyed by CFBundleIdentifier.
+    private static let iconOverrides: [String: EntryIcon] = [
+        "com.apple.Battery-Settings.extension": .contentType("com.apple.graphic-icon.battery"),
+        "com.apple.HeadphoneSettings": .symbol("headphones")
+    ]
+
     /// Panes that shouldn't appear in the launcher at all (contextual/one-shot panes).
     private static let skippedBundleIDs: Set<String> = []
 
@@ -53,7 +59,7 @@ enum SettingsPaneScanner {
                     id: url.path, name: nameOverrides[bundleID] ?? names.first ?? base, url: url,
                     bundleID: bundleID, kind: .systemSettings,
                     // `EntryNaming` drops whatever repeats the name, so the whole list can go in.
-                    alternateNames: names))
+                    alternateNames: names, iconOverride: iconOverrides[bundleID]))
         }
         let panes = result.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
