@@ -71,17 +71,17 @@ struct NotesView: View {
     /// The count hides first, and the band keeps the offered width so the bar never widens a note.
     private var formattingBand: some View {
         HStack(spacing: Theme.Spacing.md) {
-            NoteFormattingBar()
-                .fixedSize()
             ViewThatFits(in: .horizontal) {
                 characterCount
                 Color.clear.frame(width: 0, height: 0)
             }
-            .frame(maxWidth: .infinity, alignment: .trailing)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            NoteFormattingBar()
+                .fixedSize()
         }
-        .padding(.leading, Theme.Spacing.md)
-        .padding(.trailing, Theme.Size.noteEditorInset)
-        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, Theme.Size.noteEditorInset)
+        .padding(.trailing, Theme.Spacing.md)
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .trailing)
         .frame(height: Theme.Size.bottomBarHeight)
     }
 

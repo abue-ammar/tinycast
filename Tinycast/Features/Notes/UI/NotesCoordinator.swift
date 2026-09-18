@@ -35,6 +35,8 @@ final class NotesCoordinator {
     private(set) var isHeadingMenuPresented = false
     /// A press closes the menu before its button fires, so the button must not reopen it.
     @ObservationIgnored private var headingMenuWasOpenAtPress = false
+    /// The heading button in the panel's flipped content space, reported by the bar as it lays out.
+    @ObservationIgnored var headingButtonFrame: CGRect = .zero
     private var switcherRename = NoteSwitcherRenameState()
     private var presentationGeneration = 0
 

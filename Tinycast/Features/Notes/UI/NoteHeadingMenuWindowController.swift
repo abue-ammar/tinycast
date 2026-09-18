@@ -42,13 +42,12 @@ final class NoteHeadingMenuWindowController {
         return panel
     }
 
-    /// Aligned to the bar's capsule, whose top sits half a capsule above the band's centre.
+    /// Hangs off the heading button itself, whose frame arrives flipped from the SwiftUI bar.
     private func anchor(_ panel: NotesPanel, above host: NSWindow) {
-        let capsuleHeight = Theme.Size.barButtonHeight + Theme.Spacing.xs * 2
-        let capsuleTop = (Theme.Size.bottomBarHeight + capsuleHeight) / 2
+        let button = coordinator.headingButtonFrame
         let origin = CGPoint(
-            x: host.frame.minX + Theme.Spacing.md,
-            y: host.frame.minY + capsuleTop + Theme.Spacing.xs)
+            x: host.frame.minX + button.minX,
+            y: host.frame.maxY - button.minY + Theme.Spacing.xs)
         panel.setFrame(NSRect(origin: origin, size: Theme.Size.noteHeadingMenu), display: false)
     }
 }

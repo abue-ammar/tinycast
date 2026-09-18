@@ -53,21 +53,22 @@ struct NoteFormattingBar: View {
         let formatting = notes.formatting
         let isExpanded = notes.isFormattingBarExpanded
         HStack(spacing: Theme.Spacing.sm) {
-            NoteFormattingToggle(isExpanded: isExpanded, action: notes.toggleFormattingBar)
-                // Drawn above the buttons, so they grow out from behind it.
-                .zIndex(1)
             if isExpanded {
                 HStack(spacing: Theme.Spacing.sm) {
                     NoteHeadingButton(
                         level: formatting.headingLevel, isOpen: notes.isHeadingMenuPresented,
-                        action: notes.toggleHeadingMenu)
+                        action: notes.toggleHeadingMenu
+                    ) { notes.headingButtonFrame = $0 }
                     group(Self.styles, formatting)
                     group(Self.blocks, formatting)
-                    group(Self.lists, formatting, lastIsTrailing: true)
+                    group(Self.lists, formatting)
                 }
                 // Grows out of the round button; nothing leaves the capsule, so no clip is needed.
-                .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity))
+                .transition(.scale(scale: 0.6, anchor: .trailing).combined(with: .opacity))
             }
+            NoteFormattingToggle(isExpanded: isExpanded, action: notes.toggleFormattingBar)
+                // Drawn above the buttons, so they grow out from behind it.
+                .zIndex(1)
         }
         .padding(Theme.Spacing.xs)
         // Behind the buttons, not around them: glass clips content, tooltips draw outside it.
@@ -76,20 +77,17 @@ struct NoteFormattingBar: View {
         .accessibilityLabel("Formatting")
     }
 
-    private func group(
-        _ controls: [Control], _ formatting: NoteFormatting, lastIsTrailing: Bool = false
-    ) -> some View {
+    private func group(_ controls: [Control], _ formatting: NoteFormatting) -> some View {
         HStack(spacing: Theme.Spacing.xxs) {
             ForEach(controls, id: \.title) { control in
                 let lit = control.isLit(formatting)
-                let isLast = lastIsTrailing && control.title == controls.last?.title
                 BarButton(isSelected: lit, isCompact: true, action: { notes.format(control.action) }) {
                     NoteBarGlyph(name: control.symbol)
                 }
                 .focusable(false)
                 .accessibilityLabel(control.title)
                 .accessibilityAddTraits(lit ? .isSelected : [])
-                .tooltip("\(control.title)  \(control.shortcut)", alignment: isLast ? .trailing : .center)
+                .tooltip("\(control.title)  \(control.shortcut)")
             }
         }
     }
@@ -107,8 +105,8 @@ private struct NoteFormattingToggle: View {
         .focusable(false)
         .accessibilityLabel("Formatting")
         .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-        // Against the window's leading edge, so a centred label would run off it.
-        .tooltip("Formatting  ⌥⌘T", alignment: .leading)
+        // Against the window's trailing edge, so a centred label would run off it.
+        .tooltip("Formatting  ⌥⌘T", alignment: .trailing)
     }
 }
 
@@ -126,6 +124,7 @@ private struct NoteHeadingButton: View {
     let level: Int?
     let isOpen: Bool
     let action: () -> Void
+    let onFrameChange: (CGRect) -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var isHeading: Bool { (1...6).contains(level ?? 0) }
@@ -141,18 +140,21 @@ private struct NoteHeadingButton: View {
                     .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
             }
         }
+        // Its menu hangs off this frame, which only the laid-out view knows.
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { onFrameChange($0) }
         .focusable(false)
         .accessibilityLabel("Heading")
         .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(isHeading ? .isSelected : [])
-        .tooltip(isOpen ? nil : "Heading")
+        // The leading end of an expanded capsule, which a narrow note pushes against the edge.
+        .tooltip(isOpen ? nil : "Heading", alignment: .leading)
     }
 
     private var accessibilityValue: String {
         switch level {
-        case .some(0): "Text"
-        case .some(let level) where level > 0: "Heading \(level)"
-        default: ""
+        case nil: ""
+        case 0: "Text"
+        case let level?: "Heading \(level)"
         }
     }
 }

@@ -233,7 +233,7 @@ history. Snippets expand through `insertText` and are styled like typed text.
 ### The formatting bar
 
 While Render Markdown and Show Formatting Bar are both on, the band under the editor holds the
-formatting bar at its leading edge and the character count at its trailing edge. The bar is
+character count at its leading edge and the formatting bar at its trailing edge. The bar is
 `NoteFormattingBar`, a frosted capsule in the title bar's recipe. It starts collapsed to one round
 `paintbrush` button; ⌥⌘T or a click expands it, and the buttons slide out from behind that button:
 a heading menu, Bold, Italic, Strikethrough, Inline Code and Link, then Code Block and Quote, then
@@ -272,7 +272,7 @@ otherwise.
 
 An empty note shows a `Start writing…` placeholder aligned to the 16-point text container inset. The
 character count comes straight off `NSTextStorage.length` and sits in a footer under the editor, or at
-the trailing end of the formatting bar's band while the bar shows. Both belong to the editor surface,
+the leading end of the formatting bar's band while the bar shows. Both belong to the editor surface,
 so neither appears when no note is active.
 
 ## Autosave

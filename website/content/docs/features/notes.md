@@ -92,7 +92,8 @@ every mark as typed, and Return, Tab and these keys behave like any plain text f
 
 ### The formatting bar
 
-Under the note is a round button. Click it, or press <kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>, and a
+At the bottom right of the note is a round button. Click it, or press
+<kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>, and a
 button for each of those keys slides out, plus a heading menu. Click one to format the selection or
 the word at the caret; click a lit button to remove that formatting again. Hover a button to see its
 shortcut. Tinycast remembers whether you left it open. When the window is narrow, the character count
