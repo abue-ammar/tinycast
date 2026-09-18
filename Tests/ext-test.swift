@@ -331,9 +331,11 @@ struct ExtensionTests {
 
         // Raycast dereferences `preference.name` unconditionally, so a bare path crashes the command.
         let picked = prefs["editor"]?.runtimeValue(nil)?.jsonValue as? [String: Any]
-        check("an app picker resolves to an Application", picked?["name"] as? String == "Terminal",
+        check(
+            "an app picker resolves to an Application", picked?["name"] as? String == "Terminal",
             String(describing: picked))
-        check("an app picker carries its bundle id",
+        check(
+            "an app picker carries its bundle id",
             picked?["bundleId"] as? String == "com.apple.Terminal", String(describing: picked))
         check("an unset app picker is absent", prefs["browser"]?.runtimeValue(nil) == nil)
 
