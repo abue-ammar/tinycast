@@ -12,7 +12,7 @@ struct FallbacksSettingsView: View {
         Form {
             Section {
                 Text(
-                    "Matching searches offer these below their results, under “Use … with”. "
+                    "Every search offers these below its results, under “Use … with”. "
                         + "Each one takes what you typed as its input."
                 )
                 .foregroundStyle(.secondary)

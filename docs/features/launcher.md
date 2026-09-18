@@ -265,19 +265,13 @@ the empty query can never resolve is dead state a backup would then carry.
 The row prints `AppEntry.subtitle` beside its name — the one field for an entry whose name alone
 can't say what it acts on.
 
-`Define` is a core command, so it appears in the empty launcher and in Settings › Commands. Selecting
-it seeds the launcher with `define ` ready for the term. Typing `define <term>` puts the result from the
-system's local Dictionary Services directly into the palette; Return copies a found definition. A
-missing term stays in the same card with a no-result message. No network request or bundled word list
-is involved, and translation remains outside this command's scope.
-
 ### Fallbacks
 
 A **fallback** is the other half of the query-driven idea: a command the query is the input for,
-offered under a `Use “…” with…` header below every result when its query rule matches. A contextual row
-leads because it recognised the query; a fallback trails because nothing did.
+offered under a `Use “…” with…` header **below every result**, whatever the query says. A contextual
+row leads because it recognised the query; a fallback trails because nothing did.
 
-`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the three shipped
+`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the four shipped
 destinations and `.quicklink(UUID)` for a user's own. `Builtin` exists rather than a bare `CommandID`
 so `FallbackCoordinator.run` is **exhaustive**: a fifth built-in cannot compile without saying where
 its query goes. `Fallback.id` is deliberately the row's own `AppEntry.id`, which is what lets a stored
@@ -288,6 +282,7 @@ order name a live row across a rename or a reinstall.
 | AI Chat | a fresh chat, question already sent (`AIChatCoordinator.ask`) | `aiEnabled` |
 | Search Files | the file-search screen, already narrowed | `fileSearchEnabled` |
 | Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
+| Define | the dictionary screen, already showing the entry (see [dictionary.md](dictionary.md)) | always |
 | a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |
 
 **A quicklink earns a fallback row by declaring a placeholder**, nothing else —

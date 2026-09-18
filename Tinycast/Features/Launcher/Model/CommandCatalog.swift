@@ -32,7 +32,7 @@ enum CommandCatalog {
         return makeEntry(.openInBrowser, url: url, subtitle: "URL")
     }
 
-    /// A command's row, built rather than looked up.
+    /// A command's row, built rather than looked up — `all` holds none of the query-driven ones.
     nonisolated static func makeEntry(
         _ id: CommandID, url: URL? = nil, subtitle: String? = nil
     ) -> AppEntry {

@@ -35,14 +35,12 @@ struct LauncherList: View {
         case calc(CalcResult)
         case meeting(MeetingEvent, now: Date)
         case color(ColorValue)
-        case definition(DictionaryDefinition)
 
         var sectionTitle: String {
             switch self {
             case .calc: return "Calculator"
             case .meeting: return "Meeting"
             case .color: return "Color"
-            case .definition: return "Dictionary"
             }
         }
 
@@ -51,7 +49,6 @@ struct LauncherList: View {
             case .calc: return "calc-card"
             case .meeting: return "meeting-card"
             case .color: return "color-card"
-            case .definition: return "definition-card"
             }
         }
     }
@@ -204,35 +201,7 @@ private struct LeadCardView: View {
             MeetingCard(meeting: meeting, now: now, selected: selected)
         case .color(let color):
             ColorCard(color: color, selected: selected)
-        case .definition(let definition):
-            DefinitionCard(definition: definition, selected: selected)
         }
-    }
-}
-
-private struct DefinitionCard: View {
-    @Environment(\.metrics) private var metrics
-    let definition: DictionaryDefinition
-    let selected: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.md) {
-            Label(definition.word, systemImage: "book.closed")
-                .font(metrics.typography.panelTitle)
-            if let text = definition.text {
-                Text(text)
-                    .font(metrics.typography.rowTitle)
-                    .textSelection(.enabled)
-            } else {
-                Text("No definition found")
-                    .font(metrics.typography.rowTitle)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, metrics.spacing.xl)
-        .padding(.vertical, metrics.spacing.xxxl)
-        .leadCard(selected: selected)
     }
 }
 

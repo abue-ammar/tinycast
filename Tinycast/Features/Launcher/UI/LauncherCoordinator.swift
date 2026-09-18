@@ -183,9 +183,7 @@ final class LauncherCoordinator {
         case .openCamera:
             dismissPalette()
             Task { await core.cameraCoordinator.show() }
-        case .define:
-            paletteCoordinator.showPalette(mode: .launcher, seeding: "define ")
-        case .openInBrowser, .runShellCommand:
+        case .openInBrowser, .runShellCommand, .define:
             break  // Query-driven: each runs where the typed text is, never through this funnel.
         case .joinNextMeeting:
             calendarCoordinator.joinNextMeeting()

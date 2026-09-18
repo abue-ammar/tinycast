@@ -50,7 +50,8 @@ keep it actively maintained. GitHub Sponsors isn't available in my country, so p
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
 - **Search Files** — open files and folders from the folders you choose, through Spotlight, with no
   index of our own.
-- **Dictionary** — type `define <word>` to show the matching local definition in the palette.
+- **Dictionary** — define whatever you typed from the launcher's fallbacks, read from the Mac's own
+  dictionaries.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.
 - **Calculator** — do math, unit, live currency and crypto conversions inline, right in the palette.
 - **Quicklinks** — turn a URL, search, file or deeplink into a command, with placeholders for typed

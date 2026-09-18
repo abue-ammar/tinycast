@@ -22,7 +22,6 @@ struct FallbackTests {
         ordering()
         headers()
         verbs()
-        dictionaryQuery()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -125,24 +124,5 @@ struct FallbackTests {
         verbs.append(Fallback.quicklink(UUID()).openVerb)
         check("every fallback names its own action", verbs.allSatisfy { !$0.isEmpty })
         check("the verbs are distinct", Set(verbs).count == verbs.count, "got \(verbs)")
-    }
-
-    static func dictionaryQuery() {
-        check(
-            "define is a core command, not a fallback",
-            !CommandID.define.isQueryDriven && Fallback(id: "command:define") == nil)
-        check("define accepts a word", DictionaryLookup.word(in: "define hello") == "hello")
-        check("define is case insensitive", DictionaryLookup.word(in: "DEFINE hello") == "hello")
-        check("define rejects a bare keyword", DictionaryLookup.word(in: "define") == nil)
-        check("define rejects a prefix match", DictionaryLookup.word(in: "definition hello") == nil)
-        check(
-            "define extracts the whole lookup",
-            DictionaryLookup.word(in: "define hello world") == "hello world")
-        check(
-            "a definition with text is actionable",
-            DictionaryDefinition(word: "hello", text: "a greeting").isActionable)
-        check(
-            "a missing definition is not actionable",
-            !DictionaryDefinition(word: "unknown", text: nil).isActionable)
     }
 }

@@ -1,4 +1,3 @@
-import CoreServices
 import Foundation
 
 /// Owns the launcher's fallback section: what it offers for a query, and where running one goes.
@@ -7,7 +6,7 @@ final class FallbackCoordinator {
     private let store: FallbackStore
     private let quicklinks: QuicklinkStore
     private let settings: AppSettings
-    /// The three destinations a fallback hands its query to; nothing here is this type's own state.
+    /// The five destinations a fallback hands its query to; nothing here is this type's own state.
     private unowned let core: AppCore
 
     init(store: FallbackStore, quicklinks: QuicklinkStore, settings: AppSettings, core: AppCore) {
@@ -42,19 +41,9 @@ final class FallbackCoordinator {
         case .builtin(.aiChat): core.aiChatCoordinator.ask(query)
         case .builtin(.searchFiles): core.fileSearchCoordinator.show(query: query)
         case .builtin(.runShellCommand): core.customCommandCoordinator.runShellCommand(query)
+        case .builtin(.define): core.dictionaryCoordinator.show(term: query)
         case .quicklink(let id): core.quicklinkCoordinator.openQuicklink(id: id, filling: query)
         }
-    }
-
-    func definition(for query: String) -> DictionaryDefinition? {
-        guard let word = DictionaryLookup.word(in: query) else { return nil }
-        let term = word as NSString
-        let text =
-            DCSCopyTextDefinition(
-                nil, term as CFString, CFRange(location: 0, length: term.length))?
-            .takeRetainedValue() as String?
-        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
-        return DictionaryDefinition(word: word, text: trimmed?.isEmpty == false ? trimmed : nil)
     }
 
     /// The section's gear and the row's own action; the palette closes behind the pane.
@@ -79,7 +68,7 @@ final class FallbackCoordinator {
         case .aiChat: return settings.aiEnabled
         case .searchFiles: return settings.fileSearchEnabled
         // Its own capability: this shell is not the custom-command library's switch to hold.
-        case .runShellCommand: return true
+        case .runShellCommand, .define: return true
         }
     }
 }

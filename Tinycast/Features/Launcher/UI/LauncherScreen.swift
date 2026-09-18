@@ -23,8 +23,6 @@ struct LauncherScreen: PaletteScreen {
     private let calc: CalcResult?
     /// The colour the query itself spells, if it spells one; nil for every other query.
     private let color: ColorValue?
-    /// The native dictionary answer, if the query spells `define <term>`.
-    private let definition: DictionaryDefinition?
     /// Sections stand in for the ranked Results list, which a typed query collapses to.
     private let showSections: Bool
     /// Only the empty query pins favorites — a category shows its sections without one of its own.
@@ -63,7 +61,6 @@ struct LauncherScreen: PaletteScreen {
         let calc = CalcMemo.evaluate(vm.query, rates: currencyRates.rates)
         // After the calculator: `#FF5733` is never arithmetic, so the two can't both answer.
         let color = calc == nil ? ColorValue.parse(vm.query) : nil
-        let definition = core.fallbackCoordinator.definition(for: vm.query)
         let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
         let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespaces).isEmpty
@@ -74,7 +71,6 @@ struct LauncherScreen: PaletteScreen {
         self.calc = calc
         self.fallbacks = fallbacks
         self.color = color
-        self.definition = definition
         self.showSections = pinsFavorites || AppEntry.Kind.named(by: vm.query) != nil
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? results.prefix(while: favorites.isFavorite).count : 0
@@ -94,7 +90,6 @@ struct LauncherScreen: PaletteScreen {
         case calc(CalcResult)
         case meeting(MeetingEvent)
         case color(ColorValue)
-        case definition(DictionaryDefinition)
         case entry(AppEntry)
         /// Prefixed, because the same command can also be a ranked hit above its own fallback row.
         case fallback(Fallback, AppEntry)
@@ -104,7 +99,6 @@ struct LauncherScreen: PaletteScreen {
             case .calc: return "calc-card"
             case .meeting: return "meeting-card"
             case .color: return "color-card"
-            case .definition: return "definition-card"
             case .entry(let app): return app.id
             case .fallback(let fallback, _): return "fallback-" + fallback.id
             }
@@ -121,7 +115,6 @@ struct LauncherScreen: PaletteScreen {
         switch row(at: clampedSelection) {
         case .calc: return "Copy Answer"
         case .color: return "Copy Color"
-        case .definition: return "Copy Definition"
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
@@ -185,7 +178,7 @@ struct LauncherScreen: PaletteScreen {
 
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
-        case .calc, .meeting, .color, .definition: return true
+        case .calc, .meeting, .color: return true
         case .entry, .fallback, nil: return false
         }
     }
@@ -193,18 +186,14 @@ struct LauncherScreen: PaletteScreen {
     /// Whichever card leads, in the terms the list draws it in.
     private var leadCard: LauncherList.LeadCard? {
         if let calc { return .calc(calc) }
-        if let definition { return .definition(definition) }
         if let color { return .color(color) }
         return meeting.map { .meeting($0, now: now) }
     }
 
     /// An error card is selectable but has no action: it must drive neither the pill nor ⌘K.
     func hasPrimaryAction(at selection: Int) -> Bool {
-        switch row(at: selection) {
-        case .calc(let result): return result.isActionable
-        case .definition(let result): return result.isActionable
-        default: return true
-        }
+        guard case .calc(let result) = row(at: selection) else { return true }
+        return result.isActionable
     }
 
     func actions(at selection: Int) -> PopoverMenuContent? {
@@ -215,7 +204,6 @@ struct LauncherScreen: PaletteScreen {
             return ColorActionsMenu.content(color: color, core: core)
         case .meeting(let meeting):
             return MeetingActionsMenu.content(meeting: meeting, core: core)
-        case .definition: return nil
         case .entry(let app):
             return AppActionsMenu.content(
                 app: app, searchQuery: vm.query, core: core, running: running,
@@ -241,8 +229,6 @@ struct LauncherScreen: PaletteScreen {
         case .color(let color):
             core.clipboardCoordinator.copyColor(color, as: ColorFormat.primary(for: color))
         case .meeting(let meeting): core.calendarCoordinator.activateMeeting(id: meeting.id)
-        case .definition(let definition):
-            if let text = definition.text { Paster.copyPlainText(text) }
         case .entry(let app):
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))

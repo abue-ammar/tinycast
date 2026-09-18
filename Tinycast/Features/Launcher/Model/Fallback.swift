@@ -1,12 +1,13 @@
 import Foundation
 
-/// A launcher fallback: the typed query is its input.
+/// A launcher fallback: the typed query is its input, so it is offered whatever the query says.
 enum Fallback: Hashable, Sendable {
     /// The shipped destinations, in the order a fresh install offers them.
     enum Builtin: String, CaseIterable, Sendable {
         case aiChat
         case searchFiles
         case runShellCommand
+        case define
 
         /// Where its name and glyph come from, so a fallback row reads like the command it runs.
         var command: CommandID {
@@ -14,6 +15,7 @@ enum Fallback: Hashable, Sendable {
             case .aiChat: return .aiChat
             case .searchFiles: return .searchFiles
             case .runShellCommand: return .runShellCommand
+            case .define: return .define
             }
         }
     }
@@ -47,6 +49,7 @@ enum Fallback: Hashable, Sendable {
         case .builtin(.aiChat): return "Ask AI Chat"
         case .builtin(.searchFiles): return "Search Files"
         case .builtin(.runShellCommand): return "Run Shell Command"
+        case .builtin(.define): return "Define"
         case .quicklink: return "Open Quicklink"
         }
     }
@@ -63,22 +66,4 @@ enum Fallback: Hashable, Sendable {
         guard query.count > limit else { return "Use “\(query)” with…" }
         return "Use “\(query.prefix(limit / 2))…\(query.suffix(limit - limit / 2 - 1))” with…"
     }
-}
-
-enum DictionaryLookup {
-    private static let keyword = "define"
-
-    static func word(in query: String) -> String? {
-        let parts = query.split(maxSplits: 1, omittingEmptySubsequences: true) { $0.isWhitespace }
-        guard parts.count == 2, String(parts[0]).caseInsensitiveCompare(keyword) == .orderedSame
-        else { return nil }
-        return String(parts[1])
-    }
-}
-
-struct DictionaryDefinition: Equatable, Sendable {
-    let word: String
-    let text: String?
-
-    var isActionable: Bool { text != nil }
 }
