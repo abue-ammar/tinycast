@@ -3,7 +3,7 @@ import Foundation
 @main
 enum TextDiffTests {
     static func main() {
-        precondition(TextDiffEngine.maxTokens <= Int(UInt16.max), "LCS cells are UInt16")
+        precondition(TextDiffEngine.maxTokens <= Int(UInt16.max), "LCS scores are UInt16")
 
         precondition(TextDiffEngine.diff(original: "", modified: "") == [])
         precondition(TextDiffEngine.diff(original: "", modified: "new") == [.inserted("new")])
@@ -15,7 +15,9 @@ enum TextDiffTests {
             TextDiffEngine.diff(original: "café 👩🏽‍💻\n", modified: "cafe 👩🏽‍💻\n")
                 == [.deleted("café"), .inserted("cafe"), .equal(" 👩🏽‍💻\n")])
 
-        for count in [TextDiffEngine.maxTokens - 1, TextDiffEngine.maxTokens] {
+        for count in [
+            63, 64, 65, 127, 128, 129, TextDiffEngine.maxTokens - 1, TextDiffEngine.maxTokens
+        ] {
             let original = (0..<count).map { $0.isMultiple(of: 2) ? "word" : " " }.joined()
             let suffix = String(original.dropFirst(4))
             let modified = "ward" + suffix
@@ -23,6 +25,10 @@ enum TextDiffTests {
                 TextDiffEngine.diff(original: original, modified: modified)
                     == [.deleted("word"), .inserted("ward"), .equal(suffix)])
         }
+
+        precondition(
+            TextDiffEngine.diff(original: "alpha beta gamma", modified: "alpha gamma")
+                == [.equal("alpha"), .deleted(" beta"), .equal(" gamma")])
 
         let overCap = String(repeating: "word ", count: TextDiffEngine.maxTokens / 2) + "word"
         for (original, modified) in [(overCap, "short"), ("short", overCap)] {

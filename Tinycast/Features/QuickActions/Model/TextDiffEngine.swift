@@ -8,7 +8,7 @@ enum TextDiffEngine: Sendable {
         case deleted(String)
     }
 
-    /// The matrix is quadratic, so an unbounded diff asks for gigabytes; a cell must fit `UInt16`.
+    /// The traceback is quadratic, so an unbounded diff still asks for gigabytes — a bit a cell.
     static let maxTokens = 4_000
 
     static func diff(original: String, modified: String) -> [Chunk] {
@@ -22,7 +22,7 @@ enum TextDiffEngine: Sendable {
             return [.deleted(original), .inserted(modified)]
         }
 
-        let matrix = longestCommonSubsequence(old, new)
+        let traceback = longestCommonSubsequence(old, new)
         var reversed: [Chunk] = []
         var i = old.count
         var j = new.count
@@ -31,7 +31,7 @@ enum TextDiffEngine: Sendable {
                 reversed.append(.equal(old[i - 1]))
                 i -= 1
                 j -= 1
-            } else if j > 0, i == 0 || matrix[i][j - 1] >= matrix[i - 1][j] {
+            } else if j > 0, i == 0 || traceback.preferInsert(row: i, col: j) {
                 reversed.append(.inserted(new[j - 1]))
                 j -= 1
             } else {
@@ -61,17 +61,49 @@ enum TextDiffEngine: Sendable {
         return tokens
     }
 
-    private static func longestCommonSubsequence(_ old: [String], _ new: [String]) -> [[UInt16]] {
-        var table = Array(
-            repeating: Array(repeating: UInt16(0), count: new.count + 1), count: old.count + 1)
+    /// One row of scores plus a traceback bit per cell, so the cap costs 1 bit rather than 16.
+    private static func longestCommonSubsequence(_ old: [String], _ new: [String]) -> Traceback {
+        var traceback = Traceback(rows: old.count + 1, cols: new.count + 1)
+        var previous = [UInt16](repeating: 0, count: new.count + 1)
+        var current = [UInt16](repeating: 0, count: new.count + 1)
         for i in 0..<old.count {
+            current[0] = 0
             for j in 0..<new.count {
-                table[i + 1][j + 1] =
-                    old[i] == new[j]
-                    ? table[i][j] + 1 : max(table[i + 1][j], table[i][j + 1])
+                if old[i] == new[j] {
+                    current[j + 1] = previous[j] + 1
+                } else {
+                    let fromLeft = current[j]
+                    let fromUp = previous[j + 1]
+                    current[j + 1] = max(fromLeft, fromUp)
+                    if fromLeft >= fromUp {
+                        traceback.markPreferInsert(row: i + 1, col: j + 1)
+                    }
+                }
             }
+            swap(&previous, &current)
         }
-        return table
+        return traceback
+    }
+
+    /// A bit per cell for "insert over delete" on a tie; a match is read straight off the tokens.
+    private struct Traceback {
+        private var words: [UInt64]
+        private let cols: Int
+
+        init(rows: Int, cols: Int) {
+            self.cols = cols
+            words = [UInt64](repeating: 0, count: (rows * cols + 63) / 64)
+        }
+
+        mutating func markPreferInsert(row: Int, col: Int) {
+            let bit = row * cols + col
+            words[bit / 64] |= (1 as UInt64) << UInt64(bit % 64)
+        }
+
+        func preferInsert(row: Int, col: Int) -> Bool {
+            let bit = row * cols + col
+            return words[bit / 64] & ((1 as UInt64) << UInt64(bit % 64)) != 0
+        }
     }
 
     /// Adjacent chunks of one kind become one, so the reader sees a changed phrase, not five words.
