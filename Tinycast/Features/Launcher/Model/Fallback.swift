@@ -49,7 +49,7 @@ enum Fallback: Hashable, Sendable {
         case .builtin(.aiChat): return "Ask AI Chat"
         case .builtin(.searchFiles): return "Search Files"
         case .builtin(.runShellCommand): return "Run Shell Command"
-        case .builtin(.define): return "Define"
+        case .builtin(.define): return "Define Word"
         case .quicklink: return "Open Quicklink"
         }
     }
