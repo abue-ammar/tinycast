@@ -30,13 +30,14 @@ enum NoteMarkdownStyler {
     private static let codeInset = Theme.Spacing.lg
     /// Space after each list item, kept when revealed so moving the caret never shifts the rows.
     private static let listItemSpacing = Theme.Spacing.md
-    private static let allowedLinkSchemes: Set<String> = ["http", "https", "mailto"]
+    /// Only these get a `.link` attribute, and only these are opened when one is clicked.
+    static let openableSchemes: Set<String> = ["http", "https", "mailto"]
 
     /// Colours the fragment draws with are resolved now, under the caller's drawing appearance.
     static func style(
-        _ line: NoteMarkdown.Line, at index: Int, in markdown: NoteMarkdown, text: NSString,
-        isRevealed: Bool
+        at index: Int, in markdown: NoteMarkdown, text: NSString, isRevealed: Bool
     ) -> LineStyle {
+        let line = markdown.lines[index]
         var base = literal
         var runs: [(range: NSRange, attributes: Attributes)] = []
         let markerLook = isRevealed ? revealedMarker : hidden
@@ -57,14 +58,13 @@ enum NoteMarkdownStyler {
             if case .task(checked: true) = line.kind {
                 runs.append((line.contentRange, checkedTask))
             }
-            let spacing = listItemSpacing
             let contentIndent = CGFloat(line.level + 1) * listSlot
             guard !isRevealed else {
                 base[.paragraphStyle] = hanging(
-                    line.markerRange, in: text, contentIndent: contentIndent, spacingAfter: spacing)
+                    line.markerRange, in: text, contentIndent: contentIndent, spacingAfter: listItemSpacing)
                 break
             }
-            base[.paragraphStyle] = indented(by: contentIndent, spacingAfter: spacing)
+            base[.paragraphStyle] = indented(by: contentIndent, spacingAfter: listItemSpacing)
             base[.noteBlockDecoration] = listDecoration(line, text: text)
         case .quote(let depth):
             if let marker = line.markerRange { runs.append((marker, markerLook)) }
@@ -100,7 +100,7 @@ enum NoteMarkdownStyler {
         }
 
         let lineFont = base[.font] as? NSFont ?? NoteMarkdownTypography.body
-        runs += inlineRuns(line.inlines, lineFont: lineFont, text: text, isRevealed: isRevealed)
+        runs += inlineRuns(markdown.inlines(of: line), lineFont: lineFont, text: text, isRevealed: isRevealed)
         return LineStyle(base: base, runs: runs)
     }
 
@@ -152,7 +152,7 @@ enum NoteMarkdownStyler {
     /// A revealed link is plain coloured text, so a click places the caret to edit its URL.
     private static func linkLook(_ url: URL?, isRevealed: Bool) -> Attributes {
         guard !isRevealed else { return [.foregroundColor: NSColor.linkColor] }
-        guard let url, let scheme = url.scheme?.lowercased(), allowedLinkSchemes.contains(scheme) else {
+        guard let url, let scheme = url.scheme?.lowercased(), openableSchemes.contains(scheme) else {
             return [:]
         }
         return [.link: url]
@@ -208,7 +208,6 @@ enum NoteMarkdownStyler {
     }
 
     private static func listDecoration(_ line: NoteMarkdown.Line, text: NSString) -> NoteBlockDecoration {
-        let marker = color(Theme.Colors.textSecondary)
         let shape: NoteBlockDecoration.Shape
         switch line.kind {
         case .task(let checked):
@@ -220,8 +219,7 @@ enum NoteMarkdownStyler {
         default:
             shape = .bullet(level: line.level)
         }
-        return NoteBlockDecoration(
-            shape: shape, fill: marker, ink: marker, bodyPointSize: NoteMarkdownTypography.body.pointSize)
+        return decoration(shape, fill: Theme.Colors.textSecondary, ink: Theme.Colors.textSecondary)
     }
 
     private static func codeRow(_ index: Int, _ markdown: NoteMarkdown) -> NoteBlockDecoration.Shape.CodeRow {
@@ -257,6 +255,16 @@ enum NoteMarkdownStyler {
 
     /// Pins a dynamic token to the current drawing appearance; the fragment cannot resolve one.
     private static func color(_ token: Color) -> NSColor {
-        NSColor(cgColor: NSColor(token).cgColor) ?? NSColor(token)
+        if let resolved = resolved[token] { return resolved }
+        let pinned = NSColor(cgColor: NSColor(token).cgColor) ?? NSColor(token)
+        resolved[token] = pinned
+        return pinned
     }
+
+    /// Pinned colours belong to one appearance, so a change to it has to drop them.
+    static func invalidateColors() {
+        resolved.removeAll(keepingCapacity: true)
+    }
+
+    private static var resolved: [Color: NSColor] = [:]
 }

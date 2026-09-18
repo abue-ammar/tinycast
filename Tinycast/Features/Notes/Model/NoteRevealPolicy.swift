@@ -1,13 +1,12 @@
 import Foundation
 
-/// Which lines show raw Markdown: those under the selection, and only while the editor has focus.
+/// Decides which lines show their raw Markdown rather than its rendered form.
 enum NoteRevealPolicy {
     /// Lines that show raw syntax: those under the selection, widened to whole fenced blocks.
     static func revealedLines(
         selection: NSRange, markdown: NoteMarkdown, isFocused: Bool
     ) -> IndexSet {
-        guard isFocused, selection.location != NSNotFound, !isAfterFinalTerminator(selection, markdown)
-        else { return IndexSet() }
+        guard isFocused, selection.location != NSNotFound else { return IndexSet() }
         var revealed = IndexSet(integersIn: markdown.lineIndexes(intersecting: selection))
         guard let first = revealed.first, let last = revealed.last else { return revealed }
         for block in markdown.fenceBlocks where block.overlaps(first...last) {
@@ -28,12 +27,5 @@ enum NoteRevealPolicy {
         }
         shifted.insert(integersIn: editedNewLines)
         return shifted
-    }
-
-    /// A caret on the empty row after a final newline sits on no line at all.
-    private static func isAfterFinalTerminator(_ selection: NSRange, _ markdown: NoteMarkdown) -> Bool {
-        guard selection.length == 0, let last = markdown.lines.last else { return false }
-        return selection.location == NSMaxRange(last.range)
-            && NSMaxRange(last.contentRange) < NSMaxRange(last.range)
     }
 }

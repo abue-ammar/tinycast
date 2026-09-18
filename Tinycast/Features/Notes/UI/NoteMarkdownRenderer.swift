@@ -2,36 +2,39 @@ import AppKit
 
 /// Keeps a note's parse and reveal state in step with its text view, restyling only what changed.
 @MainActor
-final class NoteMarkdownRenderer {
+final class NoteMarkdownRenderer: NSObject, @MainActor NSTextStorageDelegate {
     private(set) var markdown = NoteMarkdown.empty
     private(set) var revealed = IndexSet()
     /// The Render Markdown setting; flipping it takes effect on the next `reset()`.
     var isEnabled: Bool
-    weak var textView: NoteTextView?
+    weak var textView: NoteTextView? {
+        didSet { textView?.textStorage?.delegate = self }
+    }
 
-    /// The source `markdown` was parsed from, compared against storage to find each edit.
-    private var units: [UInt16] = []
+    /// The edit not yet parsed, as the range it covered in `markdown` and the one it covers now.
+    private var pendingEdit: (old: NSRange, new: NSRange)?
     private var isStyling = false
 
     init(isEnabled: Bool) {
         self.isEnabled = isEnabled
+        super.init()
     }
 
     /// A full parse and restyle, after an install, a setting flip or an appearance change.
     func reset() {
         guard let textView, let storage = textView.textStorage else { return }
+        NoteMarkdownStyler.invalidateColors()
+        pendingEdit = nil
         guard isEnabled else {
             markdown = .empty
             revealed = []
-            units = []
             restyle(NSRange(location: 0, length: storage.length)) {
                 storage.setAttributes(NoteMarkdownStyler.literal, range: $0)
             }
             textView.typingAttributes = NoteMarkdownStyler.literal
             return
         }
-        units = Self.units(of: storage)
-        markdown = NoteMarkdownParser.parse(units: units)
+        markdown = NoteMarkdownParser.parse(units: Self.units(of: storage))
         revealed = nextRevealed()
         apply(IndexSet(integersIn: markdown.lines.indices))
         textView.typingAttributes = NoteMarkdownStyler.literal
@@ -54,10 +57,6 @@ final class NoteMarkdownRenderer {
         textView.typingAttributes = NoteMarkdownStyler.literal
     }
 
-    func focusDidChange() {
-        selectionDidChange()
-    }
-
     /// The parse of the source as it is right now, for edit plans that must not act on a stale one.
     func syncedMarkdown() -> NoteMarkdown {
         syncSource()
@@ -68,13 +67,11 @@ final class NoteMarkdownRenderer {
 
     /// Undo and marked text change storage without `textDidChange`, so every callback checks here.
     private func syncSource() {
-        guard isEnabled, !isStyling, let storage = textView?.textStorage else { return }
-        let current = Self.units(of: storage)
-        guard current != units else { return }
+        guard isEnabled, !isStyling, let edit = pendingEdit, let storage = textView?.textStorage
+        else { return }
+        pendingEdit = nil
         let old = markdown
-        let edit = Self.editedRanges(from: units, to: current)
-        units = current
-        markdown = NoteMarkdownParser.parse(units: current)
+        markdown = NoteMarkdownParser.parse(units: Self.units(of: storage))
 
         let oldLines = old.lineIndexes(intersecting: edit.old)
         let newLines = markdown.lineIndexes(intersecting: edit.new)
@@ -116,18 +113,21 @@ final class NoteMarkdownRenderer {
         return scope
     }
 
-    private static func editedRanges(from old: [UInt16], to new: [UInt16]) -> (old: NSRange, new: NSRange) {
-        let limit = min(old.count, new.count)
-        var prefix = 0
-        while prefix < limit, old[prefix] == new[prefix] { prefix += 1 }
-        var suffix = 0
-        while suffix < limit - prefix, old[old.count - 1 - suffix] == new[new.count - 1 - suffix] {
-            suffix += 1
+    /// Storage reports every mutation here, undo and marked text included; styling never does.
+    func textStorage(
+        _ textStorage: NSTextStorage, didProcessEditing edited: NSTextStorageEditActions,
+        range: NSRange, changeInLength delta: Int
+    ) {
+        guard edited.contains(.editedCharacters) else { return }
+        let before = NSRange(location: range.location, length: range.length - delta)
+        guard let pending = pendingEdit else {
+            pendingEdit = (old: before, new: range)
+            return
         }
-        return (
-            NSRange(location: prefix, length: old.count - prefix - suffix),
-            NSRange(location: prefix, length: new.count - prefix - suffix)
-        )
+        let lower = min(pending.old.location, before.location)
+        let upper = max(NSMaxRange(pending.new), NSMaxRange(before))
+        let shift = pending.new.length - pending.old.length
+        pendingEdit = (old: NSRange(lower..<(upper - shift)), new: NSRange(lower..<(upper + delta)))
     }
 
     private static func units(of storage: NSTextStorage) -> [UInt16] {
@@ -156,10 +156,9 @@ final class NoteMarkdownRenderer {
                 markdown.lines[lines.lowerBound].range, markdown.lines[lines.upperBound - 1].range)
             restyle(span) { _ in
                 for index in lines {
-                    let line = markdown.lines[index]
                     let style = NoteMarkdownStyler.style(
-                        line, at: index, in: markdown, text: text, isRevealed: revealed.contains(index))
-                    textView.textStorage?.setAttributes(style.base, range: line.range)
+                        at: index, in: markdown, text: text, isRevealed: revealed.contains(index))
+                    textView.textStorage?.setAttributes(style.base, range: markdown.lines[index].range)
                     for run in style.runs {
                         textView.textStorage?.addAttributes(run.attributes, range: run.range)
                     }

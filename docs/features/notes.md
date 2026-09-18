@@ -139,8 +139,10 @@ Rendering is attributes and drawing over the source.
 
 `Model/NoteMarkdownParser` splits the source on the same boundaries as `NSString.lineRange(for:)`, so
 one line is one TextKit paragraph. `NoteMarkdown` gives each line its kind, UTF-16 ranges for its
-content, block marker and task checkbox, a list level from an indent stack, and its inline spans with
-the marker ranges to hide.
+content, block marker and task checkbox, and a list level from an indent stack. A source ending in a
+terminator, and an empty source, get a final zero-length line, so a caret on the empty last row sits on
+a real line like any other. Inline spans are not stored: `NoteMarkdown.inlines(of:)` scans the one line
+asked for, which is all the styler, the editing rules and `NoteTitle` ever need.
 
 It covers headings 1 to 6 (4 to 6 look like 3), bold, italic, bold italic, strikethrough, inline code,
 links, bare `http` and `https` URLs, bullet, numbered and task lists with nesting, quotes, fenced code
@@ -154,12 +156,12 @@ and is not shared.
 
 ### Rendering
 
-`UI/NoteMarkdownRenderer` holds the parse and the set of revealed lines. `textDidChange` and
-`textViewDidChangeSelection` both call it, and it compares the storage with the source it last parsed.
-Undo, redo and marked text change the storage without posting `textDidChange`, so that comparison, not
-the callback, is what finds an edit. The common prefix and suffix give the edited lines. Those lines and
-one neighbour on each side are restyled, widened to the rest of the note when a fenced block moved and
-to any list line whose depth changed.
+`UI/NoteMarkdownRenderer` holds the parse and the set of revealed lines, and is the text storage's
+delegate. Every mutation reports its edited range and length delta there, including the undo, redo and
+marked-text ones that post no `textDidChange`, and several are folded into one pending edit.
+`textDidChange`, `textViewDidChangeSelection` and any read of the parse consume it and reparse. The
+edited lines and one neighbour on each side are restyled, widened to the rest of the note when a fenced
+block moved and to any list line whose depth changed.
 
 `NoteMarkdownStyler` turns one line into attributes. `NoteMarkdownTypography` sets the body one
 system text style up (title3) and headings at largeTitle, title1 and title2, with or without

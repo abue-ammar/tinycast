@@ -6,6 +6,9 @@ struct NoteInlineScanner {
 
     private typealias Unit = NoteMarkdownParser.Unit
 
+    /// A bare URL is recognised only when it states its scheme, never from a bare domain.
+    static let webPrefixes = ["https://", "http://"]
+
     /// GFM's trailing punctuation that never belongs to a bare URL.
     private static let autolinkTrailing: Set<UInt16> = Set(".,;:!?*_~".utf16)
 
@@ -20,7 +23,7 @@ struct NoteInlineScanner {
     private static func mayStartInline(_ unit: UInt16) -> Bool {
         switch unit {
         case Unit.asterisk, Unit.underscore, Unit.tilde, Unit.backtick, Unit.openBracket,
-            Unit.backslash, 0x3A:
+            Unit.backslash, Unit.colon:
             true
         default:
             false
@@ -146,7 +149,7 @@ struct NoteInlineScanner {
     private func autolinkEnd(at start: Int, in content: Range<Int>) -> Int? {
         guard units[start] | 0x20 == 0x68 else { return nil }
         if start > content.lowerBound, Unit.isAlphanumeric(units[start - 1]) { return nil }
-        guard let schemeEnd = ["https://", "http://"].lazy.compactMap({
+        guard let schemeEnd = Self.webPrefixes.lazy.compactMap({
             matchesIgnoringCase($0, at: start, in: content)
         }).first
         else { return nil }

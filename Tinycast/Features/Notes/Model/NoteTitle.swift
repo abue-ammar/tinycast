@@ -24,8 +24,9 @@ enum NoteTitle {
     static func firstLine(of source: String) -> String? {
         let head = String(source.prefix(scanLimit))
         let text = head as NSString
-        for line in NoteMarkdownParser.parse(head).lines {
-            let title = visibleText(of: line, in: text)
+        let markdown = NoteMarkdownParser.parse(head)
+        for line in markdown.lines {
+            let title = visibleText(of: line, in: markdown, text: text)
             guard !title.isEmpty else { continue }
             return String(title.prefix(displayLimit))
         }
@@ -33,14 +34,17 @@ enum NoteTitle {
     }
 
     /// A line as it reads when rendered, with the setting on or off: syntax never titles a note.
-    private static func visibleText(of line: NoteMarkdown.Line, in text: NSString) -> String {
+    private static func visibleText(
+        of line: NoteMarkdown.Line, in markdown: NoteMarkdown, text: NSString
+    ) -> String {
         switch line.kind {
         case .blank, .rule, .fenceOpen, .fenceClose: return ""
         default: break
         }
         var visible = ""
         var cursor = line.contentRange.location
-        for marker in line.inlines.flatMap(\.markerRanges).sorted(by: { $0.location < $1.location }) {
+        let markers = markdown.inlines(of: line).flatMap(\.markerRanges)
+        for marker in markers.sorted(by: { $0.location < $1.location }) {
             visible += text.substring(with: NSRange(cursor..<marker.location))
             cursor = NSMaxRange(marker)
         }

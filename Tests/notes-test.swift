@@ -412,7 +412,7 @@ struct NotesTests {
 
     private static func testMarkdownParser() {
         let tiled = ["a\nb\n", "a\r\nb", "\n\n", "x", "a\u{2029}b\rc"]
-        check("empty source has no lines", NoteMarkdownParser.parse("").lines.isEmpty)
+        check("an empty source is one empty line", NoteMarkdownParser.parse("").lines.map(\.kind) == [.blank])
         for source in tiled {
             let lines = NoteMarkdownParser.parse(source).lines
             let string = source as NSString
@@ -424,7 +424,9 @@ struct NotesTests {
             }
             check("lines tile \(source.debugDescription) like NSString", agrees && location == string.length)
         }
-        check("a final terminator adds no empty line", NoteMarkdownParser.parse("a\n").lines.count == 1)
+        check(
+            "a final terminator makes the empty row a real line",
+            NoteMarkdownParser.parse("a\n").lines.map(\.kind) == [.paragraph, .blank])
         let crlf = NoteMarkdownParser.parse("# Hi\r\nnext").lines
         check(
             "a CRLF terminator belongs to the range, never the content",
@@ -482,7 +484,7 @@ struct NotesTests {
             fence.lines.map(\.kind) == [
                 .fenceOpen(language: "swift"), .code, .code, .fenceClose, .paragraph,
                 .fenceOpen(language: nil), .code
-            ] && fence.lines[2].inlines.isEmpty)
+            ] && fence.inlines(of: fence.lines[2]).isEmpty)
         check(
             "fence blocks list open through close, and an unclosed one runs to the end",
             fence.fenceBlocks == [0...3, 5...6])
@@ -510,7 +512,8 @@ struct NotesTests {
         check("intraword underscores stay text", spans("snake_case_name").isEmpty)
         check("whitespace-flanked delimiters do not open", spans("a * b * c").isEmpty)
         check("an escape stops a delimiter", spans("\\*not\\* *yes*") == [.init(.emphasis, "yes")])
-        let strong = NoteMarkdownParser.parse("x **a** y").lines[0].inlines[0]
+        let strongLine = NoteMarkdownParser.parse("x **a** y")
+        let strong = strongLine.inlines(of: strongLine.lines[0])[0]
         check(
             "delimiter markers are hidden runs",
             strong.markerRanges == [NSRange(location: 2, length: 2), NSRange(location: 5, length: 2)]
@@ -527,7 +530,8 @@ struct NotesTests {
             spans(linkSource) == [
                 .init(.link(destination: "https://x.com/(y)"), "**a** b"), .init(.strong, "a")
             ])
-        let link = NoteMarkdownParser.parse(linkSource).lines[0].inlines[0]
+        let linkLine = NoteMarkdownParser.parse(linkSource)
+        let link = linkLine.inlines(of: linkLine.lines[0])[0]
         check(
             "a link hides its bracket and its destination",
             link.markerRanges.map { substring(linkSource, $0) } == ["[", "](https://x.com/(y))"])
@@ -547,9 +551,10 @@ struct NotesTests {
         check(
             "a table is a header, a matching delimiter row and the pipe rows after it",
             kinds(table) == [.table, .table, .table, .table, .blank, .paragraph])
+        let tableMarkdown = NoteMarkdownParser.parse(table)
         check(
             "table rows stay literal, with no inline spans",
-            NoteMarkdownParser.parse(table).lines.allSatisfy(\.inlines.isEmpty))
+            tableMarkdown.lines.allSatisfy { tableMarkdown.inlines(of: $0).isEmpty })
         check(
             "outer pipes are optional and alignment colons are allowed",
             kinds("a | b\n:-- | --:\nc | d") == [.table, .table, .table])
@@ -563,7 +568,8 @@ struct NotesTests {
                 && kinds("- | a |\n| --- |") == [.bullet, .paragraph])
 
         let emoji = "🧑🏽‍💻 **e\u{301}** 👍🏻"
-        let emojiSpan = NoteMarkdownParser.parse(emoji).lines[0].inlines[0]
+        let emojiLine = NoteMarkdownParser.parse(emoji)
+        let emojiSpan = emojiLine.inlines(of: emojiLine.lines[0])[0]
         check(
             "surrogate pairs and combining marks keep exact UTF-16 ranges",
             substring(emoji, emojiSpan.range) == "**e\u{301}**"
@@ -573,7 +579,7 @@ struct NotesTests {
         check(
             "line lookup covers the start, a terminator and the end of the source",
             index.lineIndex(at: 0) == 0 && index.lineIndex(at: 2) == 0 && index.lineIndex(at: 3) == 1
-                && index.lineIndex(at: 6) == 1 && index.lineIndex(at: 7) == nil)
+                && index.lineIndex(at: 6) == 2 && index.lineIndex(at: 7) == nil)
         check(
             "an empty range touches its line; a range ending at a line start does not reach it",
             index.lineIndexes(intersecting: NSRange(location: 2, length: 0)) == 0..<1
@@ -800,7 +806,9 @@ struct NotesTests {
         check("a caret at the end of a line reveals that line", revealed(3) == [0])
         check("a selection reveals every line it touches", revealed(1, 5) == [0, 1])
         check("a caret inside a code block reveals both fences", revealed(17) == [2, 3, 4])
-        check("the row after a final newline reveals nothing", revealed((source as NSString).length).isEmpty)
+        check(
+            "the row after a final newline reveals its own empty line",
+            revealed((source as NSString).length) == [6])
         check(
             "a caret at the end of an unterminated note reveals the last line",
             Array(
@@ -911,7 +919,8 @@ struct NotesTests {
 
     /// The first line's spans, each as its kind and the text of its content.
     private static func spans(_ source: String) -> [Span] {
-        let inlines = NoteMarkdownParser.parse(source).lines.first?.inlines ?? []
+        let markdown = NoteMarkdownParser.parse(source)
+        let inlines = markdown.lines.first.map(markdown.inlines(of:)) ?? []
         return inlines.map { Span($0.kind, (source as NSString).substring(with: $0.contentRange)) }
     }
 

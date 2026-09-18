@@ -47,6 +47,17 @@ final class NoteTextView: NSTextView, InjectableTextView {
         super.deleteBackward(sender)
     }
 
+    /// The `[] ` input rule; the plan writes the space itself, so the typed one is dropped.
+    override func insertText(_ string: Any, replacementRange: NSRange) {
+        let caret = selectedRange()
+        if string as? String == " ", caret.length == 0,
+            replacementRange.location == NSNotFound || replacementRange == caret,
+            perform(.typedSpace) {
+            return
+        }
+        super.insertText(string, replacementRange: replacementRange)
+    }
+
     override func insertTab(_ sender: Any?) {
         guard !perform(.indent) else { return }
         super.insertTab(sender)
@@ -144,13 +155,8 @@ final class NoteTextView: NSTextView, InjectableTextView {
 
     /// Toggles the task whose drawn box is under the point, leaving the caret where it was.
     func toggleTask(atContainerPoint point: CGPoint) -> Bool {
-        guard let editing, let lineIndex = checkboxLine(atContainerPoint: point) else { return false }
-        let plan = NoteMarkdownEditing.plan(
-            .toggleTask(lineIndex: lineIndex), source: string, selection: selectedRange(),
-            markdown: editing.markdown)
-        guard let plan else { return false }
-        performEdit(plan)
-        return true
+        guard let lineIndex = checkboxLine(atContainerPoint: point) else { return false }
+        return perform(.toggleTask(lineIndex: lineIndex))
     }
 
     /// The source offset of the link edge a click landed on, when it is within a glyph's outer 30%.

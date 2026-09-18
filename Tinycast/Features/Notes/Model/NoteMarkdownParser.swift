@@ -37,8 +37,18 @@ enum NoteMarkdownParser {
         if let open = fence {
             fenceBlocks.append(open.lineIndex...lines.count - 1)
         }
+        // A caret after the final terminator has to land on a line, so the empty row is a real one.
+        if lines.last.map({ NSMaxRange($0.contentRange) < NSMaxRange($0.range) }) ?? true {
+            let end = NSRange(location: units.count, length: 0)
+            lines.append(
+                NoteMarkdown.Line(
+                    kind: .blank, range: end, contentRange: end, markerRange: nil, checkboxRange: nil,
+                    level: 0))
+            indents.append(0)
+        }
         return NoteMarkdown(
-            lines: leveled(tabled(lines, units: units), indents: indents), fenceBlocks: fenceBlocks)
+            units: units, lines: leveled(tabled(lines, units: units), indents: indents),
+            fenceBlocks: fenceBlocks)
     }
 
     fileprivate struct Fence {
@@ -137,7 +147,7 @@ enum NoteMarkdownParser {
                 let line = lines[row]
                 result[row] = NoteMarkdown.Line(
                     kind: .table, range: line.range, contentRange: line.contentRange, markerRange: nil,
-                    checkboxRange: nil, level: 0, inlines: [])
+                    checkboxRange: nil, level: 0)
             }
             index = end
         }
@@ -195,8 +205,7 @@ enum NoteMarkdownParser {
                 guard level != line.level else { return line }
                 return NoteMarkdown.Line(
                     kind: line.kind, range: line.range, contentRange: line.contentRange,
-                    markerRange: line.markerRange, checkboxRange: line.checkboxRange,
-                    level: level, inlines: line.inlines)
+                    markerRange: line.markerRange, checkboxRange: line.checkboxRange, level: level)
             default:
                 stack.removeAll()
                 return line
@@ -228,13 +237,13 @@ enum NoteMarkdownParser {
         func wholeLine(_ kind: NoteMarkdown.Line.Kind, range: Range<Int>) -> NoteMarkdown.Line {
             NoteMarkdown.Line(
                 kind: kind, range: NSRange(range), contentRange: NSRange(location: end, length: 0),
-                markerRange: NSRange(start..<end), checkboxRange: nil, level: 0, inlines: [])
+                markerRange: NSRange(start..<end), checkboxRange: nil, level: 0)
         }
 
         func code(range: Range<Int>) -> NoteMarkdown.Line {
             NoteMarkdown.Line(
                 kind: .code, range: NSRange(range), contentRange: NSRange(start..<end),
-                markerRange: nil, checkboxRange: nil, level: 0, inlines: [])
+                markerRange: nil, checkboxRange: nil, level: 0)
         }
 
         func closes(_ fence: Fence) -> Bool {
@@ -261,7 +270,7 @@ enum NoteMarkdownParser {
         func block(range: Range<Int>) -> NoteMarkdown.Line {
             let lineRange = NSRange(range)
             if units[start..<end].allSatisfy(Unit.isSpaceOrTab) {
-                return plain(.blank, range: lineRange, contentStart: start, inlines: false)
+                return plain(.blank, range: lineRange, contentStart: start)
             }
             if isRule {
                 return wholeLine(.rule, range: range)
@@ -270,7 +279,7 @@ enum NoteMarkdownParser {
             if indentColumns <= 3, let line = heading(range: lineRange, from: first) { return line }
             if indentColumns <= 3, let line = quote(range: lineRange, from: first) { return line }
             if let line = listItem(range: lineRange, from: first) { return line }
-            return plain(.paragraph, range: lineRange, contentStart: start, inlines: true)
+            return plain(.paragraph, range: lineRange, contentStart: start)
         }
 
         private var isRule: Bool {
@@ -335,7 +344,7 @@ enum NoteMarkdownParser {
             return NoteMarkdown.Line(
                 kind: line.kind, range: line.range, contentRange: line.contentRange,
                 markerRange: line.markerRange, checkboxRange: NSRange(location: open, length: 3),
-                level: 0, inlines: line.inlines)
+                level: 0)
         }
 
         /// The marker end when `index` is followed by one space or tab, or by the end of the line.
@@ -353,18 +362,14 @@ enum NoteMarkdownParser {
         ) -> NoteMarkdown.Line {
             NoteMarkdown.Line(
                 kind: kind, range: range, contentRange: NSRange(markerEnd..<end),
-                markerRange: NSRange(start..<markerEnd), checkboxRange: nil, level: 0,
-                inlines: NoteInlineScanner(units: units).inlines(in: markerEnd..<end))
+                markerRange: NSRange(start..<markerEnd), checkboxRange: nil, level: 0)
         }
 
-        private func plain(
-            _ kind: NoteMarkdown.Line.Kind, range: NSRange, contentStart: Int, inlines: Bool
-        ) -> NoteMarkdown.Line {
-            let content = contentStart..<end
-            return NoteMarkdown.Line(
-                kind: kind, range: range, contentRange: NSRange(content), markerRange: nil,
-                checkboxRange: nil, level: 0,
-                inlines: inlines ? NoteInlineScanner(units: units).inlines(in: content) : [])
+        private func plain(_ kind: NoteMarkdown.Line.Kind, range: NSRange, contentStart: Int)
+            -> NoteMarkdown.Line {
+            NoteMarkdown.Line(
+                kind: kind, range: range, contentRange: NSRange(contentStart..<end), markerRange: nil,
+                checkboxRange: nil, level: 0)
         }
     }
 }

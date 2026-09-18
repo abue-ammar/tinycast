@@ -573,7 +573,7 @@ struct NotesEditorTests {
         let indented = NoteMarkdownParser.parse("hello\r\n  + [ ] task\r\n").lines
         check(
             "indented CRLF tasks preserve offsets",
-            indented.count == 2 && indented[1].checkboxRange == NSRange(location: 11, length: 3))
+            indented.count == 3 && indented[1].checkboxRange == NSRange(location: 11, length: 3))
         check(
             "task content ranges preserve Unicode",
             (source as NSString).substring(with: taskLines[0].contentRange) == "🧑🏽‍💻 first")

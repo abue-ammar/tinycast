@@ -23,9 +23,8 @@ final class NoteBlockLayoutFragment: NSTextLayoutFragment {
     override var renderingSurfaceBounds: CGRect {
         let bounds = super.renderingSurfaceBounds
         let frame = layoutFragmentFrame
-        let overhang = slot
         let chrome = CGRect(
-            x: -frame.minX - overhang, y: 0, width: containerWidth + overhang, height: frame.height)
+            x: -frame.minX - slot, y: 0, width: containerWidth + slot, height: frame.height)
         return bounds.union(chrome)
     }
 

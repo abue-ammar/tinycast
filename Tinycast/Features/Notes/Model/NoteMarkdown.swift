@@ -44,7 +44,6 @@ struct NoteMarkdown: Sendable, Equatable {
         let checkboxRange: NSRange?
         /// List nesting depth from the indent stack, 0 for top level and for non-list lines.
         let level: Int
-        let inlines: [Inline]
     }
 
     struct Inline: Sendable, Equatable {
@@ -61,18 +60,28 @@ struct NoteMarkdown: Sendable, Equatable {
         let markerRanges: [NSRange]
     }
 
+    /// The source the lines were parsed from; line shapes alone do not identify a note.
+    let units: [UInt16]
     let lines: [Line]
     /// Line index ranges of fenced blocks, open line through close line (or last line if unclosed).
     let fenceBlocks: [ClosedRange<Int>]
 
-    static let empty = NoteMarkdown(lines: [], fenceBlocks: [])
+    static let empty = NoteMarkdown(units: [], lines: [], fenceBlocks: [])
 
-    /// Binary search; a location at the very end of the source belongs to the last line.
-    func lineIndex(at location: Int) -> Int? {
-        guard let last = lines.last, location >= 0 else { return nil }
-        if location >= NSMaxRange(last.range) {
-            return location == NSMaxRange(last.range) ? lines.count - 1 : nil
+    /// Scanned on demand: every consumer wants one line, and storing all of them costs more.
+    func inlines(of line: Line) -> [Inline] {
+        switch line.kind {
+        case .paragraph, .heading, .quote, .bullet, .ordered, .task:
+            NoteInlineScanner(units: units)
+                .inlines(in: line.contentRange.location..<NSMaxRange(line.contentRange))
+        default:
+            []
         }
+    }
+
+    /// Binary search; the parser's trailing empty line is what a caret at the very end lands on.
+    func lineIndex(at location: Int) -> Int? {
+        guard let last = lines.last, 0...NSMaxRange(last.range) ~= location else { return nil }
         var low = 0
         var high = lines.count - 1
         while low < high {

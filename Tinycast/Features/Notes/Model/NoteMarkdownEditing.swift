@@ -51,7 +51,8 @@ enum NoteMarkdownEditing {
         // MARK: - Lists and quotes
 
         func newline(at selection: NSRange) -> NoteEditPlan? {
-            guard selection.length == 0, let index = realLine(at: selection.location) else { return nil }
+            guard selection.length == 0, let index = markdown.lineIndex(at: selection.location)
+            else { return nil }
             let line = markdown.lines[index]
             let caret = selection.location
             guard let marker = line.markerRange, caret >= line.contentRange.location else { return nil }
@@ -80,7 +81,8 @@ enum NoteMarkdownEditing {
         }
 
         func deleteBackward(at selection: NSRange) -> NoteEditPlan? {
-            guard selection.length == 0, let index = realLine(at: selection.location) else { return nil }
+            guard selection.length == 0, let index = markdown.lineIndex(at: selection.location)
+            else { return nil }
             let line = markdown.lines[index]
             guard let marker = line.markerRange, selection.location == line.contentRange.location,
                 selection.location > line.range.location
@@ -130,11 +132,11 @@ enum NoteMarkdownEditing {
         }
 
         func toggleList(_ style: NoteEditAction.ListStyle, in selection: NSRange) -> NoteEditPlan? {
-            let indexes = touchedLines(selection)
+            let indexes = markdown.lineIndexes(intersecting: selection)
             var edits: [Edit] = []
             var handled = false
             for index in indexes {
-                let line = self.line(index)
+                let line = markdown.lines[index]
                 let start = indentEnd(of: line)
                 switch line.kind {
                 case .blank where indexes.count > 1:
@@ -172,7 +174,8 @@ enum NoteMarkdownEditing {
         }
 
         func typedSpace(at selection: NSRange) -> NoteEditPlan? {
-            guard selection.length == 0, let index = realLine(at: selection.location) else { return nil }
+            guard selection.length == 0, let index = markdown.lineIndex(at: selection.location)
+            else { return nil }
             let line = markdown.lines[index]
             guard line.kind == .paragraph else { return nil }
             let start = indentEnd(of: line)
@@ -191,8 +194,8 @@ enum NoteMarkdownEditing {
         func setHeading(_ level: Int, in selection: NSRange) -> NoteEditPlan? {
             var edits: [Edit] = []
             var handled = false
-            for index in touchedLines(selection) {
-                let line = self.line(index)
+            for index in markdown.lineIndexes(intersecting: selection) {
+                let line = markdown.lines[index]
                 switch line.kind {
                 case .heading(let current):
                     handled = true
@@ -253,7 +256,7 @@ enum NoteMarkdownEditing {
             guard Self.isWebURL(url), selection.length > 0,
                 case let (line, range)? = styledLine(for: selection), range == selection
             else { return nil }
-            let overlapsLinkOrCode = line.inlines.contains {
+            let overlapsLinkOrCode = markdown.inlines(of: line).contains {
                 switch $0.kind {
                 case .link, .code: NSIntersectionRange($0.range, selection).length > 0
                 default: false
@@ -271,20 +274,20 @@ enum NoteMarkdownEditing {
             _ style: NoteEditAction.InlineStyle, at range: NSRange, in line: Line
         ) -> NoteMarkdown.Inline? {
             guard range.length > 0 else {
-                return line.inlines.last {
+                return markdown.inlines(of: line).last {
                     Self.matches($0.kind, style) && $0.contentRange.location <= range.location
                         && range.location <= NSMaxRange($0.contentRange)
                 }
             }
             let trimmed = trimmingWhitespace(range)
             guard trimmed.length > 0 else { return nil }
-            return line.inlines.last {
+            return markdown.inlines(of: line).last {
                 Self.matches($0.kind, style) && ($0.contentRange == trimmed || $0.range == trimmed)
             }
         }
 
         private func removableLink(at range: NSRange, in line: Line) -> NoteMarkdown.Inline? {
-            line.inlines.last {
+            markdown.inlines(of: line).last {
                 guard case .link = $0.kind else { return false }
                 return $0.range.location <= range.location && NSMaxRange(range) <= NSMaxRange($0.range)
             }
@@ -337,9 +340,9 @@ enum NoteMarkdownEditing {
 
         /// The one line an inline gesture acts on, with the selection clipped to its content.
         private func styledLine(for selection: NSRange) -> (Line, NSRange)? {
-            let indexes = touchedLines(selection)
+            let indexes = markdown.lineIndexes(intersecting: selection)
             guard indexes.count == 1, let index = indexes.first else { return nil }
-            let line = self.line(index)
+            let line = markdown.lines[index]
             guard !line.kind.isFenced, line.kind != .rule, line.kind != .table else { return nil }
             let end = min(NSMaxRange(selection), NSMaxRange(line.contentRange))
             guard selection.location <= end else { return nil }
@@ -357,11 +360,11 @@ enum NoteMarkdownEditing {
         // MARK: - Code blocks and quotes
 
         func toggleQuote(in selection: NSRange) -> NoteEditPlan? {
-            let candidates = quoteCandidates(touchedLines(selection))
+            let candidates = quoteCandidates(markdown.lineIndexes(intersecting: selection))
             guard !candidates.isEmpty else { return nil }
-            let removing = candidates.allSatisfy { Self.isQuote(line($0).kind) }
+            let removing = candidates.allSatisfy { Self.isQuote(markdown.lines[$0].kind) }
             let edits = candidates.compactMap { index -> Edit? in
-                let line = self.line(index)
+                let line = markdown.lines[index]
                 let start = indentEnd(of: line)
                 guard removing else {
                     guard !Self.isQuote(line.kind) else { return nil }
@@ -374,12 +377,12 @@ enum NoteMarkdownEditing {
         }
 
         func toggleCodeBlock(in selection: NSRange) -> NoteEditPlan? {
-            let indexes = touchedLines(selection)
+            let indexes = markdown.lineIndexes(intersecting: selection)
             if let block = enclosingFence(indexes) { return unfence(block, selection: selection) }
             guard let first = indexes.first, let last = indexes.last,
-                indexes.allSatisfy({ !line($0).kind.isFenced })
+                indexes.allSatisfy({ !markdown.lines[$0].kind.isFenced })
             else { return nil }
-            let opening = self.line(first)
+            let opening = markdown.lines[first]
             let fence = "```"
             if indexes.count == 1, opening.kind == .blank {
                 let at = opening.range.location
@@ -387,7 +390,7 @@ enum NoteMarkdownEditing {
                     range: NSRange(location: at, length: 0), replacement: fence + "\n\n" + fence,
                     selection: NSRange(location: at + fence.utf16.count + 1, length: 0))
             }
-            let body = NSRange(opening.range.location..<NSMaxRange(self.line(last).contentRange))
+            let body = NSRange(opening.range.location..<NSMaxRange(markdown.lines[last].contentRange))
             let shift = fence.utf16.count + 1
             let after =
                 selection.length == 0
@@ -419,16 +422,15 @@ enum NoteMarkdownEditing {
         }
 
         /// Skips fenced, table and rule lines, and blank lines unless one is all that is touched.
-        private func quoteCandidates(_ indexes: [Int]) -> [Int] {
+        private func quoteCandidates(_ indexes: Range<Int>) -> [Int] {
             indexes.filter { index in
-                let kind = line(index).kind
+                let kind = markdown.lines[index].kind
                 if kind == .blank { return indexes.count == 1 }
                 return !kind.isFenced && kind != .rule && kind != .table
             }
         }
 
-        /// The fenced block holding every touched line; the virtual last line is never inside one.
-        private func enclosingFence(_ indexes: [Int]) -> ClosedRange<Int>? {
+        private func enclosingFence(_ indexes: Range<Int>) -> ClosedRange<Int>? {
             guard let first = indexes.first, let last = indexes.last else { return nil }
             return markdown.fenceBlocks.first { $0.contains(first) && $0.contains(last) }
         }
@@ -441,8 +443,8 @@ enum NoteMarkdownEditing {
         // MARK: - Formatting
 
         func formatting(of selection: NSRange) -> NoteFormatting {
-            let indexes = touchedLines(selection)
-            let lines = indexes.map(line)
+            let indexes = markdown.lineIndexes(intersecting: selection)
+            let lines = indexes.map { markdown.lines[$0] }
             var result = NoteFormatting.plain
             result.headingLevel = sharedHeadingLevel(lines)
             let listed = lines.count > 1 ? lines.filter { $0.kind != .blank } : lines
@@ -451,7 +453,8 @@ enum NoteMarkdownEditing {
                 result.list = first
             }
             let candidates = quoteCandidates(indexes)
-            result.isQuote = !candidates.isEmpty && candidates.allSatisfy { Self.isQuote(line($0).kind) }
+            result.isQuote =
+                !candidates.isEmpty && candidates.allSatisfy { Self.isQuote(markdown.lines[$0].kind) }
             result.isCodeBlock = enclosingFence(indexes) != nil
             if case let (line, range)? = styledLine(for: selection) {
                 result.inlineStyles = Set(
@@ -476,32 +479,6 @@ enum NoteMarkdownEditing {
 
         // MARK: - Lines
 
-        /// An empty note, or a caret after a final newline, touches a virtual empty line.
-        private func touchedLines(_ selection: NSRange) -> [Int] {
-            if selection.length == 0, selection.location == text.length, hasTrailingEmptyLine {
-                return [markdown.lines.count]
-            }
-            return Array(markdown.lineIndexes(intersecting: selection))
-        }
-
-        private func line(_ index: Int) -> Line {
-            guard index == markdown.lines.count else { return markdown.lines[index] }
-            let end = NSRange(location: text.length, length: 0)
-            return Line(
-                kind: .blank, range: end, contentRange: end, markerRange: nil, checkboxRange: nil,
-                level: 0, inlines: [])
-        }
-
-        private var hasTrailingEmptyLine: Bool {
-            guard let last = markdown.lines.last else { return true }
-            return NSMaxRange(last.contentRange) < NSMaxRange(last.range)
-        }
-
-        private func realLine(at location: Int) -> Int? {
-            guard !(location == text.length && hasTrailingEmptyLine) else { return nil }
-            return markdown.lineIndex(at: location)
-        }
-
         private func indentEnd(of line: Line) -> Int {
             var index = line.range.location
             while index < NSMaxRange(line.contentRange), Unit.isSpaceOrTab(text.character(at: index)) {
@@ -523,16 +500,15 @@ enum NoteMarkdownEditing {
 
         private func nextMarker(after line: Line) -> String {
             let start = indentEnd(of: line)
-            let bullet = text.substring(with: NSRange(location: start, length: 1))
             switch line.kind {
             case .ordered(let number):
                 let digits = String(number).utf16.count
                 let delimiter = text.substring(with: NSRange(location: start + digits, length: 1))
                 return "\(number + 1)\(delimiter) "
             case .task:
-                return bullet + " [ ] "
+                return text.substring(with: NSRange(location: start, length: 1)) + " [ ] "
             default:
-                return bullet + " "
+                return text.substring(with: NSRange(location: start, length: 1)) + " "
             }
         }
 
@@ -684,8 +660,8 @@ enum NoteMarkdownEditing {
 
         private static func isWebURL(_ string: String) -> Bool {
             let lowercased = string.lowercased()
-            let schemes = ["https://", "http://"]
-            guard let scheme = schemes.first(where: lowercased.hasPrefix) else { return false }
+            guard let scheme = NoteInlineScanner.webPrefixes.first(where: lowercased.hasPrefix)
+            else { return false }
             guard string.count > scheme.count, !string.contains(where: \.isWhitespace) else { return false }
             return URL(string: string) != nil
         }
