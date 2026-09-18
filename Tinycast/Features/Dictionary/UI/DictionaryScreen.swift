@@ -8,11 +8,8 @@ struct DictionaryScreen: PaletteScreen {
 
     private var term: String { vm.query.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-    /// Only the answer for what is typed now, so ↵ never copies the word before it.
-    private var entry: DictionaryEntry? {
-        guard let lookup = session.lookup, lookup.term == term else { return nil }
-        return lookup.entry
-    }
+    /// The page on screen: it stays up while the next term resolves, and ↵ acts on what is shown.
+    private var entry: DictionaryEntry? { session.lookup?.entry }
 
     /// The one entry, so the footer and ⌘K act on it exactly as on a selected row.
     var rows: [DictionaryEntry] { entry.map { [$0] } ?? [] }
@@ -46,8 +43,7 @@ struct DictionaryScreen: PaletteScreen {
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         if term.isEmpty { return AnyView(EmptyResults(text: "Type a word to define")) }
-        // The previous page stays up while the next term resolves, so typing never flashes empty.
-        if let shown = session.lookup?.entry { return AnyView(DictionaryEntryView(entry: shown)) }
+        if let entry { return AnyView(DictionaryEntryView(entry: entry)) }
         if session.lookup?.term == term { return AnyView(EmptyResults(text: "No definition found")) }
         return AnyView(Color.clear)
     }

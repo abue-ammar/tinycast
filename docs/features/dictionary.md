@@ -24,8 +24,8 @@ no bundled word list.
   `dictionary-test` holds a real record as its fixture.
 - **Lookups run off the main actor.** A long entry (`run`, `take`) is a few hundred blocks, so
   `DictionarySession` debounces the query and looks it up detached, the way `FileSearchSession` does.
-  The previous page stays up until the next resolves, and the screen acts only on a lookup whose term
-  matches the field, so ↵ never copies the word before it.
+  The previous page stays up until the next resolves, and ↵ and ⌘K act on that page — what is shown
+  is what is copied — so neither the page nor the footer flickers while typing.
 
 ## Actions
 
