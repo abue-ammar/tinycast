@@ -57,6 +57,20 @@ struct ScopesTest {
             SearchScopes.appBundles(in: [root.appendingPathComponent("Nope").path, deep.path])
                 .map(\.lastPathComponent) == ["TooDeep.app"])
 
+        // Xcode ships Instruments and Simulator inside its own bundle.
+        let tools = root.appendingPathComponent("Tools")
+        let xcode = tools.appendingPathComponent("Xcode.app")
+        makeDir(xcode.appendingPathComponent("Contents/Applications/Instruments.app"))
+        makeDir(xcode.appendingPathComponent("Contents/Developer/Applications/Simulator.app"))
+        makeDir(xcode.appendingPathComponent("Contents/Frameworks/Helper.app"))
+        let embedded = Set(SearchScopes.appBundles(in: [tools.path]).map(\.lastPathComponent))
+        check(
+            "apps embedded in a bundle's application folders are indexed",
+            embedded == ["Xcode.app", "Instruments.app", "Simulator.app"])
+        check(
+            "an .app scope also yields its embedded apps",
+            Set(SearchScopes.appBundles(in: [xcode.path]).map(\.lastPathComponent)) == embedded)
+
         check(
             "scopes are scanned in order",
             SearchScopes.appBundles(in: [deep.path, apps.path]).map(\.lastPathComponent).first

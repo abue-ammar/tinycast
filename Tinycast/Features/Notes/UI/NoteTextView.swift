@@ -51,7 +51,8 @@ final class NoteTextView: NSTextView, InjectableTextView {
         let caret = selectedRange()
         if string as? String == " ", caret.length == 0,
             replacementRange.location == NSNotFound || replacementRange == caret,
-            perform(.typedSpace) {
+            perform(.typedSpace)
+        {
             return
         }
         super.insertText(string, replacementRange: replacementRange)
@@ -179,11 +180,13 @@ final class NoteTextView: NSTextView, InjectableTextView {
         else { return nil }
         let edgeFraction: CGFloat = 0.3
         if let first = glyphFrame(at: link.location), first.minY <= point.y, point.y <= first.maxY,
-            point.x <= first.minX + first.width * edgeFraction {
+            point.x <= first.minX + first.width * edgeFraction
+        {
             return link.location
         }
         if let last = glyphFrame(at: NSMaxRange(link) - 1), last.minY <= point.y, point.y <= last.maxY,
-            point.x >= last.maxX - last.width * edgeFraction {
+            point.x >= last.maxX - last.width * edgeFraction
+        {
             return NSMaxRange(link)
         }
         return nil

@@ -32,6 +32,11 @@ enum SearchScopes {
         return paths.map(abbreviate).filter { !$0.isEmpty && seen.insert($0).inserted }
     }
 
+    /// Where a bundle ships its own apps: Xcode keeps Instruments and Simulator there.
+    private static let embeddedAppFolders = [
+        "Contents/Applications", "Contents/Developer/Applications"
+    ]
+
     /// Every `.app` the scopes point at. One subfolder deep; deeper nesting needs its own scope.
     static func appBundles(in scopes: [String]) -> [URL] {
         let fm = FileManager.default
@@ -39,7 +44,7 @@ enum SearchScopes {
         for scope in scopes {
             let url = URL(fileURLWithPath: expand(scope))
             if url.pathExtension == "app" {
-                if fm.fileExists(atPath: url.path) { result.append(url) }
+                if fm.fileExists(atPath: url.path) { result.append(contentsOf: withEmbedded(url)) }
                 continue
             }
             result.append(contentsOf: appBundles(under: url, subfolderDepth: 1))
@@ -47,7 +52,7 @@ enum SearchScopes {
         return result
     }
 
-    /// `.app` is a leaf here — never descended into, only real subfolders recurse.
+    /// An `.app` is never descended into beyond its embedded-app folders.
     private static func appBundles(under url: URL, subfolderDepth: Int) -> [URL] {
         guard
             let items = try? FileManager.default.contentsOfDirectory(
@@ -58,7 +63,7 @@ enum SearchScopes {
         var result: [URL] = []
         for item in items {
             if item.pathExtension == "app" {
-                result.append(item)
+                result.append(contentsOf: withEmbedded(item))
             } else if subfolderDepth > 0,
                 (try? item.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
             {
@@ -66,6 +71,13 @@ enum SearchScopes {
             }
         }
         return result
+    }
+
+    private static func withEmbedded(_ app: URL) -> [URL] {
+        [app]
+            + embeddedAppFolders.flatMap {
+                appBundles(under: app.appendingPathComponent($0), subfolderDepth: 0)
+            }
     }
 
     private static func trimTrailingSlash(_ path: String) -> String {

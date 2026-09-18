@@ -22,11 +22,15 @@ struct NotesEditorPerformance {
         }
         let middleLine = text.lineRange(for: NSRange(location: text.length / 2, length: 0)).location
         let typing = [("end", text.length), ("middle", middleLine + 2), ("start", 2)].map { name, location in
-            (name, median(prepare: { editor.textView.setSelectedRange(NSRange(location: location, length: 0)) }) {
-                editor.textView.insertText("x", replacementRange: editor.textView.selectedRange())
-            } after: {
-                editor.textView.deleteBackward(nil)
-            })
+            (
+                name,
+                median(prepare: { editor.textView.setSelectedRange(NSRange(location: location, length: 0)) })
+                {
+                    editor.textView.insertText("x", replacementRange: editor.textView.selectedRange())
+                } after: {
+                    editor.textView.deleteBackward(nil)
+                }
+            )
         }
         var nearTop = true
         let caret = median {
@@ -58,7 +62,8 @@ struct NotesEditorPerformance {
             body()
             let elapsed = ContinuousClock.now - start
             after()
-            samples.append(Double(elapsed.components.attoseconds) / 1e15 + Double(elapsed.components.seconds) * 1e3)
+            samples.append(
+                Double(elapsed.components.attoseconds) / 1e15 + Double(elapsed.components.seconds) * 1e3)
         }
         return (samples.sorted()[runs / 2] * 100).rounded() / 100
     }
@@ -90,7 +95,8 @@ struct NotesEditorPerformance {
         input: NoteEditorInput
     ) -> (coordinator: NoteEditorView.Coordinator, textView: NoteTextView, window: NSWindow) {
         let view = NoteEditorView(
-            input: input, rendersMarkdown: true, onSourceChange: { _ in }, onCharacterCountChange: { _, _ in },
+            input: input, rendersMarkdown: true, onSourceChange: { _ in },
+            onCharacterCountChange: { _, _ in },
             onFormattingChange: { _, _ in }, onReady: { _ in })
         let coordinator = NoteEditorView.Coordinator(parent: view)
         let textView = NoteTextView(usingTextLayoutManager: true)
@@ -100,7 +106,8 @@ struct NotesEditorPerformance {
         textView.setFrameSize(NSSize(width: 480, height: 1))
         let scrollView = NSScrollView(frame: NSRect(x: 0, y: 0, width: 480, height: 600))
         scrollView.documentView = textView
-        let window = KeyWindow(contentRect: scrollView.frame, styleMask: .borderless, backing: .buffered, defer: false)
+        let window = KeyWindow(
+            contentRect: scrollView.frame, styleMask: .borderless, backing: .buffered, defer: false)
         window.contentView = scrollView
         coordinator.textView = textView
         coordinator.install(input, resetUndo: false)

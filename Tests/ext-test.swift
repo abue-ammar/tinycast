@@ -486,12 +486,12 @@ struct ExtensionTests {
             String(describing: looseActions.first?.enclosingSubmenuTitle))
 
         // Mirrors ExtensionCommandScreen.primaryActionTitle/activate(at:), unreachable from here.
-        func primaryActionOutcome(_ actions: [ExtensionAction]) -> (title: String, opensPanel: Bool)
-        {
+        func primaryActionOutcome(_ actions: [ExtensionAction]) -> (title: String, opensPanel: Bool) {
             guard let primary = actions.first else { return ("Run", false) }
             return (
                 primary.enclosingSubmenuTitle ?? primary.title,
-                primary.enclosingSubmenuTitle != nil)
+                primary.enclosingSubmenuTitle != nil
+            )
         }
 
         let submenuOutcome = primaryActionOutcome(actions)

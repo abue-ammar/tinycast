@@ -52,7 +52,10 @@ private struct NoteHeadingMenuRow: View {
         Button(action: action) {
             HStack(spacing: Theme.Spacing.md) {
                 Image(systemName: "checkmark")
-                    .font(.system(size: Theme.Typography.menuSymbolSize, weight: Theme.Typography.menuSymbolWeight))
+                    .font(
+                        .system(
+                            size: Theme.Typography.menuSymbolSize, weight: Theme.Typography.menuSymbolWeight)
+                    )
                     .foregroundStyle(Theme.Colors.menuSymbol)
                     .opacity(isCurrent ? 1 : 0)
                     .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)

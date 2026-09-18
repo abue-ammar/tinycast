@@ -140,7 +140,8 @@ enum NoteMarkdownParser {
             }
             var end = index + 2
             while end < lines.count, lines[end].kind == .paragraph,
-                tableCells(of: lines[end], in: units) != nil {
+                tableCells(of: lines[end], in: units) != nil
+            {
                 end += 1
             }
             for row in index..<end {
@@ -365,8 +366,11 @@ enum NoteMarkdownParser {
                 markerRange: NSRange(start..<markerEnd), checkboxRange: nil, level: 0)
         }
 
-        private func plain(_ kind: NoteMarkdown.Line.Kind, range: NSRange, contentStart: Int)
-            -> NoteMarkdown.Line {
+        private func plain(
+            _ kind: NoteMarkdown.Line.Kind, range: NSRange, contentStart: Int
+        )
+            -> NoteMarkdown.Line
+        {
             NoteMarkdown.Line(
                 kind: kind, range: range, contentRange: NSRange(contentStart..<end), markerRange: nil,
                 checkboxRange: nil, level: 0)

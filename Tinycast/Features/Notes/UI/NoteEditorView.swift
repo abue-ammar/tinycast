@@ -127,12 +127,15 @@ struct NoteEditorView: NSViewRepresentable {
 
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
             let url = link as? URL ?? (link as? String).flatMap { URL(string: $0) }
-            guard let url, let scheme = url.scheme?.lowercased(), NoteMarkdownStyler.openableSchemes.contains(scheme) else {
+            guard let url, let scheme = url.scheme?.lowercased(),
+                NoteMarkdownStyler.openableSchemes.contains(scheme)
+            else {
                 return true
             }
             if let noteView = textView as? NoteTextView, let event = NSApp.currentEvent,
                 let edge = noteView.linkEdge(
-                    ofLinkAt: charIndex, clickedAt: noteView.containerPoint(for: event)) {
+                    ofLinkAt: charIndex, clickedAt: noteView.containerPoint(for: event))
+            {
                 textView.setSelectedRange(NSRange(location: edge, length: 0))
                 return true
             }
