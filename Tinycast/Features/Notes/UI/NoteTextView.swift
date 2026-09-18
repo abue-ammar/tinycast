@@ -1,228 +1,260 @@
 import AppKit
-import SwiftUI
 
 @MainActor
 final class NoteTextView: NSTextView, InjectableTextView {
     var editorUndoManager: UndoManager?
-    private var taskButtons: [NSButton] = []
-    private var tasks: [NoteTask] = []
-    private var codeRanges: [NSRange] = []
-    private var needsFullTaskRefresh = false
-    private var pendingParagraph: (range: NSRange, delta: Int)?
+    weak var editing: NoteTextViewEditing?
+    /// True during `mouseDown`'s drag loop; revealing mid-drag would shift text under the pointer.
+    private(set) var isDragSelecting = false
+
+    /// Tracked here because the window still names this view first responder while it resigns.
+    private var isFirstResponder = false
+    private var keyObservers: [NotificationToken] = []
+
+    private static let checkboxSlop: CGFloat = 3
 
     override var undoManager: UndoManager? { editorUndoManager }
 
-    override func shouldChangeText(in affectedCharRange: NSRange, replacementString: String?) -> Bool {
-        pendingParagraph = nil
-        guard super.shouldChangeText(in: affectedCharRange, replacementString: replacementString) else {
-            return false
+    var isFocused: Bool { isFirstResponder && window?.isKeyWindow == true }
+
+    private var rendersMarkdown: Bool { editing?.rendersMarkdown == true }
+
+    /// One undoable replacement that reaches `textDidChange`, so autosave and restyling see it.
+    func performEdit(_ plan: NoteEditPlan) {
+        breakUndoCoalescing()
+        guard shouldChangeText(in: plan.range, replacementString: plan.replacement) else { return }
+        textStorage?.replaceCharacters(in: plan.range, with: plan.replacement)
+        didChangeText()
+        setSelectedRange(plan.selection)
+        breakUndoCoalescing()
+    }
+
+    /// The formatting bar's way in: the same plan, gate and undo step as the matching chord.
+    func format(_ action: NoteEditAction) {
+        perform(action)
+    }
+
+    // MARK: - Keys
+
+    override func insertNewline(_ sender: Any?) {
+        guard !perform(.newline) else { return }
+        super.insertNewline(sender)
+    }
+
+    override func deleteBackward(_ sender: Any?) {
+        guard !perform(.deleteBackward) else { return }
+        super.deleteBackward(sender)
+    }
+
+    /// The `[] ` input rule; the plan writes the space itself, so the typed one is dropped.
+    override func insertText(_ string: Any, replacementRange: NSRange) {
+        let caret = selectedRange()
+        if string as? String == " ", caret.length == 0,
+            replacementRange.location == NSNotFound || replacementRange == caret,
+            perform(.typedSpace) {
+            return
         }
-        guard !hasMarkedText(), !needsFullTaskRefresh, let replacementString else { return true }
-        let source = string as NSString
-        let paragraph = source.lineRange(for: affectedCharRange)
-        let oldText = source.substring(with: paragraph)
-        let localRange = NSRange(
-            location: affectedCharRange.location - paragraph.location,
-            length: affectedCharRange.length)
-        let newText = (oldText as NSString).replacingCharacters(in: localRange, with: replacementString)
-        // Fence or line-boundary edits can change the meaning of subsequent paragraphs.
-        if replacementString.rangeOfCharacter(from: .newlines) == nil,
-            source.substring(with: affectedCharRange).rangeOfCharacter(from: .newlines) == nil,
-            !Self.isFence(oldText), !Self.isFence(newText)
-        {
-            pendingParagraph = (paragraph, (replacementString as NSString).length - affectedCharRange.length)
+        super.insertText(string, replacementRange: replacementRange)
+    }
+
+    override func insertTab(_ sender: Any?) {
+        guard !perform(.indent) else { return }
+        super.insertTab(sender)
+    }
+
+    override func insertBacktab(_ sender: Any?) {
+        guard !perform(.outdent) else { return }
+        super.insertBacktab(sender)
+    }
+
+    /// A formatting chord is always ours while rendering, even when it has nothing to do.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        guard rendersMarkdown, window?.firstResponder === self, let action = Self.chord(for: event) else {
+            return super.performKeyEquivalent(with: event)
         }
+        if !event.isARepeat { perform(action) }
         return true
     }
 
-    private static func isFence(_ line: String) -> Bool {
-        let trimmed = line.trimmingCharacters(in: .whitespaces)
-        return trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~")
+    override func paste(_ sender: Any?) {
+        guard !pasteLink(from: .general) else { return }
+        super.paste(sender)
     }
 
-    func updateTasks() {
-        guard !hasMarkedText() else {
-            needsFullTaskRefresh = true
-            pendingParagraph = nil
+    /// Pasting a lone URL over selected text makes a link; anything else pastes as plain text.
+    func pasteLink(from pasteboard: NSPasteboard) -> Bool {
+        guard let string = pasteboard.string(forType: .string) else { return false }
+        return perform(.pasteURL(string))
+    }
+
+    @discardableResult
+    private func perform(_ action: NoteEditAction) -> Bool {
+        guard let editing, editing.rendersMarkdown, !hasMarkedText() else { return false }
+        let plan = NoteMarkdownEditing.plan(
+            action, source: string, selection: selectedRange(), markdown: editing.markdown)
+        guard let plan else { return false }
+        performEdit(plan)
+        return true
+    }
+
+    /// The digit key codes, stated here so a local chord needs no Carbon.
+    private enum DigitKey {
+        static let zero: UInt16 = 0x1D
+        static let one: UInt16 = 0x12
+        static let two: UInt16 = 0x13
+        static let three: UInt16 = 0x14
+        static let seven: UInt16 = 0x1A
+        static let eight: UInt16 = 0x1C
+        static let nine: UInt16 = 0x19
+    }
+
+    /// Digits match by key code, since shifted and optioned digits vary by keyboard layout.
+    private static func chord(for event: NSEvent) -> NoteEditAction? {
+        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        let key = event.charactersIgnoringModifiers?.lowercased()
+        switch modifiers {
+        case [.command]:
+            switch key {
+            case "b": return .toggleInline(.bold)
+            case "i": return .toggleInline(.italic)
+            case "e": return .toggleInline(.code)
+            case "k": return .toggleLink
+            default: return nil
+            }
+        case [.command, .shift]:
+            if key == "x" { return .toggleInline(.strikethrough) }
+            if key == "b" { return .toggleQuote }
+            switch event.keyCode {
+            case DigitKey.seven: return .toggleList(.ordered)
+            case DigitKey.eight: return .toggleList(.bullet)
+            case DigitKey.nine: return .toggleList(.task)
+            default: return nil
+            }
+        case [.command, .option]:
+            if key == "c" { return .toggleCodeBlock }
+            switch event.keyCode {
+            case DigitKey.one: return .setHeading(level: 1)
+            case DigitKey.two: return .setHeading(level: 2)
+            case DigitKey.three: return .setHeading(level: 3)
+            case DigitKey.zero: return .setHeading(level: 0)
+            default: return nil
+            }
+        default:
+            return nil
+        }
+    }
+
+    // MARK: - Mouse
+
+    override func mouseDown(with event: NSEvent) {
+        guard rendersMarkdown else { return super.mouseDown(with: event) }
+        guard !toggleTask(atContainerPoint: containerPoint(for: event)) else { return }
+        isDragSelecting = true
+        super.mouseDown(with: event)
+        isDragSelecting = false
+        editing?.dragSelectionEnded()
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        guard rendersMarkdown, checkboxLine(atContainerPoint: containerPoint(for: event)) != nil else {
             return
         }
-        guard let edit = pendingParagraph else {
-            refreshTasks()
-            return
+        NSCursor.arrow.set()
+    }
+
+    /// Toggles the task whose drawn box is under the point, leaving the caret where it was.
+    func toggleTask(atContainerPoint point: CGPoint) -> Bool {
+        guard let lineIndex = checkboxLine(atContainerPoint: point) else { return false }
+        return perform(.toggleTask(lineIndex: lineIndex))
+    }
+
+    /// The source offset of the link edge a click landed on, when it is within a glyph's outer 30%.
+    func linkEdge(ofLinkAt characterIndex: Int, clickedAt point: CGPoint) -> Int? {
+        guard let storage = textStorage, characterIndex < storage.length else { return nil }
+        var link = NSRange()
+        let whole = NSRange(location: 0, length: storage.length)
+        guard storage.attribute(.link, at: characterIndex, longestEffectiveRange: &link, in: whole) != nil,
+            link.length > 0
+        else { return nil }
+        let edgeFraction: CGFloat = 0.3
+        if let first = glyphFrame(at: link.location), first.minY <= point.y, point.y <= first.maxY,
+            point.x <= first.minX + first.width * edgeFraction {
+            return link.location
         }
-        pendingParagraph = nil
-        let range = NSRange(location: edit.range.location, length: edit.range.length + edit.delta)
-        let source = string as NSString
-        let inCode = codeRanges.contains { NSLocationInRange(range.location, $0) }
-        let replacement =
-            inCode
-            ? []
-            : NoteTask.parse(source.substring(with: range)).map {
-                $0.shifted(by: range.location)
+        if let last = glyphFrame(at: NSMaxRange(link) - 1), last.minY <= point.y, point.y <= last.maxY,
+            point.x >= last.maxX - last.width * edgeFraction {
+            return NSMaxRange(link)
+        }
+        return nil
+    }
+
+    func containerPoint(for event: NSEvent) -> CGPoint {
+        let point = convert(event.locationInWindow, from: nil)
+        return CGPoint(x: point.x - textContainerOrigin.x, y: point.y - textContainerOrigin.y)
+    }
+
+    private func checkboxLine(atContainerPoint point: CGPoint) -> Int? {
+        guard let editing, let content = textContentStorage,
+            let fragment = textLayoutManager?.textLayoutFragment(for: point) as? NoteBlockLayoutFragment,
+            case .task(let level, _) = fragment.decoration.shape
+        else { return nil }
+        let firstLine = fragment.textLineFragments.first?.typographicBounds ?? .zero
+        let box = NoteCheckboxGeometry.rect(
+            level: level, firstLineHeight: firstLine.height,
+            bodyPointSize: fragment.decoration.bodyPointSize
+        ).offsetBy(dx: 0, dy: fragment.layoutFragmentFrame.minY + firstLine.minY)
+        guard box.insetBy(dx: -Self.checkboxSlop, dy: -Self.checkboxSlop).contains(point) else { return nil }
+        let start = content.offset(from: content.documentRange.location, to: fragment.rangeInElement.location)
+        return editing.markdown.lineIndex(at: start)
+    }
+
+    private func glyphFrame(at characterIndex: Int) -> CGRect? {
+        guard let layout = textLayoutManager, let content = textContentStorage,
+            let start = content.location(content.documentRange.location, offsetBy: characterIndex),
+            let end = content.location(start, offsetBy: 1),
+            let range = NSTextRange(location: start, end: end)
+        else { return nil }
+        var frame: CGRect?
+        layout.enumerateTextSegments(in: range, type: .standard, options: []) { _, segment, _, _ in
+            frame = segment
+            return false
+        }
+        return frame
+    }
+
+    // MARK: - Focus and appearance
+
+    override func becomeFirstResponder() -> Bool {
+        guard super.becomeFirstResponder() else { return false }
+        isFirstResponder = true
+        editing?.focusChanged()
+        return true
+    }
+
+    override func resignFirstResponder() -> Bool {
+        guard super.resignFirstResponder() else { return false }
+        isFirstResponder = false
+        editing?.focusChanged()
+        return true
+    }
+
+    /// The panel keeps its first responder while another app is active, so key state is focus too.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        keyObservers = []
+        guard let window else { return }
+        let center = NotificationCenter.default
+        keyObservers = [NSWindow.didBecomeKeyNotification, NSWindow.didResignKeyNotification].map { name in
+            let token = center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                Task { @MainActor in self?.editing?.focusChanged() }
             }
-        let start = tasks.firstIndex { $0.markerRange.location >= edit.range.location } ?? tasks.count
-        let end =
-            tasks[start...].firstIndex { $0.markerRange.location >= NSMaxRange(edit.range) } ?? tasks.count
-        let oldButtons = Array(taskButtons[start..<end])
-        var buttons: [NSButton] = []
-        for (index, task) in replacement.enumerated() {
-            let button = index < oldButtons.count ? oldButtons[index] : makeTaskButton()
-            update(button, for: task)
-            buttons.append(button)
-        }
-        oldButtons.dropFirst(replacement.count).forEach { $0.removeFromSuperview() }
-        for index in end..<tasks.count { tasks[index] = tasks[index].shifted(by: edit.delta) }
-        tasks.replaceSubrange(start..<end, with: replacement)
-        taskButtons.replaceSubrange(start..<end, with: buttons)
-        for index in start..<taskButtons.count { taskButtons[index].tag = index }
-        for index in codeRanges.indices {
-            if codeRanges[index].location >= NSMaxRange(edit.range) {
-                codeRanges[index].location += edit.delta
-            } else if NSLocationInRange(edit.range.location, codeRanges[index]) {
-                codeRanges[index].length += edit.delta
-            }
-        }
-        styleTasks(replacement, in: range)
-    }
-
-    func refreshTasks() {
-        pendingParagraph = nil
-        guard !hasMarkedText(), let storage = textStorage else { return }
-        needsFullTaskRefresh = false
-        (tasks, codeRanges) = NoteTask.scan(string)
-        taskButtons.forEach { $0.removeFromSuperview() }
-        taskButtons = tasks.enumerated().map { index, task in
-            let button = makeTaskButton()
-            button.tag = index
-            update(button, for: task)
-            return button
-        }
-        styleTasks(tasks, in: NSRange(location: 0, length: storage.length))
-    }
-
-    private func makeTaskButton() -> NSButton {
-        let button = NSButton(checkboxWithTitle: "", target: self, action: #selector(toggleTask(_:)))
-        button.contentTintColor = NSColor(Theme.Colors.noteText)
-        button.toolTip = "Toggle Task"
-        addSubview(button)
-        return button
-    }
-
-    private func update(_ button: NSButton, for task: NoteTask) {
-        button.state = task.isChecked ? .on : .off
-        let label = (string as NSString).substring(with: task.contentRange)
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        button.setAccessibilityLabel(label.isEmpty ? "Task" : label)
-    }
-
-    private func styleTasks(_ tasks: [NoteTask], in range: NSRange) {
-        guard let storage = textStorage else { return }
-        storage.beginEditing()
-        storage.addAttribute(.foregroundColor, value: NSColor(Theme.Colors.noteText), range: range)
-        storage.removeAttribute(.strikethroughStyle, range: range)
-        storage.removeAttribute(.paragraphStyle, range: range)
-        let taskStyle = NSMutableParagraphStyle()
-        taskStyle.paragraphSpacing = Theme.Spacing.md
-        for task in tasks {
-            let paragraph = (string as NSString).lineRange(for: task.markerRange)
-            storage.addAttribute(.paragraphStyle, value: taskStyle, range: paragraph)
-            storage.addAttribute(.foregroundColor, value: NSColor.clear, range: task.markerRange)
-            if task.isChecked {
-                storage.addAttribute(
-                    .foregroundColor, value: NSColor(Theme.Colors.textSecondary),
-                    range: task.contentRange)
-                storage.addAttribute(
-                    .strikethroughStyle, value: NSUnderlineStyle.single.rawValue,
-                    range: task.contentRange)
-            }
-        }
-        storage.endEditing()
-        typingAttributes = NoteEditorView.baseAttributes
-        needsLayout = true
-    }
-
-    override func layout() {
-        super.layout()
-        guard let manager = textLayoutManager, let content = manager.textContentManager else { return }
-        for (task, button) in zip(tasks, taskButtons) {
-            guard
-                let start = content.location(
-                    content.documentRange.location,
-                    offsetBy: task.markerRange.location),
-                let end = content.location(start, offsetBy: task.markerRange.length),
-                let range = NSTextRange(location: start, end: end)
-            else { continue }
-            var markerFrame = CGRect.zero
-            manager.enumerateTextSegments(in: range, type: .standard, options: []) { _, frame, _, _ in
-                markerFrame = frame
-                return false
-            }
-            let size = Theme.Size.noteGlyph
-            button.frame = NSRect(
-                x: textContainerOrigin.x + markerFrame.minX,
-                y: textContainerOrigin.y + markerFrame.midY - size / 2,
-                width: size, height: size)
-            button.isHidden = markerFrame.isEmpty
+            return NotificationToken(token, center: center)
         }
     }
 
-    @objc private func toggleTask(_ sender: NSButton) {
-        guard tasks.indices.contains(sender.tag), !hasMarkedText() else { return }
-        let task = tasks[sender.tag]
-        let selection = selectedRange()
-        breakUndoCoalescing()
-        insertText(task.isChecked ? " " : "x", replacementRange: task.stateRange)
-        setSelectedRange(selection)
-        breakUndoCoalescing()
-        window?.makeFirstResponder(self)
-    }
-
-    override func insertText(_ insertString: Any, replacementRange: NSRange) {
-        let selection = selectedRange()
-        if !hasMarkedText(), let text = insertString as? String, text == " ", selection.length == 0,
-            replacementRange.location == NSNotFound || replacementRange == selection
-        {
-            let source = string as NSString
-            let line = source.lineRange(for: selection)
-            let prefixRange = NSRange(location: line.location, length: selection.location - line.location)
-            let prefix = source.substring(with: prefixRange)
-            let trimmed = prefix.trimmingCharacters(in: .whitespaces)
-            if trimmed == "[]" || trimmed == "[ ]" {
-                let indentation = String(prefix.prefix(while: { $0 == " " || $0 == "\t" }))
-                let replacement = indentation + "- [ ] "
-                let candidate = source.replacingCharacters(in: prefixRange, with: replacement)
-                if NoteTask.parse(candidate).contains(where: {
-                    $0.markerRange.location == line.location + (indentation as NSString).length
-                }) {
-                    super.insertText(replacement, replacementRange: prefixRange)
-                    return
-                }
-            }
-        }
-        super.insertText(insertString, replacementRange: replacementRange)
-    }
-
-    override func insertNewline(_ sender: Any?) {
-        let selection = selectedRange()
-        guard !hasMarkedText(), selection.length == 0,
-            let task = tasks.first(where: {
-                selection.location >= $0.contentRange.location
-                    && selection.location <= NSMaxRange($0.contentRange)
-            })
-        else {
-            super.insertNewline(sender)
-            return
-        }
-        let source = string as NSString
-        if source.substring(with: task.contentRange).trimmingCharacters(in: .whitespaces).isEmpty {
-            let line = source.lineRange(for: selection)
-            insertText(
-                "",
-                replacementRange: NSRange(
-                    location: line.location,
-                    length: NSMaxRange(task.contentRange) - line.location))
-        } else {
-            insertText("\n" + task.continuation, replacementRange: selection)
-        }
+    override func viewDidChangeEffectiveAppearance() {
+        super.viewDidChangeEffectiveAppearance()
+        editing?.appearanceChanged()
     }
 }

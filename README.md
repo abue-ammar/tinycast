@@ -68,7 +68,7 @@ keep it actively maintained. GitHub Sponsors isn't available in my country, so p
 - **Calendar and meetings** — your next meeting on the empty palette and in the menu bar, one key to
   join it, or let it join itself.
 - **Notes** — an unlimited collection of plain Markdown files in one floating editor, searchable from
-  the palette.
+  the palette and rendered as you write.
 - **Emoji picker** — a searchable emoji grid, one keystroke away.
 - **AI chat** — use your own key or an installed AI account, chat from the palette. Off out of the box, like every AI feature.
 - **Quick Actions** — fix grammar, rewrite, translate or summarize the selected text in any app.

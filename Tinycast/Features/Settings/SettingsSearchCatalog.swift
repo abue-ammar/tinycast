@@ -342,6 +342,12 @@ enum SettingsSearchCatalog {
             .notesNotes, "Enable Notes",
             keywords: ["markdown", "scratchpad"]),
         .init(
+            .notesNotes, "Render Markdown",
+            keywords: ["markdown", "formatting", "preview", "raw", "source"]),
+        .init(
+            .notesNotes, "Show Formatting Bar",
+            keywords: ["toolbar", "format bar", "buttons", "bold", "heading", "markdown"]),
+        .init(
             group: .notesCommands, "Notes commands",
             keywords: ["shortcut", "new note", "search notes"])
     ]

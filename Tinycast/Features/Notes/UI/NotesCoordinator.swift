@@ -17,6 +17,8 @@ final class NotesCoordinator {
     @ObservationIgnored private lazy var windowController = NotesWindowController(coordinator: self)
     @ObservationIgnored private lazy var switcherController = NoteSwitcherWindowController(
         coordinator: self)
+    @ObservationIgnored private lazy var headingMenuController = NoteHeadingMenuWindowController(
+        coordinator: self)
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private var issueTask: Task<Void, Never>?
     @ObservationIgnored private var operationTask: Task<Void, Never>?
@@ -28,19 +30,32 @@ final class NotesCoordinator {
     private(set) var switcherSelection: NoteID?
     private(set) var switcherFocusRevision = 0
     private(set) var characterCount = 0
+    private(set) var formatting = NoteFormatting.plain
+    private(set) var isFormattingBarExpanded: Bool
+    private(set) var isHeadingMenuPresented = false
+    /// A press closes the menu before its button fires, so the button must not reopen it.
+    @ObservationIgnored private var headingMenuWasOpenAtPress = false
+    /// The heading button in the panel's flipped content space, reported by the bar as it lays out.
+    @ObservationIgnored var headingButtonFrame: CGRect = .zero
     private var switcherRename = NoteSwitcherRenameState()
     private var presentationGeneration = 0
+
+    @ObservationIgnored private let saveFormattingBarExpanded: @Sendable (Bool) -> Void
 
     init(
         store: NotesStore,
         settings: AppSettings,
         appIndex: AppIndex,
-        core: AppCore
+        core: AppCore,
+        isFormattingBarExpanded: Bool = false,
+        saveFormattingBarExpanded: @escaping @Sendable (Bool) -> Void = { _ in }
     ) {
         self.store = store
         self.settings = settings
         self.appIndex = appIndex
         self.core = core
+        self.isFormattingBarExpanded = isFormattingBarExpanded
+        self.saveFormattingBarExpanded = saveFormattingBarExpanded
         store.onIssue = { [weak self] issue in self?.present(issue) }
     }
 
@@ -65,6 +80,8 @@ final class NotesCoordinator {
     }
 
     var activeTitle: String { store.activeTitle }
+    var rendersMarkdown: Bool { settings.notesRendersMarkdown }
+    var showsFormattingBar: Bool { settings.notesRendersMarkdown && settings.notesShowsFormattingBar }
     var isSearching: Bool { store.isSearching }
     var visibleNotes: [NoteSummary] {
         store.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -88,6 +105,7 @@ final class NotesCoordinator {
         loadTask?.cancel()
         loadTask = nil
         operationTask?.cancel()
+        closeHeadingMenu()
         closeSwitcher(focusEditor: false)
         windowController.hide(restoreFocus: false)
         Task { [weak self] in
@@ -122,6 +140,7 @@ final class NotesCoordinator {
 
     func openSwitcher() {
         guard settings.notesEnabled, store.isLoaded else { return }
+        closeHeadingMenu()
         if isSwitcherPresented {
             switcherFocusRevision &+= 1
             return
@@ -143,6 +162,7 @@ final class NotesCoordinator {
     }
 
     func hide() {
+        closeHeadingMenu()
         presentationGeneration &+= 1
         pendingPresentation = nil
         closeSwitcher(focusEditor: false)
@@ -151,7 +171,9 @@ final class NotesCoordinator {
     }
 
     func handleEscape() {
-        if isSwitcherPresented {
+        if isHeadingMenuPresented {
+            closeHeadingMenu()
+        } else if isSwitcherPresented {
             closeSwitcher()
         } else {
             hide()
@@ -288,6 +310,7 @@ final class NotesCoordinator {
     }
 
     func updateSource(_ source: String) {
+        closeHeadingMenu()
         store.updateSource(source)
     }
 
@@ -296,12 +319,66 @@ final class NotesCoordinator {
         characterCount = count
     }
 
+    /// Id and epoch, not the whole input: comparing a long source on every caret move is not free.
+    func updateFormatting(_ input: NoteEditorInput, _ formatting: NoteFormatting) {
+        let current = editorInput
+        guard input.id == current.id, input.epoch == current.epoch, formatting != self.formatting else {
+            return
+        }
+        self.formatting = formatting
+    }
+
+    func format(_ action: NoteEditAction) {
+        windowController.format(action)
+    }
+
+    /// Collapsing takes the heading button with it, so its menu cannot outlive it.
+    func toggleFormattingBar() {
+        guard showsFormattingBar else { return }
+        closeHeadingMenu()
+        // Explicit, because the chord changes this from outside any view's transaction.
+        withAnimation(Self.barMotion) { isFormattingBarExpanded.toggle() }
+        saveFormattingBarExpanded(isFormattingBarExpanded)
+    }
+
+    private static var barMotion: Animation? {
+        NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+            ? nil : Theme.MenuMotion.chevronAnimation
+    }
+
+    func toggleHeadingMenu() {
+        guard !headingMenuWasOpenAtPress else {
+            headingMenuWasOpenAtPress = false
+            return
+        }
+        guard !isHeadingMenuPresented else { return closeHeadingMenu() }
+        isHeadingMenuPresented = true
+        windowController.presentHeadingMenu(headingMenuController)
+    }
+
+    func chooseHeading(_ level: Int) {
+        closeHeadingMenu()
+        format(.setHeading(level: level))
+    }
+
+    func closeHeadingMenu() {
+        guard isHeadingMenuPresented else { return }
+        isHeadingMenuPresented = false
+        headingMenuController.hide()
+    }
+
+    func noteWindowMouseDown() {
+        headingMenuWasOpenAtPress = isHeadingMenuPresented
+        closeHeadingMenu()
+    }
+
     func editorReady(_ textView: NoteTextView) {
         windowController.editorReady(textView)
     }
 
     private func request(_ presentation: Presentation) {
         guard settings.notesEnabled else { return }
+        closeHeadingMenu()
         pendingPresentation = presentation
         guard loadTask == nil else { return }
         let generation = enablementGeneration

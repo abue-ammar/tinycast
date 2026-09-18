@@ -49,19 +49,61 @@ Only files directly in that folder count. Subfolders, hidden files and links are
 sorted by when they changed, newest first.
 
 New notes are named `Untitled.md`, then `Untitled 2.md`, and so on. **Until you rename one, it shows
-its first line as the title**, so a list of Untitled notes is still easy to scan. Heading marks like
-`#` are dropped from that title.
+its first line as the title**, so a list of Untitled notes is still easy to scan. Markdown marks like
+`#`, `- [ ]` and `**` are dropped from that title.
 
 Names are compared without case or accents, so `plán` next to `Plan` becomes `plán 2.md`. A note
 never clashes with itself, so you can rename one just to change its case or accents.
 
 ## The editor
 
-One plain text view. **Markdown marks stay visible.** There is no syntax coloring, no rendered
-preview and no clickable links. The text on screen, in search and in the file is exactly the same.
+**Markdown renders as you write.** Headings, bold, italic, strikethrough, inline code, links, lists,
+tasks, quotes, code blocks and rules all show formatted. The line you are on shows its Markdown so you
+can edit it, and every other line stays rendered. The file itself never changes: what is saved, searched
+and copied is the plain Markdown you typed.
+
+Images and highlighting inside code blocks are not rendered; they stay as text. Tables stay as text
+too, shown in a fixed-width font with nothing styled inside them, so their columns stay readable.
+
+- **Click a checkbox** to tick or untick a task. The caret stays where it was.
+- **Click a link** to open it in your browser. Click right at the edge of a link to edit it instead.
+- **Return** continues a list, and ends it on an empty item. **Tab** and **Shift-Tab** nest items.
+- Type `[] ` at the start of a line to start a task.
+- Paste a web address over selected text to turn that text into a link.
+
+| Key                                                              | Does                 |
+| ---------------------------------------------------------------- | -------------------- |
+| <kbd>⌘</kbd><kbd>B</kbd>                                         | Bold                 |
+| <kbd>⌘</kbd><kbd>I</kbd>                                         | Italic               |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>X</kbd>                             | Strikethrough        |
+| <kbd>⌘</kbd><kbd>E</kbd>                                         | Inline code          |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd>                             | Code block           |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>B</kbd>                             | Quote                |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>                             | Show the buttons     |
+| <kbd>⌘</kbd><kbd>K</kbd>                                         | Link                 |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>7</kbd>                             | Numbered list        |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>8</kbd>                             | Bullet list          |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>9</kbd>                             | Task list            |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>1</kbd>, <kbd>2</kbd>, <kbd>3</kbd> | Heading 1, 2, 3      |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>0</kbd>                             | Back to a plain line |
+
+Prefer to see the raw text? Turn off **Render Markdown** in **Settings → Notes**. The editor then shows
+every mark as typed, and Return, Tab and these keys behave like any plain text field.
+
+### The formatting bar
+
+At the bottom right of the note is a round button. Click it, or press
+<kbd>⌥</kbd><kbd>⌘</kbd><kbd>T</kbd>, and a
+button for each of those keys slides out, plus a heading menu. Click one to format the selection or
+the word at the caret; click a lit button to remove that formatting again. Hover a button to see its
+shortcut. Tinycast remembers whether you left it open. When the window is narrow, the character count
+makes room for the buttons.
+
+Don't want it? Turn off **Show Formatting Bar** in **Settings → Notes**. The keys keep working. The bar
+also stays hidden while Render Markdown is off.
 
 Typing, selection, copy and paste, Find, emoji, input methods and undo all behave like any Mac text
-field. An empty note shows **Start writing…**, and the footer counts characters.
+field. An empty note shows **Start writing…**, and the character count sits under the note.
 
 [Snippets](/docs/features/snippets) expand right into the editor, and undo takes them back.
 
