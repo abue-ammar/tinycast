@@ -299,6 +299,8 @@ function syncHostCall(api, method, args) {
 
 const oauthTokens = new Map();
 const runningChildren = new Map();
+const openSockets = new Map();
+let nextSocketId = 1;
 
 async function stubHostCall(api, method, args) {
   switch (`${api}.${method}`) {
@@ -335,6 +337,25 @@ async function stubHostCall(api, method, args) {
       runningChildren.delete(args[0]);
       return exit;
     }
+    // Node's own WebSocket stands in for `URLSessionWebSocketTask`: same one-message-at-a-time read.
+    case "websocket.open":
+      return openSocket(args[0]);
+    case "websocket.receive": {
+      const entry = openSockets.get(args[0]);
+      if (!entry) throw new Error("harness: no socket");
+      return entry.queue.length ? entry.queue.shift() : new Promise((resolve) => entry.waiters.push(resolve));
+    }
+    case "websocket.send": {
+      const entry = openSockets.get(args[0].id);
+      entry?.socket.send(args[0].text ?? Buffer.from(args[0].base64, "base64"));
+      return null;
+    }
+    case "websocket.close": {
+      const entry = openSockets.get(args[0].id);
+      openSockets.delete(args[0].id);
+      entry?.socket.close(args[0].code, args[0].reason);
+      return null;
+    }
     // Positional arguments throughout, matching `src/api/oauth.js`.
     case "oauth.authorize":
       return { authorizationCode: "auth-code-12345", state: args[1] ?? "" };
@@ -350,6 +371,30 @@ async function stubHostCall(api, method, args) {
       if (["window", "feedback", "cache", "storage", "clipboard", "system"].includes(api)) return null;
       throw new Error(`harness: no async stub for ${api}.${method}`);
   }
+}
+
+async function openSocket(spec) {
+  const socket = new WebSocket(spec.url, spec.protocols ?? []);
+  socket.binaryType = "arraybuffer";
+  const entry = { socket, queue: [], waiters: [] };
+  const deliver = (event) => (entry.waiters.length ? entry.waiters.shift()(event) : entry.queue.push(event));
+  socket.addEventListener("message", (event) =>
+    deliver(
+      typeof event.data === "string"
+        ? { type: "text", text: event.data }
+        : { type: "binary", base64: Buffer.from(event.data).toString("base64") },
+    ),
+  );
+  socket.addEventListener("close", (event) =>
+    deliver({ type: "close", code: event.code, reason: event.reason, abnormal: !event.wasClean }),
+  );
+  await new Promise((resolve, reject) => {
+    socket.addEventListener("open", resolve, { once: true });
+    socket.addEventListener("error", () => reject(new Error(`connection to ${spec.url} failed`)), { once: true });
+  });
+  const id = nextSocketId++;
+  openSockets.set(id, entry);
+  return { id, protocol: socket.protocol ?? "" };
 }
 
 export function bootConfig(overrides = {}) {
@@ -464,7 +509,7 @@ async function runExtension(dir, commandName) {
   );
   harness.start("s1", readFileSync(file, "utf8"), file, dir, target.mode === "view" ? "view" : "no-view", {});
 
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  await new Promise((resolve) => setTimeout(resolve, Number(process.env.EXT_TEST_SETTLE_MS ?? 1500)));
   if (harness.state.failures.length) {
     console.log("\n✗ failures:");
     for (const failure of harness.state.failures) console.log(failure);

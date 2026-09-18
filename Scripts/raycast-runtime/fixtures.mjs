@@ -394,6 +394,52 @@ export default async function Command() {
 
 // Hide My Email hands axios a cookie jar through axios-cookiejar-support, whose http-cookie-agent
 // extends `http.Agent` at load time and hooks each request in `addRequest` — the same way this does.
+// A bundled `ws` reaches the network the way this does: upgrade, then raw frames on the socket.
+const websocketSource = `
+import https from "node:https";
+
+export default async function Command() {
+  globalThis.__ws = await new Promise((resolve, reject) => {
+    const request = https.request({
+      host: "example.test",
+      path: "/socket",
+      headers: {
+        Connection: "Upgrade",
+        Upgrade: "websocket",
+        "Sec-WebSocket-Key": "dGhlIHNhbXBsZSBub25jZQ==",
+        "Sec-WebSocket-Version": "13",
+        "Sec-WebSocket-Extensions": "permessage-deflate",
+      },
+    });
+    request.on("error", reject);
+    request.on("upgrade", (response, socket) => {
+      const frames = [];
+      socket.on("data", (chunk) => frames.push(chunk.toString("hex")));
+      const payload = Buffer.from("ping", "utf8");
+      const mask = Buffer.from([1, 2, 3, 4]);
+      socket.write(
+        Buffer.concat([
+          Buffer.from([0x81, 0x80 | payload.length]),
+          mask,
+          Buffer.from(payload.map((byte, index) => byte ^ mask[index % 4])),
+        ]),
+      );
+      setTimeout(
+        () =>
+          resolve({
+            status: response.statusCode,
+            accept: response.headers["sec-websocket-accept"],
+            extensions: response.headers["sec-websocket-extensions"] ?? null,
+            frames,
+          }),
+        40,
+      );
+    });
+    request.end();
+  });
+}
+`;
+
 const cookieAgentSource = `
 import * as http from "node:http";
 import * as url from "node:url";
@@ -883,6 +929,39 @@ export async function runFixtures() {
             bodyBase64: Buffer.from('{"ok":true}').toString("base64"),
           };
         },
+      },
+    },
+  );
+
+  const socketOpens = [];
+  const socketSends = [];
+  let socketReads = 0;
+  await run(
+    "a websocket upgrade hands back a socket that frames both ways",
+    websocketSource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__ws");
+      check("opens the native socket over wss", socketOpens[0]?.url === "wss://example.test/socket", JSON.stringify(socketOpens[0]?.url));
+      check("drops the handshake headers", socketOpens[0]?.headers?.upgrade === undefined, JSON.stringify(socketOpens[0]?.headers));
+      check("reports the upgrade", result?.status === 101, String(result?.status));
+      check("answers the key the way a server would", result?.accept === "s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", String(result?.accept));
+      check("never accepts an extension", result?.extensions === null, String(result?.extensions));
+      check("unmasks an outgoing frame", socketSends[0]?.text === "ping", JSON.stringify(socketSends[0]));
+      check("frames an incoming message", result?.frames?.[0] === "8104706f6e67", JSON.stringify(result?.frames));
+    },
+    {
+      stubs: {
+        "websocket.open": (args) => {
+          socketOpens.push(args[0]);
+          return { id: 7, protocol: "" };
+        },
+        "websocket.send": (args) => {
+          socketSends.push(args[0]);
+          return null;
+        },
+        // The second read never settles, which is what an idle socket looks like from JS.
+        "websocket.receive": () => (socketReads++ === 0 ? { type: "text", text: "pong" } : new Promise(() => {})),
       },
     },
   );

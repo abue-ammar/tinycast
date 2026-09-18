@@ -22,6 +22,7 @@ import {
 import { ReadableStream, TransformStream, WritableStream } from "./web-streams.js";
 import { fileURLToPath, pathToFileURL, URL, URLSearchParams } from "./url.js";
 import { punycode } from "./punycode.js";
+import { upgradeToWebSocket } from "./websocket.js";
 
 // ─── path ───────────────────────────────────────────────────────────
 
@@ -1242,6 +1243,7 @@ class ClientRequest extends EventEmitter {
   flushHeaders() {}
 
   async _send() {
+    if (String(this.getHeader("upgrade") ?? "").toLowerCase() === "websocket") return this._upgrade();
     // Content negotiation belongs to the transport, which decodes for us and reports the result.
     this.removeHeader("accept-encoding");
     const body = this._chunks.length ? Buffer.concat(this._chunks) : null;
@@ -1265,21 +1267,64 @@ class ClientRequest extends EventEmitter {
       if (!this._destroyed) this.emit("error", error instanceof Error ? error : new Error(String(error)));
     }
   }
+
+  /// The host opens the socket, so the 101 is synthesised — never with an extension, so no deflate.
+  async _upgrade() {
+    const headers = this.getHeaders();
+    try {
+      const { socket, protocol } = await upgradeToWebSocket({
+        url: this.url.replace(/^http/, "ws"),
+        protocols: splitList(headers["sec-websocket-protocol"]),
+        headers: Object.fromEntries(
+          Object.entries(headers).filter(([name]) => !HANDSHAKE_HEADERS.has(name)),
+        ),
+      });
+      clearTimeout(this._timer);
+      if (this._destroyed) return socket.destroy();
+      const accept = new Hash("sha1").update(`${headers["sec-websocket-key"] ?? ""}${WEBSOCKET_GUID}`).digest("base64");
+      const response = new IncomingMessage({
+        status: 101,
+        statusText: "Switching Protocols",
+        headers: {
+          upgrade: "websocket",
+          connection: "Upgrade",
+          "sec-websocket-accept": accept,
+          ...(protocol ? { "sec-websocket-protocol": protocol } : {}),
+        },
+      });
+      this.emit("upgrade", response, socket, Buffer.alloc(0));
+    } catch (error) {
+      clearTimeout(this._timer);
+      if (!this._destroyed) this.emit("error", error instanceof Error ? error : new Error(String(error)));
+    }
+  }
 }
 
-function httpRequest(input, options, callback) {
-  if (typeof options === "function") return httpRequest(input, {}, options);
+const WEBSOCKET_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+/// URLSession writes the handshake itself; forwarding these would have it refuse the request.
+const HANDSHAKE_HEADERS = new Set([
+  "connection", "upgrade", "host", "sec-websocket-key", "sec-websocket-version",
+  "sec-websocket-extensions", "sec-websocket-protocol",
+]);
+
+function splitList(value) {
+  return String(value ?? "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function httpRequest(input, options, callback, scheme = "http:") {
+  if (typeof options === "function") return httpRequest(input, {}, options, scheme);
   if (typeof input === "string" || input instanceof URL) {
     return new ClientRequest(String(input), options ?? {}, callback);
   }
   const spec = input ?? {};
   const host = spec.hostname ?? spec.host ?? "localhost";
   const port = spec.port ? `:${spec.port}` : "";
-  return new ClientRequest(`${spec.protocol ?? "http:"}//${host}${port}${spec.path ?? "/"}`, spec, callback);
+  return new ClientRequest(`${spec.protocol ?? scheme}//${host}${port}${spec.path ?? "/"}`, spec, callback);
 }
 
-function httpGet(input, options, callback) {
-  return httpRequest(input, options, callback).end();
+function httpGet(input, options, callback, scheme) {
+  return httpRequest(input, options, callback, scheme).end();
 }
 
 // ─── util ───────────────────────────────────────────────────────────
@@ -1534,8 +1579,9 @@ function makeUnsupported(label) {
 
 const httpLike = (name) =>
   unsupportedModule(name, {
-    request: httpRequest,
-    get: httpGet,
+    // The scheme rides with the module: `ws` and axios both pass an options bag with no protocol.
+    request: (input, options, callback) => httpRequest(input, options, callback, `${name}:`),
+    get: (input, options, callback) => httpGet(input, options, callback, `${name}:`),
     validateHeaderName,
     validateHeaderValue,
     IncomingMessage,

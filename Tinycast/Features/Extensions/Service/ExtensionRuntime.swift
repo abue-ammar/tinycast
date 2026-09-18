@@ -5,6 +5,8 @@ import JavaScriptCore
 @MainActor
 protocol ExtensionHostAPI: AnyObject, Sendable {
     func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String
+    /// The context is gone; release anything opened on its behalf.
+    func sessionEnded()
 }
 
 /// Where a running command's UI or failure lands. Every callback arrives on the main actor.
@@ -299,6 +301,8 @@ final class ExtensionRuntime: @unchecked Sendable {
 
     /// Timers are global and React's scheduler rides them, so a context is never reused.
     func shutdown() {
+        let hostAPI = self.hostAPI
+        Task { @MainActor in hostAPI.sessionEnded() }
         queue.async {
             for timer in self.timers.values { timer.cancel() }
             self.timers.removeAll()

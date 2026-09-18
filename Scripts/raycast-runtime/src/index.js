@@ -15,6 +15,7 @@ import { NavigationRoot, setFieldCommandHandler } from "./api/components.js";
 import { Surface } from "./reconciler.js";
 import { raycastApi } from "./api/index.js";
 import { configureSystem, runToastAction } from "./api/system.js";
+import { WebSocket } from "./websocket.js";
 
 const reactModule = {
   ...React,
@@ -41,6 +42,7 @@ defineModule("react-dom", {
   flushSync: (fn) => fn?.(),
   version: React.version,
 });
+globalThis.WebSocket = WebSocket;
 
 const sessions = new Map();
 

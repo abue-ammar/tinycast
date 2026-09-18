@@ -93,6 +93,7 @@ same arrangement as `EmojiData.generated.swift`: building Tinycast never needs N
 | `src/api/oauth.js` | `OAuth.PKCEClient`, `OAuth.TokenSet`, redirect url builders |
 | `src/api/enums.generated.js` | Icon / Color / Toast.Style / … extracted from the real `@raycast/api` types |
 | `src/node-shims.js` | `path`, `fs`, `os`, `child_process`, `crypto`, `zlib`, `util`, `events`, `buffer`, `punycode`, … |
+| `src/websocket.js` | the `WebSocket` global, and the raw socket a bundled `ws` attaches to |
 | `src/url.js`, `src/punycode.js`, `src/buffer.js` | web/Node primitives JavaScriptCore lacks |
 
 Two host-call flavours:
@@ -114,6 +115,7 @@ Two host-call flavours:
 | `Service/ExtensionHostBridge.swift` | main-actor host APIs (clipboard, storage, cache, window, toasts, system, oauth) |
 | `Service/ExtensionNodeShims.swift` | the synchronous `fs` / `os` / `child_process` / `crypto` / `zlib` services |
 | `Service/ExtensionFetcher.swift` | `fetch` over `URLSession`, plus collecting async `exec` children and the shared PATH resolver |
+| `Service/ExtensionWebSocketBridge.swift` | `URLSessionWebSocketTask` connections, opened and read from JS |
 | `Service/ExtensionOAuthKeychain.swift` | secure OAuth token storage backed by macOS Keychain |
 | `Service/ExtensionOAuthSession.swift` | PKCE state tracking, browser launch, and callback redirect resolution |
 | `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
@@ -615,6 +617,19 @@ A request calls it only for an `http.Agent` subclass, which is where axios-cooki
 http-cookie-agent reads and writes its jar — Hide My Email is the reference case. URLSession folds
 repeated `Set-Cookie` headers into one line, so the response splits it back into Node's array.
 
+**WebSockets** — `WebSocket` is a global backed by `URLSessionWebSocketTask`. Swift owns the wire and
+the framing, and JS reads a socket by keeping one `receive` call outstanding, so an inbound message
+needs no push channel; sends are chained, because two host calls can otherwise settle out of order.
+
+A bundled `ws` never looks at that global. It runs its handshake through `http.request` and waits for
+an `upgrade` carrying a raw socket it frames itself, so the shim answers with one that re-frames RFC
+6455 in both directions on top of the native task. The 101 it synthesises names no extension, which
+is what keeps `permessage-deflate` — streaming zlib, which the shims have no answer for — off the
+connection. Home Assistant is the reference case: it authenticates, subscribes, and re-renders on
+every state push over that socket. The scheme rides with the module for the same reason: `ws` hands
+`https.request` an options bag with no protocol in it, and a `wss:` URL that went out as `ws:` would
+never connect.
+
 **Bundled helpers** — compiled Mach-O files and shebang scripts live in `assets/`. GitHub's raw-file
 downloads and some store zips lose their executable mode, so installation preserves Git tree mode
 `100755`; discovery also repairs known executable payloads already installed as `644`. That covers
@@ -637,10 +652,10 @@ OAuth extensions it excluded are not counted yet — re-measure before quoting t
 | **`menu-bar` commands** | The launcher lists them and explains why they don't open. |
 | **Raycast's PKCE proxy (`oauth.raycast.com`)** | Extensions whose provider has no PKCE support exchange tokens through Raycast's proxy. `OAuth.PKCEClient` works; a provider that needs that proxy still fails. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
-| **WebSocket** | No polyfill yet; `URLSessionWebSocketTask` could back one. |
+| **A WebSocket to a host with a certificate macOS distrusts** | `ws`'s `rejectUnauthorized: false` is ignored — URLSession validates the chain either way. |
 | **Aborting a `fetch` already in flight** | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |
 | **Streaming `child_process.spawn`** | `spawn` runs the child to completion and emits its output as one chunk (async-iterable, which is what `get-stream`/`execa` consume). True duplex streaming would need a bidirectional channel across the bridge. Extensions built on `execa`'s deeper stream API can still fail. |
-| **`net` / `tls`** | Resolve but throw on use. Nothing bridges a socket. |
+| **`net` / `tls`** | Resolve but throw on use. Nothing bridges a raw socket; a bundled `ws` reaches the network through the WebSocket bridge instead. |
 | **Streaming HTTP** | The bridge answers a request with the whole body at once, so `http.request` delivers one chunk and `Response.body` replays bytes that already arrived. Server-sent events, network-level progress and backpressure onto the socket are all out of reach; `stream` itself is real enough to carry them the day the bridge is. |
 | **Tool/AI-extension entry points (`tools/`)** | Not surfaced. |
 
