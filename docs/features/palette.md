@@ -360,7 +360,8 @@ anything, and a re-summon inside the Pop to Root window skips `prepare(mode:)` a
 responder, so neither of the other two paths would fire.
 
 Before routing a key to palette navigation, `PalettePanel.sendEvent` reads `hasMarkedText()` directly
-from the focused editor and gives its `NSTextInputContext` first refusal. A consumed event stops there:
+from the focused editor and gives its `NSTextInputContext` first refusal. This applies to every IME
+that composes marked text, regardless of language. A consumed event stops there:
 Tab and Shift-Tab select IME candidates without changing screens or argument focus, arrows stay with
 the candidate list, and Return or Escape can finish composition without also activating or dismissing
 the palette. The original event reaches the IME before Emacs chords are rewritten. Keys the input
