@@ -362,6 +362,8 @@ async function stubHostCall(api, method, args) {
       entry?.socket.close(args[0].code, args[0].reason);
       return null;
     }
+    case "websocket.ping":
+      return null;
     // Positional arguments throughout, matching `src/api/oauth.js`.
     case "oauth.authorize":
       return { authorizationCode: "auth-code-12345", state: args[1] ?? "" };

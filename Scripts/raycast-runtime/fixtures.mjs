@@ -399,7 +399,7 @@ export default async function Command() {
 const dgramSource = `
 import dgram from "node:dgram";
 
-function query(name) {
+function query(name, type) {
   const labels = name.split(".");
   const packet = Buffer.alloc(12 + labels.reduce((total, label) => total + label.length + 1, 1) + 4);
   packet.writeUInt16BE(0x1234, 0);
@@ -410,7 +410,7 @@ function query(name) {
     packet.write(label, offset + 1);
     offset += label.length + 1;
   }
-  packet.writeUInt16BE(1, offset + 1);
+  packet.writeUInt16BE(type, offset + 1);
   packet.writeUInt16BE(1, offset + 3);
   return packet;
 }
@@ -420,7 +420,9 @@ export default async function Command() {
   globalThis.__dgram = await new Promise((resolve) => {
     socket.on("message", (message, rinfo) => resolve({ hex: message.toString("hex"), port: rinfo.port }));
     socket.bind(5353, undefined, () => {
-      const packet = query("homeassistant.local");
+      const service = query("_services._dns-sd._udp.local", 12);
+      socket.send(service, 0, service.length, 5353, "224.0.0.251");
+      const packet = query("homeassistant.local", 1);
       socket.send(packet, 0, packet.length, 5353, "224.0.0.251");
     });
   });
@@ -456,6 +458,7 @@ export default async function Command() {
           Buffer.from(payload.map((byte, index) => byte ^ mask[index % 4])),
         ]),
       );
+      socket.write(Buffer.from([0x89, 0x80, 1, 2, 3, 4]));
       setTimeout(
         () =>
           resolve({
@@ -974,6 +977,7 @@ export async function runFixtures() {
     async (harness) => {
       const result = harness.call("globalThis.__dgram");
       check("resolves the name the query asked for", lookups[0] === "homeassistant.local", String(lookups[0]));
+      check("leaves a service question alone", lookups.length === 1, JSON.stringify(lookups));
       check("answers the query it was sent", result?.hex?.startsWith("123484000001000100000000"), String(result?.hex));
       check("names the host in the answer", result?.hex?.includes("0d686f6d65617373697374616e74056c6f63616c00"), String(result?.hex));
       check("carries the address as an A record", result?.hex?.endsWith("00010001000000780004c0a801e2"), String(result?.hex));
@@ -990,6 +994,7 @@ export async function runFixtures() {
 
   const socketSends = [];
   let socketReads = 0;
+  let socketPings = 0;
   await run(
     "a websocket upgrade hands back a socket that frames both ways",
     websocketSource,
@@ -1003,6 +1008,8 @@ export async function runFixtures() {
       check("never accepts an extension", result?.extensions === null, String(result?.extensions));
       check("unmasks an outgoing frame", socketSends[0]?.text === "ping", JSON.stringify(socketSends[0]));
       check("frames an incoming message", result?.frames?.[0] === "8104706f6e67", JSON.stringify(result?.frames));
+      check("asks the peer before answering a ping", socketPings === 1, String(socketPings));
+      check("pongs once the peer answered", result?.frames?.includes("8a00"), JSON.stringify(result?.frames));
     },
     {
       stubs: {
@@ -1012,6 +1019,10 @@ export async function runFixtures() {
         },
         "websocket.send": (args) => {
           socketSends.push(args[0]);
+          return null;
+        },
+        "websocket.ping": () => {
+          socketPings++;
           return null;
         },
         // The second read never settles, which is what an idle socket looks like from JS.

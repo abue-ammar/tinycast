@@ -24,18 +24,27 @@ class NativeSocket {
   }
 
   send(message) {
-    this.tail = this.tail.then(() =>
-      this.closed ? undefined : hostCall("websocket", "send", [{ id: this.id, ...message }]),
-    );
-    return this.tail;
+    return this.enqueue("send", { ...message });
+  }
+
+  /// Outside the queue: a pong that never arrives must not hold a later `close` back.
+  ping() {
+    if (this.closed) return Promise.resolve();
+    return hostCall("websocket", "ping", [{ id: this.id }]);
   }
 
   close(code, reason) {
     if (this.closed) return;
     this.closed = true;
-    this.tail = this.tail.then(() =>
-      hostCall("websocket", "close", [{ id: this.id, code: code ?? 1000, reason: reason ?? "" }]),
+    this.enqueue("close", { code: code ?? 1000, reason: reason ?? "" }, { whenClosed: true });
+  }
+
+  enqueue(method, payload, { whenClosed = false } = {}) {
+    const result = this.tail.then(() =>
+      this.closed && !whenClosed ? undefined : hostCall("websocket", method, [{ id: this.id, ...payload }]),
     );
+    this.tail = result.catch(() => {});
+    return result;
   }
 
   async pump() {
@@ -110,11 +119,15 @@ export class WebSocket {
 
   send(data) {
     if (this.readyState !== WebSocket.OPEN) throw new Error("WebSocket is not open");
-    if (typeof data === "string") return void this._socket.send({ text: data });
+    if (typeof data === "string") return void this.transmit({ text: data });
     const bytes = ArrayBuffer.isView(data)
       ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
       : Buffer.from(data);
-    this._socket.send({ base64: bytes.toString("base64") });
+    this.transmit({ base64: bytes.toString("base64") });
+  }
+
+  transmit(message) {
+    this._socket.send(message).catch((error) => this._end(1006, String(error?.message ?? error), true));
   }
 
   close(code, reason) {
@@ -250,7 +263,13 @@ class WebSocketSocket extends Duplex {
 
   handleFrame(final, opcode, payload) {
     if (opcode === PONG) return;
-    if (opcode === PING) return void this.push(encodeFrame(PONG, payload));
+    if (opcode === PING) {
+      this.native?.ping().then(
+        () => this.push(encodeFrame(PONG, payload)),
+        (error) => this.destroy(error),
+      );
+      return;
+    }
     if (opcode === CLOSE) {
       const code = payload.length >= 2 ? payload.readUInt16BE(0) : 1000;
       return void this.native?.close(code, payload.subarray(2).toString("utf8"));

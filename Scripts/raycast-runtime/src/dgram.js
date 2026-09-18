@@ -7,6 +7,8 @@ import { hostCall } from "./host.js";
 
 const MDNS_PORT = 5353;
 const A_RECORD = 1;
+const ANY_RECORD = 255;
+const IN_CLASS = 1;
 
 class NameLookupSocket extends EventEmitter {
   constructor() {
@@ -65,6 +67,8 @@ class NameLookupSocket extends EventEmitter {
     if (!query) return;
     const answers = [];
     for (const question of query.questions) {
+      if (question.class !== IN_CLASS) continue;
+      if (question.type !== A_RECORD && question.type !== ANY_RECORD) continue;
       const addresses = await hostCall("dns", "resolve", [question.name]).catch(() => []);
       for (const address of addresses) answers.push({ name: question.name, address });
     }
@@ -95,7 +99,11 @@ function decodeQuery(packet) {
       offset += size;
     }
     if (offset + 4 > packet.length) return null;
-    questions.push({ name: labels.join(".") });
+    questions.push({
+      name: labels.join("."),
+      type: packet.readUInt16BE(offset),
+      class: packet.readUInt16BE(offset + 2) & 0x7fff,
+    });
     offset += 4;
   }
   return questions.length ? { id: packet.readUInt16BE(0), questions, end: offset } : null;

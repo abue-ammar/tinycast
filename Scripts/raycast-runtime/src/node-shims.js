@@ -1293,7 +1293,7 @@ class ClientRequest extends EventEmitter {
           ...(protocol ? { "sec-websocket-protocol": protocol } : {}),
         },
       });
-      this.emit("upgrade", response, socket, Buffer.alloc(0));
+      if (!this.emit("upgrade", response, socket, Buffer.alloc(0))) socket.destroy();
     } catch (error) {
       clearTimeout(this._timer);
       if (!this._destroyed) this.emit("error", error instanceof Error ? error : new Error(String(error)));

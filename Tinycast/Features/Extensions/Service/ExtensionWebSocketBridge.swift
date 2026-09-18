@@ -31,6 +31,7 @@ final class ExtensionWebSocketBridge: NSObject, Sendable, URLSessionWebSocketDel
         case "open": return try await open(fields)
         case "receive": return try await receive(id: whole(arguments.first))
         case "send": return try await send(fields)
+        case "ping": return try await ping(whole(fields["id"]))
         case "close":
             close(
                 id: whole(fields["id"]), code: whole(fields["code"], or: 1000),
@@ -41,7 +42,7 @@ final class ExtensionWebSocketBridge: NSObject, Sendable, URLSessionWebSocketDel
     }
 
     private func whole(_ value: RenderValue?, or fallback: Int = 0) -> Int {
-        value?.doubleValue.map(Int.init) ?? fallback
+        value?.doubleValue.flatMap(Int.init(exactly:)) ?? fallback
     }
 
     /// The context is thrown away between commands, so nothing would read these again.
@@ -110,6 +111,16 @@ final class ExtensionWebSocketBridge: NSObject, Sendable, URLSessionWebSocketDel
             try await task.send(.data(data))
         } else {
             try await task.send(.string(fields["text"]?.stringValue ?? ""))
+        }
+        return nil
+    }
+
+    private func ping(_ id: Int) async throws -> Any? {
+        guard let task = connections.withLock({ $0[id]?.task }) else { throw SocketError.closed }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            task.sendPing { error in
+                if let error { continuation.resume(throwing: error) } else { continuation.resume() }
+            }
         }
         return nil
     }
