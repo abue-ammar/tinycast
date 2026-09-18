@@ -82,11 +82,10 @@ struct InterfaceMetrics: Equatable, Sendable {
         var barBrandIcon: CGFloat { scaledPoints(Theme.Size.barBrandIcon, scale) }
         var menuRowSpacing: CGFloat { scaledPoints(Theme.Size.menuRowSpacing, scale) }
         var menuSectionHeader: CGFloat { scaledPoints(Theme.Size.menuSectionHeader, scale) }
-        /// Derived from scaled parts so row geometry stays exact at every size.
+        /// Derived like `Theme`'s, so the row cap still counts whole rows at every size.
         var menuRowHeight: CGFloat { menuIcon + Spacing(scale: scale).md * 2 }
-        var menuRowsMaxHeight: CGFloat { scaledPoints(Theme.Size.menuRowsMaxHeight, scale) }
-        var filterMenuRowsMaxHeight: CGFloat {
-            scaledPoints(Theme.Size.filterMenuRowsMaxHeight, scale)
+        var menuRowsMaxHeight: CGFloat {
+            (Theme.Size.menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()
         }
         var clipboardListWidth: CGFloat { scaledPoints(Theme.Size.clipboardListWidth, scale) }
         var clipboardMediaHeight: CGFloat { scaledPoints(Theme.Size.clipboardMediaHeight, scale) }

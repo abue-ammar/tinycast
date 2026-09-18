@@ -11,7 +11,10 @@ private struct Metrics {
     var rowSpacing: CGFloat { 1 }
     var separatorSpacing: CGFloat { interface.spacing.sm }
     var listInset: CGFloat { interface.spacing.md }
-    var rowsMaxHeight: CGFloat { interface.scaled(172) }
+    /// Five rows and half of the sixth, so a long panel reads as scrollable rather than clipped.
+    var visibleRows: CGFloat { 5.5 }
+    /// Rounded: a fractional height lands the glass edge on a half pixel.
+    var rowsMaxHeight: CGFloat { (visibleRows * (rowHeight + rowSpacing)).rounded() }
     var headerHeight: CGFloat {
         interface.size.menuSectionHeader + interface.spacing.xs * 1.5 + rowSpacing
     }

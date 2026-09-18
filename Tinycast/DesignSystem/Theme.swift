@@ -140,14 +140,17 @@ enum Theme {
         static let fileSearchFilterMenuWidth: CGFloat = 200
         /// Fits "Shapes & Punctuation", the longest category title.
         static let emojiCategoryMenuWidth: CGFloat = 220
-        /// Fixed so content-height calculations match every rendered row.
+        /// Stated, not padded: the cap below counts rows, so a capped menu would land mid-row.
         static let menuRowHeight: CGFloat = menuIcon + Spacing.md * 2
         static let menuRowSpacing: CGFloat = 1
-        /// The optional title is added outside the row viewport cap.
+        /// Stated, not measured: `viewportHeight` counts headers, so a capped menu lands on a row.
         static let menuSectionHeader: CGFloat = 16
-        /// Content caps exclude the optional title and the list's outer inset.
-        static let menuRowsMaxHeight: CGFloat = 172
-        static let filterMenuRowsMaxHeight: CGFloat = 200
+        /// Five rows and half of the sixth, so a capped menu reads as scrollable, not clipped.
+        static let menuVisibleRows: CGFloat = 5.5
+        /// Rounded: a half-row of an odd pitch lands the glass edge on a half pixel.
+        static var menuRowsMaxHeight: CGFloat {
+            (menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()
+        }
         /// A menu row's glyph slot, sized so symbol and app-icon rows read the same.
         static let menuIcon: CGFloat = 20
         /// A brand mark inside the menu icon slot, sized to the optical weight of a symbol.
