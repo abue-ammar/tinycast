@@ -31,6 +31,15 @@ struct MeetingLink: Hashable, Sendable {
         detect(fields: [text])
     }
 
+    /// EventKit's `mailto:` participant URLs are opaque: `path` sees nothing, only the string does.
+    static func accountAddress(inMailto string: String) -> String? {
+        guard string.lowercased().hasPrefix("mailto:") else { return nil }
+        let raw = string.dropFirst("mailto:".count)
+        let address = raw.removingPercentEncoding ?? String(raw)
+        guard address.contains("@") else { return nil }
+        return address
+    }
+
     /// A known host failing its path rule is rejected, never demoted to `.generic`.
     private static func classify(_ url: URL) -> Provider? {
         guard let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",

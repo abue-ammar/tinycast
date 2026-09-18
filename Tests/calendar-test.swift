@@ -168,6 +168,22 @@ struct CalendarTests {
             hosted("https://meet.google.com/abc-defg-hij", "user@domain.com")?.url.absoluteString
                 == "https://meet.google.com/abc-defg-hij",
             "the link as written is what Copy Meeting Link keeps")
+        expect(
+            MeetingLink.accountAddress(inMailto: "mailto:user@domain.com") == "user@domain.com",
+            "the address EventKit carries is read out of the mailto string itself")
+        expect(
+            MeetingLink.accountAddress(inMailto: "mailto:user%40domain.com") == "user@domain.com",
+            "a percent-encoded address is decoded once, here")
+        expect(
+            MeetingLink.accountAddress(inMailto: "mailto:a+b@domain.com") == "a+b@domain.com",
+            "a plus survives the decode, so accountURL can encode it again")
+        expect(
+            MeetingLink.accountAddress(inMailto: "urn:uuid:1F2A") == nil,
+            "a non-mailto participant URL yields no address")
+        expect(
+            MeetingLink.accountAddress(inMailto: "mailto:unknownorganizer@calendar.google.com")
+                != nil,
+            "a placeholder organizer address is still an address, left for isCurrentUser to refuse")
     }
 
     // MARK: - The join window
