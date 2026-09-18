@@ -9,6 +9,17 @@ struct ExtensionDetailBody: View {
     let assetsPath: String?
 
     var body: some View {
+        HStack(spacing: 0) {
+            markdownPane
+            if let metadata {
+                Rectangle().fill(Theme.Colors.separator).frame(width: 1)
+                metadataPane(metadata)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var markdownPane: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: metrics.spacing.md) {
                 if isLoading && (markdown ?? "").isEmpty {
@@ -17,18 +28,29 @@ struct ExtensionDetailBody: View {
                 if let markdown, !markdown.isEmpty {
                     ExtensionMarkdownView(markdown: markdown)
                 }
-                if let metadata {
-                    if markdown?.isEmpty == false {
-                        Rectangle().fill(Theme.Colors.separator).frame(height: 1)
-                    }
-                    ExtensionMetadataView(metadata: metadata, assetsPath: assetsPath)
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, metrics.spacing.lg)
             .padding(.vertical, metrics.spacing.md)
             .hideNativeScrollers()
         }
+        .frame(maxWidth: .infinity)
+        .edgeDissolve()
+        .thinScrollbar()
+    }
+
+    /// A `Detail.Metadata` sidebar's fixed width; the markdown pane takes what's left.
+    private static let metadataWidth: CGFloat = 240
+
+    private func metadataPane(_ metadata: RenderNode) -> some View {
+        ScrollView {
+            ExtensionMetadataView(metadata: metadata, assetsPath: assetsPath)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, metrics.spacing.lg)
+                .padding(.vertical, metrics.spacing.md)
+                .hideNativeScrollers()
+        }
+        .frame(width: metrics.scaled(Self.metadataWidth))
         .edgeDissolve()
         .thinScrollbar()
     }
@@ -42,7 +64,7 @@ struct ExtensionMetadataView: View {
     let assetsPath: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+        VStack(alignment: .leading, spacing: metrics.spacing.lg) {
             ForEach(metadata.children) { child in
                 switch child.type {
                 case "Detail.Metadata.Label":

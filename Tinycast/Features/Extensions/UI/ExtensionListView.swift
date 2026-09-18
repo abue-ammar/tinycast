@@ -13,6 +13,9 @@ struct ExtensionListView: View {
     let onActivate: (Int) -> Void
     let onActions: (Int) -> Void
 
+    /// The row column beside a detail pane; narrower than Clipboard's so the markdown stays widest.
+    private static let detailListWidth: CGFloat = 220
+
     var body: some View {
         Group {
             if screen.items.isEmpty {
@@ -20,7 +23,7 @@ struct ExtensionListView: View {
             } else if screen.showsDetail {
                 HStack(spacing: 0) {
                     rowList
-                        .frame(width: metrics.size.clipboardListWidth)
+                        .frame(width: metrics.scaled(Self.detailListWidth))
                     Rectangle().fill(Theme.Colors.separator).frame(width: 1)
                     detailPane
                 }
