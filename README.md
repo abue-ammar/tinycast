@@ -25,6 +25,9 @@ RAM.**
 SwiftUI and AppKit, **zero third-party dependencies**, no Electron and no telemetry. It also **runs
 real Raycast extensions**, rendered as native SwiftUI. Free, open source, and staying that way.
 
+> **This is a custom fork of [Tinycast](https://github.com/abue-ammar/tinycast)**, kept in sync with
+> upstream, with a few personal changes on top.
+
 For anything private, email [iabueammar@gmail.com](mailto:iabueammar@gmail.com).
 
 <p align="center">
