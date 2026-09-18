@@ -47,11 +47,14 @@ typealias MenuPanelClipPath =
     let view: (MenuPanelCorner) -> AnyView
     /// Bounds-checked by the caller against `rowCount`, so a row index is always one this menu has.
     let activate: (Int) -> Void
+    /// True for a row that only changes what the menu shows — a submenu the panel drills into.
+    let keepsOpen: (Int) -> Bool
 
     init(
         rowCount: Int, preferredSelection: Int? = nil,
         view: @escaping (MenuPanelCorner) -> AnyView,
         activate: @escaping (Int) -> Void,
+        keepsOpen: @escaping (Int) -> Bool = { _ in false },
         isSelectable: @escaping (Int) -> Bool = { _ in true },
         clipPath: @escaping MenuPanelClipPath,
         motion: MenuPanelMotion
@@ -60,6 +63,7 @@ typealias MenuPanelClipPath =
         self.preferredSelection = preferredSelection
         self.view = view
         self.activate = activate
+        self.keepsOpen = keepsOpen
         self.isSelectable = isSelectable
         self.clipPath = clipPath
         self.motion = motion

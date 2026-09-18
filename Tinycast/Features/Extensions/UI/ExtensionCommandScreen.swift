@@ -24,6 +24,8 @@ struct ExtensionCommandScreen: PaletteScreen {
     let extensions: ExtensionManager
     let vm: PaletteState
     let openActions: () -> Void
+    /// Node ids of the drilled-into submenu chain, owned by the palette so closing the menu resets.
+    let submenuPath: Binding<[Int]>
 
     /// `assets/` of the running extension, so the icons it names resolve.
     var assetsPath: String? {
@@ -67,15 +69,26 @@ struct ExtensionCommandScreen: PaletteScreen {
         }
     }
 
-    /// The primary action is the panel's first `Action`.
-    private func primaryAction(at selection: Int) -> ExtensionAction? {
-        ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).first
+    /// The panel the ⌘K menu shows: the selection's own, then each submenu drilled into.
+    private func resolvedPanel(at selection: Int) -> RenderNode? {
+        var panel = screen.actionPanel(forItemAt: selection)
+        for id in submenuPath.wrappedValue {
+            guard
+                let next = ExtensionScreen.actions(in: panel).first(where: { $0.id == id })?.submenu
+            else { return panel }
+            panel = next
+        }
+        return panel
     }
 
-    /// A submenu reached first is a grouping device, so its title stands in for the leaf's.
+    /// The primary action is the panel's first row, which may itself be a submenu.
+    private func primaryAction(at selection: Int) -> ExtensionAction? {
+        ExtensionScreen.actions(in: resolvedPanel(at: selection)).first
+    }
+
+    /// A submenu reached first is a grouping device, and the row is the submenu, so its title fits.
     var primaryActionTitle: String {
-        let primary = primaryAction(at: vm.selection)
-        return primary?.enclosingSubmenuTitle ?? primary?.title ?? "Run"
+        primaryAction(at: vm.selection)?.title ?? "Run"
     }
 
     func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }
@@ -83,7 +96,7 @@ struct ExtensionCommandScreen: PaletteScreen {
     /// A form usually ships one Submit action, and a one-row ⌘K panel is noise beside its pill.
     func hasActions(at selection: Int) -> Bool {
         guard isForm else { return true }
-        return ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).count > 1
+        return ExtensionScreen.actions(in: resolvedPanel(at: selection)).count > 1
     }
 
     /// A form's pill stands even with no field to land on: the action belongs to the screen.
@@ -97,7 +110,9 @@ struct ExtensionCommandScreen: PaletteScreen {
         at selection: Int, searchQuery: ActionMenuSearchQuery, menuSelection: Binding<Int>,
         onActivate: @escaping (Int) -> Void
     ) -> PaletteMenuContent? {
-        let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
+        let panel = resolvedPanel(at: selection)
+        // A query searches the panel it was typed into, submenus and all; browsing drills in.
+        let actions = ExtensionScreen.actions(in: panel, flattenSubmenus: !searchQuery.isEmpty)
         guard !actions.isEmpty else { return nil }
         var pendingSection = false
         var filteredActions: [ExtensionAction] = []
@@ -116,6 +131,8 @@ struct ExtensionCommandScreen: PaletteScreen {
         let screen = screen
         let assetsPath = assetsPath
         let extensions = extensions
+        let submenuPath = submenuPath
+        let submenu = submenuPath.wrappedValue.isEmpty ? nil : panel
         var items = ExtensionActionsMenu.rows(filteredActions, assetsPath: assetsPath)
         for index in items.indices { items[index].startsSection = filteredSectionStarts[index] }
         return PaletteMenuContent(
@@ -123,13 +140,19 @@ struct ExtensionCommandScreen: PaletteScreen {
             view: { _ in
                 AnyView(
                     ExtensionActionsPanel(
-                        header: ExtensionActionsMenu.header(screen: screen, selection: selection),
+                        header: ExtensionActionsMenu.header(
+                            screen: screen, selection: selection, submenu: submenu),
                         items: items, selection: menuSelection, onActivate: onActivate))
             },
             activate: { index in
+                if let submenu = filteredActions[index].submenu {
+                    submenuPath.wrappedValue.append(submenu.id)
+                    return
+                }
                 guard let handler = filteredActions[index].handler else { return }
                 extensions.dispatch(handler: handler)
             },
+            keepsOpen: { filteredActions[$0].submenu != nil },
             clipPath: { bounds, metrics, _ in
                 UnevenRoundedRectangle(
                     topLeadingRadius: metrics.radius.menuPanel,
@@ -144,8 +167,9 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     func activate(at selection: Int) {
         guard let primary = primaryAction(at: selection) else { return }
-        if primary.enclosingSubmenuTitle != nil {
+        if let submenu = primary.submenu {
             vm.selection = selection
+            submenuPath.wrappedValue.append(submenu.id)
             openActions()
             return
         }
@@ -235,11 +259,15 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     /// Matched before the palette's own handling; true when an action fired.
     func dispatchShortcut(key: KeyEquivalent, modifiers: EventModifiers, at selection: Int) -> Bool {
-        let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection))
-        guard
-            let handler = actions.first(where: { $0.matches(key: key, modifiers: modifiers) })?
-                .handler
+        let actions = ExtensionScreen.actions(in: resolvedPanel(at: selection))
+        guard let action = actions.first(where: { $0.matches(key: key, modifiers: modifiers) })
         else { return false }
+        if let submenu = action.submenu {
+            submenuPath.wrappedValue.append(submenu.id)
+            openActions()
+            return true
+        }
+        guard let handler = action.handler else { return false }
         extensions.dispatch(handler: handler)
         return true
     }

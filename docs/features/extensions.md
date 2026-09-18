@@ -300,10 +300,17 @@ screens hold (see [palette.md](palette.md)).
   `Tests/ext-form-test.swift` drives activation rules, geometry and the parser; earlier interaction checks used
   a Form Lab extension covering every control, sectioned and empty and 40-option lists, validation
   errors, wrapping labels, and forms taller than the palette, in both appearances.
-- **ActionPanel** — flattened (sections and submenus included) into `ExtensionActionsPanel`, the
-  feature's own scrolling ⌘K panel. A separator marks each change of `ActionPanel.Section` node,
-  titled or not, including to or from loose actions. A submenu's actions stay in their section, and
-  an empty section draws nothing. Its rows are `ExtensionActionItem`, not `PopoverMenuItem`: an
+- **ActionPanel** — sections flattened into `ExtensionActionsPanel`, the feature's own scrolling ⌘K
+  panel. A separator marks each change of `ActionPanel.Section` node, titled or not, including to or
+  from loose actions, and an empty section draws nothing. An `ActionPanel.Submenu` is **one row with
+  a chevron**: activating it (⏎, a click, or its own `shortcut`) drills the panel into that submenu,
+  which the header then names, and ← or Escape steps back out a level. Hoisting its actions instead
+  duplicated every target a panel also lists in a section and let two rows claim one `shortcut`.
+  A typed query still reaches inside, because searching walks the submenus of the panel it was typed
+  into (`ExtensionScreen.actions(in:flattenSubmenus:)`) and names each hoisted result after the
+  submenu it came from. The palette owns the drilled-into chain as `extensionSubmenuPath` and clears
+  it when the menu closes; `PaletteMenuContent.keepsOpen` is what keeps a submenu row from closing
+  the menu. Its rows are `ExtensionActionItem`, not `PopoverMenuItem`: an
   action's `icon` is a full `ImageLike`, so it resolves through `ExtensionImage` like every other
   extension icon and keeps its `tintColor` — which is what makes a palette of `{Icon.Circle, tintColor}`
   rows read as colours rather than a column of grey circles. Untinted symbols use the extension's
@@ -319,7 +326,7 @@ screens hold (see [palette.md](palette.md)).
   action's own `shortcut` is matched against modified keystrokes.
   `ExtensionCommandScreen.menuContent` hands the whole panel to the palette as a
   `PaletteMenuContent`, so the palette never learns the row type — and a row's handler is taken from
-  the flattened `ExtensionAction` list rather than the drawn rows, so ↵ and the panel fire the same
+  the resolved `ExtensionAction` list rather than the drawn rows, so ↵ and the panel fire the same
   one without resolving an icon per arrow key. Header accessory symbols use the same 14pt Medium
   monochrome treatment; their menus use the same extension-owned transition, anchored to the control.
 - **Feedback** — `showToast` stacks above the footer, `showHUD` is a centred pill, and `confirmAlert`

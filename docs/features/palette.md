@@ -410,6 +410,9 @@ closes the open menu rather than reopening it on that row.
 
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
+The one exception states itself: a row whose `PaletteMenuContent.keepsOpen` is true only changes what
+the menu shows, so the panel re-syncs on a cleared query instead of closing — an extension
+`ActionPanel.Submenu` is the only such row today, and ← or Escape steps back out of it first.
 
 `PopoverMenuItem.startsSection` draws a separator with 6pt above and below it. That height joins the
 menu's exact sizing, but the separator takes no selection index, so navigation still walks only rows.

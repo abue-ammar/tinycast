@@ -428,13 +428,32 @@ struct ExtensionTests {
             check("section fixture decodes", false)
             return
         }
-        let starts = ExtensionScreen.actions(in: panel).map(\.startsSection)
+        let rows = ExtensionScreen.actions(in: panel)
+        let starts = rows.map(\.startsSection)
         check(
             "separators follow section nodes, not titles",
             starts == [false, false, false, true, true, true, true], "\(starts)")
+        check(
+            "a submenu is one row, its actions left inside it",
+            rows.map(\.title) == ["A3", "Share", "A6", "A9", "A11", "A13", "A14"],
+            "\(rows.map(\.title))")
+        check("that row carries the submenu", rows[1].submenu?.id == 4)
+        check(
+            "drilling in lists the submenu's own actions",
+            ExtensionScreen.actions(in: rows[1].submenu).map(\.title) == ["A5"])
+        check("an ordinary action is no submenu", rows.first?.submenu == nil)
+        let searched = ExtensionScreen.actions(in: panel, flattenSubmenus: true)
+        check(
+            "a search hoists the submenu's actions in its place",
+            searched.map(\.title) == ["A3", "A5", "A6", "A9", "A11", "A13", "A14"],
+            "\(searched.map(\.title))")
+        check(
+            "boundaries survive the hoist",
+            searched.map(\.startsSection) == [false, false, false, true, true, true, true],
+            "\(searched.map(\.startsSection))")
     }
 
-    /// A submenu reached first must not become ⏎'s target as though it were its own child. #783.
+    /// A submenu is ⏎'s target itself, and never a hoist of its children. #783, #887.
     static func submenuPrimaryActionChecks() {
         func action(_ id: Int) -> String {
             #"{"id":\#(id),"type":"Action","props":{"title":"A\#(id)"},"children":[]}"#
@@ -454,16 +473,23 @@ struct ExtensionTests {
         }
         let actions = ExtensionScreen.actions(in: panel)
         check(
-            "an action reached through a submenu carries its title",
-            actions.first?.enclosingSubmenuTitle == "Open…",
-            String(describing: actions.first?.enclosingSubmenuTitle))
+            "browsing shows the submenu itself, not its leaves",
+            actions.map(\.title) == ["Open…", "A6"], "\(actions.map(\.title))")
         check(
-            "the submenu's own leaves still flatten into the palette",
-            actions.map(\.title) == ["A3", "A4", "A6"], "\(actions.map(\.title))")
+            "a browsed row carries no hoisted submenu title",
+            actions.first?.enclosingSubmenuTitle == nil)
+        let searched = ExtensionScreen.actions(in: panel, flattenSubmenus: true)
+        check(
+            "a search still reaches the submenu's leaves",
+            searched.map(\.title) == ["A3", "A4", "A6"], "\(searched.map(\.title))")
+        check(
+            "a hoisted result names the submenu it came from",
+            searched.first?.enclosingSubmenuTitle == "Open…",
+            String(describing: searched.first?.enclosingSubmenuTitle))
         check(
             "an action outside any submenu carries no submenu title",
-            actions.last?.enclosingSubmenuTitle == nil,
-            String(describing: actions.last?.enclosingSubmenuTitle))
+            searched.last?.enclosingSubmenuTitle == nil,
+            String(describing: searched.last?.enclosingSubmenuTitle))
 
         // A loose action reached without ever entering a submenu is unaffected: primary fires it.
         let looseFirstJSON = """
@@ -482,16 +508,12 @@ struct ExtensionTests {
         let looseActions = ExtensionScreen.actions(in: loosePanel)
         check(
             "a loose action ahead of any submenu keeps the primary a direct action",
-            looseActions.first?.enclosingSubmenuTitle == nil,
-            String(describing: looseActions.first?.enclosingSubmenuTitle))
+            looseActions.first?.submenu == nil, "\(looseActions.map(\.title))")
 
         // Mirrors ExtensionCommandScreen.primaryActionTitle/activate(at:), unreachable from here.
         func primaryActionOutcome(_ actions: [ExtensionAction]) -> (title: String, opensPanel: Bool) {
             guard let primary = actions.first else { return ("Run", false) }
-            return (
-                primary.enclosingSubmenuTitle ?? primary.title,
-                primary.enclosingSubmenuTitle != nil
-            )
+            return (primary.title, primary.submenu != nil)
         }
 
         let submenuOutcome = primaryActionOutcome(actions)

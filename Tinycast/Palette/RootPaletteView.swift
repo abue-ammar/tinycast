@@ -38,6 +38,8 @@ struct RootPaletteView: View {
     @State private var menuSelection = 0
     /// The argument field whose choices are up, so `menuContent` can rebuild the same menu.
     @State private var argumentOptionsField: String?
+    /// The extension submenu chain the Actions panel is drilled into; cleared when it closes.
+    @State private var extensionSubmenuPath: [Int] = []
     @State private var menuPanel = MenuPanelController()
     /// The palette's own window, reported by `WindowReader`; the menu hangs off its frame.
     @State private var hostWindow: NSWindow?
@@ -107,7 +109,8 @@ struct RootPaletteView: View {
                 openActions: openActions)
         case .extensionCommand:
             return ExtensionCommandScreen(
-                screen: extensionScreen, extensions: extensions, vm: vm, openActions: openActions)
+                screen: extensionScreen, extensions: extensions, vm: vm, openActions: openActions,
+                submenuPath: $extensionSubmenuPath)
         }
     }
 
@@ -1043,6 +1046,7 @@ struct RootPaletteView: View {
         menuPanel.hide()
         openMenu = nil
         argumentOptionsField = nil
+        extensionSubmenuPath = []
         vm.menuQuery = ""
         // Stated here rather than mirrored later: the window delegate reads it during this turn.
         vm.menuOpen = false
@@ -1093,6 +1097,9 @@ struct RootPaletteView: View {
         case .some(.upArrow) where navigationModifiers.isEmpty:
             moveMenu(-1)
             return true
+        // Left of an empty query steps out of a submenu; with one typed it stays the caret's.
+        case .some(.leftArrow) where navigationModifiers.isEmpty && vm.menuQuery.isEmpty:
+            return leaveSubmenu()
         case .some(.carriageReturn), .some(.enter):
             let screen = screen
             let selection = selection(in: screen)
@@ -1146,11 +1153,20 @@ struct RootPaletteView: View {
     }
 
     private func escapeMenu() {
-        if vm.menuQuery.isEmpty {
-            closeMenus()
-        } else {
+        if !vm.menuQuery.isEmpty {
             vm.menuQuery = ""
+        } else if !leaveSubmenu() {
+            closeMenus()
         }
+    }
+
+    /// One level out of a drilled-into extension submenu; false when there is none to leave.
+    private func leaveSubmenu() -> Bool {
+        guard openMenu == .actions, !extensionSubmenuPath.isEmpty else { return false }
+        extensionSubmenuPath.removeLast()
+        menuSelection = 0
+        syncMenuPanel(presenting: false)
+        return true
     }
 
     /// An action can remove the last visible pin; never leave an invisible menu owning input.
@@ -1244,6 +1260,14 @@ struct RootPaletteView: View {
     private func activateMenuItem(_ index: Int) {
         guard let content = menuContent, (0..<content.rowCount).contains(index) else { return }
         guard content.isSelectable(index) else { return }
+        // A row that only changes what the menu shows keeps it open, on a cleared query.
+        if content.keepsOpen(index) {
+            content.activate(index)
+            vm.menuQuery = ""
+            menuSelection = 0
+            syncMenuPanel(presenting: false)
+            return
+        }
         // Before the action: one opening a window must find the palette key again, or nothing hides it.
         closeMenus()
         // A mouse click on a row takes the caret with it; menus close back into the field.

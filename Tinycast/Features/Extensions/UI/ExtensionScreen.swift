@@ -232,31 +232,38 @@ struct ExtensionScreen: Equatable {
         items.first { $0.node.bool("autoFocus") == true }?.index ?? 0
     }
 
-    /// Submenus flatten into their section: the palette's menu is flat.
-    static func actions(in panel: RenderNode?) -> [ExtensionAction] {
+    /// Sections flatten; a submenu stays one row the panel drills into, so its actions are its own.
+    /// `flattenSubmenus` hoists those actions anyway, which is how a search reaches inside one.
+    static func actions(in panel: RenderNode?, flattenSubmenus: Bool = false) -> [ExtensionAction] {
         guard let panel else { return [] }
         var result: [ExtensionAction] = []
         // By node, not title: untitled sections are the common case and must still separate.
         var previousSection: RenderNode.ID?
-        // submenuTitle: the outermost submenu an action sits under, so ⏎ can open it instead.
+        // submenuTitle: the outermost submenu a hoisted action sits under, so a result names it.
         func walk(_ node: RenderNode, section: RenderNode.ID?, submenuTitle: String?) {
             for child in node.children {
                 switch child.type {
                 case "Action":
-                    let startsSection = !result.isEmpty && section != previousSection
-                    result.append(
-                        ExtensionAction(
-                            node: child, startsSection: startsSection,
-                            enclosingSubmenuTitle: submenuTitle))
-                    previousSection = section
+                    append(child, section: section, submenuTitle: submenuTitle)
                 case "ActionPanel.Section":
                     walk(child, section: child.id, submenuTitle: submenuTitle)
                 case "ActionPanel.Submenu":
+                    guard flattenSubmenus else {
+                        append(child, section: section, submenuTitle: submenuTitle)
+                        continue
+                    }
                     walk(child, section: section, submenuTitle: submenuTitle ?? child.string("title"))
                 default:
                     break
                 }
             }
+        }
+        func append(_ child: RenderNode, section: RenderNode.ID?, submenuTitle: String?) {
+            let startsSection = !result.isEmpty && section != previousSection
+            result.append(
+                ExtensionAction(
+                    node: child, startsSection: startsSection, enclosingSubmenuTitle: submenuTitle))
+            previousSection = section
         }
         walk(panel, section: nil, submenuTitle: nil)
         return result
@@ -268,12 +275,14 @@ struct ExtensionAction: Equatable, Identifiable {
     let node: RenderNode
     /// True for the first action after a section boundary, so the menu draws a separator above it.
     let startsSection: Bool
-    /// The outermost enclosing submenu's title, if any, so ⏎ can open it instead of firing.
+    /// The outermost enclosing submenu's title, set only for a row a search hoisted out of one.
     let enclosingSubmenuTitle: String?
 
     var id: Int { node.id }
     var title: String { node.string("title") ?? "Action" }
     var handler: String? { node.handler("onAction") }
+    /// Non-nil for a submenu row: activating it drills into these actions instead of running one.
+    var submenu: RenderNode? { node.type == "ActionPanel.Submenu" ? node : nil }
     var isDestructive: Bool { node.string("style") == "destructive" }
     var iconValue: RenderValue? { node.props["icon"] }
 

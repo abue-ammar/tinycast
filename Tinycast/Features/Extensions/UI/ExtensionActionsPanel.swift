@@ -41,6 +41,8 @@ struct ExtensionActionItem {
     var shortcut: String?
     var isDestructive = false
     var startsSection = false
+    /// Drawn with a chevron: activating it drills into the submenu rather than closing the panel.
+    var opensSubmenu = false
 }
 
 /// The ⌘K panel of a running command; extension artwork and tints stay feature-owned.
@@ -198,6 +200,11 @@ private struct ExtensionActionRow: View {
                             KeyCapChip(text: String(glyph), style: .outline)
                         }
                     }
+                }
+                if item.opensSubmenu {
+                    Image(systemName: "chevron.right")
+                        .font(metrics.typography.rowTrailing)
+                        .foregroundStyle(.secondary)
                 }
             }
             .padding(.horizontal, metrics.spacing.md)
