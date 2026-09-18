@@ -90,9 +90,9 @@ plain `https` link opens instead.
 Google accounts otherwise lands on the account chooser, so `MeetingLink.webURL` appends
 `?authuser=<address>` — the address the current user carries in the invite, taken from their attendee
 entry or, for a meeting booked with no guests, from the organizer. EventKit's `mailto:` participant
-URLs are opaque — `path` sees nothing on them — so `MeetingLink.accountAddress(inMailto:)` reads the
-address out of the absolute string and percent-decodes it there, before `accountURL` encodes it
-again. A link that already names an
+URLs are opaque — `path` sees nothing on them — so `MeetingLink.accountAddress(of:isCurrentUser:)`
+reads the address out of the absolute string and percent-decodes it there, before `accountURL`
+encodes it again. A link that already names an
 `authuser` was written deliberately and is left alone, and no other provider takes an account in its
 URL. **`MeetingLink.url` stays the link as written**: it is what the failure report quotes and what
 `Copy Meeting Link` puts on the pasteboard, so a link shared onwards carries no address of ours.

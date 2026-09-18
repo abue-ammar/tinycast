@@ -178,8 +178,9 @@ final class CalendarStore {
 
     /// The organizer covers an event booked with no guests and so no attendee list.
     private static func accountEmail(of participant: EKParticipant?) -> String? {
-        guard let participant, participant.isCurrentUser else { return nil }
-        return MeetingLink.accountAddress(inMailto: participant.url.absoluteString)
+        guard let participant else { return nil }
+        return MeetingLink.accountAddress(
+            of: participant.url, isCurrentUser: participant.isCurrentUser)
     }
 
     func event(id: String) -> MeetingEvent? {
