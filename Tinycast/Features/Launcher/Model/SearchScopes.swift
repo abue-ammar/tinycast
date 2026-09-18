@@ -49,7 +49,8 @@ enum SearchScopes {
             }
             result.append(contentsOf: appBundles(under: url, subfolderDepth: 1))
         }
-        return result
+        var seen = Set<String>()
+        return result.filter { seen.insert($0.standardizedFileURL.path).inserted }
     }
 
     /// An `.app` is never descended into beyond its embedded-app folders.

@@ -75,6 +75,11 @@ struct ScopesTest {
             "scopes are scanned in order",
             SearchScopes.appBundles(in: [deep.path, apps.path]).map(\.lastPathComponent).first
                 == "TooDeep.app")
+        check(
+            "overlapping scopes yield each app once, at its first scope's position",
+            SearchScopes.appBundles(in: [xcode.path, tools.path, deep.path, vendor.path])
+                .map(\.lastPathComponent)
+                == ["Xcode.app", "Instruments.app", "Simulator.app", "TooDeep.app", "Nested.app"])
 
         let home = fm.homeDirectoryForCurrentUser.path
         check(
