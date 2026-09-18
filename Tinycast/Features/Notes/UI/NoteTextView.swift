@@ -1,5 +1,4 @@
 import AppKit
-import Carbon.HIToolbox
 
 @MainActor
 final class NoteTextView: NSTextView, InjectableTextView {
@@ -98,6 +97,17 @@ final class NoteTextView: NSTextView, InjectableTextView {
         return true
     }
 
+    /// The digit key codes, stated here so a local chord needs no Carbon.
+    private enum DigitKey {
+        static let zero: UInt16 = 0x1D
+        static let one: UInt16 = 0x12
+        static let two: UInt16 = 0x13
+        static let three: UInt16 = 0x14
+        static let seven: UInt16 = 0x1A
+        static let eight: UInt16 = 0x1C
+        static let nine: UInt16 = 0x19
+    }
+
     /// Digits match by key code, since shifted and optioned digits vary by keyboard layout.
     private static func chord(for event: NSEvent) -> NoteEditAction? {
         let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
@@ -114,19 +124,19 @@ final class NoteTextView: NSTextView, InjectableTextView {
         case [.command, .shift]:
             if key == "x" { return .toggleInline(.strikethrough) }
             if key == "b" { return .toggleQuote }
-            switch Int(event.keyCode) {
-            case kVK_ANSI_7: return .toggleList(.ordered)
-            case kVK_ANSI_8: return .toggleList(.bullet)
-            case kVK_ANSI_9: return .toggleList(.task)
+            switch event.keyCode {
+            case DigitKey.seven: return .toggleList(.ordered)
+            case DigitKey.eight: return .toggleList(.bullet)
+            case DigitKey.nine: return .toggleList(.task)
             default: return nil
             }
         case [.command, .option]:
             if key == "c" { return .toggleCodeBlock }
-            switch Int(event.keyCode) {
-            case kVK_ANSI_1: return .setHeading(level: 1)
-            case kVK_ANSI_2: return .setHeading(level: 2)
-            case kVK_ANSI_3: return .setHeading(level: 3)
-            case kVK_ANSI_0: return .setHeading(level: 0)
+            switch event.keyCode {
+            case DigitKey.one: return .setHeading(level: 1)
+            case DigitKey.two: return .setHeading(level: 2)
+            case DigitKey.three: return .setHeading(level: 3)
+            case DigitKey.zero: return .setHeading(level: 0)
             default: return nil
             }
         default:
