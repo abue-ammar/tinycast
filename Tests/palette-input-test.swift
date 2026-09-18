@@ -41,7 +41,7 @@ struct PaletteInputTests {
 
         func beginComposition() {
             setMarkedText(
-                "にほん", selectedRange: NSRange(location: 3, length: 0),
+                "marked", selectedRange: NSRange(location: 6, length: 0),
                 replacementRange: NSRange(location: NSNotFound, length: 0))
         }
     }
