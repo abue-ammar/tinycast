@@ -5,16 +5,13 @@ private struct Metrics {
     /// Owned here rather than in `DesignSystem`: an extension never moves a launcher surface.
     let interface: InterfaceMetrics
 
-    var width: CGFloat { interface.scaled(300) }
+    var width: CGFloat { interface.scaled(320) }
     /// The glyph slot plus its breathing room — the tallest thing a row contains.
     var rowHeight: CGFloat { interface.size.menuIcon + interface.spacing.md * 2 }
     var rowSpacing: CGFloat { 1 }
     var separatorSpacing: CGFloat { interface.spacing.sm }
     var listInset: CGFloat { interface.spacing.md }
-    /// Six rows and half of the seventh, so a long panel reads as scrollable rather than clipped.
-    var visibleRows: CGFloat { 6.5 }
-    /// Rounded: a fractional height lands the glass edge on a half pixel.
-    var rowsMaxHeight: CGFloat { (visibleRows * (rowHeight + rowSpacing)).rounded() }
+    var rowsMaxHeight: CGFloat { interface.scaled(172) }
     var headerHeight: CGFloat {
         interface.size.menuSectionHeader + interface.spacing.xs * 1.5 + rowSpacing
     }

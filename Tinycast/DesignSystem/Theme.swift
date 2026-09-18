@@ -134,22 +134,20 @@ enum Theme {
         static let emojiGridInset: CGFloat = 16
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
+        static let actionMenuWidth: CGFloat = 320
         /// The clipboard type filter's menu; `menuWidth` is far too wide for six short rows.
         static let clipboardFilterMenuWidth: CGFloat = 200
         static let fileSearchFilterMenuWidth: CGFloat = 200
         /// Fits "Shapes & Punctuation", the longest category title.
         static let emojiCategoryMenuWidth: CGFloat = 220
-        /// Stated, not padded: the cap below counts rows, so a capped menu would land mid-row.
+        /// Fixed so content-height calculations match every rendered row.
         static let menuRowHeight: CGFloat = menuIcon + Spacing.md * 2
         static let menuRowSpacing: CGFloat = 1
-        /// Stated, not measured: `viewportHeight` counts headers, so a capped menu lands on a row.
+        /// The optional title is added outside the row viewport cap.
         static let menuSectionHeader: CGFloat = 16
-        /// Six rows and half of the seventh, so a capped menu reads as scrollable, not clipped.
-        static let menuVisibleRows: CGFloat = 6.5
-        /// Rounded: a half-row of an odd pitch lands the glass edge on a half pixel.
-        static var menuRowsMaxHeight: CGFloat {
-            (menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()
-        }
+        /// Content caps exclude the optional title and the list's outer inset.
+        static let menuRowsMaxHeight: CGFloat = 172
+        static let filterMenuRowsMaxHeight: CGFloat = 200
         /// A menu row's glyph slot, sized so symbol and app-icon rows read the same.
         static let menuIcon: CGFloat = 20
         /// A brand mark inside the menu icon slot, sized to the optical weight of a symbol.

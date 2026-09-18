@@ -124,7 +124,7 @@ struct PopoverMenu: View {
             attachment: attachment, radius: metrics.radius.menuPanel,
             attachedRadius: metrics.size.menuButton / 2)
         surfaceContent
-            .frame(width: width ?? metrics.size.menuWidth)
+            .frame(width: width ?? metrics.size.actionMenuWidth)
             .glassEffect(.regular, in: shape)
     }
 
@@ -276,7 +276,12 @@ struct PopoverMenu: View {
         min(contentHeight, viewportCapacity)
     }
 
-    private var viewportCapacity: CGFloat { metrics.size.menuRowsMaxHeight + headerExtent }
+    private var viewportCapacity: CGFloat {
+        let rowsMaxHeight =
+            search.placement == .top
+            ? metrics.size.filterMenuRowsMaxHeight : metrics.size.menuRowsMaxHeight
+        return rowsMaxHeight + headerExtent
+    }
 
     private var contentHeight: CGFloat {
         let rows = CGFloat(items.count)

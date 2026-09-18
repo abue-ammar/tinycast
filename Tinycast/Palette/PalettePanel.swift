@@ -240,5 +240,6 @@ final class PalettePanel: NSPanel {
     }
 
     override var canBecomeKey: Bool { true }
-    override var canBecomeMain: Bool { false }
+    // The parent stays main while a menu is key, so its Liquid Glass remains active.
+    override var canBecomeMain: Bool { true }
 }

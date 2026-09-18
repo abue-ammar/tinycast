@@ -73,6 +73,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var checkbox: CGFloat { scaledPoints(Theme.Size.checkbox, scale) }
 
         var menuWidth: CGFloat { scaledPoints(Theme.Size.menuWidth, scale) }
+        var actionMenuWidth: CGFloat { scaledPoints(Theme.Size.actionMenuWidth, scale) }
         var clipboardFilterMenuWidth: CGFloat { scaledPoints(Theme.Size.clipboardFilterMenuWidth, scale) }
         var fileSearchFilterMenuWidth: CGFloat { scaledPoints(Theme.Size.fileSearchFilterMenuWidth, scale) }
         var emojiCategoryMenuWidth: CGFloat { scaledPoints(Theme.Size.emojiCategoryMenuWidth, scale) }
@@ -81,12 +82,12 @@ struct InterfaceMetrics: Equatable, Sendable {
         var barBrandIcon: CGFloat { scaledPoints(Theme.Size.barBrandIcon, scale) }
         var menuRowSpacing: CGFloat { scaledPoints(Theme.Size.menuRowSpacing, scale) }
         var menuSectionHeader: CGFloat { scaledPoints(Theme.Size.menuSectionHeader, scale) }
-        /// Derived like `Theme`'s, so the row cap still counts whole rows at every size.
+        /// Derived from scaled parts so row geometry stays exact at every size.
         var menuRowHeight: CGFloat { menuIcon + Spacing(scale: scale).md * 2 }
-        var menuRowsMaxHeight: CGFloat {
-            (Theme.Size.menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()
+        var menuRowsMaxHeight: CGFloat { scaledPoints(Theme.Size.menuRowsMaxHeight, scale) }
+        var filterMenuRowsMaxHeight: CGFloat {
+            scaledPoints(Theme.Size.filterMenuRowsMaxHeight, scale)
         }
-
         var clipboardListWidth: CGFloat { scaledPoints(Theme.Size.clipboardListWidth, scale) }
         var clipboardMediaHeight: CGFloat { scaledPoints(Theme.Size.clipboardMediaHeight, scale) }
         var clipboardPreviewPixel: CGFloat { scaledPoints(Theme.Size.clipboardPreviewPixel, scale) }
