@@ -13,6 +13,7 @@ struct RootPaletteView: View {
     @Environment(EmojiIndex.self) private var emojiIndex
     @Environment(FrequentEmojiStore.self) private var frequentEmoji
     @Environment(FileSearchSession.self) private var fileSearch
+    @Environment(DictionarySession.self) private var dictionary
     @Environment(MenuSearchSession.self) private var menuSearch
     @Environment(WindowSwitchSession.self) private var windowSwitch
     @Environment(CalendarStore.self) private var calendarStore
@@ -98,6 +99,8 @@ struct RootPaletteView: View {
             return ChatHistoryScreen(
                 history: core.chatHistory, chat: core.aiChat, coordinator: core.aiChatCoordinator,
                 vm: vm, openActions: openActions, metrics: metrics)
+        case .dictionary:
+            return DictionaryScreen(session: dictionary, core: core, vm: vm)
         case .calculatorHistory:
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
@@ -366,6 +369,7 @@ struct RootPaletteView: View {
                 vm.selection = 0
                 scroll = ScrollIntent(kind: .top)
                 if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
+                if vm.mode == .dictionary { dictionary.lookUp(vm.query) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
                 if vm.mode == .switchWindows { windowSwitch.filter(vm.query) }
                 // A command that took over the search text filters its own list.
@@ -407,6 +411,11 @@ struct RootPaletteView: View {
                     fileSearch.search(vm.query, filter: vm.fileSearchFilter)
                 } else {
                     fileSearch.cancel()
+                }
+                if vm.mode == .dictionary {
+                    dictionary.lookUp(vm.query)
+                } else {
+                    dictionary.reset()
                 }
                 if vm.mode != .menuSearch { menuSearch.reset() }
                 if vm.mode != .switchWindows { windowSwitch.reset() }

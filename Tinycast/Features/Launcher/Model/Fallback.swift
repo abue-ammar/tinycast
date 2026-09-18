@@ -7,6 +7,7 @@ enum Fallback: Hashable, Sendable {
         case aiChat
         case searchFiles
         case runShellCommand
+        case define
 
         /// Where its name and glyph come from, so a fallback row reads like the command it runs.
         var command: CommandID {
@@ -14,6 +15,7 @@ enum Fallback: Hashable, Sendable {
             case .aiChat: return .aiChat
             case .searchFiles: return .searchFiles
             case .runShellCommand: return .runShellCommand
+            case .define: return .define
             }
         }
     }
@@ -47,6 +49,7 @@ enum Fallback: Hashable, Sendable {
         case .builtin(.aiChat): return "Ask AI Chat"
         case .builtin(.searchFiles): return "Search Files"
         case .builtin(.runShellCommand): return "Run Shell Command"
+        case .builtin(.define): return "Define Word"
         case .quicklink: return "Open Quicklink"
         }
     }

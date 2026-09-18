@@ -43,6 +43,7 @@ final class AppCore {
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
     let fileSearch = FileSearchSession()
+    let dictionary = DictionarySession()
     let menuSearch = MenuSearchSession()
     let windowSwitch = WindowSwitchSession()
     let activationPolicy = ActivationPolicy()
@@ -145,7 +146,8 @@ final class AppCore {
         calendarCoordinator: calendarCoordinator,
         core: self)
     @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
-        store: fallbacks, quicklinks: quicklinks, settings: settings, core: self)
+        store: fallbacks, quicklinks: quicklinks, settings: settings, visibility: visibility,
+        core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, clipboardManager: clipboardManager, settings: settings,
         appIndex: appIndex, palette: palette, windowController: windowController,
@@ -168,6 +170,8 @@ final class AppCore {
         settings: settings, appIndex: appIndex, session: windowSwitch, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var cameraCoordinator = CameraCoordinator(core: self)
+    @ObservationIgnored private(set) lazy var dictionaryCoordinator = DictionaryCoordinator(
+        paletteCoordinator: paletteCoordinator)
     @ObservationIgnored private(set) lazy var updateCoordinator = UpdateCoordinator(
         store: updateChecker, core: self)
     @ObservationIgnored private(set) lazy var supportCoordinator = SupportCoordinator(

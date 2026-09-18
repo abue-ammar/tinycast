@@ -31,6 +31,7 @@ open with an `## Invariants` section; read it before changing anything in that a
 [calendar](features/calendar.md) ·
 [camera](features/camera.md) ·
 [emoji](features/emoji.md) ·
+[dictionary](features/dictionary.md) ·
 [file search](features/file-search.md) ·
 [menu search](features/menu-search.md) ·
 [notes](features/notes.md) ·
