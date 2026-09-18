@@ -417,8 +417,9 @@ private struct ExtensionMarkdownImage: View {
                         Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: 220)
+                .frame(maxWidth: maxWidth, maxHeight: maxHeight)
                 .clipShape(RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous))
+                .frame(maxWidth: .infinity)
             } else {
                 RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
                     .fill(ExtensionColors.detailCardFill)
@@ -438,4 +439,10 @@ private struct ExtensionMarkdownImage: View {
     private var source: ExtensionImage.Source {
         url.scheme == "data" ? .inline(url) : .remote(url)
     }
+
+    private var size: ExtensionImageSize? { ExtensionImageSize(url: url) }
+
+    private var maxWidth: CGFloat { size?.width.map { CGFloat($0) } ?? .infinity }
+
+    private var maxHeight: CGFloat { CGFloat(ExtensionImageSize.maxHeight(for: size)) }
 }

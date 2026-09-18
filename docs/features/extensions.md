@@ -193,7 +193,9 @@ screens hold (see [palette.md](palette.md)).
   glyph has no artwork to scale, so it takes a share of the tile; `Grid.Section` props are not read,
   since the grid draws one column count throughout.
 - **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, fetched
-  and inline images) with `AttributedString` handling inline styling, plus `Detail.Metadata`.
+  and inline images) with `AttributedString` handling inline styling, plus `Detail.Metadata`. An image
+  is full-width and at most 220pt tall; `?raycast-width=` / `?raycast-height=` on its URL, read by
+  `ExtensionImageSize`, can only shrink it within that, never lift the cap.
 - **Appearance** — `environment.appearance` reports the real one, so an extension that branches on it
   is told the truth. It is an injected field on `ExtensionLaunchContext` (a `Model/` type owns no
   environment), which means a **running command keeps the appearance it booted with**; a change
