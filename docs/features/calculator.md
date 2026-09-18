@@ -279,11 +279,18 @@ still earns a card where a lone `100000` deliberately doesn't. A literal that ov
 
 ## Time zones
 
-`CalcTimeZone` answers `time in Tokyo`, `SF time`, `what time is it in London`, `5pm ldn in sf` and
-`9:30am in nyc`. It runs **before the tokenizer** — a zone phrase is words, and `5pm ldn in sf`
-is not calculator input. The `<place> time` form resolves the whole place through the existing
-city, alias and country tables, then uses the same path as `time in <place>`. Every other form needs
-a connector or a leading clock, so ordinary app searches stay outside the zone grammar.
+`CalcTimeZone` answers `time in Tokyo`, `SF time`, `time SF`, `Canada timezone`, `now in usa`,
+`what time is it in London`, `5pm ldn in sf` and `9:30am in nyc`. It runs **before the tokenizer** —
+a zone phrase is words, and `5pm ldn in sf` is not calculator input. The current-time forms resolve
+the whole place through the existing city, alias and country tables. `<place> time`, `time <place>`,
+`<place> timezone`, `<place> time zone`, `timezone <place>` and `timezone in <place>` use the same
+path as `time in <place>`. Unknown places and ordinary app searches stay outside this grammar.
+
+`Canada time to China`, `Canada timezone to China` and `Canada time zone to China` use the existing
+`time Canada to China` path: Toronto's current clock is the source expression and Shanghai's current
+clock is the result. Both places must resolve in full. `timezone` means the current clock, while
+`diff` remains the separate time-difference operation. `now in <place>` also requests the current
+clock; the `usa` alias continues to select New York.
 
 A clock followed by a recognized source, such as `5:30pm SF` or `5:30 pm SF`, converts to the
 Mac's own zone when no destination is supplied. The destination comes from the injected calendar;

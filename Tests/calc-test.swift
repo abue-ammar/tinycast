@@ -1084,7 +1084,7 @@ struct CalcTests {
             now: clock.calendar.date(from: DateComponents(year: 2026, month: 3, day: 8, hour: 12))!)
         for query in [
             "5:30 pm PSTT", "5:30pm PSTT", "5:30pm SF junk", "5:30 pm SF London",
-            "5pm", "5 pm", "17:30", "17:30 pm", "5 SF", "pm SF", "time SF", "now SF",
+            "5pm", "5 pm", "17:30", "17:30 pm", "5 SF", "pm SF", "now SF",
             "13pm SF", "5:60pm SF", "5pm pm SF", "5:30 am pm SF", "25:30 SF",
             "5:30pm SF to", "5:30pm SF to PSTT", "5:30pm SF + 2 kg",
             "time in sf in 4 hours", "now in tokyo in 2h", "Screen Time", "Safari SF"
@@ -1302,10 +1302,36 @@ struct CalcTests {
             got: "\(CountryZoneData.zones.values.allSatisfy { TimeZone(identifier: $0) != nil })")
 
         expectDisplayAt("SF time", "5:18 PM (yesterday)")
+        expectDisplayAt("time SF", "5:18 PM (yesterday)")
+        expectDisplayAt("current time to Tokyo", "9:18 AM")
+        expectDisplayAt("what time is it to Tokyo", "9:18 AM")
+        let usaExpected = CalcResult(
+            expression: "12:00 PM", sourceBadge: "UTC", targetBadge: "New York",
+            payload: .value(display: "8:00 AM", copyText: "8:00 AM"))
+        let usaNow = CalcEngine.evaluate("now in usa", now: zoneNow, calendar: clock.calendar)
+        check("now in usa", expected: "true", got: "\(usaNow == usaExpected)")
+        for query in ["Canada timezone", "Canada time zone", "timezone Canada", "timezone in Canada"] {
+            let expected = CalcResult(
+                expression: "12:00 PM", sourceBadge: "UTC", targetBadge: "Toronto",
+                payload: .value(display: "8:00 AM", copyText: "8:00 AM"))
+            let actual = CalcEngine.evaluate(query, now: zoneNow, calendar: clock.calendar)
+            check(query, expected: "true", got: "\(actual == expected)")
+        }
+        for query in ["Canada time to China", "Canada timezone to China", "Canada time zone to China"] {
+            let expected = CalcResult(
+                expression: "8:00 AM", sourceBadge: "Toronto", targetBadge: "Shanghai",
+                payload: .value(display: "8:00 PM", copyText: "8:00 PM"))
+            let actual = CalcEngine.evaluate(query, now: zoneNow, calendar: clock.calendar)
+            check(query, expected: "true", got: "\(actual == expected)")
+        }
         expectDisplayAt("Tokyo time", "9:18 AM")
         expectDisplayAt("  sF\tTiMe  ", "5:18 PM (yesterday)")
         expectDisplayAt("San\u{a0}Francisco\u{2009}time", "5:18 PM (yesterday)")
         expectDisplayAt("Tokyo\ntime", "9:18 AM")
+        expectDisplayAt("  TiMe\tSF  ", "5:18 PM (yesterday)")
+        expectDisplayAt("SF\u{a0}TiMe\u{2009}ZoNe", "5:18 PM (yesterday)")
+        expectDisplayAt("TimeZone\nIn\tTokyo", "9:18 AM")
+        expectDisplayAt("Canada\tTiMe\u{a0}ZoNe\tTo\nChina", "8:00 PM", now: zoneNow)
         for components in [
             DateComponents(year: 2026, month: 1, day: 15, hour: 12),
             DateComponents(year: 2026, month: 9, day: 15, hour: 12),
@@ -1317,22 +1343,58 @@ struct CalcTests {
                 calendar.timeZone = TimeZone(identifier: home)!
                 for place in [
                     "SF", "Tokyo", "London", "Shanghai", "San Francisco", "New York", "Canada",
-                    "United States", "United Kingdom", "India", "South Korea", "PST", "UTC", "GMT",
+                    "USA", "United States", "United Kingdom", "India", "South Korea", "PST", "UTC", "GMT",
                     "SFO", "CDG", "LDN", "SÃO PAULO", "Zürich", "Côte d’Ivoire", "Trinidad and Tobago",
-                    "Georgia", "Basel"
+                    "Georgia", "Basel", "The Hague", "Swift Current"
                 ] {
                     let expected = CalcEngine.evaluate("time in \(place)", now: now, calendar: calendar)
-                    let actual = CalcEngine.evaluate("\(place) TiMe", now: now, calendar: calendar)
-                    check(
-                        "\(place) time [\(home), \(now)]", expected: "true",
-                        got: "\(expected != nil && actual == expected)")
+                    for query in [
+                        "\(place) TiMe", "time \(place)", "\(place) timezone", "\(place) time zone",
+                        "timezone \(place)", "timezone in \(place)", "now in \(place)"
+                    ] {
+                        let actual = CalcEngine.evaluate(query, now: now, calendar: calendar)
+                        check(
+                            "\(query) [\(home), \(now)]", expected: "true",
+                            got: "\(expected != nil && actual == expected)")
+                    }
+                }
+                for (source, target) in [
+                    ("Canada", "China"), ("SFO", "CDG"), ("Tokyo", "SF"), ("SF", "Tokyo"),
+                    ("New York", "São Paulo"), ("Kolkata", "Kathmandu"), ("Kiritimati", "Pago Pago")
+                ] {
+                    let expected = CalcEngine.evaluate(
+                        "time \(source) to \(target)", now: now, calendar: calendar)
+                    for phrase in ["time", "timezone", "time zone"] {
+                        let query = "\(source) \(phrase) to \(target)"
+                        let actual = CalcEngine.evaluate(query, now: now, calendar: calendar)
+                        check(
+                            "\(query) [\(home), \(now)]", expected: "true",
+                            got: "\(expected != nil && actual == expected)")
+                    }
                 }
             }
         }
         for query in [
             "Screen Time", "QuickTime Player", "Time Machine", "FaceTime", "PSTT time", "xyzzy time",
-            "SF junk time", "4 hours time", "90 min time", "5pm time", "5pm SF time", "time SF",
+            "SF junk time", "4 hours time", "90 min time", "5pm time", "5pm SF time",
             "SF current time", "SF time now", "SF time + 2h", "time in SF time", "time time"
+        ] {
+            expectNilAt(query)
+        }
+        for place in ["PSTT", "xyzzy", "SF junk", "4 hours", "5pm SF", "time"] {
+            for query in [
+                "time \(place)", "\(place) timezone", "\(place) time zone",
+                "timezone \(place)", "timezone in \(place)", "\(place) time to China",
+                "\(place) timezone to China", "Canada time zone to \(place)"
+            ] {
+                expectNilAt(query)
+            }
+        }
+        for query in [
+            "timezone", "time zone", "timezone in", "timezone in in SF", "timezone to China",
+            "timezone settings", "SF timezone app", "Canada time to",
+            "Canada time to China to Tokyo", "time in SF in 4 hours", "now in usa in 2h",
+            "Canada timezone to 2h", "timezone in 4 hours", "Canada time to China + 2h"
         ] {
             expectNilAt(query)
         }
