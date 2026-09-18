@@ -15,6 +15,22 @@ enum TextDiffTests {
             TextDiffEngine.diff(original: "café 👩🏽‍💻\n", modified: "cafe 👩🏽‍💻\n")
                 == [.deleted("café"), .inserted("cafe"), .equal(" 👩🏽‍💻\n")])
 
+        for count in Array(1...33) + [127, 128, 129] {
+            let original = (0..<count).map { $0.isMultiple(of: 2) ? "old" : " " }.joined()
+            let modified = (0..<count).map { $0.isMultiple(of: 2) ? "new" : " " }.joined()
+            let expected: [TextDiffEngine.Chunk] = (0..<count).flatMap { index in
+                index.isMultiple(of: 2)
+                    ? [.deleted("old"), .inserted("new")] : [.equal(" ")]
+            }
+            precondition(TextDiffEngine.diff(original: original, modified: modified) == expected)
+            precondition(
+                TextDiffEngine.diff(original: "start " + original, modified: original)
+                    == [.deleted("start "), .equal(original)])
+            precondition(
+                TextDiffEngine.diff(original: original, modified: "start " + original)
+                    == [.inserted("start "), .equal(original)])
+        }
+
         for count in [TextDiffEngine.maxTokens - 1, TextDiffEngine.maxTokens] {
             let original = (0..<count).map { $0.isMultiple(of: 2) ? "word" : " " }.joined()
             let suffix = String(original.dropFirst(4))
@@ -33,6 +49,6 @@ enum TextDiffTests {
         precondition(TextDiffEngine.diff(original: overCap, modified: overCap) == [.equal(overCap)])
         precondition(TextDiffEngine.diff(original: "", modified: overCap) == [.inserted(overCap)])
         precondition(TextDiffEngine.diff(original: overCap, modified: "") == [.deleted(overCap)])
-        print("Exact chunks, Unicode, ties, high LCS values, token boundaries and fast paths passed")
+        print("Exact chunks, Unicode, ties, packed boundaries, high LCS values and fast paths passed")
     }
 }

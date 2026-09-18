@@ -8,7 +8,7 @@ enum TextDiffEngine: Sendable {
         case deleted(String)
     }
 
-    /// The matrix is quadratic, so an unbounded diff asks for gigabytes; a cell must fit `UInt16`.
+    /// Traceback is quadratic even when packed; a running score must still fit `UInt16`.
     static let maxTokens = 4_000
 
     static func diff(original: String, modified: String) -> [Chunk] {
@@ -22,7 +22,7 @@ enum TextDiffEngine: Sendable {
             return [.deleted(original), .inserted(modified)]
         }
 
-        let matrix = longestCommonSubsequence(old, new)
+        let traceback = Traceback(old, new)
         var reversed: [Chunk] = []
         var i = old.count
         var j = new.count
@@ -31,7 +31,7 @@ enum TextDiffEngine: Sendable {
                 reversed.append(.equal(old[i - 1]))
                 i -= 1
                 j -= 1
-            } else if j > 0, i == 0 || matrix[i][j - 1] >= matrix[i - 1][j] {
+            } else if j > 0, i == 0 || traceback.inserts(row: i - 1, column: j - 1) {
                 reversed.append(.inserted(new[j - 1]))
                 j -= 1
             } else {
@@ -61,17 +61,36 @@ enum TextDiffEngine: Sendable {
         return tokens
     }
 
-    private static func longestCommonSubsequence(_ old: [String], _ new: [String]) -> [[UInt16]] {
-        var table = Array(
-            repeating: Array(repeating: UInt16(0), count: new.count + 1), count: old.count + 1)
-        for i in 0..<old.count {
-            for j in 0..<new.count {
-                table[i + 1][j + 1] =
-                    old[i] == new[j]
-                    ? table[i][j] + 1 : max(table[i + 1][j], table[i][j + 1])
+    private struct Traceback {
+        let columns: Int
+        let insertions: [UInt8]
+
+        init(_ old: [String], _ new: [String]) {
+            columns = new.count
+            var scores = [UInt16](repeating: 0, count: new.count + 1)
+            var bits = [UInt8](repeating: 0, count: (old.count * new.count + 7) / 8)
+            for i in old.indices {
+                var diagonal: UInt16 = 0
+                for j in new.indices {
+                    let above = scores[j + 1]
+                    if old[i] == new[j] {
+                        scores[j + 1] = diagonal + 1
+                    } else if scores[j] >= above {
+                        scores[j + 1] = scores[j]
+                        let index = i * new.count + j
+                        bits[index >> 3] |= UInt8(1) << (index & 7)
+                    }
+                    diagonal = above
+                }
             }
+            insertions = bits
         }
-        return table
+
+        // Equality is checked during traceback, so only insertion versus deletion needs a bit.
+        func inserts(row: Int, column: Int) -> Bool {
+            let index = row * columns + column
+            return insertions[index >> 3] & (UInt8(1) << (index & 7)) != 0
+        }
     }
 
     /// Adjacent chunks of one kind become one, so the reader sees a changed phrase, not five words.

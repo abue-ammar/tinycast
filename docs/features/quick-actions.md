@@ -204,10 +204,10 @@ makes it visible but lays its bars *over* the content instead of insetting it, s
 the buttons and escapes the corner clip. And a ramp starting at the panel edge rather than below the
 bar leaves text about 60% visible behind the title.
 
-`TextDiffEngine` shows what changed when the output is the input, edited. Its LCS matrix is
+`TextDiffEngine` shows what changed when the output is the input, edited. Its traceback is
 quadratic, so past `maxTokens` a side it degrades to whole-text rather than asking for gigabytes.
-At the cap the matrix is the feature's largest allocation, so its cells are `UInt16` rather than
-`Int` — no LCS length can exceed `maxTokens`, and the six bytes an `Int` adds are 96 MB of zeroes.
+It keeps one rolling `UInt16` score row and one insert-or-delete bit per token pair — equality is
+re-checked during traceback — so the cap costs about 2 MB where a full score matrix cost 32 MB.
 
 ## Reading the selection
 
