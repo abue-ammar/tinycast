@@ -280,8 +280,8 @@ enum Theme {
         static let entryScale: CGFloat = 0.94
         static let maximumScale: CGFloat = 1.003
         static let exitScaleDelta: CGFloat = 0.04
-        static let expansionDuration: TimeInterval = 0.14
-        static let settleDuration: TimeInterval = 0.08
+        static let expansionDuration: TimeInterval = 0.10
+        static let settleDuration: TimeInterval = 0.05
         static let exitDuration: TimeInterval = 0.18
         static let expansionTiming = CAMediaTimingFunction(controlPoints: 0.2, 0.7, 0.2, 1)
         static let settleTiming = CAMediaTimingFunction(controlPoints: 0.42, 0, 0.58, 1)
