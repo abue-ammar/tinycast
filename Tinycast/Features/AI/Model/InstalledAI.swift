@@ -3,11 +3,12 @@ import Foundation
 enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
     case codex
     case claude
+    case grok
     case openCode
     case cursor
 
-    /// Claude, OpenCode and Cursor — Codex uses its app-server instead.
-    static let managedCLIKinds: [InstalledAIKind] = [.claude, .openCode, .cursor]
+    /// Claude, Grok, OpenCode and Cursor — Codex uses its app-server instead.
+    static let managedCLIKinds: [InstalledAIKind] = [.claude, .grok, .openCode, .cursor]
 
     var id: String { rawValue }
 
@@ -15,6 +16,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex: return "Codex"
         case .claude: return "Claude"
+        case .grok: return "Grok"
         case .openCode: return "OpenCode"
         case .cursor: return "Cursor"
         }
@@ -24,6 +26,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex: return "codex"
         case .claude: return "claude"
+        case .grok: return "grok"
         case .openCode: return "opencode"
         case .cursor: return "agent"
         }
@@ -33,20 +36,26 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex: return URL(string: "https://developers.openai.com/codex/cli")!
         case .claude: return URL(string: "https://code.claude.com/docs/en/setup")!
+        case .grok: return URL(string: "https://x.ai/cli")!
         case .openCode: return URL(string: "https://opencode.ai/docs")!
         case .cursor: return URL(string: "https://cursor.com/docs/cli/overview")!
         }
     }
 
-    /// The one install that puts its command outside every shared `bin` the locator already walks.
+    /// Installs that put their command outside every shared `bin` the locator already walks.
     var extraExecutablePaths: [String] {
-        self == .claude ? [".claude/local/claude"] : []
+        switch self {
+        case .claude: return [".claude/local/claude"]
+        case .grok: return [".grok/bin/grok"]
+        case .codex, .openCode, .cursor: return []
+        }
     }
 
     var source: AIModelSource {
         switch self {
         case .codex: return .codex
         case .claude: return .claude
+        case .grok: return .grok
         case .openCode: return .openCode
         case .cursor: return .cursor
         }
@@ -56,7 +65,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
     var isolationCaveat: String? {
         switch self {
         case .cursor: return "Ask mode · your Cursor MCP servers still apply"
-        case .codex, .claude, .openCode: return nil
+        case .codex, .claude, .grok, .openCode: return nil
         }
     }
 
@@ -64,6 +73,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         switch self {
         case .codex: return "codex login"
         case .claude: return "claude auth login"
+        case .grok: return "grok login"
         case .openCode: return "opencode auth login"
         case .cursor: return "agent login"
         }
@@ -76,6 +86,7 @@ extension AIModelSource {
         switch self {
         case .codex: return .codex
         case .claude: return .claude
+        case .grok: return .grok
         case .openCode: return .openCode
         case .cursor: return .cursor
         case .appleIntelligence, .api: return nil
@@ -109,6 +120,29 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
 
     private static let claudeEfforts = ["low", "medium", "high", "xhigh", "max"].map {
         ChatGPTSubscription.Effort(id: $0, detail: nil)
+    }
+
+    /// `/effort` advertises these four; a model only honours the ones it supports.
+    private static let grokEfforts = ["low", "medium", "high", "xhigh"].map {
+        ChatGPTSubscription.Effort(id: $0, detail: nil)
+    }
+
+    static func grokCatalog(_ output: String) -> [InstalledAIModel] {
+        let clean = output.replacingOccurrences(
+            of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression)
+        var models: [InstalledAIModel] = []
+        var seen = Set<String>()
+        for raw in clean.components(separatedBy: .newlines) {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix("*") || line.hasPrefix("-") else { continue }
+            let rest = line.drop(while: { $0 == "*" || $0 == "-" || $0.isWhitespace })
+            let token = rest.split(whereSeparator: { $0.isWhitespace || $0 == "(" }).first
+            guard let token, !token.isEmpty else { continue }
+            let id = String(token)
+            guard seen.insert(id).inserted else { continue }
+            models.append(InstalledAIModel(id: id, name: id, efforts: grokEfforts))
+        }
+        return models
     }
 
     static func openCodeCatalog(_ output: String) -> [InstalledAIModel] {

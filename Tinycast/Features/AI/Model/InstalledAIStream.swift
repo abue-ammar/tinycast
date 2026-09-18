@@ -16,6 +16,10 @@ enum InstalledAIStreamDecoder {
         case .openCode: return openCode(object, type: type)
         case .claude: return claude(object, type: type)
         case .cursor: return cursor(object, type: type)
+        case .grok:
+            var frame = claude(object, type: type)
+            frame.sessionID = object["session_id"] as? String
+            return frame
         case .codex: return InstalledAIStreamFrame()
         }
     }

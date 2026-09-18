@@ -146,6 +146,16 @@ final class InstalledAIManager {
                     phase: models.status == 0 && !catalog.isEmpty ? .ready : .signInRequired,
                     version: version, executable: executable, models: catalog)
             )
+        case .grok:
+            let models = await InstalledAIProbe.run(
+                executable: executable, arguments: ["models"], workspace: workspace)
+            let catalog = InstalledAIModel.grokCatalog(models.output)
+            return (
+                kind,
+                InstalledAIStatus(
+                    phase: models.status == 0 && !catalog.isEmpty ? .ready : .signInRequired,
+                    version: version, executable: executable, models: catalog)
+            )
         case .cursor:
             let auth = await InstalledAIProbe.run(
                 executable: executable, arguments: ["status", "--format", "json"],

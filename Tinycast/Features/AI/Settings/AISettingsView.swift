@@ -257,14 +257,15 @@ struct AISettingsView: View {
                 }
             }
             installedConnection(.claude)
+            installedConnection(.grok)
             installedConnection(.openCode)
             installedConnection(.cursor)
         } header: {
             SettingsSectionHeader(.aiInstalledAI)
         } footer: {
             Text(
-                "Tinycast uses the Codex, Claude, OpenCode and Cursor commands already installed and "
-                    + "signed in on this Mac. Tinycast never stores or asks for their API keys."
+                "Tinycast uses the Codex, Claude, Grok, OpenCode and Cursor commands already installed "
+                    + "and signed in on this Mac. Tinycast never stores or asks for their API keys."
             )
             .font(.caption)
             .foregroundStyle(.secondary)

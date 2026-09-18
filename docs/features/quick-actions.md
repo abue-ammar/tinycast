@@ -51,8 +51,8 @@ provider protocol and the connections behind it.
   route: a vanished catalog model moves to its command's first model, like the shared route, but a
   removed connection or an unavailable command deletes the entry instead of borrowing chat's model.
   The action then follows the route its pane names, not one the reader never chose for it.
-- **Installed providers are ordinary routes.** The model picker reads the same live Codex, Claude and
-  OpenCode catalogs as AI Settings. Execution still goes through `AIProviderFactory`, so Quick Actions
+- **Installed providers are ordinary routes.** The model picker reads the same live Codex, Claude, Grok,
+  OpenCode and Cursor catalogs as AI Settings. Execution still goes through `AIProviderFactory`, so Quick Actions
   inherit the same installed login, tool restrictions and process cleanup without owning CLI logic.
 - **The model picker is the AI picker.** Both panes render `AIModelOption.groupedCatalog`, with the
   same provider sections, model labels and provider-supported reasoning levels. An installed-model

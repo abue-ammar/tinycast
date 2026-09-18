@@ -55,7 +55,7 @@ export const coreFeatures: Feature[] = [
   {
     icon: "aiChat",
     title: "AI Chat",
-    body: "Apple Intelligence, Codex, Claude, OpenCode or any API you bring.",
+    body: "Apple Intelligence, Codex, Claude, Grok, OpenCode or any API you bring.",
     href: "/docs/ai",
     preview: "aiChat",
     isWide: false,

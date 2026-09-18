@@ -37,9 +37,18 @@ composer-2.5 - Composer 2.5
   }
 }
 
-const prompt = fs.readFileSync(0, "utf8");
+if (command === "grok" && args.slice(0, 2).join(" ") === "sessions delete") {
+  record("grok-deleted.log", args[2]);
+  process.exit(0);
+}
+
+const promptFile = args.indexOf("--prompt-file");
+const prompt = promptFile >= 0 && args[promptFile + 1]
+  ? fs.readFileSync(args[promptFile + 1], "utf8")
+  : fs.readFileSync(0, "utf8");
 record(command + "-prompt.log", prompt);
 record(command + "-environment.log", process.env.OPENCODE_CONFIG_CONTENT ?? "");
+record(command + "-grok-environment.log", process.env.GROK_DISABLE_AUTOUPDATER ?? "");
 
 const modelIndex = args.indexOf("--model");
 const model = modelIndex >= 0 ? args[modelIndex + 1] : "";
@@ -84,6 +93,18 @@ if (command === "opencode") {
   }));
   console.log(JSON.stringify({
     type: "result", subtype: "success", result: "Cursor reply"
+  }));
+} else if (command === "grok") {
+  console.log(JSON.stringify({
+    type: "system", subtype: "init", session_id: "ses_stub"
+  }));
+  console.log(JSON.stringify({
+    type: "stream_event", session_id: "ses_stub",
+    event: { delta: { type: "text_delta", text: "Grok reply" } }
+  }));
+  console.log(JSON.stringify({
+    type: "result", is_error: false, session_id: "ses_stub",
+    usage: { input_tokens: 8, output_tokens: 2 }
   }));
 } else {
   console.log(JSON.stringify({

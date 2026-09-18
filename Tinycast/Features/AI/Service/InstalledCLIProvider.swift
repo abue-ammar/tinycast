@@ -55,6 +55,7 @@ private final class InstalledCLITurnRunner {
     private var outputBuffer = Data()
     private var errorBuffer = Data()
     private var turnSessionID: String?
+    private var promptFileURL: URL?
     private var activeExecutable: URL?
 
     init(
@@ -106,6 +107,10 @@ private final class InstalledCLITurnRunner {
                     "Install " + kind.title + " before using this model."))
             return
         }
+        if Task.isCancelled {
+            continuation.finish(throwing: CancellationError())
+            return
+        }
         cancelActiveTurn()
         do {
             try FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
@@ -123,10 +128,26 @@ private final class InstalledCLITurnRunner {
         let stdout = Pipe()
         let stderr = Pipe()
         process.executableURL = executable
-        process.arguments = arguments
         process.currentDirectoryURL = workspace
         process.environment = environment(for: executable)
-        process.standardInput = stdin
+        var grokPrompt: URL?
+        if kind == .grok {
+            let url = workspace.appending(path: "tinycast-prompt-\(UUID().uuidString).txt")
+            do {
+                try await Self.writePromptFile(prompt, to: url)
+            } catch {
+                try? FileManager.default.removeItem(at: url)
+                continuation.finish(
+                    throwing: AIProviderError.unavailable(
+                        "Tinycast could not write its private AI prompt."))
+                return
+            }
+            grokPrompt = url
+            process.standardInput = FileHandle.nullDevice
+        } else {
+            process.standardInput = stdin
+        }
+        process.arguments = arguments(promptFile: grokPrompt)
         process.standardOutput = stdout
         process.standardError = stderr
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
@@ -144,21 +165,32 @@ private final class InstalledCLITurnRunner {
             let status = process.terminationStatus
             Task { @MainActor in self.didExit(status: status, token: token) }
         }
+        if Task.isCancelled {
+            stdout.fileHandleForReading.readabilityHandler = nil
+            stderr.fileHandleForReading.readabilityHandler = nil
+            process.terminationHandler = nil
+            if let grokPrompt { try? FileManager.default.removeItem(at: grokPrompt) }
+            continuation.finish(throwing: CancellationError())
+            return
+        }
         do {
             try process.run()
         } catch {
             stdout.fileHandleForReading.readabilityHandler = nil
             stderr.fileHandleForReading.readabilityHandler = nil
             process.terminationHandler = nil
+            if let grokPrompt { try? FileManager.default.removeItem(at: grokPrompt) }
             continuation.finish(
                 throwing: AIProviderError.responseFailed(
                     kind.title + " could not start: " + error.localizedDescription))
             return
         }
+        promptFileURL = grokPrompt
         self.process = process
         activeExecutable = executable
         self.token = token
         self.continuation = continuation
+        guard kind != .grok else { return }
         // A prompt past the pipe buffer blocks until the child drains it, so never on the main actor.
         let input = stdin.fileHandleForWriting
         Task.detached {
@@ -167,7 +199,13 @@ private final class InstalledCLITurnRunner {
         }
     }
 
-    private var arguments: [String] {
+    nonisolated private static func writePromptFile(_ prompt: String, to url: URL) async throws {
+        try await Task.detached {
+            try Data(prompt.utf8).write(to: url)
+        }.value
+    }
+
+    private func arguments(promptFile: URL? = nil) -> [String] {
         switch kind {
         case .claude:
             var result = [
@@ -198,6 +236,28 @@ private final class InstalledCLITurnRunner {
                 "--dir", workspace.path, "--title", "Tinycast"
             ]
             if let effort { result += ["--variant", effort] }
+            return result
+        case .grok:
+            var result = [
+                "--prompt-file", promptFile?.path ?? "",
+                "--output-format", "streaming-messages-json",
+                "--include-partial-messages",
+                "--model", model,
+                "--max-turns", "1",
+                "--no-subagents",
+                "--disable-web-search",
+                "--no-plan",
+                "--permission-mode", "dontAsk",
+                "--tools", "",
+                "--deny", "*",
+                "--disallowed-tools", "Agent",
+                // strict refuses to start if /var/run/docker.sock is a symlink.
+                "--sandbox", "workspace",
+                "--verbatim",
+                "--cwd", workspace.path,
+                "--rules", Self.safetyInstructions
+            ]
+            if let effort { result += ["--effort", effort] }
             return result
         case .cursor:
             return [
@@ -230,6 +290,9 @@ private final class InstalledCLITurnRunner {
             result["OPENCODE_CONFIG_CONTENT"] = Self.openCodeConfiguration
             result["OPENCODE_AUTO_SHARE"] = "false"
             result["OPENCODE_DISABLE_AUTOUPDATE"] = "true"
+        case .grok:
+            result["GROK_DISABLE_AUTOUPDATER"] = "1"
+            result["GROK_AGENT_DASHBOARD"] = "0"
         case .cursor, .codex:
             break
         }
@@ -332,19 +395,30 @@ private final class InstalledCLITurnRunner {
         process?.terminate()
         outputBuffer.removeAll(keepingCapacity: false)
         errorBuffer.removeAll(keepingCapacity: false)
+        removePromptFile()
+    }
+
+    private func removePromptFile() {
+        if let promptFileURL {
+            try? FileManager.default.removeItem(at: promptFileURL)
+        }
+        promptFileURL = nil
     }
 
     private func deleteTurnSession() {
         guard let sessionID = turnSessionID else { return }
         turnSessionID = nil
         switch kind {
-        case .openCode:
+        case .openCode, .grok:
             guard let executable = activeExecutable else { return }
+            let arguments =
+                kind == .grok
+                ? ["sessions", "delete", sessionID] : ["session", "delete", sessionID, "--pure"]
             let workspace = workspace
             let environment = environment(for: executable)
             Task.detached {
-                Self.deleteOpenCodeSession(
-                    sessionID, executable: executable, workspace: workspace,
+                Self.deleteCLISession(
+                    arguments: arguments, executable: executable, workspace: workspace,
                     environment: environment)
             }
         case .cursor:
@@ -355,12 +429,12 @@ private final class InstalledCLITurnRunner {
         }
     }
 
-    nonisolated private static func deleteOpenCodeSession(
-        _ sessionID: String, executable: URL, workspace: URL, environment: [String: String]
+    nonisolated private static func deleteCLISession(
+        arguments: [String], executable: URL, workspace: URL, environment: [String: String]
     ) {
         let process = Process()
         process.executableURL = executable
-        process.arguments = ["session", "delete", sessionID, "--pure"]
+        process.arguments = arguments
         process.currentDirectoryURL = workspace
         process.environment = environment
         process.standardInput = FileHandle.nullDevice
@@ -401,6 +475,7 @@ private final class InstalledCLITurnRunner {
         outputBuffer.removeAll(keepingCapacity: false)
         errorBuffer.removeAll(keepingCapacity: false)
         turnSessionID = nil
+        removePromptFile()
         activeExecutable = nil
     }
 }

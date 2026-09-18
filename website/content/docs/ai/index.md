@@ -1,6 +1,6 @@
 ---
 title: AI Chat
-description: Chat with Apple Intelligence, your installed Codex, Claude or OpenCode, or any API you connect, right in the palette.
+description: Chat with Apple Intelligence, your installed Codex, Claude, Grok, OpenCode or Cursor, or any API you connect, right in the palette.
 ---
 
 AI Chat is a conversation screen inside the palette. The search field becomes the message box, and
@@ -86,15 +86,15 @@ It reads and writes text only, with no web search and no attachments. If Apple I
 switched off in System Settings, Tinycast tells you so. **It never quietly moves you to a paid API
 instead.**
 
-### Installed AI: Codex, Claude, OpenCode and Cursor
+### Installed AI: Codex, Claude, Grok, OpenCode and Cursor
 
-If you already use the `codex`, `claude`, `opencode` or `agent` (Cursor) command-line tools, Tinycast
-can use them with the account you are signed in to. **Tinycast never asks for or stores their keys.**
+If you already use the `codex`, `claude`, `grok`, `opencode` or `agent` (Cursor) command-line tools,
+Tinycast can use them with the account you are signed in to. **Tinycast never asks for or stores their keys.**
 
-Each one has its own switch, and all four ship off. The pane shows whether each is ready, missing,
+Each one has its own switch, and all five ship off. The pane shows whether each is ready, missing,
 or needs you to sign in. It links to the install page and can copy the sign-in command for you.
 
-Tinycast uses them as plain chat. Claude and OpenCode run with tools, file access and shell access
+Tinycast uses them as plain chat. Claude, Grok and OpenCode run with tools, file access and shell access
 switched off. Cursor runs in Ask mode against Tinycast's private workspace: read-only exploration,
 no edits, and no MCP auto-approval. Cursor's CLI has no way to start without your MCP configuration,
 so MCP servers you have already approved in Cursor still apply on this route — the Providers pane
@@ -143,7 +143,7 @@ than sending something the model will never see.
 | ----------------------------------- | -------------------- | ---- | ---------- |
 | Apple Intelligence                  | No                   | No   | Yes        |
 | Codex                               | Yes                  | No   | Yes        |
-| Claude, OpenCode and Cursor commands | No                   | No   | Yes        |
+| Claude, Grok, OpenCode and Cursor commands | No                   | No   | Yes        |
 | OpenAI API and Anthropic Claude     | Yes                  | Yes  | Yes        |
 | Google Gemini and OpenAI Compatible | Yes                  | No   | Yes        |
 | OpenRouter                          | If the model says so | No   | Yes        |
