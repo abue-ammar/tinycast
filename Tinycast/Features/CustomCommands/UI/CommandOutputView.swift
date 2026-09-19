@@ -5,6 +5,10 @@ import SwiftUI
 struct CommandOutputView: View {
     let presenter: CommandOutputPresenter
 
+    @Environment(AppSettings.self) private var settings
+
+    private var metrics: InterfaceMetrics { settings.unscaledMetrics }
+
     static let initialSize = CGSize(width: 720, height: 460)
 
     var body: some View {
@@ -12,7 +16,7 @@ struct CommandOutputView: View {
             if let run = presenter.run {
                 VStack(alignment: .leading, spacing: 0) {
                     header(run)
-                    TerminalLogView(run: run)
+                    TerminalLogView(run: run, fontFamily: settings.interfaceFontFamily)
                     footer(run)
                 }
             }
@@ -29,9 +33,9 @@ struct CommandOutputView: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text(run.name)
-                    .font(.headline)
+                    .font(metrics.typography.panelTitle)
                 Text(run.commandText)
-                    .font(Theme.Typography.code)
+                    .font(metrics.typography.code)
                     .foregroundStyle(Theme.Colors.textTertiary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -62,7 +66,7 @@ struct CommandOutputView: View {
     ) -> some View {
         BarButton(chrome: .rounded, action: action) {
             Image(systemName: symbol)
-                .font(Theme.Typography.bar)
+                .font(metrics.typography.bar)
                 .foregroundStyle(Theme.Colors.textSecondary)
         }
         .tooltip(help)
@@ -93,7 +97,7 @@ struct CommandOutputView: View {
                     .foregroundStyle(Theme.Colors.textTertiary)
             }
         }
-        .font(.callout)
+        .font(metrics.typography.rowTrailing)
         .foregroundStyle(Theme.Colors.textSecondary)
         .overlay(alignment: .topLeading) { hint(run) }
         .padding(.horizontal, Theme.Spacing.xxl)
@@ -117,7 +121,7 @@ struct CommandOutputView: View {
                 Button("Open Settings") { presenter.showCommandSettings() }
                     .buttonStyle(.link)
             }
-            .font(.callout)
+            .font(metrics.typography.rowTrailing)
             .foregroundStyle(Theme.Colors.textSecondary)
             .fixedSize()
             .alignmentGuide(.top) { $0[.bottom] + Theme.Spacing.md }
@@ -136,6 +140,9 @@ struct CommandOutputView: View {
 /// Copies the whole log, then shows a checkmark long enough to be believed.
 private struct CopyLogButton: View {
     let log: String
+    @Environment(AppSettings.self) private var settings
+
+    private var metrics: InterfaceMetrics { settings.unscaledMetrics }
     @State private var copiedAt: Date?
 
     var body: some View {
@@ -144,7 +151,7 @@ private struct CopyLogButton: View {
             copiedAt = Date()
         } label: {
             Image(systemName: copiedAt == nil ? "square.on.square" : "checkmark")
-                .font(Theme.Typography.bar)
+                .font(metrics.typography.bar)
                 .foregroundStyle(copiedAt == nil ? Theme.Colors.textSecondary : Theme.Colors.success)
         }
         .tooltip("Copy Output")

@@ -42,6 +42,9 @@ struct NoteHeadingMenuView: View {
 }
 
 private struct NoteHeadingMenuRow: View {
+    @Environment(AppSettings.self) private var settings
+
+    private var metrics: InterfaceMetrics { settings.unscaledMetrics }
     let title: String
     let shortcut: String
     let isCurrent: Bool
@@ -60,7 +63,7 @@ private struct NoteHeadingMenuRow: View {
                     .opacity(isCurrent ? 1 : 0)
                     .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
                 Text(title)
-                    .font(Theme.Typography.menuRow)
+                    .font(metrics.typography.menuRow)
                     .lineLimit(1)
                 Spacer(minLength: Theme.Spacing.sm)
                 HStack(spacing: Theme.Spacing.xxs) {

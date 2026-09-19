@@ -79,6 +79,7 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalAppearance, "Theme")
                 }
                 InterfaceSizeRow()
+                InterfaceFontRow()
                 PaletteTransparencyRow()
                 Toggle(isOn: $settings.compactMode) {
                     SettingsRowTitle(.generalAppearance, "Compact mode")
@@ -202,6 +203,117 @@ struct GeneralSettingsView: View {
 
     private func refreshInputSources() {
         inputSources = core.inputSourceSwitcher.options(selecting: settings.autoSwitchInputSourceID)
+    }
+}
+
+/// Each family previews in its own face, so the list is the specimen sheet as well as the picker.
+private struct InterfaceFontRow: View {
+    @Environment(AppSettings.self) private var settings
+    @State private var families: [String] = []
+    @State private var isPicking = false
+
+    var body: some View {
+        SettingsRow(
+            title: "Interface font",
+            subtitle: "Applies to the launcher and its panels, not Settings.",
+            anchor: .generalAppearance
+        ) {
+            Button {
+                isPicking = true
+            } label: {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text(settings.interfaceFontFamily ?? Self.systemTitle)
+                        .font(previewFont)
+                        .lineLimit(1)
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(Theme.Typography.disclosure)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: Theme.Size.interfaceFontField, alignment: .leading)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.bordered)
+            .popover(isPresented: $isPicking, arrowEdge: .bottom) {
+                FontPickerPopover(families: families, selection: settings.interfaceFontFamily) {
+                    settings.interfaceFontFamily = $0
+                    isPicking = false
+                }
+            }
+            .onAppear { families = FontCatalog.installedFamilies() }
+        }
+    }
+
+    private static let systemTitle = "System"
+
+    /// A family uninstalled since it was chosen must not leave the button drawing in a missing face.
+    private var previewFont: Font {
+        guard let family = settings.interfaceFontFamily, FontCatalog.isInstalled(family) else {
+            return Theme.Typography.rowTrailing
+        }
+        return .custom(family, size: NSFont.preferredFont(forTextStyle: .callout).pointSize)
+    }
+}
+
+/// Its own popover rather than a `Picker`: a few hundred families need a filter to be usable.
+private struct FontPickerPopover: View {
+    let families: [String]
+    let selection: String?
+    let onSelect: (String?) -> Void
+
+    @State private var query = ""
+
+    private var matches: [String] {
+        guard !query.isEmpty else { return families }
+        return families.filter { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SettingsFilterField(prompt: "Search fonts\u{2026}", query: $query)
+                .padding(Theme.Spacing.md)
+            Divider()
+            ScrollView {
+                LazyVStack(spacing: 1) {
+                    if query.isEmpty {
+                        row(title: "System", font: Theme.Typography.rowTitle, isSelected: selection == nil) {
+                            onSelect(nil)
+                        }
+                    }
+                    ForEach(matches, id: \.self) { family in
+                        row(
+                            title: family,
+                            font: .custom(family, size: NSFont.systemFontSize),
+                            isSelected: family == selection
+                        ) {
+                            onSelect(family)
+                        }
+                    }
+                }
+                .padding(Theme.Spacing.sm)
+            }
+        }
+        .frame(width: Theme.Size.interfaceFontPicker, height: Theme.Size.interfaceFontPickerHeight)
+    }
+
+    private func row(
+        title: String, font: Font, isSelected: Bool, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: Theme.Spacing.sm) {
+                Image(systemName: "checkmark")
+                    .font(Theme.Typography.disclosure)
+                    .opacity(isSelected ? 1 : 0)
+                Text(title)
+                    .font(font)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Theme.Spacing.md)
+            .padding(.vertical, Theme.Spacing.sm)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }
 }
 

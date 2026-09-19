@@ -6,7 +6,7 @@ struct QuicklinkListScreen: PaletteScreen {
     let core: AppCore
     let vm: PaletteState
 
-    private var metrics: InterfaceMetrics { core.settings.interfaceSize.metrics }
+    private var metrics: InterfaceMetrics { core.settings.metrics }
     let openActions: () -> Void
     /// Opens the palette's own menu for an `options=` field, keyed by argument name.
     let openArgumentOptions: (String) -> Void

@@ -4,6 +4,7 @@ import SwiftUI
 struct NoteEditorView: NSViewRepresentable {
     let input: NoteEditorInput
     let rendersMarkdown: Bool
+    var typography = NoteMarkdownTypography.system
     let onSourceChange: (String) -> Void
     let onCharacterCountChange: (NoteEditorInput, Int) -> Void
     let onFormattingChange: (NoteEditorInput, NoteFormatting) -> Void
@@ -24,7 +25,7 @@ struct NoteEditorView: NSViewRepresentable {
         scrollView.automaticallyAdjustsContentInsets = false
 
         let textView = NoteTextView(usingTextLayoutManager: true)
-        Self.configure(textView)
+        Self.configure(textView, typography: typography)
         textView.delegate = context.coordinator
         textView.editorUndoManager = context.coordinator.editorUndoManager
         scrollView.documentView = textView
@@ -38,6 +39,7 @@ struct NoteEditorView: NSViewRepresentable {
         context.coordinator.parent = self
         context.coordinator.update(input)
         context.coordinator.setRendersMarkdown(rendersMarkdown)
+        context.coordinator.setTypography(typography)
     }
 
     @MainActor
@@ -59,7 +61,8 @@ struct NoteEditorView: NSViewRepresentable {
         init(parent: NoteEditorView) {
             self.parent = parent
             input = parent.input
-            renderer = NoteMarkdownRenderer(isEnabled: parent.rendersMarkdown)
+            renderer = NoteMarkdownRenderer(
+                isEnabled: parent.rendersMarkdown, typography: parent.typography)
         }
 
         private func attach() {
@@ -101,6 +104,13 @@ struct NoteEditorView: NSViewRepresentable {
             reportFormatting()
         }
 
+        func setTypography(_ typography: NoteMarkdownTypography) {
+            guard typography.fontFamily != renderer.typography.fontFamily else { return }
+            renderer.typography = typography
+            textView?.font = typography.body
+            renderer.reset()
+        }
+
         func textDidChange(_ notification: Notification) {
             guard !isInstalling, let textView else { return }
             renderer.sourceDidChange()
@@ -122,7 +132,8 @@ struct NoteEditorView: NSViewRepresentable {
             _ textView: NSTextView, shouldChangeTypingAttributes oldTypingAttributes: [String: Any],
             toAttributes newTypingAttributes: [NSAttributedString.Key: Any]
         ) -> [NSAttributedString.Key: Any] {
-            renderer.isEnabled ? NoteMarkdownStyler.literal : newTypingAttributes
+            renderer.isEnabled
+                ? NoteMarkdownStyler.literal(renderer.typography) : newTypingAttributes
         }
 
         func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
@@ -176,7 +187,7 @@ struct NoteEditorView: NSViewRepresentable {
         }
     }
 
-    static func configure(_ textView: NSTextView) {
+    static func configure(_ textView: NSTextView, typography: NoteMarkdownTypography) {
         textView.isRichText = false
         textView.importsGraphics = false
         textView.drawsBackground = false
@@ -192,7 +203,7 @@ struct NoteEditorView: NSViewRepresentable {
             height: Theme.Size.noteEditorTopInset)
         textView.textContainer?.widthTracksTextView = true
         textView.textContainer?.lineFragmentPadding = 0
-        textView.font = NoteMarkdownTypography.body
+        textView.font = typography.body
         textView.textColor = NSColor(Theme.Colors.noteText)
         textView.insertionPointColor = NSColor(Theme.Colors.noteText)
         textView.selectedTextAttributes = [
@@ -208,6 +219,6 @@ struct NoteEditorView: NSViewRepresentable {
         textView.usesFindPanel = true
         textView.allowsUndo = true
         textView.linkTextAttributes = [.foregroundColor: NSColor.linkColor, .cursor: NSCursor.pointingHand]
-        textView.typingAttributes = NoteMarkdownStyler.literal
+        textView.typingAttributes = NoteMarkdownStyler.literal(typography)
     }
 }

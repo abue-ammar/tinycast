@@ -201,9 +201,34 @@ final class AppSettings {
         didSet { defaults.set(calcNumberStyle.rawValue, forKey: Key.calcNumberStyle.rawValue) }
     }
 
-    /// Scales the palette and its floating siblings only. Read through `InterfaceSize.metrics`.
+    /// Scales the palette and its floating siblings only. Read through `AppSettings.metrics`.
     var interfaceSize: InterfaceSize {
         didSet { defaults.set(interfaceSize.rawValue, forKey: Key.interfaceSize.rawValue) }
+    }
+
+    /// The family the palette and its floating siblings draw text in; `nil` is the system face.
+    var interfaceFontFamily: String? {
+        didSet {
+            guard let interfaceFontFamily else {
+                defaults.removeObject(forKey: Key.interfaceFont.rawValue)
+                return
+            }
+            defaults.set(interfaceFontFamily, forKey: Key.interfaceFont.rawValue)
+        }
+    }
+
+    /// The one place the two appearance knobs meet, so no surface can pick up only one of them.
+    var metrics: InterfaceMetrics {
+        InterfaceMetrics(scale: interfaceSize.scale, fontFamily: interfaceFontFamily)
+    }
+
+    /// The interface font without the Interface Size, for the panels that have never scaled.
+    var unscaledMetrics: InterfaceMetrics {
+        InterfaceMetrics(scale: 1, fontFamily: interfaceFontFamily)
+    }
+
+    var noteTypography: NoteMarkdownTypography {
+        NoteMarkdownTypography(fontFamily: interfaceFontFamily)
     }
 
     var paletteTransparency: Int {
@@ -574,6 +599,7 @@ final class AppSettings {
         interfaceSize =
             defaults.string(forKey: Key.interfaceSize.rawValue).flatMap(InterfaceSize.init)
             ?? .standard
+        interfaceFontFamily = defaults.string(forKey: Key.interfaceFont.rawValue)
         paletteTransparency = max(-100, min(100, defaults.integer(forKey: Key.paletteTransparency.rawValue)))
         compactMode = defaults.bool(forKey: Key.compactMode.rawValue)
         // Defaults to true, so absence must be distinguished from a stored `false`.

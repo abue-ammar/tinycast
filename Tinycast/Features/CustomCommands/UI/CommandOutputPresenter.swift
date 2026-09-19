@@ -66,7 +66,7 @@ final class CommandOutputPresenter {
             commandID: commandID, name: name, commandText: commandText, symbol: symbol,
             startedAt: Date())
         self.run = run
-        window.show { CommandOutputView(presenter: self) }
+        window.show { CommandOutputView(presenter: self).environment(AppCore.shared.settings) }
         return run.id
     }
 

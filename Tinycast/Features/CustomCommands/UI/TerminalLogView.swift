@@ -4,8 +4,15 @@ import SwiftUI
 /// An `NSTextView`, not `Text`: only the text system appends without re-laying out.
 struct TerminalLogView: NSViewRepresentable {
     let run: CommandRun
+    var fontFamily: String?
 
-    private static let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+    private static let systemFont = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+
+    /// A chosen family is the one font everywhere, so it outranks the monospaced design here too.
+    private var font: NSFont {
+        InterfaceMetrics.face(Self.systemFont, on: fontFamily, size: Self.systemFont.pointSize)
+            ?? Self.systemFont
+    }
     private static let inset = CGSize(width: Theme.Spacing.xxl, height: Theme.Spacing.xs)
     /// Within this of the bottom counts as following along, matching the chat transcript's band.
     private static let tailSlack = Theme.Spacing.chatFollowTailSlack
@@ -15,6 +22,8 @@ struct TerminalLogView: NSViewRepresentable {
     final class Coordinator {
         /// A new run and a trimmed log both make the drawn text wrong, invisibly to the revision.
         var runID: UUID?
+        /// The face the drawn text carries; a new one has to redraw what is already on screen.
+        var fontFamily: String?
         var generation = -1
         var revision = 0
         var interpreter = ANSIInterpreter()
@@ -41,7 +50,10 @@ struct TerminalLogView: NSViewRepresentable {
         let coordinator = context.coordinator
         let following = isAtBottom(scrollView)
 
-        let isSameRun = coordinator.runID == run.id && coordinator.generation == run.generation
+        let isSameFace = coordinator.fontFamily == fontFamily
+        coordinator.fontFamily = fontFamily
+        let isSameRun =
+            isSameFace && coordinator.runID == run.id && coordinator.generation == run.generation
         guard !isSameRun || run.revision != coordinator.revision else { return }
 
         // One step on is streaming and costs only the new text; anything else is drawn whole.
@@ -53,7 +65,7 @@ struct TerminalLogView: NSViewRepresentable {
         coordinator.runID = run.id
         coordinator.generation = run.generation
         coordinator.revision = run.revision
-        coordinator.interpreter.render(isAppend ? run.delta : run.log, into: storage, font: Self.font)
+        coordinator.interpreter.render(isAppend ? run.delta : run.log, into: storage, font: font)
         if following { textView.scrollToEndOfDocument(nil) }
     }
 

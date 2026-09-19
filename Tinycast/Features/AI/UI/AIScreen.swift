@@ -139,7 +139,7 @@ private struct AIEmptyState: View {
     var body: some View {
         VStack(spacing: metrics.spacing.md) {
             Image(systemName: "sparkles")
-                .font(.largeTitle)
+                .font(metrics.typography.placeholderGlyph)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tertiary)
             Text("Ask anything")

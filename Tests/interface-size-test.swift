@@ -176,7 +176,7 @@ struct InterfaceSizeTests {
     /// `.headline` is Bold and `.caption2` Medium: a size-and-weight rebuild would lighten both.
     static func fontsKeepTheirFace() {
         for size in InterfaceSize.allCases {
-            let metrics = size.metrics
+            let metrics = InterfaceMetrics(scale: size.scale)
             for style in [NSFont.TextStyle.body, .callout, .subheadline, .headline, .caption2] {
                 let base = NSFont.preferredFont(forTextStyle: style)
                 let scaled = NSFont(
@@ -201,7 +201,7 @@ struct InterfaceSizeTests {
 
     static func everySizeRounds() {
         for size in InterfaceSize.allCases {
-            let m = size.metrics
+            let m = InterfaceMetrics(scale: size.scale)
             for (name, value) in lengths(m) {
                 expect(
                     value == value.rounded(),
@@ -214,15 +214,16 @@ struct InterfaceSizeTests {
     static func sizesGrow() {
         let ordered = [InterfaceSize.standard, .large, .larger]
         for (smaller, larger) in zip(ordered, ordered.dropFirst()) {
-            let a = lengths(smaller.metrics)
-            let b = lengths(larger.metrics)
+            let a = lengths(InterfaceMetrics(scale: smaller.scale))
+            let b = lengths(InterfaceMetrics(scale: larger.scale))
             for (index, entry) in a.enumerated() {
                 expect(
                     b[index].1 >= entry.1,
                     "\(entry.0) never shrinks from \(smaller.rawValue) to \(larger.rawValue)")
             }
             expect(
-                larger.metrics.size.panelWidth > smaller.metrics.size.panelWidth,
+                InterfaceMetrics(scale: larger.scale).size.panelWidth
+                    > InterfaceMetrics(scale: smaller.scale).size.panelWidth,
                 "the panel is wider at \(larger.rawValue)")
             expect(smaller.scale < larger.scale, "\(larger.rawValue) scales further")
         }
@@ -231,7 +232,7 @@ struct InterfaceSizeTests {
     /// A derived token composes scaled parts; scaling the result would disagree by a point.
     static func derivationsHold() {
         for size in InterfaceSize.allCases {
-            let m = size.metrics
+            let m = InterfaceMetrics(scale: size.scale)
             expect(
                 m.size.compactHeight, m.size.headerHeight + m.size.headerPadding * 2,
                 "the compact bar is the header in symmetric slack at \(size.rawValue)")

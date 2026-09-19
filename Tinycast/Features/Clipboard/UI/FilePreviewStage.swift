@@ -48,7 +48,7 @@ private struct MissingFileStage: View {
     var body: some View {
         VStack(spacing: metrics.spacing.sm) {
             Image(systemName: "doc.badge.exclamationmark")
-                .font(.system(.largeTitle))
+                .font(metrics.typography.placeholderGlyph)
                 .symbolRenderingMode(.hierarchical)
             Text("File is no longer available")
                 .font(metrics.typography.rowTrailing)
@@ -80,7 +80,7 @@ private struct FileThumbnailStage: View {
                     )
             } else {
                 Image(systemName: glyph)
-                    .font(.system(.largeTitle))
+                    .font(metrics.typography.placeholderGlyph)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.tertiary)
             }
@@ -164,6 +164,8 @@ private final class PreviewPlayerView: AVPlayerView, KeyboardFocusRefusing {}
 private struct AudioPoster: View {
     let url: URL
 
+    @Environment(\.metrics) private var metrics
+
     @State private var image: NSImage?
 
     var body: some View {
@@ -172,7 +174,7 @@ private struct AudioPoster: View {
                 Image(nsImage: image).resizable().scaledToFit()
             } else {
                 Image(systemName: "waveform")
-                    .font(.system(.largeTitle))
+                    .font(metrics.typography.placeholderGlyph)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(.tertiary)
             }

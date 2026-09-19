@@ -6,7 +6,7 @@ struct ClipboardScreen: PaletteScreen {
     let core: AppCore
     let vm: PaletteState
 
-    private var metrics: InterfaceMetrics { core.settings.interfaceSize.metrics }
+    private var metrics: InterfaceMetrics { core.settings.metrics }
     let openActions: () -> Void
     let scrollToFollow: () -> Void
 

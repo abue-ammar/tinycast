@@ -188,7 +188,7 @@ final class DialogController: NSObject, NSWindowDelegate {
         closing?.fadeOut(duration: Theme.Duration.dialogExit)
     }
 
-    private var metrics: InterfaceMetrics { settings.interfaceSize.metrics }
+    private var metrics: InterfaceMetrics { settings.metrics }
 
     private func hostingView(_ view: some View, width: CGFloat, minHeight: CGFloat) -> NSView {
         let hosting = NSHostingView(rootView: AnyView(view.environment(\.metrics, metrics)))

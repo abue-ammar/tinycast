@@ -140,6 +140,9 @@ enum SettingsSearchCatalog {
             .generalAppearance, "Interface size",
             keywords: ["text size", "font size", "scale", "zoom", "bigger", "larger", "legible"]),
         .init(
+            .generalAppearance, "Interface font",
+            keywords: ["font", "typeface", "family", "type", "serif", "monospace"]),
+        .init(
             .generalAppearance, "Background transparency",
             keywords: ["glass", "opacity", "blur", "translucency", "reset"]),
         .init(

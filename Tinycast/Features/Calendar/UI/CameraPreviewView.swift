@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The join preview: your camera over the meeting it is about to open.
 struct CameraPreviewView: View {
+    @Environment(\.metrics) private var metrics
     let meeting: MeetingEvent
     let now: Date
     let feed: CameraSession.Feed
@@ -27,10 +28,10 @@ struct CameraPreviewView: View {
         HStack(spacing: Theme.Spacing.md) {
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 Text(meeting.title)
-                    .font(Theme.Typography.rowTitle)
+                    .font(metrics.typography.rowTitle)
                     .lineLimit(1)
                 Text(UpcomingWindow.countdown(to: meeting.start, now: now))
-                    .font(Theme.Typography.rowTrailing)
+                    .font(metrics.typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
             Spacer(minLength: Theme.Spacing.md)

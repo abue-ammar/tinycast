@@ -238,7 +238,7 @@ struct PalettePlacementTests {
 
     static func everyInterfaceSize() {
         for size in InterfaceSize.allCases {
-            let metrics = size.metrics
+            let metrics = InterfaceMetrics(scale: size.scale)
             let width = metrics.size.panelWidth
             let label = "at \(size.rawValue)"
 

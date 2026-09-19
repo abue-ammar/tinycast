@@ -595,7 +595,11 @@ final class AppCore {
             { _ = $0.snippetsShowInLauncher },
             reproject: { $0.snippetCoordinator.applySnippetsLauncherPresence() })
         track({ _ = $0.appearance }, reproject: { $0.applyAppearance() })
-        track({ _ = $0.interfaceSize }, reproject: { $0.windowController.applyInterfaceSize() })
+        track(
+            {
+                _ = $0.interfaceSize; _ = $0.interfaceFontFamily
+            },
+            reproject: { $0.windowController.applyInterfaceSize() })
     }
 
     /// `.system` resolves to `nil`, so AppKit follows macOS with nothing polling.

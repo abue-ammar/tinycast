@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The message pill, whose trailing mark is its tone or a spinner. See docs/ui.md#dialogs--hud.
 struct MessageHUDView: View {
+    @Environment(\.metrics) private var metrics
     /// A report ends with its tone's glyph; something still running ends with a spinner instead.
     enum Accessory {
         case tone(DialogTone)
@@ -14,7 +15,7 @@ struct MessageHUDView: View {
     var body: some View {
         HStack(spacing: Theme.Spacing.md) {
             Text(message)
-                .font(Theme.Typography.bar)
+                .font(metrics.typography.bar)
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
             mark
@@ -32,7 +33,7 @@ struct MessageHUDView: View {
     /// One box for both marks, so swapping a spinner for its outcome cannot resize the pill.
     private var mark: some View {
         symbol
-            .font(Theme.Typography.menuIcon)
+            .font(metrics.typography.menuIcon)
             .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
     }
 

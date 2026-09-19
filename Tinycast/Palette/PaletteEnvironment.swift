@@ -5,7 +5,7 @@ private struct InterfaceMetricsScope: ViewModifier {
     let settings: AppSettings
 
     func body(content: Content) -> some View {
-        content.environment(\.metrics, settings.interfaceSize.metrics)
+        content.environment(\.metrics, settings.metrics)
     }
 }
 
