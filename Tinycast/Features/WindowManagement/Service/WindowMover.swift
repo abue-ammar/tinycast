@@ -25,8 +25,7 @@ final class WindowMover {
         case own(ObjectIdentifier)
     }
 
-    /// Another app's window over AX, or one of ours: an AX call into our own process would stall
-    /// the main thread that has to service it.
+    /// One of ours or another app's: an AX call into our own process would stall the main thread.
     @MainActor
     private enum Surface {
         case external(application: AXUIElement, window: AXUIElement)
@@ -113,6 +112,7 @@ final class WindowMover {
 
     private var memory = WindowActionMemory<WindowKey>()
     private var terminationToken: NotificationToken?
+    private var windowCloseToken: NotificationToken?
 
     init() {
         // Drop a quit app's windows rather than waiting for LRU eviction to reclaim them.
@@ -132,6 +132,16 @@ final class WindowMover {
             }
         }
         terminationToken = NotificationToken(token, center: NSWorkspace.shared.notificationCenter)
+
+        // A closed window's identifier can be reused, so drop its record while it is still ours.
+        let closeToken = NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: nil, queue: .main
+        ) { [weak self] note in
+            guard let closed = note.object as? NSWindow else { return }
+            let key = WindowKey.own(ObjectIdentifier(closed))
+            MainActor.assumeIsolated { self?.memory.forget(key: key) }
+        }
+        windowCloseToken = NotificationToken(closeToken, center: .default)
     }
 
     /// The window a command targets, resolved once per press.

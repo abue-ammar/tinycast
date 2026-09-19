@@ -28,7 +28,8 @@ entries and a still-registered shortcut moves nothing.
   `WindowInventory` still excludes us entirely, so layouts never name one of our windows.
 - **A Space command never reaches `WindowMover`.** `WindowPlacementEngine.placement` answers only for
   `.geometry` and `.restore`, and `WindowCommandCoordinator` branches on `SpaceDirection` first — the
-  mover requires a target app and a resolvable AX window, and a Space switch has neither.
+  mover needs a `WindowTarget` naming a window to place, and a Space switch names none. An external
+  target additionally needs a resolvable AX window; `.own` needs neither an app nor AX.
 
 ## Layout
 
