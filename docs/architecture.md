@@ -123,7 +123,8 @@ driven imperatively from AppKit.
   full launcher by resizing the window. The controller **solely** owns the frame, resolved once per show
   to a top-left anchor so it grows downward, and the hosting view sets `sizingOptions = []` so SwiftUI
   never drives the window size — without that the hosting view resizes the panel to fit content and the
-  top edge drifts on the compact↔expanded swap. The panel auto-dismisses on `windowDidResignKey`.
+  top edge drifts on the compact↔expanded swap. The panel auto-dismisses on `windowDidResignKey`,
+  unless a modal panel holds key.
   See [features/palette.md](features/palette.md).
 - **Settings and Onboarding** — titled `NSWindow`s, one `Windows/AppWindowController.swift` each, owned
   by `SettingsCoordinator` and `OnboardingCoordinator`. SwiftUI `Settings` and `Window` scenes are

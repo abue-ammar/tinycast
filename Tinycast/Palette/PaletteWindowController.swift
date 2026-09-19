@@ -61,6 +61,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Once per summon, and from `previousApp`, so the label names the paste target.
             core.palette.pasteTarget = PasteTarget(app: previousApp)
             let panel = ensurePanel()
+            // Undo a sink a modal left behind, unless one is still up.
+            if NSApp.modalWindow == nil { panel.level = .palette }
             // Open disarmed: a pointer already over a row must not highlight it.
             core.palette.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
             // Re-resolve the anchor now, then hold it so resizes never move the window.
@@ -217,15 +219,21 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Not for one of our own dialogs: hiding would tear down a command mid-`confirmAlert`.
+    /// Not for a dialog or a modal: hiding tears down a running command.
     func windowDidResignKey(_ notification: Notification) {
         guard isVisible, !core.isShowingDialog else { return }
         if core.palette.menuOpen { return }
+        // A file panel sets its own level under ours, so sink rather than dismiss.
+        if NSApp.modalWindow != nil {
+            panel?.level = .normal
+            return
+        }
         core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 
     /// Re-bump a turn later: on the first show a synchronous bump lands before `onChange`.
     func windowDidBecomeKey(_ notification: Notification) {
+        panel?.level = .palette
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             core.palette.focusToken = UUID()

@@ -459,6 +459,8 @@ private struct ExtensionFilePicker: View {
         panel.allowsMultipleSelection = node.bool("allowMultipleSelection") ?? true
         panel.canChooseDirectories = node.bool("canChooseDirectories") ?? false
         panel.canChooseFiles = node.bool("canChooseFiles") ?? true
+        // An accessory app's panel opens behind the frontmost app without this.
+        NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK else { return }
         onChange(node, panel.urls.map(\.path))
     }
