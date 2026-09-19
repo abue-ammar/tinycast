@@ -56,8 +56,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             previousApp = frontmost?.processIdentifier == ownPID ? nil : frontmost
             // Recorded even when another app is frontmost: our panels take key without activating.
             let key = NSApp.keyWindow
-            // Never the palette itself: a mode switch re-shows it while it already holds key.
-            previousOwnWindow = key === panel ? nil : key
+            // A mode switch re-shows the palette while it holds key; keep what it recorded then.
+            if key !== panel { previousOwnWindow = key }
             // Once per summon, and from `previousApp`, so the label names the paste target.
             core.palette.pasteTarget = PasteTarget(app: previousApp)
             let panel = ensurePanel()
