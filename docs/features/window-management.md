@@ -23,6 +23,9 @@ entries and a still-registered shortcut moves nothing.
 - **`AXWindowAccess` is the one AX layer**, shared by the mover, the layout runner and
   [Navigation](navigation.md)'s window switcher. Its `write` is the size → position → size sequence:
   two copies of it would land a stubborn app two ways.
+- **Our own windows are written through AppKit, never AX.** `WindowMover.Surface` is the split:
+  an `AXUIElement` write into our own process would stall the main thread that services it.
+  `WindowInventory` still excludes us entirely, so layouts never name one of our windows.
 - **A Space command never reaches `WindowMover`.** `WindowPlacementEngine.placement` answers only for
   `.geometry` and `.restore`, and `WindowCommandCoordinator` branches on `SpaceDirection` first — the
   mover requires a target app and a resolvable AX window, and a Space switch has neither.
@@ -40,6 +43,7 @@ entries and a still-registered shortcut moves nothing.
 | `Service/AXScreens.swift`            | AppKit + ColorSync           | `@MainActor`. `AXGeometry`, the one coordinate flip                 |
 | `Service/WindowMover.swift`          | AppKit + ApplicationServices | `@MainActor`. Command policy: cycle, restore, fullscreen            |
 | `Service/SpaceSwitcher.swift`        | CoreGraphics                 | `@MainActor`. Every `CGEvent` call and the payload splice           |
+| `Service/WindowTarget.swift`         | AppKit                       | `@MainActor`. Which window a command acts on                        |
 | `Model/CustomWindowSize.swift`       | Foundation + CoreGraphics    | **Pure.** A custom size, its units and the frame it resolves to     |
 | `Model/CustomWindowSizeStore.swift`  | Foundation                   | The custom-size library, as JSON in `UserDefaults`                  |
 | `UI/WindowCommandCoordinator.swift`  | AppKit                       | The one funnel from a palette row or a global hotkey                |
@@ -193,12 +197,42 @@ Growth is bounded three ways: an LRU cap of 64, an `NSWorkspace.didTerminateAppl
 observer (the house `NotificationToken` RAII idiom) dropping a quit app's keys, and lazy invalidation
 when a read fails. Nothing is persisted.
 
+## Choosing a target
+
+Our panels are `.nonactivatingPanel`, so opening one never makes Tinycast frontmost and
+`NSWorkspace.frontmostApplication` keeps naming the app *behind* it rather than the window the user
+is looking at. `WindowTarget` is the answer to "what does this command act on": it prefers a key
+window of ours, falling back to the frontmost app only when there is none.
+
+`canBecomeMain` is the filter, and it needed no new flag — every transient panel in the app already
+declines it, which leaves exactly the Notes editor and the `AppWindowController` windows. When a key
+child is in front, such as the note switcher that `addChildWindow`s itself onto the editor,
+`WindowTarget` looks one level up through `parent` so the command still places the editor.
+
+`PalettePanel` is the one main-capable panel of ours and would pass the filter. It never reaches
+here, because `WindowCommandCoordinator.handOffTarget()` branches on `paletteCoordinator.isVisible`
+first and a hidden palette cannot be key. **That ordering is the invariant; do not reorder those two
+branches.** The palette branch reads `previousOwnWindow`, which `PaletteWindowController` records
+from whatever held key at summon time regardless of which app was frontmost — for the same reason
+this section exists.
+
+Fullscreen on a window of ours fires when it is `.resizable` and its `collectionBehavior` opts out of
+neither `.fullScreenAuxiliary` nor `.fullScreenNone`. AppKit fullscreens a resizable window without
+ever setting `.fullScreenPrimary` on it, so testing that flag would make Fullscreen a silent no-op on
+Settings. The Notes panel is `.fullScreenAuxiliary` and stays a no-op, as an unwilling external
+window already is.
+
+This mirrors `InjectionTarget` in [Text injection](text-injection.md), which solved the same problem
+for keystrokes: same shape, same `Service/` position, one idea applied twice.
+
 ## Applying a placement
 
 `WindowMover.perform(_:target:gap:cycle:)` is the only entry point. `target` is **explicit**
 because the palette is frontmost when a command dispatches from it — `WindowCommandCoordinator` passes
-`windowController.previousApp`, the same recorded app the paste path targets, and restores focus to it
-rather than dropping it. It is synchronous: every AX call is a bounded mach round trip capped by a 1s
+a `WindowTarget`, which is either an external app or one of our own windows (see
+[Choosing a target](#choosing-a-target)), and restores focus to it rather than dropping it. The own
+case skips AX and the Accessibility prompt entirely: placing our own window needs no grant. It is
+synchronous: every AX call is a bounded mach round trip capped by a 1s
 messaging timeout, and `await` would only add reentrancy between a held hotkey's repeats. The timeout
 is set on the application element _and again_ on the window element — it is per-element and never
 inherited.

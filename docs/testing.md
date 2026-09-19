@@ -607,6 +607,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Holding a bound hotkey does **not** stack dialogs
 - Window commands move the window you were last in; cycle-on-repeat steps ½ → ⅓ → ⅔
 - "Top Half" lands flush with the top of the visible frame, on a secondary display too
+- A command with the Notes window focused places Notes, not the app behind it
+- Cycling, Restore, custom sizes and display moves all work on Notes and on Settings
+- Fullscreen on Settings toggles it; on the Notes window it does nothing
+- With the note switcher open a command places Notes; the switcher and HUDs are never placed
 
 ### Extensions
 
