@@ -14,18 +14,17 @@ enum NoteMarkdownStyler {
     }
 
     /// The literal editor's attributes, and the base every rendered line starts from.
-    static let literal: Attributes = [
-        .font: NoteMarkdownTypography.body,
-        .foregroundColor: NSColor(Theme.Colors.noteText)
-    ]
+    static func literal(_ typography: NoteMarkdownTypography) -> Attributes {
+        [.font: typography.body, .foregroundColor: NSColor(Theme.Colors.noteText)]
+    }
 
-    private static let hidden: Attributes = [
-        .font: NoteMarkdownTypography.hidden,
-        .foregroundColor: NSColor.clear
-    ]
+    private static func hidden(_ typography: NoteMarkdownTypography) -> Attributes {
+        [.font: typography.hidden, .foregroundColor: NSColor.clear]
+    }
 
-    private static let listSlot = NoteCheckboxGeometry.slot(
-        bodyPointSize: NoteMarkdownTypography.body.pointSize)
+    private static func listSlot(_ typography: NoteMarkdownTypography) -> CGFloat {
+        NoteCheckboxGeometry.slot(bodyPointSize: typography.body.pointSize)
+    }
     private static let quoteStep = Theme.Size.markdownQuoteBar + Theme.Spacing.lg
     private static let codeInset = Theme.Spacing.lg
     /// Space after each list item, kept when revealed so moving the caret never shifts the rows.
@@ -35,18 +34,19 @@ enum NoteMarkdownStyler {
 
     /// Colours the fragment draws with are resolved now, under the caller's drawing appearance.
     static func style(
-        at index: Int, in markdown: NoteMarkdown, text: NSString, isRevealed: Bool
+        at index: Int, in markdown: NoteMarkdown, text: NSString, isRevealed: Bool,
+        typography: NoteMarkdownTypography
     ) -> LineStyle {
         let line = markdown.lines[index]
-        var base = literal
+        var base = literal(typography)
         var runs: [(range: NSRange, attributes: Attributes)] = []
-        let markerLook = isRevealed ? revealedMarker : hidden
+        let markerLook = isRevealed ? revealedMarker : hidden(typography)
 
         switch line.kind {
         case .blank, .paragraph:
             break
         case .heading(let level):
-            base[.font] = NoteMarkdownTypography.heading(level)
+            base[.font] = typography.heading(level)
             base[.paragraphStyle] = paragraph {
                 $0.paragraphSpacingBefore =
                     index == 0 ? 0 : level <= 2 ? Theme.Spacing.xl : Theme.Spacing.md
@@ -58,25 +58,28 @@ enum NoteMarkdownStyler {
             if case .task(checked: true) = line.kind {
                 runs.append((line.contentRange, checkedTask))
             }
-            let contentIndent = CGFloat(line.level + 1) * listSlot
+            let contentIndent = CGFloat(line.level + 1) * listSlot(typography)
             guard !isRevealed else {
                 base[.paragraphStyle] = hanging(
-                    line.markerRange, in: text, contentIndent: contentIndent, spacingAfter: listItemSpacing)
+                    line.markerRange, in: text, contentIndent: contentIndent,
+                    spacingAfter: listItemSpacing, typography: typography)
                 break
             }
             base[.paragraphStyle] = indented(by: contentIndent, spacingAfter: listItemSpacing)
-            base[.noteBlockDecoration] = listDecoration(line, text: text)
+            base[.noteBlockDecoration] = listDecoration(line, text: text, typography: typography)
         case .quote(let depth):
             if let marker = line.markerRange { runs.append((marker, markerLook)) }
             runs.append((line.contentRange, [.foregroundColor: color(Theme.Colors.textSecondary)]))
             guard !isRevealed else {
                 base[.paragraphStyle] = hanging(
-                    line.markerRange, in: text, contentIndent: CGFloat(depth) * quoteStep)
+                    line.markerRange, in: text, contentIndent: CGFloat(depth) * quoteStep,
+                    typography: typography)
                 break
             }
             base[.paragraphStyle] = indented(by: CGFloat(depth) * quoteStep)
             base[.noteBlockDecoration] = decoration(
-                .quote(depth: depth), fill: Theme.Colors.border, ink: Theme.Colors.border)
+                .quote(depth: depth), fill: Theme.Colors.border, ink: Theme.Colors.border,
+                typography: typography)
         case .rule:
             guard !isRevealed else {
                 base[.foregroundColor] = color(Theme.Colors.textTertiary)
@@ -84,42 +87,47 @@ enum NoteMarkdownStyler {
             }
             base[.foregroundColor] = NSColor.clear
             base[.noteBlockDecoration] = decoration(
-                .rule, fill: Theme.Colors.separator, ink: Theme.Colors.separator)
+                .rule, fill: Theme.Colors.separator, ink: Theme.Colors.separator,
+                typography: typography)
         case .table:
-            base[.font] = NoteMarkdownTypography.codeBlock
+            base[.font] = typography.codeBlock
             base[.paragraphStyle] = tableRow
         case .fenceOpen, .fenceClose, .code:
-            base[.font] = NoteMarkdownTypography.codeBlock
+            base[.font] = typography.codeBlock
             base[.paragraphStyle] = codeParagraph
             if line.kind != .code {
                 base[.foregroundColor] = isRevealed ? color(Theme.Colors.textTertiary) : NSColor.clear
             }
             base[.noteBlockDecoration] = decoration(
                 .code(codeRow(index, markdown), language: language(line.kind)),
-                fill: Theme.Colors.cardFill, ink: Theme.Colors.textTertiary)
+                fill: Theme.Colors.cardFill, ink: Theme.Colors.textTertiary,
+                typography: typography)
         }
 
-        let lineFont = base[.font] as? NSFont ?? NoteMarkdownTypography.body
-        runs += inlineRuns(markdown.inlines(of: line), lineFont: lineFont, text: text, isRevealed: isRevealed)
+        let lineFont = base[.font] as? NSFont ?? typography.body
+        runs += inlineRuns(
+            markdown.inlines(of: line), lineFont: lineFont, text: text, isRevealed: isRevealed,
+            typography: typography)
         return LineStyle(base: base, runs: runs)
     }
 
     // MARK: - Inlines
 
     private static func inlineRuns(
-        _ inlines: [NoteMarkdown.Inline], lineFont: NSFont, text: NSString, isRevealed: Bool
+        _ inlines: [NoteMarkdown.Inline], lineFont: NSFont, text: NSString, isRevealed: Bool,
+        typography: NoteMarkdownTypography
     ) -> [(range: NSRange, attributes: Attributes)] {
         var runs: [(range: NSRange, attributes: Attributes)] = []
         for (position, inline) in inlines.enumerated() {
-            let font = spanFont(inlines[...position], lineFont: lineFont)
-            var markerLook = isRevealed ? revealedMarker.merging([.font: font]) { $1 } : hidden
+            let font = spanFont(inlines[...position], lineFont: lineFont, typography: typography)
+            var markerLook = isRevealed ? revealedMarker.merging([.font: font]) { $1 } : hidden(typography)
             switch inline.kind {
             case .strong, .emphasis, .strongEmphasis:
                 runs.append((inline.contentRange, [.font: font]))
             case .strikethrough:
                 runs.append((inline.contentRange, [.strikethroughStyle: NSUnderlineStyle.single.rawValue]))
             case .code:
-                let codeFont = NoteMarkdownTypography.inlineCode(matching: font)
+                let codeFont = typography.inlineCode(matching: font)
                 if isRevealed { markerLook[.font] = codeFont }
                 let background = color(Theme.Colors.controlSurface)
                 runs.append((inline.contentRange, [.font: codeFont, .backgroundColor: background]))
@@ -135,7 +143,10 @@ enum NoteMarkdownStyler {
     }
 
     /// The span's font: the line font plus the traits of every emphasis span enclosing it.
-    private static func spanFont(_ spans: ArraySlice<NoteMarkdown.Inline>, lineFont: NSFont) -> NSFont {
+    private static func spanFont(
+        _ spans: ArraySlice<NoteMarkdown.Inline>, lineFont: NSFont,
+        typography: NoteMarkdownTypography
+    ) -> NSFont {
         guard let span = spans.last else { return lineFont }
         var traits: NSFontDescriptor.SymbolicTraits = []
         for outer in spans where NSIntersectionRange(outer.range, span.range) == span.range {
@@ -146,7 +157,7 @@ enum NoteMarkdownStyler {
             default: break
             }
         }
-        return traits.isEmpty ? lineFont : NoteMarkdownTypography.adding(traits, to: lineFont)
+        return traits.isEmpty ? lineFont : typography.adding(traits, to: lineFont)
     }
 
     /// A revealed link is plain coloured text, so a click places the caret to edit its URL.
@@ -190,10 +201,11 @@ enum NoteMarkdownStyler {
 
     /// A revealed marker hangs left of the content, so text stays where the rendered line had it.
     private static func hanging(
-        _ marker: NSRange?, in text: NSString, contentIndent: CGFloat, spacingAfter: CGFloat = 0
+        _ marker: NSRange?, in text: NSString, contentIndent: CGFloat, spacingAfter: CGFloat = 0,
+        typography: NoteMarkdownTypography
     ) -> NSParagraphStyle {
         let markerText = marker.map { text.substring(with: $0) as NSString }
-        let width = markerText?.size(withAttributes: [.font: NoteMarkdownTypography.body]).width ?? 0
+        let width = markerText?.size(withAttributes: [.font: typography.body]).width ?? 0
         return paragraph {
             $0.firstLineHeadIndent = max(0, contentIndent - width)
             $0.headIndent = contentIndent
@@ -207,7 +219,9 @@ enum NoteMarkdownStyler {
         return style
     }
 
-    private static func listDecoration(_ line: NoteMarkdown.Line, text: NSString) -> NoteBlockDecoration {
+    private static func listDecoration(
+        _ line: NoteMarkdown.Line, text: NSString, typography: NoteMarkdownTypography
+    ) -> NoteBlockDecoration {
         let shape: NoteBlockDecoration.Shape
         switch line.kind {
         case .task(let checked):
@@ -219,7 +233,9 @@ enum NoteMarkdownStyler {
         default:
             shape = .bullet(level: line.level)
         }
-        return decoration(shape, fill: Theme.Colors.textSecondary, ink: Theme.Colors.textSecondary)
+        return decoration(
+            shape, fill: Theme.Colors.textSecondary, ink: Theme.Colors.textSecondary,
+            typography: typography)
     }
 
     private static func codeRow(_ index: Int, _ markdown: NoteMarkdown) -> NoteBlockDecoration.Shape.CodeRow {
@@ -246,11 +262,12 @@ enum NoteMarkdownStyler {
     }
 
     private static func decoration(
-        _ shape: NoteBlockDecoration.Shape, fill: Color, ink: Color
+        _ shape: NoteBlockDecoration.Shape, fill: Color, ink: Color,
+        typography: NoteMarkdownTypography
     ) -> NoteBlockDecoration {
         NoteBlockDecoration(
             shape: shape, fill: color(fill), ink: color(ink),
-            bodyPointSize: NoteMarkdownTypography.body.pointSize)
+            bodyPointSize: typography.body.pointSize)
     }
 
     /// Pins a dynamic token to the current drawing appearance; the fragment cannot resolve one.

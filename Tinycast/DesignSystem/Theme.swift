@@ -192,6 +192,9 @@ enum Theme {
         static let paletteTransparencySlider: CGFloat = 190
         /// One "Aa" segment of the Interface Size control; three sit in a grouped row's trailing slot.
         static let interfaceSizeSegment: CGFloat = 40
+        static let interfaceFontField: CGFloat = 150
+        static let interfaceFontPicker: CGFloat = 240
+        static let interfaceFontPickerHeight: CGFloat = 280
         /// The sidebar's search field; matches a grouped `Form` row's control height.
         static let settingsSearchField: CGFloat = 28
         /// One density preview; five fit across the Emoji settings detail pane.
@@ -338,6 +341,12 @@ enum Theme {
         static let menuSymbolSize: CGFloat = 14
         static let menuSymbolWeight = Font.Weight.medium
         static let noteTitle = Font.headline
+        /// The answer line on a card that states one value: the calculator's and the colour's.
+        static let cardTitle = Font.title3.weight(.semibold)
+        /// A preview that must show its own characters exactly: a colour code, a snippet's body.
+        static let previewCode = Font.system(.subheadline, design: .monospaced)
+        /// The oversized symbol an empty or unpreviewable surface stands behind.
+        static let placeholderGlyph = Font.largeTitle
     }
 
     enum Colors {

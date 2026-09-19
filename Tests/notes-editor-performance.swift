@@ -46,7 +46,8 @@ struct NotesEditorPerformance {
             "typingMs": Dictionary(uniqueKeysWithValues: typing),
             "caretMoveMs": caret
         ]
-        let data = try? JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
+        let data = try? JSONSerialization.data(
+            withJSONObject: report, options: [.prettyPrinted, .sortedKeys])
         print(data.flatMap { String(data: $0, encoding: .utf8) } ?? "{}")
         _ = editor.window
     }

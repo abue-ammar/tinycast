@@ -66,11 +66,13 @@ Add a token rather than a magic number when introducing a new value.
 extension list panel, Quick Actions, dialogs and HUDs. Settings, Onboarding,
 Support, Update, About and Notes never scale.
 
-`DesignSystem/InterfaceMetrics.swift` stores **only a scale** and derives every value from the `Theme`
-literal, so `Theme` stays the one place a number is written down. **In any view a scaled surface can
-reach, read `@Environment(\.metrics)` rather than `Theme.Spacing/Radius/Size/Typography`** — the key
-defaults to `.standard`, so a shared `DesignSystem/` component renders unscaled in Settings without
-being forked. An AppKit site reads `settings.interfaceSize.metrics` where it computes its frame.
+`DesignSystem/InterfaceMetrics.swift` stores **a scale and a font family**, and derives every value
+from the `Theme` literal, so `Theme` stays the one place a number is written down. **In any view a
+scaled surface can reach, read `@Environment(\.metrics)` rather than
+`Theme.Spacing/Radius/Size/Typography`** — the key defaults to `.standard`, so a shared
+`DesignSystem/` component renders unscaled in Settings without being forked. An AppKit site reads
+`settings.metrics` where it computes its frame; that computed property is the only place the scale and
+the family are combined.
 
 A length measured against the **screen** does not scale; a length measured against **our own content**
 does. So `hairline`, `paletteTopMarginFraction`, `paletteSnapDistance`, `paletteMinimumVisible`, the
@@ -174,6 +176,26 @@ descriptor** at the scaled point size. Never reconstruct one as `.system(size:we
 hand-written weight table: on macOS `.headline` is Bold and `.caption2` is Medium, so a table
 *lightens* them the moment the user leaves the default size. `menuSymbol` is the deliberate exception:
 it is an explicitly-sized glyph treatment, not a system text style, so scaling preserves Medium.
+
+#### The interface font
+
+`InterfaceMetrics` carries a **`fontFamily`** beside its scale — `AppSettings.interfaceFontFamily`,
+where `nil` is the system face. Both knobs meet in exactly one place, `AppSettings.metrics`; read that
+rather than composing them yourself, or a surface picks up one and not the other. The palette and its
+floating siblings take both; the panels that have never scaled (Notes, the command-output window) take
+`AppSettings.unscaledMetrics`, which is the family at scale 1.
+
+A family is carried onto a style with `InterfaceMetrics.face(_:on:size:)`, which asks `NSFontManager`
+for that family at the system style's own traits and weight. Do **not** copy the system font's
+descriptor and swap `.family` onto it: a system descriptor carries `NSCTFontUIFontDesignTrait`, which
+outranks `.family`, and you silently get the system face back. A family that cannot render a face keeps
+the system one, so an uninstalled font degrades rather than picking a wrong member.
+
+Tokens that size an **SF Symbol** rather than setting type stay on the system face at every family:
+`headerIcon`, `menuIcon`, `disclosure`, `placeholderGlyph` and `menuSymbol`. A family swap would drop
+the symbol's weight and scale mapping. One face-level nuance is accepted and pinned by
+`interface-font-test`: `.caption2` is `.SFNS-Medium` but reports a Regular `.face` and a 0 weight
+trait, so on a chosen family it normalizes to that family's Regular.
 
 ### Colors (`Theme.Colors`) — the alpha ramp
 

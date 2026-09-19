@@ -2,6 +2,9 @@ import SwiftUI
 
 struct NotesView: View {
     @Environment(NotesCoordinator.self) private var notes
+    @Environment(AppSettings.self) private var settings
+
+    private var metrics: InterfaceMetrics { settings.unscaledMetrics }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -33,7 +36,7 @@ struct NotesView: View {
 
     private var title: some View {
         Text(notes.activeTitle)
-            .font(Theme.Typography.noteTitle)
+            .font(metrics.typography.noteTitle)
             .lineLimit(1)
             .truncationMode(.tail)
             .padding(.horizontal, Theme.Size.noteTitleInset)
@@ -54,6 +57,7 @@ struct NotesView: View {
             NoteEditorView(
                 input: notes.editorInput,
                 rendersMarkdown: notes.rendersMarkdown,
+                typography: settings.noteTypography,
                 onSourceChange: notes.updateSource,
                 onCharacterCountChange: notes.updateCharacterCount,
                 onFormattingChange: notes.updateFormatting,
@@ -89,7 +93,7 @@ struct NotesView: View {
     private var placeholder: some View {
         if notes.isActiveNoteEmpty {
             Text("Start writing…")
-                .font(.title3)
+                .font(Font(settings.noteTypography.body))
                 .foregroundStyle(Theme.Colors.textTertiary)
                 // Matches the text container inset exactly, so the caret sits on the placeholder.
                 .padding(.horizontal, Theme.Size.noteEditorInset)
@@ -104,11 +108,11 @@ struct NotesView: View {
             SymbolImage(name: "text.page", size: Theme.Size.noteEmptyGlyph)
                 .foregroundStyle(Theme.Colors.textTertiary)
             Text("No Notes")
-                .font(Theme.Typography.rowTitle)
+                .font(metrics.typography.rowTitle)
                 .foregroundStyle(Theme.Colors.textSecondary)
             Button("Create Note", action: notes.createNote)
                 .buttonStyle(.plain)
-                .font(Theme.Typography.bar)
+                .font(metrics.typography.bar)
                 .padding(.horizontal, Theme.Spacing.xl)
                 .frame(height: Theme.Size.barButtonHeight)
                 .frosted(in: Capsule())
@@ -124,7 +128,7 @@ struct NotesView: View {
 
     private var characterCount: some View {
         Text(notes.characterCountLabel)
-            .font(Theme.Typography.rowTrailing)
+            .font(metrics.typography.rowTrailing)
             .foregroundStyle(Theme.Colors.textTertiary)
             .lineLimit(1)
             .accessibilityLabel("\(notes.characterCountLabel) in this note")

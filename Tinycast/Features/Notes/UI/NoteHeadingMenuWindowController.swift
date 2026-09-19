@@ -30,7 +30,10 @@ final class NoteHeadingMenuWindowController {
 
     private func ensurePanel() -> NotesPanel {
         if let panel { return panel }
-        let hosting = NSHostingView(rootView: NoteHeadingMenuView().environment(coordinator))
+        let root = NoteHeadingMenuView()
+            .environment(coordinator)
+            .environment(AppCore.shared.settings)
+        let hosting = NSHostingView(rootView: root)
         hosting.sizingOptions = []
         let panel = NotesPanel(
             content: hosting,

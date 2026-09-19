@@ -314,7 +314,7 @@ struct ClipboardPreview: View {
             } else {
                 ScrollView {
                     Text(item.text ?? "")
-                        .font(.system(.subheadline, design: .monospaced))
+                        .font(metrics.typography.previewCode)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
@@ -333,7 +333,7 @@ struct ClipboardPreview: View {
                             .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
                     )
             } placeholder: {
-                Image(systemName: "photo").font(.system(.largeTitle))
+                Image(systemName: "photo").font(metrics.typography.placeholderGlyph)
                     .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
             }
         case .file:
@@ -393,7 +393,7 @@ private struct ClipboardInfoSection: View {
                         }
                         Text(row.value).lineLimit(1).truncationMode(.middle)
                     }
-                    .font(.callout)
+                    .font(metrics.typography.rowTrailing)
                     .padding(.vertical, metrics.spacing.sm)
                 }
             }
