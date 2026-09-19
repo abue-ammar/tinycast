@@ -41,6 +41,9 @@ final class PaletteCoordinator {
             ? windowController.previousApp : NSWorkspace.shared.frontmostApplication
     }
 
+    /// The own window the palette covered, for anything acting on it after the palette hides.
+    var previousOwnWindow: NSWindow? { windowController.previousOwnWindow }
+
     /// Up and pointed at `mode`, which is the state a mode command's second invocation closes.
     func isShowing(_ mode: PaletteMode) -> Bool {
         windowController.isVisible && palette.mode == mode

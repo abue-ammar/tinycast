@@ -5,7 +5,7 @@ import AppKit
 @MainActor
 final class WindowMover {
     /// `CFEqual`/`CFHash` are the supported identity; the pid separates two processes' elements.
-    private struct WindowKey: Hashable {
+    private struct ExternalKey: Hashable {
         let pid: pid_t
         let element: AXUIElement
 
@@ -16,6 +16,98 @@ final class WindowMover {
         func hash(into hasher: inout Hasher) {
             hasher.combine(pid)
             hasher.combine(CFHash(element))
+        }
+    }
+
+    /// A closed window's identifier can be reused; `decide` rejects the stale record on its frame.
+    private enum WindowKey: Hashable {
+        case external(ExternalKey)
+        case own(ObjectIdentifier)
+    }
+
+    /// Another app's window over AX, or one of ours: an AX call into our own process would stall
+    /// the main thread that has to service it.
+    @MainActor
+    private enum Surface {
+        case external(application: AXUIElement, window: AXUIElement)
+        case own(NSWindow)
+
+        var isFullScreen: Bool {
+            switch self {
+            case .external(_, let window): AXWindowAccess.isFullScreen(window)
+            case .own(let window): window.styleMask.contains(.fullScreen)
+            }
+        }
+
+        var canMove: Bool {
+            switch self {
+            case .external(_, let window):
+                AXWindowAccess.isSettable(kAXPositionAttribute, on: window)
+            case .own(let window): window.isMovable
+            }
+        }
+
+        var canResize: Bool {
+            switch self {
+            case .external(_, let window):
+                AXWindowAccess.isSettable(kAXSizeAttribute, on: window)
+            case .own(let window): window.styleMask.contains(.resizable)
+            }
+        }
+
+        func frame(in geometry: AXGeometry) -> CGRect? {
+            switch self {
+            case .external(_, let window): AXWindowAccess.frame(of: window)
+            case .own(let window): geometry.flip(window.frame)
+            }
+        }
+
+        /// Nothing to suppress on our own windows: it is a remote app's Accessibility setting.
+        func suppressEnhancedUserInterface() -> () -> Void {
+            guard case .external(let application, _) = self else { return {} }
+            return AXWindowAccess.suppressEnhancedUserInterface(on: application)
+        }
+
+        func write(
+            _ placement: WindowPlacementEngine.Placement, current: CGRect, canResize: Bool,
+            canvas: CGRect?, geometry: AXGeometry
+        ) -> CGRect? {
+            switch self {
+            case .external(_, let window):
+                AXWindowAccess.write(
+                    placement.frame, anchor: placement.anchor, to: window, current: current,
+                    canResize: canResize, canvas: canvas)
+            case .own(let window):
+                Self.writeOwn(
+                    placement, to: window, current: current, canResize: canResize,
+                    canvas: canvas, geometry: geometry)
+            }
+        }
+
+        /// `setFrame` is atomic and local, so AX's size → position → size sequence buys nothing.
+        private static func writeOwn(
+            _ placement: WindowPlacementEngine.Placement, to window: NSWindow, current: CGRect,
+            canResize: Bool, canvas: CGRect?, geometry: AXGeometry
+        ) -> CGRect? {
+            var target =
+                canResize
+                ? placement.frame : placement.anchor.place(current.size, in: placement.frame)
+            if !canResize, let canvas {
+                target = WindowPlacementEngine.clamped(target, into: canvas)
+            }
+            window.setFrame(geometry.flip(WindowPlacementEngine.rounded(target)), display: true)
+            var actual = geometry.flip(window.frame)
+
+            // `contentMinSize` can refuse the width or height; re-seat once, per the anchor.
+            if actual.width > target.width + AXWindowAccess.clampTolerance
+                || actual.height > target.height + AXWindowAccess.clampTolerance
+            {
+                var slot = placement.anchor.place(actual.size, in: placement.frame)
+                if let canvas { slot = WindowPlacementEngine.clamped(slot, into: canvas) }
+                window.setFrameOrigin(geometry.flip(WindowPlacementEngine.rounded(slot)).origin)
+                actual = geometry.flip(window.frame)
+            }
+            return actual
         }
     }
 
@@ -33,16 +125,18 @@ final class WindowMover {
             else { return }
             let pid = app.processIdentifier
             MainActor.assumeIsolated {
-                self?.memory.forget { $0.pid == pid }
+                self?.memory.forget { key in
+                    guard case .external(let external) = key else { return false }
+                    return external.pid == pid
+                }
             }
         }
         terminationToken = NotificationToken(token, center: NSWorkspace.shared.notificationCenter)
     }
 
-    /// The focused window of the app a command targets, resolved once per press.
+    /// The window a command targets, resolved once per press.
     private struct FocusedWindow {
-        let application: AXUIElement
-        let window: AXUIElement
+        let surface: Surface
         let key: WindowKey
     }
 
@@ -55,15 +149,14 @@ final class WindowMover {
     /// Runs `command` against `target`'s focused window, returning whether anything changed.
     @discardableResult
     func perform(
-        _ command: WindowCommand.ID, target: NSRunningApplication?, gap: CGFloat,
-        cycle: WindowCycle
+        _ command: WindowCommand.ID, target: WindowTarget?, gap: CGFloat, cycle: WindowCycle
     ) -> Bool {
         guard let catalogued = WindowCommandCatalog.command(id: command),
             let focused = focusedWindow(of: target)
         else { return false }
 
         if catalogued.kind == .fullscreen {
-            guard toggleFullScreen(focused.window) else { return false }
+            guard toggleFullScreen(focused.surface) else { return false }
             // The size chain is moot, but the pre-Tinycast frame is still the Restore target.
             memory.forgetCycle(key: focused.key)
             return true
@@ -85,7 +178,7 @@ final class WindowMover {
 
     /// Applies `size` to `target`'s focused window; Restore undoes it like any command.
     @discardableResult
-    func perform(_ size: CustomWindowSize, target: NSRunningApplication?, gap: CGFloat) -> Bool {
+    func perform(_ size: CustomWindowSize, target: WindowTarget?, gap: CGFloat) -> Bool {
         guard let focused = focusedWindow(of: target) else { return false }
         return place(
             focused, command: nil, gap: gap, cycleLength: { _ in 1 },
@@ -94,19 +187,28 @@ final class WindowMover {
             })
     }
 
-    private func focusedWindow(of target: NSRunningApplication?) -> FocusedWindow? {
-        // Invoked from an explicit user gesture, so prompting for the grant is appropriate here.
-        guard Permissions.ensureAccessibility() else { return nil }
-        guard let target, !target.isTerminated,
-            target.processIdentifier != ProcessInfo.processInfo.processIdentifier
-        else { return nil }
+    private func focusedWindow(of target: WindowTarget?) -> FocusedWindow? {
+        switch target {
+        case .own(let window):
+            // No Accessibility grant is involved in placing one of our own windows.
+            guard window.isVisible else { return nil }
+            return FocusedWindow(surface: .own(window), key: .own(ObjectIdentifier(window)))
+        case .external(let app):
+            // Invoked from an explicit user gesture, so prompting for the grant is right here.
+            guard Permissions.ensureAccessibility() else { return nil }
+            guard !app.isTerminated,
+                app.processIdentifier != ProcessInfo.processInfo.processIdentifier
+            else { return nil }
 
-        let application = AXWindowAccess.application(for: target.processIdentifier)
-        guard let window = AXWindowAccess.targetWindow(in: application) else { return nil }
-        AXUIElementSetMessagingTimeout(window, AXWindowAccess.messagingTimeout)
-        return FocusedWindow(
-            application: application, window: window,
-            key: WindowKey(pid: target.processIdentifier, element: window))
+            let application = AXWindowAccess.application(for: app.processIdentifier)
+            guard let window = AXWindowAccess.targetWindow(in: application) else { return nil }
+            AXUIElementSetMessagingTimeout(window, AXWindowAccess.messagingTimeout)
+            return FocusedWindow(
+                surface: .external(application: application, window: window),
+                key: .external(ExternalKey(pid: app.processIdentifier, element: window)))
+        case nil:
+            return nil
+        }
     }
 
     /// The one decide → resolve → write → commit sequence every geometry press runs through.
@@ -114,13 +216,11 @@ final class WindowMover {
         _ focused: FocusedWindow, command: WindowCommand.ID?, gap: CGFloat,
         cycleLength: ([WindowPlacementEngine.Screen]) -> Int, resolve: Resolver
     ) -> Bool {
-        let window = focused.window
-        // Tiling a natively fullscreen window fights the window server; leave it alone.
-        guard !AXWindowAccess.isFullScreen(window),
-            let current = AXWindowAccess.frame(of: window)
-        else { return false }
-
+        let surface = focused.surface
         let geometry = AXGeometry(screens: NSScreen.screens)
+        // Tiling a natively fullscreen window fights the window server; leave it alone.
+        guard !surface.isFullScreen, let current = surface.frame(in: geometry) else { return false }
+
         let screens = AXScreens.converted(NSScreen.screens, geometry: geometry)
         guard let host = WindowPlacementEngine.screen(containing: current, in: screens) else {
             return false
@@ -134,9 +234,8 @@ final class WindowMover {
         guard let placement = resolve(current, screens, decision) else { return false }
 
         // Checked before any write, so an unpositionable window is left untouched.
-        guard AXWindowAccess.isSettable(kAXPositionAttribute, on: window) else { return false }
-        let canResize =
-            placement.resizes && AXWindowAccess.isSettable(kAXSizeAttribute, on: window)
+        guard surface.canMove else { return false }
+        let canResize = placement.resizes && surface.canResize
 
         let destination = screens.first { $0.id == placement.screenID }
         let canvas = destination.map {
@@ -144,15 +243,13 @@ final class WindowMover {
                 $0.visibleFrame,
                 gap: WindowPlacementEngine.sanitizedGap(gap, in: $0.visibleFrame))
         }
-        let restoreEnhancedUI =
-            canResize
-            ? AXWindowAccess.suppressEnhancedUserInterface(on: focused.application) : {}
+        let restoreEnhancedUI = canResize ? surface.suppressEnhancedUserInterface() : {}
         defer { restoreEnhancedUI() }
 
         guard
-            let applied = AXWindowAccess.write(
-                placement.frame, anchor: placement.anchor, to: window, current: current,
-                canResize: canResize, canvas: canvas)
+            let applied = surface.write(
+                placement, current: current, canResize: canResize, canvas: canvas,
+                geometry: geometry)
         else { return false }
 
         let landedOn =
@@ -167,20 +264,30 @@ final class WindowMover {
     // MARK: - Fullscreen
 
     /// `AXFullScreen`, then the green button. docs/features/window-management.md
-    private func toggleFullScreen(_ window: AXUIElement) -> Bool {
-        let target: CFBoolean =
-            AXWindowAccess.isFullScreen(window) ? kCFBooleanFalse : kCFBooleanTrue
-        if AXWindowAccess.isSettable(
-            AXWindowAccess.fullScreenAttribute as String, on: window),
-            AXUIElementSetAttributeValue(
-                window, AXWindowAccess.fullScreenAttribute, target) == .success
-        {
+    private func toggleFullScreen(_ surface: Surface) -> Bool {
+        switch surface {
+        case .own(let window):
+            // AppKit fullscreens any resizable window unless it opts out, as the Notes panel does.
+            guard window.styleMask.contains(.resizable),
+                window.collectionBehavior.isDisjoint(with: [.fullScreenAuxiliary, .fullScreenNone])
+            else { return false }
+            window.toggleFullScreen(nil)
             return true
+        case .external(_, let window):
+            let target: CFBoolean =
+                AXWindowAccess.isFullScreen(window) ? kCFBooleanFalse : kCFBooleanTrue
+            if AXWindowAccess.isSettable(
+                AXWindowAccess.fullScreenAttribute as String, on: window),
+                AXUIElementSetAttributeValue(
+                    window, AXWindowAccess.fullScreenAttribute, target) == .success
+            {
+                return true
+            }
+            guard
+                let button = AXWindowAccess.element(
+                    window, AXWindowAccess.fullScreenButtonAttribute as String)
+            else { return false }
+            return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
         }
-        guard
-            let button = AXWindowAccess.element(
-                window, AXWindowAccess.fullScreenButtonAttribute as String)
-        else { return false }
-        return AXUIElementPerformAction(button, kAXPressAction as CFString) == .success
     }
 }

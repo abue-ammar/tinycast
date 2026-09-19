@@ -8,7 +8,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private var panel: PalettePanel?
     private(set) var previousApp: NSRunningApplication?
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
-    private weak var previousOwnWindow: NSWindow?
+    private(set) weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
     // Reopen beat the timeout, so select the preserved query.
     private var queryWasPreserved = false
@@ -52,14 +52,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         Signposts.interval("PaletteWindowController.show") {
             // Summoned over one of our own windows: there is no external paste or focus target.
             let frontmost = NSWorkspace.shared.frontmostApplication
-            if frontmost?.processIdentifier == NSRunningApplication.current.processIdentifier {
-                previousApp = nil
-                // Never the palette itself: a mode switch re-shows it while it already holds key.
-                if let key = NSApp.keyWindow, key !== panel { previousOwnWindow = key }
-            } else {
-                previousApp = frontmost
-                previousOwnWindow = nil
-            }
+            let ownPID = NSRunningApplication.current.processIdentifier
+            previousApp = frontmost?.processIdentifier == ownPID ? nil : frontmost
+            // Recorded even when another app is frontmost: our panels take key without activating.
+            let key = NSApp.keyWindow
+            // Never the palette itself: a mode switch re-shows it while it already holds key.
+            previousOwnWindow = key === panel ? nil : key
             // Once per summon, and from `previousApp`, so the label names the paste target.
             core.palette.pasteTarget = PasteTarget(app: previousApp)
             let panel = ensurePanel()

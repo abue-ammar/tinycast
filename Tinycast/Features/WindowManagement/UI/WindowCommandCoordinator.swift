@@ -40,10 +40,12 @@ final class WindowCommandCoordinator {
         windowMover.perform(size, target: handOffTarget(), gap: CGFloat(settings.windowGap))
     }
 
-    /// The app to move, read before the palette hides and hands focus back to it.
-    private func handOffTarget() -> NSRunningApplication? {
-        let target = paletteCoordinator.targetApp
-        if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: true) }
+    /// The window to place, read before the palette hides and hands focus back to it.
+    private func handOffTarget() -> WindowTarget? {
+        guard paletteCoordinator.isVisible else { return WindowTarget.current() }
+        let target = WindowTarget.behindPalette(
+            ownWindow: paletteCoordinator.previousOwnWindow, app: paletteCoordinator.targetApp)
+        paletteCoordinator.hidePalette(restoreFocus: true)
         return target
     }
 }
