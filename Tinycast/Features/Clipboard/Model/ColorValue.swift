@@ -128,7 +128,7 @@ extension ColorValue {
             alpha: channels.count == 4 ? channels[3] : 1)
     }
 
-    /// `rgb()` / `rgba()` / `hsl()` / `hsla()`, in both the comma and the CSS4 space form.
+    /// `rgb()` / `rgba()` / `hsl()` / `hsla()` / `oklch()`, in the comma and CSS4 space forms.
     private static func parseFunctional(_ token: String) -> ColorValue? {
         guard let open = token.firstIndex(of: "("), token.hasSuffix(")") else { return nil }
         let function = token[token.startIndex..<open].lowercased()
@@ -151,6 +151,15 @@ extension ColorValue {
             else { return nil }
             return ColorValue(
                 hue: hue, saturation: saturation, lightness: lightness, alpha: alpha)
+        case "oklch":
+            // A percentage chroma is a fraction of 0.4, the bound CSS gives the axis.
+            guard let lightness = component(parts[0], scale: 1),
+                let chroma = component(parts[1], scale: 1),
+                let hue = angle(parts[2])
+            else { return nil }
+            return ColorValue(
+                lightness: lightness, chroma: parts[1].hasSuffix("%") ? chroma * 0.4 : chroma,
+                hue: hue, alpha: alpha)
         default:
             return nil
         }

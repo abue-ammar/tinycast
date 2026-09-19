@@ -312,7 +312,9 @@ run ext-icon-test          Tinycast/Platform/Appearance.swift \
                            Tinycast/Features/Extensions/Service/ExtensionRuntime.swift \
                            Tinycast/Features/Extensions/Service/ExtensionIconCache.swift \
                            Tinycast/Features/Extensions/UI/ExtensionAnimatedImage.swift \
-                           Tinycast/Features/Extensions/UI/ExtensionImage.swift
+                           Tinycast/Features/Extensions/UI/ExtensionImage.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift
 run system-action-test     Tinycast/Features/SystemActions/Model/SystemAction.swift
 run volume-test            Tinycast/Features/SystemActions/Model/VolumeLevel.swift
 run window-command-test    Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
@@ -480,7 +482,9 @@ run slow ext-test          -parse-as-library \
                            $E/UI/ExtensionImage.swift \
                            $E/UI/ExtensionScreen.swift \
                            $L/SearchRelevance.swift \
-                           Tinycast/Platform/Compression/Zlib.swift
+                           Tinycast/Platform/Compression/Zlib.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift
 run settings-history-test  Tinycast/Features/Settings/SettingsTab.swift \
                            Tinycast/Features/Settings/SettingsHistory.swift \
                            Tinycast/Features/Settings/SettingsAnchor.swift \

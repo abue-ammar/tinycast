@@ -175,26 +175,11 @@ enum ExtensionImage {
     ]
 
     private static func color(named raw: String) -> Color? {
-        // Extensions also pass raw hex.
-        palette[raw] ?? hexColor(raw)
-    }
-
-    private static func hexColor(_ raw: String) -> Color? {
-        var text = raw.trimmingCharacters(in: .whitespaces)
-        guard text.hasPrefix("#") else { return nil }
-        text.removeFirst()
-        if text.count == 3 {
-            text = text.map { "\($0)\($0)" }.joined()
-        }
-        guard text.count == 6 || text.count == 8, let value = UInt32(text, radix: 16) else {
-            return nil
-        }
-        let hasAlpha = text.count == 8
-        let red = Double((value >> (hasAlpha ? 24 : 16)) & 0xff) / 255
-        let green = Double((value >> (hasAlpha ? 16 : 8)) & 0xff) / 255
-        let blue = Double((value >> (hasAlpha ? 8 : 0)) & 0xff) / 255
-        let alpha = hasAlpha ? Double(value & 0xff) / 255 : 1
-        return Color(red: red, green: green, blue: blue, opacity: alpha)
+        // Extensions also pass raw CSS, in every notation `ColorValue` reads.
+        palette[raw]
+            ?? ColorValue.parse(raw).map {
+                Color(.sRGB, red: $0.red, green: $0.green, blue: $0.blue, opacity: $0.alpha)
+            }
     }
 
     /// SF only enumerates 0…50, so draw all hundred as glyphs and they look alike.

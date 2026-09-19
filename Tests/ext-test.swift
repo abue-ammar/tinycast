@@ -736,6 +736,10 @@ struct ExtensionTests {
             "a themed tint picks the dark side",
             icon(#"{"source":"circle-16","tintColor":{"light":"raycast-red","dark":"raycast-blue"}}"#)
                 .tint == .blue)
+        // A colour picker states its swatch in Oklch, which read as no tint at all before.
+        check(
+            "an oklch tint too",
+            icon(#"{"source":"circle-16","tintColor":"oklch(62.8% 0.2577 29.23)"}"#).tint != nil)
 
         let bare = icon(#""checkmark-circle-16""#)
         check("a bare icon still resolves", bare.source == .symbol("checkmark.circle"))

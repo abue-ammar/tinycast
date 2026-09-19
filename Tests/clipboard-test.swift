@@ -245,7 +245,10 @@ struct ClipboardTests {
             ("rgb(0 255 0 / 0.5)", ColorValue(red: 0, green: 1, blue: 0, alpha: 0.5)),
             ("rgba(255,87,51,0.5)", ColorValue(red: 1, green: 87 / 255, blue: 51 / 255, alpha: 0.5)),
             ("hsl(120, 100%, 50%)", ColorValue(red: 0, green: 1, blue: 0)),
-            ("hsl(10.6deg 100% 60%)", ColorValue(red: 1, green: 87 / 255, blue: 51 / 255))
+            ("hsl(10.6deg 100% 60%)", ColorValue(red: 1, green: 87 / 255, blue: 51 / 255)),
+            // The notation a colour picker hands an extension, and its percentage chroma.
+            ("oklch(62.7955% 0.257683 29.2338)", ColorValue(red: 1, green: 0, blue: 0)),
+            ("oklch(0.627955 64.42% 29.2338deg / 0.5)", ColorValue(red: 1, green: 0, blue: 0, alpha: 0.5))
         ]
         for (text, expected) in cases {
             guard let parsed = ColorValue.parse(text) else {
@@ -398,7 +401,7 @@ struct ClipboardTests {
                             red: Double(red) / 255, green: Double(green) / 255,
                             blue: Double(blue) / 255, alpha: Double(alpha) / 255)
                         for format in ColorFormat.offered(for: color) {
-                            // `oklch()` is copied out but never read back, so it is not swept.
+                            // `oklch()` re-parses, but states too few digits to land on a channel.
                             guard format != .oklch else { continue }
                             let text = format.string(for: color)
                             guard let back = ColorValue.parse(text) else {
