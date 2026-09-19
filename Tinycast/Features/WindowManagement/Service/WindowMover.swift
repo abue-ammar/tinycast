@@ -139,7 +139,7 @@ final class WindowMover {
         ) { [weak self] note in
             guard let closed = note.object as? NSWindow else { return }
             let key = WindowKey.own(ObjectIdentifier(closed))
-            MainActor.assumeIsolated { self?.memory.forget(key: key) }
+            Task { @MainActor [weak self] in self?.memory.forget(key: key) }
         }
         windowCloseToken = NotificationToken(closeToken, center: .default)
     }
