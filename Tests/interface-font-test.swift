@@ -30,6 +30,8 @@ struct InterfaceFontTests {
         theSystemFaceIsThemeVerbatim()
         aFamilyReachesEveryTextToken()
         aFamilyKeepsEachStylesWeight()
+        oneFontMeansOneFont()
+        noteTitleTakesTheFamilyButNotTheScale()
         anUnknownFamilyFallsBack()
         symbolTokensIgnoreTheFamily()
         theFamilyComposesWithScale()
@@ -56,6 +58,18 @@ struct InterfaceFontTests {
             t.searchFieldNSFont == Theme.Typography.searchFieldNSFont,
             "searchFieldNSFont is Theme verbatim")
         expect(t.chipNSFont == Theme.Typography.chipNSFont, "chipNSFont is Theme verbatim")
+        expect(t.keyCap == Theme.Typography.keyCap, "keyCap is Theme verbatim")
+        expect(t.compactKeyCap == Theme.Typography.compactKeyCap, "compactKeyCap is Theme verbatim")
+        expect(t.heroKeyCap == Theme.Typography.heroKeyCap, "heroKeyCap is Theme verbatim")
+        expect(t.markdownHeading1 == Theme.Typography.markdownHeading1, "heading1 is Theme verbatim")
+        expect(t.markdownHeading2 == Theme.Typography.markdownHeading2, "heading2 is Theme verbatim")
+        expect(t.markdownHeading3 == Theme.Typography.markdownHeading3, "heading3 is Theme verbatim")
+        expect(t.bar == Theme.Typography.bar, "bar is Theme verbatim")
+        expect(t.chip == Theme.Typography.chip, "chip is Theme verbatim")
+        expect(t.menuRow == Theme.Typography.menuRow, "menuRow is Theme verbatim")
+        expect(t.menuShortcut == Theme.Typography.menuShortcut, "menuShortcut is Theme verbatim")
+        expect(t.noteTitle == Theme.Typography.noteTitle, "noteTitle is Theme verbatim")
+        expect(t.placeholderGlyph == Theme.Typography.placeholderGlyph, "placeholderGlyph is verbatim")
         expect(InterfaceMetrics.standard.fontFamily == nil, "standard names no family")
     }
 
@@ -72,6 +86,40 @@ struct InterfaceFontTests {
         expect(
             NoteMarkdownTypography(fontFamily: family).codeBlock.familyName == family,
             "a note code block takes the family too, since one font means one font")
+        expect(
+            NoteMarkdownTypography(fontFamily: family).inlineCode.familyName == family,
+            "note inline code takes the family too")
+    }
+
+    /// `code`, `previewCode` and `inlineCode` drop the monospaced design once a family is chosen.
+    static func oneFontMeansOneFont() {
+        let system = InterfaceMetrics.standard.typography
+        let chosen = InterfaceMetrics(scale: 1, fontFamily: family).typography
+        expect(chosen.code != system.code, "code leaves the monospaced design behind")
+        expect(chosen.previewCode != system.previewCode, "previewCode leaves it behind")
+        expect(chosen.inlineCode != system.inlineCode, "inlineCode leaves it behind")
+        expect(
+            chosen.code == Font(chosen.nsFont(.callout)), "code is the family at the callout size")
+        expect(
+            chosen.previewCode == Font(chosen.nsFont(.subheadline)),
+            "previewCode is the family at the subheadline size")
+        expect(
+            chosen.inlineCode == Font(chosen.nsFont(.body)),
+            "inlineCode is the family at the body size, with no monospaced design left on it")
+    }
+
+    /// Notes sits a style above the app and has never scaled; only the family may reach it.
+    static func noteTitleTakesTheFamilyButNotTheScale() {
+        for size in InterfaceSize.allCases {
+            let scaled = InterfaceMetrics(scale: size.scale, fontFamily: family).typography
+            let unscaled = InterfaceMetrics(scale: 1, fontFamily: family).typography
+            expect(
+                scaled.noteTitle == unscaled.noteTitle,
+                "noteTitle is the same at \(size.title) as at Default")
+        }
+        expect(
+            InterfaceMetrics(scale: 1.2).typography.noteTitle == Theme.Typography.noteTitle,
+            "noteTitle without a family stays Theme verbatim at every size")
     }
 
     /// The regression docs/ui.md warns about: a weight table lightens `.headline` off its face.

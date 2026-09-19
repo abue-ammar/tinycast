@@ -1,6 +1,6 @@
 import AppKit
 
-/// The font families this Mac can render text with; the system face is this setting's absence, not a member.
+/// The font families this Mac can draw text with; the system face is this setting's absence.
 enum FontCatalog {
     @MainActor
     static func installedFamilies() -> [String] {

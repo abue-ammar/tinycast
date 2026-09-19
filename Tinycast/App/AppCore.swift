@@ -597,7 +597,8 @@ final class AppCore {
         track({ _ = $0.appearance }, reproject: { $0.applyAppearance() })
         track(
             {
-                _ = $0.interfaceSize; _ = $0.interfaceFontFamily
+                _ = $0.interfaceSize
+                _ = $0.interfaceFontFamily
             },
             reproject: { $0.windowController.applyInterfaceSize() })
     }

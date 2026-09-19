@@ -245,12 +245,12 @@ private struct InterfaceFontRow: View {
 
     private static let systemTitle = "System"
 
-    /// A family uninstalled since it was chosen must not leave the button drawing in a missing face.
+    /// A family uninstalled since it was chosen must not draw the button in a missing face.
     private var previewFont: Font {
         guard let family = settings.interfaceFontFamily, FontCatalog.isInstalled(family) else {
             return Theme.Typography.rowTrailing
         }
-        return .custom(family, size: NSFont.preferredFont(forTextStyle: .callout).pointSize)
+        return .custom(family, size: Theme.Typography.fontSpecimenSize)
     }
 }
 
@@ -262,9 +262,16 @@ private struct FontPickerPopover: View {
 
     @State private var query = ""
 
+    private static let systemTitle = "System"
+
     private var matches: [String] {
         guard !query.isEmpty else { return families }
         return families.filter { $0.localizedCaseInsensitiveContains(query) }
+    }
+
+    /// The row back to the default, which a filter must never be able to hide.
+    private var matchesSystem: Bool {
+        query.isEmpty || Self.systemTitle.localizedCaseInsensitiveContains(query)
     }
 
     var body: some View {
@@ -274,15 +281,18 @@ private struct FontPickerPopover: View {
             Divider()
             ScrollView {
                 LazyVStack(spacing: 1) {
-                    if query.isEmpty {
-                        row(title: "System", font: Theme.Typography.rowTitle, isSelected: selection == nil) {
+                    if matchesSystem {
+                        row(
+                            title: Self.systemTitle, font: Theme.Typography.rowTitle,
+                            isSelected: selection == nil
+                        ) {
                             onSelect(nil)
                         }
                     }
                     ForEach(matches, id: \.self) { family in
                         row(
                             title: family,
-                            font: .custom(family, size: NSFont.systemFontSize),
+                            font: .custom(family, size: Theme.Typography.fontSpecimenSize),
                             isSelected: family == selection
                         ) {
                             onSelect(family)

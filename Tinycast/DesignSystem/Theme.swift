@@ -347,6 +347,8 @@ enum Theme {
         static let previewCode = Font.system(.subheadline, design: .monospaced)
         /// The oversized symbol an empty or unpreviewable surface stands behind.
         static let placeholderGlyph = Font.largeTitle
+        /// The third size a token may state: a font specimen has to name the size it draws at.
+        static let fontSpecimenSize: CGFloat = 13
     }
 
     enum Colors {
