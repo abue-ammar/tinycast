@@ -36,6 +36,12 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
 - **Remote endpoints require HTTPS.** Plain HTTP is accepted only for `localhost`, `127.0.0.1` and
   `::1`, where a key is optional, and any other scheme is rejected outright — a loopback host does
   not excuse `ftp://`. `AIEndpointPolicy` is the one place that decides this.
+- **MCP OAuth is separate from the model provider's login.** The HTTP MCP client can sign into a
+  hosted server from Settings and keep its client credentials and tokens in that server's Keychain
+  item. API chat uses this session without receiving its credentials. A rejected refresh becomes
+  Sign-in required on the server, an unserved one does not end the session, and either way a
+  running tool loop receives an explainable failure result.
+  This does not offer Tinycast's MCP servers to installed CLI or on-device routes. See [MCP](mcp.md).
 - **The chat model is the routing decision.** It names the on-device model, a model exposed by the
   installed Codex, Claude, Grok, OpenCode or Cursor command, or one saved API connection and model. Installed
   routes also carry their reasoning effort when the selected model supports one. A removed route

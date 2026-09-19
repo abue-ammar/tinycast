@@ -8,6 +8,7 @@ struct MCPServerEditorTarget: Identifiable {
 
 /// Adds or edits one server, and can prove it connects before the panel is dismissed.
 struct MCPServerEditor: View {
+    @Environment(MCPCoordinator.self) private var coordinator
     let target: MCPServerEditorTarget
     let onSave: (MCPServer, MCPSecretStore.Secrets) -> String?
     let onCancel: () -> Void
@@ -27,6 +28,12 @@ struct MCPServerEditor: View {
         case failed(String)
     }
 
+    @State private var usesOAuth: Bool
+    @State private var clientID: String
+    @State private var clientSecret: String
+    // The status label's copy: a view body never reads the Keychain, actions read it fresh.
+    @State private var storedOAuth: MCPOAuth.Credentials?
+    @State private var operation: Task<Void, Never>?
     @State private var name: String
     @State private var kind: Kind
     @State private var url: String
@@ -50,6 +57,10 @@ struct MCPServerEditor: View {
         self.onCancel = onCancel
         let server = target.server
         let secrets = target.isNew ? MCPSecretStore.Secrets() : MCPSecretStore().secrets(for: server.id)
+        _usesOAuth = State(initialValue: server.oauth == true)
+        _clientID = State(initialValue: secrets.oauth?.clientID ?? "")
+        _clientSecret = State(initialValue: secrets.oauth?.clientSecret ?? "")
+        _storedOAuth = State(initialValue: secrets.oauth)
         _name = State(initialValue: server.name)
         _isEnabled = State(initialValue: server.isEnabled)
         _trust = State(initialValue: server.trust)
@@ -105,13 +116,24 @@ struct MCPServerEditor: View {
                             TextField("URL", text: $url, prompt: Text("https://example.com/mcp"))
                                 .settingsEditorTextField()
                         }
-                        field("Header") {
-                            TextField("Header", text: $headerName, prompt: Text("Authorization"))
-                                .settingsEditorTextField()
+                        field("Authentication") {
+                            Picker("Authentication", selection: $usesOAuth) {
+                                Text("Header").tag(false)
+                                Text("OAuth").tag(true)
+                            }
+                            .labelsHidden()
                         }
-                        field("Value") {
-                            SecureField("Value", text: $headerValue, prompt: Text("Bearer …"))
-                                .settingsEditorTextField()
+                        if usesOAuth {
+                            oauthFields
+                        } else {
+                            field("Header") {
+                                TextField("Header", text: $headerName, prompt: Text("Authorization"))
+                                    .settingsEditorTextField()
+                            }
+                            field("Value") {
+                                SecureField("Value", text: $headerValue, prompt: Text("Bearer …"))
+                                    .settingsEditorTextField()
+                            }
                         }
                     } else {
                         field("Command") {
@@ -138,7 +160,7 @@ struct MCPServerEditor: View {
                 } footer: {
                     Text(
                         kind == .http
-                            ? "Remote endpoints must use HTTPS. The header value is stored in your "
+                            ? "Remote endpoints must use HTTPS. Credentials are stored in your "
                                 + "login Keychain, never in preferences."
                             : "The command runs on this Mac with your own account. One "
                                 + "NAME=value per line; values are stored in your login Keychain."
@@ -157,7 +179,7 @@ struct MCPServerEditor: View {
                     }
                     HStack(spacing: Theme.Spacing.lg) {
                         Button("Test Connection", action: test)
-                            .disabled(probe == .running)
+                            .disabled(operation != nil)
                         probeLabel
                     }
                     if let error {
@@ -181,6 +203,7 @@ struct MCPServerEditor: View {
                     .buttonStyle(.modalAction(.cancel))
                     .keyboardShortcut(.cancelAction)
                 Button("Save", action: save)
+                    .disabled(operation != nil)
                     .buttonStyle(.modalAction(.primary))
                     .keyboardShortcut(.defaultAction)
             }
@@ -188,6 +211,92 @@ struct MCPServerEditor: View {
         }
         .frame(width: 620, height: 560)
         .settingsEditorPanelSurface()
+        .onDisappear {
+            operation?.cancel()
+            coordinator.cancelSignIn(target.server.id)
+            if target.isNew { coordinator.discardUnsaved(target.server.id) }
+        }
+        .onChange(of: url) { cancelOperation() }
+        .onChange(of: usesOAuth) { cancelOperation() }
+        .onChange(of: kind) { cancelOperation() }
+        .onChange(of: clientID) { cancelOperation() }
+        .onChange(of: clientSecret) { cancelOperation() }
+    }
+
+    private var oauthFields: some View {
+        Group {
+            field("Client ID") {
+                TextField("Client ID", text: $clientID, prompt: Text("Optional — register automatically"))
+                    .settingsEditorTextField()
+            }
+            field("Client secret") {
+                SecureField("Client secret", text: $clientSecret, prompt: Text("Optional"))
+                    .settingsEditorTextField()
+            }
+            field("Sign-in") {
+                HStack(spacing: Theme.Spacing.lg) {
+                    switch authenticationStatus {
+                    case .signedIn: Button("Sign Out", action: signOut).disabled(operation != nil)
+                    case .signingIn: Button("Cancel", action: cancelOperation)
+                    default: Button("Sign In", action: signIn).disabled(operation != nil)
+                    }
+                    Text(authenticationStatus.label)
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    // A pasted ID often ends in a newline, and Google answers that with "client not found".
+    private var suppliedClientID: String { clientID.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var suppliedClientSecret: String { clientSecret.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var authenticationStatus: MCPOAuthManager.Status {
+        var server = target.server
+        server.transport = .http(
+            url: url.trimmingCharacters(in: .whitespaces),
+            headerName: headerName.trimmingCharacters(in: .whitespaces))
+        let status = coordinator.authenticationStatus(server, stored: storedOAuth)
+        guard storedOAuth?.clientID == suppliedClientID, storedOAuth?.clientSecret == suppliedClientSecret,
+            storedOAuth?.registration?.resource == (try? MCPOAuth.resource(url)) else {
+            if case .signingIn = status { return status }
+            if case .failed = status { return status }
+            return .signedOut
+        }
+        return status
+    }
+
+    private func signIn() {
+        if let message = validate() { error = message; return }
+        error = nil
+        let draft = draft
+        guard let credentials = draft.secrets.oauth else { return }
+        operation = Task {
+            defer { operation = nil }
+            do {
+                try await coordinator.signIn(draft.server, credentials: credentials)
+                storedOAuth = MCPSecretStore().secrets(for: target.server.id).oauth
+            } catch is CancellationError {
+                return
+            } catch {
+                self.error = error.localizedDescription
+            }
+        }
+    }
+
+    private func signOut() {
+        do {
+            try coordinator.signOut(target.server.id)
+            storedOAuth?.token = nil
+            probe = .idle
+            error = nil
+        } catch { self.error = "The credentials could not be removed from your login Keychain." }
+    }
+
+    private func cancelOperation() {
+        operation?.cancel()
+        coordinator.cancelSignIn(target.server.id)
+        probe = .idle
     }
 
     @ViewBuilder private var probeLabel: some View {
@@ -224,8 +333,20 @@ struct MCPServerEditor: View {
             server.transport = .http(
                 url: url.trimmingCharacters(in: .whitespaces),
                 headerName: headerName.trimmingCharacters(in: .whitespaces))
-            return (server, MCPSecretStore.Secrets(headerValue: headerValue))
+            server.oauth = usesOAuth ? true : nil
+            var secrets = MCPSecretStore.Secrets(headerValue: usesOAuth ? "" : headerValue)
+            if usesOAuth {
+                var credentials = MCPSecretStore().secrets(for: server.id).oauth ?? MCPOAuth.Credentials()
+                if credentials.clientID != suppliedClientID || credentials.clientSecret != suppliedClientSecret {
+                    credentials = MCPOAuth.Credentials(clientID: suppliedClientID, clientSecret: suppliedClientSecret)
+                }
+                if let registration = credentials.registration,
+                    registration.resource != (try? MCPOAuth.resource(url)) { credentials.token = nil }
+                secrets.oauth = credentials
+            }
+            return (server, secrets)
         case .stdio:
+            server.oauth = nil
             server.transport = .stdio(
                 command: command.trimmingCharacters(in: .whitespaces),
                 arguments: Self.arguments(from: argumentText),
@@ -243,15 +364,16 @@ struct MCPServerEditor: View {
         error = nil
         probe = .running
         let draft = draft
-        Task {
-            let connection = MCPServerConnection(server: draft.server, secrets: draft.secrets)
-            await connection.start()
-            switch connection.status {
+        operation = Task {
+            defer { operation = nil }
+            let status = await coordinator.test(draft.server, secrets: draft.secrets)
+            guard !Task.isCancelled else { return }
+            switch status {
             case .ready(let tools): probe = .found(tools)
             case .failed(let message): probe = .failed(message)
+            case .signInRequired: probe = .failed("Sign-in required")
             default: probe = .failed("The server did not answer.")
             }
-            connection.stop()
         }
     }
 

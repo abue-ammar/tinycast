@@ -20,7 +20,9 @@ process runs.
 | Name        | Anything. It becomes the server's **handle**, like `@github`.               |
 | Connection  | **HTTP** for a remote server, or **Command** for one that runs on your Mac. |
 | URL         | For HTTP. Remote servers must use HTTPS; plain HTTP only for `localhost`.   |
-| Header      | For HTTP. A header name and value, like `Authorization` and `Bearer …`.     |
+| Authentication | For HTTP. **Header** for a static credential, or **OAuth** for browser sign-in. |
+| Header      | With Header authentication. A name and value, like `Authorization` and `Bearer …`. |
+| Client ID / secret | With OAuth. Leave blank for automatic registration, or enter the credentials supplied by your server provider. |
 | Command     | For a local server, like `npx`.                                             |
 | Arguments   | Like `-y @modelcontextprotocol/server-filesystem ~/Desktop`.                |
 | Environment | `NAME=value`, one per line, like `GITHUB_TOKEN=…`.                          |
@@ -29,10 +31,30 @@ process runs.
 **Test Connection** runs a real handshake and reports how many tools the server offers, so a typo
 shows up here instead of halfway through a conversation.
 
-**Header values and environment values are stored in your login Keychain**, never in preferences,
+**Header values, environment values and OAuth credentials are stored in your login Keychain**, never in preferences,
 logs or backups. Removing a server deletes them.
 
 A local server runs with your own user account, so only add commands you trust.
+
+### Signing into an OAuth server
+
+Choose **HTTP**, paste the server's MCP URL, and select **OAuth**. Choose **Sign In**, complete the
+provider's browser sign-in and review its access request. Return to Tinycast when the browser says
+you can close the tab. **Signed in** confirms completion; **Test Connection** checks the authenticated
+session and reports its tool count. Save the server to use it in an API chat.
+
+Leave Client ID and Client secret blank when the provider supports automatic registration. If it
+requires your own registered OAuth client, enter its client ID and any required secret. Register
+`http://127.0.0.1:4962/callback` as its redirect URL. Sign-in expires after five minutes; if another
+app uses that port, Tinycast reports the conflict so you can free it and retry.
+
+Tinycast refreshes expiring tokens automatically. If it shows **Sign-in required**, open the server
+in Settings and sign in again. **Sign Out** disconnects it and removes its access and refresh tokens
+from this Mac. It keeps the client registration; revoke the app in the provider's settings if you
+also want to withdraw its account access there.
+
+OAuth sign-in does not change the server's tool trust setting. **Ask Each Chat** still asks before
+the first tool call.
 
 ## Using tools in a chat
 

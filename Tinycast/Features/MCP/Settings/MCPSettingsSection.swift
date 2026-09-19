@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Settings → AI's MCP half: the switch, the servers, and what each one is doing right now.
 struct MCPSettingsSection: View {
-    @Environment(AppCore.self) private var core
+    @Environment(MCPCoordinator.self) private var coordinator
     @Environment(AppSettings.self) private var appSettings
     @Environment(MCPSettingsStore.self) private var store
     @State private var editor: MCPServerEditorTarget?
@@ -21,7 +21,7 @@ struct MCPSettingsSection: View {
                 } else {
                     ForEach(store.servers) { server in
                         MCPServerRow(
-                            server: server, status: core.mcp.status(of: server.id),
+                            server: server, status: coordinator.status(of: server.id),
                             onEdit: { editor = MCPServerEditorTarget(server: server, isNew: false) },
                             onRemove: { pendingRemoval = server })
                     }
@@ -64,21 +64,17 @@ struct MCPSettingsSection: View {
     /// A returned message is shown in the panel; nil closes it.
     private func save(_ server: MCPServer, _ secrets: MCPSecretStore.Secrets) -> String? {
         do {
-            try MCPSecretStore().save(secrets, for: server.id)
+            try coordinator.save(server, secrets: secrets)
         } catch {
             return "The credentials could not be saved to your login Keychain."
         }
-        store.save(server)
         editor = nil
-        core.mcpCoordinator.applyEnabled()
         return nil
     }
 
     private func remove(_ server: MCPServer) {
-        try? MCPSecretStore().remove(for: server.id)
-        store.remove(id: server.id)
+        try? coordinator.remove(server.id)
         pendingRemoval = nil
-        core.mcpCoordinator.applyEnabled()
     }
 }
 

@@ -5,13 +5,14 @@ struct MCPSecretStore: Sendable {
     struct Secrets: Codable, Equatable, Sendable {
         var headerValue: String
         var environment: [String: String]
+        var oauth: MCPOAuth.Credentials?
 
         init(headerValue: String = "", environment: [String: String] = [:]) {
             self.headerValue = headerValue
             self.environment = environment
         }
 
-        var isEmpty: Bool { headerValue.isEmpty && environment.isEmpty }
+        var isEmpty: Bool { headerValue.isEmpty && environment.isEmpty && oauth == nil }
     }
 
     private let keychain: KeychainSecretStore

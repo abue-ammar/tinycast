@@ -40,6 +40,7 @@ struct MCPServer: Codable, Equatable, Identifiable, Sendable {
     var transport: MCPTransportKind
     var isEnabled: Bool
     var trust: MCPTrust
+    var oauth: Bool?
 
     init(
         id: UUID = UUID(), name: String = "", slug: String = "",

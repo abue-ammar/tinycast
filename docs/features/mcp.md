@@ -15,13 +15,25 @@ the two meet.
   only consumer. Both flags and `mcpServers` are excluded from settings backups — a server list is a
   source of executable code and a destination for chat context, and the flag doubles as consent to
   run it, so an import can never arrive having connected one.
-- **Credentials live only in the login Keychain.** `MCPServer` persists the endpoint, the header
-  *name*, the command, its arguments and its environment variable *names* in `UserDefaults`; it never
-  contains a secret. The HTTP header value and every environment value are one JSON item per server
-  under `KeychainSecretStore.mcpSecrets`, and never enter logs, errors or backups.
+- **Credentials live only in the login Keychain.** `MCPServer` persists the endpoint, authentication
+  mode, the header *name*, the command, its arguments and its environment variable *names* in
+  `UserDefaults`; it never contains a secret. The HTTP header value, environment values, OAuth client
+  registration and tokens are one JSON item per server under `KeychainSecretStore.mcpSecrets`, and
+  never enter logs, errors or backups.
 - **Remote endpoints require HTTPS**, through the same `AIEndpointPolicy.validate` the AI providers
   use — plain HTTP only for `localhost`, `127.0.0.1` and `::1`, and no other scheme at all. There is
   one place that decides this and MCP does not get a second one.
+- **OAuth tokens belong to one configured MCP endpoint.** Editing its URL cannot lend its token to
+  the new destination. Discovery validates every endpoint; private ephemeral sessions have no URL,
+  cookie or credential cache. OAuth endpoints — discovery, registration, token — refuse every
+  redirect. An MCP endpoint may redirect within its own origin, the `/mcp` to `/mcp/` that Python
+  servers answer with, and the credentials `URLSession` would strip are restored because the origin
+  is unchanged; a redirect to any other origin is refused, so no credential ever reaches a second
+  host. Refresh tokens go only to the token endpoint retained with their client registration.
+- **OAuth sign-in is explicit.** Settings opens the browser after discovery and PKCE S256 checks.
+  The callback binds only `127.0.0.1:4962`, validates state and any issuer parameter, accepts one
+  response and closes. Cancellation, disabling AI/MCP and the five-minute timeout also close it.
+  An occupied port fails instead of choosing another port. No custom URL scheme is involved.
 - **A tool call never enters the conversation.** The whole call-and-result round trip lives inside
   one turn, in `AIToolLoopProvider`, and what `ChatSession` keeps is a `ChatToolUse` render record —
   exactly what `ChatSearch` already is. That is deliberate: a stored `tool_call` separated from its
@@ -54,7 +66,8 @@ the two meet.
   with a JSON-RPC error. The client advertises no capabilities in `initialize`.
 - **`Model/` stays Foundation-only.** `mcp-test` compiles the shipped models and pins the framing,
   handles, tool names, output flattening, trust and addressing; `mcp-stdio-test` drives a real
-  subprocess.
+  subprocess. `mcp-oauth-test` pins OAuth parsing, PKCE, endpoint binding, callback lifetime,
+  registration, refresh coalescing, redirects and bounded 401 recovery.
 
 ## Transports
 
@@ -78,6 +91,34 @@ because the owner's own `close()` would otherwise overwrite the real reason with
 The command is found by `Platform/ExecutableLocator`, which asks a login shell first and only then
 walks PATH, the usual install prefixes and every nvm Node version — a GUI app inherits Finder's PATH,
 which has none of `npx`, `uvx` or `node` on it.
+
+## HTTP OAuth
+
+`AppCore` owns `MCPOAuthManager`; Settings and server connections use that same Keychain-backed
+session. `MCPOAuth` and `MCPOAuthRequest` hold Foundation-only protocol decisions, with entropy,
+hashing and time injected. `MCPOAuthService` performs discovery and exchanges; `MCPOAuthListener`
+owns the Network.framework loopback callback.
+
+Sign In probes the MCP endpoint without credentials, reads the Bearer `resource_metadata` challenge,
+or tries path-specific then root RFC 9728 discovery. The first advertised authorization server is
+resolved through RFC 8414, with the OIDC discovery locations as fallbacks. Its issuer must match,
+a trailing slash aside — Google advertises one and publishes none — and it must advertise S256. A supplied client ID and optional secret take precedence;
+otherwise Tinycast uses RFC 7591 dynamic registration with a native public client. CIMD and device
+flow are not implemented.
+
+The canonical configured MCP URL is the RFC 8707 `resource` on authorization and token requests.
+Protected-resource metadata may describe an ancestor path on the same origin, matching current MCP
+SDK behavior; sibling paths and other origins are rejected. Saved tokens remain bound to the exact
+configured endpoint. This is deliberately broader than RFC 9728's exact resource-match wording.
+
+Access tokens refresh within 60 seconds of expiry. Concurrent requests share one refresh, and
+rotated refresh tokens replace the old token in the same Keychain item. A 401 permits one refresh
+and retry; a refresh the authorization server rejects (400 or 401) or a repeated 401 clears the live
+tool catalog and reports **Sign-in required**. A refresh that could not be served — offline, a
+timeout, a 5xx — is a network failure: the session is kept and the next request refreshes again.
+A failed tool call remains a tool result the model can explain. Sign Out disconnects the
+server and deletes its access and refresh tokens, retaining the client registration for the next
+sign-in; it does not revoke the provider-side grant.
 
 ## Tool names
 
@@ -110,13 +151,19 @@ that must arrive as **one** user turn however many of them there are.
 
 `MCPSettingsSection` is a section inside Settings → AI, the way `AICommandSection` is. Each row leads
 with the handle, because that is the half a reader has to type, then the live status and the
-transport. `MCPServerEditor` is the editor panel: name, HTTP or command, the credential, enabled, trust, and
-a Test Connection button that runs a real handshake so a typo is caught there rather than in the
-middle of a conversation.
+transport. `MCPServerEditor` reaches `MCPCoordinator` through its environment. The editor holds name,
+HTTP or command, Header or OAuth authentication, optional client ID/secret, one Sign In / Cancel / Sign Out button and live
+sign-in status, enabled, trust, and a Test Connection button that runs a real handshake so a typo is
+caught there rather than in the middle of a conversation.
 
 ## Manual sweep
 
 - An HTTP server with a bearer header reports its tool count from Test Connection and from its row.
+- An OAuth-only server signs in through the browser with client fields empty when DCR is available;
+  Test Connection and a BYOK chat use the session. Repeat with supplied client credentials.
+- Relaunch retains the sign-in, refresh retains connectivity, and Sign Out makes Test Connection
+  report Sign-in required. Changing the endpoint never sends the old token to the new endpoint.
+- Cancelling sign-in or occupying port 4962 leaves no listener or stale successful sign-in behind.
 - A stdio server (`npx -y @modelcontextprotocol/server-filesystem ~/Desktop`) reaches ready; its
   process is gone ten minutes after the palette closes, and immediately on Quit.
 - A question answered with a tool shows the row inline, spinner then glyph, and the reply continues
@@ -128,6 +175,6 @@ middle of a conversation.
 - On Apple Intelligence or a ChatGPT model, no tool is offered and the reply streams as before.
 - Switching MCP off, then AI off, leaves no server process resident.
 - A settings backup carries neither a server nor the flag.
-- Harnesses: `mcp-test` and `mcp-stdio-test`, plus the tool halves of `ai-provider-test`
+- Harnesses: `mcp-test`, `mcp-stdio-test` and `mcp-oauth-test`, plus the tool halves of `ai-provider-test`
   (catalog and turn encoding, fragmented argument decoding) and `ai-chat-test` (the loop, its cap,
   its output bounds, and tool-use persistence).

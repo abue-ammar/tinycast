@@ -7,13 +7,15 @@ import Observation
 final class MCPServerManager {
     private(set) var connections: [UUID: MCPServerConnection] = [:]
 
+    @ObservationIgnored private let oauth: MCPOAuthManager?
     @ObservationIgnored private let secrets: MCPSecretStore
     @ObservationIgnored private var idleTask: Task<Void, Never>?
 
     /// Servers outlive one summon but not an afternoon; a resident helper is the memory budget.
     private static let idleTimeout: Duration = .seconds(600)
 
-    init(secrets: MCPSecretStore = MCPSecretStore()) {
+    init(secrets: MCPSecretStore = MCPSecretStore(), oauth: MCPOAuthManager? = nil) {
+        self.oauth = oauth
         self.secrets = secrets
     }
 
@@ -35,7 +37,7 @@ final class MCPServerManager {
         for server in servers {
             guard let existing = connections[server.id] else {
                 let connection = MCPServerConnection(
-                    server: server, secrets: secrets.secrets(for: server.id))
+                    server: server, secrets: secrets.secrets(for: server.id), oauth: oauth)
                 connections[server.id] = connection
                 Task { await connection.start() }
                 continue
@@ -48,6 +50,10 @@ final class MCPServerManager {
 
     func connection(slug: String) -> MCPServerConnection? {
         connections.values.first { $0.server.slug == slug }
+    }
+
+    func disconnect(_ id: UUID) {
+        connections.removeValue(forKey: id)?.stop()
     }
 
     func stop() {

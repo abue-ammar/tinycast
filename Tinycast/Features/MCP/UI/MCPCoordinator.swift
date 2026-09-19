@@ -1,7 +1,9 @@
 import Foundation
+import Observation
 
 /// MCP's action surface: what is running, what the model may call, and who is asked first.
 @MainActor
+@Observable
 final class MCPCoordinator {
     private let settings: AppSettings
     private let store: MCPSettingsStore
@@ -9,7 +11,7 @@ final class MCPCoordinator {
     private unowned let core: AppCore
 
     /// Servers this conversation has already been asked about; a new chat asks again.
-    private var chatGrants: (chat: UUID, servers: Set<UUID>) = (UUID(), [])
+    @ObservationIgnored private var chatGrants: (chat: UUID, servers: Set<UUID>) = (UUID(), [])
 
     init(
         settings: AppSettings, store: MCPSettingsStore, manager: MCPServerManager, core: AppCore
@@ -25,6 +27,7 @@ final class MCPCoordinator {
     /// Off means off: no connection, no resident process, and nothing offered to a model.
     func applyEnabled() {
         guard isActive else {
+            core.mcpOAuth.stop()
             manager.stop()
             return
         }
@@ -76,6 +79,59 @@ final class MCPCoordinator {
         } catch {
             return .failure(call.id, error.localizedDescription)
         }
+    }
+
+    func signIn(_ server: MCPServer, credentials: MCPOAuth.Credentials) async throws {
+        guard isActive else { throw MCPOAuth.Failure.signInRequired }
+        manager.disconnect(server.id)
+        try await core.mcpOAuth.signIn(server: server, credentials: credentials)
+    }
+
+    func signOut(_ id: UUID) throws {
+        manager.disconnect(id)
+        try core.mcpOAuth.signOut(id)
+    }
+
+    func cancelSignIn(_ id: UUID) { core.mcpOAuth.cancel(id) }
+
+    func status(of id: UUID) -> MCPServerStatus { manager.status(of: id) }
+
+    func save(_ server: MCPServer, secrets: MCPSecretStore.Secrets) throws {
+        try MCPSecretStore().save(secrets, for: server.id)
+        core.mcpOAuth.cancel(server.id)
+        manager.disconnect(server.id)
+        store.save(server)
+        applyEnabled()
+    }
+
+    func remove(_ id: UUID) throws {
+        core.mcpOAuth.cancel(id)
+        try MCPSecretStore().remove(for: id)
+        store.remove(id: id)
+        applyEnabled()
+    }
+
+    func discardUnsaved(_ id: UUID) {
+        cancelSignIn(id)
+        if store.server(id: id) == nil { try? MCPSecretStore().remove(for: id) }
+    }
+
+    func authenticationStatus(
+        _ server: MCPServer, stored: MCPOAuth.Credentials?
+    ) -> MCPOAuthManager.Status {
+        core.mcpOAuth.status(for: server, stored: stored)
+    }
+
+    func test(_ server: MCPServer, secrets: MCPSecretStore.Secrets) async -> MCPServerStatus {
+        if server.oauth == true {
+            let stored = MCPSecretStore().secrets(for: server.id).oauth
+            guard stored?.clientID == secrets.oauth?.clientID,
+                stored?.clientSecret == secrets.oauth?.clientSecret else { return .signInRequired }
+        }
+        let connection = MCPServerConnection(server: server, secrets: secrets, oauth: core.mcpOAuth)
+        defer { connection.stop() }
+        await connection.start()
+        return connection.status
     }
 
     private func isPermitted(_ server: MCPServer, tool: String, in chat: UUID) async -> Bool {

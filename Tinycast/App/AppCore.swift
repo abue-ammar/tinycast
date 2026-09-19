@@ -56,7 +56,8 @@ final class AppCore {
     let aiSettings = AISettingsStore(
         isAppleIntelligenceAvailable: { AppleIntelligenceProvider.status().isAvailable })
     let mcpSettings = MCPSettingsStore()
-    let mcp = MCPServerManager()
+    let mcpOAuth = MCPOAuthManager()
+    @ObservationIgnored private(set) lazy var mcp = MCPServerManager(oauth: mcpOAuth)
     let quickActionSettings = QuickActionSettingsStore()
     let customQuickActions = CustomQuickActionStore()
     let chatGPTSubscription = ChatGPTSubscriptionManager()
@@ -486,6 +487,7 @@ final class AppCore {
         snippetsStore.stop()
         aiChat.cancel()
         chatGPTSubscription.stop()
+        mcpOAuth.stop()
         mcp.stop()
         installedAI.stop()
     }
