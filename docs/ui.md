@@ -166,8 +166,9 @@ Notes adds `noteWindow 520×420` (opening size on a first run only), `noteWindow
 
 ### Typography (`Theme.Typography`)
 
-System text styles only — **no fixed point sizes in views**. Two named exceptions are explicit:
-`searchField` (20pt Regular) and the optical SF Symbol treatment `menuSymbol` (14pt Medium). Use
+System text styles only — **no fixed point sizes in views**. Three named exceptions are explicit:
+`searchField` (20pt Regular), the optical SF Symbol treatment `menuSymbol` (14pt Medium), and
+`fontSpecimenSize` (13pt), which the interface-font picker draws each family's own name at. Use
 `rowTitle` (`.body`), `sectionHeader` (`.subheadline.medium`),
 `rowTrailing`/`bar`/`menuRow`/`keyCap` etc. as named.
 

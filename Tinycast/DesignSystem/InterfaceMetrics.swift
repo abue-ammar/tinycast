@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// `Theme`'s palette geometry at the user's Interface Size and font; `.standard` is `Theme` verbatim.
+/// `Theme`'s palette geometry at the user's Interface Size and font; `.standard` is `Theme`.
 struct InterfaceMetrics: Equatable, Sendable {
     static let standard = InterfaceMetrics(scale: 1)
 
@@ -152,7 +152,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         @MainActor var searchFieldNSFont: NSFont {
             isStandard ? Theme.Typography.searchFieldNSFont : sizedFont(searchFieldSize, .regular)
         }
-        /// Sizes an SF Symbol, not text: a family swap would drop the symbol's weight and scale mapping.
+        /// Sizes an SF Symbol, not text: a family swap would drop its weight and scale mapping.
         var headerIcon: Font {
             scale == 1
                 ? Theme.Typography.headerIcon
@@ -170,13 +170,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var markdownHeading1: Font { font(Theme.Typography.markdownHeading1, .title2, .semibold) }
         var markdownHeading2: Font { font(Theme.Typography.markdownHeading2, .title3, .semibold) }
         var markdownHeading3: Font { font(Theme.Typography.markdownHeading3, .headline) }
-        /// A chosen family is the one font everywhere, so it outranks the monospaced design here.
-        var code: Font {
-            guard fontFamily == nil else { return font(Theme.Typography.code, .callout) }
-            return scale == 1
-                ? Theme.Typography.code
-                : .system(size: nsFont(.callout).pointSize, design: .monospaced)
-        }
+        var code: Font { monospaced(Theme.Typography.code, .callout) }
         var inlineCode: Font {
             guard !isStandard else { return Theme.Typography.inlineCode }
             let resolved = font(Theme.Typography.inlineCode, .body)
@@ -193,17 +187,18 @@ struct InterfaceMetrics: Equatable, Sendable {
         var menuShortcut: Font { font(Theme.Typography.menuShortcut, .callout) }
         var menuIcon: Font { systemFont(Theme.Typography.menuIcon, .body) }
         var cardTitle: Font { font(Theme.Typography.cardTitle, .title3, .semibold) }
-        var previewCode: Font {
-            guard fontFamily == nil else { return font(Theme.Typography.previewCode, .subheadline) }
-            return scale == 1
-                ? Theme.Typography.previewCode
-                : .system(size: nsFont(.subheadline).pointSize, design: .monospaced)
-        }
+        var previewCode: Font { monospaced(Theme.Typography.previewCode, .subheadline) }
         /// An oversized SF Symbol, so it stays on the system face like the other symbol tokens.
         var placeholderGlyph: Font { systemFont(Theme.Typography.placeholderGlyph, .largeTitle) }
         /// Notes sits a style above the app and never scales, so only the family reaches it.
         var noteTitle: Font {
             Typography(scale: 1, fontFamily: fontFamily).font(Theme.Typography.noteTitle, .headline)
+        }
+
+        /// A chosen family is the one font everywhere, so it outranks the monospaced design.
+        private func monospaced(_ base: Font, _ style: NSFont.TextStyle) -> Font {
+            guard fontFamily == nil else { return font(base, style) }
+            return scale == 1 ? base : .system(size: nsFont(style).pointSize, design: .monospaced)
         }
 
         /// Composed like `Theme`'s own: the style carries the face, an explicit weight overrides it.
