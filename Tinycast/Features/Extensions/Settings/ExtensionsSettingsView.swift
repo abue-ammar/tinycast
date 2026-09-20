@@ -528,8 +528,8 @@ private struct CommandRows: View {
         if command.mode == .menuBar {
             SettingsCardRow(title: "Show in menu bar", indent: Theme.Spacing.lg) {
                 Toggle("Show in menu bar", isOn: Binding(
-                    get: { core.extensions.menuBarIsEnabled(reference) },
-                    set: { core.extensions.setMenuBarEnabled($0, reference: reference) }))
+                    get: { core.extensionCoordinator.menuBarIsEnabled(reference) },
+                    set: { core.extensionCoordinator.setMenuBarEnabled($0, reference: reference) }))
                     .labelsHidden()
             }
         }

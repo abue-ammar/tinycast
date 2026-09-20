@@ -191,6 +191,14 @@ final class ExtensionCoordinator {
         }
     }
 
+    func menuBarIsEnabled(_ reference: ExtensionCommandRef) -> Bool {
+        extensions.menuBarIsEnabled(reference)
+    }
+
+    func setMenuBarEnabled(_ enabled: Bool, reference: ExtensionCommandRef) {
+        extensions.setMenuBarEnabled(enabled, reference: reference)
+    }
+
     /// The arguments a row declares, or nil — what decides whether the header shows inline fields.
     func commandArguments(for entry: AppEntry?) -> [ExtensionCommandArgument]? {
         guard let entry, entry.kind == .extensionCommand,
