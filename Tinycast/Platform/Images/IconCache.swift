@@ -449,7 +449,8 @@ enum IconCache {
             let rep = NSBitmapImageRep(
                 bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
                 samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                bytesPerRow: 0, bitsPerPixel: 0),
+                bitmapFormat: [], bytesPerRow: 0, bitsPerPixel: 32),
+            let data = rep.bitmapData,
             let ctx = NSGraphicsContext(bitmapImageRep: rep)
         else { return nil }
         rep.size = NSSize(width: pixels, height: pixels)
@@ -460,9 +461,10 @@ enum IconCache {
 
         var minX = pixels, maxX = -1, minY = pixels, maxY = -1
         for y in 0..<pixels {
+            let row = data.advanced(by: y * rep.bytesPerRow)
             for x in 0..<pixels {
-                // A faint antialiased edge isn't artwork; 0.06 keeps a drop shadow from counting.
-                guard let colour = rep.colorAt(x: x, y: y), colour.alphaComponent > 0.06 else {
+                // Alpha above 0.06 starts at byte 16; fainter shadows do not count as artwork.
+                guard row[x * 4 + 3] >= 16 else {
                     continue
                 }
                 minX = min(minX, x)
