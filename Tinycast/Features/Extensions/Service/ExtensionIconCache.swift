@@ -67,9 +67,11 @@ enum ExtensionIconCache {
 
     /// No renderer knows a `raycast-*` colour keyword, so the shape would draw nothing.
     private static func resolvingPaletteNames(in data: Data, palette: [String: String]) -> Data {
-        guard !palette.isEmpty, let source = String(data: data, encoding: .utf8),
-            let rewritten = rewritingNames(in: source, palette: palette)
-        else { return data }
+        guard let source = String(data: data, encoding: .utf8) else { return data }
+        let resolved = rewritingNames(in: source, palette: palette) ?? source
+        let rewritten = resolved.replacing(#/(fill|stroke)(\s*=\s*["']|\s*:\s*)transparent\b/#) {
+            "\($0.1)\($0.2)none"
+        }
         return Data(rewritten.utf8)
     }
 
