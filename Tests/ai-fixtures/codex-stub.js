@@ -15,6 +15,7 @@ const ROOT = process.env.TC_STUB_ROOT;
 const MODE = process.env.TC_STUB_MODE ?? "hold-turn";
 const THREAD = "thread-1";
 const TURN = "turn-1";
+const ARGV = process.argv.slice(2);
 
 // Synchronous throughout, like the blocking script this replaces: the stalls below are the point,
 // and an event loop would read the next line while one of them is still holding.
@@ -57,7 +58,76 @@ function* lines() {
     }
 }
 
-for (const line of lines()) {
+// `mcp list --json` is a separate, short-lived invocation: it is how the app-server's launch
+// learns which of the user's own servers to disable, without starting a single one of them.
+if (ARGV.includes("mcp") && ARGV.includes("list")) {
+    fs.writeFileSync(path.join(ROOT, "list-argv.log"), JSON.stringify(ARGV) + "\n");
+    fs.writeSync(
+        1,
+        JSON.stringify([
+            { name: "user-one", enabled: true, transport: { type: "stdio" } },
+            { name: "user-two", enabled: true, transport: { type: "streamable_http" } },
+        ]) + "\n");
+    process.exit(0);
+}
+
+fs.appendFileSync(path.join(ROOT, "argv.log"), JSON.stringify(ARGV) + "\n");
+fs.appendFileSync(
+    path.join(ROOT, "env.log"),
+    JSON.stringify(
+        Object.fromEntries(
+            Object.entries(process.env).filter(([key]) => key.startsWith("TC_MCP_")))) + "\n");
+
+/** One MCP call, from the item that names it to the elicitation that gates it. */
+function toolCall(index, read) {
+    const item = {
+        type: "mcpToolCall",
+        id: `call-${index}`,
+        server: "probe",
+        tool: "safe_echo",
+        status: "inProgress",
+        arguments: { message: "one" },
+        readOnlyHint: false,
+    };
+    emit({ method: "item/started", params: { threadId: THREAD, item } });
+    if (MODE !== "mcp") return;
+    emit({
+        id: 900 + index,
+        method: "mcpServer/elicitation/request",
+        params: {
+            serverName: "probe",
+            threadId: THREAD,
+            turnId: TURN,
+            message: "Allow the probe MCP server to run tool “safe_echo”?",
+            _meta: {
+                codex_approval_kind: "mcp_tool_call",
+                persist: ["session", "always"],
+                tool_title: "Safe Echo",
+                tool_params: { message: "one" },
+            },
+        },
+    });
+    const reply = JSON.parse(read.next().value ?? "{}");
+    record(`elicitation:${JSON.stringify(reply.result ?? reply.error ?? {})}`);
+    const accepted = reply.result && reply.result.action === "accept";
+    emit({
+        method: "item/completed",
+        params: {
+            threadId: THREAD,
+            item: {
+                ...item,
+                status: accepted ? "completed" : "failed",
+                error: accepted ? null : { message: "user rejected MCP tool call" },
+            },
+        },
+    });
+}
+
+const input = lines();
+for (;;) {
+    const next = input.next();
+    if (next.done) break;
+    const line = next.value;
     if (!line.trim()) continue;
     const message = JSON.parse(line);
     const method = message.method;
@@ -65,9 +135,21 @@ for (const line of lines()) {
     record(method ?? "?");
 
     if (method === "thread/start") {
+        record(`thread-params:${JSON.stringify(message.params ?? {})}`);
         emit({ id: requestID, result: { thread: { id: THREAD } } });
     } else if (method === "turn/start") {
         record(`turn-params:${JSON.stringify(message.params ?? {})}`);
+        if (MODE === "mcp" || MODE === "mcp-rounds") {
+            emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });
+            emit({ id: requestID, result: { turn: { id: TURN } } });
+            const calls = MODE === "mcp-rounds" ? 3 : 1;
+            for (let index = 1; index <= calls; index += 1) toolCall(index, input);
+            emit({
+                method: "turn/completed",
+                params: { threadId: THREAD, turn: { id: TURN, status: "completed" } },
+            });
+            continue;
+        }
         mark("turn-start-received");
         awaitMark("stop-landed");
         emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });

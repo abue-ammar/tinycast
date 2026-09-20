@@ -108,7 +108,7 @@ struct AIModelCapabilities: Equatable, Sendable {
     /// A PDF as a native block; four routes have no field for one, so it is refused, never dropped.
     let documents: Bool
     let webSearch: Bool
-    /// Only the two HTTP shapes; the Codex route declines tools and the on-device one has none.
+    /// Every route but the on-device one and the three CLIs with no MCP switch of their own.
     let tools: Bool
 
     static let none = AIModelCapabilities(
@@ -116,7 +116,10 @@ struct AIModelCapabilities: Equatable, Sendable {
     static let chatGPT = AIModelCapabilities(
         images: true, documents: false, webSearch: true, tools: false)
     static let codex = AIModelCapabilities(
-        images: true, documents: false, webSearch: true, tools: false)
+        images: true, documents: false, webSearch: true, tools: true)
+    /// Text only, but its own client runs Tinycast's MCP servers when the reader has any.
+    static let claudeCommand = AIModelCapabilities(
+        images: false, documents: false, webSearch: false, tools: true)
     /// The on-device model is text-only and reaches nothing, so it offers none of the three.
     static let appleIntelligence = AIModelCapabilities.none
 }
@@ -139,6 +142,15 @@ enum AIModelSelection: Codable, Equatable, Hashable, Sendable {
     case openCode(model: String, effort: String?)
     case cursor(model: String, effort: String?)
     case api(connection: UUID, model: String, effort: String?)
+
+    /// The routes whose own client is the MCP client: Tinycast hands them servers rather than
+    /// wrapping them in its tool loop, and they answer consent through `AIToolServerSession`.
+    var runsItsOwnTools: Bool {
+        switch self {
+        case .codex, .claude: return true
+        case .appleIntelligence, .grok, .openCode, .cursor, .api: return false
+        }
+    }
 
     var source: AIModelSource {
         switch self {

@@ -510,9 +510,12 @@ final class AppCore {
         return Task { for task in tasks { await task.value } }
     }
 
-    func aiProvider() throws -> any AIProvider {
+    /// `toolServers` is chat's alone: it is how a route whose own client runs the tool loop
+    /// reaches Tinycast's MCP servers, and a quick action has nothing to call.
+    func aiProvider(toolServers: AIToolServerSession? = nil) throws -> any AIProvider {
         try AIProviderFactory.make(
-            settings: aiSettings, subscription: chatGPTSubscription, installedAI: installedAI)
+            settings: aiSettings, subscription: chatGPTSubscription, installedAI: installedAI,
+            toolServers: toolServers)
     }
 
     /// Permissive guardrails: the text transformed is the reader's own, which `.default` refuses.

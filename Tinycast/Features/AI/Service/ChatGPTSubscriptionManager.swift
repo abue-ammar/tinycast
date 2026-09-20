@@ -24,9 +24,9 @@ final class ChatGPTSubscriptionManager {
         client = CodexAppServerClient(
             workspace: root.appending(path: "Workspace", directoryHint: .isDirectory))
         turns = CodexTurnRunner(client: client)
-        turns.connect = { [weak self] in
+        turns.connect = { [weak self] servers in
             guard let self else { throw CancellationError() }
-            try await self.ensureConnected()
+            try await self.ensureConnected(toolServers: servers)
             return self.models
         }
         turns.onTurnEnded = { [weak self] in self?.turnDidEnd() }
@@ -61,9 +61,11 @@ final class ChatGPTSubscriptionManager {
     }
 
     /// What a turn needs before it starts: a running server and a signed-in account.
-    private func ensureConnected() async throws {
+    private func ensureConnected(toolServers: [AIToolServer]) async throws {
         idleTask?.cancel()
-        try await client.start()
+        // A changed list relaunches the server: its overrides and environment are fixed at exec.
+        // The account outlives that, so it is read once and not again for the new process.
+        try await client.start(toolServers: toolServers)
         if account == nil, try await restoreAccount() {
             phase = .connected
             await loadModelsAndLimits()
@@ -93,7 +95,9 @@ final class ChatGPTSubscriptionManager {
     private func refreshNow() async {
         phase = .starting
         do {
-            try await client.start()
+            // A check is not a turn: it keeps whatever list is already running rather than
+            // relaunching a server twice around it.
+            try await client.start(toolServers: client.toolServers)
             guard try await restoreAccount() else {
                 phase = .signedOut
                 client.stop()
@@ -231,8 +235,10 @@ struct CodexInstalledProvider: AIProvider {
     let turns: CodexTurnRunner
     let model: String
     let effort: String?
+    /// Set only by chat: a quick action has nothing to call and arms no server.
+    var toolServers: AIToolServerSession?
 
     func stream(_ request: AIRequest) -> AIProviderStream {
-        turns.stream(request, model: model, effort: effort)
+        turns.stream(request, model: model, effort: effort, toolServers: toolServers)
     }
 }

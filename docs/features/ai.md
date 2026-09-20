@@ -40,8 +40,9 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   hosted server from Settings and keep its client credentials and tokens in that server's Keychain
   item. API chat uses this session without receiving its credentials. A rejected refresh becomes
   Sign-in required on the server, an unserved one does not end the session, and either way a
-  running tool loop receives an explainable failure result.
-  This does not offer Tinycast's MCP servers to installed CLI or on-device routes. See [MCP](mcp.md).
+  running tool loop receives an explainable failure result. The same session is lent to the Codex
+  and Claude routes as a bearer header, so a hosted server is signed into once for every route.
+  See [MCP](mcp.md).
 - **The chat model is the routing decision.** It names the on-device model, a model exposed by the
   installed Codex, Claude, Grok, OpenCode or Cursor command, or one saved API connection and model. Installed
   routes also carry their reasoning effort when the selected model supports one. A removed route
@@ -64,38 +65,53 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   `opencode` executable without asking for or storing another key. Codex inherits the user's normal
   home and credential-store setting; Claude, Grok, OpenCode and Cursor inherit their normal configuration. Tinycast
   never reads those credential files, browser cookies or undocumented web endpoints.
-- **Codex tools are unavailable.** The app-server launches with tool capabilities disabled, approvals
-  set to never and a read-only, network-disabled sandbox. Any server approval request is declined.
-  [MCP](mcp.md) does not lift this: `AIModelCapabilities.tools` is false for the subscription route
-  and for the on-device one, so only the two HTTP shapes are ever handed a tool.
-- **Tool calling is a decorator, not a transport change.** `AIToolLoopProvider` wraps a route and
-  re-streams the turn until the model stops asking, so a route with no tools behaves exactly as it
-  did and `AIChatState` reduces one more pair of events. Only chat wraps: `quickActionProvider()`
+- **Codex runs Tinycast's MCP servers and nothing else.** The app-server still launches with every
+  feature flag off and a read-only, network-disabled sandbox, and every server request but one is
+  declined. What changed is the list: the servers the reader configured for their own Codex are
+  disabled by name at launch — which they were not before, so they used to start inside Tinycast
+  threads — and the servers [MCP](mcp.md) supplies take their place when a chat has any. A turn
+  that arms none keeps `approvalPolicy: "never"`; a turn that arms some uses `"untrusted"`, where
+  a tool call becomes an elicitation Tinycast answers from the reader's own trust setting.
+- **Tool calling is a decorator, except where the CLI is the client.** `AIToolLoopProvider` wraps a
+  route and re-streams the turn until the model stops asking, so a route with no tools behaves
+  exactly as it did and `AIChatState` reduces one more pair of events. Codex and the Claude command
+  run that loop themselves, so `AIModelSelection.runsItsOwnTools` hands them an
+  `AIToolServerSession` instead of a wrapper — same servers, same trust, same rows, and the same
+  round cap counted in whatever unit the CLI counts in. Only chat wraps or arms: `quickActionProvider()`
   rewrites the reader's own selected text and has nothing to call. A turn's tool messages stay inside
   the loop — what the transcript keeps is a `ChatToolUse` record, pinned at a text offset like a
   search, so `boundedContext` can never separate a stored call from its result.
 - **Every HTTP request uses a private ephemeral `URLSession` with no URL cache.** Provider traffic must
   not create a second credential or response cache on disk.
 - **`Model/` stays Foundation-only.** `ai-provider-test` compiles the shipped provider models and pins
-  endpoints, request bodies, stream parsing, persistence repair and Codex protocol framing. Request
+  endpoints, request bodies, stream parsing, persistence repair, Codex protocol framing and both
+  CLI routes' MCP launch encodings. Request
   bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
   conversation. `installed-ai-test` runs the Claude, Grok, OpenCode and Cursor adapters against real
   subprocess stubs and pins their safety boundaries.
-- **Claude, Grok, OpenCode and Cursor are text transports, not agents.** Claude runs one turn with no tools,
-  browser integration, slash commands or persisted session — but never `--bare`, which reads neither
-  OAuth nor the keychain and so refuses the very sign-in this route reuses. Grok runs with `--deny *`,
+- **Grok, OpenCode and Cursor are text transports, not agents, and so is Claude with no server to
+  run.** Claude runs one turn with no tools, browser integration, slash commands or persisted
+  session — but never `--bare`, which reads neither
+  OAuth nor the keychain and so refuses the very sign-in this route reuses. Given servers by
+  [MCP](mcp.md) it becomes an agent for that turn and only over those: `--tools ""` still withholds
+  every built-in, the turn runs `--input-format stream-json` so consent has a pipe to answer on,
+  `--disallowedTools "*"` comes off because it removes the MCP tools too, and `--max-turns` carries
+  the round cap instead of the constant 1. Grok runs with `--deny *`,
   `dontAsk` permissions and a workspace sandbox, and never `--always-approve`, so a user's always-approve
   config cannot arm tools for this route. OpenCode runs `--pure` with deny-all permissions, disabled
   sharing and a private working directory. Cursor runs `agent -p --mode ask` with `--trust` against
   Tinycast's private workspace and never `--force` / `--yolo` / `--approve-mcps`; ask mode blocks edits.
   Each deletes the session or chat it created once the child exits, and Tinycast never reaches into the
   user's own config to do it. **Only Claude keeps the user's MCP servers out of the process**, through
-  `--strict-mcp-config` with an empty config — and even that yields to an installed managed MCP policy,
-  which makes the CLI reject both flags. Grok, OpenCode and Cursor load the global config either way,
+  `--strict-mcp-config` — whether the config it names is empty or Tinycast's own — and even that
+  yields to an installed managed MCP policy, which makes the CLI reject both flags and leaves MCP
+  on that route the organization's decision; the Providers row says so.
+  Grok, OpenCode and Cursor load the global config either way,
   because their configs merge with no opt-out; what refuses the call is `--deny *` for Grok,
   `permission: deny` for OpenCode and withheld MCP approval for Cursor. Cursor's is the only one resting
   on an approval prompt rather than an explicit deny, which is why its Providers row says so and the
-  others do not. None of these routes offer images or web search.
+  others do not. That is also why none of the three may be handed a server: there is no way to offer
+  one without offering the reader's own. None of these routes offer images or web search.
 - **Chat is a palette screen, not another window** — including its lifetime. The launcher command
   enters `.ai`; its search field is the composer, and the shared footer's primary pill is Return's
   job: Send (`↵`), or Stop (`↵`) while a response streams — followed by Actions (`⌘K`), which owns
@@ -320,6 +336,9 @@ and `MCPCoordinator` the twentieth.
   and confirm Chat and each model-backed Quick Action use it without showing a credential field.
 - Sign out of an installed command, press Check Again, and confirm its models leave both pickers while
   the stored selection is repaired according to the normal routing rule.
+- On Codex and on the Claude command, with an MCP server enabled, a question answered with a tool
+  shows the same rows the API routes show and the reply continues after them; with MCP off, both
+  routes stream exactly as they did before.
 - With `Opens to: Recent Conversation` and a five-minute window, Escape out and summon again inside
   five minutes resumes the transcript; past it, the composer is empty. Quitting and relaunching still
   reopens the last conversation. `A New Conversation` is always empty.
@@ -327,11 +346,13 @@ and `MCPCoordinator` the twentieth.
   `ai-chats.sqlite3`. Switching AI off, waiting past a boundary and switching back on prunes nothing
   that was saved before it went off.
 - Harnesses: `ai-provider-test` (endpoints, request bodies, stream decoding, persistence repair,
-  Codex framing, on-device routing), `ai-chat-test` (`ChatSession`, `MarkdownBlock`,
-  `ChatHistoryStore`, `AIToolLoopProvider`),
+  Codex framing, on-device routing, the two MCP launch encodings and the two consent channels),
+  `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore`, `AIToolLoopProvider`),
   `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
-  turn ID, plus the no-config-mutation boundary), `installed-ai-test` (Claude/Grok/OpenCode/Cursor flags, prompt
-  framing, streaming and cleanup) and `apple-intelligence-test` (status copy, snapshot deltas,
+  turn ID, plus the MCP launch boundary, the elicitation, the rows and the call cap),
+  `installed-ai-test` (Claude/Grok/OpenCode/Cursor flags, prompt
+  framing, streaming and cleanup, and Claude's private MCP configuration, control channel, round
+  cap and managed-policy branch) and `apple-intelligence-test` (status copy, snapshot deltas,
   transcript assembly, error mapping, plus one real generation when this Mac can run one), all in
   `run-tests.sh`.
 
@@ -353,6 +374,12 @@ only a private working directory. The server stops after ten idle minutes, when 
 when the app terminates, and restarts on demand. Account state, model availability and rate-limit
 windows come from the supported app-server protocol.
 
+MCP is the one thing about that server that is fixed at `exec`: its overrides and its environment
+both are, so `CodexAppServerClient` remembers the list it was launched with and relaunches when the
+next turn wants a different one — a server added or removed, or an OAuth token refreshed. A check
+is not a turn and keeps whatever is already running. The account survives the relaunch because it
+was never the process's to begin with. See [MCP](mcp.md) for what goes on the launch line.
+
 `CodexTurnRunner` is the generation half behind `CodexInstalledProvider`.
 
 It creates an ephemeral thread for each request, injects prior user/assistant messages, and
@@ -370,7 +397,10 @@ out as `image` input parts with data URLs, and as `input_image` when prior turns
 `InstalledCLITurnRunner` handles Claude, Grok, OpenCode and Cursor behind the same provider protocol. It
 frames Tinycast's instructions and bounded conversation history as stdin (or a private `--prompt-file` for
 Grok, whose CLI requires a path), consumes newline-delimited JSON, and never puts prompt text on the
-process command line. Claude uses stream JSON, `--effort` and no session persistence.
+process command line. Claude uses stream JSON, `--effort` and no session persistence. With servers
+armed it takes its turn as one framed `stream-json` line instead, keeps stdin open for the consent
+channel and closes it on the CLI's own result frame; writes are chained rather than concurrent,
+because two racing the same pipe would interleave a line.
 Grok uses `streaming-messages-json` and `--effort`, with `--deny *` so tools cannot run even when the
 user's Grok config is always-approve; it captures the session id, then calls `grok sessions delete`.
 OpenCode runs pure with an inline deny-all configuration and passes the selected
@@ -394,8 +424,8 @@ transport code at all.
 | Route | Web search | Images | PDFs | MCP tools |
 | --- | --- | --- | --- | --- |
 | Apple Intelligence | never — it reaches nothing | never — the model is text-only | never | never |
-| Codex | thread-scoped `web_search` config | `image` input part | never — the app-server takes no document part | never — its tools are disabled by design |
-| Claude command | never | never | never | none load — `--strict-mcp-config` with an empty config, unless a managed MCP policy forces both flags off |
+| Codex | thread-scoped `web_search` config | `image` input part | never — the app-server takes no document part | Tinycast's servers, added as launch overrides; the reader's own are disabled by name |
+| Claude command | never | never | never | Tinycast's servers, through `--strict-mcp-config` and a private config file — an empty one when there are none, and neither flag under a managed MCP policy |
 | Grok command | never | never | never | the global config still loads — `--deny *` refuses the call |
 | OpenCode command | never | never | never | the global config still loads — `permission: deny` refuses the call |
 | Cursor command | never | never | never | the global config still loads — ask mode and withheld approval refuse the call |

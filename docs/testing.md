@@ -130,7 +130,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `backup-archive-test` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
 | `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
 | `support-test` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
-| `mcp-test` | `MCP/Model/` and `MCPSettingsStore` — JSON-RPC framing, handles, tool names, output flattening, trust, `@server` addressing |
+| `mcp-test` | `MCP/Model/` and `MCPSettingsStore` — JSON-RPC framing, handles, tool names, output flattening, trust, `@server` addressing, and the shape a vendor CLI is handed |
 | `mcp-stdio-test` | `MCP/Service/` against a stub server — handshake, listing, calling, and every way one can go away |
 | `mcp-oauth-test` | OAuth parsing, RFC 7636 PKCE, discovery and resource binding, loopback callback validation/cancellation, dynamic registration, supplied client credentials and their token-endpoint authentication, Keychain token rotation, concurrent refresh, redirects and one-retry 401 handling |
 
@@ -139,7 +139,9 @@ and `mcp-stub.js`, each copied into a scratch directory and put in front of PATH
 it the way it would find a real one. Both read fd 0 synchronously rather than through a stream —
 `codex-stub.js` stalls mid-turn on purpose, and an event loop would read the next line while it is
 still holding — and both write with `fs.writeSync`, so a reply is on the pipe before a mode that
-exits does.
+exits does. `installed-cli-stub.js` reads the same way for the one turn shape that answers back:
+Claude's consent channel is a reply on stdin in the middle of a turn, so the stub has to be sitting
+on the pipe when it arrives.
 
 `mcp-oauth-test` starts `Tests/ai-fixtures/mcp-oauth-stub.js` on `127.0.0.1:4963` and tests the
 single-use callback on `127.0.0.1:4962`. Both ports must be free; the harness never chooses another

@@ -131,7 +131,8 @@ struct AISettingsView: View {
             } label: {
                 SettingsRowTitle(.aiChat, "Tool call rounds")
                 Text(
-                    "A reply stops after this many; Unlimited runs until Stop. API connections only.")
+                    "A reply stops after this many; Unlimited runs until Stop. "
+                        + "API connections, Codex and Claude.")
             }
         } header: {
             SettingsSectionHeader(.aiChat)
@@ -573,7 +574,11 @@ struct AISettingsView: View {
         var parts: [String] = []
         if let version = status.version { parts.append("Version " + version) }
         parts.append(modelCount(status.models))
-        if let caveat = kind.isolationCaveat { parts.append(caveat) }
+        if let caveat = kind.isolationCaveat(
+            hasManagedMCPPolicy: InstalledAIManager.hasManagedMCPPolicy)
+        {
+            parts.append(caveat)
+        }
         return parts.joined(separator: " · ")
     }
 

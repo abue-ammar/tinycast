@@ -8,13 +8,19 @@ final class CodexTurnRunner {
         files, inspect the environment, or modify files. Use only the request content supplied by \
         Tinycast.
         """
+    /// The same boundary for the one turn shape that is handed tools; everything else stays off.
+    private static let toolSafetyInstructions = """
+        You are providing text generation inside Tinycast. The only tools you may use are the MCP \
+        tools supplied with this request. Never execute commands, read files, inspect the \
+        environment, or modify files.
+        """
     private static let webSearchInstructions = """
         You may search the web when the answer depends on current or external information. Cite a \
         source as a markdown link whose text is the publication's name, never "Read more" or a URL.
         """
     private static let noWebSearchInstructions = "Never access external resources."
 
-    var connect: (@MainActor () async throws -> [ChatGPTSubscription.Model])?
+    var connect: (@MainActor ([AIToolServer]) async throws -> [ChatGPTSubscription.Model])?
     var onTurnEnded: (@MainActor () -> Void)?
 
     /// Reference identity for one stream, so a stale turn's cleanup can't clear its successor.
@@ -27,6 +33,11 @@ final class CodexTurnRunner {
     private var activeTurnID: String?
     /// A Stop that beat the turn's ID arms its thread; the first ID to name it spends the Stop.
     private var pendingInterruptThreadID: String?
+    private var activeServers: [AIToolServer] = []
+    /// The tool an elicitation is about: the item that names it always starts before the ask.
+    private var startedTools: [String: String] = [:]
+    private var spentCalls = 0
+    private var roundCap = 1
 
     init(client: CodexAppServerClient) {
         self.client = client
@@ -34,12 +45,16 @@ final class CodexTurnRunner {
 
     var isActive: Bool { activeThreadID != nil }
 
-    nonisolated func stream(_ request: AIRequest, model: String, effort: String?) -> AIProviderStream {
+    nonisolated func stream(
+        _ request: AIRequest, model: String, effort: String?,
+        toolServers: AIToolServerSession? = nil
+    ) -> AIProviderStream {
         AIProviderStream { continuation in
             let token = TurnToken()
             let task = Task { [weak self] in
                 await self?.startTurn(
-                    request, model: model, effort: effort, continuation: continuation, token: token)
+                    request, model: model, effort: effort, toolServers: toolServers,
+                    continuation: continuation, token: token)
             }
             continuation.onTermination = { [weak self] _ in
                 task.cancel()
@@ -73,12 +88,19 @@ final class CodexTurnRunner {
             switch item["type"]?.stringValue {
             case "webSearch": activeContinuation?.yield(.searching(item["query"]?.stringValue))
             case "reasoning": activeContinuation?.yield(.thinking)
+            case "mcpToolCall": startToolCall(item)
             default: break
             }
         case "item/completed":
-            guard let item = params["item"]?.objectValue, item["type"]?.stringValue == "webSearch"
-            else { return }
-            activeContinuation?.yield(.searched(item["query"]?.stringValue))
+            guard let item = params["item"]?.objectValue else { return }
+            switch item["type"]?.stringValue {
+            case "webSearch": activeContinuation?.yield(.searched(item["query"]?.stringValue))
+            case "mcpToolCall":
+                guard let id = item["id"]?.stringValue else { return }
+                activeContinuation?.yield(
+                    .toolResult(id: id, isError: item["status"]?.stringValue != "completed"))
+            default: break
+            }
         case "turn/started":
             // Captured eagerly so Stop can interrupt even when the turn/start response never lands.
             if let id = params["turn"]?.objectValue?["id"]?.stringValue { activeTurnID = id }
@@ -110,6 +132,27 @@ final class CodexTurnRunner {
         }
     }
 
+    /// A call's row, and the cap that ends a turn spending them. Codex names no round of its own,
+    /// so the count is calls rather than model requests — stricter than the loop's, never looser.
+    private func startToolCall(_ item: [String: JSONValue]) {
+        guard let id = item["id"]?.stringValue else { return }
+        let server = item["server"]?.stringValue ?? ""
+        if let tool = item["tool"]?.stringValue { startedTools[server] = tool }
+        activeContinuation?.yield(
+            .toolCall(
+                id: id, origin: AIToolServerRow.title(of: server, in: activeServers),
+                title: AIToolServerRow.label(item["tool"]?.stringValue ?? "")))
+        spentCalls += 1
+        guard spentCalls > roundCap else { return }
+        // Finished before the interrupt, whose own cleanup would otherwise name a different reason.
+        activeContinuation?.finish(
+            throwing: AIProviderError.responseFailed(
+                "Stopped after \(roundCap) rounds of tool calls."))
+        activeContinuation = nil
+        interruptActiveTurn()
+        onTurnEnded?()
+    }
+
     /// A thread Stop already dropped, watched only for the turn ID that Stop lacked.
     private func handleArmed(
         method: String, params: [String: JSONValue], threadID: String
@@ -129,6 +172,7 @@ final class CodexTurnRunner {
         _ request: AIRequest,
         model: String,
         effort: String?,
+        toolServers: AIToolServerSession?,
         continuation: AIProviderStream.Continuation,
         token: TurnToken
     ) async {
@@ -145,7 +189,9 @@ final class CodexTurnRunner {
         }
         var tookOwnership = false
         do {
-            let models = try await connect?() ?? []
+            let servers = await toolServers?.servers() ?? []
+            // The list is a launch fact, so `connect` may relaunch a server armed with another.
+            let models = try await connect?(servers) ?? []
             // Discovery swallows errors, so a Stop that landed inside connect resurfaces here.
             try Task.checkCancellation()
             guard !model.isEmpty else {
@@ -158,6 +204,7 @@ final class CodexTurnRunner {
             activeContinuation = continuation
             activeToken = token
             tookOwnership = true
+            arm(servers, session: toolServers)
 
             guard models.isEmpty || models.contains(where: { $0.id == model }) else {
                 throw AIProviderError.unavailable(
@@ -169,12 +216,14 @@ final class CodexTurnRunner {
                 params: [
                     "model": model,
                     "cwd": client.workspace.path,
-                    "approvalPolicy": "never",
+                    // `untrusted` is what turns an MCP tool call into an elicitation to answer.
+                    "approvalPolicy": servers.isEmpty ? "never" : "untrusted",
                     "sandbox": "read-only",
                     "ephemeral": true,
                     // Thread-scoped so this request never writes the user's saved web-search choice.
                     "config": ["web_search": request.webSearch ? "live" : "disabled"],
-                    "developerInstructions": developerInstructions(for: request)
+                    "developerInstructions": developerInstructions(
+                        for: request, hasTools: !servers.isEmpty)
                 ])
             guard let thread = threadResponse["thread"]?.objectValue,
                 let threadID = thread["id"]?.stringValue
@@ -196,7 +245,7 @@ final class CodexTurnRunner {
             var turnParameters: [String: Any] = [
                 "threadId": threadID,
                 "model": model,
-                "approvalPolicy": "never",
+                "approvalPolicy": servers.isEmpty ? "never" : "untrusted",
                 "sandboxPolicy": ["type": "readOnly", "networkAccess": false],
                 "input": turnInput(for: request.messages[promptIndex])
             ]
@@ -229,7 +278,25 @@ final class CodexTurnRunner {
         }
     }
 
-    private func developerInstructions(for request: AIRequest) -> String {
+    /// What this turn may call, and who answers for it. Cleared with the turn, so a later one that
+    /// arms nothing goes back to declining every server request.
+    private func arm(_ servers: [AIToolServer], session: AIToolServerSession?) {
+        activeServers = servers
+        startedTools = [:]
+        spentCalls = 0
+        roundCap = session?.rounds ?? 1
+        guard !servers.isEmpty, let session else {
+            client.onElicitation = nil
+            return
+        }
+        client.onElicitation = { [weak self] elicitation in
+            let tool = self?.startedTools[elicitation.serverName] ?? elicitation.toolName
+            return await session.consent(
+                AIToolServerCall(handle: elicitation.serverName, tool: tool))
+        }
+    }
+
+    private func developerInstructions(for request: AIRequest, hasTools: Bool) -> String {
         let requestInstructions =
             ([request.instructions]
             + request.messages.compactMap {
@@ -239,8 +306,9 @@ final class CodexTurnRunner {
                 let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
                 return trimmed.isEmpty ? nil : trimmed
             }
+        let safety = hasTools ? Self.toolSafetyInstructions : Self.safetyInstructions
         let search = request.webSearch ? Self.webSearchInstructions : Self.noWebSearchInstructions
-        return ([Self.safetyInstructions, search] + requestInstructions).joined(separator: "\n\n")
+        return ([safety, search] + requestInstructions).joined(separator: "\n\n")
     }
 
     private func turnInput(for message: AIMessage) -> [[String: Any]] {
@@ -301,6 +369,9 @@ final class CodexTurnRunner {
         activeToken = nil
         activeThreadID = nil
         activeTurnID = nil
+        activeServers = []
+        startedTools = [:]
+        client.onElicitation = nil
         if wasLive { onTurnEnded?() }
     }
 }

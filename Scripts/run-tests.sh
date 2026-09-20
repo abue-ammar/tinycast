@@ -525,6 +525,7 @@ run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \
                            Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/AIToolServer.swift \
                            Tinycast/Features/AI/Model/JSONValue.swift \
                            Tinycast/Features/MCP/Model/*.swift \
                            Tinycast/Features/MCP/Settings/MCPSettingsStore.swift
@@ -547,6 +548,7 @@ run mcp-oauth-test         Tinycast/Platform/ExecutableLocator.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \
                            Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/AIToolServer.swift \
                            Tinycast/Features/AI/Model/AIStreamDecoder.swift \
                            Tinycast/Features/AI/Model/AIRequest.swift \
                            Tinycast/Features/AI/Model/JSONValue.swift \
@@ -558,6 +560,7 @@ run slow mcp-stdio-test    Tinycast/Platform/ExecutableLocator.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \
                            Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/AIToolServer.swift \
                            Tinycast/Features/AI/Model/AIStreamDecoder.swift \
                            Tinycast/Features/AI/Model/AIRequest.swift \
                            Tinycast/Features/AI/Model/JSONValue.swift \
@@ -568,6 +571,7 @@ run slow codex-turn-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
                            Tinycast/Features/AI/Service/ChatGPTSubscriptionManager.swift \
                            Tinycast/Features/AI/Service/CodexAppServerClient.swift \
+                           Tinycast/Features/AI/Service/InstalledAIProbe.swift \
                            Tinycast/Platform/ExecutableLocator.swift \
                            Tinycast/Features/AI/Service/CodexTurnRunner.swift
 run installed-ai-test     Tinycast/Features/AI/Model/*.swift \
@@ -575,6 +579,7 @@ run installed-ai-test     Tinycast/Features/AI/Model/*.swift \
                           Tinycast/Platform/AppPaths.swift \
                           Tinycast/Platform/ExecutableLocator.swift \
                           Tinycast/Features/AI/Service/InstalledCLIProvider.swift \
+                          Tinycast/Features/AI/Service/InstalledAIProbe.swift \
                           Tinycast/Features/AI/Service/InstalledAIManager.swift
 
 if [ "$emit_db" -eq 1 ]; then

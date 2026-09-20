@@ -61,6 +61,38 @@ final class MCPCoordinator {
             .map(\.aiTool)
     }
 
+    /// The same list, for a route whose own client runs the loop. Tinycast's own connections are
+    /// not consulted: the CLI starts its own copy, so a server it can reach need not be ready here.
+    func toolServers(scopedTo slug: String?) async -> [AIToolServer] {
+        guard isActive else { return [] }
+        let secrets = MCPSecretStore()
+        var result: [AIToolServer] = []
+        for server in store.enabledServers
+        where server.trust != .never && (slug == nil || server.slug == slug) {
+            let stored = secrets.secrets(for: server.id)
+            var bearer: String?
+            if server.oauth == true {
+                // A server nobody is signed into is left out: a CLI cannot explain a 401 the way
+                // a tool result can, and lending nothing would only produce one.
+                guard let token = try? await core.mcpOAuth.accessToken(for: server) else { continue }
+                bearer = token
+            }
+            guard
+                let toolServer = server.toolServer(
+                    headerValue: stored.headerValue, environment: stored.environment,
+                    bearerToken: bearer)
+            else { continue }
+            result.append(toolServer)
+        }
+        return result
+    }
+
+    /// Consent for a call a vendor CLI is making, through the same policy and the same dialog.
+    func permit(_ call: AIToolServerCall, in chat: UUID) async -> Bool {
+        guard isActive, let server = server(slug: call.handle) else { return false }
+        return await isPermitted(server, tool: call.tool, in: chat)
+    }
+
     func invoke(_ call: AIToolCall, in chat: UUID) async -> AIToolResult {
         guard let route = MCPToolName.parse(call.name),
             let server = server(slug: route.slug),

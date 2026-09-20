@@ -85,18 +85,28 @@ A refused or failed call is not an error. The model is told what happened and ca
 
 ## Which models get tools
 
-Only **API connections** are offered tools: OpenAI API, Anthropic Claude, Google Gemini, OpenRouter
-and OpenAI Compatible endpoints.
+**API connections** are offered tools — OpenAI API, Anthropic Claude, Google Gemini, OpenRouter and
+OpenAI Compatible endpoints — and so are the installed **Codex** and **Claude** commands. On those
+two the CLI calls the tools itself; the servers, the confirmation and the rows in the reply are the
+same ones you see everywhere else. Your own Codex and Claude MCP servers stay out of a Tinycast
+chat, and nothing is written to their settings.
 
-Apple Intelligence and the installed Codex, Claude, Grok, OpenCode and Cursor commands never get tools. For those,
+One thing is different on Codex: adding, removing or re-authorizing a server restarts its helper,
+which takes about a second on the next message.
+
+Apple Intelligence and the installed Grok, OpenCode and Cursor commands never get tools. For those,
 chat works exactly as it does without MCP.
+
+If your organization installs a Claude Code MCP policy, MCP on the Claude command is their decision
+and Tinycast passes no servers to it. The Providers row says so.
 
 ## Limits
 
 - **Settings → AI → Chat → Tool call rounds** sets how many rounds of tool calls one reply can go
   through: **25** by default, or 10, 50, 100 or **Unlimited**. A model that only keeps calling tools
   has stopped answering, so at that limit the reply ends and says it stopped after that many rounds.
-  On Unlimited only the model or **Stop** ends it, unless the reply's tool history grows past
+  On Codex the count is tool calls rather than rounds, which stops a runaway reply sooner. On
+  Unlimited only the model or **Stop** ends it, unless the reply's tool history grows past
   1 MB, and a reply keeps running while the palette is hidden, each round billed to your provider.
 - Each tool result, and all results in one reply together, are capped in size.
 - Servers start when you use chat and stop after **10 idle minutes**, or when Tinycast quits.

@@ -113,8 +113,9 @@ final class AIChatCoordinator {
         do {
             let webSearch = core.aiSettings.webSearchEnabled && capabilities.webSearch
             let address = MCPComposerAddress.parse(input, slugs: core.mcpCoordinator.slugs)
+            let provider = try core.aiProvider(toolServers: toolServers(scopedTo: address.slug))
             return chat.send(
-                address.rest, using: try toolAware(core.aiProvider(), scopedTo: address.slug),
+                address.rest, using: toolAware(provider, scopedTo: address.slug),
                 webSearch: webSearch,
                 instructions: AIInstructions.compose(
                     userPrompt: core.aiSettings.systemPrompt,
@@ -126,8 +127,24 @@ final class AIChatCoordinator {
         }
     }
 
+    /// Only chat arms a route's tools, and only for a route whose own client is the MCP client:
+    /// a CLI runs the loop itself, so Tinycast supplies servers instead of wrapping the provider.
+    private func toolServers(scopedTo slug: String?) -> AIToolServerSession? {
+        guard capabilities.tools, core.aiSettings.defaultModel?.runsItsOwnTools == true else {
+            return nil
+        }
+        let chatID = chat.session.id
+        let mcp = core.mcpCoordinator
+        return AIToolServerSession(rounds: core.aiSettings.toolRounds.rawValue) {
+            await mcp.toolServers(scopedTo: slug)
+        } consent: { call in
+            await mcp.permit(call, in: chatID)
+        }
+    }
+
     /// Only chat wraps a route in the tool loop; a text rewrite has nothing to call.
     private func toolAware(_ provider: any AIProvider, scopedTo slug: String?) -> any AIProvider {
+        guard core.aiSettings.defaultModel?.runsItsOwnTools != true else { return provider }
         let tools = core.mcpCoordinator.tools(scopedTo: slug)
         guard capabilities.tools, !tools.isEmpty else { return provider }
         let chatID = chat.session.id
@@ -189,7 +206,8 @@ final class AIChatCoordinator {
         switch core.aiSettings.defaultModel {
         case .appleIntelligence?: return .appleIntelligence
         case .codex?: return .codex
-        case .claude?, .grok?, .openCode?, .cursor?:
+        case .claude?: return .claudeCommand
+        case .grok?, .openCode?, .cursor?:
             return AIModelCapabilities(
                 images: false, documents: false, webSearch: false, tools: false)
         case .api(let connection, let model, _)?:

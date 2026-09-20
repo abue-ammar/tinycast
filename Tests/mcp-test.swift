@@ -27,6 +27,7 @@ struct MCPTests {
         trustDecidesFromStandingAndChatGrants()
         addressingTakesOnlyAKnownHandle()
         settingsPersistAndKeepHandlesApart()
+        serversBecomeWhatACLICanRunItself()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -236,5 +237,51 @@ struct MCPTests {
 
         store.remove(id: edited.id)
         expect(store.servers.count == 1, "removal takes exactly one")
+    }
+
+    /// The same servers, shaped for the routes whose own client runs them.
+    static func serversBecomeWhatACLICanRunItself() {
+        var remote = MCPServer(
+            name: "Linear", slug: "linear",
+            transport: .http(url: "https://mcp.linear.app/mcp", headerName: "Authorization"))
+        remote.oauth = true
+        expect(
+            remote.toolServer(headerValue: "", environment: [:], bearerToken: "tok-9")?.transport
+                == .url(
+                    "https://mcp.linear.app/mcp", headerName: "Authorization",
+                    headerValue: "Bearer tok-9"),
+            "an OAuth server lends the session's token as the header Tinycast itself would send")
+        expect(
+            remote.toolServer(headerValue: "", environment: [:], bearerToken: nil) == nil,
+            "and a server with neither a token nor a header value is not offered at all")
+
+        let header = MCPServer(
+            name: "Notes", slug: "notes",
+            transport: .http(url: "https://notes.example/mcp", headerName: " X-Api-Key "))
+        expect(
+            header.toolServer(headerValue: "k1", environment: [:], bearerToken: nil)?.transport
+                == .url("https://notes.example/mcp", headerName: "X-Api-Key", headerValue: "k1"),
+            "a header-authenticated server carries its own name and value, trimmed")
+
+        let local = MCPServer(
+            name: "Files", slug: "files",
+            transport: .stdio(
+                command: "/bin/node", arguments: ["s.js"], environmentKeys: ["API_KEY"]))
+        expect(
+            local.toolServer(
+                headerValue: "", environment: ["API_KEY": "s3cret", "OTHER": "x"],
+                bearerToken: nil)?
+                .transport
+                == .command(
+                    path: "/bin/node", arguments: ["s.js"], environment: ["API_KEY": "s3cret"]),
+            "a local server takes only the variables it declared, never the whole secret item")
+        expect(
+            local.toolServer(headerValue: "", environment: [:], bearerToken: nil)?.title == "Files",
+            "and both kinds keep the handle and title a transcript row is written from")
+        expect(
+            MCPServer(name: "Empty", slug: "empty", transport: .stdio(
+                command: "", arguments: [], environmentKeys: []))
+                .toolServer(headerValue: "", environment: [:], bearerToken: nil) == nil,
+            "a server with no command is nothing a CLI could start")
     }
 }

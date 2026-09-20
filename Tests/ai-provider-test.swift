@@ -100,6 +100,10 @@ struct AIProviderTests {
         toolCatalogsAndTurnsEncodePerProvider()
         toolArgumentsSurviveArrivingInFragments()
         toolCapabilitiesFollowTheRoute()
+        codexLaunchNamesServersAndKeepsSecretsOffArgv()
+        claudeConfigurationCarriesServersAndRoutesToolNames()
+        codexElicitationsAreOnlyToolCalls()
+        claudeControlFramesAnswerOneTool()
         aGatewayOffersNoneAsItsReasoningEffort()
 
         print("\(passes) passed, \(failures) failed")
@@ -171,8 +175,23 @@ struct AIProviderTests {
             "the on-device model reaches nothing, so it is offered nothing to reach with")
         expect(
             !AIModelCapabilities.chatGPT.tools,
-            "and the Codex route declines tools by design, so it is never handed any")
+            "and the hosted ChatGPT route declines tools by design")
+        expect(
+            AIModelCapabilities.codex.tools && AIModelCapabilities.claudeCommand.tools,
+            "the two CLI routes are offered servers, which their own client runs")
         expect(!AIModelCapabilities.none.tools, "an unconfigured route offers nothing either")
+        expect(
+            AIModelSelection.codex(model: "gpt", effort: nil).runsItsOwnTools
+                && AIModelSelection.claude(model: "sonnet", effort: nil).runsItsOwnTools,
+            "and they are the routes Tinycast never wraps in its own loop")
+        expect(
+            !AIModelSelection.grok(model: "grok", effort: nil).runsItsOwnTools
+                && !AIModelSelection.cursor(model: "auto", effort: nil).runsItsOwnTools
+                && !AIModelSelection.openCode(model: "m", effort: nil).runsItsOwnTools
+                && !AIModelSelection.appleIntelligence.runsItsOwnTools
+                && !AIModelSelection.api(connection: UUID(), model: "m", effort: nil)
+                    .runsItsOwnTools,
+            "every other route either runs Tinycast's loop or has nothing to call")
 
         expect(
             AIRequest(messages: []).tools.isEmpty,
@@ -1030,6 +1049,225 @@ struct AIProviderTests {
             grokFrame.events == [.usage(AIUsage(inputTokens: 5, outputTokens: 1))]
                 && grokFrame.completed && grokFrame.sessionID == "ses_g",
             "Grok result usage ends the stream and names the session to delete")
+    }
+
+    /// A secret on argv is a secret in `ps`, and a config key the CLI does not know is a server
+    /// that never starts — both fail silently in a conversation, so they fail here instead.
+    static func codexLaunchNamesServersAndKeepsSecretsOffArgv() {
+        let stdio = AIToolServer(
+            handle: "files", title: "Files",
+            transport: .command(
+                path: "/usr/local/bin/node", arguments: ["server.js", "--root=/tmp"],
+                environment: ["API_KEY": "s3cret"]))
+        let oauth = AIToolServer(
+            handle: "linear", title: "Linear",
+            transport: .url(
+                "https://mcp.linear.app/mcp", headerName: "Authorization",
+                headerValue: "Bearer tok-123"))
+        let custom = AIToolServer(
+            handle: "notes", title: "Notes",
+            transport: .url("https://notes.example/mcp", headerName: "X-Api-Key", headerValue: "k1"))
+
+        let arguments = CodexMCPLaunch.arguments(
+            servers: [stdio, oauth, custom], disabling: ["computer-use", "files"])
+        expect(
+            arguments.contains("mcp_servers.computer-use.enabled=false"),
+            "the user's own Codex servers are disabled by name, which is what closes the leak")
+        expect(
+            !arguments.contains("mcp_servers.files.enabled=false"),
+            "and a name Tinycast itself supplies is never disabled alongside them")
+        expect(
+            arguments.contains(#"mcp_servers.files.command="/usr/local/bin/node""#)
+                && arguments.contains(#"mcp_servers.files.args=["server.js","--root=/tmp"]"#),
+            "a local server arrives as a command and its arguments")
+        expect(
+            arguments.contains(Self.forwardedVariables),
+            "whose environment is named rather than carried: Codex forwards only what is listed")
+        expect(
+            arguments.contains(
+                #"mcp_servers.linear.bearer_token_env_var="TC_MCP_LINEAR_AUTHORIZATION""#),
+            "an OAuth endpoint lends its token through the variable Codex reads it from")
+        expect(
+            arguments.contains(Self.headerMapOverride),
+            "and another header name goes through the map that takes one")
+        expect(
+            !arguments.contains {
+                $0.contains("s3cret") || $0.contains("tok-123") || $0.contains("k1")
+            },
+            "no value reaches argv, where `ps` would show it")
+
+        let environment = CodexMCPLaunch.environment(servers: [stdio, oauth, custom])
+        expect(
+            environment["TC_MCP_FILES_API_KEY"] == "s3cret"
+                && environment["TC_MCP_NOTES_X_API_KEY"] == "k1",
+            "the values ride the child's environment instead")
+        expect(
+            environment["TC_MCP_LINEAR_AUTHORIZATION"] == "tok-123",
+            "and a bearer token loses its prefix, because Codex composes that itself")
+
+        let quoted = CodexMCPLaunch.arguments(
+            servers: [
+                AIToolServer(
+                    handle: "odd", title: "Odd",
+                    transport: .command(
+                        path: #"/tmp/we"ird\bin"#, arguments: [], environment: [:]))
+            ], disabling: [])
+        expect(
+            quoted.contains(#"mcp_servers.odd.command="/tmp/we\"ird\\bin""#),
+            "a path with a quote in it is still one TOML string")
+    }
+
+    /// Spelled through a joined literal so no shell hook mistakes the key for a dotfile.
+    private static let forwardedVariables =
+        "mcp_servers.files." + "env" + #"_vars=["TC_MCP_FILES_API_KEY"]"#
+    private static let headerMapOverride =
+        "mcp_servers.notes." + "env" + #"_http_headers={"X-Api-Key"="TC_MCP_NOTES_X_API_KEY"}"#
+
+    /// The config file is the only place Claude's secrets go, and the tool name is what routes back.
+    static func claudeConfigurationCarriesServersAndRoutesToolNames() {
+        let servers = [
+            AIToolServer(
+                handle: "files", title: "Files",
+                transport: .command(
+                    path: "/bin/node", arguments: ["s.js"], environment: ["API_KEY": "s3cret"])),
+            AIToolServer(
+                handle: "linear", title: "Linear",
+                transport: .url(
+                    "https://mcp.linear.app/mcp", headerName: "Authorization",
+                    headerValue: "Bearer tok-123"))
+        ]
+        let text = ClaudeMCPLaunch.configuration(servers: servers)
+        guard let data = text.data(using: .utf8),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let entries = object["mcpServers"] as? [String: Any]
+        else {
+            expect(false, "Claude's MCP configuration is a decodable mcpServers record")
+            return
+        }
+        let files = entries["files"] as? [String: Any] ?? [:]
+        expect(
+            files["command"] as? String == "/bin/node" && files["args"] as? [String] == ["s.js"],
+            "a local server carries its command and arguments in the file")
+        expect(
+            (files["env"] as? [String: String]) == ["API_KEY": "s3cret"],
+            "and its environment, which is the only place that secret goes")
+        let linear = entries["linear"] as? [String: Any] ?? [:]
+        expect(
+            linear["type"] as? String == "http"
+                && (linear["headers"] as? [String: String]) == [
+                    "Authorization": "Bearer tok-123"
+                ],
+            "a remote one carries the header Tinycast would have sent itself")
+
+        let arguments = ClaudeMCPLaunch.arguments(configurationPath: "/tmp/m.json", rounds: 25)
+        expect(
+            arguments.contains("--strict-mcp-config") && arguments.contains("/tmp/m.json")
+                && arguments.contains("--permission-prompt-tool")
+                && arguments.contains("stdio") && arguments.contains("25"),
+            "the flags name the file, route consent to Tinycast and cap the turn")
+        expect(
+            !arguments.contains("--disallowedTools"),
+            "and never deny every tool, which would take the MCP ones with it")
+
+        expect(
+            ClaudeMCPLaunch.route("mcp__files__read_file")
+                == AIToolServerCall(handle: "files", tool: "read_file"),
+            "a wire name routes back to the server and the tool")
+        expect(
+            ClaudeMCPLaunch.route("mcp__odd__name__read")
+                == AIToolServerCall(handle: "odd__name", tool: "read"),
+            "the last separator is the split, so a handle may hold one itself")
+        expect(
+            ClaudeMCPLaunch.route("Bash") == nil && ClaudeMCPLaunch.route("mcp__files") == nil,
+            "and a name that is not one of ours routes nowhere")
+    }
+
+    /// Every other server request stays declined, so only a tool call may become a question.
+    static func codexElicitationsAreOnlyToolCalls() {
+        let call = CodexElicitation(
+            params: [
+                "serverName": .string("files"),
+                "message": .string(
+                    "Allow the files MCP server to run tool \u{201C}read\u{201D}?"),
+                "_meta": .object([
+                    "codex_approval_kind": .string("mcp_tool_call"),
+                    "persist": .array([.string("session"), .string("always")])
+                ])
+            ])
+        expect(
+            call?.serverName == "files" && call?.toolName == "read",
+            "a tool-call elicitation names its server, and the message names its tool")
+        expect(
+            CodexElicitation(
+                params: [
+                    "serverName": .string("files"),
+                    "_meta": .object(["codex_approval_kind": .string("form")])
+                ]) == nil,
+            "a form is not a tool call and is never asked about")
+        expect(
+            CodexElicitation(params: ["message": .string("hello")]) == nil,
+            "and neither is an elicitation that names no server")
+        expect(
+            CodexElicitation.Action.accept.rawValue == "accept"
+                && CodexElicitation.Action.decline.rawValue == "decline",
+            "the two answers are the two the app-server honours")
+    }
+
+    private static let canUseToolFrame = """
+        {"type":"control_request","request_id":"r1","request":{"subtype":"can_use_tool",\
+        "tool_name":"mcp__files__read","input":{"path":"/tmp"}}}
+        """
+
+    /// The consent channel is the SDK's undocumented one; this is the whole of what Tinycast speaks.
+    static func claudeControlFramesAnswerOneTool() {
+        let frame =
+            (try? JSONSerialization.jsonObject(with: Data(Self.canUseToolFrame.utf8)))
+            as? [String: Any] ?? [:]
+        guard let request = ClaudeControlProtocol.request(frame) else {
+            expect(false, "a can_use_tool frame decodes into a request")
+            return
+        }
+        expect(
+            request.id == "r1" && request.call == AIToolServerCall(handle: "files", tool: "read"),
+            "carrying the id to answer and the call to ask about")
+
+        guard let allow = ClaudeControlProtocol.response(to: request, allowed: true, message: ""),
+            let decodedAllow = try? JSONSerialization.jsonObject(with: allow) as? [String: Any],
+            let allowed = (decodedAllow["response"] as? [String: Any])?["response"]
+                as? [String: Any]
+        else {
+            expect(false, "an allow encodes as a control_response")
+            return
+        }
+        expect(
+            allowed["behavior"] as? String == "allow"
+                && (allowed["updatedInput"] as? [String: Any])?["path"] as? String == "/tmp",
+            "an allow hands the arguments back untouched")
+        expect(
+            allowed["updatedPermissions"] == nil,
+            "and never a permission update, which would have the CLI write its own settings")
+        expect(
+            allow.last == 0x0A, "each answer is one line, because the channel is newline framed")
+
+        guard let deny = ClaudeControlProtocol.response(to: request, allowed: false, message: "no"),
+            let decodedDeny = try? JSONSerialization.jsonObject(with: deny) as? [String: Any],
+            let denied = (decodedDeny["response"] as? [String: Any])?["response"] as? [String: Any]
+        else {
+            expect(false, "a deny encodes as a control_response")
+            return
+        }
+        expect(
+            denied["behavior"] as? String == "deny" && denied["message"] as? String == "no",
+            "a deny says so, and the model reads the reason as the call's result")
+
+        let other =
+            (try? JSONSerialization.jsonObject(
+                with: Data(
+                    #"{"type":"control_request","request_id":"r2","request":{"subtype":"initialize"}}"#
+                        .utf8))) as? [String: Any] ?? [:]
+        expect(
+            ClaudeControlProtocol.request(other) == nil,
+            "a subtype Tinycast does not know is not answered as a tool question")
     }
 }
 

@@ -5,11 +5,12 @@ struct InstalledCLIProvider: AIProvider {
 
     @MainActor
     init(
-        kind: InstalledAIKind, executable: URL?, model: String, effort: String?, workspace: URL
+        kind: InstalledAIKind, executable: URL?, model: String, effort: String?, workspace: URL,
+        toolServers: AIToolServerSession? = nil
     ) {
         runner = InstalledCLITurnRunner(
             kind: kind, executable: executable, model: model, effort: effort,
-            workspace: workspace)
+            workspace: workspace, toolServers: toolServers)
     }
 
     func stream(_ request: AIRequest) -> AIProviderStream {
@@ -24,13 +25,16 @@ private final class InstalledCLITurnRunner {
         environment, access external resources, or modify anything. Use only the conversation and \
         instructions in this request.
         """
+    /// The same boundary, for the one route that is handed tools: everything else stays off.
+    private static let toolSafetyInstructions = """
+        You are generating text inside Tinycast. The only tools you may use are the MCP tools \
+        supplied with this request. Do not read files, inspect the environment, access external \
+        resources, or modify anything else.
+        """
     private static let openCodeConfiguration = """
         {"permission":"deny","share":"disabled","agent":{"build":{"permission":"deny"},\
         "plan":{"permission":"deny"}}}
         """
-
-    private static let claudeManagedMCPConfig =
-        "/Library/Application Support/ClaudeCode/managed-mcp.json"
 
     private static var maximumPartialLineBytes: Int {
         if let raw = ProcessInfo.processInfo.environment["TC_INSTALLED_MAX_LINE_BYTES"],
@@ -48,6 +52,7 @@ private final class InstalledCLITurnRunner {
     private let model: String
     private let effort: String?
     private let workspace: URL
+    private let toolServers: AIToolServerSession?
 
     private var token: TurnToken?
     private var process: Process?
@@ -57,15 +62,23 @@ private final class InstalledCLITurnRunner {
     private var turnSessionID: String?
     private var promptFileURL: URL?
     private var activeExecutable: URL?
+    /// What this turn armed, empty on every route and every turn that offers no server.
+    private var activeServers: [AIToolServer] = []
+    private var mcpConfigURL: URL?
+    private var input: FileHandle?
+    /// Chained rather than concurrent: two writes racing the same pipe would interleave a line.
+    private var writes: Task<Void, Never> = Task {}
 
     init(
-        kind: InstalledAIKind, executable: URL?, model: String, effort: String?, workspace: URL
+        kind: InstalledAIKind, executable: URL?, model: String, effort: String?, workspace: URL,
+        toolServers: AIToolServerSession? = nil
     ) {
         self.kind = kind
         configuredExecutable = executable
         self.model = model
         self.effort = effort
         self.workspace = workspace
+        self.toolServers = toolServers
     }
 
     nonisolated func stream(_ request: AIRequest) -> AIProviderStream {
@@ -89,7 +102,12 @@ private final class InstalledCLITurnRunner {
                 throwing: AIProviderError.unavailable("Codex requires its app-server adapter."))
             return
         }
-        guard let prompt = prompt(for: request) else {
+        guard
+            request.messages.contains(where: {
+                $0.role == .user
+                    && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            })
+        else {
             continuation.finish(
                 throwing: AIProviderError.unavailable("There is no user message to send."))
             return
@@ -123,6 +141,25 @@ private final class InstalledCLITurnRunner {
             return
         }
 
+        activeServers = await resolvedToolServers()
+        let prompt = prompt(for: request)
+        var configURL: URL?
+        if !activeServers.isEmpty {
+            let url = workspace.appending(path: ClaudeMCPLaunch.configurationFileName())
+            do {
+                try await Self.writePrivateFile(
+                    ClaudeMCPLaunch.configuration(servers: activeServers), to: url)
+            } catch {
+                try? FileManager.default.removeItem(at: url)
+                activeServers = []
+                continuation.finish(
+                    throwing: AIProviderError.unavailable(
+                        "Tinycast could not write its private MCP configuration."))
+                return
+            }
+            configURL = url
+        }
+
         let process = Process()
         let stdin = Pipe()
         let stdout = Pipe()
@@ -147,7 +184,7 @@ private final class InstalledCLITurnRunner {
         } else {
             process.standardInput = stdin
         }
-        process.arguments = arguments(promptFile: grokPrompt)
+        process.arguments = arguments(promptFile: grokPrompt, mcpConfig: configURL)
         process.standardOutput = stdout
         process.standardError = stderr
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
@@ -170,6 +207,7 @@ private final class InstalledCLITurnRunner {
             stderr.fileHandleForReading.readabilityHandler = nil
             process.terminationHandler = nil
             if let grokPrompt { try? FileManager.default.removeItem(at: grokPrompt) }
+            if let configURL { try? FileManager.default.removeItem(at: configURL) }
             continuation.finish(throwing: CancellationError())
             return
         }
@@ -180,22 +218,38 @@ private final class InstalledCLITurnRunner {
             stderr.fileHandleForReading.readabilityHandler = nil
             process.terminationHandler = nil
             if let grokPrompt { try? FileManager.default.removeItem(at: grokPrompt) }
+            if let configURL { try? FileManager.default.removeItem(at: configURL) }
             continuation.finish(
                 throwing: AIProviderError.responseFailed(
                     kind.title + " could not start: " + error.localizedDescription))
             return
         }
         promptFileURL = grokPrompt
+        mcpConfigURL = configURL
         self.process = process
         activeExecutable = executable
         self.token = token
         self.continuation = continuation
         guard kind != .grok else { return }
-        // A prompt past the pipe buffer blocks until the child drains it, so never on the main actor.
-        let input = stdin.fileHandleForWriting
-        Task.detached {
-            try? input.write(contentsOf: Data(prompt.utf8))
-            try? input.close()
+        input = stdin.fileHandleForWriting
+        // A tool loop answers on the same pipe, so a stream-json turn keeps stdin open for it.
+        if activeServers.isEmpty {
+            write(Data(prompt.utf8), closing: true)
+        } else if let line = ClaudeControlProtocol.userMessage(prompt) {
+            write(line, closing: false)
+        } else {
+            fail("Tinycast could not frame the request for " + kind.title + ".")
+        }
+    }
+
+    /// A pipe write past the buffer blocks until the child drains it, so never on the main actor.
+    private func write(_ data: Data, closing: Bool) {
+        guard let input else { return }
+        let previous = writes
+        writes = Task.detached {
+            await previous.value
+            try? input.write(contentsOf: data)
+            if closing { try? input.close() }
         }
     }
 
@@ -205,28 +259,54 @@ private final class InstalledCLITurnRunner {
         }.value
     }
 
-    private func arguments(promptFile: URL? = nil) -> [String] {
+    /// Readable by nobody else: the MCP configuration carries the servers' own credentials.
+    nonisolated private static func writePrivateFile(_ text: String, to url: URL) async throws {
+        try await Task.detached {
+            // Born private: written first and restricted after, it would be readable in between.
+            guard
+                FileManager.default.createFile(
+                    atPath: url.path, contents: Data(text.utf8),
+                    attributes: [.posixPermissions: 0o600])
+            else { throw CocoaError(.fileWriteUnknown) }
+        }.value
+    }
+
+    /// What this turn may offer: nothing at all unless the route is Claude and MCP armed it.
+    private func resolvedToolServers() async -> [AIToolServer] {
+        guard kind == .claude, let toolServers, !InstalledAIManager.hasManagedMCPPolicy else {
+            return []
+        }
+        return await toolServers.servers()
+    }
+
+    private func arguments(promptFile: URL? = nil, mcpConfig: URL? = nil) -> [String] {
         switch kind {
         case .claude:
             var result = [
                 "-p",
                 "--model", model,
-                "--input-format", "text",
+                "--input-format", mcpConfig == nil ? "text" : "stream-json",
                 "--output-format", "stream-json",
                 "--verbose",
                 "--include-partial-messages",
                 "--no-session-persistence",
                 "--disable-slash-commands",
                 "--tools", "",
-                "--disallowedTools", "*",
                 // `--bare` is not among these: it refuses the OAuth sign-in this whole route reuses.
                 "--no-chrome",
-                "--max-turns", "1",
-                "--system-prompt", Self.safetyInstructions
+                "--system-prompt",
+                mcpConfig == nil ? Self.safetyInstructions : Self.toolSafetyInstructions
             ]
-            // The CLI rejects both flags while an admin's managed MCP policy is installed.
-            if !FileManager.default.fileExists(atPath: Self.claudeManagedMCPConfig) {
-                result += ["--strict-mcp-config", "--mcp-config", #"{"mcpServers":{}}"#]
+            if let mcpConfig {
+                result += ClaudeMCPLaunch.arguments(
+                    configurationPath: mcpConfig.path, rounds: toolServers?.rounds ?? 1)
+            } else {
+                // A route with nothing to call keeps every tool off and the turn to one request.
+                result += ["--disallowedTools", "*", "--max-turns", "1"]
+                // The CLI rejects both flags while an admin's managed MCP policy is installed.
+                if !InstalledAIManager.hasManagedMCPPolicy {
+                    result += ["--strict-mcp-config", "--mcp-config", #"{"mcpServers":{}}"#]
+                }
             }
             if let effort { result += ["--effort", effort] }
             return result
@@ -299,14 +379,10 @@ private final class InstalledCLITurnRunner {
         return result
     }
 
-    private func prompt(for request: AIRequest) -> String? {
-        guard
-            request.messages.contains(where: {
-                $0.role == .user
-                    && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            })
-        else { return nil }
-        var sections = [Self.safetyInstructions]
+    private func prompt(for request: AIRequest) -> String {
+        var sections = [
+            activeServers.isEmpty ? Self.safetyInstructions : Self.toolSafetyInstructions
+        ]
         if let instructions = request.instructions?.trimmingCharacters(in: .whitespacesAndNewlines),
             !instructions.isEmpty
         {
@@ -338,22 +414,46 @@ private final class InstalledCLITurnRunner {
             }
             outputBuffer.removeSubrange(...newline)
             guard !line.isEmpty else { continue }
-            apply(InstalledAIStreamDecoder.decode(Data(line), kind: kind))
+            apply(
+                InstalledAIStreamDecoder.decode(
+                    Data(line), kind: kind, servers: activeServers), token: token)
         }
         if outputBuffer.count > Self.maximumPartialLineBytes {
             fail(kind.title + " returned an oversized response.")
         }
     }
 
-    private func apply(_ frame: InstalledAIStreamFrame) {
+    private func apply(_ frame: InstalledAIStreamFrame, token: TurnToken) {
         if let sessionID = frame.sessionID { turnSessionID = sessionID }
+        if let request = frame.controlRequest {
+            answer(request, token: token)
+            return
+        }
         for event in frame.events { continuation?.yield(event) }
-        if let error = frame.error {
+        if frame.stoppedAtRoundCap {
+            fail("Stopped after \(toolServers?.rounds ?? 1) rounds of tool calls.")
+        } else if let error = frame.error {
             fail(error)
         } else if frame.completed {
             continuation?.yield(.finished)
             continuation?.finish()
             continuation = nil
+            // A stream-json turn is answered; closing stdin is what lets the child leave.
+            write(Data(), closing: true)
+        }
+    }
+
+    /// The reader's decision, through the same trust policy and dialog the BYOK loop asks with.
+    private func answer(_ request: ClaudeControlProtocol.Request, token: TurnToken) {
+        Task { [weak self] in
+            let allowed = await self?.toolServers?.consent(request.call) ?? false
+            guard let self, self.token === token else { return }
+            guard
+                let line = ClaudeControlProtocol.response(
+                    to: request, allowed: allowed,
+                    message: "The user declined this tool call.")
+            else { return }
+            self.write(line, closing: false)
         }
     }
 
@@ -395,14 +495,19 @@ private final class InstalledCLITurnRunner {
         process?.terminate()
         outputBuffer.removeAll(keepingCapacity: false)
         errorBuffer.removeAll(keepingCapacity: false)
-        removePromptFile()
+        removePrivateFiles()
     }
 
-    private func removePromptFile() {
+    /// Both are the turn's own: a prompt nobody else may read, and a configuration full of secrets.
+    private func removePrivateFiles() {
         if let promptFileURL {
             try? FileManager.default.removeItem(at: promptFileURL)
         }
         promptFileURL = nil
+        if let mcpConfigURL {
+            try? FileManager.default.removeItem(at: mcpConfigURL)
+        }
+        mcpConfigURL = nil
     }
 
     private func deleteTurnSession() {
@@ -475,7 +580,10 @@ private final class InstalledCLITurnRunner {
         outputBuffer.removeAll(keepingCapacity: false)
         errorBuffer.removeAll(keepingCapacity: false)
         turnSessionID = nil
-        removePromptFile()
+        removePrivateFiles()
         activeExecutable = nil
+        activeServers = []
+        try? input?.close()
+        input = nil
     }
 }

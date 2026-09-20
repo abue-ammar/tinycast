@@ -61,11 +61,15 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         }
     }
 
-    /// Cursor's CLI has no empty-MCP-config flag, so the person enabling it has to be told.
-    var isolationCaveat: String? {
+    /// Cursor's CLI has no empty-MCP-config flag, so the person enabling it has to be told. An
+    /// admin's MCP policy takes Claude's away too, and then this route's MCP is their decision.
+    func isolationCaveat(hasManagedMCPPolicy: Bool) -> String? {
         switch self {
         case .cursor: return "Ask mode · your Cursor MCP servers still apply"
-        case .codex, .claude, .grok, .openCode: return nil
+        case .claude:
+            return hasManagedMCPPolicy
+                ? "MCP on this route is managed by your organization" : nil
+        case .codex, .grok, .openCode: return nil
         }
     }
 

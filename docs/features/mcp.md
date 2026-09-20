@@ -3,9 +3,10 @@
 Tinycast connects [Model Context Protocol](https://modelcontextprotocol.io) servers and offers their
 tools to the model during a chat. A server is either a remote HTTP endpoint or a command Tinycast
 runs on this Mac; either way it advertises tools, Tinycast namespaces them by the server's handle,
-and the model calls what it wants. `Features/MCP/` owns servers and knows nothing about chat;
-[AI](ai.md) owns tool calling and knows nothing about MCP. `AIChatCoordinator.send` is the one place
-the two meet.
+and the model calls what it wants. On an API route Tinycast is the MCP client; on the Codex and
+Claude routes the vendor CLI is, and Tinycast supplies the servers and answers for them.
+`Features/MCP/` owns servers and knows nothing about chat; [AI](ai.md) owns tool calling and knows
+nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
 
 ## Invariants
 
@@ -57,16 +58,45 @@ the two meet.
   unless what the turn has added — the model's text, call arguments and results — reaches
   `maxTurnHistoryBytes`, since every round resends all of it. Each result is cut to
   `maxResultBytes`, and a turn's results together to `maxTurnResultBytes`, because tool output is
-  appended inside the turn and so never passes through `ChatSession.boundedContext`.
+  appended inside the turn and so never passes through `ChatSession.boundedContext`. The same
+  number bounds a CLI route, in the terms its own client counts in: Claude takes it as
+  `--max-turns`, which bounds model requests exactly as the loop's rounds do, and Codex — which
+  names no round at all — is interrupted once a turn has spent that many **calls**, which is
+  stricter, never looser. Neither result size is Tinycast's to cut there: the output goes back to
+  the model inside the CLI, and what the transcript keeps is the row.
 - **A server's handle is derived, never typed.** `MCPSlug` makes it from the name and uniques it, so
   `@slug` can never name two servers or nothing at all. An unknown handle is not an address: the text
   is sent exactly as it was typed.
 - **Servers start with chat and stop after ten idle minutes**, and at `prepareForTermination()`.
   A stdio server is a resident process of someone else's making, and the 100 MB budget is the reason
   this is not "start at launch".
-- **Only the two HTTP shapes are offered tools.** `AIModelCapabilities.tools` is true for `.api` and
-  false for `.appleIntelligence` and `.chatGPT`; the Codex route already has an invariant saying its
-  tools are unavailable, and a sandbox boundary on a local CLI is not something MCP may lift.
+- **Who runs the loop is the route's own answer, and it is the only thing that differs.**
+  `AIModelCapabilities.tools` is true for `.api`, for Codex and for the Claude command, and false
+  for Apple Intelligence, Grok, OpenCode and Cursor — the three CLIs whose configurations merge
+  with no opt-out, which is why none of them may be handed a server. On an API route Tinycast is
+  the MCP client and `AIToolLoopProvider` runs the loop. On the two subscription routes the vendor
+  CLI is the MCP client: `AIModelSelection.runsItsOwnTools` says so, and `AIChatCoordinator` hands
+  the route an `AIToolServerSession` instead of wrapping it. Same server list, same `MCPTrust`, same
+  `ChatToolUse` rows either way.
+- **A CLI is told what to run, never where to keep it.** Launch arguments, the child's environment
+  and files inside Tinycast's own workspace are the whole surface; `~/.codex` and `~/.claude` are
+  never written. Secrets never reach argv, where `ps` would show them: Codex reads them from the
+  app-server's environment through the config keys that name a variable, and Claude reads them from
+  a `0600` file written per turn into the private workspace and deleted when the turn ends. Neither
+  route is ever told to persist a decision — no Codex `persist`, no Claude `updatedPermissions` —
+  because only Settings may change a standing one.
+- **The user's own CLI servers stay out of a Tinycast thread.** Codex's launch disables each by
+  name, read first by a short-lived `codex mcp list --json` under the same flags the app-server
+  runs with, because that command starts nothing and because a name the configuration does not
+  define cannot be disabled — naming one makes the whole config refuse to load. Claude's
+  `--strict-mcp-config` does it in one flag. This is what closes the leak the route shipped with:
+  its launch flags never touched `mcp_servers`, so every server in `~/.codex/config.toml` used to
+  start inside a Tinycast thread, invisible because `CodexTurnRunner` ignored the items.
+- **Every Codex tool call asks Tinycast, read-only ones included.** Left alone, the app-server runs
+  a tool its server annotates `readOnlyHint: true` without raising an elicitation, even under
+  `approvalPolicy: "untrusted"` — and that annotation is the server's own claim. So each server is
+  passed with `default_tools_approval_mode="prompt"`, which makes Codex ask for every tool; the
+  answer then comes from `MCPTrustPolicy`, exactly as it does on an API route.
 - **Tinycast exposes nothing back.** A server request — sampling, elicitation, roots — is declined
   with a JSON-RPC error. The client advertises no capabilities in `initialize`.
 - **`Model/` stays Foundation-only.** `mcp-test` compiles the shipped models and pins the framing,
@@ -156,6 +186,41 @@ unforgiving: OpenAI takes a catalog of `{type: "function", function: {…}}` and
 block whose `input` is the arguments parsed back into an object, and results as `tool_result` blocks
 that must arrive as **one** user turn however many of them there are.
 
+## The loop somebody else runs
+
+On Codex and Claude the CLI is the MCP client, so there is no loop to wrap. `AIToolServer` is the
+hand-off — a server shaped for someone else to start — exactly as `AITool` is for the routes
+Tinycast runs itself, and `MCPServer.toolServer` is the one place the mapping happens.
+`AIToolServerSession` carries the three things the route needs: what to run, who to ask, and how
+many rounds it may spend. `MCPCoordinator.toolServers` builds the list from `enabledServers`
+honouring `@slug` and dropping `.never`; `MCPCoordinator.permit` answers with `MCPTrustPolicy` and
+the same three-way dialog. An OAuth server with no live session is left out rather than passed
+without one — a CLI cannot turn a 401 into a sentence the model can work around, and a tool result
+is the only place that explanation would fit.
+
+`CodexMCPLaunch` turns the list into `-c` overrides: `command`/`args`/`env_vars` for a local
+server, `url` with `bearer_token_env_var` — or `env_http_headers` when the header is not
+`Authorization` — for a remote one, and `enabled=false` for each of the user's own. The values live
+in the app-server's environment under `TC_MCP_<HANDLE>_<KEY>`. That environment is fixed at `exec`,
+so a changed list, a refreshed OAuth token included, is a **relaunch**: `CodexAppServerClient`
+remembers what it was started with and starts again when the next turn wants something else.
+Nothing else can deliver it — `config/mcpServer/reload` takes no parameters and re-reads the
+config from disk, and thread-scoped `mcp_servers` on `thread/start` both fails to arm the tools and
+undoes the launch-level disabling, which is why it is not used. A tool call arrives as
+`mcpServer/elicitation/request`, decoded by `CodexElicitation` and answered `accept` or `decline`;
+every other server request is declined as it always was. `item/started` and `item/completed` for an
+`mcpToolCall` become `.toolCall` and `.toolResult`.
+
+`ClaudeMCPLaunch` writes the same list as the CLI's own `mcpServers` record, `0600`, named per turn
+and deleted with it. The turn then runs `--input-format stream-json` so the consent channel has a
+pipe to answer on, and drops `--disallowedTools "*"` — verified to remove the MCP tools along with
+the built-ins, after which the model narrates a call it never made. `ClaudeControlProtocol` is the
+whole of that channel: a `control_request` of subtype `can_use_tool` in, a `control_response` of
+`allow` with the arguments untouched or `deny` with a reason out. **It is the Agent SDK's wire
+format and is not documented for a host that is not the SDK**, which is why it is one type: the
+documented fallback is `--allowedTools "mcp__<handle>"`, with anything not pre-allowed denied and
+no per-call question at all. `tool_use` and `tool_result` blocks become the two events.
+
 ## Settings
 
 `MCPSettingsSection` is a section inside Settings → AI, the way `AICommandSection` is. Each row leads
@@ -181,9 +246,20 @@ caught there rather than in the middle of a conversation.
   in the next; Always Allow survives a relaunch; Escape refuses only that call.
 - `@filesystem list my desktop` shows the tools glyph after the text, sends without the prefix, and
   offers only that server's tools. `@nosuch hello` is sent verbatim.
-- On Apple Intelligence or a ChatGPT model, no tool is offered and the reply streams as before.
+- On Apple Intelligence, Grok, OpenCode or Cursor, no tool is offered and the reply streams as before.
+- On Codex and on the Claude command the same question answers with the same rows, the same dialog
+  and the same `@slug` scoping; `ps` during a turn shows no secret on either command line.
+- A Codex turn with the user's own `~/.codex` servers configured runs none of them: nothing they
+  would have printed appears, and their processes never start.
+- Signing out of an OAuth server mid-conversation, then asking again, relaunches the app-server
+  rather than sending the old token; Codex's own `~/.codex/config.toml` is byte-identical after.
+- With `/Library/Application Support/ClaudeCode/managed-mcp.json` present, the Claude row says MCP
+  is managed by your organization and the turn runs with no MCP flags at all.
 - Switching MCP off, then AI off, leaves no server process resident.
 - A settings backup carries neither a server nor the flag.
 - Harnesses: `mcp-test`, `mcp-stdio-test` and `mcp-oauth-test`, plus the tool halves of `ai-provider-test`
-  (catalog and turn encoding, fragmented argument decoding) and `ai-chat-test` (the loop, its cap,
-  its output bounds, and tool-use persistence).
+  (catalog and turn encoding, fragmented argument decoding, both CLIs' launch encodings and their
+  two consent channels), `ai-chat-test` (the loop, its cap, its output bounds, and tool-use
+  persistence), `codex-turn-test` (the launch boundary, the elicitation, the rows and the call cap)
+  and `installed-ai-test` (the flags, the `0600` configuration and its deletion, the control
+  channel, the round cap and the managed-policy branch).

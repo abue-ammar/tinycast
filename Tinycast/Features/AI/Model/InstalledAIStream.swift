@@ -5,19 +5,26 @@ struct InstalledAIStreamFrame: Equatable, Sendable {
     var sessionID: String?
     var error: String?
     var completed = false
+    /// A tool call the CLI is holding open; the runner answers it and the turn carries on.
+    var controlRequest: ClaudeControlProtocol.Request?
+    /// The round cap ended the turn. Only the runner knows the number to say it with.
+    var stoppedAtRoundCap = false
 }
 
 enum InstalledAIStreamDecoder {
-    static func decode(_ data: Data, kind: InstalledAIKind) -> InstalledAIStreamFrame {
+    static func decode(
+        _ data: Data, kind: InstalledAIKind, servers: [AIToolServer] = []
+    ) -> InstalledAIStreamFrame {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let type = object["type"] as? String
         else { return InstalledAIStreamFrame() }
         switch kind {
         case .openCode: return openCode(object, type: type)
-        case .claude: return claude(object, type: type)
+        case .claude: return claude(object, type: type, servers: servers)
         case .cursor: return cursor(object, type: type)
         case .grok:
-            var frame = claude(object, type: type)
+            // Grok shares the frame shape but never the tools: `--deny *` refuses every call.
+            var frame = claude(object, type: type, servers: [])
             frame.sessionID = object["session_id"] as? String
             return frame
         case .codex: return InstalledAIStreamFrame()
@@ -52,9 +59,17 @@ enum InstalledAIStreamDecoder {
     }
 
     private static func claude(
-        _ object: [String: Any], type: String
+        _ object: [String: Any], type: String, servers: [AIToolServer]
     ) -> InstalledAIStreamFrame {
         var frame = InstalledAIStreamFrame()
+        if !servers.isEmpty, type == "control_request" {
+            frame.controlRequest = ClaudeControlProtocol.request(object)
+            return frame
+        }
+        if !servers.isEmpty, type == "assistant" || type == "user" {
+            frame.events = toolEvents(in: object, servers: servers)
+            return frame
+        }
         if type == "stream_event", let event = object["event"] as? [String: Any],
             let delta = event["delta"] as? [String: Any]
         {
@@ -71,6 +86,11 @@ enum InstalledAIStreamDecoder {
             return frame
         }
         guard type == "result" else { return frame }
+        // The cap's own subtype comes with an empty `result`, so it is read before the error is.
+        if object["subtype"] as? String == "error_max_turns" {
+            frame.stoppedAtRoundCap = true
+            return frame
+        }
         if object["is_error"] as? Bool == true {
             frame.error = object["result"] as? String ?? "Claude could not finish the response."
             return frame
@@ -84,6 +104,32 @@ enum InstalledAIStreamDecoder {
         }
         frame.completed = true
         return frame
+    }
+
+    /// An assistant turn's `tool_use` blocks and the `tool_result` blocks that answer them, as the
+    /// two events a transcript row is built from. A block naming no configured server is not ours.
+    private static func toolEvents(
+        in object: [String: Any], servers: [AIToolServer]
+    ) -> [AIStreamEvent] {
+        guard let message = object["message"] as? [String: Any],
+            let content = message["content"] as? [[String: Any]]
+        else { return [] }
+        return content.compactMap { block in
+            switch block["type"] as? String {
+            case "tool_use":
+                guard let id = block["id"] as? String, let name = block["name"] as? String,
+                    let call = ClaudeMCPLaunch.route(name)
+                else { return nil }
+                return .toolCall(
+                    id: id, origin: AIToolServerRow.title(of: call.handle, in: servers),
+                    title: AIToolServerRow.label(call.tool))
+            case "tool_result":
+                guard let id = block["tool_use_id"] as? String else { return nil }
+                return .toolResult(id: id, isError: block["is_error"] as? Bool == true)
+            default:
+                return nil
+            }
+        }
     }
 
     private static func cursor(

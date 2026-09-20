@@ -60,6 +60,29 @@ struct MCPServer: Codable, Equatable, Identifiable, Sendable {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? slug : trimmed
     }
+
+    /// The shape a vendor CLI can run itself, for a route whose own client is the MCP client.
+    /// `bearerToken` is the OAuth session's, lent so the reader signs in once for every route;
+    /// everything secret travels in the value rather than the name, and never on argv.
+    func toolServer(
+        headerValue: String, environment: [String: String], bearerToken: String?
+    ) -> AIToolServer? {
+        switch transport {
+        case .http(let url, let headerName):
+            let name = headerName.trimmingCharacters(in: .whitespaces)
+            let value = bearerToken.map { "Bearer \($0)" } ?? headerValue
+            guard !url.isEmpty, !name.isEmpty, !value.isEmpty else { return nil }
+            return AIToolServer(
+                handle: slug, title: title,
+                transport: .url(url, headerName: name, headerValue: value))
+        case .stdio(let command, let arguments, let environmentKeys):
+            guard !command.isEmpty else { return nil }
+            let values = environment.filter { environmentKeys.contains($0.key) }
+            return AIToolServer(
+                handle: slug, title: title,
+                transport: .command(path: command, arguments: arguments, environment: values))
+        }
+    }
 }
 
 /// The handle `@slug` addresses, derived from the name so nobody has to invent a second one.
