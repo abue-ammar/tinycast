@@ -24,6 +24,7 @@
 		05A237890B4BD21EE91D8090 /* DictionaryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 732AEAA3A5C5DE559B739295 /* DictionaryService.swift */; };
 		05DD364ADC75E040E2C17AE1 /* MenuSearchQuery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 631BCDD61FD48D31C3A7AE6D /* MenuSearchQuery.swift */; };
 		064C3281B4FABBBD5979F24A /* CustomWindowSize.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A864436CAD5C5F62946603 /* CustomWindowSize.swift */; };
+		065D1E3540ED0A83CF492925 /* SnippetUsageStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A89E14CCF7D29C502085217 /* SnippetUsageStore.swift */; };
 		067A064C013F0F66208E7DB1 /* KeychainSecretStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC02192DE787DBE081C589B8 /* KeychainSecretStore.swift */; };
 		06B25F0B7A2B2D887A9B62FC /* WindowLayoutDraft.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D9C37A9079B2BE573136DFF /* WindowLayoutDraft.swift */; };
 		06BA73AE917A8595DF18E8E1 /* NoteMarkdownParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C3F123266ED0DA4BC9616B9 /* NoteMarkdownParser.swift */; };
@@ -996,6 +997,7 @@
 		7945C129A685FC29FBA70EE4 /* BackupCategorySelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupCategorySelection.swift; sourceTree = "<group>"; };
 		79BC68E042182F7068220BB3 /* QuicklinksSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinksSettingsView.swift; sourceTree = "<group>"; };
 		7A660CA7A22E900E0EE2B90F /* ExtensionDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionDeepLink.swift; sourceTree = "<group>"; };
+		7A89E14CCF7D29C502085217 /* SnippetUsageStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetUsageStore.swift; sourceTree = "<group>"; };
 		7B42664C60B760276FBAAD61 /* EmojiSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiSettingsView.swift; sourceTree = "<group>"; };
 		7B711492A6DA473E6DC9646C /* RaycastImportSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportSelection.swift; sourceTree = "<group>"; };
 		7BFFB1471D30C915BBC5DCBA /* SnippetRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetRepository.swift; sourceTree = "<group>"; };
@@ -2610,6 +2612,7 @@
 				7BFFB1471D30C915BBC5DCBA /* SnippetRepository.swift */,
 				375734577C888260A8023181 /* SnippetsStore.swift */,
 				F58E564E6181EB15497E51CD /* SnippetTemplateEngine.swift */,
+				7A89E14CCF7D29C502085217 /* SnippetUsageStore.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -3783,6 +3786,7 @@
 				58D369977E702AD66F070913 /* SnippetMarkdownSerializer.swift in Sources */,
 				175DAAED3859A54861D8CEBC /* SnippetRepository.swift in Sources */,
 				3B02D6CE68E0E488955A19B5 /* SnippetTemplateEngine.swift in Sources */,
+				065D1E3540ED0A83CF492925 /* SnippetUsageStore.swift in Sources */,
 				57784875AA132F7756399363 /* SnippetsListView.swift in Sources */,
 				96BC636877D935C5EB20BF7F /* SnippetsScreen.swift in Sources */,
 				3BC6CC35889FFC77D640C7CA /* SnippetsSettingsView.swift in Sources */,

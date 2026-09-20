@@ -203,6 +203,7 @@ final class SnippetCoordinator {
         }
         completeSnippetExpansion(
             result,
+            recordID: record.id,
             target: target,
             expectedKeyword: expectedKeyword,
             keywordLength: keywordLength,
@@ -248,6 +249,7 @@ final class SnippetCoordinator {
                 userArguments: arguments)
             completeSnippetExpansion(
                 result,
+                recordID: record.id,
                 target: target,
                 expectedKeyword: expectedKeyword,
                 keywordLength: keywordLength,
@@ -258,6 +260,7 @@ final class SnippetCoordinator {
 
     private func completeSnippetExpansion(
         _ result: SnippetTemplateEngine.ExpansionResult,
+        recordID: StoredSnippet.ID,
         target: InjectionTarget?,
         expectedKeyword: String?,
         keywordLength: Int,
@@ -271,6 +274,7 @@ final class SnippetCoordinator {
             keywordLength: keywordLength,
             automaticGeneration: automaticGeneration,
             onDelivered: { [weak self] in
+                self?.store.recordUse(id: recordID)
                 guard let self, let confirmation else { return }
                 self.showMessage(confirmation)
             })

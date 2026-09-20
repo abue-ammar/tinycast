@@ -11,12 +11,24 @@ struct SnippetsScreen: PaletteScreen {
 
     /// A disabled snippet is off everywhere, so the browser lists exactly what the launcher does.
     var rows: [StoredSnippet] {
+        let _ = store.usageRevision
         let enabled = store.snippets.filter { $0.snippet.isEnabled }
         let query = vm.query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return enabled }
-        return enabled.filter { record in
+        let filtered = query.isEmpty ? enabled : enabled.filter { record in
             record.snippet.name.localizedCaseInsensitiveContains(query)
                 || record.snippet.keyword?.localizedCaseInsensitiveContains(query) == true
+        }
+        return filtered.sorted { lhs, rhs in
+            let leftGroup =
+                SnippetUsageGroup.allCases.firstIndex(of: store.usage.group(for: lhs.id)) ?? 0
+            let rightGroup =
+                SnippetUsageGroup.allCases.firstIndex(of: store.usage.group(for: rhs.id)) ?? 0
+            if leftGroup != rightGroup { return leftGroup < rightGroup }
+            let leftDate = store.usage.lastUsed(for: lhs.id) ?? .distantPast
+            let rightDate = store.usage.lastUsed(for: rhs.id) ?? .distantPast
+            if leftDate != rightDate { return leftDate > rightDate }
+            return lhs.snippet.name.localizedCaseInsensitiveCompare(rhs.snippet.name)
+                == .orderedAscending
         }
     }
 
@@ -52,7 +64,7 @@ struct SnippetsScreen: PaletteScreen {
             let selected = record(at: selection)
             HStack(spacing: 0) {
                 SnippetsList(
-                    results: rows, selectedID: selected?.id, scroll: scroll,
+                    results: rows, usage: store.usage, selectedID: selected?.id, scroll: scroll,
                     onSelect: { record in
                         vm.selection = rows.firstIndex(of: record) ?? 0
                     },

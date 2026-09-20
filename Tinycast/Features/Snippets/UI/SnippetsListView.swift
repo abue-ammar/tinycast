@@ -4,32 +4,59 @@ struct SnippetsList: View {
 
     @Environment(\.metrics) private var metrics
     let results: [StoredSnippet]
+    let usage: SnippetUsageStore
     let selectedID: StoredSnippet.ID?
     let scroll: ScrollIntent
     let onSelect: (StoredSnippet) -> Void
     let onActivate: () -> Void
     let onActions: (StoredSnippet) -> Void
 
+    private struct Section: Identifiable {
+        let group: SnippetUsageGroup
+        let records: [StoredSnippet]
+        var id: SnippetUsageGroup { group }
+    }
+
     private var firstRowSelected: Bool {
         selectedID != nil && selectedID == results.first?.id
+    }
+
+    private var sections: [Section] {
+        let grouped = Dictionary(grouping: results) { usage.group(for: $0.id) }
+        return SnippetUsageGroup.allCases.compactMap { group in
+            guard let records = grouped[group], !records.isEmpty else { return nil }
+            return Section(group: group, records: records)
+        }
     }
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(results) { record in
-                        SnippetRow(record: record, selected: record.id == selectedID)
-                            .selectionFrame(record.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onSelect(record) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    onSelect(record)
-                                    onActivate()
-                                }
-                            )
-                            .onRightClick { onActions(record) }
+                    ForEach(sections) { section in
+                        Text(section.group.title)
+                            .font(Theme.Typography.sectionHeader)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, Theme.Spacing.md)
+                            .padding(
+                                .top,
+                                section.id == sections.first?.id
+                                    ? Theme.Spacing.xs : Theme.Spacing.lg)
+                            .padding(.bottom, Theme.Spacing.xs)
+                        ForEach(section.records) { record in
+                            SnippetRow(record: record, selected: record.id == selectedID)
+                                .selectionFrame(record.id == selectedID)
+                                .contentShape(Rectangle())
+                                .onTapGesture { onSelect(record) }
+                                .simultaneousGesture(
+                                    TapGesture(count: 2).onEnded {
+                                        onSelect(record)
+                                        onActivate()
+                                    }
+                                )
+                                .onRightClick { onActions(record) }
+                        }
                     }
                 }
                 .padding(.horizontal, metrics.spacing.md)
