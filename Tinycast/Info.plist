@@ -69,6 +69,8 @@
 	<string>Tinycast shows a camera preview so you can check yourself, and take a photo to the clipboard.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
 	<string>Tinycast reads today's and tomorrow's events so you can join a meeting from the palette.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Tinycast lets the Apple Reminders extension read and create your reminders.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Tinycast uses Bluetooth access only when you run the Toggle Bluetooth action.</string>
 	<key>NSHumanReadableCopyright</key>

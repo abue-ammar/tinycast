@@ -5,6 +5,7 @@ struct PermissionsSettingsView: View {
     @Environment(AppCore.self) private var core
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
     @State private var calendarAccess = Permissions.calendarAccess()
+    @State private var remindersAccess = Permissions.remindersAccess()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
@@ -52,6 +53,31 @@ struct PermissionsSettingsView: View {
             } header: {
                 SettingsSectionHeader(.permissionsCalendars)
             }
+
+            Section {
+                LabeledContent {
+                    HStack(spacing: Theme.Spacing.lg) {
+                        Label(remindersStatus.title, systemImage: remindersStatus.symbol)
+                            .foregroundStyle(remindersStatus.tint)
+                        Button(remindersNeedsPrompt ? "Grant Access…" : "Open…") {
+                            if remindersNeedsPrompt {
+                                requestReminders()
+                            } else {
+                                Permissions.openRemindersSettings()
+                            }
+                        }
+                        .help(
+                            remindersNeedsPrompt
+                                ? "Asks macOS for access, so the Apple Reminders extension can work."
+                                : "Opens Privacy & Security › Reminders.")
+                    }
+                } label: {
+                    SettingsRowTitle(.permissionsReminders, "Reminders")
+                    Text("Lets the Apple Reminders extension work.")
+                }
+            } header: {
+                SettingsSectionHeader(.permissionsReminders)
+            }
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.permissions)
@@ -60,6 +86,7 @@ struct PermissionsSettingsView: View {
     }
 
     private var calendarNeedsPrompt: Bool { calendarAccess == .notDetermined }
+    private var remindersNeedsPrompt: Bool { remindersAccess == .notDetermined }
 
     private var accessibilityStatus: (title: String, symbol: String, tint: Color) {
         accessibilityTrusted
@@ -75,10 +102,34 @@ struct PermissionsSettingsView: View {
         }
     }
 
+    private var remindersStatus: (title: String, symbol: String, tint: Color) {
+        switch remindersAccess {
+        case .granted: return ("Granted", "checkmark.circle.fill", .green)
+        case .notDetermined: return ("Not asked yet", "questionmark.circle.fill", .secondary)
+        case .denied: return ("Not granted", "exclamationmark.triangle.fill", .orange)
+        }
+    }
+
     private func refresh() {
         let trusted = Permissions.isAccessibilityTrusted()
         if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
         let access = Permissions.calendarAccess()
         if access != calendarAccess { calendarAccess = access }
+        let reminders = Permissions.remindersAccess()
+        if reminders != remindersAccess { remindersAccess = reminders }
+    }
+
+    private func requestReminders() {
+        Task {
+            guard
+                await core.confirm(
+                    title: "Enable Reminders?",
+                    message: "Lets the Apple Reminders extension read and create your reminders.",
+                    symbol: "checklist", confirmTitle: "Continue", tone: .neutral,
+                    confirmRole: .standard)
+            else { return }
+            _ = await Permissions.requestRemindersAccess()
+            refresh()
+        }
     }
 }

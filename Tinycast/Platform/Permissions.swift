@@ -61,4 +61,26 @@ enum Permissions {
         else { return }
         NSWorkspace.shared.open(url)
     }
+
+    static func remindersAccess() -> RemindersAccess {
+        switch EKEventStore.authorizationStatus(for: .reminder) {
+        case .fullAccess: return .granted
+        case .notDetermined: return .notDetermined
+        default: return .denied
+        }
+    }
+
+    /// The store is built and dropped here: a grant is process-wide, so nothing travels.
+    nonisolated static func requestRemindersAccess() async -> Bool {
+        (try? await EKEventStore().requestFullAccessToReminders()) ?? false
+    }
+
+    @MainActor
+    static func openRemindersSettings() {
+        guard
+            let url = URL(
+                string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Reminders")
+        else { return }
+        NSWorkspace.shared.open(url)
+    }
 }
