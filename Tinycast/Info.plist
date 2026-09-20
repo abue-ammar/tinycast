@@ -61,6 +61,14 @@
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
 	<key>LSUIElement</key>
 	<true/>
+	<!-- Extensions name their own endpoints and plenty are cleartext — ip-api.com, a Home
+	     Assistant on the LAN, a localhost dev server — which ATS fails with -1022. It is a
+	     process-wide switch, so there is no per-session opt-out to scope this to extensions. -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 	<key>NSAutoFillRequiresTextContentTypeForOneTimeCodeOnMac</key>
 	<true/>
 	<key>NSAppleEventsUsageDescription</key>
