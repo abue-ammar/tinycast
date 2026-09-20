@@ -199,7 +199,6 @@ struct ExtensionTests {
         await asyncComponentChecks()
         await menuBarRuntimeChecks()
         await menuBarHostChecks()
-        await ExtensionBackgroundSessionTests.runChecks(check)
         await ExtensionFetchTests.runChecks()
 
         print("\n\(passes) passed, \(failures) failed")
@@ -259,10 +258,10 @@ struct ExtensionTests {
     @MainActor
     static func menuBarRuntimeChecks() async {
         for (value, expected) in [("10m", 600.0), ("1h", 3600), ("1d", 86400), ("30s", 30), ("1s", 10)] {
-            check("interval \(value)", ExtensionCommand.refreshInterval(value) == expected)
+            check("interval \(value)", ExtensionRefreshPolicy.parse(value, floor: 10) == expected)
         }
         for value in ["", "0m", "-1m", "NaNm", "Infinityh", "1e308d", "5x"] {
-            check("reject interval \(value)", ExtensionCommand.refreshInterval(value) == nil)
+            check("reject interval \(value)", ExtensionRefreshPolicy.parse(value, floor: 10) == nil)
         }
         let (runtime, _, recorder) = makeRuntime()
         defer { runtime.shutdown() }

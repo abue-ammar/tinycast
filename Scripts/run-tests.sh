@@ -437,6 +437,7 @@ run ext-refresh-test       $E/Model/ExtensionManifest.swift \
                            $E/Model/ExtensionRefreshPolicy.swift \
                            $E/Model/ExtensionRefreshState.swift
 run ext-metadata-test      $E/Model/ExtensionCommandMetadata.swift \
+                           $E/Model/ExtensionMenuBarSnapshot.swift \
                            $E/Service/ExtensionCommandMetadataStore.swift
 run ext-store-test         $E/Model/ExtensionRegistry.swift \
                            $E/Model/ExtensionPackageManager.swift \
@@ -458,9 +459,9 @@ run slow ext-test          -parse-as-library \
                            $E/Model/ExtensionLaunchError.swift \
                            $E/Model/ExtensionMenuBarSnapshot.swift \
                            $E/Service/ExtensionStorage.swift \
-                           $E/Service/ExtensionMenuBarStore.swift \
                            $E/Service/ExtensionMenuBarManager.swift \
-                           $E/Service/ExtensionBackgroundSession.swift \
+                           $E/Model/ExtensionCommandMetadata.swift \
+                           $E/Service/ExtensionCommandMetadataStore.swift \
                            $E/UI/ExtensionMenuBarController.swift \
                            $E/UI/ExtensionMenuBarImage.swift \
                            Tinycast/Platform/Appearance.swift \

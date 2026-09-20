@@ -127,13 +127,12 @@ Two host-call flavours:
 | `Service/ExtensionOAuthKeychain.swift` | secure OAuth token storage backed by macOS Keychain |
 | `Service/ExtensionOAuthSession.swift` | PKCE state tracking, browser launch, and callback redirect resolution |
 | `Service/ExtensionStorage.swift` | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each) |
-| `Service/ExtensionCommandMetadataStore.swift` | every command's subtitle override and refresh bookkeeping, in one small file |
+| `Service/ExtensionCommandMetadataStore.swift` | every command's subtitle override, refresh bookkeeping and menu-bar state, in one small file |
 | `Service/ExtensionCatalog.swift` | discovery on disk, install, uninstall, import-from-Raycast |
 | `Service/ExtensionCleanup.swift` | the build workspace's name, the launch sweep, and reclaiming orphans |
 | `Service/ExtensionManager.swift` | the single owner: installed set, foreground session, no-view refreshes, menu-bar manager, launcher entries |
 | `Service/ExtensionMenuBarManager.swift` | serialized refreshes, short-lived menu sessions and their deadlines |
 | `Service/ExtensionMenuBarHost.swift` | immutable per-session namespace and menu-specific host behavior |
-| `Service/ExtensionMenuBarStore.swift` | active commands, button snapshots and next refresh dates |
 | `UI/ExtensionMenuBarController.swift` | native `NSStatusItem` and `NSMenu` rendering and dispatch |
 | `UI/ExtensionMenuBarImage.swift` | small native icons with light/dark variants |
 | `Model/ExtensionManifest.swift` | `package.json` → commands, preferences, arguments |
@@ -207,7 +206,8 @@ This bounds asynchronous work, but cannot interrupt an extension stuck in synchr
 blocking Node shim on the runtime queue.
 
 A saved button restores after relaunch without executing JavaScript; only its next due refresh boots
-the runtime. `extension-menu-bars.json` is channel-local Application Support data and is excluded from
+the runtime. Activation and the saved button live on the command's own record in
+`extension-commands.json`, which is channel-local Application Support data and is excluded from
 settings backups. The command's **Show in menu bar** toggle, uninstall, and disabling extensions
 all tear down the corresponding native items and work. Removing a menu item leaves the extension's
 other commands installed. Only explicitly activated commands have saved records.
@@ -601,7 +601,9 @@ with nothing due costs a comparison. Three guards keep it cheap:
 
 `ExtensionRefreshPolicy` is where the parsing, due dates and backoff live, driven by
 `Tests/ext-refresh-test.swift`; `Tests/ext-metadata-test.swift` covers the store behind it. Menu-bar
-commands schedule separately through `ExtensionMenuBarManager`, with a ten-second interval floor.
+commands run on their own lane in `ExtensionMenuBarManager` but read the same policy — `nextDue`,
+its failure backoff and its per-command phase — measured from the same `lastRun`, with a ten-second
+interval floor instead of sixty.
 
 ## What's supported
 
@@ -806,7 +808,7 @@ never shares with an installed copy.
 | Command subtitle, refresh state | `extension-commands.json` | yes |
 | `environment.supportPath` | `extension-support/<safe name>/` | yes |
 | OAuth tokens | macOS Keychain (`com.tinycast.extensions.oauth`) | yes |
-| Menu-bar activation and snapshot | `extension-menu-bars.json` | yes |
+| Menu-bar activation and snapshot | `extension-commands.json` | yes |
 | Icon override | `UserDefaults` → `extensionAppearances` | yes |
 | Command shortcuts | `UserDefaults` → `hotkey.extensionCommand.<entry id>` | yes |
 | Favorites, hidden items | `UserDefaults` → `favoriteApps`, `hiddenItemKeys` | yes |

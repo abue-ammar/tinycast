@@ -121,7 +121,7 @@ struct ExtensionsSettingsView: View {
                         ForEach(matching) { installed in
                             if installed.id != matching.first?.id { Divider() }
                             ExtensionDisclosure(
-                                installed: installed, coordinator: core.extensionCoordinator,
+                                installed: installed,
                                 isExpanded: expanded == installed.manifest.name,
                                 onToggle: {
                                     expanded =
@@ -335,7 +335,6 @@ struct ExtensionsSettingsView: View {
 /// A summary row, and while open its settings on an inset card — separators and fill, never glass.
 private struct ExtensionDisclosure: View {
     let installed: InstalledExtension
-    let coordinator: ExtensionCoordinator
     let isExpanded: Bool
     let onToggle: () -> Void
     let onUninstall: () -> Void
@@ -401,7 +400,7 @@ private struct ExtensionDisclosure: View {
                 ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
                     index, command in
                     if index > 0 { rule }
-                    CommandRows(installed: installed, command: command, coordinator: coordinator)
+                    CommandRows(installed: installed, command: command)
                 }
             }
             HStack {
@@ -494,12 +493,12 @@ private struct SettingsCardRow<Control: View>: View {
 private struct CommandRows: View {
     let installed: InstalledExtension
     let command: ExtensionCommand
+    @Environment(AppCore.self) private var core
     @Environment(AppSettings.self) private var settings
     @Environment(VisibilityStore.self) private var visibility
 
     /// A fact about the command, so it sits by the name as a badge rather than a warning colour.
     private var badge: String? { command.mode == .menuBar ? "Menu Bar" : nil }
-    let coordinator: ExtensionCoordinator
 
     private var reference: ExtensionCommandRef {
         ExtensionCommandRef(extensionName: installed.manifest.name, commandName: command.name)
@@ -529,8 +528,8 @@ private struct CommandRows: View {
         if command.mode == .menuBar {
             SettingsCardRow(title: "Show in menu bar", indent: Theme.Spacing.lg) {
                 Toggle("Show in menu bar", isOn: Binding(
-                    get: { coordinator.menuBarIsEnabled(reference) },
-                    set: { coordinator.setMenuBarEnabled($0, reference: reference) }))
+                    get: { core.extensions.menuBarIsEnabled(reference) },
+                    set: { core.extensions.setMenuBarEnabled($0, reference: reference) }))
                     .labelsHidden()
             }
         }

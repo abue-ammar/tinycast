@@ -35,6 +35,34 @@ final class ExtensionCommandMetadataStore {
         mutate(name, command) { $0.backgroundEnabled = enabled }
     }
 
+    func menuBarCommands() -> [(extension: String, command: String)] {
+        records.flatMap { name, commands in
+            commands.filter(\.value.menuBarEnabled).keys.map { (extension: name, command: $0) }
+        }
+    }
+
+    /// Switching the item off drops its render too: a stale one would come back at next launch.
+    func setMenuBarEnabled(_ enabled: Bool, extension name: String, command: String) {
+        mutate(name, command) {
+            $0.menuBarEnabled = enabled
+            if !enabled { $0.menuBarSnapshot = nil }
+        }
+    }
+
+    func setMenuBarSnapshot(
+        _ snapshot: ExtensionMenuBarSnapshot?, extension name: String, command: String
+    ) {
+        mutate(name, command) { $0.menuBarSnapshot = snapshot }
+    }
+
+    /// A menu-bar run is its own refresh, so the next one is measured from the launch.
+    func recordMenuBarRun(extension name: String, command: String, now: Date) {
+        mutate(name, command) {
+            $0.menuBarEnabled = true
+            $0.lastRun = now
+        }
+    }
+
     /// Disabling retires the last error with the schedule; a stale warning would outlive its cause.
     func clearBackgroundError(extension name: String, command: String) {
         mutate(name, command) {
@@ -79,6 +107,8 @@ final class ExtensionCommandMetadataStore {
     ) {
         var record = records[name]?[command] ?? ExtensionCommandMetadata()
         body(&record)
+        // A menu redraws its rows on every commit; an unchanged one must not cost a write.
+        guard records[name]?[command] != record else { return }
         records[name, default: [:]][command] = record
         scheduleFlush()
     }

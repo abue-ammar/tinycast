@@ -236,7 +236,6 @@
 		568B7DA6A6C2D24BABF0867A /* ClipboardTextHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DB32B7ACED5BE2BEE7451F /* ClipboardTextHelper.swift */; };
 		56E4958BCEF1FED10B4A796E /* UpdateCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 46F3D4D06C13288911E8D135 /* UpdateCoordinator.swift */; };
 		56EB00CB2815CC268829C97B /* AIAttachmentPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EBB9959DB6CA493D241080C /* AIAttachmentPolicy.swift */; };
-		5700D294BA97146E60DE5A2A /* ExtensionBackgroundSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3A9C0D3FFC4F12C04582688 /* ExtensionBackgroundSession.swift */; };
 		576BE005250F0F6F56C4F42D /* NoteEditAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34B6E769255C1AA37EDA28E2 /* NoteEditAction.swift */; };
 		576CE9CDD0E373C8FFEA5D1D /* WindowLayoutPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AB691265C48648210F1F6D7 /* WindowLayoutPreview.swift */; };
 		5770FB1A3FD29E27C25C944E /* SearchRelevance.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABB9DB77DCE25C41D86BB955 /* SearchRelevance.swift */; };
@@ -640,7 +639,6 @@
 		F93CD1542844003929AB1BDB /* DialogChip.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0CFA4726A74C5CCA6E301665 /* DialogChip.swift */; };
 		F9750CE5EC2E7E541F740A15 /* QuickActionSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3C83D437500107168E12647 /* QuickActionSettings.swift */; };
 		FA05D882203673A9FEE5F421 /* UninstallCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AAFBFA70EF62B67F7357E0E /* UninstallCoordinator.swift */; };
-		FA199EE3760070CA26536737 /* ExtensionMenuBarStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D0977ECBCF0EC6113E8EC83 /* ExtensionMenuBarStore.swift */; };
 		FA386C9B6DA24481565D506D /* ExtensionPackageManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0ADFFB5180991764FB13FE0B /* ExtensionPackageManager.swift */; };
 		FA93B008A17CEC503CFD7E2E /* ExtensionMenuBarSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3111655F925234368AA7EE31 /* ExtensionMenuBarSnapshot.swift */; };
 		FAD4B4B7A3B39591C73C3BAD /* MenuSearchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42ACB4D70CA089A6E948069 /* MenuSearchSession.swift */; };
@@ -805,7 +803,6 @@
 		2BAC1D756594DA0FC63F9033 /* MCPSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSettingsStore.swift; sourceTree = "<group>"; };
 		2BECF24B674F9458E4A876DA /* AppCore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCore.swift; sourceTree = "<group>"; };
 		2C5FFE395B9164BDC77B3470 /* SettingsBackupCoverage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsBackupCoverage.swift; sourceTree = "<group>"; };
-		2D0977ECBCF0EC6113E8EC83 /* ExtensionMenuBarStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionMenuBarStore.swift; sourceTree = "<group>"; };
 		2D303E193CFEFE455778C150 /* CommandsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandsSettingsView.swift; sourceTree = "<group>"; };
 		2D70641CACF5FE83A09F2275 /* BackupClipboardItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupClipboardItem.swift; sourceTree = "<group>"; };
 		2D76186A7F36C4EEDCCC8A54 /* ExtensionCaret.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionCaret.swift; sourceTree = "<group>"; };
@@ -1113,7 +1110,6 @@
 		A178C17DB989B6D2D71C021E /* ExtensionActionsPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionActionsPanel.swift; sourceTree = "<group>"; };
 		A17C22B5CE1449E12331FA94 /* WindowLayoutEditorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowLayoutEditorPanel.swift; sourceTree = "<group>"; };
 		A379CB384B76FF70AC72E235 /* AppleShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcut.swift; sourceTree = "<group>"; };
-		A3A9C0D3FFC4F12C04582688 /* ExtensionBackgroundSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionBackgroundSession.swift; sourceTree = "<group>"; };
 		A4942C19E48EF6DECD2D303D /* FileSearchMediaPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchMediaPlayer.swift; sourceTree = "<group>"; };
 		A4B1949D20DAEA3F80649D17 /* WindowCycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowCycle.swift; sourceTree = "<group>"; };
 		A5873BB8728FD8BC5D256A21 /* CameraCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraCoordinator.swift; sourceTree = "<group>"; };
@@ -2838,7 +2834,6 @@
 			isa = PBXGroup;
 			children = (
 				1AA26F487C06DC6F03F78B13 /* ExtensionAppearanceStore.swift */,
-				A3A9C0D3FFC4F12C04582688 /* ExtensionBackgroundSession.swift */,
 				A7DDDF0D150C30D0D0FC0BFD /* ExtensionCatalog.swift */,
 				87F282D4BBC2F147D3A98FFB /* ExtensionCleanup.swift */,
 				BD4C0743DE901F5E248991B4 /* ExtensionCommandMetadataStore.swift */,
@@ -2849,7 +2844,6 @@
 				DD8CDDBAC59480E1A7559278 /* ExtensionManager.swift */,
 				2858A6BD41085BF9C1679259 /* ExtensionMenuBarHost.swift */,
 				E7D5244DA7C7D17A80F33442 /* ExtensionMenuBarManager.swift */,
-				2D0977ECBCF0EC6113E8EC83 /* ExtensionMenuBarStore.swift */,
 				C40D65C644389618DF5F5E26 /* ExtensionNameResolver.swift */,
 				9F9A0A3867D1B8E1D3284471 /* ExtensionNodeShims.swift */,
 				CFE7A7AC9AEE81BAB9DA87FB /* ExtensionOAuthKeychain.swift */,
@@ -3452,7 +3446,6 @@
 				FD8DE9FDC0B6D5D94B59C4DB /* ExtensionAppearancePicker.swift in Sources */,
 				BEA4A58DE854DC330E90B5B9 /* ExtensionAppearanceStore.swift in Sources */,
 				7320E4B2ABFAE8C1D76A3526 /* ExtensionArgumentsAccessory.swift in Sources */,
-				5700D294BA97146E60DE5A2A /* ExtensionBackgroundSession.swift in Sources */,
 				1B9BC6B00770D1F002E62E0D /* ExtensionBootConfig.swift in Sources */,
 				90167E291A8F08419B0D5517 /* ExtensionCaret.swift in Sources */,
 				32238C3CCA0310804D30506A /* ExtensionCatalog.swift in Sources */,
@@ -3493,7 +3486,6 @@
 				901315BA689C48923301469F /* ExtensionMenuBarImage.swift in Sources */,
 				827BC647374905538C3E5DE8 /* ExtensionMenuBarManager.swift in Sources */,
 				FA93B008A17CEC503CFD7E2E /* ExtensionMenuBarSnapshot.swift in Sources */,
-				FA199EE3760070CA26536737 /* ExtensionMenuBarStore.swift in Sources */,
 				F88C1B7A8E2C46404792C826 /* ExtensionNameResolver.swift in Sources */,
 				552B7230E78D2C05793EC013 /* ExtensionNodeShims.swift in Sources */,
 				8FDF7F20B5FBA1B4D4FF563D /* ExtensionOAuthKeychain.swift in Sources */,

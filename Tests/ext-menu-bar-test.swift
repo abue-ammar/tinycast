@@ -15,8 +15,9 @@ extension ExtensionTests {
         var hosts: [StubHost] = []
         var boots = 0
         weak var lastRuntime: ExtensionRuntime?
+        let metadata = ExtensionCommandMetadataStore(fileURL: directory.appendingPathComponent("commands.json"))
         let manager = ExtensionMenuBarManager(
-            storage: storage, file: directory.appendingPathComponent("bars.json"),
+            storage: storage, commandMetadata: metadata,
             supportDirectory: directory.appendingPathComponent("support"), showsStatusItems: false,
             makeExecution: { _, _, _ in
                 boots += 1
@@ -33,7 +34,9 @@ extension ExtensionTests {
         manager.run(owner, command: command)
         for _ in 0..<200 where manager.isRunning { await settle(50) }
         check("real command settles and unloads", !manager.isRunning && lastRuntime == nil)
-        check("real command saves a native item", manager.store.records[reference.entryID]?.snapshot?.hasMenu == true)
+        check("real command saves a native item",
+              metadata.metadata(extension: owner.manifest.name, command: command.name)
+                  .menuBarSnapshot?.hasMenu == true)
         let controller = manager.controller(for: reference, owner: owner)
         for cycle in 1...3 {
             controller.menuWillOpen(controller.menu)
@@ -445,8 +448,10 @@ extension ExtensionTests {
         var failures: [String] = []
         var hosts: [MenuHost] = []
         weak var lastRuntime: ExtensionRuntime?
+        let metadataFile = directory.appendingPathComponent("commands.json")
+        let metadata = ExtensionCommandMetadataStore(fileURL: metadataFile)
         let manager = ExtensionMenuBarManager(
-            storage: storage, file: directory.appendingPathComponent("bars.json"),
+            storage: storage, commandMetadata: metadata,
             supportDirectory: directory.appendingPathComponent("support"), executionTimeout: .seconds(1),
             showsStatusItems: false,
             makeExecution: { owner, _, type in
@@ -460,12 +465,22 @@ extension ExtensionTests {
             }, onError: { message, _, _ in failures.append(message) })
         defer { manager.stop() }
         manager.synchronize(installed)
-        check("install does not run a menu command", boots.isEmpty && manager.store.records.isEmpty)
+        func snapshot(_ reference: ExtensionCommandRef) -> ExtensionMenuBarSnapshot? {
+            metadata.metadata(extension: reference.extensionName, command: reference.commandName)
+                .menuBarSnapshot
+        }
+        /// Backdating the last run is what the scheduler reads as due, the way a restart would.
+        func makeOverdue(_ reference: ExtensionCommandRef) {
+            metadata.recordMenuBarRun(
+                extension: reference.extensionName, command: reference.commandName, now: .distantPast)
+        }
+        check("install does not run a menu command", boots.isEmpty && metadata.menuBarCommands().isEmpty)
         manager.run(first, command: first.manifest.commands[0])
         await settle(400)
         check("settled menu keeps only a snapshot", !manager.isRunning && lastRuntime == nil)
-        check("manual launch snapshots title", manager.store.records[firstRef.entryID]?.snapshot?.title == "userInitiated")
-        check("manifest interval schedules next refresh", manager.store.records[firstRef.entryID]?.nextRefresh != nil)
+        check("manual launch snapshots title", snapshot(firstRef)?.title == "userInitiated")
+        check("manifest interval schedules next refresh",
+              metadata.metadata(extension: "first", command: "bar").lastRun != nil)
 
         let controller = manager.controller(for: firstRef, owner: first)
         controller.menuWillOpen(controller.menu)
@@ -493,7 +508,7 @@ extension ExtensionTests {
             check("action writes into its own extension", storage.localStorageValue(extension: "first", key: "clicked")
                   == .string("left-click") && storage.localStorageValue(extension: "second", key: "clicked") == nil)
             check("action snapshot updates before unloading",
-                  manager.store.records[firstRef.entryID]?.snapshot?.title == "Updated"
+                  snapshot(firstRef)?.title == "Updated"
                   && !manager.isRunning && lastRuntime == nil)
         } else { check("refresh action exists", false) }
 
@@ -510,7 +525,7 @@ extension ExtensionTests {
             controller.menuDidClose(controller.menu)
         } else { check("refresh exists after reopening", false) }
         let secondRef = ExtensionCommandRef(extensionName: "second", commandName: "bar")
-        manager.store.set(.init(), for: secondRef.entryID)
+        metadata.setMenuBarEnabled(true, extension: "second", command: "bar")
         let secondController = manager.controller(for: secondRef, owner: second)
         secondController.menuWillOpen(secondController.menu)
         await settle(350)
@@ -526,9 +541,7 @@ extension ExtensionTests {
         await settle(200)
         manager.run(second, command: second.manifest.commands[0], arguments: ["value": "kept"],
                     type: .background, context: ["origin": .string("payload")])
-        var secondRecord = manager.store.records[secondRef.entryID]!
-        secondRecord.nextRefresh = .distantPast
-        manager.store.set(secondRecord, for: secondRef.entryID)
+        makeOverdue(secondRef)
         manager.synchronize(installed)
         await settle(100)
         controller.menuDidClose(controller.menu)
@@ -566,15 +579,16 @@ extension ExtensionTests {
                   && boots.count == beforeEarlyClick + 1 && !manager.isRunning && lastRuntime == nil)
         } else { check("early confirmation action exists", false) }
 
-        var record = manager.store.records[firstRef.entryID]!
-        record.nextRefresh = .distantPast
-        manager.store.set(record, for: firstRef.entryID)
+        makeOverdue(firstRef)
         manager.synchronize(installed)
         await settle(450)
         check("overdue refresh runs with background launch type", boots.last?.1 == .background)
         check("background refresh unloads", !manager.isRunning && lastRuntime == nil)
-        let restored = ExtensionMenuBarStore(file: directory.appendingPathComponent("bars.json"))
-        check("button snapshot survives restart", restored.records == manager.store.records)
+        metadata.flush()
+        let restored = ExtensionCommandMetadataStore(fileURL: metadataFile)
+        check("button snapshot survives restart",
+              restored.metadata(extension: "first", command: "bar") ==
+                  metadata.metadata(extension: "first", command: "bar"))
         let bootCount = boots.count
         manager.stop()
         manager.synchronize(installed)
@@ -587,8 +601,10 @@ extension ExtensionTests {
         check("queued refreshes finish serially", boots.suffix(2).map(\.0) == ["first", "second"] && !manager.isRunning)
         manager.run(empty, command: empty.manifest.commands[0])
         await settle(300)
-        check("null removes item without forgetting activation", manager.store.records["extension:empty/bar"] != nil
-              && manager.store.records["extension:empty/bar"]?.snapshot == nil && !manager.isRunning)
+        check("null removes item without forgetting activation",
+              metadata.metadata(extension: "empty", command: "bar").menuBarEnabled
+              && metadata.metadata(extension: "empty", command: "bar").menuBarSnapshot == nil
+              && !manager.isRunning)
         let (foreground, _, recorder) = makeRuntime()
         defer { foreground.shutdown() }
         try? await foreground.boot(config: .current(supportDirectory: directory))
@@ -607,7 +623,8 @@ extension ExtensionTests {
         await settle(300)
         check("background no-view receives scoped context", storage.localStorageValue(extension: "job", key: "context")
               == .string("background:menu") && !manager.isRunning && lastRuntime == nil)
-        check("no-view launch creates no menu snapshot", manager.store.records["extension:job/bar"] == nil)
+        check("no-view launch creates no menu snapshot",
+              !metadata.metadata(extension: "job", command: "bar").menuBarEnabled)
         manager.run(first, command: first.manifest.commands[0], type: .background)
         await settle(300)
         check("foreground keeps rendering during background commands", recorder.trees.count > foregroundRenders + 3
@@ -619,114 +636,13 @@ extension ExtensionTests {
         manager.disable("extension:hanging/bar")
         await settle(150)
         check("disable cancels host requests", hosts.last?.didCancel == true && lastRuntime == nil)
-        check("disable removes snapshot and schedule", manager.store.records["extension:hanging/bar"] == nil)
+        check("disable removes snapshot and schedule",
+              !metadata.metadata(extension: "hanging", command: "bar").menuBarEnabled)
         manager.run(hanging, command: hanging.manifest.commands[0])
         await settle(1250)
         check("loading timeout releases runtime", !manager.isRunning && lastRuntime == nil
               && failures.last?.contains("timed out") == true)
         manager.synchronize([])
-        check("uninstall prunes every menu and schedule", manager.store.records.isEmpty && !manager.isRunning)
+        check("uninstall prunes every menu and schedule", metadata.menuBarCommands().isEmpty && !manager.isRunning)
     }
-}
-
-/// The headless refresh lane: what one run reports, and what a preempted one must not.
-@MainActor
-enum ExtensionBackgroundSessionTests {
-    static func runChecks(_ check: (String, Bool, String) -> Void) async {
-        let reference = ExtensionCommandRef(extensionName: "coffee", commandName: "status")
-
-        // A fast command used to finish before anyone waited, and then record a timeout instead.
-        let early = ExtensionBackgroundSession(reference: reference)
-        early.complete(.success)
-        var outcome = await early.wait(timeout: 0.05)
-        check("a run that finished before the wait still reports success", outcome == .success, "")
-
-        let failed = ExtensionBackgroundSession(reference: reference)
-        failed.complete(.failure("TypeError: x"))
-        outcome = await failed.wait(timeout: 0.05)
-        check("a synchronous failure keeps its own message", outcome.error == "TypeError: x", "")
-
-        let hung = ExtensionBackgroundSession(reference: reference)
-        outcome = await hung.wait(timeout: 0.05)
-        check("a run that never settles times out", outcome == .failure("Timed out."), "")
-        hung.complete(.success)
-        check("a late success cannot rewrite the timeout", hung.outcome == .failure("Timed out."), "")
-
-        let aborted = ExtensionBackgroundSession(reference: reference)
-        aborted.complete(.cancelled)
-        outcome = await aborted.wait(timeout: 0.05)
-        check("a preempted run records neither success nor failure",
-              outcome == .cancelled && outcome.error == nil, "")
-
-        await realCommandChecks(check)
-    }
-
-    /// End to end through JavaScriptCore, wired the way `runInBackground` wires it.
-    static func realCommandChecks(_ check: (String, Bool, String) -> Void) async {
-        let reference = ExtensionCommandRef(extensionName: "fixture", commandName: "status")
-        let cases: [(String, String, ExtensionBackgroundSession.Outcome)] = [
-            ("a command that returns settles as a success",
-             "module.exports.default = async function() { return; };", .success),
-            ("a command that throws settles as its own failure",
-             "module.exports.default = async function() { throw new Error('boom'); };",
-             .failure("boom"))
-        ]
-        for (label, body, expected) in cases {
-            let session = ExtensionBackgroundSession(reference: reference)
-            let relay = BackgroundRelay(session: session)
-            let runtime = ExtensionRuntime(
-                hostAPI: StubBackgroundHost(), runtimeURL: ExtensionTests.runtimeURL())
-            defer { runtime.shutdown() }
-            runtime.setDelegate(relay)
-            try? await runtime.boot(config: ExtensionBootConfig.current(
-                supportDirectory: FileManager.default.temporaryDirectory))
-            var context = ExtensionLaunchContext(
-                extensionName: reference.extensionName, extensionTitle: reference.extensionName,
-                commandName: reference.commandName, commandMode: ExtensionCommandMode.noView,
-                assetsPath: "/tmp",
-                supportPath: "/tmp", preferences: [:], caches: [:], arguments: [:],
-                fallbackText: nil, isDarkAppearance: true)
-            context.launchType = .background
-            await runtime.start(
-                session: session.id, code: body, file: URL(fileURLWithPath: "/tmp/status.js"),
-                mode: ExtensionCommandMode.noView, context: context)
-            // The whole point: a fast command settles before anyone waits, and must still report.
-            let outcome = await session.wait(timeout: 5)
-            let matched: Bool
-            switch (outcome, expected) {
-            case (.success, .success): matched = true
-            case (.failure(let actual), .failure(let wanted)): matched = actual.contains(wanted)
-            default: matched = false
-            }
-            check(label, matched, "got \(outcome)")
-        }
-    }
-}
-
-/// Routes the runtime callbacks into one background session, exactly as `ExtensionManager` does.
-@MainActor
-private final class BackgroundRelay: ExtensionRuntimeDelegate {
-    private let session: ExtensionBackgroundSession
-
-    init(session: ExtensionBackgroundSession) { self.session = session }
-
-    func runtime(_ runtime: ExtensionRuntime, session id: String, didRender tree: RenderTree) {}
-    func runtime(_ runtime: ExtensionRuntime, session id: String, navigationDepth: Int) {}
-    func runtime(_ runtime: ExtensionRuntime, log level: String, message: String) {}
-
-    func runtime(_ runtime: ExtensionRuntime, session id: String, didFail message: String) {
-        guard id == session.id else { return }
-        session.complete(.failure(message))
-    }
-
-    func runtime(_ runtime: ExtensionRuntime, session id: String, didFinish: Void) {
-        guard id == session.id else { return }
-        session.complete(.success)
-    }
-}
-
-@MainActor
-private final class StubBackgroundHost: ExtensionHostAPI {
-    func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String { "" }
-    func sessionEnded() {}
 }

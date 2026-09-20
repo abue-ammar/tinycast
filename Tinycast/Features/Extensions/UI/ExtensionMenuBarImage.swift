@@ -23,19 +23,14 @@ enum ExtensionMenuBarImage {
         case .symbol(let name):
             source = NSImage(systemSymbolName: name, accessibilityDescription: nil)
             template = resolved.tint == nil
-        case .file(let path):
-            source = await ExtensionIconCache.loadOriginalAsync(atPath: path)
-        case .fileIcon(let path):
-            source = NSWorkspace.shared.icon(forFile: path)
-        case .remote(let url):
-            source = await ExtensionIconCache.loadRemoteAsync(url, asIcon: false)
-        case .inline(let url):
-            source = await ExtensionIconCache.loadInlineAsync(url, palette: ExtensionImage.svgPalette(isDark: isDark))
         case .glyph(let text):
             source = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
                 (text as NSString).draw(in: rect, withAttributes: [.font: NSFont.systemFont(ofSize: size - 2)])
                 return true
             }
+        default:
+            // Only a symbol or a glyph is drawn here; the palette already loads every bitmap.
+            source = await ExtensionImage.load(resolved, isDark: isDark, animates: true)
         }
         guard !Task.isCancelled, let source, source.size.width > 0, source.size.height > 0 else { return nil }
         let tint = resolved.tint.map(NSColor.init)

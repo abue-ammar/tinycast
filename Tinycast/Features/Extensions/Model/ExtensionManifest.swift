@@ -171,15 +171,6 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
         return complete
     }
 
-    static func refreshInterval(_ value: String?) -> TimeInterval? {
-        guard let value, let unit = value.last,
-            let amount = Double(value.dropLast()), amount.isFinite, amount > 0,
-            let multiplier: Double = ["s": 1, "m": 60, "h": 3600, "d": 86400][String(unit)]
-        else { return nil }
-        let seconds = amount * multiplier
-        return seconds.isFinite ? max(seconds, 10) : nil
-    }
-
     init?(json: Any) {
         guard let dict = json as? [String: Any], let name = dict["name"] as? String,
             let title = dict["title"] as? String
@@ -190,7 +181,10 @@ struct ExtensionCommand: Sendable, Hashable, Identifiable {
         description = dict["description"] as? String ?? ""
         mode = ExtensionCommandMode(rawValue: dict["mode"] as? String ?? "view") ?? .view
         intervalRaw = dict["interval"] as? String
-        interval = mode == .menuBar ? Self.refreshInterval(intervalRaw) : ExtensionRefreshPolicy.parse(intervalRaw)
+        interval = ExtensionRefreshPolicy.parse(
+            intervalRaw,
+            floor: mode == .menuBar
+                ? ExtensionRefreshPolicy.menuBarMinimumInterval : ExtensionRefreshPolicy.minimumInterval)
         keywords = dict["keywords"] as? [String] ?? []
         icon = dict["icon"] as? String
         disabledByDefault = dict["disabledByDefault"] as? Bool ?? false

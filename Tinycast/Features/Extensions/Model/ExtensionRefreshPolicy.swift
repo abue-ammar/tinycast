@@ -5,6 +5,8 @@ import Foundation
 enum ExtensionRefreshPolicy {
     /// What a manifest may ask for; tighter would burn battery re-rendering a subtitle.
     static let minimumInterval: TimeInterval = 60
+    /// A menu-bar item redraws in place, so it may tick far faster than a launcher subtitle.
+    static let menuBarMinimumInterval: TimeInterval = 10
     /// A broken command backs off to at most this, so it can never pin the loop.
     static let maximumInterval: TimeInterval = 24 * 3600
     /// Due commands firing together run as one batch when they land inside this window.
@@ -13,7 +15,7 @@ enum ExtensionRefreshPolicy {
     static let idleHeartbeat: TimeInterval = 300
 
     /// `"90s"`, `"1m"`, `"12h"`, `"1d"` → seconds, clamped to the floor. Anything else is no schedule.
-    static func parse(_ raw: String?) -> TimeInterval? {
+    static func parse(_ raw: String?, floor: TimeInterval = minimumInterval) -> TimeInterval? {
         guard let raw else { return nil }
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard text.count >= 2, let unit = text.last, let amount = Double(text.dropLast()),
@@ -27,7 +29,9 @@ enum ExtensionRefreshPolicy {
         case "d": multiplier = 86400
         default: return nil
         }
-        return max(amount * multiplier, minimumInterval)
+        let seconds = amount * multiplier
+        // A huge amount overflows to infinity, which would schedule a tick that never comes.
+        return seconds.isFinite ? max(seconds, floor) : nil
     }
 
     /// Menu-bar refreshes belong to their own scheduler.

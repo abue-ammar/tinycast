@@ -3,8 +3,8 @@ import os
 
 @MainActor
 final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
-    let store: ExtensionMenuBarStore
     private let storage: ExtensionStorage
+    private let commandMetadata: ExtensionCommandMetadataStore
     private let supportDirectory: URL
     private let executionTimeout: Duration
     private let showsStatusItems: Bool
@@ -60,29 +60,30 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         }
     }
 
-    init(storage: ExtensionStorage, file: URL, supportDirectory: URL, executionTimeout: Duration = .seconds(60),
-         showsStatusItems: Bool = true,
+    init(storage: ExtensionStorage, commandMetadata: ExtensionCommandMetadataStore, supportDirectory: URL,
+         executionTimeout: Duration = .seconds(60), showsStatusItems: Bool = true,
          makeExecution: @escaping (InstalledExtension, ExtensionCommand, ExtensionLaunchType) -> Execution?,
          onError: @escaping (String, InstalledExtension, Bool) -> Void) {
         self.storage = storage
+        self.commandMetadata = commandMetadata
         self.supportDirectory = supportDirectory
         self.executionTimeout = executionTimeout
         self.showsStatusItems = showsStatusItems
         self.makeExecution = makeExecution
         self.onError = onError
-        store = ExtensionMenuBarStore(file: file)
     }
 
     func synchronize(_ installed: [InstalledExtension]) {
         self.installed = installed
-        for (entryID, record) in store.records {
-            guard let reference = ExtensionCommandRef(entryID: entryID), let (owner, command) = resolve(reference),
-                command.mode == .menuBar
+        for reference in menuBarReferences() {
+            guard let (owner, command) = resolve(reference), command.mode == .menuBar
             else {
-                disable(entryID)
+                disable(reference.entryID)
                 continue
             }
-            if let snapshot = record.snapshot { controller(for: reference, owner: owner).update(snapshot) }
+            if let snapshot = metadata(reference).menuBarSnapshot {
+                controller(for: reference, owner: owner).update(snapshot)
+            }
         }
         scheduleRefresh()
     }
@@ -90,8 +91,9 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     func run(_ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:],
              type: ExtensionLaunchType = .userInitiated, context: [String: RenderValue] = [:]) {
         let reference = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
-        if command.mode == .menuBar, store.records[reference.entryID] == nil {
-            store.set(.init(), for: reference.entryID)
+        if command.mode == .menuBar, !metadata(reference).menuBarEnabled {
+            commandMetadata.setMenuBarEnabled(true, extension: reference.extensionName,
+                                              command: reference.commandName)
         }
         enqueue(Request(reference: reference, type: type, arguments: arguments, context: context))
     }
@@ -99,7 +101,10 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     func disable(_ entryID: String) {
         requests.removeAll { $0.reference.entryID == entryID }
         controllers.removeValue(forKey: entryID)?.remove()
-        store.set(nil, for: entryID)
+        if let reference = ExtensionCommandRef(entryID: entryID) {
+            commandMetadata.setMenuBarEnabled(false, extension: reference.extensionName,
+                                              command: reference.commandName)
+        }
         if active?.request.reference.entryID == entryID { finish() }
         runNext()
         scheduleRefresh()
@@ -108,8 +113,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     func remove(extensionName: String) {
         requests.removeAll { $0.reference.extensionName == extensionName }
         if active?.owner.manifest.name == extensionName { finish() }
-        for entryID in store.records.keys where ExtensionCommandRef(entryID: entryID)?.extensionName == extensionName {
-            disable(entryID)
+        for reference in menuBarReferences() where reference.extensionName == extensionName {
+            disable(reference.entryID)
         }
         runNext()
     }
@@ -131,6 +136,16 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         return (owner, command)
     }
 
+    private func metadata(_ reference: ExtensionCommandRef) -> ExtensionCommandMetadata {
+        commandMetadata.metadata(extension: reference.extensionName, command: reference.commandName)
+    }
+
+    private func menuBarReferences() -> [ExtensionCommandRef] {
+        commandMetadata.menuBarCommands().map {
+            ExtensionCommandRef(extensionName: $0.extension, commandName: $0.command)
+        }
+    }
+
     private func enqueue(_ request: Request) {
         if request.scheduled, requests.contains(where: { $0.reference == request.reference }) { return }
         requests.removeAll { $0.reference == request.reference && $0.scheduled }
@@ -143,12 +158,11 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         let request = requests.removeFirst()
         let entryID = request.reference.entryID
         guard let (owner, command) = resolve(request.reference),
-            command.mode == .noView || store.records[entryID] != nil
+            command.mode == .noView || metadata(request.reference).menuBarEnabled
         else { runNext(); return }
         if command.mode == .menuBar {
-            var record = store.records[entryID] ?? .init()
-            record.nextRefresh = command.interval.map { Date().addingTimeInterval($0) }
-            store.set(record, for: entryID)
+            commandMetadata.recordMenuBarRun(extension: request.reference.extensionName,
+                                             command: request.reference.commandName, now: Date())
             scheduleRefresh()
         }
 
@@ -177,8 +191,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             preferences: storage.resolvedPreferences(extension: owner.manifest.name,
                                                      schemas: owner.manifest.preferences + command.preferences),
             caches: storage.caches(extension: owner.manifest.name), arguments: command.completeArguments(request.arguments),
-            fallbackText: nil, isDarkAppearance: NSApp.effectiveAppearance.isDark,
-            launchType: request.type, launchContext: request.context)
+            fallbackText: nil, launchType: request.type,
+            isDarkAppearance: NSApp.effectiveAppearance.isDark, launchContext: request.context)
         launchTask = Task { [weak self] in
             do {
                 let code = try await Task.detached(priority: .utility) {
@@ -286,24 +300,31 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     private func scheduleRefresh() {
         refreshTask?.cancel()
         refreshTask = nil
-        let dates = store.records.values.compactMap(\.nextRefresh)
-        guard let next = dates.min() else { return }
+        guard let next = dueDates().values.min() else { return }
         refreshTask = Task { [weak self] in
             do { try await Task.sleep(for: .seconds(max(0, next.timeIntervalSinceNow)), tolerance: .seconds(1)) } catch { return }
             guard !Task.isCancelled, let self else { return }
-            let due = self.store.records.filter { ($0.value.nextRefresh ?? .distantFuture) <= Date() }.map(\.key)
-            for entryID in due {
-                guard let reference = ExtensionCommandRef(entryID: entryID), let (_, command) = self.resolve(reference)
-                else { continue }
-                var record = self.store.records[entryID] ?? .init()
-                record.nextRefresh = command.interval.map { Date().addingTimeInterval($0) }
-                self.store.set(record, for: entryID)
-                if self.active?.request.reference != reference {
-                    self.enqueue(Request(reference: reference, scheduled: true))
-                }
+            let now = Date()
+            for (reference, date) in self.dueDates() where date <= now {
+                guard self.active?.request.reference != reference else { continue }
+                self.enqueue(Request(reference: reference, scheduled: true))
             }
             self.scheduleRefresh()
         }
+    }
+
+    /// The background loop's cadence: from lastRun, with its backoff and per-command phase.
+    private func dueDates() -> [ExtensionCommandRef: Date] {
+        var dates: [ExtensionCommandRef: Date] = [:]
+        let now = Date()
+        for reference in menuBarReferences() {
+            guard let (_, command) = resolve(reference), let interval = command.interval else { continue }
+            let record = metadata(reference)
+            dates[reference] = ExtensionRefreshPolicy.nextDue(
+                lastRun: record.lastRun, now: now, interval: interval,
+                consecutiveFailures: record.consecutiveFailures, entryID: reference.entryID)
+        }
+        return dates
     }
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didRender tree: RenderTree) {
@@ -317,23 +338,36 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         let wasLoading = active.isLoading
         active.isLoading = root?.bool("isLoading") == true
         if !wasLoading, active.isLoading { armDeadline(active) }
-        var record = store.records[reference.entryID] ?? .init()
         if let root {
             let snapshot = ExtensionMenuBarSnapshot(node: root)
             let controller = controller(for: reference, owner: active.owner)
-            if !active.isLoading || record.snapshot == nil { controller.update(snapshot) }
+            if !active.isLoading || metadata(reference).menuBarSnapshot == nil { controller.update(snapshot) }
             controller.showMenu(root, session: session)
-            if !active.isLoading { record.snapshot = snapshot }
+            if !active.isLoading, active.mode == .menuBar {
+                commandMetadata.setMenuBarSnapshot(snapshot, extension: reference.extensionName,
+                                                   command: reference.commandName)
+                commandMetadata.clearBackgroundError(extension: reference.extensionName,
+                                                     command: reference.commandName)
+            }
         } else {
             controllers.removeValue(forKey: reference.entryID)?.remove()
-            record.snapshot = nil
+            if active.mode == .menuBar {
+                commandMetadata.setMenuBarSnapshot(nil, extension: reference.extensionName,
+                                                   command: reference.commandName)
+            }
         }
-        if !active.isLoading { store.set(record, for: reference.entryID) }
         releaseIfIdle()
     }
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didFail message: String) {
         guard let active, active.id == session else { return }
+        let reference = active.request.reference
+        // Recorded as a failed refresh, so a broken item backs off instead of retrying.
+        if active.mode == .menuBar {
+            commandMetadata.recordBackgroundResult(
+                extension: reference.extensionName, command: reference.commandName, success: false,
+                error: message, now: Date())
+        }
         controllers[active.request.reference.entryID]?.showError(message)
         if active.isInteractive { onError(message, active.owner, false) }
         finish()
@@ -353,5 +387,28 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         if level == "error" {
             Logger(subsystem: "com.tinycast", category: "extension-menu-bar").error("\(message, privacy: .public)")
         }
+    }
+}
+
+extension ExtensionMenuBarSnapshot {
+    /// The icon travels as JSON because a rendered prop is not Codable.
+    init(node: RenderNode) {
+        title = node.string("title")
+        tooltip = node.string("tooltip")
+        if let value = node.props["icon"],
+            let data = try? JSONSerialization.data(withJSONObject: value.jsonValue, options: .fragmentsAllowed)
+        {
+            iconJSON = String(bytes: data, encoding: .utf8)
+        } else {
+            iconJSON = nil
+        }
+        hasMenu = !node.children.isEmpty
+    }
+
+    var icon: RenderValue? {
+        guard let data = iconJSON?.data(using: .utf8),
+            let value = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)
+        else { return nil }
+        return RenderValue(json: value)
     }
 }
