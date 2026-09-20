@@ -277,6 +277,9 @@ enum SettingsSearchCatalog {
         .init(.aiDefault, "Reasoning effort", keywords: ["thinking", "effort", "deepseek"]),
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
         .init(
+            .aiChat, "Tool call rounds",
+            keywords: ["mcp", "tools", "agent", "limit", "turns", "loop"]),
+        .init(
             .aiConversations, "Opens to",
             keywords: ["new chat", "last", "summon"]),
         .init(

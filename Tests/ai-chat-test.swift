@@ -36,6 +36,7 @@ struct AIChatTests {
         segmentsInterleaveSearchesAndTools()
         await theToolLoopRunsUntilTheModelStopsAsking()
         await theToolLoopRefusesToRunForever()
+        theToolLoopDefaultsToTenRounds()
         await toolOutputIsBoundedBeforeItIsBilled()
         toolUsesPersistAndSettleOnReload()
 
@@ -114,18 +115,28 @@ struct AIChatTests {
         ]
         let base = ScriptedProvider(rounds: Array(repeating: round, count: 40))
         let invoker = RecordingInvoker(result: "again")
+        // A cap the default is not, so honouring it can only come from the value passed in.
+        let cap = 3
         var failure: String?
         do {
-            for try await _ in loop(base, invoker).stream(Self.turn) {}
+            for try await _ in loop(base, invoker, maxRounds: cap).stream(Self.turn) {}
         } catch {
             failure = error.localizedDescription
         }
         expect(
-            base.requests.count == AIToolLoopProvider.maxRounds,
-            "the loop stops at its cap rather than billing another round")
+            base.requests.count == cap,
+            "the loop stops at the configured cap rather than billing another round")
         expect(
-            failure?.contains("\(AIToolLoopProvider.maxRounds) rounds") == true,
-            "and the turn fails with a sentence naming why it stopped")
+            failure?.contains("\(cap) rounds") == true,
+            "and the turn fails with a sentence naming the cap it stopped at")
+    }
+
+    static func theToolLoopDefaultsToTenRounds() {
+        let base = ScriptedProvider(rounds: [])
+        let invoker = RecordingInvoker(result: "again")
+        expect(
+            loop(base, invoker).maxRounds == 10,
+            "with no cap passed in the loop keeps the ten rounds it shipped with")
     }
 
     static func toolOutputIsBoundedBeforeItIsBilled() async {
@@ -177,7 +188,7 @@ struct AIChatTests {
     private static let turn = AIRequest(messages: [AIMessage(role: .user, text: "go")])
 
     private static func loop(
-        _ base: ScriptedProvider, _ invoker: RecordingInvoker
+        _ base: ScriptedProvider, _ invoker: RecordingInvoker, maxRounds: Int = 10
     ) -> AIToolLoopProvider {
         AIToolLoopProvider(
             base: base,
@@ -186,6 +197,7 @@ struct AIChatTests {
                     name: "fs__read", description: "", parameters: .object([:]), origin: "Files",
                     title: "read")
             ],
+            maxRounds: maxRounds,
             invoke: { call in await invoker.invoke(call) })
     }
 

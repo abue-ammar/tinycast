@@ -78,6 +78,7 @@ enum AppSettingsKey: String, CaseIterable {
     case aiRetention = "aiRetentionDays"
     case aiOpensTo = "aiOpensTo"
     case aiNewChatAfter = "aiNewChatAfterMinutes"
+    case aiToolLoopMaxRounds = "aiToolLoopMaxRounds"
     case mcpEnabled = "mcpEnabled"
     case mcpServers = "mcpServers"
     case quickActionsEnabled = "quickActionsEnabled"

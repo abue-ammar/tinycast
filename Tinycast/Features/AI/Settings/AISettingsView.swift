@@ -126,8 +126,27 @@ struct AISettingsView: View {
                 SettingsRowTitle(.aiChat, "Web search")
                 Text("Codex and OpenRouter only. Prompts go to a search engine.")
             }
+            LabeledContent {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Text("\(settings.toolLoopMaxRounds)")
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    Stepper(
+                        "Tool call rounds", value: $settings.toolLoopMaxRounds,
+                        in: AISettingsStore.toolLoopMaxRoundsRange
+                    )
+                    .labelsHidden()
+                }
+            } label: {
+                SettingsRowTitle(.aiChat, "Tool call rounds")
+                Text("How many rounds of tool calls one reply may make before it stops.")
+            }
         } header: {
             SettingsSectionHeader(.aiChat)
+        } footer: {
+            Text("Higher lets a long tool chain finish; lower ends it sooner if a model gets stuck.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 

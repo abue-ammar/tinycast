@@ -38,6 +38,21 @@ final class AISettingsStore {
             defaults.set(newChatAfter.rawValue, forKey: AppSettingsKey.aiNewChatAfter.rawValue)
         }
     }
+    /// How many rounds of tool calls one turn may run before it is treated as stuck.
+    var toolLoopMaxRounds: Int {
+        didSet {
+            let clamped = Self.clampToolLoopMaxRounds(toolLoopMaxRounds)
+            // Assigning inside `didSet` does not re-fire it, so the stored value is clamped here.
+            if clamped != toolLoopMaxRounds { toolLoopMaxRounds = clamped }
+            defaults.set(clamped, forKey: AppSettingsKey.aiToolLoopMaxRounds.rawValue)
+        }
+    }
+    /// Bounds so a turn cannot be configured to fail instantly or to bill without end.
+    static let toolLoopMaxRoundsRange = 1...100
+    static let defaultToolLoopMaxRounds = 10
+    static func clampToolLoopMaxRounds(_ rounds: Int) -> Int {
+        min(max(rounds, toolLoopMaxRoundsRange.lowerBound), toolLoopMaxRoundsRange.upperBound)
+    }
     var enabledInstalledProviders: Set<InstalledAIKind> {
         didSet {
             guard
@@ -79,6 +94,10 @@ final class AISettingsStore {
             AINewChatAfter(
                 rawValue: defaults.integer(forKey: AppSettingsKey.aiNewChatAfter.rawValue))
             ?? .fiveMinutes
+        // Absent reads as 0, below the range, so an unset key clamps to the default first on write.
+        toolLoopMaxRounds = Self.clampToolLoopMaxRounds(
+            defaults.object(forKey: AppSettingsKey.aiToolLoopMaxRounds.rawValue) as? Int
+                ?? Self.defaultToolLoopMaxRounds)
         enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
             defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
         if case .api(let connection, let model, _) = defaultModel,

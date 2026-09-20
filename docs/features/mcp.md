@@ -37,8 +37,10 @@ the two meet.
 - **A refused or failed call is content, never a thrown error.** It comes back as an `AIToolResult`
   the model can read and work around, so a declined tool ends in an honest sentence rather than a
   failed turn.
-- **Every turn is bounded three ways.** `AIToolLoopProvider.maxRounds` is 10, after which the turn
-  fails saying so — a model that only calls has stopped answering. Each result is cut to
+- **Every turn is bounded three ways.** `AIToolLoopProvider.maxRounds` comes from
+  `AISettingsStore.toolLoopMaxRounds` — Settings → AI → Chat → Tool call rounds, default 10 — after
+  which the turn fails saying so: a model that only calls has stopped answering. The knob exists
+  because a long tool chain is legitimate work, not only a stuck model. Each result is cut to
   `maxResultBytes`, and a turn's results together to `maxTurnResultBytes`, because tool output is
   appended inside the turn and so never passes through `ChatSession.boundedContext`.
 - **A server's handle is derived, never typed.** `MCPSlug` makes it from the name and uniques it, so

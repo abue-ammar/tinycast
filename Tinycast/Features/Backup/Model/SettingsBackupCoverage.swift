@@ -120,6 +120,9 @@ enum SettingsBackupCoverage {
         AppSettingsKey.aiNewChatAfter.rawValue:
             "Paces the same decision as the setting it accompanies, against conversations that stay "
             + "on the Mac that had them.",
+        AppSettingsKey.aiToolLoopMaxRounds.rawValue:
+            "A pacing choice for tool-driven turns; no other AI setting travels in a backup, so an "
+            + "import must not tune one the AI feature it paces was never enabled for.",
         AppSettingsKey.mcpEnabled.rawValue:
             "Doubles as consent to run third-party MCP servers, one of which is a local process; a "
             + "flag that grants a capability is never carried by a backup.",
