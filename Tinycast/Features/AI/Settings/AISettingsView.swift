@@ -126,6 +126,12 @@ struct AISettingsView: View {
                 SettingsRowTitle(.aiChat, "Web search")
                 Text("Codex and OpenRouter only. Prompts go to a search engine.")
             }
+            Picker(selection: $settings.toolRounds) {
+                ForEach(AIToolRounds.allCases) { Text($0.title).tag($0) }
+            } label: {
+                SettingsRowTitle(.aiChat, "Tool call rounds")
+                Text("A reply stops after this many. API connections only.")
+            }
         } header: {
             SettingsSectionHeader(.aiChat)
         }

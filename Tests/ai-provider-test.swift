@@ -801,11 +801,18 @@ struct AIProviderTests {
         expect(fresh.retention == .forever, "retention defaults to Forever, so upgrading deletes nothing")
         expect(fresh.opensTo == .recent, "chat reopens on the recent conversation by default")
         expect(fresh.newChatAfter == .fiveMinutes, "the idle window defaults to five minutes")
+        expect(fresh.toolRounds == .ten, "a reply's tool rounds default to the ten it shipped with")
 
         fresh.retention = .week
         fresh.opensTo = .newConversation
         fresh.newChatAfter = .never
+        fresh.toolRounds = .fifty
         let reopened = AISettingsStore(defaults: defaults)
+        expect(reopened.toolRounds == .fifty, "the tool round cap persists")
+        defaults.set(7, forKey: AppSettingsKey.aiToolRounds.rawValue)
+        expect(
+            AISettingsStore(defaults: defaults).toolRounds == .ten,
+            "a stored cap no case carries reads as the default rather than an arbitrary number")
         expect(reopened.retention == .week, "retention persists")
         expect(reopened.opensTo == .newConversation, "the open policy persists")
         expect(reopened.newChatAfter == .never, "Never persists rather than reading as the default")

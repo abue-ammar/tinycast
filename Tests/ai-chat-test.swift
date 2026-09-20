@@ -116,16 +116,16 @@ struct AIChatTests {
         let invoker = RecordingInvoker(result: "again")
         var failure: String?
         do {
-            for try await _ in loop(base, invoker).stream(Self.turn) {}
+            for try await _ in loop(base, invoker, maxRounds: 3).stream(Self.turn) {}
         } catch {
             failure = error.localizedDescription
         }
         expect(
-            base.requests.count == AIToolLoopProvider.maxRounds,
-            "the loop stops at its cap rather than billing another round")
+            base.requests.count == 3,
+            "the loop stops at the cap it was given rather than billing another round")
         expect(
-            failure?.contains("\(AIToolLoopProvider.maxRounds) rounds") == true,
-            "and the turn fails with a sentence naming why it stopped")
+            failure?.contains("3 rounds") == true,
+            "and the turn fails with a sentence naming the cap it stopped at")
     }
 
     static func toolOutputIsBoundedBeforeItIsBilled() async {
@@ -177,7 +177,7 @@ struct AIChatTests {
     private static let turn = AIRequest(messages: [AIMessage(role: .user, text: "go")])
 
     private static func loop(
-        _ base: ScriptedProvider, _ invoker: RecordingInvoker
+        _ base: ScriptedProvider, _ invoker: RecordingInvoker, maxRounds: Int = 10
     ) -> AIToolLoopProvider {
         AIToolLoopProvider(
             base: base,
@@ -186,6 +186,7 @@ struct AIChatTests {
                     name: "fs__read", description: "", parameters: .object([:]), origin: "Files",
                     title: "read")
             ],
+            maxRounds: maxRounds,
             invoke: { call in await invoker.invoke(call) })
     }
 

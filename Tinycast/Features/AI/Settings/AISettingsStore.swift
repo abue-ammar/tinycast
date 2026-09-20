@@ -38,6 +38,9 @@ final class AISettingsStore {
             defaults.set(newChatAfter.rawValue, forKey: AppSettingsKey.aiNewChatAfter.rawValue)
         }
     }
+    var toolRounds: AIToolRounds {
+        didSet { defaults.set(toolRounds.rawValue, forKey: AppSettingsKey.aiToolRounds.rawValue) }
+    }
     var enabledInstalledProviders: Set<InstalledAIKind> {
         didSet {
             guard
@@ -79,6 +82,9 @@ final class AISettingsStore {
             AINewChatAfter(
                 rawValue: defaults.integer(forKey: AppSettingsKey.aiNewChatAfter.rawValue))
             ?? .fiveMinutes
+        toolRounds =
+            AIToolRounds(rawValue: defaults.integer(forKey: AppSettingsKey.aiToolRounds.rawValue))
+            ?? .ten
         enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
             defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
         if case .api(let connection, let model, _) = defaultModel,

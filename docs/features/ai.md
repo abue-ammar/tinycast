@@ -524,4 +524,5 @@ second names an external destination and must not silently redirect AI traffic a
 last two are standing instructions and the switch that sends them, both of which change every
 answer and must not arrive on another Mac unread. `aiRetention`, `aiOpensTo` and `aiNewChatAfter`
 join them: all three are decisions about conversations that never leave the Mac that had them, and
-an import must not arrive carrying an instruction to delete them.
+an import must not arrive carrying an instruction to delete them. `aiToolRounds` stays behind too: it
+limits what a tool-driven reply may spend, and an import must not raise that unasked.

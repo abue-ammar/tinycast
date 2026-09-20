@@ -131,7 +131,9 @@ final class AIChatCoordinator {
         let tools = core.mcpCoordinator.tools(scopedTo: slug)
         guard capabilities.tools, !tools.isEmpty else { return provider }
         let chatID = chat.session.id
-        return AIToolLoopProvider(base: provider, tools: tools) { [mcp = core.mcpCoordinator] call in
+        return AIToolLoopProvider(
+            base: provider, tools: tools, maxRounds: core.aiSettings.toolRounds.rawValue
+        ) { [mcp = core.mcpCoordinator] call in
             await mcp.invoke(call, in: chatID)
         }
     }

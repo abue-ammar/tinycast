@@ -6,18 +6,19 @@ struct AIToolLoopProvider: AIProvider {
     private let tools: [AITool]
     private let invoke: @Sendable (AIToolCall) async -> AIToolResult
 
-    /// A model that keeps calling has stopped answering; ten rounds is where the turn fails.
-    static let maxRounds = 10
+    /// A model that keeps calling has stopped answering; this many rounds is where the turn fails.
+    private let maxRounds: Int
     static let maxResultBytes = 32_768
     /// Results bypass `boundedContext`, so the turn carries its own ceiling for what they add.
     static let maxTurnResultBytes = 131_072
 
     init(
-        base: any AIProvider, tools: [AITool],
+        base: any AIProvider, tools: [AITool], maxRounds: Int,
         invoke: @escaping @Sendable (AIToolCall) async -> AIToolResult
     ) {
         self.base = base
         self.tools = tools
+        self.maxRounds = maxRounds
         self.invoke = invoke
     }
 
@@ -42,7 +43,7 @@ struct AIToolLoopProvider: AIProvider {
     ) async throws {
         var messages = request.messages
         var spent = 0
-        for _ in 0..<Self.maxRounds {
+        for _ in 0..<maxRounds {
             let round = try await streamRound(
                 request.continuing(with: messages, tools: tools), into: continuation)
             guard !round.calls.isEmpty else {
@@ -63,7 +64,7 @@ struct AIToolLoopProvider: AIProvider {
             }
         }
         throw AIProviderError.responseFailed(
-            "Stopped after \(Self.maxRounds) rounds of tool calls.")
+            "Stopped after \(maxRounds) rounds of tool calls.")
     }
 
     /// One pass over the base route: text flows straight to the transcript, calls are collected.
