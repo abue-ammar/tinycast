@@ -88,9 +88,7 @@ struct BackupSettingsView: View {
                     Text(raycastFileSubtitle)
                 }
                 LabeledContent {
-                    SecureField(
-                        "Passphrase", text: $passphrase, prompt: Text("Export password")
-                    )
+                    RevealableSecureField(title: "Passphrase", text: $passphrase, prompt: Text("Export password"))
                     .labelsHidden()
                     .textFieldStyle(.roundedBorder)
                     // LabeledContent right-aligns its value text, caret and all; a field reads left.

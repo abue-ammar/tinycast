@@ -594,6 +594,10 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   is unaffected.
 - **`.settingsEnabled(_:)`, never a bare `.disabled(_:)`.** It dims as well as disables, so a
   switched-off row reads as unavailable rather than merely unresponsive.
+- **A secret is a `RevealableSecureField`, never a bare `SecureField`.** One eye, one place, so an API
+  key, a header value and a passphrase all offer the same way to check a pasted value before saving.
+  It re-hides on its own once the field is cleared, and its eye is disabled while it is empty.
+  A password field an extension declares, in a form or a preference, is left as it was.
 - **A `TextEditor` ignores `.disabled(_:)` on macOS** — its own and an ancestor's alike. The backing
   `NSTextView` keeps its caret, its keyboard and its selection, so a "disabled" prompt box still takes
   typing and still gives up its text to ⌘A ⌘C. Swap the editor for a `Text` when it must be read-only,

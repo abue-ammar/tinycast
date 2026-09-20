@@ -382,6 +382,7 @@
 		939F3944AE8D36A8C337D46F /* Signposts.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9044F107ADD5896746DBC35 /* Signposts.swift */; };
 		94887F8E18AB2C08A8273897 /* Permissions.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA7B3EB88881CEEFCE71448D /* Permissions.swift */; };
 		94A1ED3C3F04FC266AF0F63E /* ExtensionMenuBarHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2858A6BD41085BF9C1679259 /* ExtensionMenuBarHost.swift */; };
+		94E62234828A0945CFCFE764 /* RevealableSecureField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36DEEF228EF1398B421C89B2 /* RevealableSecureField.swift */; };
 		9553DDEBD6FCC205069ED996 /* MenuPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF96A1566757811AD434C0F9 /* MenuPanel.swift */; };
 		9608AFDEDC3B330E64F53437 /* ExtensionStoreClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 410684C9DEB3754962C20C9C /* ExtensionStoreClient.swift */; };
 		96BC636877D935C5EB20BF7F /* SnippetsScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E06AA30E7BA44BC211B667F /* SnippetsScreen.swift */; };
@@ -841,6 +842,7 @@
 		369115AB459927FE90BCBEB5 /* WindowSwitchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSwitchScreen.swift; sourceTree = "<group>"; };
 		36B6DAC3B9FF387367C3FAB4 /* UninstallSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UninstallSession.swift; sourceTree = "<group>"; };
 		36C6775BBA0FC6F134296606 /* ImageThumbnail.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageThumbnail.swift; sourceTree = "<group>"; };
+		36DEEF228EF1398B421C89B2 /* RevealableSecureField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevealableSecureField.swift; sourceTree = "<group>"; };
 		370B1767182D5C53ADBEDA35 /* MCPOAuthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPOAuthManager.swift; sourceTree = "<group>"; };
 		375734577C888260A8023181 /* SnippetsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsStore.swift; sourceTree = "<group>"; };
 		37602A3CBE03EB41BF09622A /* CustomCommandArgumentsAccessory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCommandArgumentsAccessory.swift; sourceTree = "<group>"; };
@@ -1617,6 +1619,7 @@
 				4FAE24CC14F7DFECD1BD7FB1 /* PopoverMenu.swift */,
 				131B15F5EF86A067FA6C36D7 /* RedactedPlaceholder.swift */,
 				4BEA1E122A8139A21E646FE2 /* RedactedText.swift */,
+				36DEEF228EF1398B421C89B2 /* RevealableSecureField.swift */,
 				BEDDA8820165672AF8464E25 /* SettingsComponents.swift */,
 				64EC07E163CE4F3D11FE7225 /* SymbolImage.swift */,
 				A9F256977D955CC53C1D914E /* SymbolPicker.swift */,
@@ -3772,6 +3775,7 @@
 				607D38D86E7C4763DD28C8D0 /* ReleaseNotes.swift in Sources */,
 				18B3F78B6363E80149D4A646 /* ReleaseNotesView.swift in Sources */,
 				9B05C47A7414D04E20237B09 /* RenderNode.swift in Sources */,
+				94E62234828A0945CFCFE764 /* RevealableSecureField.swift in Sources */,
 				AD98F015439106F0E9D32015 /* RightClick.swift in Sources */,
 				47E13BC63F8BE11EDF25EA82 /* RootPaletteView.swift in Sources */,
 				B076DE322213FBD43C04B886 /* RowClick.swift in Sources */,

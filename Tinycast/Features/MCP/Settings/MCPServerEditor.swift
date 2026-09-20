@@ -131,7 +131,7 @@ struct MCPServerEditor: View {
                                     .settingsEditorTextField()
                             }
                             field("Value") {
-                                SecureField("Value", text: $headerValue, prompt: Text("Bearer …"))
+                                RevealableSecureField(title: "Value", text: $headerValue, prompt: Text("Bearer …"))
                                     .settingsEditorTextField()
                             }
                         }
@@ -230,7 +230,7 @@ struct MCPServerEditor: View {
                     .settingsEditorTextField()
             }
             field("Client secret") {
-                SecureField("Client secret", text: $clientSecret, prompt: Text("Optional"))
+                RevealableSecureField(title: "Client secret", text: $clientSecret, prompt: Text("Optional"))
                     .settingsEditorTextField()
             }
             field("Sign-in") {

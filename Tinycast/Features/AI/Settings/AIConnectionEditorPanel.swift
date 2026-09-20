@@ -66,10 +66,8 @@ struct AIConnectionEditorPanel: View {
                         .settingsEditorTextField()
                     }
                     editorField("API Key") {
-                        SecureField(
-                            "API Key", text: $key, prompt: Text(apiKeyPlaceholder)
-                        )
-                        .settingsEditorTextField()
+                        RevealableSecureField(title: "API Key", text: $key, prompt: Text(apiKeyPlaceholder))
+                            .settingsEditorTextField()
                     }
                     if storedKeyMatchesTarget {
                         Label("A key is already stored in Keychain", systemImage: "lock.fill")
