@@ -12,6 +12,10 @@ struct ClipboardScreen: PaletteScreen {
 
     var rows: [ClipboardItem] { store.search(vm.query, filter: vm.clipboardFilter) }
 
+    var initialSelection: Int {
+        store.initialRowIndex(in: vm.query, filter: vm.clipboardFilter)
+    }
+
     var primaryActionTitle: String {
         core.settings.clipboardDefaultAction == .copy
             ? ClipboardDefaultAction.copy.title
@@ -91,8 +95,11 @@ struct ClipboardScreen: PaletteScreen {
 
     /// Follow a row the store moved; with a query typed the highlight stays put.
     private func follow(from old: ClipFollowKey, to new: ClipFollowKey) {
-        // A nil `old.id` is the first load landing, not a row that moved.
-        guard old.id != nil else { return }
+        // A nil `old.id` is the deferred load: it restates the row the open could not compute.
+        guard old.id != nil else {
+            vm.selection = initialSelection
+            return scrollToFollow()
+        }
         let rows = rows
         if vm.query.trimmingCharacters(in: .whitespaces).isEmpty, old.id != new.id, let id = new.id,
             let index = rows.firstIndex(where: { $0.id == id })

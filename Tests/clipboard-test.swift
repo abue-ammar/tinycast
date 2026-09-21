@@ -14,6 +14,7 @@ struct ClipboardTests {
         pinsSurvivePruningAndTheWindow()
         pinsLeadFilteredSearches()
         pinnedSlotResolutionUsesVisiblePins()
+        initialRowIsNewestClipOrTopMatch()
         textFormClassification()
         colorParsing()
         colorFormatting()
@@ -191,6 +192,49 @@ struct ClipboardTests {
             expect(
                 store.pinnedItem(at: 0, in: "", filter: .link) == nil,
                 "filter applies before pinned slot mapping")
+        }
+    }
+
+    /// With no query, the newest clip below the pins opens selected; a query selects its top match.
+    static func initialRowIsNewestClipOrTopMatch() {
+        withStore { store, _ in
+            expect(
+                store.initialRowIndex(in: "", filter: .all) == 0,
+                "an empty history opens on row 0")
+
+            store.addText("alpha one", sourceBundleID: nil)
+            store.addText("beta two", sourceBundleID: nil)
+            store.addText("gamma three", sourceBundleID: nil)
+            expect(
+                store.initialRowIndex(in: "", filter: .all) == 0,
+                "with no pins the newest clip is already row 0")
+
+            store.togglePinned(item(store, "alpha one"))
+            store.togglePinned(item(store, "beta two"))
+            let results = store.search("", filter: .all)
+            let initial = store.initialRowIndex(in: "", filter: .all)
+            expect(initial == 2, "two pins push the newest clip to row 2")
+            expect(results[initial].text == "gamma three", "the initial row is the newest clip")
+            expect(
+                store.initialRowIndex(in: "   ", filter: .all) == 2,
+                "a blank query is no query, as search treats it")
+
+            let matches = store.search("beta", filter: .all)
+            expect(matches.first?.isPinned == true, "the pinned match leads the query's results")
+            expect(
+                store.initialRowIndex(in: "beta", filter: .all) == 0,
+                "a query highlights its top match, even a pin")
+
+            store.togglePinned(item(store, "gamma three"))
+            expect(
+                store.initialRowIndex(in: "", filter: .all) == 0,
+                "an all-pinned history falls back to row 0")
+
+            store.addText("delta four", sourceBundleID: nil)
+            expect(
+                store.search("", filter: .all)[store.initialRowIndex(in: "", filter: .all)].text
+                    == "delta four",
+                "the initial row follows the newest clip as the history grows")
         }
     }
 

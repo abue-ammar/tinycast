@@ -304,6 +304,14 @@ Pins change four things:
 - **Selection.** Pinning lifts a row out of its date bucket, so `ClipboardCoordinator.togglePinnedClip` moves the
   palette selection to the row's new index in the _current_ results and bumps `palette.followToken`,
   which is what makes the list scroll the highlight back into view.
+- **A pin is never what opens selected.** The screen answers `initialSelection` with
+  `initialRowIndex(in:filter:)`: with no query, the newest clip below the whole Pinned block, because
+  a pin is kept to be reached on purpose (⌘1…⌘0, or a glance at the top) while the newest clip is what
+  a summon is usually for. It falls back to row 0 when nothing is unpinned, so an all-pinned or empty
+  history still opens on its first row. A typed query is a target of its own, so it highlights its top
+  match even when that match is a pin; clearing the query returns to the newest clip. `load` is
+  deferred off the launch path, so an open that beats it computes row 0 and `ClipboardScreen.follow`
+  restates the answer when the rows arrive.
 
 Pasting a pinned entry deliberately does **not** promote it: it holds its place in the Pinned
 section, so `promote` skips pinned rows instead of rewriting the row and its FTS entry for no

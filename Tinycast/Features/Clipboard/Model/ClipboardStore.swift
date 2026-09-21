@@ -505,6 +505,12 @@ final class ClipboardStore {
         search(query, filter: filter).firstIndex { $0.id == item.id }
     }
 
+    /// Highlighted first: a query's top match, or with no query the newest clip below the pins.
+    func initialRowIndex(in query: String, filter: ClipboardFilter) -> Int {
+        guard query.trimmingCharacters(in: .whitespaces).isEmpty else { return 0 }
+        return search(query, filter: filter).firstIndex { !$0.isPinned } ?? 0
+    }
+
     /// The Nth visible pinned entry under `query` and `filter`, where 0 is the first pinned row.
     func pinnedItem(at index: Int, in query: String, filter: ClipboardFilter) -> ClipboardItem? {
         guard index >= 0 else { return nil }

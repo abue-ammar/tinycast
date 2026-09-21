@@ -327,10 +327,7 @@ struct RootPaletteView: View {
     @ViewBuilder
     private func emojiObservers(_ content: some View) -> some View {
         content
-            .onChange(of: vm.emojiCategoryFilter) {
-                vm.selection = 0
-                scroll = ScrollIntent(kind: .top)
-            }
+            .onChange(of: vm.emojiCategoryFilter) { resetSelection() }
             .onChange(of: core.pinnedEmoji.revision) { emojiGridChanged() }
             .onChange(of: vm.emojiGridColumnsOverride) { emojiGridChanged() }
             .onChange(of: settings.emojiGridColumns) { emojiGridChanged() }
@@ -348,6 +345,12 @@ struct RootPaletteView: View {
         refreshActionsMenu()
     }
 
+    /// Every fresh landing on a list: the row the screen opens on, revealed when it is not row 0.
+    private func resetSelection() {
+        vm.selection = screen.initialSelection
+        scroll = ScrollIntent(kind: vm.selection == 0 ? .top : .follow)
+    }
+
     /// Split from `body` for the same reason `keyHandlers` is: one chain cannot carry them all.
     @ViewBuilder
     private func stateObservers(_ content: some View) -> some View {
@@ -362,8 +365,7 @@ struct RootPaletteView: View {
             }
             .onChange(of: vm.query) {
                 if vm.collapseQueryLineBreaks() { return }
-                vm.selection = 0
-                scroll = ScrollIntent(kind: .top)
+                resetSelection()
                 if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
                 if vm.mode == .dictionary { dictionary.lookUp(vm.query) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
@@ -380,25 +382,21 @@ struct RootPaletteView: View {
             }
             .modifier(ExtensionSelectionForwarder(screen: extensionScreen, selection: vm.selection))
             // A narrower list means the old index points at a different row, or at none.
-            .onChange(of: vm.clipboardFilter) {
-                vm.selection = 0
-                scroll = ScrollIntent(kind: .top)
-            }
+            .onChange(of: vm.clipboardFilter) { resetSelection() }
             // The filter is part of the query, so narrowing re-runs it rather than thinning rows.
             .onChange(of: vm.fileSearchFilter) {
-                vm.selection = 0
-                scroll = ScrollIntent(kind: .top)
+                resetSelection()
                 fileSearch.search(vm.query, filter: vm.fileSearchFilter)
             }
             .onChange(of: vm.mode) {
-                vm.selection = 0
                 vm.clipboardFilter = .all
                 vm.fileSearchFilter = .all
                 vm.emojiCategoryFilter = .all
                 vm.emojiGridColumnsOverride = nil
                 vm.fileSearchQuickLook = false
                 if menuOpen { closeMenus() }
-                scroll = ScrollIntent(kind: .top)
+                // After the filter resets, so the opening row is read under the final filter.
+                resetSelection()
                 searchFocused = !screen.hidesSearchField
                 // Every way out of the Uninstall screen: back chevron, bare backspace, a fresh summon.
                 if vm.mode != .uninstall { uninstall.cancel() }
@@ -420,10 +418,15 @@ struct RootPaletteView: View {
                     Task { await extensions.stop() }
                 }
             }
-            // `prepare` may change nothing, so this intent still snaps the scroll to the origin.
+            // `prepare` may change nothing, so this still restates the row the screen opens on.
             .onChange(of: vm.resetToken) {
                 if menuOpen { closeMenus() }
-                scroll = ScrollIntent(kind: .top)
+                // Non-zero: a caller set it after `prepare`, as Quicklinks' prompt does; keep it.
+                if vm.selection == 0 {
+                    resetSelection()
+                } else {
+                    scroll = ScrollIntent(kind: .follow)
+                }
             }
             // ⌘. arrives as a token rather than a key press. See `PaletteState.pinChordToken`.
             .onChange(of: vm.pinChordToken) { performShortcut(.pin) }

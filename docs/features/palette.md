@@ -90,6 +90,13 @@ A chord aimed at the selected row — ⌃X, ⇧⌘F, ⌘Y and the rest — follo
 `PaletteShortcut` recognises the key and carries its compact-bar and open-menu guards, and the screen
 answers through `perform(_:at:)`, so a new chord never adds a cast to the shell.
 
+**Which row a screen opens on is the screen's own answer, given as `initialSelection`.** It defaults
+to row 0, and `RootPaletteView.resetSelection()` is the one place that applies it — on a mode
+change, on the query and filter changes that rebuild a list, and on a `resetToken` bump unless a
+caller already set the selection after `prepare` (Quicklinks' argument prompt does), which it keeps.
+A non-zero row scrolls with `follow` rather than `top`, so it lands on screen, not above the fold.
+Only `ClipboardScreen` overrides it today; see [clipboard.md](clipboard.md#pinned-entries).
+
 | Mode | Screen | Inner list |
 | --- | --- | --- |
 | `.launcher` | `LauncherScreen` | `LauncherList` |
@@ -133,8 +140,8 @@ that returning looks like never having left — and offers four motions over it:
 | `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring |
 | `pop()` | restore the screen underneath; `false` when this one is the root |
 
-`pop()` bumps `followToken` rather than `resetToken`: the reset token exists to snap a list to the
-top, which would throw away the very selection being restored.
+`pop()` bumps `followToken` rather than `resetToken`: the reset token restates the row a screen
+opens on, which would throw away the very selection being restored.
 
 **Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
 leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a

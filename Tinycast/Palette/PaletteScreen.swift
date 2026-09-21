@@ -109,6 +109,8 @@ private extension MenuPanelCorner {
     var primaryActionTitle: String { get }
     /// True when the screen owns the keyboard, so the header's field is hidden and unfocused.
     var hidesSearchField: Bool { get }
+    /// The row a fresh open highlights; defaults to the top row.
+    var initialSelection: Int { get }
     /// True when the footer and ⌘K still act with no rows — a form's action belongs to the screen.
     var actsWithoutRows: Bool { get }
 
@@ -148,6 +150,7 @@ extension PaletteScreen {
     func hasPrimaryAction(at selection: Int) -> Bool { true }
     func hasActions(at selection: Int) -> Bool { true }
     var hidesSearchField: Bool { false }
+    var initialSelection: Int { 0 }
     var actsWithoutRows: Bool { false }
     func ownsVerticalKeys(at selection: Int) -> Bool { false }
     func tabTarget(from selection: Int, backwards: Bool) -> Int? { nil }
