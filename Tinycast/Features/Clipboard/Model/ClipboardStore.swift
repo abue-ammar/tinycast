@@ -476,12 +476,12 @@ final class ClipboardStore {
 
     func imageURL(for item: ClipboardItem) -> URL? {
         guard let path = item.imagePath else { return nil }
-        return URL(fileURLWithPath: path)
+        return URL(filePath: path, directoryHint: .inferFromPath)
     }
 
     func fileURL(for item: ClipboardItem) -> URL? {
         guard let path = item.filePath else { return nil }
-        return URL(fileURLWithPath: path)
+        return URL(filePath: path, directoryHint: .inferFromPath)
     }
 
     /// Display order for `query` under `filter`: pinned entries first, each block newest-first.

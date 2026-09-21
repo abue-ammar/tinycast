@@ -13,7 +13,8 @@ enum ClipboardFileKind: Sendable {
     /// Resolved from the extension, never from disk, so a vanished file still classifies.
     static func of(path: String, isDirectory: Bool = false) -> ClipboardFileKind {
         guard !isDirectory else { return .folder }
-        let type = UTType(filenameExtension: URL(fileURLWithPath: path).pathExtension)
+        let url = URL(filePath: path, directoryHint: .inferFromPath)
+        let type = UTType(filenameExtension: url.pathExtension)
         guard let type else { return .other }
         if type.conforms(to: .image) { return .image }
         if type.conforms(to: .movie) { return .movie }

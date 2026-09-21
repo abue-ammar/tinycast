@@ -14,7 +14,7 @@ struct FilePreviewStage: View {
 
     @State private var probe: Probe?
 
-    private var url: URL { URL(fileURLWithPath: path) }
+    private var url: URL { URL(filePath: path, directoryHint: .inferFromPath) }
 
     var body: some View {
         stage.task(id: path) { probe = await Self.probe(path) }

@@ -173,7 +173,10 @@ private struct ClipboardRow: View {
             return String((item.text ?? "").prefix(200)).trimmingCharacters(
                 in: .whitespacesAndNewlines)
         case .image: return "Image"
-        case .file: return item.filePath.map { URL(fileURLWithPath: $0).lastPathComponent } ?? "File"
+        case .file:
+            return item.filePath.map {
+                URL(filePath: $0, directoryHint: .inferFromPath).lastPathComponent
+            } ?? "File"
         }
     }
 
@@ -213,7 +216,10 @@ private struct ClipboardRow: View {
         }
     }
 
-    private var fileURL: URL? { item.filePath.map { URL(fileURLWithPath: $0) } }
+    // Not `fileURLWithPath:`, which stats the path: on a network mount that stalls the render.
+    private var fileURL: URL? {
+        item.filePath.map { URL(filePath: $0, directoryHint: .inferFromPath) }
+    }
 
     private var fileKind: ClipboardFileKind {
         item.filePath.map { ClipboardFileKind.of(path: $0) } ?? .other
