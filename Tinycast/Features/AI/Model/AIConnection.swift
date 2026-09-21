@@ -77,7 +77,7 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         self.reasoningOptions = reasoningOptions
     }
 
-    /// A preset pointed away from its own API is a gateway, and only a gateway takes a thinking field.
+    /// A preset pointed away from its own API is a gateway, and only a gateway takes a reasoning off switch.
     var takesThinkingField: Bool {
         provider.apiShape == .openAICompatible
             && baseURL.trimmingCharacters(in: .whitespacesAndNewlines) != provider.defaultBaseURL

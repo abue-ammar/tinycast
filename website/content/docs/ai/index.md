@@ -114,8 +114,10 @@ any **OpenAI Compatible** endpoint, including a local one like Ollama.
 - While you edit a connection, Tinycast asks the provider which models your key can use, and you
   search that list as you type. If a gateway cannot list models, type the model ID by hand.
 
-For a gateway that copies DeepSeek's API, the reasoning effort menu offers **None**, which turns
-thinking off.
+For a custom OpenAI-compatible gateway, the reasoning effort menu offers **None**, which turns
+reasoning off by sending OpenAI's `reasoning_effort: none`. Use that with GPT-5-class models when
+chat also has MCP tools — those models reject function tools on `/chat/completions` while reasoning
+is left on.
 
 ## Web search
 

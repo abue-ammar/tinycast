@@ -267,7 +267,7 @@ struct AIProviderTests {
             "OpenRouter receives the reasoning effort its catalog offered")
     }
 
-    /// A body that named the default would 400 on every endpoint without a thinking mode.
+    /// A body that named the default would 400 on every endpoint without a reasoning mode.
     static func aGatewayOffersNoneAsItsReasoningEffort() {
         let gateway = AIConnection(
             provider: .openAI, baseURL: "https://api.fusioncode.app/v1", models: ["m"])
@@ -304,9 +304,26 @@ struct AIProviderTests {
             configuration: AIHTTPConfiguration(
                 provider: .openAI, baseURL: url, model: "m", effort: "none",
                 disablesThinking: true))
+        expect(off["thinking"] == nil, "DeepSeek's thinking object is never sent on this shape")
         expect(
-            (off["thinking"] as? [String: String])?["type"] == "disabled",
-            "None asks the endpoint to answer directly")
+            off["reasoning_effort"] as? String == "none",
+            "None asks the endpoint to answer directly, in OpenAI's chat/completions spelling")
+
+        let tooled = AIRequestBody.make(
+            AIRequest(
+                messages: [AIMessage(role: .user, text: "hi")],
+                tools: [
+                    AITool(
+                        name: "lookup", description: "Look something up",
+                        parameters: .object(["type": .string("object")]), origin: "Files",
+                        title: "lookup")
+                ]),
+            configuration: AIHTTPConfiguration(
+                provider: .openAICompatible, baseURL: url, model: "gpt-5", effort: "none",
+                disablesThinking: true))
+        expect(
+            tooled["reasoning_effort"] as? String == "none" && tooled["thinking"] == nil,
+            "MCP tools still ride the OpenAI off switch, not a second vendor field")
     }
 
     static func providerPresetsResolveEndpoints() {

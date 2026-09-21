@@ -31,7 +31,9 @@ enum AIRequestBody {
             body["reasoning"] = ["effort": effort]
         }
         if configuration.disablesThinking {
-            body["thinking"] = ["type": "disabled"]
+            // OpenAI chat/completions spelling. The previous `thinking` object is DeepSeek's,
+            // and GPT-5-class OpenAI-compatible endpoints reject it as an unknown parameter.
+            body["reasoning_effort"] = "none"
         }
         if !input.tools.isEmpty {
             body["tools"] = input.tools.map {
