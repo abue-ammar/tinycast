@@ -12,6 +12,8 @@ final class ShortcutCaptureSession {
     }
 
     private(set) var heldModifiers: NSEvent.ModifierFlags = []
+    private(set) var heldGlobe = false
+    private(set) var awaitingSecondGlobe = false
     private(set) var conflict: Conflict?
 
     private static let conflictDwell: Duration = .seconds(1.5)
@@ -19,8 +21,10 @@ final class ShortcutCaptureSession {
     @ObservationIgnored private var monitors: [Any] = []
     @ObservationIgnored private var resignObserver: NSObjectProtocol?
     @ObservationIgnored private var conflictReset: Task<Void, Never>?
+    @ObservationIgnored private var globeCommit: Task<Void, Never>?
     /// The same recognizer the global monitor uses, so recording needs no tap and no grant.
     @ObservationIgnored private var detector = DoubleTapDetector()
+    @ObservationIgnored private var globeDetector = GlobeTapDetector()
 
     func start(action: HotKeyAction, hotKeys: HotKeyManager) {
         stop()
@@ -49,6 +53,7 @@ final class ShortcutCaptureSession {
             matching: .flagsChanged,
             handler: { [weak self, weak hotKeys] event in
                 let all = event.modifierFlags
+                let keyCode = Int(event.keyCode)
                 let flags = all.intersection([.command, .option, .control, .shift])
                 // `.function` only: `.capsLock` is the latch, and would refuse every double-tap.
                 let hasOthers = all.contains(.function)
@@ -56,9 +61,12 @@ final class ShortcutCaptureSession {
                 MainActor.assumeIsolated {
                     guard let self else { return }
                     self.heldModifiers = flags
+                    if keyCode == kVK_Function { self.heldGlobe = all.contains(.function) }
                     guard let hotKeys else { return }
                     self.handleModifiers(
-                        flags, hasOtherModifiers: hasOthers, at: timestamp, action: action,
+                        flags, isGlobeKey: keyCode == kVK_Function,
+                        functionDown: all.contains(.function), hasOtherModifiers: hasOthers,
+                        at: timestamp, action: action,
                         hotKeys: hotKeys)
                 }
                 return event
@@ -95,9 +103,12 @@ final class ShortcutCaptureSession {
         }
         conflictReset?.cancel()
         conflictReset = nil
+        cancelGlobeCommit()
         conflict = nil
         heldModifiers = []
+        heldGlobe = false
         detector.reset()
+        globeDetector.cancel()
     }
 
     private func handleKeyDown(
@@ -106,8 +117,12 @@ final class ShortcutCaptureSession {
     ) {
         // A key press makes any modifier held at the moment part of a combo, not a tap.
         _ = detector.handle(.otherInput, at: timestamp)
+        cancelGlobeCommit()
+        globeDetector.cancel()
 
-        let bareKey = flags.isDisjoint(with: [.command, .option, .control, .shift])
+        // F-keys also carry `.function`; only the physical Globe press makes it a modifier.
+        let flags = heldGlobe ? flags.union(.function) : flags.subtracting(.function)
+        let bareKey = flags.isDisjoint(with: [.command, .option, .control, .shift, .function])
 
         if bareKey, keyCode == kVK_Escape {
             hotKeys.recordingAction = nil
@@ -125,16 +140,49 @@ final class ShortcutCaptureSession {
     }
 
     private func handleModifiers(
-        _ flags: NSEvent.ModifierFlags, hasOtherModifiers: Bool, at timestamp: TimeInterval,
+        _ flags: NSEvent.ModifierFlags, isGlobeKey: Bool, functionDown: Bool,
+        hasOtherModifiers: Bool, at timestamp: TimeInterval,
         action: HotKeyAction, hotKeys: HotKeyManager
     ) {
-        // `NSEvent.timestamp` is the same monotonic basis `DoubleTapMonitor` feeds in.
+        if !isGlobeKey { cancelGlobeCommit() }
+        if let gesture = globeDetector.handle(
+            isGlobeKey: isGlobeKey, functionDown: functionDown,
+            hasOtherModifiers: !flags.isEmpty, at: timestamp)
+        {
+            switch gesture {
+            case .single:
+                if globeCommit != nil {
+                    cancelGlobeCommit()
+                    commit(.globe, action: action, hotKeys: hotKeys)
+                } else {
+                    awaitingSecondGlobe = true
+                    globeCommit = Task { [weak self, weak hotKeys] in
+                        try? await Task.sleep(for: GlobeTapDetector.resolutionWindow)
+                        guard !Task.isCancelled, let self, let hotKeys else { return }
+                        self.globeCommit = nil
+                        self.awaitingSecondGlobe = false
+                        self.commit(.globe, action: action, hotKeys: hotKeys)
+                    }
+                }
+            case .double:
+                cancelGlobeCommit()
+                commit(.doubleGlobe, action: action, hotKeys: hotKeys)
+            }
+            return
+        }
+        // `NSEvent.timestamp` is the same monotonic basis `ModifierTapMonitor` feeds in.
         guard
             let modifier = detector.handle(
                 .modifiers(Self.doubleTapModifiers(in: flags), hasOtherModifiers: hasOtherModifiers),
                 at: timestamp)
         else { return }
         commit(.doubleTap(modifier), action: action, hotKeys: hotKeys)
+    }
+
+    private func cancelGlobeCommit() {
+        globeCommit?.cancel()
+        globeCommit = nil
+        awaitingSecondGlobe = false
     }
 
     private static func doubleTapModifiers(

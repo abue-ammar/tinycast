@@ -59,6 +59,8 @@ struct DoubleTapDetectorTests {
         layoutCharacters()
         hyperChord()
         hyperRetargeting()
+        globeTap()
+        globeChord()
         firing()
         timing()
         chords()
@@ -71,6 +73,68 @@ struct DoubleTapDetectorTests {
     }
 
     // MARK: - Model
+
+    static func globeTap() {
+        var detector = GlobeTapDetector()
+        func globe(
+            _ down: Bool, at time: TimeInterval, physical: Bool = true, other: Bool = false
+        ) -> GlobeTapDetector.Gesture? {
+            detector.handle(
+                isGlobeKey: physical, functionDown: down, hasOtherModifiers: other, at: time)
+        }
+
+        expect(globe(true, at: 0) == nil, "Globe press waits for release")
+        expect(globe(false, at: 0.05) == .single, "lone Globe fires on release")
+        expect(globe(false, at: 0.10) == nil, "a second release without a press does nothing")
+        expect(globe(true, at: 0.25) == nil, "a second Globe press waits for release")
+        expect(globe(false, at: 0.30) == .double, "two quick Globe presses form a double tap")
+
+        _ = globe(true, at: 1)
+        _ = globe(true, at: 1.02, physical: false, other: true)
+        expect(globe(false, at: 1.05) == nil, "another modifier cancels Globe")
+
+        _ = globe(true, at: 2)
+        detector.cancel()
+        expect(globe(false, at: 2.05) == nil, "a key press or click cancels Globe")
+        expect(globe(true, at: 3, physical: false) == nil, "an F-key cannot start Globe")
+        expect(globe(false, at: 3.05, physical: false) == nil, "an F-key cannot finish Globe")
+
+        _ = globe(true, at: 4)
+        expect(globe(false, at: 4.05) == .single, "first release remains a single candidate")
+        _ = globe(true, at: 4.40)
+        expect(globe(false, at: 4.45) == .single, "a late second press starts a new tap")
+        _ = globe(true, at: 5)
+        expect(globe(false, at: 5.30) == nil, "holding Globe is not a tap")
+
+        for binding in [HotKeyBinding.globe, .doubleGlobe] {
+            let encoded = try? JSONEncoder().encode(binding)
+            expect(
+                encoded.flatMap { try? JSONDecoder().decode(HotKeyBinding.self, from: $0) }
+                    == binding,
+                "\(binding) round-trips through the existing persistence format")
+        }
+        expect(HotKeyBinding.globe.keycaps == ["🌐︎"], "Globe uses one monochrome keycap")
+        expect(
+            HotKeyBinding.doubleGlobe.keycaps == ["🌐︎", "🌐︎"],
+            "double Globe renders as two monochrome keycaps")
+    }
+
+    static func globeChord() {
+        let shortcut = KeyShortcut(keyCode: kVK_ANSI_J, modifierFlags: [.function])
+        expect(shortcut != nil, "Globe alone can modify a letter")
+        expect(
+            shortcut?.carbonModifiers == kEventKeyModifierFnMask,
+            "Globe uses Carbon's fn modifier bit")
+        expect(shortcut?.keycaps == ["🌐︎", "J"], "Globe and the key have separate caps")
+        expect(
+            KeyShortcut(keyCode: kVK_ANSI_J, modifierFlags: [.function, .command])?.modifierFlags
+                == [.function, .command],
+            "Globe combines with ordinary modifiers")
+        expect(
+            KeyShortcut(carbonKeyCode: kVK_ANSI_J, carbonModifiers: Int.max).carbonModifiers
+                == KeyShortcut.carbonModifiers(from: [.function, .control, .option, .shift, .command]),
+            "decoding keeps fn but still discards unrelated modifier bits")
+    }
 
     static func modifierGlyphs() {
         expect(DoubleTapModifier.allCases.count == 4, "exactly four modifiers are eligible")

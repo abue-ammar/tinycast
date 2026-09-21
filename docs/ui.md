@@ -740,8 +740,8 @@ See [features/window-layouts.md](features/window-layouts.md#the-editor).
 `ShortcutRecorder` is a **120pt** field showing only the binding — a combo's modifiers collapse into
 one cap (`HotKeyBinding.compactKeycaps`), so any shortcut fits in two chips. Recording is narrated by
 `ShortcutRecorderPopover`, a small **132 × 82** callout above it: caps, one label line, an `esc` cap in
-the bottom-right corner. Three states in one fixed frame — prompt (`⌥ A` at half opacity, "Type a
-shortcut"), live held modifiers, and conflict (rejected caps + owner, orange).
+the bottom-right corner. Its fixed frame shows the prompt (`⌥ A` at half opacity, "Type a
+shortcut"), live held keys, a pending second Globe tap, or a conflict (rejected caps + owner, orange).
 
 - **An ancestor draws it.** The open recorder publishes its bounds via `ShortcutRecorderAnchorKey`;
   `.shortcutRecorderPopoverHost()` sits on `SettingsDetailView` — one host above every pane's

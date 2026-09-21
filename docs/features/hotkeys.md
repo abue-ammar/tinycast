@@ -3,13 +3,14 @@
 `Features/HotKeys/` holds:
 
 - `KeyShortcut` — Sendable model, Carbon keycode + modifiers, layout-aware glyphs via `UCKeyTranslate`.
-- `HotKeyBinding` — what an action is actually bound to: a `.combo(KeyShortcut)` or a
-  `.doubleTap(DoubleTapModifier)`.
+- `HotKeyBinding` — what an action is bound to: `.combo(KeyShortcut)`,
+  `.doubleTap(DoubleTapModifier)`, `.globe`, or `.doubleGlobe`.
 - `HotKeyCenter` — the Carbon `RegisterEventHotKey` layer, pausable.
-- `DoubleTapModifier` / `DoubleTapDetector` / `DoubleTapMonitor` — the double-tap stack.
+- `DoubleTapModifier` / `DoubleTapDetector` — the double-tap recognizer.
+- `GlobeTapDetector` / `ModifierTapMonitor` — Globe recognition and the shared modifier-only tap.
 
 `HotKeyManager` owns them all: persistence, conflict lookup, and dispatch. Every action reads and
-writes one `HotKeyBinding`, so the two kinds share persistence, conflict detection, the recorder and
+writes one `HotKeyBinding`, so the four cases share persistence, conflict detection, the recorder and
 the keycap rendering — only the _engine_ differs.
 
 ## Invariants
@@ -24,15 +25,16 @@ the keycap rendering — only the _engine_ differs.
 - **A command that opens a palette mode toggles it.** Every one of them enters through
   `PaletteCoordinator.togglePalette(mode:)`, so a second press closes what the first opened. From a
   launcher row the palette is in `.launcher`, so the row always re-points instead.
-- **`HotKeyBinding` is the one thing an action is bound to, and it has two cases with two engines.** A
-  `.combo` is a Carbon registration; a `.doubleTap` is recognized by `DoubleTapMonitor`, because Carbon
-  cannot see a lone modifier at all. Its `Codable` is the synthesised one.
+- **`HotKeyBinding` is the one thing an action is bound to, with four cases and two engines.** A
+  `.combo` is a Carbon registration; `.doubleTap`, `.globe` and `.doubleGlobe` are recognized by
+  `ModifierTapMonitor`, because Carbon cannot see a lone modifier at all. Its `Codable` is the
+  synthesised one.
 - `KeyShortcut`'s hand-written `init(from:)` is a correctness seam, not a format one: it routes every
   decode through the initializer that masks device modifier bits off.
-- **`Model/DoubleTapModifier.swift` and `Model/DoubleTapDetector.swift` stay Foundation-only and pure**
-  with the clock injected as a parameter, for `hotkey-test`. Every `CGEvent` call lives in
-  `Service/DoubleTapMonitor.swift`, which is listen-only, installs *only* while something is bound to a
-  double-tap, and never prompts for Accessibility.
+- **The modifier-only detectors stay Foundation-only and pure** for `hotkey-test`; the double-tap
+  clock is injected as a parameter. Every `CGEvent` call lives in
+  `Service/ModifierTapMonitor.swift`, which is listen-only, installs *only* while a modifier-only
+  shortcut is bound, and never prompts for Accessibility.
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyTap` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
@@ -86,6 +88,19 @@ feature switch is off — `WindowCommandCoordinator.runWindowCommand` re-checks 
 `SystemActionCoordinator.runSystemAction(id:)`, so the confirmation gate holds for a hotkey exactly as it does for the
 palette.
 
+## Modifier-only shortcuts
+
+Globe/fn can be bound once (`.globe`) or twice (`.doubleGlobe`). The recorder waits briefly after the
+first release so another press can select the double binding; otherwise it saves the single one.
+Globally, a single Globe fires on release when no double Globe action is bound. When both are bound,
+the single action waits until the double-tap window expires. Neither gesture counts if another
+modifier, key, or mouse click joined the press. The recognizer
+checks the physical `kVK_Function` keycode, not just the fn flag, because F-keys also carry that flag.
+It shares the double-tap's listen-only monitor, Accessibility warning, lifecycle and pause while
+recording. macOS may perform its own Globe action too; set “Press fn/Globe key to” to “Do Nothing” in
+Keyboard settings if it conflicts. Globe+key chords use Carbon registration, like other combos. The
+recorder tracks the physical Globe press so an F-key's incidental fn flag is not mistaken for Globe.
+
 ## Double-tap modifiers
 
 Any action can instead be bound to a **double-tapped lone modifier** — ⌃, ⌥, ⇧ or ⌘. Carbon cannot
@@ -108,8 +123,8 @@ It **fires on the second release, not the second press**. The modifier is then a
 action runs, so the palette never opens with a phantom ⌘ held and focus restoration isn't polluted —
 and "double-tap and hold" is a deliberate non-event.
 
-`DoubleTapMonitor` is the one platform file. It is a **listen-only** `CGEventTap` and it installs only
-while something is actually bound to a double-tap, so users who never use the feature pay nothing. Two
+`ModifierTapMonitor` is the one platform file. It is a **listen-only** `CGEventTap` and it installs only
+while a modifier-only shortcut is bound, so users who never use the feature pay nothing. Two
 details are load-bearing:
 
 - It is `.tailAppendEventTap`, unlike the two head-inserted taps, so it observes events **after**
@@ -212,9 +227,9 @@ stops until this session is active again. The HID remap outlives the process, so
 
 The settings recorder (`Features/HotKeys/UI/ShortcutRecorder.swift`) is deliberately **not** a focusable
 control: the active recorder is `HotKeyManager.recordingAction` state, and keys are captured by local
-NSEvent monitors while both engines are paused. It records both kinds — type a combo, or double-tap a
-modifier — by feeding its `.flagsChanged` / `.keyDown` monitors into the _same_ `DoubleTapDetector`
-the global monitor uses, so recording needs no event tap and no permission.
+NSEvent monitors while both engines are paused. It records combos, double-tapped modifiers and single
+or double Globe taps by feeding its `.flagsChanged` / `.keyDown` monitors into the same pure detectors
+as the global monitor, so recording needs no event tap and no permission.
 
 Setting `recordingAction` is what starts and stops the capture, so there is exactly **one**
 `ShortcutCaptureSession` (`HotKeys/Service/`) for the app rather than one per row — which is what lets the

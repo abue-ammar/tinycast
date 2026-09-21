@@ -8,14 +8,14 @@ struct KeyShortcut: Hashable, Sendable {
 
     init(carbonKeyCode: Int, carbonModifiers: Int) {
         self.carbonKeyCode = carbonKeyCode
-        // Mask to the four real modifiers, so device bits can't throw equality off.
+        // Mask to the supported modifiers, so device bits can't throw equality off.
         self.carbonModifiers = carbonModifiers & Self.allModifiers
     }
 
-    /// Captures from a key-down, or nil: one of ⌘⌥⌃ is required, bar function keys.
+    /// Captures from a key-down, or nil: one of ⌘⌥⌃🌐 is required, bar function keys.
     init?(keyCode: Int, modifierFlags: NSEvent.ModifierFlags) {
-        let flags = modifierFlags.intersection([.command, .option, .control, .shift])
-        let hasCommandingModifier = !flags.isDisjoint(with: [.command, .option, .control])
+        let flags = modifierFlags.intersection([.command, .option, .control, .shift, .function])
+        let hasCommandingModifier = !flags.isDisjoint(with: [.command, .option, .control, .function])
         guard hasCommandingModifier || Self.isFunctionKey(keyCode) else { return nil }
         self.init(carbonKeyCode: keyCode, carbonModifiers: Self.carbonModifiers(from: flags))
     }
@@ -23,7 +23,7 @@ struct KeyShortcut: Hashable, Sendable {
     /// The chord ✦ stands for, nil without a Hyper key; a closure, so a toggle re-renders keycaps.
     @MainActor static var displayedHyperChord: () -> NSEvent.ModifierFlags? = { nil }
 
-    /// One string per keycap in canonical order (⌃⌥⇧⌘), with the key glyph last.
+    /// One string per keycap in canonical order (🌐⌃⌥⇧⌘), with the key glyph last.
     @MainActor var keycaps: [String] {
         Self.collapsedModifierSymbols(from: modifierFlags, hyperChord: Self.displayedHyperChord())
             + [keyGlyph]
@@ -37,6 +37,7 @@ struct KeyShortcut: Hashable, Sendable {
         if carbonModifiers & optionKey != 0 { flags.insert(.option) }
         if carbonModifiers & shiftKey != 0 { flags.insert(.shift) }
         if carbonModifiers & cmdKey != 0 { flags.insert(.command) }
+        if carbonModifiers & kEventKeyModifierFnMask != 0 { flags.insert(.function) }
         return flags
     }
 
@@ -46,6 +47,7 @@ struct KeyShortcut: Hashable, Sendable {
         if flags.contains(.option) { carbon |= optionKey }
         if flags.contains(.shift) { carbon |= shiftKey }
         if flags.contains(.command) { carbon |= cmdKey }
+        if flags.contains(.function) { carbon |= kEventKeyModifierFnMask }
         return carbon
     }
 
@@ -76,9 +78,10 @@ struct KeyShortcut: Hashable, Sendable {
         return [HyperKeyPhysicalKey.hyperGlyph] + modifierSymbols(from: flags.subtracting(hyperChord))
     }
 
-    /// Modifier symbols in the fixed ⌃⌥⇧⌘ order every macOS surface uses.
+    /// Modifier symbols in fixed 🌐⌃⌥⇧⌘ order.
     static func modifierSymbols(from flags: NSEvent.ModifierFlags) -> [String] {
         var symbols: [String] = []
+        if flags.contains(.function) { symbols.append("🌐︎") }
         if flags.contains(.control) { symbols.append("⌃") }
         if flags.contains(.option) { symbols.append("⌥") }
         if flags.contains(.shift) { symbols.append("⇧") }
@@ -90,7 +93,7 @@ struct KeyShortcut: Hashable, Sendable {
         functionKeyNames[keyCode] != nil
     }
 
-    private static let allModifiers = cmdKey | optionKey | controlKey | shiftKey
+    private static let allModifiers = cmdKey | optionKey | controlKey | shiftKey | kEventKeyModifierFnMask
 
     // MARK: - Key glyph
 

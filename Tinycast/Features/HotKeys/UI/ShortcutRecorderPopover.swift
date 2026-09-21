@@ -60,8 +60,20 @@ struct ShortcutRecorderPopover: View {
         if let conflict = capture.conflict {
             return State(caps: conflict.binding.keycaps, label: conflict.owner, tint: .orange)
         }
+        if capture.awaitingSecondGlobe {
+            let secondPress = capture.heldGlobe
+            return State(
+                caps: secondPress ? HotKeyBinding.doubleGlobe.keycaps : HotKeyBinding.globe.keycaps,
+                label: secondPress ? "Release Globe" : "Press Globe again")
+        }
+        if capture.heldGlobe && capture.heldModifiers.isEmpty {
+            return State(caps: HotKeyBinding.globe.keycaps, label: "Release Globe")
+        }
+        let flags =
+            capture.heldGlobe
+            ? capture.heldModifiers.union(.function) : capture.heldModifiers
         let held = KeyShortcut.collapsedModifierSymbols(
-            from: capture.heldModifiers, hyperChord: KeyShortcut.displayedHyperChord())
+            from: flags, hyperChord: KeyShortcut.displayedHyperChord())
         guard held.isEmpty else { return State(caps: held, label: "Add a key") }
         return State(
             caps: [DoubleTapModifier.option.glyph, "A"], label: "Type a shortcut", isExample: true)

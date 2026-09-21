@@ -7,8 +7,8 @@ struct ShortcutRecorder: View {
     var isQuiet = false
 
     @Environment(HotKeyManager.self) private var hotKeys
-    /// Observed so a bound double-tap surfaces its warning the moment the grant changes.
-    private var doubleTapMonitor: DoubleTapMonitor { hotKeys.doubleTapMonitor }
+    /// Observed so a modifier-only binding surfaces its warning when the grant changes.
+    private var modifierTapMonitor: ModifierTapMonitor { hotKeys.modifierTapMonitor }
     @State private var hovered = false
 
     private var isRecording: Bool { hotKeys.recordingAction == action }
@@ -62,8 +62,8 @@ struct ShortcutRecorder: View {
 
     private func boundLabel(_ binding: HotKeyBinding) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
-            // A double-tap binding is dead without the grant, so say so where the binding is.
-            if binding.doubleTapModifier != nil, doubleTapMonitor.needsAccessibility {
+            // A modifier-only binding is dead without the grant, so warn at the binding.
+            if binding.usesModifierTapMonitor, modifierTapMonitor.needsAccessibility {
                 Button {
                     Permissions.openAccessibilitySettings()
                 } label: {
@@ -71,7 +71,7 @@ struct ShortcutRecorder: View {
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
-                .help("Double-tap shortcuts need Accessibility access. Click to grant it.")
+                .help("Modifier-only shortcuts need Accessibility access. Click to grant it.")
             }
             ForEach(Array(binding.keycaps.enumerated()), id: \.offset) { _, cap in
                 Text(cap)

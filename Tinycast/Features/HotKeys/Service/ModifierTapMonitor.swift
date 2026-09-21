@@ -2,47 +2,57 @@ import AppKit
 import Carbon.HIToolbox
 
 /// C entry point: reduce to Sendable scalars, then cross in. Listen-only, so nothing changes.
-private func doubleTapEventTapCallback(
+private func modifierTapEventTapCallback(
     proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
     userInfo: UnsafeMutableRawPointer?
 ) -> Unmanaged<CGEvent>? {
     guard let userInfo else { return Unmanaged.passUnretained(event) }
-    let monitor = Unmanaged<DoubleTapMonitor>.fromOpaque(userInfo).takeUnretainedValue()
+    let monitor = Unmanaged<ModifierTapMonitor>.fromOpaque(userInfo).takeUnretainedValue()
 
     if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
         MainActor.assumeIsolated { monitor.tapWasDisabled() }
         return Unmanaged.passUnretained(event)
     }
 
+    // macOS follows a bare Globe release with key-down 179; it is not a separate key press.
+    if type == .keyDown, event.getIntegerValueField(.keyboardEventKeycode) == 179 {
+        return Unmanaged.passUnretained(event)
+    }
     let isFlagsChanged = type == .flagsChanged
     let flagsRaw = event.flags.rawValue
+    let keyCode = isFlagsChanged ? Int(event.getIntegerValueField(.keyboardEventKeycode)) : 0
     MainActor.assumeIsolated {
-        monitor.process(isFlagsChanged: isFlagsChanged, flagsRaw: flagsRaw)
+        monitor.process(isFlagsChanged: isFlagsChanged, flagsRaw: flagsRaw, keyCode: keyCode)
     }
     return Unmanaged.passUnretained(event)
 }
 
-/// The listen-only double-tap tap. See docs/features/hotkeys.md#double-tap-modifiers.
+/// The listen-only modifier tap. See docs/features/hotkeys.md#modifier-only-shortcuts.
 @MainActor
 @Observable
-final class DoubleTapMonitor: HealthCheckable {
+final class ModifierTapMonitor: HealthCheckable {
     /// True while something is bound and the tap can't be created; the recorder surfaces it.
     private(set) var needsAccessibility = false
 
     /// Fired on the second release, so the modifier is up by the time the action runs.
     @ObservationIgnored var onDoubleTap: ((DoubleTapModifier) -> Void)?
+    @ObservationIgnored var onGlobeTap: ((GlobeTapDetector.Gesture) -> Void)?
 
     /// Set while a recorder captures, so editing a binding can't trigger it.
     var isPaused = false {
         didSet {
             guard isPaused != oldValue else { return }
-            detector.reset()
+            resetDetectors()
         }
     }
 
     private var bound: Set<DoubleTapModifier> = []
+    private var singleGlobeBound = false
+    private var doubleGlobeBound = false
     /// Advanced by the tap callback on every modifier transition; released by teardown.
-    @ObservationIgnored private var detector = DoubleTapDetector()
+    @ObservationIgnored private var doubleTapDetector = DoubleTapDetector()
+    @ObservationIgnored private var globeDetector = GlobeTapDetector()
+    @ObservationIgnored private var pendingSingleGlobe: Task<Void, Never>?
     @ObservationIgnored private var tapPort: CFMachPort?
     @ObservationIgnored private var runLoopSource: CFRunLoopSource?
     @ObservationIgnored private var sessionTokens: [NotificationToken] = []
@@ -62,30 +72,85 @@ final class DoubleTapMonitor: HealthCheckable {
     }
 
     /// Modifiers currently carrying a binding; an empty set tears the tap down entirely.
-    func update(bound: Set<DoubleTapModifier>) {
-        guard bound != self.bound else { return }
+    func update(
+        bound: Set<DoubleTapModifier>, singleGlobeBound: Bool, doubleGlobeBound: Bool
+    ) {
+        guard
+            bound != self.bound || singleGlobeBound != self.singleGlobeBound
+                || doubleGlobeBound != self.doubleGlobeBound
+        else { return }
         self.bound = bound
-        detector.reset()
+        self.singleGlobeBound = singleGlobeBound
+        self.doubleGlobeBound = doubleGlobeBound
+        resetDetectors()
         syncTapPresence()
     }
 
     // MARK: - Detection
 
-    fileprivate func process(isFlagsChanged: Bool, flagsRaw: UInt64) {
-        guard !isPaused, !bound.isEmpty else { return }
-        let input: DoubleTapDetector.Input
+    fileprivate func process(isFlagsChanged: Bool, flagsRaw: UInt64, keyCode: Int) {
+        guard !isPaused else { return }
+        let flags = CGEventFlags(rawValue: flagsRaw)
         if isFlagsChanged {
-            let flags = CGEventFlags(rawValue: flagsRaw)
-            input = .modifiers(
-                Self.modifiers(in: flags), hasOtherModifiers: Self.hasOtherModifiers(in: flags))
+            if singleGlobeBound || doubleGlobeBound,
+                let gesture = globeDetector.handle(
+                    isGlobeKey: keyCode == kVK_Function,
+                    functionDown: flags.contains(.maskSecondaryFn),
+                    hasOtherModifiers: !Self.modifiers(in: flags).isEmpty,
+                    at: ProcessInfo.processInfo.systemUptime)
+            {
+                handleGlobe(gesture)
+            }
         } else {
-            input = .otherInput
+            globeDetector.cancel()
         }
+        guard !bound.isEmpty else { return }
+        let input: DoubleTapDetector.Input =
+            isFlagsChanged
+            ? .modifiers(
+                Self.modifiers(in: flags), hasOtherModifiers: Self.hasOtherModifiers(in: flags))
+            : .otherInput
         // `systemUptime` is monotonic, so a wall-clock adjustment can't turn a tap into a hold.
-        guard let modifier = detector.handle(input, at: ProcessInfo.processInfo.systemUptime),
+        guard
+            let modifier = doubleTapDetector.handle(
+                input, at: ProcessInfo.processInfo.systemUptime),
             bound.contains(modifier)
         else { return }
         onDoubleTap?(modifier)
+    }
+
+    private func handleGlobe(_ gesture: GlobeTapDetector.Gesture) {
+        switch gesture {
+        case .single:
+            guard singleGlobeBound else { return }
+            guard doubleGlobeBound else {
+                globeDetector.cancel()
+                onGlobeTap?(.single)
+                return
+            }
+            if pendingSingleGlobe != nil {
+                pendingSingleGlobe?.cancel()
+                onGlobeTap?(.single)
+            }
+            pendingSingleGlobe = Task { [weak self] in
+                try? await Task.sleep(for: GlobeTapDetector.resolutionWindow)
+                guard !Task.isCancelled, let self else { return }
+                self.pendingSingleGlobe = nil
+                guard !self.isPaused, self.sessionActive, self.singleGlobeBound else { return }
+                self.onGlobeTap?(.single)
+            }
+        case .double:
+            pendingSingleGlobe?.cancel()
+            pendingSingleGlobe = nil
+            if doubleGlobeBound { onGlobeTap?(.double) }
+        }
+    }
+
+    private func resetDetectors() {
+        doubleTapDetector.reset()
+        globeDetector.cancel()
+        pendingSingleGlobe?.cancel()
+        pendingSingleGlobe = nil
     }
 
     private static func modifiers(in flags: CGEventFlags) -> Set<DoubleTapModifier> {
@@ -128,12 +193,12 @@ final class DoubleTapMonitor: HealthCheckable {
 
     private func sessionDidChange(active: Bool) {
         sessionActive = active
-        detector.reset()
+        resetDetectors()
         syncTapPresence()
     }
 
     private func syncTapPresence() {
-        guard !bound.isEmpty, sessionActive else {
+        guard !bound.isEmpty || singleGlobeBound || doubleGlobeBound, sessionActive else {
             tearDownTap()
             healthTicker?.unsubscribe(self)
             needsAccessibility = false
@@ -158,12 +223,12 @@ final class DoubleTapMonitor: HealthCheckable {
                 place: .tailAppendEventTap,
                 options: .listenOnly,
                 eventsOfInterest: mask,
-                callback: doubleTapEventTapCallback,
+                callback: modifierTapEventTapCallback,
                 userInfo: Unmanaged.passUnretained(self).toOpaque())
         else {
             // Even a listen-only tap needs Accessibility; the health timer retries until granted.
             if !loggedTapFailure {
-                NSLog("Tinycast: Failed to create double-tap event tap")
+                NSLog("Tinycast: Failed to create modifier event tap")
                 loggedTapFailure = true
             }
             needsAccessibility = true
@@ -179,7 +244,7 @@ final class DoubleTapMonitor: HealthCheckable {
     }
 
     private func tearDownTap() {
-        detector.reset()
+        resetDetectors()
         if let runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), runLoopSource, .commonModes)
             self.runLoopSource = nil
@@ -193,13 +258,15 @@ final class DoubleTapMonitor: HealthCheckable {
 
     /// Called when the system disables the tap; any half-tracked press is stale by then.
     fileprivate func tapWasDisabled() {
-        detector.reset()
+        resetDetectors()
         if let tapPort { CGEvent.tapEnable(tap: tapPort, enable: true) }
     }
 
     /// One-second watchdog while something is bound. See docs/features/hotkeys.md#lifecycle.
     func healthCheck() {
-        guard !bound.isEmpty, sessionActive else { return }
+        guard !bound.isEmpty || singleGlobeBound || doubleGlobeBound, sessionActive else {
+            return
+        }
         if tapPort == nil {
             installTapIfNeeded()
         } else if !Permissions.isAccessibilityTrusted() {
