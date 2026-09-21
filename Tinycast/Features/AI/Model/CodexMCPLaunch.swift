@@ -18,8 +18,11 @@ enum CodexMCPLaunch {
             arguments += ["-c", "\(key).default_tools_approval_mode=\(quoted("prompt"))"]
             switch server.transport {
             case .command(let path, let commandArguments, let environment):
-                arguments += ["-c", "\(key).command=\(quoted(path))"]
-                arguments += ["-c", "\(key).args=\(array(commandArguments))"]
+                let launch = command(
+                    path: path, arguments: commandArguments, handle: server.handle,
+                    names: environment.keys.sorted())
+                arguments += ["-c", "\(key).command=\(quoted(launch.path))"]
+                arguments += ["-c", "\(key).args=\(array(launch.arguments))"]
                 let names = environment.keys.sorted().map { variable(server.handle, $0) }
                 arguments += ["-c", "\(key).env_vars=\(array(names))"]
             case .url(let url, let headerName, let headerValue):
@@ -51,6 +54,28 @@ enum CodexMCPLaunch {
             }
         }
         return result
+    }
+
+    /// Codex cannot rename a forwarded variable, so `/bin/sh` moves each to its server's name.
+    static func command(
+        path: String, arguments: [String], handle: String, names: [String]
+    ) -> (path: String, arguments: [String]) {
+        let renamed = names.filter(isShellName)
+        guard !renamed.isEmpty else { return (path, arguments) }
+        let moves = renamed.map { name in
+            let derived = variable(handle, name)
+            return "export \(name)=\"$\(derived)\"; unset \(derived)"
+        }
+        let script = (moves + [#"exec "$@""#]).joined(separator: "; ")
+        return ("/bin/sh", ["-c", script, "tinycast-mcp", path] + arguments)
+    }
+
+    /// What `export` accepts; any other name stays under its derived one, as it always has here.
+    private static func isShellName(_ name: String) -> Bool {
+        guard let first = name.first, first == "_" || (first.isASCII && first.isLetter) else {
+            return false
+        }
+        return name.allSatisfy { $0 == "_" || ($0.isASCII && ($0.isLetter || $0.isNumber)) }
     }
 
     /// Prefixed and derived, so a server's own variable names can never shadow the child's PATH.

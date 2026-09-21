@@ -31,13 +31,19 @@ final class MCPCoordinator {
             manager.stop()
             return
         }
-        manager.reconcile(store.enabledServers)
+        manager.reconcile(ownServers)
     }
 
     /// Connecting on the way into chat, so the first send does not wait on every handshake.
     func warmUp() {
         guard isActive else { return }
-        manager.reconcile(store.enabledServers)
+        manager.reconcile(ownServers)
+    }
+
+    /// What Tinycast runs itself; Codex and Claude start their own copy of every local server.
+    private var ownServers: [MCPServer] {
+        let cliRoute = core.aiSettings.defaultModel?.runsItsOwnTools == true
+        return store.enabledServers.filter { $0.runsInTinycast(whileCLIRouteSelected: cliRoute) }
     }
 
     var slugs: Set<String> {

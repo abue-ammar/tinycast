@@ -44,8 +44,11 @@ struct CodexTurnTests {
 
         let argv = server.argv
         expect(
-            argv.contains(#"mcp_servers.probe.command="/bin/echo""#),
-            "Tinycast's own server is named on the launch line")
+            argv.contains(#"mcp_servers.probe.command="/bin/sh""#)
+                && argv.contains {
+                    $0.hasPrefix("mcp_servers.probe.args=") && $0.hasSuffix(#""/bin/echo","probe"]"#)
+                },
+            "Tinycast's own server is named on the launch line, behind the shell that renames its variables")
         expect(
             argv.contains(#"mcp_servers.probe.default_tools_approval_mode="prompt""#),
             "in the mode that asks for every tool, so one marked read-only cannot run unasked")

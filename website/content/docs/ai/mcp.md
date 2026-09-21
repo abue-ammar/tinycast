@@ -110,6 +110,9 @@ and Tinycast passes no servers to it. The Providers row says so.
   1 MB, and a reply keeps running while the palette is hidden, each round billed to your provider.
 - Each tool result, and all results in one reply together, are capped in size.
 - Servers start when you use chat and stop after **10 idle minutes**, or when Tinycast quits.
+  While Codex or Claude is the chat model, a server that runs on your Mac is started by that
+  command instead of Tinycast, so it never runs twice. Its row in Settings shows **Stopped** until
+  you choose an API model.
 - Tinycast offers nothing back to a server. Requests from a server, like sampling, are declined.
 
 ## Backups

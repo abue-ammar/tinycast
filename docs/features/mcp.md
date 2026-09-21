@@ -201,7 +201,10 @@ is the only place that explanation would fit.
 `CodexMCPLaunch` turns the list into `-c` overrides: `command`/`args`/`env_vars` for a local
 server, `url` with `bearer_token_env_var` — or `env_http_headers` when the header is not
 `Authorization` — for a remote one, and `enabled=false` for each of the user's own. The values live
-in the app-server's environment under `TC_MCP_<HANDLE>_<KEY>`. That environment is fixed at `exec`,
+in the app-server's environment under `TC_MCP_<HANDLE>_<KEY>`. Codex forwards a variable only under
+the name it already has, so a local server with variables starts through `/bin/sh`, which moves
+each value to the name the server reads and then execs it; the script carries names, never values.
+That environment is fixed at `exec`,
 so a changed list, a refreshed OAuth token included, is a **relaunch**: `CodexAppServerClient`
 remembers what it was started with and starts again when the next turn wants something else.
 Nothing else can deliver it — `config/mcpServer/reload` takes no parameters and re-reads the
@@ -220,6 +223,13 @@ whole of that channel: a `control_request` of subtype `can_use_tool` in, a `cont
 format and is not documented for a host that is not the SDK**, which is why it is one type: the
 documented fallback is `--allowedTools "mcp__<handle>"`, with anything not pre-allowed denied and
 no per-call question at all. `tool_use` and `tool_result` blocks become the two events.
+
+While Codex or Claude is the chat model, Tinycast keeps no connection of its own to a local
+server: the CLI starts its own copy, and a second would only run it twice.
+`MCPServer.runsInTinycast(whileCLIRouteSelected:)` is the rule, and `AppCore` re-applies it
+whenever the chat model changes, so choosing an API model starts the server again. A remote server
+stays connected — a session, not a process — so its row keeps a live status; a local one reads
+Stopped.
 
 ## Settings
 

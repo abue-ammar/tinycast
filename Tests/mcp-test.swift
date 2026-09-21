@@ -28,6 +28,7 @@ struct MCPTests {
         addressingTakesOnlyAKnownHandle()
         settingsPersistAndKeepHandlesApart()
         serversBecomeWhatACLICanRunItself()
+        onlyOneCopyOfALocalServerRuns()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -283,5 +284,24 @@ struct MCPTests {
                 command: "", arguments: [], environmentKeys: []))
                 .toolServer(headerValue: "", environment: [:], bearerToken: nil) == nil,
             "a server with no command is nothing a CLI could start")
+    }
+
+    /// Codex and Claude start their own copy of a local server; Tinycast's would be the second.
+    static func onlyOneCopyOfALocalServerRuns() {
+        let local = MCPServer(
+            name: "Files", slug: "files",
+            transport: .stdio(command: "/bin/node", arguments: [], environmentKeys: []))
+        let remote = MCPServer(
+            name: "Linear", slug: "linear",
+            transport: .http(url: "https://mcp.linear.app/mcp", headerName: "Authorization"))
+        expect(
+            local.runsInTinycast(whileCLIRouteSelected: false),
+            "on an API route Tinycast runs a local server, since it is the one calling it")
+        expect(
+            !local.runsInTinycast(whileCLIRouteSelected: true),
+            "on Codex or Claude it leaves the local server to the CLI's own copy")
+        expect(
+            remote.runsInTinycast(whileCLIRouteSelected: true),
+            "while a remote one stays connected: a session, no process, and live status in Settings")
     }
 }

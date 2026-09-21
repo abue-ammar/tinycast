@@ -83,6 +83,12 @@ struct MCPServer: Codable, Equatable, Identifiable, Sendable {
                 transport: .command(path: command, arguments: arguments, environment: values))
         }
     }
+
+    /// A CLI route starts its own copy of a local server, so one here would only run it twice.
+    func runsInTinycast(whileCLIRouteSelected cliRoute: Bool) -> Bool {
+        guard cliRoute, case .stdio = transport else { return true }
+        return false
+    }
 }
 
 /// The handle `@slug` addresses, derived from the name so nobody has to invent a second one.

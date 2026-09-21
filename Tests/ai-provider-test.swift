@@ -101,6 +101,7 @@ struct AIProviderTests {
         toolArgumentsSurviveArrivingInFragments()
         toolCapabilitiesFollowTheRoute()
         codexLaunchNamesServersAndKeepsSecretsOffArgv()
+        codexLaunchHandsAServerItsOwnVariableNames()
         claudeConfigurationCarriesServersAndRoutesToolNames()
         codexElicitationsAreOnlyToolCalls()
         claudeControlFramesAnswerOneTool()
@@ -1077,9 +1078,9 @@ struct AIProviderTests {
             !arguments.contains("mcp_servers.files.enabled=false"),
             "and a name Tinycast itself supplies is never disabled alongside them")
         expect(
-            arguments.contains(#"mcp_servers.files.command="/usr/local/bin/node""#)
-                && arguments.contains(#"mcp_servers.files.args=["server.js","--root=/tmp"]"#),
-            "a local server arrives as a command and its arguments")
+            arguments.contains(#"mcp_servers.files.command="/bin/sh""#)
+                && arguments.contains(Self.renamingArguments),
+            "a local server with variables arrives through a shell that renames them, then runs it")
         expect(
             arguments.contains(Self.forwardedVariables),
             "whose environment is named rather than carried: Codex forwards only what is listed")
@@ -1116,6 +1117,47 @@ struct AIProviderTests {
             quoted.contains(#"mcp_servers.odd.command="/tmp/we\"ird\\bin""#),
             "a path with a quote in it is still one TOML string")
     }
+
+    /// Only running the launch proves a server gets its own names; `printenv` stands in for it.
+    static func codexLaunchHandsAServerItsOwnVariableNames() {
+        let derived = ["TC_MCP_FILES_API_KEY": "s3cret"]
+        let launch = CodexMCPLaunch.command(
+            path: "/usr/bin/printenv", arguments: ["API_KEY"], handle: "files",
+            names: ["API_KEY"])
+        expect(
+            run(launch, environment: derived) == "s3cret\n",
+            "the server reads its value under its own name, which Codex alone cannot give it")
+        let leftover = CodexMCPLaunch.command(
+            path: "/usr/bin/printenv", arguments: ["TC_MCP_FILES_API_KEY"], handle: "files",
+            names: ["API_KEY"])
+        expect(
+            run(leftover, environment: derived) == "",
+            "and the derived name is gone, so the value does not reach it twice")
+        let odd = CodexMCPLaunch.command(
+            path: "/usr/bin/true", arguments: [], handle: "files", names: ["NOT-A-NAME"])
+        expect(
+            odd.path == "/usr/bin/true" && odd.arguments.isEmpty,
+            "a name the shell cannot export leaves the server launched directly, as before")
+    }
+
+    private static func run(
+        _ launch: (path: String, arguments: [String]), environment: [String: String]
+    ) -> String {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: launch.path)
+        process.arguments = launch.arguments
+        process.environment = environment.merging(["PATH": "/usr/bin:/bin"]) { value, _ in value }
+        let output = Pipe()
+        process.standardOutput = output
+        guard (try? process.run()) != nil else { return "<did not start>" }
+        process.waitUntilExit()
+        return String(bytes: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+    }
+
+    private static let renamingArguments =
+        #"mcp_servers.files.args=["-c","export API_KEY=\"$TC_MCP_FILES_API_KEY\"; unset "#
+        + #"TC_MCP_FILES_API_KEY; exec \"$@\"","tinycast-mcp","/usr/local/bin/node","server.js","#
+        + #""--root=/tmp"]"#
 
     /// Spelled through a joined literal so no shell hook mistakes the key for a dotfile.
     private static let forwardedVariables =
