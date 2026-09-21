@@ -11,17 +11,19 @@ struct SettingsSidebarView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsSearchField(query: $query, focused: $searchFocused)
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.bottom, Theme.Spacing.md)
             if query.isEmpty {
                 browse
             } else {
                 found
             }
         }
-        // The field sits under the toolbar's material, so it needs its own clearance from the top.
-        .padding(.top, Theme.Spacing.md)
+        // Attach a search bar to the top of the sidebar.
+        // Using .safeAreaBar ensures the Liquid Glass effects are preserved
+        .safeAreaBar(edge: .top) {
+            SettingsSearchField(query: $query, focused: $searchFocused)
+                .padding(.horizontal, Theme.Spacing.lg)
+                .padding(.bottom, Theme.Spacing.md)
+        }
         .onExitCommand { query = "" }
         .background(focusShortcut)
     }
