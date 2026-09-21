@@ -1,6 +1,14 @@
 import AppKit
 import SwiftUI
 
+private final class AppWindow: NSWindow {
+    var closesOnEscape = false
+
+    override func cancelOperation(_ sender: Any?) {
+        if closesOnEscape { close() } else { super.cancelOperation(sender) }
+    }
+}
+
 /// Built on first show, torn down on close so its SwiftUI tree deallocates. Never quits the app.
 @MainActor
 final class AppWindowController: NSObject, NSWindowDelegate {
@@ -9,19 +17,21 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     private let isResizable: Bool
     private let autosaveName: String?
     private let activation: ActivationPolicy
+    private let closesOnEscape: Bool
     private var window: NSWindow?
     /// Rebuilt with the window, so a chrome's state never outlives the window it decorated.
     private var chrome: WindowChrome?
 
     init(
         title: String, contentSize: CGSize, resizable: Bool = false, autosaveName: String? = nil,
-        activation: ActivationPolicy
+        activation: ActivationPolicy, closesOnEscape: Bool = false
     ) {
         self.title = title
         self.contentSize = contentSize
         self.isResizable = resizable
         self.autosaveName = autosaveName
         self.activation = activation
+        self.closesOnEscape = closesOnEscape
     }
 
     /// Returns `true` when a window was built, `false` when an already-open one was re-raised.
@@ -95,13 +105,14 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     private func makeWindow(content: NSViewController) -> NSWindow {
         var style: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         if isResizable { style.insert(.resizable) }
-        let window = NSWindow(
+        let window = AppWindow(
             contentRect: NSRect(origin: .zero, size: contentSize),
             styleMask: style,
             backing: .buffered,
             defer: false
         )
         window.title = title
+        window.closesOnEscape = closesOnEscape
         // Edge-to-edge under a transparent titlebar, so it reads as one surface.
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
