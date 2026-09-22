@@ -33,10 +33,6 @@ struct SettingsDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(
-            GlassEffectView()
-                .ignoresSafeArea()
-        )
         // One host for every pane, above their scroll views so a callout is never clipped.
         .shortcutRecorderPopoverHost()
     }
