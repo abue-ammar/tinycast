@@ -3,16 +3,30 @@ import Foundation
 /// Tinycast's servers as `codex app-server` launch overrides, and the elicitation they answer.
 /// Every value here is process-scoped: nothing reaches `~/.codex/config.toml`.
 enum CodexMCPLaunch {
-    /// `-c` pairs for the servers Tinycast supplies, plus each of the user's own, disabled by name.
-    /// A name the user's configuration does not define cannot be disabled — the whole config then
-    /// fails to load — so `foreignNames` is what `mcp mcp list` reported under these same flags.
+    /// Codex's name for a Tinycast server; `-c` merges into a same-named table of the reader's.
+    static func serverName(for handle: String) -> String { serverPrefix + handle }
+
+    /// The handle behind a name Codex reports, or `nil` for a server that is not Tinycast's.
+    static func handle(ofServer name: String) -> String? {
+        guard name.hasPrefix(serverPrefix), name.count > serverPrefix.count else { return nil }
+        return String(name.dropFirst(serverPrefix.count))
+    }
+
+    private static let serverPrefix = "tinycast-"
+
+    /// A reader's server already named like an armed one of ours, which it would merge into.
+    static func takenName(servers: [AIToolServer], foreignNames: [String]) -> String? {
+        servers.map { serverName(for: $0.handle) }.first { foreignNames.contains($0) }
+    }
+
+    /// `-c` pairs for Tinycast's servers, and every one of the reader's own, disabled by name.
     static func arguments(servers: [AIToolServer], disabling foreignNames: [String]) -> [String] {
         var arguments: [String] = []
-        for name in foreignNames where !servers.contains(where: { $0.handle == name }) {
+        for name in foreignNames {
             arguments += ["-c", "mcp_servers.\(name).enabled=false"]
         }
         for (index, server) in servers.enumerated() {
-            let key = "mcp_servers.\(server.handle)"
+            let key = "mcp_servers.\(serverName(for: server.handle))"
             arguments += ["-c", "\(key).enabled=true"]
             // Codex runs a tool its server calls read-only unasked; trust is Tinycast's call.
             arguments += ["-c", "\(key).default_tools_approval_mode=\(quoted("prompt"))"]

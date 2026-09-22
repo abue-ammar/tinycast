@@ -1073,20 +1073,22 @@ struct AIProviderTests {
         let arguments = CodexMCPLaunch.arguments(
             servers: [stdio, oauth, custom], disabling: ["computer-use", "files"])
         expect(
-            arguments.contains("mcp_servers.computer-use.enabled=false"),
-            "the user's own Codex servers are disabled by name, which is what closes the leak")
+            arguments.contains("mcp_servers.computer-use.enabled=false")
+                && arguments.contains("mcp_servers.files.enabled=false"),
+            "every one of the reader's own servers is disabled by name, one named like ours too")
         expect(
-            !arguments.contains("mcp_servers.files.enabled=false"),
-            "and a name Tinycast itself supplies is never disabled alongside them")
+            arguments.contains("mcp_servers.tinycast-files.enabled=true")
+                && !arguments.contains { $0.hasPrefix("mcp_servers.files.") && !$0.hasSuffix("=false") },
+            "since Tinycast's go by names of their own, which no table of the reader's merges into")
         expect(
-            arguments.contains(#"mcp_servers.files.command="/bin/sh""#)
+            arguments.contains(#"mcp_servers.tinycast-files.command="/bin/sh""#)
                 && arguments.contains(Self.renamingArguments),
             "a local server with variables arrives through a shell that renames them, then runs it")
         expect(
             arguments.contains(Self.forwardedVariables),
             "whose environment is named rather than carried: Codex forwards only what is listed")
         expect(
-            arguments.contains(#"mcp_servers.linear.bearer_token_env_var="TC_MCP_1_0""#),
+            arguments.contains(#"mcp_servers.tinycast-linear.bearer_token_env_var="TC_MCP_1_0""#),
             "an OAuth endpoint lends its token through the variable Codex reads it from")
         expect(
             arguments.contains(Self.headerMapOverride),
@@ -1113,8 +1115,19 @@ struct AIProviderTests {
                         path: #"/tmp/we"ird\bin"#, arguments: [], environment: [:]))
             ], disabling: [])
         expect(
-            quoted.contains(#"mcp_servers.odd.command="/tmp/we\"ird\\bin""#),
+            quoted.contains(#"mcp_servers.tinycast-odd.command="/tmp/we\"ird\\bin""#),
             "a path with a quote in it is still one TOML string")
+
+        expect(
+            CodexMCPLaunch.handle(ofServer: "tinycast-files") == "files"
+                && CodexMCPLaunch.handle(ofServer: "files") == nil
+                && CodexMCPLaunch.handle(ofServer: "tinycast-") == nil,
+            "a name Codex reports maps back to a handle only when it is one of Tinycast's")
+        expect(
+            CodexMCPLaunch.takenName(servers: [stdio], foreignNames: ["tinycast-files"])
+                == "tinycast-files"
+                && CodexMCPLaunch.takenName(servers: [stdio], foreignNames: ["files"]) == nil,
+            "and a reader's server already named like an armed one of ours is caught before launch")
     }
 
     /// Only running the launch proves a server gets its own names; `printenv` stands in for it.
@@ -1139,8 +1152,8 @@ struct AIProviderTests {
                 path: "/usr/bin/true", arguments: [], environment: ["NOT-A-NAME": "hidden"]))
         let oddArguments = CodexMCPLaunch.arguments(servers: [odd], disabling: [])
         expect(
-            oddArguments.contains(#"mcp_servers.odd.command="/usr/bin/true""#)
-                && oddArguments.contains("mcp_servers.odd." + "env" + "_vars=[]"),
+            oddArguments.contains(#"mcp_servers.tinycast-odd.command="/usr/bin/true""#)
+                && oddArguments.contains("mcp_servers.tinycast-odd." + "env" + "_vars=[]"),
             "a name the shell cannot export is not forwarded, and the server launches directly")
         expect(
             CodexMCPLaunch.environment(servers: [odd]) == [:],
@@ -1213,14 +1226,15 @@ struct AIProviderTests {
     }
 
     private static let renamingArguments =
-        #"mcp_servers.files.args=["-c","export API_KEY=\"$TC_MCP_0_0\"; unset TC_MCP_0_0; "#
+        #"mcp_servers.tinycast-files.args=["-c","export API_KEY=\"$TC_MCP_0_0\"; "#
+        + #"unset TC_MCP_0_0; "#
         + #"exec \"$@\"","tinycast-mcp","/usr/local/bin/node","server.js","--root=/tmp"]"#
 
     /// Spelled through a joined literal so no shell hook mistakes the key for a dotfile.
     private static let forwardedVariables =
-        "mcp_servers.files." + "env" + #"_vars=["TC_MCP_0_0"]"#
+        "mcp_servers.tinycast-files." + "env" + #"_vars=["TC_MCP_0_0"]"#
     private static let headerMapOverride =
-        "mcp_servers.notes." + "env" + #"_http_headers={"X-Api-Key"="TC_MCP_2_0"}"#
+        "mcp_servers.tinycast-notes." + "env" + #"_http_headers={"X-Api-Key"="TC_MCP_2_0"}"#
 
     /// The config file is the only place Claude's secrets go, and the tool name is what routes back.
     static func claudeConfigurationCarriesServersAndRoutesToolNames() {

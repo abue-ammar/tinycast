@@ -85,13 +85,19 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   a `0600` file written per turn into the private workspace and deleted when the turn ends. Neither
   route is ever told to persist a decision — no Codex `persist`, no Claude `updatedPermissions` —
   because only Settings may change a standing one.
-- **The user's own CLI servers stay out of a Tinycast thread.** Codex's launch disables each by
-  name, read first by a short-lived `codex mcp list --json` under the same flags the app-server
-  runs with, because that command starts nothing and because a name the configuration does not
-  define cannot be disabled — naming one makes the whole config refuse to load. Claude's
-  `--strict-mcp-config` does it in one flag. This is what closes the leak the route shipped with:
-  its launch flags never touched `mcp_servers`, so every server in `~/.codex/config.toml` used to
-  start inside a Tinycast thread, invisible because `CodexTurnRunner` ignored the items.
+- **The user's own CLI servers stay out of a Tinycast thread, and never mix with Tinycast's.**
+  Codex's launch disables every one of them by name, read first by a short-lived
+  `codex mcp list --json` under the same flags the app-server runs with, because that command
+  starts nothing and because a name the configuration does not define cannot be disabled — naming
+  one makes the whole config refuse to load. Tinycast's own go by `tinycast-<handle>`: `-c` sets
+  single keys, so a Tinycast `github` under the reader's own name would inherit everything of theirs
+  it did not set — their `env` table with its literal secrets, `cwd`, a per-tool `approval_mode`
+  that skips consent — and a remote one over their stdio one makes Codex refuse the whole config.
+  A reader's server already named `tinycast-<handle>` for an armed handle refuses the launch rather
+  than merge. Claude's `--strict-mcp-config` does it in one flag. This is what closes the leak the
+  route shipped with: its launch flags never touched `mcp_servers`, so every server in
+  `~/.codex/config.toml` used to start inside a Tinycast thread, invisible because
+  `CodexTurnRunner` ignored the items.
 - **Every Codex tool call asks Tinycast, read-only ones included.** Left alone, the app-server runs
   a tool its server annotates `readOnlyHint: true` without raising an elicitation, even under
   `approvalPolicy: "untrusted"` — and that annotation is the server's own claim. So each server is
@@ -200,7 +206,10 @@ is the only place that explanation would fit.
 
 `CodexMCPLaunch` turns the list into `-c` overrides: `command`/`args`/`env_vars` for a local
 server, `url` with `bearer_token_env_var` — or `env_http_headers` when the header is not
-`Authorization` — for a remote one, and `enabled=false` for each of the user's own. The values live
+`Authorization` — for a remote one, each under `mcp_servers.tinycast-<handle>`, and
+`enabled=false` for each of the user's own. `CodexMCPLaunch.handle(ofServer:)` is the way back: an
+elicitation's `serverName` and an `mcpToolCall` item's `server` name a Codex server, and only one
+with the prefix is Tinycast's to ask about or to title a row with. The values live
 in the app-server's environment under `TC_MCP_<server>_<key>`, two positions in the launch's own
 list rather than any spelling of the handle and key: `github-x` + `TOKEN` and `github` + `X_TOKEN`
 would upper-case to one name, and so would `token` and `TOKEN`, a header and a local key, or two

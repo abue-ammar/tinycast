@@ -88,8 +88,12 @@ A refused or failed call is not an error. The model is told what happened and ca
 **API connections** are offered tools — OpenAI API, Anthropic Claude, Google Gemini, OpenRouter and
 OpenAI Compatible endpoints — and so are the installed **Codex** and **Claude** commands. On those
 two the CLI calls the tools itself; the servers, the confirmation and the rows in the reply are the
-same ones you see everywhere else. Your own Codex and Claude MCP servers stay out of a Tinycast
-chat, and nothing is written to their settings.
+same ones you see everywhere else. Nothing is written to either command's settings.
+
+Your own Codex and Claude MCP servers stay out of a Tinycast chat. Claude is told to use Tinycast's
+list alone. Codex is handed Tinycast's servers under names of their own, like `tinycast-github`,
+and every server in your Codex configuration is switched off for that chat, so a server of yours
+named `github` never mixes with Tinycast's `@github`.
 
 One thing is different on Codex: adding, removing or re-authorizing a server restarts its helper,
 which takes about a second on the next message.

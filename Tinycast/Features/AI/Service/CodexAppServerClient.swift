@@ -118,6 +118,11 @@ final class CodexAppServerClient {
         // would have launched every one of them before anything could ask for their names.
         let foreign = await Self.foreignServerNames(
             executable: executable, workspace: workspace, codexHome: codexHome)
+        if let taken = CodexMCPLaunch.takenName(servers: toolServers, foreignNames: foreign) {
+            throw ClientError.launchFailed(
+                "Your Codex configuration has its own MCP server named \u{201C}\(taken)\u{201D}. "
+                    + "Rename it to use this Tinycast server with Codex.")
+        }
         let process = Process()
         let stdin = Pipe()
         let stdout = Pipe()

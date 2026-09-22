@@ -69,7 +69,8 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   feature flag off and a read-only, network-disabled sandbox, and every server request but one is
   declined. What changed is the list: the servers the reader configured for their own Codex are
   disabled by name at launch — which they were not before, so they used to start inside Tinycast
-  threads — and the servers [MCP](mcp.md) supplies take their place when a chat has any. A turn
+  threads — and the servers [MCP](mcp.md) supplies take their place when a chat has any, under
+  names of their own (`tinycast-<handle>`) so that no table of the reader's merges into one. A turn
   that arms none keeps `approvalPolicy: "never"`; a turn that arms some uses `"untrusted"`, where
   a tool call becomes an elicitation Tinycast answers from the reader's own trust setting.
 - **Tool calling is a decorator, except where the CLI is the client.** `AIToolLoopProvider` wraps a

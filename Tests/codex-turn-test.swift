@@ -22,6 +22,7 @@ struct CodexTurnTests {
         await tinycastsServersAreLaunchedAndTheUsersOwnAreNot()
         await anElicitationIsAnsweredByTheTrustDialog()
         await aRefusedCallIsAFailedRowAndAnHonestReply()
+        await aForeignServersElicitationIsNeverAsked()
         await theRoundCapInterruptsTheTurn()
 
         print("\(passes) passed, \(failures) failed")
@@ -43,19 +44,24 @@ struct CodexTurnTests {
         turn.cancel()
 
         let argv = server.argv
+        let key = "mcp_servers.tinycast-probe"
         expect(
-            argv.contains(#"mcp_servers.probe.command="/bin/sh""#)
+            argv.contains(#"\#(key).command="/bin/sh""#)
                 && argv.contains {
-                    $0.hasPrefix("mcp_servers.probe.args=") && $0.hasSuffix(#""/bin/echo","probe"]"#)
+                    $0.hasPrefix("\(key).args=") && $0.hasSuffix(#""/bin/echo","probe"]"#)
                 },
-            "Tinycast's own server is named on the launch line, behind the shell that renames its variables")
+            "Tinycast's server is on the launch line under its own name, behind the renaming shell")
         expect(
-            argv.contains(#"mcp_servers.probe.default_tools_approval_mode="prompt""#),
+            argv.contains(#"\#(key).default_tools_approval_mode="prompt""#),
             "in the mode that asks for every tool, so one marked read-only cannot run unasked")
         expect(
             argv.contains("mcp_servers.user-one.enabled=false")
                 && argv.contains("mcp_servers.user-two.enabled=false"),
             "and every server the user configured for their own Codex is disabled by name")
+        expect(
+            argv.contains("mcp_servers.probe.enabled=false")
+                && !argv.contains { $0.hasPrefix("mcp_servers.probe.") && !$0.hasSuffix("=false") },
+            "including the reader's own `probe`, which Tinycast's `probe` never merges into")
         expect(
             server.listArgv.contains("mcp") && server.listArgv.contains("--json"),
             "which were read by a short-lived `mcp list`, so none of them ever started")
@@ -100,6 +106,25 @@ struct CodexTurnTests {
         expect(
             events.contains(.toolResult(id: "call-1", isError: false)),
             "and its completion settles that row")
+    }
+
+    /// Consent is for Tinycast's servers; a question about any other is declined, never asked.
+    static func aForeignServersElicitationIsNeverAsked() async {
+        guard let server = StubServer(mode: "mcp-foreign") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+
+        let asked = Box()
+        let events = await server.collect(
+            toolServers: server.session(allowing: true, asked: asked))
+        expect(
+            asked.calls.isEmpty && server.received.contains(#"elicitation:{"action":"decline"}"#),
+            "a call on the reader's own `probe` is declined without asking about Tinycast's")
+        expect(
+            events.contains(.toolCall(id: "call-1", origin: "probe", title: "safe_echo")),
+            "and its row keeps the name Codex gave, never the title of Tinycast's same-handle server")
     }
 
     static func aRefusedCallIsAFailedRowAndAnHonestReply() async {

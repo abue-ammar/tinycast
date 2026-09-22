@@ -136,11 +136,13 @@ final class CodexTurnRunner {
     /// so the count is calls rather than model requests — stricter than the loop's, never looser.
     private func startToolCall(_ item: [String: JSONValue]) {
         guard let id = item["id"]?.stringValue else { return }
-        let server = item["server"]?.stringValue ?? ""
-        if let tool = item["tool"]?.stringValue { startedTools[server] = tool }
+        let name = item["server"]?.stringValue ?? ""
+        let handle = CodexMCPLaunch.handle(ofServer: name)
+        if let handle, let tool = item["tool"]?.stringValue { startedTools[handle] = tool }
+        let origin = handle.map { AIToolServerRow.title(of: $0, in: activeServers) }
         activeContinuation?.yield(
             .toolCall(
-                id: id, origin: AIToolServerRow.title(of: server, in: activeServers),
+                id: id, origin: origin ?? AIToolServerRow.label(name),
                 title: AIToolServerRow.label(item["tool"]?.stringValue ?? "")))
         spentCalls += 1
         guard spentCalls > roundCap else { return }
@@ -290,9 +292,11 @@ final class CodexTurnRunner {
             return
         }
         client.onElicitation = { [weak self] elicitation in
-            let tool = self?.startedTools[elicitation.serverName] ?? elicitation.toolName
-            return await session.consent(
-                AIToolServerCall(handle: elicitation.serverName, tool: tool))
+            guard let handle = CodexMCPLaunch.handle(ofServer: elicitation.serverName) else {
+                return false
+            }
+            let tool = self?.startedTools[handle] ?? elicitation.toolName
+            return await session.consent(AIToolServerCall(handle: handle, tool: tool))
         }
     }
 

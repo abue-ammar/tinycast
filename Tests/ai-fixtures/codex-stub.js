@@ -67,6 +67,7 @@ if (ARGV.includes("mcp") && ARGV.includes("list")) {
         JSON.stringify([
             { name: "user-one", enabled: true, transport: { type: "stdio" } },
             { name: "user-two", enabled: true, transport: { type: "streamable_http" } },
+            { name: "probe", enabled: true, transport: { type: "stdio" } },
         ]) + "\n");
     process.exit(0);
 }
@@ -80,22 +81,24 @@ fs.appendFileSync(
 
 /** One MCP call, from the item that names it to the elicitation that gates it. */
 function toolCall(index, read) {
+    // `mcp-foreign` asks on behalf of the reader's own `probe`, which Tinycast must never answer.
+    const server = MODE === "mcp-foreign" ? "probe" : "tinycast-probe";
     const item = {
         type: "mcpToolCall",
         id: `call-${index}`,
-        server: "probe",
+        server,
         tool: "safe_echo",
         status: "inProgress",
         arguments: { message: "one" },
         readOnlyHint: false,
     };
     emit({ method: "item/started", params: { threadId: THREAD, item } });
-    if (MODE !== "mcp") return;
+    if (MODE !== "mcp" && MODE !== "mcp-foreign") return;
     emit({
         id: 900 + index,
         method: "mcpServer/elicitation/request",
         params: {
-            serverName: "probe",
+            serverName: server,
             threadId: THREAD,
             turnId: TURN,
             message: "Allow the probe MCP server to run tool “safe_echo”?",
@@ -139,7 +142,7 @@ for (;;) {
         emit({ id: requestID, result: { thread: { id: THREAD } } });
     } else if (method === "turn/start") {
         record(`turn-params:${JSON.stringify(message.params ?? {})}`);
-        if (MODE === "mcp" || MODE === "mcp-rounds") {
+        if (MODE.startsWith("mcp")) {
             emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });
             emit({ id: requestID, result: { turn: { id: TURN } } });
             const calls = MODE === "mcp-rounds" ? 3 : 1;
