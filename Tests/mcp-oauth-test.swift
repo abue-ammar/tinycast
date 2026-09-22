@@ -54,6 +54,10 @@ struct MCPOAuthTests {
         expect(issuers.map(\.absoluteString) == ["https://example.com/.well-known/oauth-authorization-server/tenant",
             "https://example.com/.well-known/openid-configuration/tenant",
             "https://example.com/tenant/.well-known/openid-configuration"], "all issuer discovery locations")
+        expect(try MCPOAuth.serverMetadataURLs(issuer: "https://example.com/tenant/") == issuers,
+               "an issuer's terminating slash is dropped before the well-known path goes in")
+        expect(try MCPOAuth.protectedMetadataURLs(resource: "https://example.com/team/mcp/", challenge: [:]) == urls,
+               "a resource's terminating slash is dropped the same way")
         let metadataJSON = #"{"issuer":"https://auth.test","authorization_endpoint":"https://auth.test/authorize","#
             + #""token_endpoint":"https://auth.test/token","code_challenge_methods_supported":["S256"]}"#
         let metadata = try MCPOAuth.parseServer(Data(metadataJSON.utf8), issuer: "https://auth.test")

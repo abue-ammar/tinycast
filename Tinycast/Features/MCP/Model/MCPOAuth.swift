@@ -116,7 +116,8 @@ enum MCPOAuth {
         guard var parts = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
             throw Failure.invalidMetadata
         }
-        let path = parts.percentEncodedPath == "/" ? "" : parts.percentEncodedPath
+        let encoded = parts.percentEncodedPath
+        let path = encoded.hasSuffix("/") ? String(encoded.dropLast()) : encoded
         parts.query = nil
         var results: [URL] = []
         for suffix in suffixes {
