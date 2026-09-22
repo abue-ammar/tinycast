@@ -186,7 +186,9 @@ final class AIChatState {
             guard var message = session.messages.last, message.role == .assistant else { return }
             isThinking = false
             message.searches.append(
-                ChatSearch(query: query, isComplete: false, textOffset: message.text.count))
+                ChatSearch(
+                    query: query, isComplete: false, textOffset: message.text.count,
+                    sequence: message.nextSequence))
             session.replaceLast(with: message)
         case .searched(let query):
             flushPendingText()
@@ -203,7 +205,7 @@ final class AIChatState {
             message.toolUses.append(
                 ChatToolUse(
                     callID: id, origin: origin, title: title, state: .running,
-                    textOffset: message.text.count))
+                    textOffset: message.text.count, sequence: message.nextSequence))
             session.replaceLast(with: message)
         case .toolResult(let id, let isError):
             guard var message = session.messages.last, message.role == .assistant else { return }

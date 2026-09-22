@@ -327,9 +327,9 @@ final class ChatHistoryStore {
             """
         guard let statement = prepare(sql, in: database) else { return false }
         defer { sqlite3_finalize(statement) }
-        for (position, search) in message.searches.enumerated() {
+        for search in message.searches {
             bind(message.id.uuidString, to: statement, at: 1)
-            sqlite3_bind_int64(statement, 2, Int64(position))
+            sqlite3_bind_int64(statement, 2, Int64(search.sequence))
             if let query = search.query { bind(query, to: statement, at: 3) }
             sqlite3_bind_int64(statement, 4, Int64(search.textOffset))
             guard sqlite3_step(statement) == SQLITE_DONE else { return false }
@@ -344,7 +344,7 @@ final class ChatHistoryStore {
         forConversation id: UUID, in database: OpaquePointer
     ) -> [UUID: [ChatSearch]] {
         let sql = """
-            SELECT s.message_id, s.query, s.text_offset FROM message_searches s
+            SELECT s.message_id, s.query, s.text_offset, s.position FROM message_searches s
             JOIN messages m ON m.id = s.message_id
             WHERE m.conversation_id = ? ORDER BY s.message_id, s.position;
             """
@@ -358,7 +358,8 @@ final class ChatHistoryStore {
             searches[messageID, default: []].append(
                 ChatSearch(
                     query: query, isComplete: true,
-                    textOffset: Int(sqlite3_column_int64(statement, 2))))
+                    textOffset: Int(sqlite3_column_int64(statement, 2)),
+                    sequence: Int(sqlite3_column_int64(statement, 3))))
         }
         return searches
     }
@@ -372,9 +373,9 @@ final class ChatHistoryStore {
             """
         guard let statement = prepare(sql, in: database) else { return false }
         defer { sqlite3_finalize(statement) }
-        for (position, use) in message.toolUses.enumerated() {
+        for use in message.toolUses {
             bind(message.id.uuidString, to: statement, at: 1)
-            sqlite3_bind_int64(statement, 2, Int64(position))
+            sqlite3_bind_int64(statement, 2, Int64(use.sequence))
             bind(use.callID, to: statement, at: 3)
             bind(use.origin, to: statement, at: 4)
             bind(use.title, to: statement, at: 5)
@@ -392,7 +393,7 @@ final class ChatHistoryStore {
         forConversation id: UUID, in database: OpaquePointer
     ) -> [UUID: [ChatToolUse]] {
         let sql = """
-            SELECT t.message_id, t.call_id, t.origin, t.title, t.state, t.text_offset
+            SELECT t.message_id, t.call_id, t.origin, t.title, t.state, t.text_offset, t.position
             FROM message_tools t
             JOIN messages m ON m.id = t.message_id
             WHERE m.conversation_id = ? ORDER BY t.message_id, t.position;
@@ -408,7 +409,8 @@ final class ChatHistoryStore {
                 ChatToolUse(
                     callID: text(statement, 1), origin: text(statement, 2),
                     title: text(statement, 3), state: stored == .running ? .failed : stored,
-                    textOffset: Int(sqlite3_column_int64(statement, 5))))
+                    textOffset: Int(sqlite3_column_int64(statement, 5)),
+                    sequence: Int(sqlite3_column_int64(statement, 6))))
         }
         return uses
     }

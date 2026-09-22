@@ -42,12 +42,19 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         self.toolUses = toolUses
     }
 
+    /// The next search or call's place among the reply's: with no text between, offsets tie.
+    var nextSequence: Int { searches.count + toolUses.count }
+
     /// The reply split around what it did: text, search or tool, text… rendered where it happened.
     var segments: [ChatSegment] {
         let interruptions =
-            (searches.map { (offset: $0.textOffset, segment: ChatSegment.search($0)) }
-            + toolUses.map { (offset: $0.textOffset, segment: ChatSegment.tools([$0])) })
-            .sorted { $0.offset < $1.offset }
+            (searches.map {
+                (offset: $0.textOffset, sequence: $0.sequence, segment: ChatSegment.search($0))
+            }
+            + toolUses.map {
+                (offset: $0.textOffset, sequence: $0.sequence, segment: ChatSegment.tools([$0]))
+            })
+            .sorted { ($0.offset, $0.sequence) < ($1.offset, $1.sequence) }
         var segments: [ChatSegment] = []
         var rest = Substring(text)
         var consumed = 0
@@ -74,6 +81,7 @@ struct ChatSearch: Equatable, Hashable, Sendable {
     var isComplete: Bool
     /// Characters of reply text that had arrived when the search began.
     let textOffset: Int
+    let sequence: Int
 }
 
 /// One tool call inside a reply: live while it runs, a record of what ran once it is done.
@@ -90,6 +98,7 @@ struct ChatToolUse: Equatable, Hashable, Sendable {
     var state: State
     /// Characters of reply text that had arrived when the call started.
     let textOffset: Int
+    let sequence: Int
 
     var label: String {
         let verb = state == .running ? "Calling" : "Called"
