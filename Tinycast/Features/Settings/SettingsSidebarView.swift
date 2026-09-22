@@ -17,8 +17,6 @@ struct SettingsSidebarView: View {
                 found
             }
         }
-        // Attach a search bar to the top of the sidebar.
-        // Using .safeAreaBar ensures the Liquid Glass effects are preserved
         .safeAreaBar(edge: .top) {
             SettingsSearchField(query: $query, focused: $searchFocused)
                 .padding(.horizontal, Theme.Spacing.lg)
@@ -36,12 +34,11 @@ struct SettingsSidebarView: View {
                         Label {
                             Text(tab.title)
                         } icon: {
-                            Image(systemName: tab.systemImage)
-                                .imageScale(.large)
-                                .foregroundStyle(
-                                    appearsActive
-                                        ? (navigation.tab == tab ? Color.primary : Color.accentColor)
-                                        : Color.secondary)
+                            SettingsTabIcon(
+                                systemImage: tab.systemImage,
+                                tint: appearsActive
+                                    ? (navigation.tab == tab ? Color.primary : Color.accentColor)
+                                    : Color.secondary)
                         }
                         .tag(tab)
                     }
@@ -109,7 +106,36 @@ private struct SettingsSearchResultRow: View {
                     .truncationMode(.middle)
             }
         } icon: {
-            Image(systemName: entry.tab.systemImage)
+            SettingsTabIcon(systemImage: entry.tab.systemImage, tint: .accentColor)
         }
+        // Centred, not first-baseline: the tile sits against a two-line title and breadcrumb.
+        .labelStyle(CenteredLabelStyle())
+    }
+}
+
+private struct CenteredLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(alignment: .center) {
+            configuration.icon
+            configuration.title
+        }
+    }
+}
+
+/// The glyph on a tinted tile, so every row's icon reads at one weight whatever its symbol's shape.
+private struct SettingsTabIcon: View {
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        Image(systemName: systemImage)
+            .resizable()
+            .scaledToFit()
+            .frame(width: Theme.Size.settingsSidebarGlyph, height: Theme.Size.settingsSidebarGlyph)
+            .foregroundStyle(tint)
+            .padding(Theme.Spacing.xs)
+            .background(
+                tint.opacity(0.1),
+                in: RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
     }
 }

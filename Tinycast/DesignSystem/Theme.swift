@@ -189,6 +189,8 @@ enum Theme {
         /// The narrowest the pane column may get before a grouped row's control starts colliding.
         static let settingsDetailMinimum: CGFloat = 420
         static let settingsRowIcon: CGFloat = 20
+        /// A sidebar glyph inside its tinted tile; the tile's inset brings it to the row icon's size.
+        static let settingsSidebarGlyph: CGFloat = 14
         static let paletteTransparencySlider: CGFloat = 190
         /// One "Aa" segment of the Interface Size control; three sit in a grouped row's trailing slot.
         static let interfaceSizeSegment: CGFloat = 40
