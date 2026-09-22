@@ -93,7 +93,9 @@ same ones you see everywhere else. Nothing is written to either command's settin
 Your own Codex and Claude MCP servers stay out of a Tinycast chat. Claude is told to use Tinycast's
 list alone. Codex is handed Tinycast's servers under names of their own, like `tinycast-github`,
 and every server in your Codex configuration is switched off for that chat, so a server of yours
-named `github` never mixes with Tinycast's `@github`.
+named `github` never mixes with Tinycast's `@github`. If Tinycast cannot read which servers your
+Codex configuration has, or one of them has a dot or `=` in its name, Codex does not start from
+Tinycast at all, and the Codex row in Settings says why.
 
 One thing is different on Codex: adding, removing or re-authorizing a server restarts its helper,
 which takes about a second on the next message.

@@ -1128,6 +1128,21 @@ struct AIProviderTests {
                 == "tinycast-files"
                 && CodexMCPLaunch.takenName(servers: [stdio], foreignNames: ["files"]) == nil,
             "and a reader's server already named like an armed one of ours is caught before launch")
+
+        expect(
+            CodexMCPLaunch.foreignNames(listing: #"[{"name":"a","enabled":true},{"name":"b c"}]"#)
+                == ["a", "b c"],
+            "the reader's servers are every name `codex mcp list --json` reports")
+        expect(
+            CodexMCPLaunch.foreignNames(listing: "warning: not json") == nil
+                && CodexMCPLaunch.foreignNames(listing: #"{"name":"a"}"#) == nil
+                && CodexMCPLaunch.foreignNames(listing: #"[{"name":"a"},{"enabled":true}]"#) == nil,
+            "and output that is not that list reads as unknown, never as an empty one")
+        expect(
+            CodexMCPLaunch.unaddressableName(["ok", "日本", "has space", "has.dot"]) == "has.dot"
+                && CodexMCPLaunch.unaddressableName(["a=b"]) == "a=b"
+                && CodexMCPLaunch.unaddressableName(["ok", "日本", "has space"]) == nil,
+            "only a dot or an equals sign keeps `-c` from naming a server; spaces and scripts do not")
     }
 
     /// Only running the launch proves a server gets its own names; `printenv` stands in for it.

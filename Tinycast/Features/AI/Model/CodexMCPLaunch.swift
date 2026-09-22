@@ -14,6 +14,22 @@ enum CodexMCPLaunch {
 
     private static let serverPrefix = "tinycast-"
 
+    /// The names `codex mcp list --json` reported, or `nil` for output that is not that list.
+    static func foreignNames(listing: String) -> [String]? {
+        guard let entries = JSONValue(data: Data(listing.utf8))?.arrayValue else { return nil }
+        var names: [String] = []
+        for entry in entries {
+            guard let name = entry.objectValue?["name"]?.stringValue else { return nil }
+            names.append(name)
+        }
+        return names
+    }
+
+    /// A reader's server `-c` cannot switch off: a dot or `=` splits the key it would be named by.
+    static func unaddressableName(_ foreignNames: [String]) -> String? {
+        foreignNames.first { $0.contains(".") || $0.contains("=") }
+    }
+
     /// A reader's server already named like an armed one of ours, which it would merge into.
     static func takenName(servers: [AIToolServer], foreignNames: [String]) -> String? {
         servers.map { serverName(for: $0.handle) }.first { foreignNames.contains($0) }

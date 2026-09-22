@@ -67,22 +67,18 @@ final class CodexAppServerClient {
         "-c", "memories.use_memories=false"
     ]
 
-    /// The servers the user configured for their own Codex, which a Tinycast thread never runs.
-    /// A name this does not report cannot be disabled — the whole configuration then refuses to
-    /// load — so the reading runs under the same flags the app-server will.
+    /// The reader's own servers, read under the app-server's flags; `nil` when that fails.
     nonisolated private static func foreignServerNames(
         executable: URL, workspace: URL, codexHome: URL?
-    ) async -> [String] {
+    ) async -> [String]? {
         var environment = ProcessInfo.processInfo.environment
         environment["NO_COLOR"] = "1"
         if let codexHome { environment["CODEX_HOME"] = codexHome.path }
         let result = await InstalledAIProbe.run(
             executable: executable, arguments: configurationFlags + ["mcp", "list", "--json"],
             workspace: workspace, environment: environment)
-        guard result.status == 0 else { return [] }
-        return (JSONValue(data: Data(result.output.utf8))?.arrayValue ?? []).compactMap {
-            $0.objectValue?["name"]?.stringValue
-        }
+        guard result.status == 0 else { return nil }
+        return CodexMCPLaunch.foreignNames(listing: result.output)
     }
 
     var isRunning: Bool { process?.isRunning == true }
@@ -114,10 +110,22 @@ final class CodexAppServerClient {
             throw ClientError.launchFailed("Its private support folder could not be prepared.")
         }
 
-        // Read in a short-lived process because `mcp list` starts nothing, while the app-server
-        // would have launched every one of them before anything could ask for their names.
-        let foreign = await Self.foreignServerNames(
-            executable: executable, workspace: workspace, codexHome: codexHome)
+        // Unread, the reader's servers would start inside the chat; so Codex does not start either.
+        guard
+            let foreign = await Self.foreignServerNames(
+                executable: executable, workspace: workspace, codexHome: codexHome)
+        else {
+            throw ClientError.launchFailed(
+                "Tinycast could not read which MCP servers your Codex configuration runs, so it "
+                    + "could not keep them out of the chat. Run \u{201C}codex mcp list\u{201D} "
+                    + "in Terminal to see why.")
+        }
+        if let name = CodexMCPLaunch.unaddressableName(foreign) {
+            throw ClientError.launchFailed(
+                "Your Codex MCP server \u{201C}\(name)\u{201D} cannot be kept out of a Tinycast "
+                    + "chat, because a dot or an equals sign in its name cannot be addressed. "
+                    + "Rename it in your Codex configuration.")
+        }
         if let taken = CodexMCPLaunch.takenName(servers: toolServers, foreignNames: foreign) {
             throw ClientError.launchFailed(
                 "Your Codex configuration has its own MCP server named \u{201C}\(taken)\u{201D}. "

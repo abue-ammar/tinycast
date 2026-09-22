@@ -23,6 +23,7 @@ struct CodexTurnTests {
         await anElicitationIsAnsweredByTheTrustDialog()
         await aRefusedCallIsAFailedRowAndAnHonestReply()
         await aForeignServersElicitationIsNeverAsked()
+        await aListThatCannotBeReadRefusesToStart()
         await theRoundCapInterruptsTheTurn()
 
         print("\(passes) passed, \(failures) failed")
@@ -81,6 +82,31 @@ struct CodexTurnTests {
         expect(
             server.received.contains(#""approvalPolicy":"untrusted""#),
             "the thread asks before a tool runs, rather than refusing every call")
+    }
+
+    /// A reader's server Tinycast cannot switch off would start inside the chat, so none do.
+    static func aListThatCannotBeReadRefusesToStart() async {
+        let cases = [
+            ("list-fails", "could not read which MCP servers"),
+            ("list-garbage", "could not read which MCP servers"),
+            ("list-dotted", "\u{201C}has.dot\u{201D} cannot be kept out")
+        ]
+        for (mode, reason) in cases {
+            guard let server = StubServer(mode: mode) else {
+                expect(false, "the stub app-server installs")
+                return
+            }
+            var message = ""
+            do {
+                try await server.client.start()
+            } catch {
+                message = error.localizedDescription
+            }
+            expect(
+                message.contains(reason) && server.argv.isEmpty && !server.client.isRunning,
+                "\(mode): Codex does not start, and says why, rather than run the reader's servers")
+            server.tearDown()
+        }
     }
 
     /// `.ask` on a CLI route is the same dialog it is on an API one.

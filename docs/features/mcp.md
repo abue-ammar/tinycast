@@ -94,7 +94,10 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   it did not set — their `env` table with its literal secrets, `cwd`, a per-tool `approval_mode`
   that skips consent — and a remote one over their stdio one makes Codex refuse the whole config.
   A reader's server already named `tinycast-<handle>` for an armed handle refuses the launch rather
-  than merge. Claude's `--strict-mcp-config` does it in one flag. This is what closes the leak the
+  than merge. The boundary fails closed: a listing that exits non-zero or is not a JSON array of
+  named servers refuses the launch, since reading it as empty would start every one of them, and
+  so does a name with a dot or `=`, which `-c` splits and so cannot switch off. The Providers row
+  and the failed turn both say why. Claude's `--strict-mcp-config` does it in one flag. This is what closes the leak the
   route shipped with: its launch flags never touched `mcp_servers`, so every server in
   `~/.codex/config.toml` used to start inside a Tinycast thread, invisible because
   `CodexTurnRunner` ignored the items.

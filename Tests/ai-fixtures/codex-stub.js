@@ -62,13 +62,18 @@ function* lines() {
 // learns which of the user's own servers to disable, without starting a single one of them.
 if (ARGV.includes("mcp") && ARGV.includes("list")) {
     fs.writeFileSync(path.join(ROOT, "list-argv.log"), JSON.stringify(ARGV) + "\n");
-    fs.writeSync(
-        1,
-        JSON.stringify([
-            { name: "user-one", enabled: true, transport: { type: "stdio" } },
-            { name: "user-two", enabled: true, transport: { type: "streamable_http" } },
-            { name: "probe", enabled: true, transport: { type: "stdio" } },
-        ]) + "\n");
+    if (MODE === "list-fails") process.exit(1);
+    if (MODE === "list-garbage") {
+        fs.writeSync(1, "warning: this is not the list\n");
+        process.exit(0);
+    }
+    const servers = [
+        { name: "user-one", enabled: true, transport: { type: "stdio" } },
+        { name: "user-two", enabled: true, transport: { type: "streamable_http" } },
+        { name: "probe", enabled: true, transport: { type: "stdio" } },
+    ];
+    if (MODE === "list-dotted") servers.push({ name: "has.dot", enabled: true });
+    fs.writeSync(1, JSON.stringify(servers) + "\n");
     process.exit(0);
 }
 
