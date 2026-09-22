@@ -232,11 +232,13 @@ final class InstalledAIManager {
             let models = await InstalledAIProbe.run(
                 executable: executable, arguments: ["models"], workspace: workspace)
             let catalog = InstalledAIModel.grokCatalog(models.output)
+            let signedIn = models.status == 0 && InstalledAIModel.grokSignedIn(models.output)
             return (
                 kind,
                 InstalledAIStatus(
-                    phase: models.status == 0 && !catalog.isEmpty ? .ready : .signInRequired,
-                    version: version, executable: executable, models: catalog)
+                    phase: signedIn && !catalog.isEmpty ? .ready : .signInRequired,
+                    version: version, executable: executable,
+                    models: signedIn ? catalog : [])
             )
         case .cursor:
             let auth = await InstalledAIProbe.run(

@@ -1057,6 +1057,19 @@ struct AIProviderTests {
             grokFrame.events == [.usage(AIUsage(inputTokens: 5, outputTokens: 1))]
                 && grokFrame.completed && grokFrame.sessionID == "ses_g",
             "Grok result usage ends the stream and names the session to delete")
+        let grokError = Data(
+            #"{"type":"result","subtype":"error_during_execution","is_error":true,"errors":["Not signed in."],"session_id":""}"#
+                .utf8)
+        let grokErrorFrame = InstalledAIStreamDecoder.decode(grokError, kind: .grok)
+        expect(
+            grokErrorFrame.error == "Not signed in." && grokErrorFrame.sessionID == nil
+                && !grokErrorFrame.completed,
+            "Grok execution errors name the cause, not Claude, and ignore an empty session id")
+        let grokBare = Data(#"{"type":"result","is_error":true}"#.utf8)
+        expect(
+            InstalledAIStreamDecoder.decode(grokBare, kind: .grok).error
+                == "Grok could not finish the response.",
+            "a Grok error with no cause still names Grok")
     }
 
     /// A secret on argv is in `ps`, and a key Codex does not know is a server that never starts.

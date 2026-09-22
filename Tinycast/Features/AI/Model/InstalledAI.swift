@@ -213,6 +213,15 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
         return models
     }
 
+    /// `grok models` exits 0 and still prints the catalog when the CLI is signed out.
+    static func grokSignedIn(_ output: String) -> Bool {
+        let clean = output.replacingOccurrences(
+            of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression
+        )
+        .lowercased()
+        return !clean.contains("not authenticated") && !clean.contains("not signed in")
+    }
+
     static func openCodeCatalog(_ output: String) -> [InstalledAIModel] {
         let clean = output.replacingOccurrences(
             of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression)

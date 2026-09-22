@@ -23,11 +23,7 @@ enum InstalledAIStreamDecoder {
         case .openCode: return openCode(object, type: type)
         case .claude: return claude(object, type: type, servers: servers)
         case .cursor: return cursor(object, type: type)
-        case .grok:
-            // Grok shares the frame shape but never the tools: `--deny *` refuses every call.
-            var frame = claude(object, type: type, servers: [])
-            frame.sessionID = object["session_id"] as? String
-            return frame
+        case .grok: return grok(object, type: type)
         case .codex: return InstalledAIStreamFrame()
         }
     }
@@ -160,6 +156,37 @@ enum InstalledAIStreamDecoder {
         let prompt = ["inputTokens", "cacheReadInputTokens", "cacheCreationInputTokens"]
             .compactMap { integer(model[$0]) }.reduce(0, +)
         return (prompt, integer(model["contextWindow"]) ?? 0)
+    }
+
+    /// Grok's error result omits `result` and names the cause in `errors`.
+    private static func grok(
+        _ object: [String: Any], type: String
+    ) -> InstalledAIStreamFrame {
+        // Grok shares the frame shape but never the tools: `--deny *` refuses every call.
+        var frame = claude(object, type: type, servers: [])
+        if let sessionID = object["session_id"] as? String, !sessionID.isEmpty {
+            frame.sessionID = sessionID
+        }
+        if type == "result", object["is_error"] as? Bool == true {
+            frame.error = grokFailure(object)
+        }
+        return frame
+    }
+
+    private static func grokFailure(_ object: [String: Any]) -> String {
+        if let errors = object["errors"] as? [Any] {
+            let lines = errors.compactMap { item -> String? in
+                guard let text = item as? String else { return nil }
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                return trimmed.isEmpty ? nil : trimmed
+            }
+            if !lines.isEmpty { return lines.joined(separator: "\n") }
+        }
+        if let result = object["result"] as? String {
+            let trimmed = result.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty { return trimmed }
+        }
+        return "Grok could not finish the response."
     }
 
     private static func cursor(

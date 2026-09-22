@@ -167,6 +167,20 @@ struct InstalledAITests {
         expect(
             models.first?.efforts.map(\.id) == ["low", "medium", "high", "xhigh"],
             "Grok models expose the CLI's advertised reasoning efforts")
+        let signedOut = """
+            You are not authenticated.
+
+            Default model: grok-4.6
+
+            Available models:
+              * grok-4.6 (default)
+              - grok-4.5
+            """
+        expect(
+            !InstalledAIModel.grokSignedIn(signedOut)
+                && InstalledAIModel.grokCatalog(signedOut).map(\.id) == ["grok-4.6", "grok-4.5"],
+            "a signed-out Grok catalog is not a login")
+        expect(InstalledAIModel.grokSignedIn(output), "a logged-in Grok catalog counts as signed in")
     }
 
     static func claudeDiscoveryReadsTheCLIsOwnModelList() {

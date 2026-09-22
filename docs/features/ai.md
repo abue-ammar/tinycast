@@ -555,8 +555,10 @@ locations and every nvm Node version, newest first — a fallback that can pick 
 commands are never installed by Tinycast; Settings links to their own install docs and offers a sign-in
 command to copy. `InstalledAIManager` probes Claude, Grok, OpenCode and Cursor off-main, in parallel.
 Claude's auth status gates an `initialize` control request, and `InstalledAIModel.claudeCatalog` builds
-its model list from the answer; a successful Grok or OpenCode model list is both its auth check and
-catalog; Cursor's `status --format json` gates `--list-models`.
+its model list from the answer. OpenCode's successful model list is both its auth check and catalog.
+Grok's `models` output is the catalog, but a signed-out CLI still exits 0 and prints that catalog under
+"You are not authenticated." — that banner is the auth check, not the exit status. Cursor's
+`status --format json` gates `--list-models`.
 
 `ChatGPTSubscriptionManager` retains its historical type name but now owns only the installed Codex
 app-server lifecycle and discovered account metadata. Production never sets `CODEX_HOME`, so the
@@ -594,6 +596,8 @@ channel and closes it on the CLI's own result frame; writes are chained rather t
 because two racing the same pipe would interleave a line.
 Grok uses `streaming-messages-json` and `--effort`, with `--deny *` so tools cannot run even when the
 user's Grok config is always-approve; it captures the session id, then calls `grok sessions delete`.
+An error result omits `result` and carries the cause in `errors`; that text is the failure, not
+Claude's missing-`result` fallback.
 OpenCode runs pure with an inline deny-all configuration and passes the selected
 model variant through `--variant`; it captures the returned session identifier, then calls
 `opencode session delete` after the process exits. Cursor runs ask mode with `--trust`,
