@@ -164,6 +164,24 @@ composer-2.5 - Composer 2.5
   }
 }
 
+if (command === "grok") {
+  if (args.includes("--version")) {
+    console.log("1.0.40");
+    process.exit(0);
+  }
+  if (args[0] === "models") {
+    console.log(`You are not authenticated.
+
+Default model: grok-4.6
+
+Available models:
+  * grok-4.6 (default)
+  - grok-4.5
+`);
+    process.exit(0);
+  }
+}
+
 if (command === "grok" && args.slice(0, 2).join(" ") === "sessions delete") {
   record("grok-deleted.log", args[2]);
   process.exit(0);

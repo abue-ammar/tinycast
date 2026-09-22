@@ -37,13 +37,14 @@ struct InstalledAITests {
         defer { fixture.tearDown() }
         openCodeCatalogCarriesModelVariants()
         cursorCatalogParsesListModels()
-        grokCatalogParsesListedModels()
         statusJSONRecognizesLogin()
         versionKeepsPrereleaseAndBuild()
         await openCodeRunsWithoutToolsAndDeletesItsSession(fixture)
         claudeDiscoveryReadsTheCLIsOwnModelList()
         await claudeRunsWithoutToolsOrHistory(fixture)
         await grokRunsWithoutToolsAndDeletesItsSession(fixture)
+        grokCatalogParsesListedModels()
+        await grokDiscoveryRequiresLoginAndFiltersModels(fixture)
         await cursorRunsAskModeWithoutForce(fixture)
         await cursorDiscoveryRequiresLoginAndListsModels(fixture)
         await oversizedCompleteFrameFailsTheTurn(fixture)
@@ -256,6 +257,18 @@ struct InstalledAITests {
             usage.contextWindow == 1_000_000,
             "the window is the conversation model's, not a side call's: "
                 + String(describing: usage.contextWindow))
+    }
+
+    private static func grokDiscoveryRequiresLoginAndFiltersModels(_ fixture: Fixture) async {
+        let manager = InstalledAIManager(supportDirectory: fixture.root)
+        await manager.refresh(kind: .grok).value
+        let status = manager.status(for: .grok)
+        expect(
+            status.phase == .signInRequired,
+            "Grok discovery requires sign-in despite a successful catalog response")
+        expect(
+            status.models.isEmpty,
+            "Grok discovery hides listed models while signed out")
     }
 
     private static func claudeRunsWithoutToolsOrHistory(_ fixture: Fixture) async {
