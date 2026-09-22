@@ -56,12 +56,11 @@ enum ClaudeMCPLaunch {
         return text
     }
 
-    /// `mcp__<handle>__<tool>` back to the pair Tinycast addresses. A handle may hold `__` itself,
-    /// so the tool is what the last separator names, exactly as the CLI composes it.
+    /// `mcp__<handle>__<tool>` back to Tinycast's pair; a handle never holds `_`, a tool may.
     static func route(_ wireName: String) -> AIToolServerCall? {
         guard wireName.hasPrefix(toolPrefix) else { return nil }
         let rest = wireName.dropFirst(toolPrefix.count)
-        guard let separator = rest.range(of: Self.separator, options: .backwards) else { return nil }
+        guard let separator = rest.range(of: Self.separator) else { return nil }
         let handle = String(rest[..<separator.lowerBound])
         let tool = String(rest[separator.upperBound...])
         guard !handle.isEmpty, !tool.isEmpty else { return nil }

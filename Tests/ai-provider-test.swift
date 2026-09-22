@@ -1334,9 +1334,9 @@ struct AIProviderTests {
                 == AIToolServerCall(handle: "files", tool: "read_file"),
             "a wire name routes back to the server and the tool")
         expect(
-            ClaudeMCPLaunch.route("mcp__odd__name__read")
-                == AIToolServerCall(handle: "odd__name", tool: "read"),
-            "the last separator is the split, so a handle may hold one itself")
+            ClaudeMCPLaunch.route("mcp__files__read__file")
+                == AIToolServerCall(handle: "files", tool: "read__file"),
+            "the first separator is the split: a handle is letters, digits and `-`, a tool is not")
         expect(
             ClaudeMCPLaunch.route("Bash") == nil && ClaudeMCPLaunch.route("mcp__files") == nil,
             "and a name that is not one of ours routes nowhere")
