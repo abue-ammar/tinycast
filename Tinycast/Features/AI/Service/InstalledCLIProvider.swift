@@ -260,15 +260,14 @@ private final class InstalledCLITurnRunner {
         }.value
     }
 
-    /// Readable by nobody else: the MCP configuration carries the servers' own credentials.
+    /// Created `0600`: `createFile` writes a `0644` temporary first and restricts it after.
     nonisolated private static func writePrivateFile(_ text: String, to url: URL) async throws {
         try await Task.detached {
-            // Born private: written first and restricted after, it would be readable in between.
-            guard
-                FileManager.default.createFile(
-                    atPath: url.path, contents: Data(text.utf8),
-                    attributes: [.posixPermissions: 0o600])
-            else { throw CocoaError(.fileWriteUnknown) }
+            let descriptor = open(url.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
+            guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
+            let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+            try file.write(contentsOf: Data(text.utf8))
+            try file.close()
         }.value
     }
 
