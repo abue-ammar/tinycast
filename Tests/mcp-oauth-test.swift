@@ -210,6 +210,52 @@ struct MCPOAuthTests {
         expect(recovered == "fixture-access", "\(refresh): next refresh recovers")
     }
 
+    /// A rotating server may already have spent the old refresh token; the new one must be kept.
+    static func refreshOutlivesEditor(
+        registration: MCPOAuth.Registration, secrets: MCPSecretStore, manager: MCPOAuthManager
+    ) async throws {
+        var configured = MCPServer(name: "Held", transport: .http(url: base + "/mcp", headerName: ""))
+        configured.oauth = true
+        let server = configured
+        defer { try? secrets.remove(for: server.id) }
+        var stored = MCPSecretStore.Secrets()
+        stored.oauth = MCPOAuth.Credentials(registration: registration,
+            token: MCPOAuth.Token(accessToken: "expired", refreshToken: "fixture-held",
+                                 expiresAt: .distantPast, scope: "read"))
+        try secrets.save(stored, for: server.id)
+        async let refreshed = manager.accessToken(for: server)
+        var polls = 0
+        while try await count("held") == 0, polls < 200 {
+            polls += 1
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        manager.cancelSignIn(server.id)
+        _ = try await MCPOAuthHTTP.json(URL(string: base + "/release")!)
+        let token: String?
+        do { token = try await refreshed } catch { token = nil }
+        expect(polls < 200 && token == "fixture-access"
+               && secrets.secrets(for: server.id).oauth?.token?.refreshToken == "rotated-refresh",
+               "closing or saving the editor lets a refresh in flight finish and keep its rotated token")
+        try secrets.save(stored, for: server.id)
+        async let abandoned = manager.accessToken(for: server)
+        polls = 0
+        while try await count("held") == 0, polls < 200 {
+            polls += 1
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try manager.signOut(server.id)
+        _ = try await MCPOAuthHTTP.json(URL(string: base + "/release")!)
+        let late: String?
+        do { late = try await abandoned } catch { late = nil }
+        expect(polls < 200 && late == nil && secrets.secrets(for: server.id).oauth?.token == nil,
+               "sign-out still discards a refresh in flight")
+    }
+
+    static func count(_ name: String) async throws -> Int {
+        let data = try await MCPOAuthHTTP.json(URL(string: base + "/counts")!)
+        return (try JSONSerialization.jsonObject(with: data) as? [String: Int])?[name] ?? 0
+    }
+
     static func networkFlow() async throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -300,6 +346,7 @@ struct MCPOAuthTests {
             try await transientRefresh(
                 refresh, registration: registration, secrets: secrets, manager: manager)
         }
+        try await refreshOutlivesEditor(registration: registration, secrets: secrets, manager: manager)
         var moved = server
         moved.transport = .http(url: base + "/other", headerName: "")
         do {

@@ -3,6 +3,8 @@ const base = 'http://127.0.0.1:4963';
 let refreshes = 0;
 let calls = 0;
 let redirects = 0;
+let held = [];
+const issued = { access_token: 'fixture-access', token_type: 'Bearer', refresh_token: 'rotated-refresh', expires_in: 3600 };
 const server = http.createServer(async (req, res) => {
   let raw = '';
   for await (const chunk of req) raw += chunk;
@@ -33,10 +35,11 @@ const server = http.createServer(async (req, res) => {
     if (fields.get('grant_type') === 'refresh_token') {
       if (fields.get('refresh_token') === 'fixture-unavailable') return send(503, {});
       if (fields.get('refresh_token') === 'fixture-dropped') return req.socket.destroy();
+      if (fields.get('refresh_token') === 'fixture-held') return held.push(() => send(200, issued));
       refreshes++;
       if (fields.get('refresh_token') !== 'fixture-refresh') return send(400, {error: 'invalid_grant'});
     } else if (fields.get('code') !== 'fixture-code' || !fields.get('code_verifier')) return send(400, {});
-    return send(200, { access_token: 'fixture-access', token_type: 'Bearer', refresh_token: 'rotated-refresh', expires_in: 3600 });
+    return send(200, issued);
   }
   if (req.url === '/redirect') {
     res.writeHead(307, { Location: base + '/unexpected' });
@@ -51,7 +54,8 @@ const server = http.createServer(async (req, res) => {
     return res.end();
   }
   if (req.url === '/unexpected') { redirects++; return send(200, {}); }
-  if (req.url === '/counts') return send(200, { refreshes, calls, redirects });
+  if (req.url === '/release') { held.splice(0).forEach(reply => reply()); return send(200, {}); }
+  if (req.url === '/counts') return send(200, { refreshes, calls, redirects, held: held.length });
   if (req.url === '/always-401') { calls++; return send(401, {}); }
   if (req.url === '/mcp') {
     calls++;

@@ -92,20 +92,20 @@ final class MCPCoordinator {
         try core.mcpOAuth.signOut(id)
     }
 
-    func cancelSignIn(_ id: UUID) { core.mcpOAuth.cancel(id) }
+    func cancelSignIn(_ id: UUID) { core.mcpOAuth.cancelSignIn(id) }
 
     func status(of id: UUID) -> MCPServerStatus { manager.status(of: id) }
 
     func save(_ server: MCPServer, secrets: MCPSecretStore.Secrets) throws {
         try MCPSecretStore().save(secrets, for: server.id)
-        core.mcpOAuth.cancel(server.id)
+        core.mcpOAuth.cancelSignIn(server.id)
         manager.disconnect(server.id)
         store.save(server)
         applyEnabled()
     }
 
     func remove(_ id: UUID) throws {
-        core.mcpOAuth.cancel(id)
+        core.mcpOAuth.cancelSignIn(id)
         try MCPSecretStore().remove(for: id)
         store.remove(id: id)
         applyEnabled()

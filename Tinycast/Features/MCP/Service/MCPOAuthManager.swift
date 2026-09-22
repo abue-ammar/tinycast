@@ -85,22 +85,25 @@ final class MCPOAuthManager {
     }
 
     func signOut(_ id: UUID) throws {
-        cancel(id)
+        cancelSignIn(id)
+        revisions[id] = UUID()
+        refreshes.removeValue(forKey: id)?.cancel()
         var stored = secrets.secrets(for: id)
         stored.oauth?.token = nil
         try secrets.save(stored, for: id)
         statuses[id] = .signedOut
     }
 
-    func cancel(_ id: UUID) {
+    /// A refresh in flight finishes: a rotating server may already have spent the old token.
+    func cancelSignIn(_ id: UUID) {
+        guard signingIn == id else { return }
         revisions[id] = UUID()
-        refreshes.removeValue(forKey: id)?.cancel()
-        if signingIn == id { listener?.cancel(); statuses[id] = .signedOut }
+        listener?.cancel()
+        statuses[id] = .signedOut
     }
 
     func stop() {
-        if let signingIn { cancel(signingIn) }
-        for id in Array(refreshes.keys) { cancel(id) }
+        if let signingIn { cancelSignIn(signingIn) }
     }
 
     func accessToken(for server: MCPServer, rejectedToken: String? = nil) async throws -> String {

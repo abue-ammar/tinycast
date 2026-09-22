@@ -112,7 +112,9 @@ SDK behavior; sibling paths and other origins are rejected. Saved tokens remain 
 configured endpoint. This is deliberately broader than RFC 9728's exact resource-match wording.
 
 Access tokens refresh within 60 seconds of expiry. Concurrent requests share one refresh, and
-rotated refresh tokens replace the old token in the same Keychain item. A 401 permits one refresh
+rotated refresh tokens replace the old token in the same Keychain item. Closing or saving the editor
+leaves a refresh in flight to finish, because a server that rotates refresh tokens may already have
+spent the old one; only Sign In and Sign Out discard it. A 401 permits one refresh
 and retry; a refresh the authorization server rejects (400 or 401) or a repeated 401 clears the live
 tool catalog and reports **Sign-in required**. A refresh that could not be served — offline, a
 timeout, a 5xx — is a network failure: the session is kept and the next request refreshes again.
