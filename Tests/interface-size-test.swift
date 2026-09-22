@@ -127,8 +127,6 @@ struct InterfaceSizeTests {
         expect(m.size.chatImageThumb, Theme.Size.chatImageThumb, "size.chatImageThumb")
         expect(m.size.chatAttachmentGlyph, Theme.Size.chatAttachmentGlyph, "size.chatAttachmentGlyph")
         expect(m.size.chatAttachmentThumb, Theme.Size.chatAttachmentThumb, "size.chatAttachmentThumb")
-        expect(
-            m.size.chatAttachmentRemove, Theme.Size.chatAttachmentRemove, "size.chatAttachmentRemove")
         expect(m.size.chatAttachmentInset, Theme.Size.chatAttachmentInset, "size.chatAttachmentInset")
         expect(m.size.quickActionPanel, Theme.Size.quickActionPanel, "size.quickActionPanel")
         expect(
@@ -314,7 +312,6 @@ struct InterfaceSizeTests {
             ("size.chatImageThumb", m.size.chatImageThumb),
             ("size.chatAttachmentGlyph", m.size.chatAttachmentGlyph),
             ("size.chatAttachmentThumb", m.size.chatAttachmentThumb),
-            ("size.chatAttachmentRemove", m.size.chatAttachmentRemove),
             ("size.chatAttachmentInset", m.size.chatAttachmentInset),
             ("size.quickActionPanel", m.size.quickActionPanel),
             ("size.quickActionHeaderIcon", m.size.quickActionHeaderIcon),

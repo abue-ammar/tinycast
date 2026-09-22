@@ -102,7 +102,6 @@ struct InterfaceMetrics: Equatable, Sendable {
         var chatImageThumb: CGFloat { scaledPoints(Theme.Size.chatImageThumb, scale) }
         var chatAttachmentGlyph: CGFloat { scaledPoints(Theme.Size.chatAttachmentGlyph, scale) }
         var chatAttachmentThumb: CGFloat { scaledPoints(Theme.Size.chatAttachmentThumb, scale) }
-        var chatAttachmentRemove: CGFloat { scaledPoints(Theme.Size.chatAttachmentRemove, scale) }
         var chatAttachmentInset: CGFloat { scaledPoints(Theme.Size.chatAttachmentInset, scale) }
 
         var quickActionPanel: CGFloat { scaledPoints(Theme.Size.quickActionPanel, scale) }
