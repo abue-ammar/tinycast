@@ -1130,6 +1130,20 @@ struct AIProviderTests {
             "a path with a quote in it is still one TOML string")
 
         expect(
+            CodexMCPLaunch.quoted("a\r\nb\tc\u{1}\u{7F}é\"\\")
+                == #""a\u000D\u000Ab\u0009c\u0001\u007Fé\"\\""#,
+            "CRLF, every other control character and DEL become \\u escapes TOML accepts")
+        let crlf = CodexMCPLaunch.arguments(
+            servers: [
+                AIToolServer(
+                    handle: "lines", title: "Lines",
+                    transport: .command(path: "/bin/echo", arguments: ["a\r\nb"], environment: [:]))
+            ], disabling: [])
+        expect(
+            crlf.contains(#"mcp_servers.tinycast-lines.args=["a\u000D\u000Ab"]"#),
+            "so an argument carrying a Windows line ending still leaves Codex's config loadable")
+
+        expect(
             CodexMCPLaunch.handle(ofServer: "tinycast-files") == "files"
                 && CodexMCPLaunch.handle(ofServer: "files") == nil
                 && CodexMCPLaunch.handle(ofServer: "tinycast-") == nil,

@@ -144,17 +144,17 @@ enum CodexMCPLaunch {
         "[" + values.map(quoted).joined(separator: ",") + "]"
     }
 
-    /// A TOML basic string: `-c` parses the value as TOML and only falls back to a raw literal.
-    private static func quoted(_ value: String) -> String {
+    /// A TOML basic string, escaped per scalar: CRLF is one `Character` and would slip through.
+    static func quoted(_ value: String) -> String {
         var escaped = ""
-        for character in value {
-            switch character {
+        for scalar in value.unicodeScalars {
+            switch scalar {
             case "\\": escaped += "\\\\"
             case "\"": escaped += "\\\""
-            case "\n": escaped += "\\n"
-            case "\r": escaped += "\\r"
-            case "\t": escaped += "\\t"
-            default: escaped.append(character)
+            case _ where scalar.value < 0x20 || scalar.value == 0x7F:
+                let hex = String(scalar.value, radix: 16, uppercase: true)
+                escaped += "\\u" + String(repeating: "0", count: 4 - hex.count) + hex
+            default: escaped.unicodeScalars.append(scalar)
             }
         }
         return "\"" + escaped + "\""
