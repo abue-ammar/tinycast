@@ -34,7 +34,7 @@ the keycap rendering — only the _engine_ differs.
 - **The modifier-only detectors stay Foundation-only and pure** for `hotkey-test`; the double-tap
   clock is injected as a parameter. Every `CGEvent` call lives in
   `Service/ModifierTapMonitor.swift`, which is listen-only, installs *only* while a modifier-only
-  shortcut is bound, and never prompts for Accessibility.
+  shortcut is bound, and never prompts automatically for keyboard access.
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyTap` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
@@ -93,10 +93,10 @@ palette.
 Globe/fn can be bound once (`.globe`) or twice (`.doubleGlobe`). The recorder waits briefly after the
 first release so another press can select the double binding; otherwise it saves the single one.
 Globally, a single Globe fires on release when no double Globe action is bound. When both are bound,
-the single action waits until the double-tap window expires. Neither gesture counts if another
-modifier, key, or mouse click joined the press. The recognizer
-checks the physical `kVK_Function` keycode, not just the fn flag, because F-keys also carry that flag.
-It shares the double-tap's listen-only monitor, Accessibility warning, lifecycle and pause while
+the single action waits until the double-tap window expires. Another modifier, key, or mouse click
+cancels the gesture, even while a single tap awaits the second. The recognizer checks the physical
+`kVK_Function` keycode, not just the fn flag, because F-keys also carry that flag.
+It shares the double-tap's listen-only monitor, permission warning, lifecycle and pause while
 recording. macOS may perform its own Globe action too; set “Press fn/Globe key to” to “Do Nothing” in
 Keyboard settings if it conflicts. Globe+key chords use Carbon registration, like other combos. The
 recorder tracks the physical Globe press so an F-key's incidental fn flag is not mistaken for Globe.
@@ -124,15 +124,18 @@ action runs, so the palette never opens with a phantom ⌘ held and focus restor
 and "double-tap and hold" is a deliberate non-event.
 
 `ModifierTapMonitor` is the one platform file. It is a **listen-only** `CGEventTap` and it installs only
-while a modifier-only shortcut is bound, so users who never use the feature pay nothing. Two
+while a modifier-only shortcut is bound, so users who never use the feature pay nothing. Three
 details are load-bearing:
+
+- It needs **Input Monitoring** to receive key-downs outside Tinycast. Accessibility alone can expose
+  modifier transitions but silently omit the letters that must cancel a lone Globe tap.
 
 - It is `.tailAppendEventTap`, unlike the two head-inserted taps, so it observes events **after**
   `HyperKeyTap`'s rewrite. A Hyper-remapped right-side modifier therefore arrives as the full ⌃⌥⇧⌘
   chord and correctly reads as "not a lone modifier" — the left-side twin still double-taps.
-- Like every keyboard tap it needs the **Accessibility** grant, and it never prompts for it. The
-  binding records regardless; the recorder shows an inline warning that opens System Settings, and the
-  one-second health timer installs the tap the moment the grant lands.
+- It also needs **Accessibility**. The binding records regardless; the recorder warns about the missing
+  grant and Settings ▸ Permissions requests Input Monitoring on demand. The one-second health timer
+  installs the tap when both grants are available.
 
 ⇧ is bindable this way even though `KeyShortcut` rejects a bare ⇧ combo: a double-_tap_ is unambiguous
 where a bare ⇧ combo would shadow typing.

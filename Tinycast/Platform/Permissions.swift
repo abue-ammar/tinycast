@@ -16,12 +16,30 @@ enum Permissions {
         return AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
     }
 
+    static func isInputMonitoringGranted() -> Bool {
+        CGPreflightListenEventAccess()
+    }
+
+    @MainActor
+    static func requestInputMonitoring() {
+        if !CGRequestListenEventAccess() { openInputMonitoringSettings() }
+    }
+
     @MainActor
     static func openAccessibilitySettings() {
         guard
             let url = URL(
                 string:
                     "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
+        else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    @MainActor
+    static func openInputMonitoringSettings() {
+        guard
+            let url = URL(
+                string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent")
         else { return }
         NSWorkspace.shared.open(url)
     }
