@@ -82,7 +82,8 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   and files inside Tinycast's own workspace are the whole surface; `~/.codex` and `~/.claude` are
   never written. Secrets never reach argv, where `ps` would show them: Codex reads them from the
   app-server's environment through the config keys that name a variable, and Claude reads them from
-  a `0600` file written per turn into the private workspace and deleted when the turn ends. Neither
+  a `0600` file written per turn into the private workspace and deleted when the turn ends — or,
+  when Tinycast did not live to see it end, by `InstalledAIManager` at the next launch. Neither
   route is ever told to persist a decision — no Codex `persist`, no Claude `updatedPermissions` —
   because only Settings may change a standing one.
 - **The user's own CLI servers stay out of a Tinycast thread, and never mix with Tinycast's.**
@@ -243,7 +244,9 @@ every other server request is declined as it always was. `item/started` and `ite
 `mcpToolCall` become `.toolCall` and `.toolResult`.
 
 `ClaudeMCPLaunch` writes the same list as the CLI's own `mcpServers` record, `0600`, named per turn
-and deleted with it. The turn then runs `--input-format stream-json` so the consent channel has a
+and deleted with it; a crash leaves it, and Grok's prompt file, for `InstalledAIManager` to delete
+at the next launch, which removes only `tinycast-mcp-*` and `tinycast-prompt-*` files older than
+that launch. The turn then runs `--input-format stream-json` so the consent channel has a
 pipe to answer on, and drops `--disallowedTools "*"` — verified to remove the MCP tools along with
 the built-ins, after which the model narrates a call it never made. The question only reaches
 Tinycast if the CLI's own permission system asks it, and the reader's settings can answer first:

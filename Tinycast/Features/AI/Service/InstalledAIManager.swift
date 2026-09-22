@@ -22,6 +22,31 @@ final class InstalledAIManager {
     init(supportDirectory: URL = AppPaths.applicationSupport()) {
         workspace = supportDirectory.appending(
             path: "InstalledAI/Workspace", directoryHint: .isDirectory)
+        let workspace = workspace
+        let launch = Date()
+        Task.detached(priority: .utility) {
+            Self.removeStaleTurnFiles(in: workspace, olderThan: launch)
+        }
+    }
+
+    /// A turn deletes its own files as it ends, so any older than this launch outlived a crash.
+    nonisolated private static func removeStaleTurnFiles(in workspace: URL, olderThan launch: Date) {
+        let fileManager = FileManager.default
+        guard
+            let files = try? fileManager.contentsOfDirectory(
+                at: workspace, includingPropertiesForKeys: [.contentModificationDateKey])
+        else { return }
+        for file in files {
+            let name = file.lastPathComponent
+            guard
+                (name.hasPrefix("tinycast-mcp-") && name.hasSuffix(".json"))
+                    || (name.hasPrefix("tinycast-prompt-") && name.hasSuffix(".txt")),
+                let modified = try? file.resourceValues(forKeys: [.contentModificationDateKey])
+                    .contentModificationDate,
+                modified < launch
+            else { continue }
+            try? fileManager.removeItem(at: file)
+        }
     }
 
     func status(for kind: InstalledAIKind) -> InstalledAIStatus {

@@ -37,6 +37,7 @@ struct InstalledAITests {
         await aDeclinedCallComesBackAsAnErrorResult(fixture)
         await theRoundCapEndsTheTurnTheWayTheLoopDoes(fixture)
         await concurrentCallsAreAskedOneAtATime(fixture)
+        await aCrashedTurnsFilesAreRemovedAtLaunch(fixture)
         await aManagedMCPPolicyLeavesBothFlagsOff(fixture)
 
         print("\(passes) passed, \(failures) failed")
@@ -205,6 +206,33 @@ struct InstalledAITests {
         expect(
             error?.contains("oversized response") == true,
             "a complete NDJSON frame over the byte limit fails the turn")
+    }
+
+    /// A crash mid-turn leaves the turn's files, secrets included; the next launch removes them.
+    private static func aCrashedTurnsFilesAreRemovedAtLaunch(_ fixture: Fixture) async {
+        let support = fixture.root.appending(path: "relaunch", directoryHint: .isDirectory)
+        let workspace = support.appending(path: "InstalledAI/Workspace", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
+        func file(_ name: String, age: TimeInterval) -> URL {
+            let url = workspace.appending(path: name)
+            FileManager.default.createFile(atPath: url.path, contents: Data("secret".utf8))
+            try? FileManager.default.setAttributes(
+                [.modificationDate: Date().addingTimeInterval(-age)], ofItemAtPath: url.path)
+            return url
+        }
+        let config = file("tinycast-mcp-\(UUID().uuidString).json", age: 60)
+        let prompt = file("tinycast-prompt-\(UUID().uuidString).txt", age: 60)
+        let live = file("tinycast-mcp-\(UUID().uuidString).json", age: -60)
+        let other = file("notes.txt", age: 60)
+        _ = InstalledAIManager(supportDirectory: support)
+        let removed = await fixture.awaitMissing(config)
+        expect(
+            removed && !FileManager.default.fileExists(atPath: prompt.path),
+            "a configuration and a prompt left by a turn that never ended are deleted at launch")
+        expect(
+            FileManager.default.fileExists(atPath: live.path)
+                && FileManager.default.fileExists(atPath: other.path),
+            "and nothing written since, nor anything that is not a turn's own file, is touched")
     }
 
     private static func cursorDiscoveryRequiresLoginAndListsModels(_ fixture: Fixture) async {
