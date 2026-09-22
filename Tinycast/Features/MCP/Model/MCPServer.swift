@@ -61,17 +61,24 @@ struct MCPServer: Codable, Equatable, Identifiable, Sendable {
         return trimmed.isEmpty ? slug : trimmed
     }
 
-    /// The shape a vendor CLI can run itself, for a route whose own client is the MCP client.
-    /// `bearerToken` is the OAuth session's, lent so the reader signs in once for every route;
-    /// everything secret travels in the value rather than the name, and never on argv.
+    /// The shape a CLI runs itself; `bearerToken` is the OAuth session's, lent for the turn.
     func toolServer(
         headerValue: String, environment: [String: String], bearerToken: String?
     ) -> AIToolServer? {
         switch transport {
         case .http(let url, let headerName):
+            guard !url.isEmpty else { return nil }
+            if let bearerToken {
+                return AIToolServer(
+                    handle: slug, title: title,
+                    transport: .url(
+                        url, headerName: MCPTransportKind.defaultHeaderName,
+                        headerValue: "Bearer \(bearerToken)"))
+            }
+            // Signed out, an OAuth server could only earn a 401 the CLI cannot explain.
+            guard oauth != true else { return nil }
             let name = headerName.trimmingCharacters(in: .whitespaces)
-            let value = bearerToken.map { "Bearer \($0)" } ?? headerValue
-            guard !url.isEmpty, !name.isEmpty, !value.isEmpty else { return nil }
+            let value = name.isEmpty ? "" : headerValue
             return AIToolServer(
                 handle: slug, title: title,
                 transport: .url(url, headerName: name, headerValue: value))

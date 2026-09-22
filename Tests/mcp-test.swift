@@ -254,7 +254,26 @@ struct MCPTests {
             "an OAuth server lends the session's token as the header Tinycast itself would send")
         expect(
             remote.toolServer(headerValue: "", environment: [:], bearerToken: nil) == nil,
-            "and a server with neither a token nor a header value is not offered at all")
+            "and an OAuth server nobody is signed into is not offered at all")
+        var switched = MCPServer(
+            name: "Switched", slug: "switched",
+            transport: .http(url: "https://switched.example/mcp", headerName: "X-Api-Key"))
+        switched.oauth = true
+        expect(
+            switched.toolServer(headerValue: "stale", environment: [:], bearerToken: "tok-1")?
+                .transport
+                == .url(
+                    "https://switched.example/mcp", headerName: "Authorization",
+                    headerValue: "Bearer tok-1"),
+            "a lent token always goes as Authorization, never under a header name left from before")
+
+        let open = MCPServer(
+            name: "Open", slug: "open",
+            transport: .http(url: "https://open.example/mcp", headerName: "Authorization"))
+        expect(
+            open.toolServer(headerValue: "", environment: [:], bearerToken: nil)?.transport
+                == .url("https://open.example/mcp", headerName: "Authorization", headerValue: ""),
+            "a server that needs no credential is still offered, with no header to send")
 
         let header = MCPServer(
             name: "Notes", slug: "notes",

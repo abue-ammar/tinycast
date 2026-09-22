@@ -77,12 +77,7 @@ final class MCPCoordinator {
         where server.trust != .never && (slug == nil || server.slug == slug) {
             let stored = secrets.secrets(for: server.id)
             var bearer: String?
-            if server.oauth == true {
-                // A server nobody is signed into is left out: a CLI cannot explain a 401 the way
-                // a tool result can, and lending nothing would only produce one.
-                guard let token = try? await core.mcpOAuth.accessToken(for: server) else { continue }
-                bearer = token
-            }
+            if server.oauth == true { bearer = try? await core.mcpOAuth.accessToken(for: server) }
             guard
                 let toolServer = server.toolServer(
                     headerValue: stored.headerValue, environment: stored.environment,

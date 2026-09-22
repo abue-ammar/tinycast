@@ -6,7 +6,7 @@ struct AIToolServer: Equatable, Sendable {
     enum Transport: Equatable, Sendable {
         /// A local process. The values travel in the child's environment, never on its argv.
         case command(path: String, arguments: [String], environment: [String: String])
-        /// A remote endpoint. The header value is a secret for the same reason.
+        /// A remote endpoint. An empty value sends no header, as Tinycast's own transport does.
         case url(String, headerName: String, headerValue: String)
     }
 

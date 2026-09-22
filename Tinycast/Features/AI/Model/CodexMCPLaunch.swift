@@ -59,6 +59,7 @@ enum CodexMCPLaunch {
                 arguments += ["-c", "\(key).env_vars=\(array(names))"]
             case .url(let url, let headerName, let headerValue):
                 arguments += ["-c", "\(key).url=\(quoted(url))"]
+                guard !headerValue.isEmpty else { continue }
                 let name = variable(server: index, key: 0)
                 if bearerToken(headerName: headerName, headerValue: headerValue) != nil {
                     arguments += ["-c", "\(key).bearer_token_env_var=\(quoted(name))"]
@@ -82,6 +83,7 @@ enum CodexMCPLaunch {
                     pairs.append((variable(server: index, key: key), environment[name] ?? ""))
                 }
             case .url(_, let headerName, let headerValue):
+                guard !headerValue.isEmpty else { continue }
                 let value = bearerToken(headerName: headerName, headerValue: headerValue)
                 pairs.append((variable(server: index, key: 0), value ?? headerValue))
             }

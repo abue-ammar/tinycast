@@ -209,7 +209,10 @@ the next, which read as the reader declining a call nobody showed them. So a sec
 for the first dialog to close and is then decided afresh, seeing whatever grant it made; one still
 waiting when its turn ends is never asked. An OAuth server with no live session is left out rather
 than passed without one — a CLI cannot turn a 401 into a sentence the model can work around, and a
-tool result is the only place that explanation would fit.
+tool result is the only place that explanation would fit. A lent token always goes as
+`Authorization`, as Tinycast's own transport sends it, whatever header name the server kept from
+before it switched to OAuth; and a Header server with no value is offered with no header at all,
+which both encoders omit, rather than dropped — it needs no credential on the API route either.
 
 `CodexMCPLaunch` turns the list into `-c` overrides: `command`/`args`/`env_vars` for a local
 server, `url` with `bearer_token_env_var` — or `env_http_headers` when the header is not

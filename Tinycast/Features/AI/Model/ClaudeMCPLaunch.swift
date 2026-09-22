@@ -20,9 +20,9 @@ enum ClaudeMCPLaunch {
                     "command": path, "args": arguments, "env": environment
                 ]
             case .url(let url, let headerName, let headerValue):
-                entries[server.handle] = [
-                    "type": "http", "url": url, "headers": [headerName: headerValue]
-                ]
+                var entry: [String: Any] = ["type": "http", "url": url]
+                if !headerValue.isEmpty { entry["headers"] = [headerName: headerValue] }
+                entries[server.handle] = entry
             }
         }
         guard

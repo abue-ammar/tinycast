@@ -1107,6 +1107,17 @@ struct AIProviderTests {
             environment["TC_MCP_1_0"] == "tok-123",
             "and a bearer token loses its prefix, because Codex composes that itself")
 
+        let open = AIToolServer(
+            handle: "open", title: "Open",
+            transport: .url(
+                "https://open.example/mcp", headerName: "Authorization", headerValue: ""))
+        let openArguments = CodexMCPLaunch.arguments(servers: [open], disabling: [])
+        expect(
+            openArguments.contains(#"mcp_servers.tinycast-open.url="https://open.example/mcp""#)
+                && !openArguments.contains { $0.contains("bearer_token") || $0.contains("headers") }
+                && CodexMCPLaunch.environment(servers: [open]) == [:],
+            "a server that needs no credential goes to Codex with no header and no variable")
+
         let quoted = CodexMCPLaunch.arguments(
             servers: [
                 AIToolServer(
@@ -1286,6 +1297,16 @@ struct AIProviderTests {
                     "Authorization": "Bearer tok-123"
                 ],
             "a remote one carries the header Tinycast would have sent itself")
+
+        let bare = ClaudeMCPLaunch.configuration(servers: [
+            AIToolServer(
+                handle: "open", title: "Open",
+                transport: .url(
+                    "https://open.example/mcp", headerName: "Authorization", headerValue: ""))
+        ])
+        expect(
+            bare == #"{"mcpServers":{"open":{"type":"http","url":"https:\/\/open.example\/mcp"}}}"#,
+            "and one that needs no credential goes to Claude with no headers at all")
 
         let arguments = ClaudeMCPLaunch.arguments(
             configurationPath: "/tmp/m.json", handles: ["files", "linear"], rounds: 25)
