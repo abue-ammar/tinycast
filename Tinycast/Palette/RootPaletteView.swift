@@ -722,6 +722,7 @@ struct RootPaletteView: View {
         .frame(maxWidth: .infinity)
         // Set after the show, so the field it names is focused rather than the search field.
         .onChange(of: vm.pendingArgumentEntryID) { focusPendingArgument() }
+        .onChange(of: core.aiChat.pendingAttachments.map(\.id)) { refreshAttachmentsMenu() }
     }
 
     /// Mode-gated ahead of the cast, which would otherwise cost every other mode a list build.
@@ -1165,6 +1166,17 @@ struct RootPaletteView: View {
             closeMenus()
             return
         }
+        syncMenuPanel(presenting: false)
+    }
+
+    /// A row is addressed by index, so a file staged or dropped under the open menu re-lays it.
+    private func refreshAttachmentsMenu() {
+        guard openMenu == .aiAttachments else { return }
+        guard let content = menuContent else {
+            closeMenus()
+            return
+        }
+        menuSelection = min(menuSelection, max(content.rowCount - 1, 0))
         syncMenuPanel(presenting: false)
     }
 

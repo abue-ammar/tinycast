@@ -462,7 +462,10 @@ thumbnail, a PDF's or text file's glyph — and `+N` for the rest, because the s
 out of the search field and a named pill per file left too little room to read what you are typing.
 The names are a hover away, one per line, and clicking the pill opens a header menu listing every
 file with its ✕, so a mispaste is taken back without clearing the rest — ⌘K → Remove Attachments
-and bare backspace stay as the bulk and last-one routes. The preview is a ~1 KB PNG downsampled on
+and bare backspace stay as the bulk and last-one routes. A row runs by its index, so the open menu
+is re-laid whenever the staged list changes and closes once it empties; left stale, a file decoded
+under it would shift the rows, and clicking Remove All would take back only that file. The preview
+is a ~1 KB PNG downsampled on
 the same detached task that encodes the attachment and carried on the staged attachment itself, so a
 header re-rendered per keystroke decodes nothing and there is no cache whose lifetime could drift
 from the staging counter's. The pill states its own width through `AttachmentsPill.width(for:)`,
