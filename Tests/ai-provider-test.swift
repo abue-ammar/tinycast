@@ -1451,8 +1451,19 @@ struct AIProviderTests {
                     #"{"type":"control_request","request_id":"r2","request":{"subtype":"initialize"}}"#
                         .utf8))) as? [String: Any] ?? [:]
         expect(
-            ClaudeControlProtocol.request(other) == nil,
-            "a subtype Tinycast does not know is not answered as a tool question")
+            ClaudeControlProtocol.request(other) == nil
+                && ClaudeControlProtocol.unsupportedRequestID(other) == "r2"
+                && ClaudeControlProtocol.unsupportedRequestID(frame) == nil,
+            "a subtype Tinycast does not know is no tool question, yet it is still answered")
+        let error =
+            ClaudeControlProtocol.error(to: "r2", message: "no")
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        let errorResponse = error?["response"] as? [String: Any]
+        expect(
+            error?["type"] as? String == "control_response"
+                && errorResponse?["subtype"] as? String == "error"
+                && errorResponse?["request_id"] as? String == "r2",
+            "with the SDK's error response, so the CLI stops waiting on it")
     }
 }
 

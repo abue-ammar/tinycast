@@ -373,6 +373,11 @@ struct InstalledAITests {
         expect(
             !control.contains("updatedPermissions"),
             "and never handed a permission update, which it would write to its own settings")
+        let unknown = fixture.read("claude-unknown.log")
+        expect(
+            unknown.contains(#""subtype":"error""#)
+                && unknown.contains(#""request_id":"req_unknown""#),
+            "a control request Tinycast does not know is answered with an error, not left waiting")
     }
 
     /// The dialog shows one question at a time, and the second must see what the first granted.

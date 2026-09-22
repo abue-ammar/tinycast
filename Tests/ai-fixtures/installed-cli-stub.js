@@ -41,6 +41,9 @@ function claudeToolLoop() {
     return;
   }
 
+  emit({ type: "control_request", request_id: "req_unknown", request: { subtype: "unknown" } });
+  record("claude-unknown.log", read.next().value ?? "{}");
+
   const id = "toolu_stub";
   emit({
     type: "assistant",

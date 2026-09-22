@@ -431,6 +431,13 @@ private final class InstalledCLITurnRunner {
             answer(request, token: token)
             return
         }
+        if let id = frame.unsupportedRequestID {
+            let refusal = "Tinycast does not answer this request."
+            if let line = ClaudeControlProtocol.error(to: id, message: refusal) {
+                write(line, closing: false)
+            }
+            return
+        }
         for event in frame.events { continuation?.yield(event) }
         if frame.stoppedAtRoundCap {
             fail("Stopped after \(toolServers?.rounds ?? 1) rounds of tool calls.")

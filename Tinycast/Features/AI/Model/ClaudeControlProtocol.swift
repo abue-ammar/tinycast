@@ -47,6 +47,24 @@ enum ClaudeControlProtocol {
         return line
     }
 
+    /// A control request that is no tool question of ours; unanswered, the CLI waits for good.
+    static func unsupportedRequestID(_ object: [String: Any]) -> String? {
+        guard object["type"] as? String == "control_request", request(object) == nil else {
+            return nil
+        }
+        return object["request_id"] as? String
+    }
+
+    static func error(to id: String, message: String) -> Data? {
+        var line = try? JSONSerialization.data(
+            withJSONObject: [
+                "type": "control_response",
+                "response": ["subtype": "error", "request_id": id, "error": message]
+            ])
+        line?.append(0x0A)
+        return line
+    }
+
     /// The single user message a `stream-json` turn is made of, framed for stdin.
     static func userMessage(_ text: String) -> Data? {
         var line = try? JSONSerialization.data(

@@ -268,7 +268,9 @@ own settings. The reader's other settings — environment, proxy, `apiKeyHelper`
 which `--setting-sources ""` would not have allowed. A `PreToolUse` hook that answers allow is the
 one thing this leaves open. `ClaudeControlProtocol` is the
 whole of that channel: a `control_request` of subtype `can_use_tool` in, a `control_response` of
-`allow` with the arguments untouched or `deny` with a reason out. **It is the Agent SDK's wire
+`allow` with the arguments untouched or `deny` with a reason out. Any other control request — a
+subtype Tinycast does not know, or a tool that is not one of its servers — gets the SDK's `error`
+response, because the CLI holds the turn until something answers. **It is the Agent SDK's wire
 format and is not documented for a host that is not the SDK**, which is why it is one type: the
 documented fallback is `--allowedTools "mcp__<handle>"`, with anything not pre-allowed denied and
 no per-call question at all. `tool_use` and `tool_result` blocks become the two events.

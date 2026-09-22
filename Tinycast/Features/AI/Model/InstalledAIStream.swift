@@ -7,6 +7,7 @@ struct InstalledAIStreamFrame: Equatable, Sendable {
     var completed = false
     /// A tool call the CLI is holding open; the runner answers it and the turn carries on.
     var controlRequest: ClaudeControlProtocol.Request?
+    var unsupportedRequestID: String?
     /// The round cap ended the turn. Only the runner knows the number to say it with.
     var stoppedAtRoundCap = false
 }
@@ -64,6 +65,7 @@ enum InstalledAIStreamDecoder {
         var frame = InstalledAIStreamFrame()
         if !servers.isEmpty, type == "control_request" {
             frame.controlRequest = ClaudeControlProtocol.request(object)
+            frame.unsupportedRequestID = ClaudeControlProtocol.unsupportedRequestID(object)
             return frame
         }
         if !servers.isEmpty, type == "assistant" || type == "user" {
