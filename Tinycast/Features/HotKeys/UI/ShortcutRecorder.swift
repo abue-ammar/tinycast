@@ -77,6 +77,11 @@ struct ShortcutRecorder: View {
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(
+                    modifierTapMonitor.needsAccessibility
+                        ? "Open Accessibility settings"
+                        : "Request Input Monitoring access"
+                )
                 .help(
                     modifierTapMonitor.needsAccessibility
                         ? "Modifier-only hotkeys need Accessibility access. Click to grant it."
