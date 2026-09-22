@@ -76,7 +76,7 @@ struct AIScreen: PaletteScreen {
         guard !attachments.isEmpty || addressed != nil else { return nil }
         let width =
             PendingAttachmentsChips.width(for: attachments, metrics)
-            + (addressed.map { ComposerChip.width(of: "@\($0.slug)", metrics) } ?? 0)
+            + (addressed == nil ? 0 : ComposerChip.width(metrics))
         return PaletteHeaderAccessory(
             width: width + metrics.spacing.md,
             fieldNames: [], firstIncompleteField: nil,
@@ -169,33 +169,28 @@ private struct AIEmptyState: View {
     }
 }
 
-/// The MCP `@server` pill: a glyph and a word, unchanged by what attachments do.
+/// The MCP `@server` pill: its glyph alone, since the handle it confirms is already in the text.
 private struct ComposerChip: View {
     @Environment(\.metrics) private var metrics
     let symbol: String
     let label: String
 
     /// Load-bearing: `RootPaletteView.searchFieldWidth(for:)` shrinks the field by exactly this.
-    static func width(of label: String, _ metrics: InterfaceMetrics) -> CGFloat {
-        let font = metrics.typography.chipNSFont
-        let text = (label as NSString).size(withAttributes: [.font: font]).width
-        return metrics.size.chatAttachmentGlyph + text + metrics.spacing.md * 3
+    static func width(_ metrics: InterfaceMetrics) -> CGFloat {
+        metrics.size.chatAttachmentGlyph + metrics.spacing.sm * 2
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.xs) {
-            Image(systemName: symbol)
-                .font(metrics.typography.chip)
-                .symbolRenderingMode(.hierarchical)
-                .frame(width: metrics.size.chatAttachmentGlyph)
-            Text(label)
-                .font(metrics.typography.chip)
-                .lineLimit(1)
-        }
-        .foregroundStyle(Theme.Colors.textSecondary)
-        .padding(.horizontal, metrics.spacing.sm)
-        .padding(.vertical, metrics.spacing.xxs)
-        .background(Capsule().fill(Theme.Colors.controlSurface))
+        Image(systemName: symbol)
+            .font(metrics.typography.chip)
+            .symbolRenderingMode(.hierarchical)
+            .frame(width: metrics.size.chatAttachmentGlyph)
+            .foregroundStyle(Theme.Colors.textSecondary)
+            .padding(.horizontal, metrics.spacing.sm)
+            .padding(.vertical, metrics.spacing.xxs)
+            .background(Capsule().fill(Theme.Colors.controlSurface))
+            .help("Offers only \(label)'s tools")
+            .accessibilityLabel("Addressed to \(label)")
     }
 }
 

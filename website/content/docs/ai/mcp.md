@@ -43,9 +43,9 @@ call. The reply carries on after it, and the calls are saved with the chat.
 
 ### Talking to one server
 
-Start a message with a handle, like `@filesystem list my desktop`. Only that server's tools are
-offered, and the handle is removed before the message is sent. A handle that matches no server is
-sent exactly as you typed it.
+Start a message with a handle, like `@filesystem list my desktop`. A tools icon after your text
+shows the handle was recognised. Only that server's tools are offered, and the handle is removed
+before the message is sent. A handle that matches no server is sent exactly as you typed it.
 
 ### Permission to run
 

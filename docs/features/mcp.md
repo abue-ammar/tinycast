@@ -123,8 +123,8 @@ middle of a conversation.
   after it. Reopening that chat from ⌘K → Chat History still shows what ran.
 - The first call raises the dialog. Allow This Chat does not ask again in that conversation and does
   in the next; Always Allow survives a relaunch; Escape refuses only that call.
-- `@filesystem list my desktop` sends without the prefix, shows the chip, and offers only that
-  server's tools. `@nosuch hello` is sent verbatim.
+- `@filesystem list my desktop` shows the tools glyph after the text, sends without the prefix, and
+  offers only that server's tools. `@nosuch hello` is sent verbatim.
 - On Apple Intelligence or a ChatGPT model, no tool is offered and the reply streams as before.
 - Switching MCP off, then AI off, leaves no server process resident.
 - A settings backup carries neither a server nor the flag.

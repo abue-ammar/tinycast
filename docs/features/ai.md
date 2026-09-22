@@ -291,8 +291,9 @@ and `MCPCoordinator` the twentieth.
 ### Manual sweep
 
 - The selected model appears at the right of the composer and truncates without crowding typed text.
-- An `@server` chip or a staged pill follows the typed text with a clear gap, and a long draft stops
-  it right before the model name, the same gap with a reasoning menu and without.
+- An `@server` chip — the tools glyph alone, since the handle is still in the text — or a staged
+  pill follows the typed text with a clear gap, and a long draft stops it right before the model
+  name, the same gap with a reasoning menu and without.
 - Clicking it opens the same anchored menu shape as Clipboard's type filter; arrows, Return and Escape
   operate the menu without changing the draft.
 - Repeatedly clicking either the model switcher or the type filter opens and closes every time, even
