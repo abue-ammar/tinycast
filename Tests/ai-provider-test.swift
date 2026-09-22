@@ -1190,6 +1190,13 @@ struct AIProviderTests {
             "a repeated variable refuses the launch rather than keeping one of the two values")
     }
 
+    private static func value(after flag: String, in arguments: [String]) -> String? {
+        guard let index = arguments.firstIndex(of: flag), index + 1 < arguments.count else {
+            return nil
+        }
+        return arguments[index + 1]
+    }
+
     private static func run(
         _ launch: (path: String, arguments: [String]), environment: [String: String]
     ) -> String {
@@ -1251,7 +1258,8 @@ struct AIProviderTests {
                 ],
             "a remote one carries the header Tinycast would have sent itself")
 
-        let arguments = ClaudeMCPLaunch.arguments(configurationPath: "/tmp/m.json", rounds: 25)
+        let arguments = ClaudeMCPLaunch.arguments(
+            configurationPath: "/tmp/m.json", handles: ["files", "linear"], rounds: 25)
         expect(
             arguments.contains("--strict-mcp-config") && arguments.contains("/tmp/m.json")
                 && arguments.contains("--permission-prompt-tool")
@@ -1260,6 +1268,16 @@ struct AIProviderTests {
         expect(
             !arguments.contains("--disallowedTools"),
             "and never deny every tool, which would take the MCP ones with it")
+        expect(
+            value(after: "--permission-mode", in: arguments) == "default",
+            "the mode is pinned, so a reader's bypassPermissions default never skips the question")
+        let settings =
+            (value(after: "--settings", in: arguments)?.data(using: .utf8))
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+        expect(
+            ((settings["permissions"] as? [String: Any])?["ask"] as? [String])
+                == ["mcp__files", "mcp__linear"] && settings.count == 1,
+            "and every armed server has an ask rule, which outranks any allow rule of the reader's")
 
         expect(
             ClaudeMCPLaunch.route("mcp__files__read_file")

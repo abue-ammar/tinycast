@@ -299,7 +299,8 @@ private final class InstalledCLITurnRunner {
             ]
             if let mcpConfig {
                 result += ClaudeMCPLaunch.arguments(
-                    configurationPath: mcpConfig.path, rounds: toolServers?.rounds ?? 1)
+                    configurationPath: mcpConfig.path, handles: activeServers.map(\.handle),
+                    rounds: toolServers?.rounds ?? 1)
             } else {
                 // A route with nothing to call keeps every tool off and the turn to one request.
                 result += ["--disallowedTools", "*", "--max-turns", "1"]

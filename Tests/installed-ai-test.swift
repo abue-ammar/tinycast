@@ -288,6 +288,11 @@ struct InstalledAITests {
         expect(
             !argv.contains("--disallowedTools"),
             "and without the deny-all that would take the MCP tools with it")
+        let mode = argv.firstIndex(of: "--permission-mode").map { argv[$0 + 1] }
+        let settings = argv.firstIndex(of: "--settings").map { argv[$0 + 1] }
+        expect(
+            mode == "default" && settings == #"{"permissions":{"ask":["mcp__probe"]}}"#,
+            "its mode is pinned and the server has an ask rule the reader's own rules cannot outrank")
         expect(
             argv.contains("--input-format")
                 && argv[(argv.firstIndex(of: "--input-format") ?? 0) + 1] == "stream-json",

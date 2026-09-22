@@ -95,8 +95,10 @@ depends on neither, and Quick Actions carries its own route rather than borrowin
   OAuth nor the keychain and so refuses the very sign-in this route reuses. Given servers by
   [MCP](mcp.md) it becomes an agent for that turn and only over those: `--tools ""` still withholds
   every built-in, the turn runs `--input-format stream-json` so consent has a pipe to answer on,
-  `--disallowedTools "*"` comes off because it removes the MCP tools too, and `--max-turns` carries
-  the round cap instead of the constant 1. Grok runs with `--deny *`,
+  `--disallowedTools "*"` comes off because it removes the MCP tools too, `--max-turns` carries
+  the round cap instead of the constant 1, and `--permission-mode default` with an ask rule per
+  server keeps the reader's own allow rules and default mode from answering before Tinycast does.
+  Grok runs with `--deny *`,
   `dontAsk` permissions and a workspace sandbox, and never `--always-approve`, so a user's always-approve
   config cannot arm tools for this route. OpenCode runs `--pure` with deny-all permissions, disabled
   sharing and a private working directory. Cursor runs `agent -p --mode ask` with `--trust` against

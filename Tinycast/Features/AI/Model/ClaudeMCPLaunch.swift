@@ -33,15 +33,27 @@ enum ClaudeMCPLaunch {
         return text
     }
 
-    /// The flags that arm the servers. `--disallowedTools *` is deliberately absent: it removes
-    /// the MCP tools along with the built-ins, and then the model narrates a call it never made.
-    static func arguments(configurationPath: String, rounds: Int) -> [String] {
+    /// The flags that arm the servers; `--disallowedTools *` would take the MCP tools with it.
+    static func arguments(configurationPath: String, handles: [String], rounds: Int) -> [String] {
         [
             "--strict-mcp-config",
             "--mcp-config", configurationPath,
             "--permission-prompt-tool", "stdio",
+            "--permission-mode", "default",
+            "--settings", askSettings(handles: handles),
             "--max-turns", "\(rounds)"
         ]
+    }
+
+    /// An ask rule outranks the reader's allow rules, so their settings never pre-approve a call.
+    static func askSettings(handles: [String]) -> String {
+        let rules = handles.map { toolPrefix + $0 }
+        guard
+            let data = try? JSONSerialization.data(
+                withJSONObject: ["permissions": ["ask": rules]], options: [.sortedKeys]),
+            let text = String(bytes: data, encoding: .utf8)
+        else { return #"{"permissions":{"ask":[]}}"# }
+        return text
     }
 
     /// `mcp__<handle>__<tool>` back to the pair Tinycast addresses. A handle may hold `__` itself,

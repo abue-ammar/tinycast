@@ -223,7 +223,16 @@ every other server request is declined as it always was. `item/started` and `ite
 `ClaudeMCPLaunch` writes the same list as the CLI's own `mcpServers` record, `0600`, named per turn
 and deleted with it. The turn then runs `--input-format stream-json` so the consent channel has a
 pipe to answer on, and drops `--disallowedTools "*"` — verified to remove the MCP tools along with
-the built-ins, after which the model narrates a call it never made. `ClaudeControlProtocol` is the
+the built-ins, after which the model narrates a call it never made. The question only reaches
+Tinycast if the CLI's own permission system asks it, and the reader's settings can answer first:
+an allow rule `mcp__github` written for their own `github` server matches Tinycast's too, and a
+`defaultMode` of `bypassPermissions` skips every question. So the armed turn pins
+`--permission-mode default`, which beats a settings `defaultMode`, and passes `--settings` with a
+`permissions.ask` rule `mcp__<handle>` for every armed server, which outranks an allow rule from any
+source; both were verified against the real CLI with the allow rule and the bypass in the project's
+own settings. The reader's other settings — environment, proxy, `apiKeyHelper` — keep working,
+which `--setting-sources ""` would not have allowed. A `PreToolUse` hook that answers allow is the
+one thing this leaves open. `ClaudeControlProtocol` is the
 whole of that channel: a `control_request` of subtype `can_use_tool` in, a `control_response` of
 `allow` with the arguments untouched or `deny` with a reason out. **It is the Agent SDK's wire
 format and is not documented for a host that is not the SDK**, which is why it is one type: the
