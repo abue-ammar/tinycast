@@ -78,17 +78,22 @@ struct AIScreen: PaletteScreen {
             PendingAttachmentsChips.width(for: attachments, metrics)
             + (addressed.map { ComposerChip.width(of: "@\($0.slug)", metrics) } ?? 0)
         return PaletteHeaderAccessory(
-            width: width + metrics.size.menuWidth,
+            width: width + metrics.spacing.md,
             fieldNames: [], firstIncompleteField: nil,
             view: AnyView(
                 HStack(spacing: metrics.spacing.sm) {
                     if let addressed {
                         ComposerChip(symbol: "wrench.and.screwdriver", label: "@\(addressed.slug)")
                     }
-                    PendingAttachmentsChips(
-                        attachments: attachments,
-                        onRemove: coordinator.removeAttachment)
-                }))
+                    // Absent, not empty: an empty stack would still take a gap after the `@` chip.
+                    if !attachments.isEmpty {
+                        PendingAttachmentsChips(
+                            attachments: attachments,
+                            onRemove: coordinator.removeAttachment)
+                    }
+                }
+                // Clear of the caret, so a chip never reads as laid over the last word.
+                .padding(.leading, metrics.spacing.md)))
     }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {

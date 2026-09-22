@@ -641,7 +641,8 @@ struct RootPaletteView: View {
             headerField
             if let accessory = headerAccessory {
                 accessory.view
-                Spacer(minLength: 0)
+                // Given room last: at the default priority it would split it with the field.
+                Spacer(minLength: 0).layoutPriority(-1)
             }
             if tabOpensChat {
                 headerGutter(width: metrics.spacing.md)
@@ -758,7 +759,8 @@ struct RootPaletteView: View {
     /// The field, kept mounted and hidden rather than swapped: a branch would tear its editor down.
     private var headerField: some View {
         searchField
-            .frame(width: searchFieldWidth)
+            // A ceiling, not a size, so the row squeezes a long query before the strip overruns.
+            .frame(minWidth: searchFieldFloor, maxWidth: searchFieldWidth)
             .opacity(hidesSearchField ? 0 : 1)
             .allowsHitTesting(!hidesSearchField)
             .accessibilityHidden(hidesSearchField)
@@ -773,6 +775,9 @@ struct RootPaletteView: View {
         if hidesSearchField { return nil }
         return headerAccessory.map(searchFieldWidth)
     }
+
+    /// As narrow as a crowded row may push it: the caret and a few characters stay in view.
+    private var searchFieldFloor: CGFloat? { searchFieldWidth.map { min($0, metrics.scaled(60)) } }
 
     /// The field's own text, floored for the caret and capped so the strip stays on screen.
     /// Empty, that is the prompt where one is drawn — which is what seats the strip right after it.

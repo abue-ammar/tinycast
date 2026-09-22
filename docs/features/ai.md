@@ -291,6 +291,8 @@ and `MCPCoordinator` the twentieth.
 ### Manual sweep
 
 - The selected model appears at the right of the composer and truncates without crowding typed text.
+- An `@server` chip or a staged pill follows the typed text with a clear gap, and a long draft stops
+  it right before the model name, the same gap with a reasoning menu and without.
 - Clicking it opens the same anchored menu shape as Clipboard's type filter; arrows, Return and Escape
   operate the menu without changing the draft.
 - Repeatedly clicking either the model switcher or the type filter opens and closes every time, even
@@ -464,7 +466,9 @@ decodes nothing and there is no cache whose lifetime could drift from the stagin
 Each pill states its own width through `AttachmentChip.width(for:)`, which
 `RootPaletteView.searchFieldWidth(for:)` subtracts from the search field — so the two must move
 together or the caret drifts. Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to
-its text and the chip follows it rather than the composer growing. Bare backspace on an empty composer removes the last
+its text and the chip follows it rather than the composer growing. Nothing is reserved for the model
+menu: the row itself squeezes a long draft, so the strip stops right before that menu however wide
+its title is. Bare backspace on an empty composer removes the last
 chip before it backs out of chat; ⌘K → Remove Attachments clears them all. Sent images persist in `message_images` and sent PDFs in `message_documents` beside their message;
 the bubble renders images as thumbnails and documents as the same named chips the composer showed.
 A text file is already in the message's text and needs no table. The schema is
