@@ -27,6 +27,16 @@ if [ "${1:-}" = "--exec" ]; then
         exit 0
     }
     TIMEFORMAT=%1R
+    if [ "$name" = clipboard-capture-test ]; then
+        if ! swiftc -swift-version 6 \
+            Tinycast/Platform/PasteboardFiles.swift \
+            Tinycast/Features/Clipboard/Service/ClipboardCapture.swift \
+            Tinycast/Features/Clipboard/Service/ClipboardCaptureHelper.swift \
+            -o "$BIN/ClipboardCaptureHelper" > "$BIN/$name.log" 2>&1; then
+            fail "capture helper did not compile"
+        fi
+        export TINYCAST_CAPTURE_HELPER="$BIN/ClipboardCaptureHelper"
+    fi
     if ! compiled=$( { time swiftc -swift-version 6 "$opt" "$@" "Tests/$name.swift" -o "$BIN/$name" > "$BIN/$name.log" 2>&1; } 2>&1 ); then
         fail "did not compile"
     fi
@@ -158,6 +168,7 @@ run clipboard-text-test    Tinycast/Features/Clipboard/Model/*.swift $Q \
                            Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardTextWorker.swift
 run pasteboard-test        Tinycast/Platform/PasteboardFiles.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardCapture.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Tinycast/Features/Clipboard/Model/ColorValue.swift \
@@ -165,6 +176,15 @@ run pasteboard-test        Tinycast/Platform/PasteboardFiles.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
                            Tinycast/Features/Clipboard/Service/Paster.swift
+run clipboard-capture-test Tinycast/Platform/NotificationToken.swift \
+                           Tinycast/Platform/PasteboardFiles.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorFormat.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardCapture.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardManager.swift
 run index clipboard-file-performance \
                            Tinycast/Platform/PasteboardFiles.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \

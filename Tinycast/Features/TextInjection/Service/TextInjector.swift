@@ -231,7 +231,8 @@ final class TextInjector {
     func copySelection(
         from targetApp: NSRunningApplication?, pasteboard: any PasteboardAccess
     ) async -> String? {
-        clipboardManager.prepareForTinycastPasteboardMutation()
+        await clipboardManager.drainPendingCapture()
+        guard !Task.isCancelled else { return nil }
         guard let original = PasteboardSnapshot(pasteboard: pasteboard) else { return nil }
         defer { restore(original, to: pasteboard) }
 
@@ -420,7 +421,15 @@ final class TextInjector {
                 automaticGeneration: automaticGeneration)
         }
 
-        guard let lease = beginTemporaryPasteboardLease(text) else {
+        guard let lease = await beginTemporaryPasteboardLease(
+            text, targetApp: targetApp, automaticGeneration: automaticGeneration
+        ) else {
+            guard !Task.isCancelled,
+                deliveryIsAllowed(
+                    automaticGeneration: automaticGeneration,
+                    targetApp: targetApp,
+                    promptForInteractiveAccessibility: false)
+            else { return false }
             return await deliverUsingUnicodeEvents(
                 text,
                 keywordLength: keywordLength,
@@ -512,8 +521,18 @@ final class TextInjector {
         return await wait(for: .milliseconds(40))
     }
 
-    private func beginTemporaryPasteboardLease(_ text: String) -> TemporaryPasteboardLease? {
-        clipboardManager.prepareForTinycastPasteboardMutation()
+    private func beginTemporaryPasteboardLease(
+        _ text: String,
+        targetApp: NSRunningApplication?,
+        automaticGeneration: AutomaticGeneration?
+    ) async -> TemporaryPasteboardLease? {
+        await clipboardManager.drainPendingCapture()
+        guard !Task.isCancelled,
+            deliveryIsAllowed(
+                automaticGeneration: automaticGeneration,
+                targetApp: targetApp,
+                promptForInteractiveAccessibility: false)
+        else { return nil }
         return TemporaryPasteboardLease.begin(
             text: text,
             pasteboard: NSPasteboard.general

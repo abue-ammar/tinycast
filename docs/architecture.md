@@ -106,7 +106,9 @@ fine too; deciding something with one is what the rule forbids. `showNotice`, `c
 
 New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a competing singleton: this is a singleton, not a container.
 
-Clipboard text recognition is the one feature that leaves the process. `AppCore` owns the indexer;
+Clipboard capture and text recognition leave the process. `ClipboardManager` keeps pasteboard
+reads in a bundled `ClipboardCaptureHelper`, so an unresponsive data provider cannot block the
+app's main runloop or global hotkey handler. `AppCore` owns the recognition indexer;
 the stateless `ClipboardTextWorker` runs one bundled `ClipboardTextHelper` per item, from
 `Contents/Helpers`, and reaps it before returning. Vision's and PDFKit's allocations therefore belong
 to a process that exits, and the helper — which has no database, clipboard or settings access — is

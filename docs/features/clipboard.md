@@ -62,13 +62,18 @@ together rather than filtering a list it has already decoded whole. Rejected pat
 the cap, and even a rejected modern file URL suppresses the legacy filenames fallback. The uncapped
 `PasteboardFiles.urls(on:)` that attachments use is the same reader with no limit and no test.
 
-`ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. To avoid
-re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the
-pasteboard and the poller skips anything carrying it.
+`ClipboardManager` runs a 0.5s `Timer` watching `NSPasteboard.general.changeCount`. Content reads
+run in a resident `ClipboardCaptureHelper` process, so a pasteboard owner that delays a promised
+representation cannot block the app's main runloop and global hotkeys. A timed-out read kills the
+helper; a later capture launches a fresh one. Text, file paths and PNG bytes return through a bounded
+pipe protocol; PNGs over 16 MiB are skipped to keep the resident app within its memory budget. To
+avoid re-capturing Tinycast's own writes, every write stamps a private
+`internalType` marker and the helper skips anything carrying it.
 
 `stop()` is the off switch: it drops the timer and the fast-user-switching observers, and clears the
-`isCapturing` flag that `prepareForTinycastPasteboardMutation` reads — so a paste Tinycast performs
-itself no longer drains the pasteboard into history either.
+`isCapturing` flag that `drainPendingCapture` reads — so a paste Tinycast performs itself no longer
+drains the pasteboard into history either. A pasteboard write first awaits any pending capture;
+stopping or switching sessions invalidates its result before it reaches the store.
 
 Existing clips survive being switched off, since a history is captured rather than authored and
 nothing else can put it back. **Clear history stays live with the feature off** —

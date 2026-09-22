@@ -113,7 +113,9 @@ jobs:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
         run: |
           APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
-          for BIN in "$APP/Contents/MacOS/${DISPLAY_NAME}" "$APP/Contents/Helpers/ClipboardTextHelper"; do
+          for BIN in "$APP/Contents/MacOS/${DISPLAY_NAME}" \
+            "$APP/Contents/Helpers/ClipboardTextHelper" \
+            "$APP/Contents/Helpers/ClipboardCaptureHelper"; do
             SLICES="$(lipo -archs "$BIN")"
             if [ "$SLICES" != "arm64" ]; then
               echo "::error::${BIN##*/}: expected arm64 alone, got '$SLICES'"
@@ -339,7 +341,9 @@ jobs:
             echo "::error::expected LSMinimumSystemVersion 26.0, got $PLIST_MIN"
             exit 1
           fi
-          for BIN in "$APP/Contents/MacOS/${DISPLAY_NAME}" "$APP/Contents/Helpers/ClipboardTextHelper"; do
+          for BIN in "$APP/Contents/MacOS/${DISPLAY_NAME}" \
+            "$APP/Contents/Helpers/ClipboardTextHelper" \
+            "$APP/Contents/Helpers/ClipboardCaptureHelper"; do
             SLICES="$(lipo -archs "$BIN")"
             echo "${BIN##*/}: arch=$SLICES"
             for A in arm64 x86_64; do

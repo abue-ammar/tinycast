@@ -1,35 +1,59 @@
 import AppKit
+import os
 
 @MainActor
 final class ClipboardManager {
     /// Marker we attach to the pasteboard when *we* write to it, so polling ignores our own pastes.
-    static let internalType = NSPasteboard.PasteboardType("com.tinycast.internal")
+    static let internalType = NSPasteboard.PasteboardType(ClipboardCapture.internalTypeName)
 
     /// Longest text captured; bigger copies are skipped, truncation losing the tail.
-    static let maxTextLength = 32_000
+    static let maxTextLength = ClipboardCapture.maxTextLength
 
     /// Markers put on secret copies by password managers, browsers and the OS.
-    static let sensitiveTypes: Set<NSPasteboard.PasteboardType> = [
-        .init("org.nspasteboard.ConcealedType"),
-        .init("org.nspasteboard.TransientType"),
-        .init("com.apple.is-sensitive")
-    ]
+    static let sensitiveTypes: Set<NSPasteboard.PasteboardType> = Set(
+        ClipboardCapture.sensitiveTypeNames.map { NSPasteboard.PasteboardType($0) })
 
     private let store: ClipboardStore
     private let settings: AppSettings
+    private let logger = Logger(subsystem: "com.tinycast", category: "Clipboard")
     private var timer: Timer?
     private var sessionTokens: [NotificationToken] = []
+    private var watched = NSPasteboard.general
     private var lastChangeCount = 0
     private var isCapturing = false
+    private var captureEpoch = 0
+    private var isReading = false
+    private var pendingCapture: Task<Void, Never>?
+    private var reader: ClipboardCaptureClient?
+    private var helperExecutable: URL
+    private var didLogMissingHelper = false
+    /// A hung owner must lose the helper, not the next paste.
+    var captureTimeout: Duration = .milliseconds(1500)
 
     init(store: ClipboardStore, settings: AppSettings) {
         self.store = store
         self.settings = settings
+        helperExecutable = Bundle.main.bundleURL
+            .appendingPathComponent("Contents/Helpers/ClipboardCaptureHelper")
+    }
+
+    /// Tests point at a helper they just compiled. The app uses the bundled one.
+    func useCaptureHelper(at executable: URL) {
+        helperExecutable = executable
+        reader?.cancel()
+        reader = nil
+    }
+
+    /// Harness-only. Production watches `NSPasteboard.general`.
+    func useWatchedPasteboard(_ pasteboard: NSPasteboard) {
+        watched = pasteboard
+        lastChangeCount = pasteboard.changeCount &- 1
     }
 
     // Isolated so teardown can touch the main-actor timer; the poll block is already weak.
     isolated deinit {
         timer?.invalidate()
+        reader?.cancel()
     }
 
     func start() {
@@ -43,7 +67,44 @@ final class ClipboardManager {
     func stop() {
         isCapturing = false
         sessionTokens = []
-        stopPolling()
+        stopTimer()
+        abandonCapture()
+    }
+
+    /// The real copy has to reach history before a Tinycast write replaces it.
+    func drainPendingCapture() async {
+        guard !Task.isCancelled else { return }
+        if isCapturing { poll() }
+        await pendingCapture?.value
+        guard isCapturing, !Task.isCancelled else { return }
+        poll()
+        await pendingCapture?.value
+    }
+
+    // Load-bearing: a mismatched count means a foreign write the next poll must still see.
+    func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {
+        guard watched.changeCount == changeCount else { return }
+        lastChangeCount = changeCount
+    }
+
+    /// A Finder select-all must not insert ten thousand rows on one poll tick.
+    nonisolated static let maxCapturedFiles = ClipboardCapture.maxCapturedFiles
+
+    /// Reclaimable roots, without the `/private` that `resolvingSymlinksInPath` strips.
+    nonisolated static let volatileRoots = ClipboardCapture.volatileRoots
+
+    /// Both parameters are injected environment facts, so a harness can drive its own scratch.
+    nonisolated static func fileURLs(
+        on pasteboard: NSPasteboard, volatileRoots roots: [String] = volatileRoots
+    ) -> [String]? {
+        ClipboardCapture.filePaths(on: pasteboard, volatileRoots: roots)
+    }
+
+    /// Harness entry. Production goes through `poll`, which only samples `changeCount` here.
+    func capture(pasteboard: NSPasteboard, sourceBundleID: String?) async {
+        guard isCapturing else { return }
+        beginCapture(board: pasteboard.name.rawValue, sourceBundleID: sourceBundleID)
+        await pendingCapture?.value
     }
 
     // Fast user switching: another session's clipboard isn't ours, so stop waking up for it.
@@ -56,14 +117,14 @@ final class ClipboardManager {
                     forName: NSWorkspace.sessionDidResignActiveNotification, object: nil,
                     queue: .main
                 ) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.stopPolling() }
+                    Task { @MainActor in self?.sessionDidResign() }
                 }, center: center),
             NotificationToken(
                 center.addObserver(
                     forName: NSWorkspace.sessionDidBecomeActiveNotification, object: nil,
                     queue: .main
                 ) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.startPolling() }
+                    Task { @MainActor in self?.sessionDidBecomeActive() }
                 }, center: center)
         ]
     }
@@ -71,101 +132,89 @@ final class ClipboardManager {
     // Re-baselining first is what stops a clip made in another session reading as new on resume.
     private func startPolling() {
         guard isCapturing, timer == nil else { return }
-        lastChangeCount = NSPasteboard.general.changeCount
+        lastChangeCount = watched.changeCount
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated { self?.poll() }
+            Task { @MainActor in self?.poll() }
         }
         timer.tolerance = 0.1
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
     }
 
-    private func stopPolling() {
+    private func stopTimer() {
         timer?.invalidate()
         timer = nil
     }
 
-    // Drain first: the real copy must reach history before we overwrite the pasteboard.
-    func prepareForTinycastPasteboardMutation() {
-        guard isCapturing else { return }
-        poll()
+    private func sessionDidResign() {
+        stopTimer()
+        abandonCapture()
     }
 
-    // Load-bearing: a mismatched count means a foreign write the next poll must still see.
-    func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {
-        guard NSPasteboard.general.changeCount == changeCount else { return }
-        lastChangeCount = changeCount
+    private func sessionDidBecomeActive() {
+        startPolling()
     }
 
-    /// A Finder select-all must not insert ten thousand rows on one poll tick.
-    nonisolated static let maxCapturedFiles = 32
-
-    /// Reclaimable roots, without the `/private` that `resolvingSymlinksInPath` strips.
-    nonisolated static let volatileRoots = [
-        "/tmp/", "/var/tmp/", "/var/folders/", NSHomeDirectory() + "/Library/Caches/"
-    ]
-
-    /// Both parameters are injected environment facts, so a harness can drive its own scratch.
-    nonisolated static func fileURLs(
-        on pasteboard: NSPasteboard, volatileRoots roots: [String] = volatileRoots
-    ) -> [String]? {
-        let durable = PasteboardFiles.urls(on: pasteboard, limit: maxCapturedFiles) {
-            isDurable($0, roots: roots)
-        }
-        // Nil rather than empty, so a copied `http` URL falls through and stays a link.
-        guard !durable.isEmpty else { return nil }
-        // Reversed on insert, so the first file copied ends up leading the history.
-        return durable.map(\.standardizedFileURL.path).reversed()
-    }
-
-    /// An app that stages a temp file beside better inline content must keep the inline content.
-    nonisolated private static func isDurable(_ url: URL, roots: [String]) -> Bool {
-        guard FileManager.default.fileExists(atPath: url.path) else { return false }
-        var path = url.resolvingSymlinksInPath().path
-        if path.hasPrefix("/private/") { path.removeFirst("/private".count) }
-        return !roots.contains { path.hasPrefix($0) }
+    /// Bumps the epoch so a helper that already read cannot still publish.
+    private func abandonCapture() {
+        captureEpoch += 1
+        isReading = false
+        pendingCapture?.cancel()
+        pendingCapture = nil
+        reader?.cancel()
     }
 
     private func poll() {
-        let pb = NSPasteboard.general
-        guard pb.changeCount != lastChangeCount else { return }
-        lastChangeCount = pb.changeCount
+        let changeCount = watched.changeCount
+        guard changeCount != lastChangeCount, !isReading else { return }
+        // A timed-out copy is skipped: retrying it would make every drain wait out the timeout.
+        lastChangeCount = changeCount
+        let source = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+        beginCapture(board: watched.name.rawValue, sourceBundleID: source)
+    }
 
-        if pb.types?.contains(Self.internalType) == true { return }
-
-        // Never record secrets: skip copies tagged sensitive by any of the marker owners.
-        if let types = pb.types, !Set(types).isDisjoint(with: Self.sensitiveTypes) { return }
-
-        // The pasteboard carries no source, so attribute it to the frontmost app.
-        let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
+    private func beginCapture(board: String, sourceBundleID: String?) {
+        guard isCapturing, !isReading else { return }
         if let sourceBundleID, settings.clipboardDisabledApps.contains(sourceBundleID) { return }
-
-        // Ahead of the text branch: Finder puts the file's *name* on `.string` beside its URL.
-        if let paths = Self.fileURLs(on: pb) {
-            store.addFiles(paths, sourceBundleID: sourceBundleID)
-            return
+        guard let reader = makeReader() else { return }
+        isReading = true
+        let epoch = captureEpoch
+        let timeout = captureTimeout
+        pendingCapture = Task { [weak self] in
+            let payload = await reader.read(board: board, timeout: timeout)
+            guard let self, epoch == self.captureEpoch else { return }
+            self.isReading = false
+            guard self.isCapturing else { return }
+            self.apply(payload, sourceBundleID: sourceBundleID)
         }
+    }
 
-        if let text = pb.string(forType: .string),
-            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        {
+    private func makeReader() -> ClipboardCaptureClient? {
+        if let reader { return reader }
+        guard FileManager.default.isExecutableFile(atPath: helperExecutable.path) else {
+            if !didLogMissingHelper {
+                didLogMissingHelper = true
+                logger.error(
+                    "capture helper missing at \(self.helperExecutable.path, privacy: .public)")
+            }
+            return nil
+        }
+        let reader = ClipboardCaptureClient(executable: helperExecutable)
+        self.reader = reader
+        return reader
+    }
+
+    private func apply(_ payload: ClipboardCapture.Payload, sourceBundleID: String?) {
+        switch payload {
+        case .text(let text):
             guard text.count <= Self.maxTextLength else { return }
             store.addText(text, sourceBundleID: sourceBundleID)
-            return
-        }
-
-        if let type = pb.availableType(from: [.png, .tiff]), let data = pb.data(forType: type) {
-            let isPNG = type == .png
-            let store = store
-            // A big TIFF→PNG re-encode can take 100ms+, so keep the poll off that path.
-            Task.detached(priority: .utility) {
-                let png =
-                    isPNG
-                    ? data
-                    : NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
-                guard let png else { return }
-                await store.addImage(png, sourceBundleID: sourceBundleID)
-            }
+        case .files(let paths):
+            store.addFiles(paths, sourceBundleID: sourceBundleID)
+        case .png(let data):
+            store.addImage(data, sourceBundleID: sourceBundleID)
+        case .skipped, .timedOut, .unavailable:
+            break
         }
     }
 }

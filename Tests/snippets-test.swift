@@ -1947,7 +1947,7 @@ private final class StubPasteboard: PasteboardAccess {
 @MainActor
 final class ClipboardManager {
     static let internalType = NSPasteboard.PasteboardType("com.tinycast.internal")
-    func prepareForTinycastPasteboardMutation() {}
+    func drainPendingCapture() async {}
     func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {}
 }
 
