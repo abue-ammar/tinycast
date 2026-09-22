@@ -321,6 +321,6 @@ struct MCPTests {
             "on Codex or Claude it leaves the local server to the CLI's own copy")
         expect(
             remote.runsInTinycast(whileCLIRouteSelected: true),
-            "while a remote one stays connected: a session, no process, and live status in Settings")
+            "while a remote one stays connected: a session, no process, and a live status row")
     }
 }

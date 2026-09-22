@@ -39,8 +39,7 @@ final class CodexAppServerClient {
     private var stderrBuffer = Data()
     private var nextID = 1
     private var pending: [Int: PendingRequest] = [:]
-    /// What the running process was launched with. Overrides and environment are fixed at exec,
-    /// so a changed list — a refreshed token included — is a relaunch, not a reconfiguration.
+    /// What the process was launched with; it is fixed at exec, so a different list relaunches.
     private(set) var toolServers: [AIToolServer] = []
     private var elicitations: [Task<Void, Never>] = []
     private var pendingLaunch: (id: UUID, servers: [AIToolServer], task: Task<Void, Error>)?
@@ -52,8 +51,7 @@ final class CodexAppServerClient {
         self.workspace = workspace
     }
 
-    /// Process-scoped, every one of them: nothing here is ever written to the user's Codex config.
-    /// `features.plugins=false` also keeps a plugin's own MCP servers out of the list below.
+    /// Process-scoped, never written to the reader's config; `plugins=false` drops plugin servers.
     nonisolated private static let configurationFlags = [
         "-c", "check_for_update_on_startup=false",
         "-c", "features.apps=false",

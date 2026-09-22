@@ -143,8 +143,7 @@ enum AIModelSelection: Codable, Equatable, Hashable, Sendable {
     case cursor(model: String, effort: String?)
     case api(connection: UUID, model: String, effort: String?)
 
-    /// The routes whose own client is the MCP client: Tinycast hands them servers rather than
-    /// wrapping them in its tool loop, and they answer consent through `AIToolServerSession`.
+    /// The routes whose own client is the MCP client, handed servers rather than Tinycast's loop.
     var runsItsOwnTools: Bool {
         switch self {
         case .codex, .claude: return true

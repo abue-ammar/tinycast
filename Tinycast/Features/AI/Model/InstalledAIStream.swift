@@ -108,8 +108,7 @@ enum InstalledAIStreamDecoder {
         return frame
     }
 
-    /// An assistant turn's `tool_use` blocks and the `tool_result` blocks that answer them, as the
-    /// two events a transcript row is built from. A block naming no configured server is not ours.
+    /// `tool_use` and `tool_result` blocks, as the two events a transcript row is built from.
     private static func toolEvents(
         in object: [String: Any], servers: [AIToolServer]
     ) -> [AIStreamEvent] {

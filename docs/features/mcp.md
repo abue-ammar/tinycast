@@ -16,9 +16,10 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   only consumer. That reaches the Codex helper too, which keeps what it was launched with until it
   exits: when MCP goes off, or a server it runs is removed, set to Never Allow or signed out of,
   `ChatGPTSubscriptionManager.dropWithdrawnServers` stops it between turns rather than leave the
-  server process and any lent token in it for its ten idle minutes. Both flags and `mcpServers` are excluded from settings backups — a server list is a
-  source of executable code and a destination for chat context, and the flag doubles as consent to
-  run it, so an import can never arrive having connected one.
+  server process and any lent token in it for its ten idle minutes. Both flags and `mcpServers`
+  are excluded from settings backups — a server list is a source of executable code and a
+  destination for chat context, and the flag doubles as consent to run it, so an import can never
+  arrive having connected one.
 - **Credentials live only in the login Keychain.** `MCPServer` persists the endpoint, authentication
   mode, the header *name*, the command, its arguments and its environment variable *names* in
   `UserDefaults`; it never contains a secret. The HTTP header value, environment values, OAuth client
@@ -101,9 +102,9 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   than merge. The boundary fails closed: a listing that exits non-zero or is not a JSON array of
   named servers refuses the launch, since reading it as empty would start every one of them, and
   so does a name with a dot or `=`, which `-c` splits and so cannot switch off. The Providers row
-  and the failed turn both say why. Claude's `--strict-mcp-config` does it in one flag. This is what closes the leak the
-  route shipped with: its launch flags never touched `mcp_servers`, so every server in
-  `~/.codex/config.toml` used to start inside a Tinycast thread, invisible because
+  and the failed turn both say why. Claude's `--strict-mcp-config` does it in one flag. This is
+  what closes the leak the route shipped with: its launch flags never touched `mcp_servers`, so
+  every server in `~/.codex/config.toml` used to start inside a Tinycast thread, invisible because
   `CodexTurnRunner` ignored the items.
 - **Every Codex tool call asks Tinycast, read-only ones included.** Left alone, the app-server runs
   a tool its server annotates `readOnlyHint: true` without raising an elicitation, even under
@@ -225,10 +226,12 @@ which both encoders omit, rather than dropped — it needs no credential on the 
 `CodexMCPLaunch` turns the list into `-c` overrides: `command`/`args`/`env_vars` for a local
 server, `url` with `bearer_token_env_var` — or `env_http_headers` when the header is not
 `Authorization` — for a remote one, each under `mcp_servers.tinycast-<handle>`, and
-`enabled=false` for each of the user's own. `CodexMCPLaunch.handle(ofServer:)` is the way back: an
-elicitation's `serverName` and an `mcpToolCall` item's `server` name a Codex server, and only one
-with the prefix is Tinycast's to ask about or to title a row with. The values live
-in the app-server's environment under `TC_MCP_<server>_<key>`, two positions in the launch's own
+`enabled=false` for each of the user's own. Every override is process-scoped, like the feature flags
+the route always passed, and one of those, `features.plugins=false`, also keeps a plugin's own
+servers out of both the listing and the launch. `CodexMCPLaunch.handle(ofServer:)` is the way
+back: an elicitation's `serverName` and an `mcpToolCall` item's `server` name a Codex server, and
+only one with the prefix is Tinycast's to ask about or to title a row with. The values live in the
+app-server's environment under `TC_MCP_<server>_<key>`, two positions in the launch's own
 list rather than any spelling of the handle and key: `github-x` + `TOKEN` and `github` + `X_TOKEN`
 would upper-case to one name, and so would `token` and `TOKEN`, a header and a local key, or two
 non-Latin handles of the same length — and a shared name hands one server another's secret. A name
@@ -237,23 +240,27 @@ has, so a local server with variables starts through `/bin/sh`, which moves each
 the server reads and then execs it; the script carries names, never values. Only a name `export`
 accepts — a letter or `_`, then letters, digits and `_` — can be moved, so a key like `API-TOKEN`
 is not forwarded to Codex's copy at all, where the API route and Claude hand it over as typed.
-That environment is fixed at `exec`,
-so a changed list, a refreshed OAuth token included, is a **relaunch**: `CodexAppServerClient`
-remembers what it was started with and starts again when the next turn wants something else.
-A launch is single-flight, handshake included: a status check racing a turn, or two quick sends,
-await the one in progress rather than each start a process whose exit would then tear down the
-other's, a `stop` that lands while the list is being read keeps the launch from starting after it,
-and an exit is only acted on when it is the current process's. Nothing else can deliver it — `config/mcpServer/reload` takes no parameters and re-reads the
-config from disk, and thread-scoped `mcp_servers` on `thread/start` both fails to arm the tools and
-undoes the launch-level disabling, which is why it is not used. A tool call arrives as
+That environment is fixed at `exec`, so a changed list, a refreshed OAuth token included, is a
+**relaunch**: `CodexAppServerClient` remembers what it was started with and starts again when the
+next turn wants something else. The account read at the first launch outlives the process, so a
+relaunch does not read it again, and a Settings status check is not a turn: it keeps whatever list
+is running rather than relaunching around it. A launch is single-flight, handshake included: a
+status check racing a turn, or two quick sends, await the one in progress rather than each start a
+process whose exit would then tear down the other's, a `stop` that lands while the list is being
+read keeps the launch from starting after it, and an exit is only acted on when it is the current
+process's. Nothing else can deliver a new list — `config/mcpServer/reload` takes no parameters and
+re-reads the config from disk, and thread-scoped `mcp_servers` on `thread/start` both fails to arm
+the tools and undoes the launch-level disabling, which is why it is not used. A tool call arrives as
 `mcpServer/elicitation/request`, decoded by `CodexElicitation` and answered `accept` or `decline`.
 The question names the tool by `_meta.tool_name` when Codex sends it, since the latest item started
 on that server is a different call whenever two run at once; only without it does that item's name
 stand in. Every other server request is declined as it always was. `item/started` and
 `item/completed` for an `mcpToolCall` become `.toolCall` and `.toolResult`.
 
-`ClaudeMCPLaunch` writes the same list as the CLI's own `mcpServers` record, `0600`, named per turn
-and deleted with it; a crash leaves it, and Grok's prompt file, for `InstalledAIManager` to delete
+`ClaudeMCPLaunch` writes the same list as the CLI's own `mcpServers` record, into a file because
+argv is in `ps`: `0600`, and named per turn, like Grok's prompt file, so a second turn never
+overwrites or deletes a live turn's configuration out from under the process reading it. It is
+deleted with the turn; a crash leaves it, and Grok's prompt file, for `InstalledAIManager` to delete
 at the next launch, which removes only `tinycast-mcp-*` and `tinycast-prompt-*` files older than
 that launch. The turn then runs `--input-format stream-json` so the consent channel has a
 pipe to answer on, and drops `--disallowedTools "*"` — verified to remove the MCP tools along with
@@ -266,14 +273,20 @@ an allow rule `mcp__github` written for their own `github` server matches Tinyca
 source; both were verified against the real CLI with the allow rule and the bypass in the project's
 own settings. The reader's other settings — environment, proxy, `apiKeyHelper` — keep working,
 which `--setting-sources ""` would not have allowed. A `PreToolUse` hook that answers allow is the
-one thing this leaves open. `ClaudeControlProtocol` is the
-whole of that channel: a `control_request` of subtype `can_use_tool` in, a `control_response` of
-`allow` with the arguments untouched or `deny` with a reason out. Any other control request — a
-subtype Tinycast does not know, or a tool that is not one of its servers — gets the SDK's `error`
-response, because the CLI holds the turn until something answers. **It is the Agent SDK's wire
-format and is not documented for a host that is not the SDK**, which is why it is one type: the
-documented fallback is `--allowedTools "mcp__<handle>"`, with anything not pre-allowed denied and
-no per-call question at all. `tool_use` and `tool_result` blocks become the two events.
+one thing this leaves open.
+
+`ClaudeControlProtocol` is the whole of that channel: `--permission-prompt-tool stdio` puts a
+`control_request` of subtype `can_use_tool` on stdout and takes a `control_response` of `allow`,
+with the arguments untouched, or `deny` with a reason, on stdin. `updatedPermissions` is never
+sent: it would have the CLI write its own settings, and only Tinycast's Settings may change a
+standing decision. Any other control request — a subtype Tinycast does not know, or a tool that is
+not one of its servers — gets the SDK's `error` response, because the CLI holds the turn until
+something answers. **It is the Agent SDK's wire format and is not documented for a host that is not
+the SDK**; a CLI release may change it, which is why everything about it is one type. The
+documented fallback is `--allowedTools "mcp__<handle>"` under `--permission-mode dontAsk`: the mode
+is what refuses every tool the list does not name, since an allow list alone denies nothing, and it
+asks no per-call question at all, so it could not express Ask Each Chat. `tool_use` and
+`tool_result` blocks become the two events.
 
 While Codex or Claude is the chat model, Tinycast keeps no connection of its own to a local
 server: the CLI starts its own copy, and a second would only run it twice.
@@ -322,7 +335,6 @@ caught there rather than in the middle of a conversation.
 - Harnesses: `mcp-test`, `mcp-stdio-test` and `mcp-oauth-test`, plus the tool halves of `ai-provider-test`
   (catalog and turn encoding, fragmented argument decoding, both CLIs' launch encodings and their
   two consent channels), `ai-chat-test` (the loop, its cap, its output bounds, and tool-use
-  persistence), `codex-turn-test` (the launch boundary and its failing closed, one launch for concurrent
-  starts, the elicitation, the rows and the call cap)
-  and `installed-ai-test` (the flags, the `0600` configuration and its deletion, the control
+  persistence), `codex-turn-test` (the launch boundary and its failing closed, one launch for
+  concurrent starts, the elicitation, the rows and the call cap) and `installed-ai-test` (the flags, the `0600` configuration and its deletion, the control
   channel, the round cap and the managed-policy branch).

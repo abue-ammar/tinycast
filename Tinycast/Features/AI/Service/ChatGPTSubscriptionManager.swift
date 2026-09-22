@@ -72,8 +72,7 @@ final class ChatGPTSubscriptionManager {
     /// What a turn needs before it starts: a running server and a signed-in account.
     private func ensureConnected(toolServers: [AIToolServer]) async throws {
         idleTask?.cancel()
-        // A changed list relaunches the server: its overrides and environment are fixed at exec.
-        // The account outlives that, so it is read once and not again for the new process.
+        // A changed list relaunches, since it is fixed at exec; the account outlives the process.
         try await client.start(toolServers: toolServers)
         if account == nil, try await restoreAccount() {
             phase = .connected
@@ -104,8 +103,7 @@ final class ChatGPTSubscriptionManager {
     private func refreshNow() async {
         phase = .starting
         do {
-            // A check is not a turn: it keeps whatever list is already running rather than
-            // relaunching a server twice around it.
+            // A check is not a turn: it keeps the running list rather than relaunch around it.
             try await client.start(toolServers: client.toolServers)
             guard try await restoreAccount() else {
                 phase = .signedOut

@@ -258,7 +258,8 @@ struct MCPOAuthTests {
     static func lendingOutlastsTheTurn(
         registration: MCPOAuth.Registration, secrets: MCPSecretStore, manager: MCPOAuthManager
     ) async throws {
-        var configured = MCPServer(name: "Lent", transport: .http(url: base + "/mcp", headerName: ""))
+        var configured = MCPServer(
+            name: "Lent", transport: .http(url: base + "/mcp", headerName: ""))
         configured.oauth = true
         let server = configured
         defer { try? secrets.remove(for: server.id) }
@@ -273,7 +274,7 @@ struct MCPOAuthTests {
         let used = try await manager.accessToken(for: server)
         let lent = try await manager.lentToken(for: server)
         expect(used == "five-minutes" && lent == "fixture-access",
-               "five minutes serve Tinycast's own request; a CLI's whole turn gets a refreshed token")
+               "five minutes serve Tinycast's own request; a CLI's whole turn gets a fresh token")
         try store(refresh: nil)
         let unrefreshable = try await manager.lentToken(for: server)
         expect(unrefreshable == "five-minutes",
@@ -449,7 +450,8 @@ struct MCPOAuthTests {
                 refresh, registration: registration, secrets: secrets, manager: manager)
         }
         try await refreshOutlivesEditor(registration: registration, secrets: secrets, manager: manager)
-        try await lendingOutlastsTheTurn(registration: registration, secrets: secrets, manager: manager)
+        try await lendingOutlastsTheTurn(
+            registration: registration, secrets: secrets, manager: manager)
         var moved = server
         moved.transport = .http(url: base + "/other", headerName: "")
         do {

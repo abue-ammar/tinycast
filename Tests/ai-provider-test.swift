@@ -1078,7 +1078,9 @@ struct AIProviderTests {
             "every one of the reader's own servers is disabled by name, one named like ours too")
         expect(
             arguments.contains("mcp_servers.tinycast-files.enabled=true")
-                && !arguments.contains { $0.hasPrefix("mcp_servers.files.") && !$0.hasSuffix("=false") },
+                && !arguments.contains {
+                    $0.hasPrefix("mcp_servers.files.") && !$0.hasSuffix("=false")
+                },
             "since Tinycast's go by names of their own, which no table of the reader's merges into")
         expect(
             arguments.contains(#"mcp_servers.tinycast-files.command="/bin/sh""#)
@@ -1167,7 +1169,7 @@ struct AIProviderTests {
             CodexMCPLaunch.unaddressableName(["ok", "日本", "has space", "has.dot"]) == "has.dot"
                 && CodexMCPLaunch.unaddressableName(["a=b"]) == "a=b"
                 && CodexMCPLaunch.unaddressableName(["ok", "日本", "has space"]) == nil,
-            "only a dot or an equals sign keeps `-c` from naming a server; spaces and scripts do not")
+            "only a dot or `=` keeps `-c` from naming a server; spaces and other scripts do not")
     }
 
     /// Only running the launch proves a server gets its own names; `printenv` stands in for it.
@@ -1276,7 +1278,7 @@ struct AIProviderTests {
     private static let headerMapOverride =
         "mcp_servers.tinycast-notes." + "env" + #"_http_headers={"X-Api-Key"="TC_MCP_2_0"}"#
 
-    /// The config file is the only place Claude's secrets go, and the tool name is what routes back.
+    /// The file is the only place Claude's secrets go, and the tool name is what routes back.
     static func claudeConfigurationCarriesServersAndRoutesToolNames() {
         let servers = [
             AIToolServer(
@@ -1403,7 +1405,7 @@ struct AIProviderTests {
         "tool_name":"mcp__files__read","input":{"path":"/tmp"}}}
         """
 
-    /// The consent channel is the SDK's undocumented one; this is the whole of what Tinycast speaks.
+    /// The consent channel is the SDK's undocumented one; this is all of it Tinycast speaks.
     static func claudeControlFramesAnswerOneTool() {
         let frame =
             (try? JSONSerialization.jsonObject(with: Data(Self.canUseToolFrame.utf8)))
@@ -1445,11 +1447,11 @@ struct AIProviderTests {
             denied["behavior"] as? String == "deny" && denied["message"] as? String == "no",
             "a deny says so, and the model reads the reason as the call's result")
 
+        let initialize =
+            #"{"type":"control_request","request_id":"r2","request":{"subtype":"initialize"}}"#
         let other =
-            (try? JSONSerialization.jsonObject(
-                with: Data(
-                    #"{"type":"control_request","request_id":"r2","request":{"subtype":"initialize"}}"#
-                        .utf8))) as? [String: Any] ?? [:]
+            (try? JSONSerialization.jsonObject(with: Data(initialize.utf8))) as? [String: Any]
+            ?? [:]
         expect(
             ClaudeControlProtocol.request(other) == nil
                 && ClaudeControlProtocol.unsupportedRequestID(other) == "r2"

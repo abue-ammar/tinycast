@@ -34,8 +34,7 @@ struct CodexTurnTests {
         if failures > 0 { exit(1) }
     }
 
-    /// The launch is the whole boundary: Tinycast's servers named, the user's disabled, and not a
-    /// byte of either written to their Codex configuration.
+    /// The launch is the boundary: ours named, the reader's disabled, their config never written.
     static func tinycastsServersAreLaunchedAndTheUsersOwnAreNot() async {
         guard let server = StubServer(mode: "mcp") else {
             expect(false, "the stub app-server installs")
@@ -189,7 +188,7 @@ struct CodexTurnTests {
         manager.dropWithdrawnServers(keeping: ["other"])
         expect(
             await server.awaitLog("stdin-closed"),
-            "and one launched with a server that is no longer offered stops without waiting to idle")
+            "and one launched with a server no longer offered stops without waiting to idle")
     }
 
     /// Two calls at once: each asked about by its own name, one at a time, after the grant.
@@ -260,7 +259,7 @@ struct CodexTurnTests {
             "a call on the reader's own `probe` is declined without asking about Tinycast's")
         expect(
             events.contains(.toolCall(id: "call-1", origin: "probe", title: "safe_echo")),
-            "and its row keeps the name Codex gave, never the title of Tinycast's same-handle server")
+            "and its row keeps Codex's name, never the title of Tinycast's same-handle server")
     }
 
     static func aRefusedCallIsAFailedRowAndAnHonestReply() async {

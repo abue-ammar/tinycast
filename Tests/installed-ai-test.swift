@@ -211,7 +211,8 @@ struct InstalledAITests {
     /// A crash mid-turn leaves the turn's files, secrets included; the next launch removes them.
     private static func aCrashedTurnsFilesAreRemovedAtLaunch(_ fixture: Fixture) async {
         let support = fixture.root.appending(path: "relaunch", directoryHint: .isDirectory)
-        let workspace = support.appending(path: "InstalledAI/Workspace", directoryHint: .isDirectory)
+        let workspace = support.appending(
+            path: "InstalledAI/Workspace", directoryHint: .isDirectory)
         try? FileManager.default.createDirectory(at: workspace, withIntermediateDirectories: true)
         func file(_ name: String, age: TimeInterval) -> URL {
             let url = workspace.appending(path: name)
@@ -321,7 +322,7 @@ struct InstalledAITests {
         let settings = argv.firstIndex(of: "--settings").map { argv[$0 + 1] }
         expect(
             mode == "default" && settings == #"{"permissions":{"ask":["mcp__probe"]}}"#,
-            "its mode is pinned and the server has an ask rule the reader's own rules cannot outrank")
+            "its mode is pinned, and the server has an ask rule no rule of the reader's outranks")
         expect(
             argv.contains("--input-format")
                 && argv[(argv.firstIndex(of: "--input-format") ?? 0) + 1] == "stream-json",

@@ -1,11 +1,9 @@
 import Foundation
 
-/// Tinycast's servers as the Claude CLI's own MCP configuration, and the names it calls them by.
-/// The file this writes is the only place the secrets go: `ps` would show anything on argv.
+/// Tinycast's servers as Claude's own MCP configuration: a file, since argv shows in `ps`.
 enum ClaudeMCPLaunch {
     static let toolPrefix = "mcp__"
-    /// Per turn, like the Grok prompt file: a second turn must not overwrite, or delete, a live
-    /// turn's configuration out from under the process reading it.
+    /// Per turn, so a second turn never overwrites or deletes a live turn's configuration.
     static func configurationFileName(_ id: UUID = UUID()) -> String {
         "tinycast-mcp-\(id.uuidString).json"
     }

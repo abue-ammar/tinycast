@@ -1,7 +1,6 @@
 import Foundation
 
-/// A tool server a route's own client runs, for the routes where the vendor CLI is the MCP client.
-/// `AITool` is the same hand-off for the routes where Tinycast runs the loop itself.
+/// A server a CLI route's own client runs, as `AITool` is a tool for the loop Tinycast runs.
 struct AIToolServer: Equatable, Sendable {
     enum Transport: Equatable, Sendable {
         /// A local process. The values travel in the child's environment, never on its argv.

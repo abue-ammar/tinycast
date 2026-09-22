@@ -127,8 +127,7 @@ final class AIChatCoordinator {
         }
     }
 
-    /// Only chat arms a route's tools, and only for a route whose own client is the MCP client:
-    /// a CLI runs the loop itself, so Tinycast supplies servers instead of wrapping the provider.
+    /// Chat alone arms a CLI route's tools: its own client runs the loop, so it is handed servers.
     private func toolServers(scopedTo slug: String?) -> AIToolServerSession? {
         guard capabilities.tools, core.aiSettings.defaultModel?.runsItsOwnTools == true else {
             return nil

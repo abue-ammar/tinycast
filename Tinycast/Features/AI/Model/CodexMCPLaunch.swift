@@ -1,7 +1,6 @@
 import Foundation
 
-/// Tinycast's servers as `codex app-server` launch overrides, and the elicitation they answer.
-/// Every value here is process-scoped: nothing reaches `~/.codex/config.toml`.
+/// Tinycast's servers as `codex app-server` launch overrides; nothing reaches `~/.codex`.
 enum CodexMCPLaunch {
     /// Codex's name for a Tinycast server; `-c` merges into a same-named table of the reader's.
     static func serverName(for handle: String) -> String { serverPrefix + handle }
@@ -161,7 +160,7 @@ enum CodexMCPLaunch {
     }
 }
 
-/// The one server request Tinycast answers: may this MCP tool call run? Everything else is declined.
+/// The one server request Tinycast answers, whether an MCP tool call may run; all else is declined.
 struct CodexElicitation: Equatable, Sendable {
     /// What the reply says. `persist` is never sent: only Settings may change a standing decision.
     enum Action: String, Sendable {

@@ -132,8 +132,7 @@ final class CodexTurnRunner {
         }
     }
 
-    /// A call's row, and the cap that ends a turn spending them. Codex names no round of its own,
-    /// so the count is calls rather than model requests — stricter than the loop's, never looser.
+    /// A call's row, and the cap: Codex names no round, so it counts calls, which is stricter.
     private func startToolCall(_ item: [String: JSONValue]) {
         guard let id = item["id"]?.stringValue else { return }
         let name = item["server"]?.stringValue ?? ""
@@ -280,8 +279,7 @@ final class CodexTurnRunner {
         }
     }
 
-    /// What this turn may call, and who answers for it. Cleared with the turn, so a later one that
-    /// arms nothing goes back to declining every server request.
+    /// What this turn may call and who answers; cleared with it, so the next one declines again.
     private func arm(_ servers: [AIToolServer], session: AIToolServerSession?) {
         activeServers = servers
         startedTools = [:]

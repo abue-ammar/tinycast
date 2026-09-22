@@ -10,8 +10,7 @@ final class InstalledAIManager {
     @ObservationIgnored private let workspace: URL
     @ObservationIgnored private var refreshTasks: [InstalledAIKind: Task<Void, Never>] = [:]
 
-    /// An admin's MCP policy makes the Claude CLI reject both MCP flags, so the route passes
-    /// neither and says so. A harness points this at a file it owns to exercise that branch.
+    /// An admin's MCP policy makes Claude reject both MCP flags; a harness points this elsewhere.
     nonisolated static var hasManagedMCPPolicy: Bool {
         let path =
             ProcessInfo.processInfo.environment["TC_CLAUDE_MANAGED_MCP"]
@@ -30,7 +29,9 @@ final class InstalledAIManager {
     }
 
     /// A turn deletes its own files as it ends, so any older than this launch outlived a crash.
-    nonisolated private static func removeStaleTurnFiles(in workspace: URL, olderThan launch: Date) {
+    nonisolated private static func removeStaleTurnFiles(
+        in workspace: URL, olderThan launch: Date
+    ) {
         let fileManager = FileManager.default
         guard
             let files = try? fileManager.contentsOfDirectory(

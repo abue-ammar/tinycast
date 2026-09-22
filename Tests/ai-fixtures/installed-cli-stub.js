@@ -13,8 +13,7 @@ function record(name, value) {
 
 record(command + "-args.log", JSON.stringify(args));
 
-// The MCP half of the Claude route: a tool loop the CLI runs, whose consent Tinycast answers on
-// the same pipe it sends the turn on. Everything here is synchronous so the stalls are real.
+// Claude's tool loop, answered on the pipe the turn came in on; synchronous, so stalls are real.
 if (command === "claude" && args.includes("--permission-prompt-tool")) {
   claudeToolLoop();
   process.exit(0);

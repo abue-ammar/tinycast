@@ -1,8 +1,6 @@
 import Foundation
 
-/// One short-lived run of an installed command, bounded three ways: a watchdog, an output
-/// ceiling and the caller's own cancellation. Discovery uses it, and so does anything else
-/// that has to ask a CLI a question before a turn starts.
+/// A short-lived run of a command, bounded by a watchdog, an output cap and cancellation.
 enum InstalledAIProbe {
     private static let maximumOutputBytes = 2 * 1_048_576
     private static let readChunkBytes = 64 * 1_024

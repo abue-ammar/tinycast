@@ -75,8 +75,7 @@ final class MCPCoordinator {
             .map(\.aiTool)
     }
 
-    /// The same list, for a route whose own client runs the loop. Tinycast's own connections are
-    /// not consulted: the CLI starts its own copy, so a server it can reach need not be ready here.
+    /// The same list for a CLI route; it starts its own copies, so Tinycast's need not be ready.
     func toolServers(scopedTo slug: String?) async -> [AIToolServer] {
         guard isActive else { return [] }
         let secrets = MCPSecretStore()

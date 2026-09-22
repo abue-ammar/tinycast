@@ -1,12 +1,6 @@
 import Foundation
 
-/// Claude's consent channel, and the only place Tinycast speaks it.
-///
-/// `--permission-prompt-tool stdio` puts a `control_request` on stdout and takes a
-/// `control_response` on stdin. That is the Agent SDK's wire format: it is not documented for a
-/// host that is not the SDK, and a CLI release may change it. Everything about it lives here so
-/// the fallback — `--allowedTools "mcp__<handle>"`, with anything not pre-allowed denied — is one
-/// type's worth of change rather than a rewrite of the runner.
+/// Claude's consent channel: the Agent SDK's undocumented wire format, kept to this one type.
 enum ClaudeControlProtocol {
     /// One call the CLI is holding open until Tinycast answers.
     struct Request: Equatable, Sendable {
@@ -16,7 +10,7 @@ enum ClaudeControlProtocol {
         let input: JSONValue
     }
 
-    /// `nil` for every frame that is not a tool question, including subtypes Tinycast does not know.
+    /// `nil` for every frame that is not a tool question on one of Tinycast's servers.
     static func request(_ object: [String: Any]) -> Request? {
         guard object["type"] as? String == "control_request",
             let id = object["request_id"] as? String,
@@ -29,8 +23,7 @@ enum ClaudeControlProtocol {
             id: id, call: call, input: JSONValue(request["input"] ?? [String: Any]()))
     }
 
-    /// The answer. `updatedPermissions` is never sent: it would have the CLI write its own
-    /// settings, and only Tinycast's Settings may change a standing decision.
+    /// The answer; never `updatedPermissions`, which would have the CLI write its own settings.
     static func response(to request: Request, allowed: Bool, message: String) -> Data? {
         let answer: [String: Any] =
             allowed
