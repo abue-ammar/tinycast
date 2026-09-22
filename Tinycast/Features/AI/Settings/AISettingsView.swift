@@ -145,7 +145,7 @@ struct AISettingsView: View {
             Picker(selection: $settings.opensTo) {
                 ForEach(AIOpensTo.allCases) { Text($0.title).tag($0) }
             } label: {
-                SettingsRowTitle(.aiConversations, "Opens to")
+                SettingsRowTitle(.aiConversations, "Quick AI opens to")
             }
             if settings.opensTo == .recent {
                 Picker(selection: $settings.newChatAfter) {
@@ -158,7 +158,7 @@ struct AISettingsView: View {
                 ForEach(AIRetention.allCases) { Text($0.title).tag($0) }
             } label: {
                 SettingsRowTitle(.aiConversations, "Keep conversations")
-                Text("Older ones are deleted.")
+                Text("Older ones are deleted, except pinned chats.")
             }
             .onChange(of: settings.retention) { core.aiChatCoordinator.applyRetention() }
         } header: {

@@ -26,6 +26,8 @@ final class AppCore {
     let inputSourceSwitcher = InputSourceSwitcher()
     let settings: AppSettings
     @ObservationIgnored private var appearanceObservation: NSKeyValueObservation?
+    /// The last verdict `trackChatRoute` acted on; nil until it has read one.
+    @ObservationIgnored private var chatsRunTheirOwnTools: Bool?
     @ObservationIgnored private let iconStyle = IconStyleMonitor()
     let favorites = FavoritesStore()
     let visibility = VisibilityStore()
@@ -52,7 +54,7 @@ final class AppCore {
     let notesStore: NotesStore
     let extensions: ExtensionManager
     let chatHistory: ChatHistoryStore
-    let aiChat: AIChatState
+    let aiChats: AIChatSurfacesState
     let aiSettings = AISettingsStore(
         isAppleIntelligenceAvailable: { AppleIntelligenceProvider.status().isAvailable })
     let mcpSettings = MCPSettingsStore()
@@ -189,10 +191,14 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var mcpCoordinator = MCPCoordinator(
         settings: settings, store: mcpSettings, manager: mcp, core: self)
+    /// Its own window and lifecycle, like Settings; Quick AI is the palette's half of the feature.
     @ObservationIgnored private(set) lazy var aiChatCoordinator = AIChatCoordinator(
-        chat: aiChat, settings: settings, appIndex: appIndex, palette: palette,
+        chats: aiChats, settings: settings, appIndex: appIndex,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         core: self)
+    @ObservationIgnored private(set) lazy var quickAICoordinator = QuickAICoordinator(
+        chats: aiChats, settings: settings, palette: palette,
+        paletteCoordinator: paletteCoordinator, core: self)
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
@@ -215,7 +221,7 @@ final class AppCore {
         self.settings = settings
         self.chatHistory = chatHistory
         supportReminders = SupportReminderStore(settings: settings)
-        aiChat = AIChatState(history: chatHistory)
+        aiChats = AIChatSurfacesState(history: chatHistory)
         appIndex = AppIndex(ranking: launcherRanking, aliases: aliases)
         let clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
         self.clipboardManager = clipboardManager
@@ -393,6 +399,7 @@ final class AppCore {
     /// Clicking the Dock icon: raise whichever window is already open, else summon the launcher.
     func handleReopen() {
         if settingsCoordinator.focusExisting() { return }
+        if aiChatCoordinator.focusExisting() { return }
         if onboardingCoordinator.focusExisting() { return }
         if updateCoordinator.focusExisting() { return }
         if supportCoordinator.focusExisting() { return }
@@ -485,7 +492,7 @@ final class AppCore {
         textInjector.prepareForTermination()
         snippetListener.stop()
         snippetsStore.stop()
-        aiChat.cancel()
+        aiChats.reset()
         chatGPTSubscription.stop()
         mcpOAuth.stop()
         mcp.stop()
@@ -508,13 +515,6 @@ final class AppCore {
         }
         tasks.append(installedAI.ensure(enabledKinds: enabledKinds))
         return Task { for task in tasks { await task.value } }
-    }
-
-    /// `toolServers` is chat's alone; a quick action has nothing to call.
-    func aiProvider(toolServers: AIToolServerSession? = nil) throws -> any AIProvider {
-        try AIProviderFactory.make(
-            settings: aiSettings, subscription: chatGPTSubscription, installedAI: installedAI,
-            toolServers: toolServers)
     }
 
     /// Permissive guardrails: the text transformed is the reader's own, which `.default` refuses.
@@ -647,15 +647,15 @@ final class AppCore {
 
     /// A chat route that runs its own MCP client decides which servers Tinycast runs itself.
     private func trackChatRoute() {
-        withObservationTracking {
-            _ = aiSettings.defaultModel?.runsItsOwnTools
+        let runsOwnTools = withObservationTracking {
+            aiChatCoordinator.everyChatRunsItsOwnTools
         } onChange: { [weak self] in
-            Task { @MainActor in
-                guard let self else { return }
-                self.trackChatRoute()
-                self.mcpCoordinator.applyEnabled()
-            }
+            Task { @MainActor in self?.trackChatRoute() }
         }
+        // Re-read on every streaming flush, so only a changed verdict reaches the servers.
+        defer { chatsRunTheirOwnTools = runsOwnTools }
+        guard let previous = chatsRunTheirOwnTools, previous != runsOwnTools else { return }
+        mcpCoordinator.applyEnabled()
     }
 
     /// Without a Hyper key the chord means nothing, so a literal ⌃⌥⌘ combo is left as recorded.

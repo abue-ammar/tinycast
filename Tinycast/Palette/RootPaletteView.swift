@@ -89,11 +89,12 @@ struct RootPaletteView: View {
                 scrollToFollow: { scroll = ScrollIntent(kind: .follow) })
         case .ai:
             return AIScreen(
-                vm: vm, metrics: metrics, chat: core.aiChat, settings: core.aiSettings,
-                coordinator: core.aiChatCoordinator, openAttachments: toggleAIAttachments)
+                vm: vm, metrics: metrics, chat: quickAI,
+                coordinator: core.quickAICoordinator, chatCoordinator: core.aiChatCoordinator,
+                openAttachments: toggleAIAttachments)
         case .aiHistory:
             return ChatHistoryScreen(
-                history: core.chatHistory, chat: core.aiChat, coordinator: core.aiChatCoordinator,
+                history: core.chatHistory, chat: quickAI, coordinator: core.quickAICoordinator,
                 vm: vm, openActions: openActions, metrics: metrics)
         case .dictionary:
             return DictionaryScreen(session: dictionary, core: core, vm: vm)
@@ -235,17 +236,18 @@ struct RootPaletteView: View {
             return headerMenu(emojiCategoryContent, width: metrics.size.emojiCategoryMenuWidth)
         case .aiModel:
             return headerMenu(
-                AIModelMenu.models(coordinator: core.aiChatCoordinator),
+                AIModelMenu.models(coordinator: core.aiChatCoordinator, chat: quickAI),
                 width: metrics.size.menuWidth)
         case .aiReasoning:
             return headerMenu(
                 AIModelMenu.reasoning(
-                    coordinator: core.aiChatCoordinator, settings: core.aiSettings),
+                    coordinator: core.aiChatCoordinator, chat: quickAI),
                 width: metrics.size.menuWidth)
         case .aiAttachments:
-            guard !core.aiChat.pendingAttachments.isEmpty else { return nil }
+            guard !quickAI.pendingAttachments.isEmpty else { return nil }
             return headerMenu(
-                AIModelMenu.attachments(chat: core.aiChat, coordinator: core.aiChatCoordinator),
+                AIModelMenu.attachments(
+                    coordinator: core.aiChatCoordinator, chat: quickAI),
                 width: metrics.size.menuWidth)
         case .argumentOptions:
             guard let field = argumentOptionsField,
@@ -651,7 +653,7 @@ struct RootPaletteView: View {
             }
             if tabOpensChat {
                 headerGutter(width: metrics.spacing.md)
-                aiChatTabHint
+                quickAITabHint
             }
             // Keyed off the mode, which says which screen is up; the field just flexes narrower.
             if !isCollapsed, vm.mode == .clipboard {
@@ -679,14 +681,14 @@ struct RootPaletteView: View {
             if !isCollapsed, vm.mode == .ai {
                 headerGutter(width: metrics.spacing.md)
                 AIModelButton(
-                    title: core.aiChatCoordinator.selectedModelTitle,
-                    icon: core.aiChatCoordinator.selectedModelIcon,
+                    title: core.aiChatCoordinator.selectedModelTitle(for: quickAI),
+                    icon: core.aiChatCoordinator.selectedModelIcon(for: quickAI),
                     isOpen: openMenu == .aiModel,
                     action: toggleAIModel)
-                if !core.aiChatCoordinator.reasoningEfforts.isEmpty {
+                if !core.aiChatCoordinator.reasoningEfforts(for: quickAI).isEmpty {
                     headerGutter(width: metrics.spacing.md)
                     AIReasoningButton(
-                        title: core.aiChatCoordinator.selectedReasoningTitle,
+                        title: core.aiChatCoordinator.selectedReasoningTitle(for: quickAI),
                         isOpen: openMenu == .aiReasoning,
                         action: toggleAIReasoning)
                 }
@@ -722,7 +724,7 @@ struct RootPaletteView: View {
         .frame(maxWidth: .infinity)
         // Set after the show, so the field it names is focused rather than the search field.
         .onChange(of: vm.pendingArgumentEntryID) { focusPendingArgument() }
-        .onChange(of: core.aiChat.pendingAttachments.map(\.id)) { refreshAttachmentsMenu() }
+        .onChange(of: quickAI.pendingAttachments.map(\.id)) { refreshAttachmentsMenu() }
     }
 
     /// Mode-gated ahead of the cast, which would otherwise cost every other mode a list build.
@@ -739,16 +741,16 @@ struct RootPaletteView: View {
     }
 
     /// Nothing else advertises Tab, so the launcher says where it goes.
-    private var aiChatTabHint: some View {
+    private var quickAITabHint: some View {
         BarButton(chrome: .rounded, action: cycleMode) {
             HStack(spacing: metrics.spacing.sm) {
-                Text("AI Chat")
+                Text("Quick AI")
                     .font(metrics.typography.bar)
                     .foregroundStyle(Theme.Colors.textSecondary)
                 KeyCapChip(text: "⇥", style: .outline)
             }
         }
-        .help("Ask AI Chat what you typed  ⇥")
+        .help("Ask Quick AI what you typed  ⇥")
     }
 
     /// Resolved through `PaletteTabAction`, so the hint cannot promise the wrong destination.
@@ -1004,8 +1006,10 @@ struct RootPaletteView: View {
         }
     }
 
+    private var quickAI: AIChatState { core.aiChats.quickAI }
+
     private var aiModelHighlight: Int {
-        AIModelMenu.modelHighlight(coordinator: core.aiChatCoordinator, settings: core.aiSettings)
+        AIModelMenu.modelHighlight(coordinator: core.aiChatCoordinator, chat: quickAI)
     }
 
     private func toggleAIAttachments() {
@@ -1024,7 +1028,7 @@ struct RootPaletteView: View {
         open(
             .aiReasoning,
             highlighting: AIModelMenu.reasoningHighlight(
-                coordinator: core.aiChatCoordinator, settings: core.aiSettings))
+                coordinator: core.aiChatCoordinator, chat: quickAI))
     }
 
     /// Every header menu states its own width, so resizing one never moves another.
@@ -1287,7 +1291,7 @@ struct RootPaletteView: View {
             vm.resetNavigation()
         case .carryQuery(let mode): vm.pushCarryingQuery(mode: mode)
         case .freshScreen(let mode): vm.push(mode: mode)
-        case .ask: core.aiChatCoordinator.ask(vm.query)
+        case .ask: core.quickAICoordinator.ask(vm.query)
         }
     }
 

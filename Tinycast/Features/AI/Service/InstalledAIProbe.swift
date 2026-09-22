@@ -32,9 +32,11 @@ enum InstalledAIProbe {
         }
     }
 
+    /// `input` is written whole and the pipe closed, for a CLI that answers one request and exits.
     nonisolated static func run(
         executable: URL, arguments: [String], workspace: URL,
-        environment: [String: String]? = nil
+        environment: [String: String]? = nil, input: Data? = nil,
+        timeout: Duration = .seconds(10)
     ) async -> Result {
         let handle = ProcessHandle()
         return await withTaskCancellationHandler(
@@ -49,13 +51,15 @@ enum InstalledAIProbe {
                     process.arguments = arguments
                     process.currentDirectoryURL = workspace
                     if let environment { process.environment = environment }
-                    process.standardInput = FileHandle.nullDevice
+                    let stdin = input.map { _ in Pipe() }
+                    process.standardInput = stdin ?? FileHandle.nullDevice
                     process.standardOutput = output
                     process.standardError = FileHandle.nullDevice
                     do { try process.run() } catch { return Result(status: -1, output: "") }
                     handle.set(process)
+                    if let stdin, let input { Self.write(input, to: stdin, closing: true) }
                     let watchdog = Task {
-                        try? await Task.sleep(for: .seconds(10))
+                        try? await Task.sleep(for: timeout)
                         if process.isRunning { process.terminate() }
                     }
                     var data = Data()
@@ -79,6 +83,52 @@ enum InstalledAIProbe {
             onCancel: {
                 handle.cancel()
             })
+    }
+
+    /// Holds stdin open until a line answers, since the CLI exits once its input closes.
+    nonisolated static func request(
+        executable: URL, arguments: [String], workspace: URL, input: Data,
+        until answered: @escaping @Sendable (String) -> Bool, timeout: Duration = .seconds(30)
+    ) async -> String {
+        await Task.detached {
+            try? FileManager.default.createDirectory(
+                at: workspace, withIntermediateDirectories: true)
+            let process = Process()
+            let stdin = Pipe()
+            let output = Pipe()
+            process.executableURL = executable
+            process.arguments = arguments
+            process.currentDirectoryURL = workspace
+            process.standardInput = stdin
+            process.standardOutput = output
+            process.standardError = FileHandle.nullDevice
+            do { try process.run() } catch { return "" }
+            Self.write(input, to: stdin, closing: false)
+            let watchdog = Task {
+                try? await Task.sleep(for: timeout)
+                if process.isRunning { process.terminate() }
+            }
+            var data = Data()
+            // Not `read(upToCount:)`, which waits for a full chunk or EOF and so for the watchdog.
+            while data.count < Self.maximumOutputBytes {
+                let chunk = output.fileHandleForReading.availableData
+                guard !chunk.isEmpty else { break }
+                data.append(chunk)
+                if answered(String(bytes: data, encoding: .utf8) ?? "") { break }
+            }
+            try? stdin.fileHandleForWriting.close()
+            if process.isRunning { process.terminate() }
+            process.waitUntilExit()
+            watchdog.cancel()
+            return String(bytes: data, encoding: .utf8) ?? ""
+        }.value
+    }
+
+    /// A child that exits before reading must fail the write, not SIGPIPE Tinycast.
+    nonisolated private static func write(_ data: Data, to pipe: Pipe, closing: Bool) {
+        _ = fcntl(pipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
+        try? pipe.fileHandleForWriting.write(contentsOf: data)
+        if closing { try? pipe.fileHandleForWriting.close() }
     }
 
     nonisolated static func version(in output: String) -> String? {

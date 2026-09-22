@@ -1,39 +1,47 @@
 import AppKit
-import Foundation
+import SwiftUI
 
-/// Owns chat actions; views render `AIChatState` and route every mutation through here.
+/// Chat actions for both surfaces, plus the AI Chat window's own; views route every mutation here.
 @MainActor
+@Observable
 final class AIChatCoordinator {
-    private let chat: AIChatState
+    let chats: AIChatSurfacesState
     private let settings: AppSettings
     private let appIndex: AppIndex
-    private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
     private let settingsCoordinator: SettingsCoordinator
     private unowned let core: AppCore
+    private let window: AppWindowController
+    /// Chats with a title request in flight, so a quick second reply never asks twice.
+    @ObservationIgnored private var naming: Set<UUID> = []
 
     init(
-        chat: AIChatState, settings: AppSettings, appIndex: AppIndex, palette: PaletteState,
+        chats: AIChatSurfacesState, settings: AppSettings, appIndex: AppIndex,
         paletteCoordinator: PaletteCoordinator, settingsCoordinator: SettingsCoordinator,
         core: AppCore
     ) {
-        self.chat = chat
+        self.chats = chats
         self.settings = settings
         self.appIndex = appIndex
-        self.palette = palette
         self.paletteCoordinator = paletteCoordinator
         self.settingsCoordinator = settingsCoordinator
         self.core = core
+        window = AppWindowController(
+            title: "AI Chat", contentSize: Theme.Size.aiChatWindow,
+            minimumSize: Theme.Size.aiChatWindowMinimum, resizable: true,
+            autosaveName: "AIChatWindow", activation: core.activationPolicy)
+        chats.onReplyFinished = { [weak self] chat in self?.nameIfNeeded(chat) }
     }
 
     func applyEnabled() {
-        appIndex.setCommandsVisible([.aiChat], settings.aiEnabled)
+        appIndex.setCommandsVisible([.aiChat, .quickAI], settings.aiEnabled)
         guard settings.aiEnabled else {
             // Before the handle closes: cancelling an open reply saves the conversation it ends.
-            chat.startNewChat()
+            chats.reset()
+            window.close()
             core.applyInstalledAILifecycle()
             core.chatHistory.close()
-            if palette.mode == .ai || palette.mode == .aiHistory { palette.prepare(mode: .launcher) }
+            core.quickAICoordinator.leave()
             return
         }
         core.applyInstalledAILifecycle()
@@ -52,100 +60,242 @@ final class AIChatCoordinator {
         core.chatHistory.prune(before: cutoff)
     }
 
-    func showChat() {
+    // MARK: - The window
+
+    /// Reopens on whatever it last showed: the conversation is `AppCore`'s, not the window's.
+    func showWindow() {
         guard settings.aiEnabled else { return }
-        // Not `togglePalette`: the open policy decides a chat only on the way in.
-        guard !paletteCoordinator.isShowing(.ai) else {
-            paletteCoordinator.hidePalette()
+        prepareForChat()
+        guard !window.focus() else { return }
+        // One find per window: the chrome's search field writes it, the transcript reads it.
+        let find = ChatFindState()
+        window.show(chrome: AIChatWindowChrome(coordinator: self, chats: chats, find: find)) {
+            AIChatSplitViewController(
+                sidebar: AIChatSidebarView().environment(self),
+                detail: AIChatDetailView().environment(self).environment(find))
+        }
+    }
+
+    /// The window's views read these through the coordinator, never through `AppCore`.
+    var history: ChatHistoryStore { core.chatHistory }
+    var aiSettings: AISettingsStore { core.aiSettings }
+
+    func focusExisting() -> Bool {
+        window.focus()
+    }
+
+    /// ⌘Q's target while the window is key; false leaves the chord to Settings.
+    func closeWindowIfKey() -> Bool {
+        guard NSApp.keyWindow?.identifier == AIChatWindowChrome.windowIdentifier else {
+            return false
+        }
+        window.close()
+        return true
+    }
+
+    func newChat() {
+        chats.newWindowChat()
+    }
+
+    func openChat(id: UUID) {
+        guard chats.openInWindow(id: id) else {
+            core.showMessage("That chat could not be opened.", tone: .danger)
             return
         }
-        applyOpenPolicy()
-        paletteCoordinator.showPalette(mode: .ai)
     }
 
-    /// ⇥ and the AI fallback: a fresh chat that carries the question, already asked.
-    func ask(_ prompt: String) {
-        guard settings.aiEnabled else { return }
-        // No question is no reason to skip the open policy: this is a summon, not an ask.
-        guard !prompt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            showChat()
-            return
+    /// Quick AI's ⌘J: the conversation, its staged files and the half-typed line all move over.
+    func continueInWindow(draft: String) {
+        chats.continueQuickAIInWindow(draft: draft)
+        showWindow()
+    }
+
+    /// A chat with no message yet is unsaved, so it has nothing to pin, copy or delete.
+    func isSaved(_ chat: AIChatState) -> Bool {
+        core.chatHistory.conversation(id: chat.session.id) != nil
+    }
+
+    func isPinned(_ chat: AIChatState) -> Bool {
+        core.chatHistory.conversation(id: chat.session.id)?.isPinned == true
+    }
+
+    func togglePin(id: UUID) {
+        guard let conversation = core.chatHistory.conversation(id: id) else { return }
+        core.chatHistory.setPinned(!conversation.isPinned, id: id)
+    }
+
+    func rename(id: UUID, to title: String) {
+        core.chatHistory.rename(id: id, to: title)
+    }
+
+    /// The title the window and the sidebar show, a rename included.
+    func title(of chat: AIChatState) -> String {
+        core.chatHistory.conversation(id: chat.session.id)?.displayTitle ?? chat.session.title
+    }
+
+    func copyChat(id: UUID) {
+        let session = chats.holder(of: id)?.session ?? core.chatHistory.session(id: id)
+        guard let session else { return }
+        let title = core.chatHistory.conversation(id: id)?.displayTitle ?? session.title
+        Paster.copyPlainText(session.markdownTranscript(title: title))
+        core.showMessage("Chat copied")
+    }
+
+    func deleteChat(id: UUID) async {
+        let title = core.chatHistory.conversation(id: id)?.displayTitle ?? "This chat"
+        guard
+            await core.confirm(
+                title: "Delete chat?", message: "“\(title)” will be removed. This can't be undone.",
+                symbol: "trash", confirmTitle: "Delete")
+        else { return }
+        chats.delete(id: id)
+    }
+
+    func deleteAllChats() async {
+        guard
+            await core.confirm(
+                title: "Delete all chats?",
+                message: "Every saved conversation except pinned ones will be removed. "
+                    + "This can't be undone.",
+                symbol: "trash", confirmTitle: "Delete All")
+        else { return }
+        chats.deleteAll()
+    }
+
+    // MARK: - Titles
+
+    /// Asked on the first send, again after an answer if that failed, and never over a rename.
+    private func nameIfNeeded(_ chat: AIChatState) {
+        let session = chat.session
+        guard let conversation = core.chatHistory.conversation(id: session.id),
+            conversation.customTitle == nil, conversation.generatedTitle == nil,
+            let description = ChatTitle.description(of: session),
+            naming.insert(session.id).inserted
+        else { return }
+        let selection = model(for: chat)
+        let servers = titleServers(for: chat, on: selection)
+        Task {
+            defer { naming.remove(session.id) }
+            guard
+                let title = await self.title(
+                    describing: description, with: selection, servers: servers)
+            else { return }
+            core.chatHistory.setGeneratedTitle(title, id: session.id)
         }
-        chat.startNewChat()
-        paletteCoordinator.showPalette(mode: .ai)
-        send(prompt)
     }
 
-    /// A file pasted at the launcher belongs in chat, never in a search for its name.
-    func attachPastedFileFromLauncher(files: [URL]) -> Bool {
-        guard settings.aiEnabled, !files.isEmpty else { return false }
-        showChat()
-        return attachPastedFile(files: files)
-    }
-
-    /// The one place deciding whether summoning resumes; Pop to Root only forgets the screen.
-    private func applyOpenPolicy() {
-        // A reply still arriving was asked for; resetting would discard the answer.
-        guard !chat.isStreaming else { return }
-        let recent = core.chatHistory.conversations.first
-        let hasTranscript = !chat.session.messages.isEmpty
-        // Staged files are unsent work: neither branch may throw them away on a plain re-summon.
-        let hasStaging = !chat.pendingAttachments.isEmpty
-        // From history when nothing is resident, so the verdict still holds after a relaunch.
-        let lastActiveAt = hasTranscript ? chat.session.updatedAt : recent?.updatedAt
-        let decision = AIConversationOpenPolicy.decide(
-            opensTo: core.aiSettings.opensTo, newAfter: core.aiSettings.newChatAfter,
-            lastActiveAt: lastActiveAt, now: Date())
-        switch decision {
-        case .resume:
-            guard !hasTranscript, !hasStaging, let recent else { return }
-            chat.open(id: recent.id)
-        case .startNew:
-            // An empty chat is already new; resetting it would only drop what is staged in it.
-            guard hasTranscript else { return }
-            chat.startNewChat()
+    /// Codex's list is fixed at launch, so a title borrows the reply's servers and may call none.
+    private func titleServers(
+        for chat: AIChatState, on selection: AIModelSelection?
+    ) -> AIToolServerSession? {
+        guard case .codex? = selection else { return nil }
+        let scope = chat.session.messages.first { $0.role == .user }?.toolScope
+        return toolServers(for: chat, scopedTo: scope).map { borrowed in
+            AIToolServerSession(rounds: 1, servers: borrowed.servers) { _ in false }
         }
     }
+
+    /// Claude's CLI names sessions itself; every other route is asked once, in a side request.
+    private func title(
+        describing description: String, with selection: AIModelSelection?,
+        servers: AIToolServerSession?
+    ) async -> String? {
+        if case .claude? = selection, let title = await core.installedAI.claudeTitle(for: description) {
+            return title
+        }
+        guard let selection,
+            let provider = try? AIProviderFactory.make(
+                selection: selection, settings: core.aiSettings,
+                subscription: core.chatGPTSubscription, installedAI: core.installedAI,
+                toolServers: servers)
+        else { return nil }
+        let request = AIRequest(
+            instructions: ChatTitle.instructions,
+            messages: [AIMessage(role: .user, text: description)])
+        var text = ""
+        do {
+            for try await event in provider.stream(request) {
+                if case .text(let delta) = event { text += delta }
+                if case .finished = event { break }
+            }
+        } catch {
+            return nil
+        }
+        return ChatTitle.sanitize(text)
+    }
+
+    // MARK: - Either surface
 
     @discardableResult
-    func send(_ input: String) -> Bool {
+    func send(_ input: String, in chat: AIChatState) -> Bool {
         guard settings.aiEnabled else { return false }
         do {
-            let webSearch = core.aiSettings.webSearchEnabled && capabilities.webSearch
             let address = MCPComposerAddress.parse(input, slugs: core.mcpCoordinator.slugs)
-            let provider = try core.aiProvider(toolServers: toolServers(scopedTo: address.slug))
-            return chat.send(
-                address.rest, using: toolAware(provider, scopedTo: address.slug),
-                webSearch: webSearch,
-                instructions: AIInstructions.compose(
-                    userPrompt: core.aiSettings.systemPrompt,
-                    isEnabled: core.aiSettings.systemPromptEnabled),
-                contextBudget: contextBudget)
+            let sent = chat.send(
+                address.rest, using: try provider(for: chat, scopedTo: address.slug),
+                model: model(for: chat), webSearch: webSearch(for: chat),
+                instructions: instructions, contextBudget: contextBudget(for: chat),
+                toolScope: address.slug)
+            // Named while the answer streams, so the sidebar has a title before the reply ends.
+            if sent { nameIfNeeded(chat) }
+            return sent
         } catch {
             chat.report(error.localizedDescription)
             return false
         }
     }
 
-    /// Chat alone arms a CLI route's tools: its own client runs the loop, so it is handed servers.
-    private func toolServers(scopedTo slug: String?) -> AIToolServerSession? {
-        guard capabilities.tools, core.aiSettings.defaultModel?.runsItsOwnTools == true else {
-            return nil
+    /// The same question, asked of whichever model is selected now, of the server it named.
+    func regenerate(in chat: AIChatState) {
+        guard settings.aiEnabled else { return }
+        let scope = chat.session.messages.last { $0.role == .user }?.toolScope
+        do {
+            chat.regenerate(
+                using: try provider(for: chat, scopedTo: scope),
+                model: model(for: chat), webSearch: webSearch(for: chat),
+                instructions: instructions, contextBudget: contextBudget(for: chat))
+        } catch {
+            chat.report(error.localizedDescription)
         }
+    }
+
+    private func webSearch(for chat: AIChatState) -> Bool {
+        core.aiSettings.webSearchEnabled && capabilities(for: chat).webSearch
+    }
+
+    private var instructions: String? {
+        AIInstructions.compose(
+            userPrompt: core.aiSettings.systemPrompt,
+            isEnabled: core.aiSettings.systemPromptEnabled)
+    }
+
+    /// A turn's route and its tools: a CLI with its own client is handed servers, others the loop.
+    private func provider(for chat: AIChatState, scopedTo slug: String?) throws -> any AIProvider {
+        guard model(for: chat)?.runsItsOwnTools == true else {
+            return toolAware(try provider(for: chat), scopedTo: slug, in: chat)
+        }
+        return try provider(for: chat, toolServers: toolServers(for: chat, scopedTo: slug))
+    }
+
+    /// The same narrowing as `tools(for:scopedTo:)`, for a client that starts its own servers.
+    private func toolServers(for chat: AIChatState, scopedTo slug: String?) -> AIToolServerSession? {
+        guard capabilities(for: chat).tools, chat.toolScope.isEnabled else { return nil }
+        let excluded = chat.toolScope.excluded
         let chatID = chat.session.id
         let mcp = core.mcpCoordinator
         return AIToolServerSession(rounds: core.aiSettings.toolRounds.limit) {
-            await mcp.toolServers(scopedTo: slug)
+            await mcp.toolServers(scopedTo: slug).filter { !excluded.contains($0.handle) }
         } consent: { call in
             await mcp.permit(call, in: chatID)
         }
     }
 
     /// Only chat wraps a route in the tool loop; a text rewrite has nothing to call.
-    private func toolAware(_ provider: any AIProvider, scopedTo slug: String?) -> any AIProvider {
-        guard core.aiSettings.defaultModel?.runsItsOwnTools != true else { return provider }
-        let tools = core.mcpCoordinator.tools(scopedTo: slug)
-        guard capabilities.tools, !tools.isEmpty else { return provider }
+    private func toolAware(
+        _ provider: any AIProvider, scopedTo slug: String?, in chat: AIChatState
+    ) -> any AIProvider {
+        let tools = tools(for: chat, scopedTo: slug)
+        guard capabilities(for: chat).tools, !tools.isEmpty else { return provider }
         let chatID = chat.session.id
         return AIToolLoopProvider(
             base: provider, tools: tools, maxRounds: core.aiSettings.toolRounds.limit
@@ -154,55 +304,49 @@ final class AIChatCoordinator {
         }
     }
 
+    /// `@server` narrows a turn further, but never past what the chat's tools menu switched off.
+    private func tools(for chat: AIChatState, scopedTo slug: String?) -> [AITool] {
+        guard chat.toolScope.isEnabled else { return [] }
+        let excluded = chat.toolScope.excluded
+        return core.mcpCoordinator.tools(scopedTo: slug).filter { tool in
+            guard let route = MCPToolName.parse(tool.name) else { return true }
+            return !excluded.contains(route.slug)
+        }
+    }
+
+    /// The servers a chat's tools menu offers; empty when MCP is off or nothing is set up.
+    var mcpServers: [MCPServer] { core.mcpCoordinator.servers }
+
+    func setToolsEnabled(_ enabled: Bool, in chat: AIChatState) {
+        chat.toolScope.isEnabled = enabled
+    }
+
+    func toggleToolServer(_ slug: String, in chat: AIChatState) {
+        chat.toolScope.toggle(slug)
+    }
+
+    func showMCPSettings() {
+        settingsCoordinator.showSettings(tab: .ai)
+    }
+
     /// The server a draft is addressed to, so the composer can show it as a chip while typing.
     func addressedServer(in draft: String) -> MCPServer? {
         MCPComposerAddress.parse(draft, slugs: core.mcpCoordinator.slugs).slug
             .flatMap { core.mcpCoordinator.server(slug: $0) }
     }
 
-    func startNewChat() {
-        chat.startNewChat()
-        // A fresh conversation, not a fresh root: whatever opened chat is still behind it.
-        palette.replace(mode: .ai)
-    }
-
-    func showHistory() {
-        palette.push(mode: .aiHistory)
-    }
-
-    func openChat(id: UUID) {
-        guard chat.open(id: id) else { return }
-        // History is left behind rather than stacked under, so one back step leaves chat for good.
-        _ = palette.pop()
-        palette.replace(mode: .ai)
-    }
-
-    func deleteChat(id: UUID) {
-        chat.delete(id: id)
-    }
-
-    func deleteAllChats() async {
-        guard
-            await core.confirm(
-                title: "Delete all chats?",
-                message: "Every saved conversation will be removed. This can't be undone.",
-                symbol: PaletteMode.aiHistory.systemImage, confirmTitle: "Delete All")
-        else { return }
-        chat.deleteAll()
-    }
-
-    func stopResponse() {
+    func stopResponse(in chat: AIChatState) {
         chat.cancel()
     }
 
-    func copyLastResponse() {
+    func copyLastResponse(in chat: AIChatState) {
         guard let text = chat.lastAssistantText else { return }
         Paster.copyPlainText(text)
     }
 
-    /// What the selected model can take; the footer offers only what applies.
-    var capabilities: AIModelCapabilities {
-        switch core.aiSettings.defaultModel {
+    /// What the chat's model can take; the composer offers only what applies.
+    func capabilities(for chat: AIChatState) -> AIModelCapabilities {
+        switch model(for: chat) {
         case .appleIntelligence?: return .appleIntelligence
         case .codex?: return .codex
         case .claude?: return .claudeCommand
@@ -216,14 +360,36 @@ final class AIChatCoordinator {
         }
     }
 
-    /// How much history the selected route can hold; the on-device window is far smaller.
-    private var contextBudget: Int {
-        core.aiSettings.defaultModel?.isOnDevice == true
+    /// How much history the chat's route can hold; the on-device window is far smaller.
+    func contextBudget(for chat: AIChatState) -> Int {
+        model(for: chat)?.isOnDevice == true
             ? AppleIntelligence.contextBudget : ChatSession.defaultTextBudget
     }
 
+    /// The context card's facts; the gauge redraws per flush, so it skips the card's model title.
+    func contextReport(for chat: AIChatState, detailed: Bool = true) -> ChatContextReport {
+        let session = chat.session
+        let budget = contextBudget(for: chat)
+        let can = capabilities(for: chat)
+        let scope = chat.toolScope
+        return ChatContextReport(
+            modelTitle: detailed ? selectedModelTitle(for: chat) : "",
+            historyBytes: session.historyBytes, budget: budget,
+            sentMessages: session.sentMessageCount(textBudget: budget),
+            totalMessages: session.historyMessages.count,
+            stagedFiles: chat.pendingAttachments.count,
+            stagedBytes: chat.pendingAttachments.reduce(0) { $0 + $1.payload.byteCount },
+            usage: chat.usage,
+            systemPrompt: core.aiSettings.systemPromptEnabled,
+            webSearch: core.aiSettings.webSearchEnabled && can.webSearch,
+            toolServers: can.tools && scope.isEnabled
+                ? mcpServers.count { scope.allows($0.slug) } : 0)
+    }
+
+    // MARK: - Attachments
+
     /// ⌘V stages a file, read off-main; false hands the chord back to the field editor.
-    func attachPastedFile(files: [URL]) -> Bool {
+    func attachPastedFile(files: [URL], to chat: AIChatState) -> Bool {
         let pasteboard = NSPasteboard.general
         // A copied text selection often carries a TIFF too; only a board with no string is a picture.
         let pasted =
@@ -231,21 +397,53 @@ final class AIChatCoordinator {
             ? pasteboard.availableType(from: [.png, .tiff]).flatMap { pasteboard.data(forType: $0) }
             : nil
         guard !files.isEmpty || pasted != nil else { return false }
-        if let refusal = unattachable(files) {
+        if let refusal = unattachable(files, in: chat) {
             core.showMessage(refusal.message, tone: .neutral)
             return true
         }
-        if pasted != nil, !capabilities.images {
+        if pasted != nil, !capabilities(for: chat).images {
             core.showMessage(ChatAttachmentRefusal.imagesUnsupported.message, tone: .neutral)
             return true
         }
-        stage(files: files, pasted: pasted)
+        stage(files: files, pasted: pasted, into: chat)
         return true
     }
 
+    /// A drop or the paperclip: the same refusals as a paste, since the route is what decides.
+    func attach(files: [URL], to chat: AIChatState) {
+        let files = files.filter(\.isFileURL)
+        guard !files.isEmpty else { return }
+        if let refusal = unattachable(files, in: chat) {
+            core.showMessage(refusal.message, tone: .neutral)
+            return
+        }
+        stage(files: files, pasted: nil, into: chat)
+    }
+
+    /// An accessory app must activate first, or the panel opens behind the frontmost app.
+    func chooseFiles(for chat: AIChatState) {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = true
+        panel.prompt = "Attach"
+        panel.message = "Choose images, PDFs or text files to send with your next message."
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK else { return }
+        attach(files: panel.urls, to: chat)
+    }
+
+    func clearAttachments(in chat: AIChatState) {
+        chat.clearAttachments()
+    }
+
+    func removeAttachment(_ id: UUID, in chat: AIChatState) {
+        chat.removeAttachment(id)
+    }
+
     /// The first refusal the current route forces, so a paste explains itself rather than dropping.
-    private func unattachable(_ files: [URL]) -> ChatAttachmentRefusal? {
-        let can = capabilities
+    private func unattachable(_ files: [URL], in chat: AIChatState) -> ChatAttachmentRefusal? {
+        let can = capabilities(for: chat)
         for file in files {
             guard let kind = AIAttachmentPolicy.kind(forFileName: file.lastPathComponent) else {
                 return .unsupported(file.pathExtension.lowercased())
@@ -260,21 +458,16 @@ final class AIChatCoordinator {
     }
 
     /// Files first, raw bytes as fallback; the chord is consumed, never pasting a path.
-    private func stage(files: [URL], pasted: Data?) {
+    private func stage(files: [URL], pasted: Data?, into chat: AIChatState) {
         let generation = chat.stagingGeneration
-        Task { [weak self] in
-            let read = await Task.detached(priority: .userInitiated) { () -> [Read] in
-                if !files.isEmpty { return files.map(Self.read) }
-                guard let pasted, let png = Self.boundedPNG(pasted) else { return [.failed(.size)] }
-                return [
-                    .staged(
-                        Staged(
-                            payload: .image(AIImage(data: png, mimeType: "image/png")),
-                            name: "Image", preview: Self.preview(png)))
-                ]
+        Task { [weak self, weak chat] in
+            let read = await Task.detached(priority: .userInitiated) {
+                () -> [ChatAttachmentReader.Outcome] in
+                if !files.isEmpty { return files.map(ChatAttachmentReader.read) }
+                return pasted.map { [ChatAttachmentReader.image($0)] } ?? []
             }.value
-            guard let self else { return }
-            guard generation == self.chat.stagingGeneration else {
+            guard let self, let chat else { return }
+            guard generation == chat.stagingGeneration else {
                 core.showMessage(
                     "That file was still loading and did not make it into the chat.",
                     tone: .neutral)
@@ -298,117 +491,7 @@ final class AIChatCoordinator {
         }
     }
 
-    /// Carries what a staged file becomes across the detached read.
-    private struct Staged: Sendable {
-        let payload: ChatAttachment.Payload
-        let name: String
-        let preview: Data?
-    }
-
-    /// A refusal rather than a nil, so one bad file in a paste is named instead of vanishing.
-    private enum Read: Sendable {
-        case staged(Staged)
-        case failed(ChatAttachmentRefusal)
-    }
-
-    /// Sized before it is read, so a four-gigabyte CSV can never be slurped into memory.
-    nonisolated private static func read(_ file: URL) -> Read {
-        let name = file.lastPathComponent
-        guard let kind = AIAttachmentPolicy.kind(forFileName: name) else {
-            return .failed(.unsupported(file.pathExtension.lowercased()))
-        }
-        let size = (try? file.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-        let ceiling =
-            kind == .text ? AIAttachmentBudget.maxInlinedTextBytes : AIAttachmentBudget.maxBytes
-        guard size <= ceiling else { return .failed(kind == .text ? .textTooLong : .size) }
-        guard let bytes = try? Data(contentsOf: file) else { return .failed(.unreadable) }
-        let mimeType = AIAttachmentPolicy.mimeType(forFileName: name)
-        switch kind {
-        case .image:
-            guard let png = boundedPNG(bytes) else { return .failed(.unreadable) }
-            return .staged(
-                Staged(
-                    payload: .image(AIImage(data: png, mimeType: "image/png")), name: name,
-                    preview: preview(png)))
-        case .pdf:
-            return .staged(
-                Staged(
-                    payload: .document(AIDocument(data: bytes, mimeType: mimeType, name: name)),
-                    name: name, preview: nil))
-        case .text:
-            // Re-encoded from the decoded string, so undecodable bytes refuse rather than mojibake.
-            guard let decoded = String(data: bytes, encoding: .utf8) else {
-                return .failed(.undecodable)
-            }
-            return .staged(
-                Staged(
-                    payload: .document(
-                        AIDocument(data: Data(decoded.utf8), mimeType: mimeType, name: name)),
-                    name: name, preview: nil))
-        }
-    }
-
-    /// The pill's thumbnail, encoded once here rather than decoded per keystroke in the header.
-    nonisolated private static func preview(_ png: Data) -> Data? {
-        guard let source = NSBitmapImageRep(data: png) else { return nil }
-        let edge: CGFloat = 40
-        let scale = min(1, edge / max(CGFloat(source.pixelsWide), CGFloat(source.pixelsHigh)))
-        let size = NSSize(
-            width: max(1, (CGFloat(source.pixelsWide) * scale).rounded()),
-            height: max(1, (CGFloat(source.pixelsHigh) * scale).rounded()))
-        guard
-            let scaled = NSBitmapImageRep(
-                bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height),
-                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-                colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
-            let context = NSGraphicsContext(bitmapImageRep: scaled)
-        else { return nil }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        context.imageInterpolation = .high
-        source.draw(in: NSRect(origin: .zero, size: size))
-        NSGraphicsContext.restoreGraphicsState()
-        return scaled.representation(using: .png, properties: [:])
-    }
-
-    /// Backspace on an empty composer takes the last staged image before it backs out of chat.
-    func removeLastAttachment() -> Bool {
-        chat.removeLastAttachment()
-    }
-
-    func clearAttachments() {
-        chat.clearAttachments()
-    }
-
-    func removeAttachment(_ id: UUID) {
-        chat.removeAttachment(id)
-    }
-
-    nonisolated private static let maxImageEdge: CGFloat = 1_568
-
-    nonisolated private static func boundedPNG(_ data: Data) -> Data? {
-        guard let source = NSBitmapImageRep(data: data) else { return nil }
-        let width = CGFloat(source.pixelsWide)
-        let height = CGFloat(source.pixelsHigh)
-        let scale = min(1, maxImageEdge / max(width, height))
-        guard scale < 1 else {
-            return source.representation(using: .png, properties: [:])
-        }
-        let size = NSSize(width: (width * scale).rounded(), height: (height * scale).rounded())
-        guard
-            let scaled = NSBitmapImageRep(
-                bitmapDataPlanes: nil, pixelsWide: Int(size.width), pixelsHigh: Int(size.height),
-                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-                colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
-            let context = NSGraphicsContext(bitmapImageRep: scaled)
-        else { return nil }
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = context
-        context.imageInterpolation = .high
-        source.draw(in: NSRect(origin: .zero, size: size))
-        NSGraphicsContext.restoreGraphicsState()
-        return scaled.representation(using: .png, properties: [:])
-    }
+    // MARK: - Models
 
     var modelOptions: [AIModelOption] {
         modelGroups.flatMap(\.options)
@@ -430,10 +513,47 @@ final class AIChatCoordinator {
             installedAI: core.installedAI)
     }
 
+    /// The chat's own model while it is still reachable; otherwise the default a new chat takes.
+    func model(for chat: AIChatState) -> AIModelSelection? {
+        if let own = chat.session.model, isReachable(own) { return own }
+        return core.aiSettings.defaultModel
+    }
+
+    /// A route removed in Settings falls back to the default rather than failing the chat.
+    private func isReachable(_ selection: AIModelSelection) -> Bool {
+        switch selection {
+        case .appleIntelligence:
+            return true
+        case .api(let connection, let model, _):
+            return core.aiSettings.connection(id: connection)?.models.contains(model) == true
+        case .codex, .claude, .grok, .openCode, .cursor:
+            return selection.source.installedKind.map {
+                core.aiSettings.enabledInstalledProviders.contains($0)
+            } ?? false
+        }
+    }
+
+    private func provider(
+        for chat: AIChatState, toolServers: AIToolServerSession? = nil
+    ) throws -> any AIProvider {
+        guard let selection = model(for: chat) else {
+            throw AIProviderError.unavailable("Choose a default AI model in Settings.")
+        }
+        return try AIProviderFactory.make(
+            selection: selection, settings: core.aiSettings,
+            subscription: core.chatGPTSubscription, installedAI: core.installedAI,
+            toolServers: toolServers)
+    }
+
+    /// Tinycast runs a local server itself only while some open chat's route cannot.
+    var everyChatRunsItsOwnTools: Bool {
+        [chats.quickAI, chats.window].allSatisfy { model(for: $0)?.runsItsOwnTools == true }
+    }
+
     /// Shortened here, not by layout: a flexible label would take the row from the search field.
-    var selectedModelTitle: String {
-        guard let selected = core.aiSettings.defaultModel else { return "Choose Model" }
-        let title = selectedModelOption?.title ?? selected.model
+    func selectedModelTitle(for chat: AIChatState) -> String {
+        guard let selected = model(for: chat) else { return "Choose Model" }
+        let title = modelOptions.first { $0.matches(selected) }?.title ?? selected.model
         guard title.count > Self.maxModelTitleLength else { return title }
         let keep = Self.maxModelTitleLength / 2
         return "\(title.prefix(keep))…\(title.suffix(keep))"
@@ -442,8 +562,8 @@ final class AIChatCoordinator {
     private static let maxModelTitleLength = 26
 
     /// From the selection, not the loaded list: the list arrives after the picker first paints.
-    var selectedModelIcon: PopoverMenuIcon {
-        switch core.aiSettings.defaultModel {
+    func selectedModelIcon(for chat: AIChatState) -> PopoverMenuIcon {
+        switch model(for: chat) {
         case .appleIntelligence?: return AIModelOption.appleIntelligenceIcon
         case .codex?: return .asset(AIBrand.openAI.assetName)
         case .claude?: return .asset(AIBrand.claude.assetName)
@@ -459,13 +579,13 @@ final class AIChatCoordinator {
         }
     }
 
-    /// Fetches the list so the title is a name, and a default can resolve without Settings.
     /// What entering chat costs once: the model list resolved, and the servers connected.
     func prepareForChat() {
         warmUpModelList()
         core.mcpCoordinator.warmUp()
     }
 
+    /// Fetches the list so the title is a name, and a default can resolve without Settings.
     func warmUpModelList() {
         guard let stored = core.aiSettings.defaultModel else {
             prepareModelSwitcher()
@@ -476,34 +596,32 @@ final class AIChatCoordinator {
         if stored.source.installedKind != nil { prepareModelSwitcher() }
     }
 
-    private var selectedModelOption: AIModelOption? {
-        guard let selected = core.aiSettings.defaultModel else { return nil }
-        return modelOptions.first { $0.matches(selected) }
+    /// The chat keeps the pick; the default follows it, so the next new chat starts there too.
+    func selectModel(_ option: AIModelOption, in chat: AIChatState) {
+        let selection = AIModelOption.withDefaultEffort(
+            option.selection, settings: core.aiSettings,
+            subscription: core.chatGPTSubscription, installedAI: core.installedAI)
+        chat.setModel(selection)
+        core.aiSettings.select(selection)
     }
 
-    func selectModel(_ option: AIModelOption) {
-        core.aiSettings.select(
-            AIModelOption.withDefaultEffort(
-                option.selection, settings: core.aiSettings,
-                subscription: core.chatGPTSubscription, installedAI: core.installedAI))
-    }
-
-    var reasoningEfforts: [ChatGPTSubscription.Effort] {
+    func reasoningEfforts(for chat: AIChatState) -> [ChatGPTSubscription.Effort] {
         AIModelOption.efforts(
-            for: core.aiSettings.defaultModel, settings: core.aiSettings,
+            for: model(for: chat), settings: core.aiSettings,
             subscription: core.chatGPTSubscription, installedAI: core.installedAI)
     }
 
-    var selectedReasoningTitle: String {
-        guard let selected = core.aiSettings.defaultModel?.effort,
-            let effort = reasoningEfforts.first(where: { $0.id == selected })
+    func selectedReasoningTitle(for chat: AIChatState) -> String {
+        guard let selected = model(for: chat)?.effort,
+            let effort = reasoningEfforts(for: chat).first(where: { $0.id == selected })
         else { return "Reasoning" }
         return effort.title
     }
 
-    func selectReasoningEffort(_ effort: ChatGPTSubscription.Effort) {
-        guard let selection = core.aiSettings.defaultModel else { return }
-        core.aiSettings.select(selection.withEffort(effort.id))
+    func selectReasoningEffort(_ effort: ChatGPTSubscription.Effort, in chat: AIChatState) {
+        guard let selection = model(for: chat)?.withEffort(effort.id) else { return }
+        chat.setModel(selection)
+        core.aiSettings.select(selection)
     }
 
     @discardableResult
@@ -512,13 +630,13 @@ final class AIChatCoordinator {
     }
 
     func showSettings() {
-        paletteCoordinator.hidePalette(restoreFocus: false)
+        if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
         settingsCoordinator.showSettings(tab: .ai)
     }
 
-    func availability() -> String? {
+    func availability(for chat: AIChatState) -> String? {
         do {
-            _ = try core.aiProvider()
+            _ = try provider(for: chat)
             return nil
         } catch {
             return error.localizedDescription
@@ -526,176 +644,30 @@ final class AIChatCoordinator {
     }
 }
 
-struct AIModelOption: Identifiable {
-    let selection: AIModelSelection
-    let title: String
-    let sourceTitle: String
-    let menuIcon: PopoverMenuIcon
+/// What the context card lays out; history is counted in bytes, the unit the budget is kept in.
+struct ChatContextReport: Equatable {
+    let modelTitle: String
+    let historyBytes: Int
+    let budget: Int
+    let sentMessages: Int
+    let totalMessages: Int
+    let stagedFiles: Int
+    let stagedBytes: Int
+    let usage: AIUsage?
+    let systemPrompt: Bool
+    let webSearch: Bool
+    let toolServers: Int
 
-    static let appleIntelligenceIcon = PopoverMenuIcon.symbol("apple.intelligence")
-
-    @MainActor
-    static func availableGroups(
-        settings: AISettingsStore, subscription: ChatGPTSubscriptionManager,
-        installedAI: InstalledAIManager
-    ) -> [AIModelOptionGroup] {
-        let enabled = settings.enabledInstalledProviders
-        let claude = installedAI.status(for: .claude)
-        let grok = installedAI.status(for: .grok)
-        let openCode = installedAI.status(for: .openCode)
-        let cursor = installedAI.status(for: .cursor)
-        return groupedCatalog(
-            appleIntelligence: settings.isAppleIntelligenceAvailable(),
-            codex: enabled.contains(.codex) && subscription.isConnected
-                ? subscription.models : [],
-            claude: enabled.contains(.claude) && claude.isReady ? claude.models : [],
-            grok: enabled.contains(.grok) && grok.isReady ? grok.models : [],
-            openCode: enabled.contains(.openCode) && openCode.isReady ? openCode.models : [],
-            cursor: enabled.contains(.cursor) && cursor.isReady ? cursor.models : [],
-            connections: settings.connections)
+    /// The model's own window when the route reported one; otherwise Tinycast's history budget.
+    var fill: Double {
+        if let tokens = usage?.contextTokens, let window = usage?.contextWindow, window > 0 {
+            return Double(tokens) / Double(window)
+        }
+        return Double(historyBytes) / Double(max(budget, 1))
     }
 
-    /// An unrecognised model keeps the generic sparkle rather than borrowing someone's mark.
-    static func icon(_ brand: AIBrand?) -> PopoverMenuIcon {
-        brand.map { .asset($0.assetName) } ?? .symbol("sparkles")
+    var accessibilitySummary: String {
+        let percent = fill.formatted(.percent.precision(.fractionLength(0)))
+        return "Context \(percent), \(sentMessages) of \(totalMessages) messages sent"
     }
-
-    static let cursorIcon = PopoverMenuIcon.symbol("cursorarrow.rays")
-
-    /// Every route the Mac can reach, on-device first: it is the one an unconfigured Mac has.
-    private static func catalog(
-        appleIntelligence: Bool,
-        codex: [ChatGPTSubscription.Model],
-        claude: [InstalledAIModel],
-        grok: [InstalledAIModel],
-        openCode: [InstalledAIModel],
-        cursor: [InstalledAIModel],
-        connections: [AIConnection]
-    ) -> [AIModelOption] {
-        let onDevice =
-            appleIntelligence
-            ? [
-                AIModelOption(
-                    selection: .appleIntelligence, title: AppleIntelligence.title,
-                    sourceTitle: "On device", menuIcon: appleIntelligenceIcon)
-            ] : []
-        let codex = codex.map { model in
-            AIModelOption(
-                selection: .codex(model: model.id, effort: nil),
-                title: model.name,
-                sourceTitle: "Codex",
-                menuIcon: .asset(AIBrand.openAI.assetName))
-        }
-        let claude = claude.map { model in
-            AIModelOption(
-                selection: .claude(model: model.id, effort: nil), title: model.name,
-                sourceTitle: "Claude", menuIcon: .asset(AIBrand.claude.assetName))
-        }
-        let grok = grok.map { model in
-            AIModelOption(
-                selection: .grok(model: model.id, effort: nil), title: model.name,
-                sourceTitle: "Grok", menuIcon: .asset(AIBrand.x.assetName))
-        }
-        let openCode = openCode.map { model in
-            AIModelOption(
-                selection: .openCode(model: model.id, effort: nil), title: model.name,
-                sourceTitle: "OpenCode", menuIcon: icon(AIBrand.resolve(model: model.id)))
-        }
-        let cursor = cursor.map { model in
-            AIModelOption(
-                selection: .cursor(model: model.id, effort: nil), title: model.name,
-                sourceTitle: "Cursor", menuIcon: cursorIcon)
-        }
-        let api = connections.flatMap { connection in
-            connection.models.map { model in
-                AIModelOption(
-                    selection: .api(connection: connection.id, model: model, effort: nil),
-                    title: model,
-                    sourceTitle: connection.title,
-                    menuIcon: icon(AIBrand.resolve(provider: connection.provider, model: model)))
-            }
-        }
-        return onDevice + codex + claude + grok + openCode + cursor + api
-    }
-
-    private static func groupedCatalog(
-        appleIntelligence: Bool,
-        codex: [ChatGPTSubscription.Model],
-        claude: [InstalledAIModel],
-        grok: [InstalledAIModel],
-        openCode: [InstalledAIModel],
-        cursor: [InstalledAIModel],
-        connections: [AIConnection]
-    ) -> [AIModelOptionGroup] {
-        var groups: [AIModelOptionGroup] = []
-        for option in catalog(
-            appleIntelligence: appleIntelligence, codex: codex, claude: claude, grok: grok,
-            openCode: openCode, cursor: cursor, connections: connections)
-        {
-            if groups.last?.id == option.selection.source {
-                groups[groups.count - 1].options.append(option)
-            } else {
-                groups.append(
-                    AIModelOptionGroup(
-                        source: option.selection.source, title: option.sourceTitle,
-                        options: [option]))
-            }
-        }
-        return groups
-    }
-
-    /// The model list only names a route; the effort it comes with is the one that route defaults to.
-    @MainActor
-    static func withDefaultEffort(
-        _ selection: AIModelSelection, settings: AISettingsStore,
-        subscription: ChatGPTSubscriptionManager, installedAI: InstalledAIManager
-    ) -> AIModelSelection {
-        let model = selection.model
-        let effort: String?
-        switch selection.source {
-        case .appleIntelligence:
-            return selection
-        case .codex:
-            effort = subscription.models.first { $0.id == model }?.resolvedEffort(nil)
-        case .claude, .grok, .openCode, .cursor:
-            effort = installedAI.models(for: selection.source)
-                .first { $0.id == model }?.resolvedEffort(nil)
-        case .api(let connection):
-            effort = settings.connection(id: connection)?
-                .reasoningOptions(for: model)?.resolvedEffort(nil)
-        }
-        return selection.withEffort(effort)
-    }
-
-    @MainActor
-    static func efforts(
-        for selection: AIModelSelection?, settings: AISettingsStore,
-        subscription: ChatGPTSubscriptionManager, installedAI: InstalledAIManager
-    ) -> [ChatGPTSubscription.Effort] {
-        guard let selection else { return [] }
-        let model = selection.model
-        switch selection.source {
-        case .appleIntelligence:
-            return []
-        case .codex:
-            return subscription.models.first { $0.id == model }?.efforts ?? []
-        case .claude, .grok, .openCode, .cursor:
-            return installedAI.models(for: selection.source).first { $0.id == model }?.efforts ?? []
-        case .api(let connection):
-            return settings.connection(id: connection)?.reasoningOptions(for: model)?
-                .efforts.map { ChatGPTSubscription.Effort(id: $0, detail: nil) } ?? []
-        }
-    }
-
-    var id: AIModelSelection { selection }
-    func matches(_ other: AIModelSelection) -> Bool {
-        selection.source == other.source && selection.model == other.model
-    }
-}
-
-struct AIModelOptionGroup: Identifiable {
-    let source: AIModelSource
-    let title: String
-    var options: [AIModelOption]
-    var id: AIModelSource { source }
 }

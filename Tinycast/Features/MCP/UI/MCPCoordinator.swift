@@ -10,8 +10,8 @@ final class MCPCoordinator {
     private let manager: MCPServerManager
     private unowned let core: AppCore
 
-    /// Servers this conversation has already been asked about; a new chat asks again.
-    @ObservationIgnored private var chatGrants: (chat: UUID, servers: Set<UUID>) = (UUID(), [])
+    /// Servers each conversation was granted; keyed, since a dialog may outlive a chat switch.
+    @ObservationIgnored private var chatGrants: [UUID: Set<UUID>] = [:]
 
     init(
         settings: AppSettings, store: MCPSettingsStore, manager: MCPServerManager, core: AppCore
@@ -50,13 +50,19 @@ final class MCPCoordinator {
 
     /// What Tinycast runs itself; Codex and Claude start their own copy of every local server.
     private var ownServers: [MCPServer] {
-        let cliRoute = core.aiSettings.defaultModel?.runsItsOwnTools == true
+        let cliRoute = core.aiChatCoordinator.everyChatRunsItsOwnTools
         return store.enabledServers.filter { $0.runsInTinycast(whileCLIRouteSelected: cliRoute) }
     }
 
     var slugs: Set<String> {
         guard isActive else { return [] }
         return Set(store.enabledServers.map(\.slug))
+    }
+
+    /// What a chat's tools menu lists; empty while MCP is off.
+    var servers: [MCPServer] {
+        guard isActive else { return [] }
+        return store.enabledServers
     }
 
     func server(slug: String) -> MCPServer? {
@@ -177,9 +183,8 @@ final class MCPCoordinator {
     }
 
     private func isPermitted(_ server: MCPServer, tool: String, in chat: UUID) async -> Bool {
-        if chatGrants.chat != chat { chatGrants = (chat, []) }
         switch MCPTrustPolicy.decide(
-            trust: server.trust, isGrantedForChat: chatGrants.servers.contains(server.id))
+            trust: server.trust, isGrantedForChat: chatGrants[chat]?.contains(server.id) == true)
         {
         case .allow: return true
         case .refuse: return false
@@ -190,7 +195,7 @@ final class MCPCoordinator {
             store.setTrust(.always, for: server.id)
             return true
         case .thisChat:
-            chatGrants.servers.insert(server.id)
+            chatGrants[chat, default: []].insert(server.id)
             return true
         case .refuse:
             return false

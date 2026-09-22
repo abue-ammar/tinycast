@@ -106,7 +106,8 @@ private final class InstalledCLITurnRunner {
         guard
             request.messages.contains(where: {
                 $0.role == .user
-                    && !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    && (!$0.images.isEmpty
+                        || !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             })
         else {
             continuation.finish(
@@ -233,14 +234,20 @@ private final class InstalledCLITurnRunner {
         self.continuation = continuation
         guard kind != .grok else { return }
         input = stdin.fileHandleForWriting
-        // A tool loop answers on the same pipe, so a stream-json turn keeps stdin open for it.
-        if activeServers.isEmpty {
+        // A child that exits before reading must fail the write, not SIGPIPE Tinycast.
+        _ = fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
+        guard kind == .claude else {
             write(Data(prompt.utf8), closing: true)
-        } else if let line = ClaudeControlProtocol.userMessage(prompt) {
-            write(line, closing: false)
-        } else {
-            fail("Tinycast could not frame the request for " + kind.title + ".")
+            return
         }
+        // Framed as JSON, so a picture rides beside the text as a content block.
+        let images = request.messages.last { $0.role == .user }?.images ?? []
+        guard let line = ClaudeControlProtocol.userMessage(prompt, images: images) else {
+            fail("Tinycast could not frame the request for " + kind.title + ".")
+            return
+        }
+        // A tool loop answers on the same pipe, so an armed turn keeps stdin open for it.
+        write(line, closing: activeServers.isEmpty)
     }
 
     /// A pipe write past the buffer blocks until the child drains it, so never on the main actor.
@@ -289,8 +296,10 @@ private final class InstalledCLITurnRunner {
             var result = [
                 "-p",
                 "--model", model,
-                "--input-format", mcpConfig == nil ? "text" : "stream-json",
+                "--input-format", "stream-json",
                 "--output-format", "stream-json",
+                // A `-p` run omits thinking text unless a display is named; the setting is ignored.
+                "--thinking-display", "summarized",
                 "--verbose",
                 "--include-partial-messages",
                 "--no-session-persistence",
@@ -308,10 +317,7 @@ private final class InstalledCLITurnRunner {
             } else {
                 // A route with nothing to call keeps every tool off and the turn to one request.
                 result += ["--disallowedTools", "*", "--max-turns", "1"]
-                // The CLI rejects both flags while an admin's managed MCP policy is installed.
-                if !InstalledAIManager.hasManagedMCPPolicy {
-                    result += ["--strict-mcp-config", "--mcp-config", #"{"mcpServers":{}}"#]
-                }
+                result += InstalledAIManager.claudeWithoutMCPArguments
             }
             if let effort { result += ["--effort", effort] }
             return result

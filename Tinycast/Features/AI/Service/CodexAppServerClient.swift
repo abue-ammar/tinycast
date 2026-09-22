@@ -27,8 +27,10 @@ final class CodexAppServerClient {
 
     var onNotification: ((String, [String: JSONValue]) -> Void)?
     var onExit: ((String) -> Void)?
-    /// Set for the turn that armed tools; nil declines every elicitation, as the route did before.
+    /// Answers a tool call's ask; nil, or a false answer, declines it.
     var onElicitation: ((CodexElicitation) async -> Bool)?
+    /// A launch is about to replace a running process, whose threads go with it.
+    var onRelaunch: (() -> Void)?
 
     private let codexHome: URL?
     let workspace: URL
@@ -41,7 +43,7 @@ final class CodexAppServerClient {
     private var pending: [Int: PendingRequest] = [:]
     /// What the process was launched with; it is fixed at exec, so a different list relaunches.
     private(set) var toolServers: [AIToolServer] = []
-    private var elicitations: [Task<Void, Never>] = []
+    private var elicitations: [(threadID: String?, task: Task<Void, Never>)] = []
     private var pendingLaunch: (id: UUID, servers: [AIToolServer], task: Task<Void, Error>)?
     /// Bumped by `stop`, so a launch still reading the list does not start a process after it.
     private var generation = 0
@@ -117,7 +119,10 @@ final class CodexAppServerClient {
         }
         try checkNotStopped(since: generation)
         // The list is only readable at launch, so the old process cannot be talked into it.
-        if isRunning { stop(error: ClientError.processExited("Codex stopped.")) }
+        if isRunning {
+            onRelaunch?()
+            stop(error: ClientError.processExited("Codex stopped."))
+        }
         guard let secrets = CodexMCPLaunch.environment(servers: toolServers) else {
             throw ClientError.launchFailed("Two MCP servers' secrets would share one variable.")
         }
@@ -211,6 +216,8 @@ final class CodexAppServerClient {
         }
         self.process = process
         processID = launchID
+        // A server that dies mid-write must fail the write, not SIGPIPE Tinycast.
+        _ = fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
         input = stdin.fileHandleForWriting
         self.toolServers = toolServers
 
@@ -262,9 +269,11 @@ final class CodexAppServerClient {
     }
 
     /// A question still waiting its turn belongs to a turn that is over, so it is never asked.
-    func cancelElicitations() {
-        for elicitation in elicitations { elicitation.cancel() }
-        elicitations = []
+    func cancelElicitations(threadID: String) {
+        for elicitation in elicitations where elicitation.threadID == threadID {
+            elicitation.task.cancel()
+        }
+        elicitations.removeAll { $0.threadID == threadID }
     }
 
     func stop() {
@@ -327,15 +336,14 @@ final class CodexAppServerClient {
                 declineServerRequest(id: id, method: method)
                 return
             }
-            elicitations.append(
-                Task { [weak self] in
-                    let action: CodexElicitation.Action =
-                        await onElicitation(elicitation) ? .accept : .decline
-                    // `persist` is never answered: only Settings may change a standing decision.
-                    try? self?.send(
-                        CodexAppServerProtocol.response(
-                            id: id, result: ["action": action.rawValue]))
-                })
+            let task = Task { [weak self] in
+                let action: CodexElicitation.Action =
+                    await onElicitation(elicitation) ? .accept : .decline
+                // `persist` is never answered: only Settings may change a standing decision.
+                try? self?.send(
+                    CodexAppServerProtocol.response(id: id, result: ["action": action.rawValue]))
+            }
+            elicitations.append((elicitation.threadID, task))
         case .invalid:
             break
         }
@@ -393,7 +401,8 @@ final class CodexAppServerClient {
     }
 
     private func cleanup(error: Error) {
-        cancelElicitations()
+        for elicitation in elicitations { elicitation.task.cancel() }
+        elicitations = []
         toolServers = []
         process?.terminationHandler = nil
         (process?.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil

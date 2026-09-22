@@ -47,6 +47,20 @@ struct AIChatTests {
         await anUnlimitedToolLoopStopsWhenItsHistoryIsFull()
         await toolOutputIsBoundedBeforeItIsBilled()
         toolUsesPersistAndSettleOnReload()
+        renamesAndPinsSurviveSavesAndSpareRetention()
+        transcriptsExportAndDropOnlyATrailingReply()
+        await regenerateAsksTheSameQuestionAgain()
+        await aConversationIsLiveOnOneSurfaceAtATime()
+        await everyStateReportsAFinishedReply()
+        await reasoningFoldsIntoTheReplyAndIsNeverResent()
+        chatsKeepTheirOwnModel()
+        choicesComeOutOfTheirFence()
+        referencesAreTheLinksAReplyCites()
+        titlesAreCleanedAndNeverBeatARename()
+        findWalksMatchesAndWraps()
+        citationsCloseTheSentenceThatCitedThem()
+        toolScopeSwitchesServersPerChat()
+        await usageIsKeptWithTheReplyThatReportedIt()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -199,6 +213,7 @@ struct AIChatTests {
             case .text(let text): "text \(text)"
             case .search(let search): "search \(search.query ?? "")"
             case .tools(let uses): "tools \(uses.map(\.callID).joined(separator: ","))"
+            case .reasoning(let block): "reasoning \(block.text)"
             }
         }
     }
@@ -385,10 +400,15 @@ struct AIChatTests {
                         callID: "c2", origin: "Files", title: "write", state: .running,
                         textOffset: 7, sequence: 1)
                 ]))
+        session.append(ChatMessage(role: .user, text: "list my PRs", toolScope: "github"))
+        session.append(ChatMessage(role: .assistant, text: "Two open."))
         store.save(session)
 
         let reloaded = ChatHistoryStore(directory: directory).session(id: session.id)
-        let uses = reloaded?.messages.last?.toolUses ?? []
+        expect(
+            reloaded?.messages[2].toolScope == "github" && reloaded?.messages[0].toolScope == nil,
+            "a question addressed to one server still names it after reopening, so Regenerate does too")
+        let uses = reloaded?.messages[1].toolUses ?? []
         expect(uses.count == 2, "a reopened chat still shows what the model did on the reader's behalf")
         expect(uses.first?.title == "read", "in the order it did it")
         expect(
@@ -1006,10 +1026,10 @@ struct AIChatTests {
         deleting.delete(id: saved)
         expect(deleting.pendingAttachments.isEmpty, "deleting the open conversation drops its staged images")
 
-        let clearingAll = AIChatState(history: store)
-        stage(clearingAll)
+        let clearingAll = AIChatSurfacesState(history: store)
+        stage(clearingAll.window)
         clearingAll.deleteAll()
-        expect(clearingAll.pendingAttachments.isEmpty, "Delete All drops the staged images")
+        expect(clearingAll.window.pendingAttachments.isEmpty, "Delete All drops the staged images")
 
         let starting = AIChatState(history: store)
         stage(starting)
@@ -1027,6 +1047,448 @@ struct AIChatTests {
         expect(
             removing.stagingGeneration == beforeRemove,
             "taking one staged image back leaves another's decode on its way")
+    }
+}
+
+extension AIChatTests {
+    static func temporaryStore(_ name: String) -> (ChatHistoryStore, URL) {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-ai-\(name)-\(UUID().uuidString)", isDirectory: true)
+        return (ChatHistoryStore(directory: directory), directory)
+    }
+
+    static func saved(_ store: ChatHistoryStore, _ text: String, at moment: Date) -> UUID {
+        var session = ChatSession(createdAt: moment)
+        session.append(ChatMessage(role: .user, text: text, sentAt: moment))
+        session.append(ChatMessage(role: .assistant, text: "answer", sentAt: moment))
+        store.save(session)
+        return session.id
+    }
+
+    /// A rename or a pin is the reader's; neither a later save nor a retention sweep may undo it.
+    static func renamesAndPinsSurviveSavesAndSpareRetention() {
+        let (store, directory) = temporaryStore("meta")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let now = Date(timeIntervalSince1970: 2_000_000)
+        let old = saved(store, "an old question", at: now.addingTimeInterval(-90 * 86_400))
+        let pinned = saved(store, "a keeper", at: now.addingTimeInterval(-90 * 86_400))
+        let fresh = saved(store, "a fresh question", at: now)
+
+        store.rename(id: fresh, to: "  Trip planning  ")
+        store.setPinned(true, id: pinned)
+        expect(
+            store.conversation(id: fresh)?.displayTitle == "Trip planning",
+            "a rename is trimmed and shown in place of the first question")
+        expect(store.search("trip").first?.id == fresh, "search matches the renamed title")
+
+        var continued = store.session(id: fresh)!
+        continued.append(ChatMessage(role: .user, text: "and hotels?", sentAt: now))
+        store.save(continued)
+        expect(
+            store.conversation(id: fresh)?.displayTitle == "Trip planning",
+            "saving a later turn keeps the rename")
+
+        let reopened = ChatHistoryStore(directory: directory)
+        reopened.load()
+        expect(
+            reopened.conversation(id: fresh)?.customTitle == "Trip planning",
+            "a rename survives reopening")
+        expect(reopened.conversation(id: pinned)?.isPinned == true, "a pin survives reopening")
+
+        reopened.rename(id: fresh, to: "   ")
+        expect(
+            reopened.conversation(id: fresh)?.displayTitle == "a fresh question",
+            "a blank rename hands the title back to the first question")
+
+        let cutoff = AIRetention.month.cutoff(from: now)!
+        expect(reopened.prune(before: cutoff) == 1, "retention removes only the unpinned old chat")
+        expect(reopened.conversation(id: old) == nil, "the old chat is gone")
+        expect(reopened.session(id: pinned) != nil, "a pinned chat outlives retention")
+
+        reopened.clearAll()
+        expect(
+            reopened.conversations.map(\.id) == [pinned],
+            "Delete All keeps the pinned chat and nothing else")
+        expect(
+            count(directory.appendingPathComponent("ai-chats.sqlite3"),
+                "SELECT COUNT(*) FROM conversation_meta") == 1,
+            "a deleted chat's rename cascades away with it")
+    }
+
+    static func transcriptsExportAndDropOnlyATrailingReply() {
+        var session = ChatSession()
+        expect(!session.dropTrailingReply(), "an empty chat has no reply to drop")
+        session.append(
+            ChatMessage(
+                role: .user, text: "Summarise this",
+                documents: [AIDocument(data: Data("x".utf8), mimeType: "text/plain", name: "a.txt")]))
+        expect(!session.dropTrailingReply(), "a question with no reply keeps the question")
+        session.append(ChatMessage(role: .assistant, text: "It says x."))
+        expect(
+            session.markdownTranscript(title: "Notes")
+                == "# Notes\n\n**You** _(attached: a.txt)_\n\nSummarise this\n\n**AI**\n\nIt says x.",
+            "a transcript names each speaker and each attachment")
+        expect(
+            session.historyBytes == "Summarise this".utf8.count + "It says x.".utf8.count,
+            "the context gauge counts every turn that would go out as history")
+        let budgeted = ChatSession(messages: [
+            ChatMessage(role: .user, text: String(repeating: "a", count: 40)),
+            ChatMessage(role: .assistant, text: String(repeating: "b", count: 40)),
+            ChatMessage(role: .user, text: "Now?")
+        ])
+        for budget in [10, 50, 100, 1_000] {
+            expect(
+                budgeted.sentMessageCount(textBudget: budget)
+                    == budgeted.requestMessages(textBudget: budget).count,
+                "the gauge's count agrees with the request at a \(budget)-byte budget")
+        }
+        expect(session.dropTrailingReply(), "a trailing reply can be dropped")
+        expect(
+            session.messages.map(\.role) == [.user], "dropping the reply leaves the question it answered")
+    }
+
+    static func regenerateAsksTheSameQuestionAgain() async {
+        let (store, directory) = temporaryStore("regenerate")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chat = AIChatState(history: store)
+        let provider = ScriptedProvider(rounds: [
+            [.text("First"), .finished], [.text("Second"), .finished]
+        ])
+        chat.send("Why?", using: provider)
+        await settle(chat)
+        expect(chat.lastAssistantText == "First", "the first reply arrives")
+        expect(chat.regenerate(using: provider), "a finished reply can be regenerated")
+        await settle(chat)
+        expect(
+            chat.session.messages.map(\.text) == ["Why?", "Second"],
+            "regenerating replaces the reply rather than adding one")
+        expect(
+            provider.requests.last?.messages.map(\.text) == ["Why?"],
+            "the second request carries the question, not the discarded answer")
+        expect(
+            store.session(id: chat.session.id)?.messages.map(\.text) == ["Why?", "Second"],
+            "the stored transcript holds only the new reply")
+    }
+
+    /// Naming hangs off this hook, so a state made after it is set must be told too.
+    static func everyStateReportsAFinishedReply() async {
+        let (store, directory) = temporaryStore("finished")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chats = AIChatSurfacesState(history: store)
+        var finished: [UUID] = []
+        chats.onReplyFinished = { finished.append($0.session.id) }
+        chats.window.send("Hi", using: ScriptedProvider(rounds: [[.text("Yo"), .finished]]))
+        await settle(chats.window)
+        chats.newWindowChat()
+        chats.window.send("Again", using: ScriptedProvider(rounds: [[.text("Yo"), .finished]]))
+        await settle(chats.window)
+        chats.quickAI.send("Quick", using: ScriptedProvider(rounds: [[.text("Yo"), .finished]]))
+        await settle(chats.quickAI)
+        expect(finished.count == 3, "every surface's replies reach the hook, got \(finished.count)")
+        chats.quickAI.send("Fails", using: ScriptedProvider(rounds: [[.text("Half")]]))
+        await settle(chats.quickAI)
+        expect(finished.count == 3, "a reply that failed is not one to name a chat by")
+    }
+
+    /// Two surfaces editing one transcript would each save over the other.
+    static func aConversationIsLiveOnOneSurfaceAtATime() async {
+        let (store, directory) = temporaryStore("surfaces")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chats = AIChatSurfacesState(history: store)
+        let stalled = StalledProvider()
+
+        chats.quickAI.send("Quick question", using: stalled)
+        let quick = chats.quickAI
+        let quickID = quick.session.id
+        expect(chats.continueQuickAIInWindow(), "a Quick AI chat continues in the window")
+        expect(chats.window === quick, "the window takes the live state, reply and all")
+        expect(chats.quickAI !== quick && chats.quickAI.session.messages.isEmpty, "Quick AI starts over")
+        expect(!chats.continueQuickAIInWindow(), "an empty Quick AI has nothing to hand over")
+        chats.window.draft = "Half-written"
+        expect(!chats.continueQuickAIInWindow(draft: "foo"), "a typed line alone moves no chat")
+        expect(
+            chats.window.draft == "Half-written\nfoo",
+            "and joins the window's draft instead of replacing it")
+        chats.window.draft = ""
+        expect(!chats.openInQuickAI(id: quickID), "Quick AI will not reopen the window's chat")
+
+        chats.newWindowChat()
+        expect(chats.window !== quick, "a new window chat leaves the answering one")
+        expect(quick.isStreaming, "leaving a chat mid-reply does not cancel it")
+        expect(chats.answeringIDs == [quickID], "the chat still answering is reported as such")
+        expect(chats.holder(of: quickID) === quick, "and it is still the one holding the chat")
+        expect(chats.openInWindow(id: quickID), "the answering chat can be reopened")
+        expect(chats.window === quick, "reopening it returns the same live state")
+
+        stalled.finishAll()
+        await settle(quick)
+        let settled = saved(store, "older", at: Date(timeIntervalSince1970: 1_000))
+        expect(chats.openInQuickAI(id: settled), "a chat nobody holds opens in Quick AI")
+        expect(chats.openInWindow(id: settled), "the window can take it from Quick AI")
+        expect(chats.quickAI.session.messages.isEmpty, "and Quick AI lets it go")
+
+        store.setPinned(true, id: settled)
+        chats.deleteAll()
+        expect(chats.window.holds(settled), "Delete All leaves a pinned chat open")
+        expect(store.conversation(id: quickID) == nil, "and removes the rest")
+    }
+
+    static func reasoningFoldsIntoTheReplyAndIsNeverResent() async {
+        let (store, directory) = temporaryStore("reasoning")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chat = AIChatState(history: store)
+        let provider = ScriptedProvider(rounds: [
+            [
+                .thinking, .reasoning("\n\n"), .reasoning("Let me "), .reasoning("see."),
+                .text("Answer"), .reasoning("Checking."), .text(" more"), .finished
+            ],
+            [.text("Again"), .finished]
+        ])
+        chat.send("Why?", using: provider)
+        await settle(chat)
+        let reply = chat.session.messages.last
+        expect(
+            reply?.reasoning.map(\.text) == ["Let me see.", "Checking."],
+            "thinking that resumes after answer text is a second block, got \(reply?.reasoning ?? [])")
+        expect(
+            reply?.reasoning.map(\.textOffset) == [0, 6],
+            "each block is pinned where the answer paused for it")
+        expect(reply?.text == "Answer more", "reasoning never leaks into the answer text")
+        expect(
+            reply?.reasoning.allSatisfy { $0.duration != nil } == true,
+            "every block knows how long it thought")
+        chat.send("And?", using: provider)
+        await settle(chat)
+        expect(
+            provider.requests.last?.messages.map(\.text) == ["Why?", "Answer more", "And?"],
+            "the next turn resends the answer, never the thinking")
+        let reloaded = ChatHistoryStore(directory: directory).session(id: chat.session.id)
+        expect(
+            reloaded?.messages[1].reasoning == reply?.reasoning,
+            "reasoning survives reopening the chat")
+    }
+
+    /// Coming back to a chat has to come back to the model it was talking to.
+    static func chatsKeepTheirOwnModel() {
+        let (store, directory) = temporaryStore("model")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let opus = AIModelSelection.claude(model: "opus", effort: "high")
+        let chat = AIChatState(history: store)
+        chat.setModel(opus)
+        expect(chat.session.model == opus, "a new chat holds its pick before its first message")
+        chat.send("Hi", using: ScriptedProvider(rounds: []), model: opus)
+        expect(
+            ChatHistoryStore(directory: directory).session(id: chat.session.id)?.model == opus,
+            "the first save records the chat's model")
+        let sonnet = AIModelSelection.claude(model: "sonnet", effort: nil)
+        chat.setModel(sonnet)
+        let reopened = AIChatState(history: ChatHistoryStore(directory: directory))
+        expect(reopened.open(id: chat.session.id), "the chat reopens")
+        expect(reopened.session.model == sonnet, "a later pick is what the chat reopens on")
+    }
+
+    static func titlesAreCleanedAndNeverBeatARename() {
+        expect(
+            ChatTitle.sanitize("Title: \"Weekend Hiking Trip Plan.\"\nmore")
+                == "Weekend Hiking Trip Plan",
+            "a title loses its label, quotes, full stop and any second line")
+        expect(ChatTitle.sanitize("## Trip plan") == "Trip plan", "a heading marker is not the title")
+        expect(ChatTitle.sanitize("  \n ") == nil, "an empty answer names nothing")
+        var session = ChatSession()
+        expect(ChatTitle.description(of: session) == nil, "an empty chat has nothing to name")
+        session.append(ChatMessage(role: .user, text: "Is 1001 prime?"))
+        expect(
+            ChatTitle.description(of: session) == "User: Is 1001 prime?",
+            "a chat is named from its question alone while the answer is still coming")
+        session.append(ChatMessage(role: .assistant, text: "No: 7 × 11 × 13."))
+        expect(
+            ChatTitle.description(of: session) == "User: Is 1001 prime?\nAssistant: No: 7 × 11 × 13.",
+            "a title is asked for from the first question and answer")
+
+        let (store, directory) = temporaryStore("titles")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        store.save(session)
+        store.setGeneratedTitle("Prime factors of 1001", id: session.id)
+        expect(
+            store.conversation(id: session.id)?.displayTitle == "Prime factors of 1001",
+            "a generated title replaces the first question's")
+        store.save(session)
+        let reopened = ChatHistoryStore(directory: directory)
+        reopened.load()
+        expect(
+            reopened.conversation(id: session.id)?.generatedTitle == "Prime factors of 1001",
+            "a generated title survives a later save and reopening")
+        reopened.rename(id: session.id, to: "Maths")
+        expect(reopened.conversation(id: session.id)?.displayTitle == "Maths", "a rename still wins")
+    }
+
+    static func referencesAreTheLinksAReplyCites() {
+        let reply = """
+            See [the Swift book](https://www.swift.org/documentation/tspl/) and \
+            https://forums.swift.org/t/example/42. Also https://www.swift.org/documentation/tspl.
+
+            ```sh
+            curl https://example.com/not-a-source
+            ```
+            """
+        let references = ChatReferences.extract(from: reply)
+        expect(references.count == 2, "a page cited twice is one source, got \(references.count)")
+        expect(
+            references.first?.title == "the Swift book"
+                && references.first?.host == "swift.org",
+            "a Markdown link keeps its own name and a readable host")
+        expect(
+            references.last?.url.absoluteString == "https://forums.swift.org/t/example/42",
+            "a bare URL is a source too, its trailing full stop left out")
+        expect(
+            !references.contains { $0.host == "example.com" },
+            "a URL inside a code sample is not a source")
+        expect(ChatReferences.extract(from: "No links here.").isEmpty, "plain prose cites nothing")
+    }
+
+    static func findWalksMatchesAndWraps() {
+        let reply = ChatMessage(
+            role: .assistant,
+            text: "**Apples** and apples.\n\n- An apple a day\n\n```choices\nMore apples\n```",
+            reasoning: [ChatReasoning(text: "Think of apples", textOffset: 0, duration: 1)])
+        let messages = [
+            ChatMessage(role: .user, text: "Tell me about apples"),
+            ChatMessage(role: .assistant, text: "Pears are nice"),
+            reply
+        ]
+        let find = ChatFindState()
+        find.query = " apple "
+        let found = find.occurrences(in: messages)
+        expect(found.count == 5, "every word is a stop of its own, not every message, got \(found.count)")
+        expect(
+            found.map(\.messageID) == [messages[0].id] + Array(repeating: reply.id, count: 4),
+            "matches run in reading order across messages")
+        expect(
+            found[1].leaf == [0] && found[2].leaf == [1, 0]
+                && found[3] == ChatFindOccurrence(messageID: reply.id, leaf: [1, 0], index: 1)
+                && found[4].leaf == [1, 1, 0, 0],
+            "a reply's thinking comes first, then each drawn text numbers its own matches")
+        let table = ChatMessage(role: .assistant, text: "| Q | A |\n| - | - |\n| One | Yes |\n| Two | Yes |")
+        let cells = ChatFindIndex.occurrences(of: "yes", in: [table])
+        expect(
+            cells.map(\.leaf) == [[0, 0, 1, 1], [0, 0, 2, 1]],
+            "identical cells are two places, so each is its own match: \(cells.map(\.leaf))")
+        var grown = messages
+        grown[1].text += " and apples"
+        expect(
+            find.occurrences(in: grown).count == 6 && find.occurrences(in: messages).count == 5,
+            "a reply that grows is searched again, the rest come from the cache")
+        find.step(-1, in: messages)
+        expect(find.currentOccurrence(in: found) == found.last, "stepping back from the first wraps")
+        find.query = "more apples"
+        expect(find.occurrences(in: messages).isEmpty, "a choices fence is not text find can see")
+        expect(find.current == 0, "a new query starts at its first match")
+    }
+
+    static func citationsCloseTheSentenceThatCitedThem() {
+        let text = MarkdownBlock.inline(
+            "Read [the guide](https://example.com/guide) first. Then see https://example.org/faq.")
+        let numbers = ChatReferences.numbers(
+            for: ChatReferences.extract(
+                from: "[g](https://example.com/guide) https://example.org/faq"))
+        let anchors = ChatCitations.anchors(in: text, numbers: numbers)
+        let plain = String(text.characters)
+        expect(
+            anchors.map(\.number) == [1, 2],
+            "each cited source is numbered as its chip is, got \(anchors.map(\.number))")
+        expect(
+            anchors.map(\.offset) == [
+                plain.distance(from: plain.startIndex, to: plain.range(of: "first.")!.upperBound),
+                plain.count
+            ],
+            "a number lands after the full stop of the sentence that cited it")
+        expect(
+            ChatCitations.anchors(in: text, numbers: [:]).isEmpty,
+            "a reply with no sources gets no numbers")
+    }
+
+    static func toolScopeSwitchesServersPerChat() {
+        var scope = ChatToolScope()
+        expect(scope.allows("files"), "a new chat may call every connected server")
+        scope.toggle("files")
+        expect(!scope.allows("files") && scope.allows("web"), "one server switches off alone")
+        scope.toggle("files")
+        scope.isEnabled = false
+        expect(!scope.allows("web"), "switching tools off stops every server")
+    }
+
+    static func choicesComeOutOfTheirFence() {
+        let reply = "Which one?\n\n```choices\n- Summarise it\n2. Translate it\n\n```\nThanks."
+        let split = ChatChoices.split(reply)
+        expect(split.choices == ["Summarise it", "Translate it"], "a fence's lines are the choices")
+        expect(split.text == "Which one?\n\nThanks.", "the fence never shows as prose")
+        let streaming = ChatChoices.split("Pick:\n```choices\nA\nB")
+        expect(
+            streaming.choices == ["A", "B"] && streaming.text == "Pick:",
+            "an unclosed fence is already hidden while it streams")
+        let code = "Use this:\n```swift\nlet choices = 1\n```"
+        expect(ChatChoices.split(code).choices.isEmpty, "an ordinary code fence is not a choice list")
+        let inline = ChatChoices.split("Say ```choices``` to me")
+        expect(inline.choices.isEmpty, "a fence mid-line is prose, not choices")
+
+        // What Apple Intelligence wrote: no fence, a `choices` line over a list.
+        let unfenced = ChatChoices.split(
+            "Here are a few ways I can help:\n\n* Open it\n\nchoices\n\n- Open Quick AI\n- Open AI Chat\n")
+        expect(
+            unfenced.choices == ["Open Quick AI", "Open AI Chat"]
+                && unfenced.text == "Here are a few ways I can help:\n\n* Open it",
+            "a bare `choices` label over a closing list is a choice list: \(unfenced)")
+        expect(
+            ChatChoices.split("**Choices:**\n1. Yes\n2. No").choices == ["Yes", "No"],
+            "the label may be bold, capitalised or end in a colon")
+        let proseAfter = "choices\n- A\n- B\n\nThat is all."
+        expect(ChatChoices.split(proseAfter).choices.isEmpty, "a list followed by prose is not the reply's end")
+        expect(
+            ChatChoices.split("Your choices matter.\n- A").choices.isEmpty,
+            "the word inside a sentence is not a label")
+    }
+
+    static func usageIsKeptWithTheReplyThatReportedIt() async {
+        let (store, directory) = temporaryStore("usage")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let reported = AIUsage(
+            inputTokens: 10, outputTokens: 59, cachedInputTokens: 6_401, reasoningTokens: 51,
+            contextWindow: 200_000, costUSD: 0.0009)
+        let chat = AIChatState(history: store)
+        chat.send("Hi", using: ScriptedProvider(rounds: [[.text("Yo"), .usage(reported), .finished]]))
+        await settle(chat)
+        expect(chat.usage == reported, "the reply carries what its route reported")
+        expect(reported.contextTokens == 6_470, "the context counts cached prompt tokens too")
+        let reopened = AIChatState(history: ChatHistoryStore(directory: directory))
+        expect(reopened.open(id: chat.session.id), "the chat reopens")
+        expect(reopened.usage == reported, "a reopened chat still knows its last turn's tokens")
+    }
+
+    /// Replies stream on a task; a few turns of the main actor let the scripted events land.
+    static func settle(_ chat: AIChatState) async {
+        for _ in 0..<50 where chat.isStreaming {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+    }
+}
+
+/// Holds every reply open until told to finish, so a test can switch surfaces mid-answer.
+final class StalledProvider: AIProvider, @unchecked Sendable {
+    private let lock = NSLock()
+    private var continuations: [AIProviderStream.Continuation] = []
+
+    func stream(_ request: AIRequest) -> AIProviderStream {
+        AIProviderStream { continuation in
+            lock.withLock { continuations.append(continuation) }
+        }
+    }
+
+    func finishAll() {
+        for continuation in lock.withLock({ continuations }) {
+            continuation.yield(.text("done"))
+            continuation.yield(.finished)
+            continuation.finish()
+        }
     }
 }
 

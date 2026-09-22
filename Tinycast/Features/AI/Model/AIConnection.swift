@@ -117,9 +117,9 @@ struct AIModelCapabilities: Equatable, Sendable {
         images: true, documents: false, webSearch: true, tools: false)
     static let codex = AIModelCapabilities(
         images: true, documents: false, webSearch: true, tools: true)
-    /// Text only, but its own client runs Tinycast's MCP servers when the reader has any.
+    /// Pictures ride in its stream-json input; its own client runs Tinycast's MCP servers.
     static let claudeCommand = AIModelCapabilities(
-        images: false, documents: false, webSearch: false, tools: true)
+        images: true, documents: false, webSearch: false, tools: true)
     /// The on-device model is text-only and reaches nothing, so it offers none of the three.
     static let appleIntelligence = AIModelCapabilities.none
 }

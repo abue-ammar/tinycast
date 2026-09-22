@@ -31,6 +31,10 @@ struct CodexTurnTests {
         await twoCallsAreAskedAboutByTheirOwnNames()
         await theRoundCapInterruptsTheTurn()
         await unlimitedNeverStopsOnACount()
+        await twoChatsStreamSideBySide()
+        await stoppingOneChatLeavesTheOther()
+        await twoChatsStartingColdShareOneHandshake()
+        await aRelaunchEndsTheOtherChatsThreadWithAReason()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -417,6 +421,114 @@ struct CodexTurnTests {
         _ = await server.awaitCondition(timeout: .milliseconds(400)) { server.interrupts > 1 }
         expect(server.interrupts == 1, "the turn's second name spends no second interrupt")
     }
+
+    /// A second chat's turn used to end the first with "A newer request replaced this response."
+    static func twoChatsStreamSideBySide() async {
+        guard let server = StubServer(mode: "parallel") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+
+        let first = server.collectTurn()
+        guard await server.awaitTurns(1) else {
+            expect(false, "the first chat starts its turn")
+            return
+        }
+        let second = server.collectTurn()
+        guard await server.awaitTurns(2) else {
+            expect(false, "the second chat starts its turn while the first is live")
+            return
+        }
+        server.mark("release")
+
+        let firstReply = await first.value
+        let secondReply = await second.value
+        expect(firstReply.error == nil, "the first chat is not replaced by the second")
+        expect(firstReply.text == "from thread-1", "the first chat reads only its own thread")
+        expect(
+            firstReply.reasoning == "**Planning** done.\n\n**Checking**",
+            "each summary part opens a paragraph, a split part does not: "
+                + firstReply.reasoning.debugDescription)
+        expect(secondReply.error == nil, "the second chat finishes too")
+        expect(secondReply.text == "from thread-2", "the second chat reads only its own thread")
+        expect(!server.runner.isActive, "both finished turns are released")
+    }
+
+    /// A reply and its title leave together, before the handshake the stub, like Codex, requires.
+    static func twoChatsStartingColdShareOneHandshake() async {
+        guard let server = StubServer(mode: "parallel") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+
+        let first = server.collectTurn()
+        let second = server.collectTurn()
+        guard await server.awaitTurns(2) else {
+            expect(false, "both cold turns reach the server: \(server.received)")
+            return
+        }
+        server.mark("release")
+        let replies = [await first.value, await second.value]
+        expect(
+            replies.allSatisfy { $0.error == nil },
+            "neither cold turn is sent before the handshake: \(replies.map { String(describing: $0.error) })")
+        expect(
+            server.received.split(separator: "\n").count { $0 == "initialize" } == 1,
+            "one process, one handshake")
+    }
+
+    /// The server list is fixed at launch: a chat armed with another one takes the process away.
+    static func aRelaunchEndsTheOtherChatsThreadWithAReason() async {
+        guard let server = StubServer(mode: "parallel") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+
+        let first = server.collectTurn()
+        guard await server.awaitTurns(1) else {
+            expect(false, "the first chat starts its turn")
+            return
+        }
+        let armed = server.startTurn(toolServers: server.session(allowing: true, asked: Box()))
+        let reply = await first.value
+        expect(
+            String(describing: reply.error).contains("restarted"),
+            "the stranded chat is told why its reply ended: \(String(describing: reply.error))")
+        armed.cancel()
+        _ = await armed.value
+    }
+
+    static func stoppingOneChatLeavesTheOther() async {
+        guard let server = StubServer(mode: "parallel") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+
+        let first = server.collectTurn()
+        guard await server.awaitTurns(1) else {
+            expect(false, "the first chat starts its turn")
+            return
+        }
+        let second = server.collectTurn()
+        guard await server.awaitTurns(2) else {
+            expect(false, "the second chat starts its turn while the first is live")
+            return
+        }
+        first.cancel()
+        _ = await first.value
+        server.mark("release")
+
+        let secondReply = await second.value
+        expect(secondReply.error == nil, "Stop on one chat leaves the other streaming")
+        expect(secondReply.text == "from thread-2", "the surviving chat keeps its own reply")
+        let interrupted = await server.awaitLog("interrupt:thread-1:turn-1")
+        expect(interrupted, "the stopped chat's turn is interrupted")
+        expect(!server.received.contains("interrupt:thread-2"), "the other chat's turn is not interrupted")
+    }
 }
 
 /// What the runner asked about, collected across the hop the consent closure makes.
@@ -473,6 +585,8 @@ final class StubServer {
         // The locator walks PATH, so the stub only sits in front of any real `codex`.
         let inherited = ProcessInfo.processInfo.environment["PATH"] ?? ""
         setenv("PATH", "\(executable.deletingLastPathComponent().path):\(inherited)", 1)
+        // The locator asks a login shell first; the user's rc files would put a real `codex` ahead.
+        setenv("ZDOTDIR", root.path, 1)
         setenv("TC_STUB_ROOT", root.path, 1)
         setenv("TC_STUB_MODE", mode, 1)
 
@@ -550,6 +664,32 @@ final class StubServer {
         } consent: { call in
             await MainActor.run { asked.calls.append(call) }
             return allowing
+        }
+    }
+
+    /// Collects one turn's text the way the transcript does, keeping whatever ended it.
+    func collectTurn() -> Task<(text: String, reasoning: String, error: Error?), Never> {
+        let stream = runner.stream(
+            AIRequest(messages: [AIMessage(role: .user, text: "Hello")]),
+            model: "gpt-5-codex", effort: nil)
+        return Task {
+            var text = ""
+            var reasoning = ""
+            do {
+                for try await event in stream {
+                    if case .text(let delta) = event { text += delta }
+                    if case .reasoning(let delta) = event { reasoning += delta }
+                }
+            } catch {
+                return (text, reasoning, error)
+            }
+            return (text, reasoning, nil)
+        }
+    }
+
+    func awaitTurns(_ count: Int) async -> Bool {
+        await awaitCondition {
+            self.received.split(separator: "\n").count { $0.hasPrefix("turn-params:") } >= count
         }
     }
 

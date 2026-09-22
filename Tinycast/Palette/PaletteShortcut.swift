@@ -26,6 +26,8 @@ enum PaletteShortcut: Equatable {
     case quit
     /// ⌘R.
     case restart
+    /// ⌘J, Quick AI handing its conversation to the AI Chat window.
+    case continueInChat
     /// ⌘., which AppKit binds to `cancelOperation:`, so it arrives as a token instead of a key.
     case pin
     /// ⌘1…⌘0, matched by key code in the panel and handed over as a slot.
@@ -49,6 +51,7 @@ enum PaletteShortcut: Equatable {
         if command, shift, matches("h") { return .hideFromSearch }
         if control, shift, matches("q") { return .quit }
         if command, matches("r") { return .restart }
+        if command, matches("j") { return .continueInChat }
         return nil
     }
 
@@ -58,7 +61,7 @@ enum PaletteShortcut: Equatable {
         case .copyFile, .copyName, .copyPath, .pasteFile, .quickLook, .toggleFavorite,
             .hideFromSearch, .quit, .restart:
             true
-        case .commandDelete, .delete, .deleteAll, .pin, .favoriteSlot:
+        case .commandDelete, .delete, .deleteAll, .pin, .favoriteSlot, .continueInChat:
             false
         }
     }
@@ -68,7 +71,7 @@ enum PaletteShortcut: Equatable {
         case .delete, .deleteAll, .copyFile, .copyName, .copyPath, .quickLook, .toggleFavorite,
             .hideFromSearch:
             true
-        case .commandDelete, .pasteFile, .quit, .restart, .pin, .favoriteSlot:
+        case .commandDelete, .pasteFile, .quit, .restart, .pin, .favoriteSlot, .continueInChat:
             false
         }
     }

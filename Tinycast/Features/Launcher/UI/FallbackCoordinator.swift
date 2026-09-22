@@ -43,7 +43,7 @@ final class FallbackCoordinator {
     /// The one funnel; each destination takes the query as the input it was already asking for.
     func run(_ fallback: Fallback, query: String) {
         switch fallback {
-        case .builtin(.aiChat): core.aiChatCoordinator.ask(query)
+        case .builtin(.quickAI): core.quickAICoordinator.ask(query)
         case .builtin(.searchFiles): core.fileSearchCoordinator.show(query: query)
         case .builtin(.runShellCommand): core.customCommandCoordinator.runShellCommand(query)
         case .builtin(.define): core.dictionaryCoordinator.show(term: query)
@@ -70,7 +70,7 @@ final class FallbackCoordinator {
 
     private func isAvailable(_ builtin: Fallback.Builtin) -> Bool {
         switch builtin {
-        case .aiChat: return settings.aiEnabled
+        case .quickAI: return settings.aiEnabled
         case .searchFiles: return settings.fileSearchEnabled
         // Its own capability: this shell is not the custom-command library's switch to hold.
         case .runShellCommand: return true

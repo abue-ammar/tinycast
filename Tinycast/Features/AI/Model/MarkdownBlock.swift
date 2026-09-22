@@ -29,6 +29,15 @@ enum MarkdownBlock: Equatable, Sendable {
         let rows: [[String]]
     }
 
+    /// One span's inline Markdown, parsed once here so what is drawn and what find counts agree.
+    static func inline(_ source: String) -> AttributedString {
+        var options = AttributedString.MarkdownParsingOptions()
+        options.interpretedSyntax = .inlineOnlyPreservingWhitespace
+        options.failurePolicy = .returnPartiallyParsedIfPossible
+        return (try? AttributedString(markdown: source, options: options))
+            ?? AttributedString(source)
+    }
+
     /// Tolerates the half-written document a stream produces: an open fence closes at the end.
     static func parse(_ markdown: String) -> [MarkdownBlock] {
         let text = markdown.replacingOccurrences(of: "\r\n", with: "\n")

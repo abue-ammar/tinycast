@@ -15,6 +15,20 @@ struct InstalledAITests {
         }
     }
 
+    /// A write to a pipe nobody reads raises SIGPIPE, whose default action ends this process.
+    static func aChildThatNeverReadsCannotKillTheApp() async {
+        let input = Data(repeating: 0x61, count: 1_048_576)
+        let workspace = URL(fileURLWithPath: NSTemporaryDirectory()).appending(path: "sigpipe-probe")
+        let probe = await InstalledAIProbe.run(
+            executable: URL(fileURLWithPath: "/usr/bin/true"), arguments: [], workspace: workspace,
+            input: input)
+        expect(probe.status == 0, "a probe whose child ignores stdin still returns")
+        let answer = await InstalledAIProbe.request(
+            executable: URL(fileURLWithPath: "/usr/bin/true"), arguments: [], workspace: workspace,
+            input: input, until: { _ in true })
+        expect(answer.isEmpty, "a request whose child ignores stdin still returns")
+    }
+
     static func main() async {
         guard let fixture = Fixture() else {
             expect(false, "the installed CLI fixture starts")
@@ -27,6 +41,7 @@ struct InstalledAITests {
         statusJSONRecognizesLogin()
         versionKeepsPrereleaseAndBuild()
         await openCodeRunsWithoutToolsAndDeletesItsSession(fixture)
+        claudeDiscoveryReadsTheCLIsOwnModelList()
         await claudeRunsWithoutToolsOrHistory(fixture)
         await grokRunsWithoutToolsAndDeletesItsSession(fixture)
         await cursorRunsAskModeWithoutForce(fixture)
@@ -40,6 +55,7 @@ struct InstalledAITests {
         await concurrentCallsAreAskedOneAtATime(fixture)
         await aCrashedTurnsFilesAreRemovedAtLaunch(fixture)
         await aManagedMCPPolicyLeavesBothFlagsOff(fixture)
+        await aChildThatNeverReadsCannotKillTheApp()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -153,6 +169,77 @@ struct InstalledAITests {
             "Grok models expose the CLI's advertised reasoning efforts")
     }
 
+    static func claudeDiscoveryReadsTheCLIsOwnModelList() {
+        let output = """
+            {"type":"system","subtype":"hook_started"}
+            {"type":"control_response","response":{"subtype":"success","request_id":"x","response":\
+            {"models":[{"value":"default","resolvedModel":"claude-opus-5-5",\
+            "description":"Opus 5.5 · Best"},{"value":"opus","resolvedModel":"claude-opus-5-5",\
+            "description":"Opus 5.5 · Best","supportedEffortLevels":["low","high"]},\
+            {"value":"claude-fable-5-1[1m]","resolvedModel":"claude-fable-5-1",\
+            "description":"Fable 5.1 · Most capable"},{"value":"haiku","displayName":"Haiku"}]}}}
+            """
+        let models = InstalledAIModel.claudeCatalog(output)
+        expect(
+            models.map(\.id) == ["opus", "claude-fable-5-1[1m]", "haiku"],
+            "Claude discovery keeps every model the CLI offers, once per resolved model")
+        expect(
+            models.map(\.name) == ["Claude Opus 5.5", "Claude Fable 5.1", "Claude Haiku"],
+            "a Claude model is named by the version its alias points at")
+        expect(
+            models.first?.efforts.map(\.id) == ["low", "high"],
+            "a Claude model carries only the efforts the CLI says it supports")
+        let frame = InstalledAIStreamDecoder.decode(
+            Data(#"{"type":"stream_event","event":{"delta":{"type":"thinking_delta","thinking":"Plan"}}}"#.utf8),
+            kind: .claude)
+        expect(frame.events == [.thinking, .reasoning("Plan")], "Claude thinking reaches the fold")
+        let opening = InstalledAIStreamDecoder.decode(
+            Data(#"{"type":"stream_event","event":{"type":"content_block_start","content_block":{"type":"thinking"}}}"#.utf8),
+            kind: .claude)
+        expect(
+            opening.events == [.thinking, .reasoning("\n\n")],
+            "a new thinking block breaks from the one before it")
+        expect(
+            InstalledAIModel.claudeTitle(
+                #"{"type":"control_response","response":{"subtype":"success","#
+                    + #""request_id":"tinycast-title","response":{"title":"Weekend hiking trip plan"}}}"#)
+                == "Weekend hiking trip plan",
+            "Claude's own session namer is read from its control response")
+        expect(
+            InstalledAIModel.claudeTitleRequest("User: hi")?.contains("generate_session_title") == true,
+            "the title request asks Claude Code to name the session without persisting it")
+        let result = InstalledAIStreamDecoder.decode(
+            Data(
+                (#"{"type":"result","total_cost_usd":0.5,"usage":{"input_tokens":10,"output_tokens":59,"#
+                    + #""cache_read_input_tokens":6401,"cache_creation_input_tokens":0,"#
+                    + #""output_tokens_details":{"thinking_tokens":51}},"#
+                    + #""modelUsage":{"claude-haiku-4-5":{"contextWindow":200000}}}"#).utf8),
+            kind: .claude)
+        expect(
+            result.events == [
+                .usage(
+                    AIUsage(
+                        inputTokens: 10, outputTokens: 59, cachedInputTokens: 6_401,
+                        reasoningTokens: 51, contextWindow: 200_000, costUSD: 0.5))
+            ],
+            "Claude's result reports cached and thinking tokens, its window and its cost")
+        let mixed = InstalledAIStreamDecoder.decode(
+            Data(
+                (#"{"type":"result","usage":{"input_tokens":10,"output_tokens":5},"modelUsage":{"#
+                    + #""claude-haiku-4-5":{"inputTokens":300,"contextWindow":200000},"#
+                    + #""claude-opus-5-5[1m]":{"inputTokens":40,"cacheReadInputTokens":90000,"#
+                    + #""contextWindow":1000000}}}"#).utf8),
+            kind: .claude)
+        guard case .usage(let usage)? = mixed.events.first else {
+            expect(false, "a result naming two models still reports usage")
+            return
+        }
+        expect(
+            usage.contextWindow == 1_000_000,
+            "the window is the conversation model's, not a side call's: "
+                + String(describing: usage.contextWindow))
+    }
+
     private static func claudeRunsWithoutToolsOrHistory(_ fixture: Fixture) async {
         let events = await fixture.events(kind: .claude, model: "sonnet", effort: "xhigh")
         expect(events.contains(.text("Claude reply")), "Claude text reaches the provider stream")
@@ -164,6 +251,13 @@ struct InstalledAITests {
         ] {
             expect(arguments.contains(flag), "Claude runs with \(flag)")
         }
+        expect(
+            arguments.contains("stream-json") && arguments.contains("--thinking-display")
+                && arguments.contains("summarized"),
+            "Claude reads JSON input and streams its thinking summaries")
+        expect(
+            fixture.read("claude-prompt.log").hasPrefix(#"{""#),
+            "Claude's turn arrives as one stream-json user message")
         // `--bare` reads neither OAuth nor the keychain, so it refuses the sign-in this route reuses.
         expect(!arguments.contains("--bare"), "Claude never runs with --bare")
         expect(
@@ -534,6 +628,8 @@ private final class Fixture {
             executables = values
             let inheritedPath = ProcessInfo.processInfo.environment["PATH"] ?? ""
             setenv("PATH", bin.path + ":" + inheritedPath, 1)
+            // The locator asks a login shell first; the user's rc files would put real CLIs ahead.
+            setenv("ZDOTDIR", root.path, 1)
             setenv("TC_INSTALLED_STUB_ROOT", root.path, 1)
             setenv("TC_CURSOR_CHATS_ROOT", cursorChats.path, 1)
         } catch {

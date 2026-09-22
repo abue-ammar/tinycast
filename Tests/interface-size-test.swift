@@ -62,6 +62,7 @@ struct InterfaceSizeTests {
         expect(
             m.spacing.chatFollowTailSlack, Theme.Spacing.chatFollowTailSlack,
             "spacing.chatFollowTailSlack")
+        expect(m.spacing.chatLine, Theme.Spacing.chatLine, "spacing.chatLine")
 
         expect(m.radius.panel, Theme.Radius.panel, "radius.panel")
         expect(m.radius.row, Theme.Radius.row, "radius.row")
@@ -274,6 +275,7 @@ struct InterfaceSizeTests {
             ("spacing.emojiSectionSpacing", m.spacing.emojiSectionSpacing),
             ("spacing.chatTranscriptBottom", m.spacing.chatTranscriptBottom),
             ("spacing.chatFollowTailSlack", m.spacing.chatFollowTailSlack),
+            ("spacing.chatLine", m.spacing.chatLine),
             ("radius.panel", m.radius.panel), ("radius.row", m.radius.row),
             ("radius.emojiCell", m.radius.emojiCell), ("radius.menu", m.radius.menu),
             ("radius.menuRow", m.radius.menuRow),

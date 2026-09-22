@@ -161,6 +161,12 @@ Notes adds `noteWindow 520×420` (opening size on a first run only), `noteWindow
 `noteTitlebar 44`, `noteTitleInset 120`, `noteEditorInset 16`, `noteSearchHeight 34`,
 `noteFooterHeight 28`, `noteGlyph 16`, `noteEmptyGlyph 28`, and `noteHeadingMenu 220×159`.
 
+AI Chat adds `aiChatWindow 960×660` (opening size), `aiChatWindowMinimum 640×440`, a sidebar of
+`aiChatSidebarMinimum 200`–`aiChatSidebarMaximum 340`, `aiChatDetailMinimum 440`,
+`aiChatReadingWidth 760` for the transcript and composer column, `aiChatComposerMaxHeight 180`, and
+`chatContextGauge 14` for the composer's context ring, and `chatContextCard 300` for the card it
+raises on hover.
+
 `keyCap` sizes the palette's keycap chips; `recorderKeyCap` (both size and radius) is the intentionally-smaller Settings shortcut-recorder chip.
 
 ### Typography (`Theme.Typography`)
@@ -304,6 +310,28 @@ than adding another toolbar or window.
 The switcher exposes activation, Rename, and Move to Trash as VoiceOver actions with the actual note
 title. Its hover buttons are hidden from accessibility so those actions are announced once. See
 [features/notes.md](features/notes.md).
+
+---
+
+## AI Chat window
+
+Source: `Features/AI/UI/AIChatSplitViewController.swift`, `AIChatDetailView.swift`.
+
+AI Chat is a titled window built the way Settings is, not a palette sibling like Notes: a real
+`NSSplitViewController` whose sidebar item takes the system sidebar material, a unified toolbar with
+an inline title, and native `List`, `Menu` and context menus. Nothing about it scales with Interface
+Size. The composer is untinted Liquid Glass at `Radius.dialog`, stacked under the transcript so nothing
+scrolls behind it, with `.glass` capsules for its model and reasoning menus, and its glass on a
+background layer rather than the box.
+The title bar keeps the system's own toolbar band, as any document window's does. The context card
+the gauge raises on hover is glass over a solid `windowBackgroundColor`, because it rises over
+transcript text, and sits in the transcript's own frame at its bottom edge, so no window size can
+push it off screen. A reply's choices are `.glass` capsules that rise out of the composer's top
+edge. Find marks words in `Colors.findMatch` / `findCurrent`, the system yellow, with
+`findCurrentInk` black on the solid one in both appearances. Transcript lines sit
+`spacing.chatLine 4` apart on both surfaces. The transcript itself is the palette's `ChatTranscriptView`
+with `surface: .window`, which leaves out `edgeDissolve` and `thinScrollbar` — both are measured
+against the palette's bars — and caps the column at `aiChatReadingWidth`, centred.
 
 ---
 

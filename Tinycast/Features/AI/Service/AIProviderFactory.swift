@@ -3,22 +3,6 @@ import Foundation
 
 @MainActor
 enum AIProviderFactory {
-    /// Chat's route, and the one every existing caller means.
-    static func make(
-        settings: AISettingsStore,
-        subscription: ChatGPTSubscriptionManager,
-        installedAI: InstalledAIManager,
-        keyStore: KeychainSecretStore = .aiAPIKeys,
-        toolServers: AIToolServerSession? = nil
-    ) throws -> any AIProvider {
-        guard let selection = settings.defaultModel else {
-            throw AIProviderError.unavailable("Choose a default AI model in Settings.")
-        }
-        return try make(
-            selection: selection, settings: settings, subscription: subscription,
-            installedAI: installedAI, keyStore: keyStore, toolServers: toolServers)
-    }
-
     /// `guardrails` reaches only the on-device model, the one route that filters locally.
     static func make(
         selection: AIModelSelection,

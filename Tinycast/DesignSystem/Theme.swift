@@ -21,6 +21,8 @@ enum Theme {
         static let chatTranscriptBottom: CGFloat = 28
         /// A stream grows the transcript as the reader descends, so an exact-bottom test runs away.
         static let chatFollowTailSlack: CGFloat = 44
+        /// Extra leading between a transcript's lines, so a long reply reads as paragraphs.
+        static let chatLine: CGFloat = 4
         /// Space above every header but the first, reading as the previous section's close.
         static let sectionSpacing: CGFloat = 12
         /// Emoji tiles need a little more separation so adjacent category grids stay distinct.
@@ -139,6 +141,11 @@ enum Theme {
         static let hairline: CGFloat = 1
         static let markdownListMarker: CGFloat = 20
         static let markdownQuoteBar: CGFloat = 2
+        /// The chat composer's context ring, track and fill alike.
+        static let contextRingStroke: CGFloat = 2
+        /// The chat window's drop outline and the length of its dashes.
+        static let dropHintStroke: CGFloat = 2
+        static let dropHintDash: CGFloat = 6
         /// The uninstall list's leading checkbox / lock glyph.
         static let checkbox: CGFloat = 16
         static let clipboardListWidth: CGFloat = 290
@@ -174,6 +181,8 @@ enum Theme {
         static let chatAttachmentGlyph: CGFloat = 16
         /// A staged file's preview in its pill, kept under the pill's height so it reads inside it.
         static let chatAttachmentThumb: CGFloat = 18
+        /// The window composer's remove button; small, but what makes a mispaste recoverable.
+        static let chatAttachmentRemove: CGFloat = 14
         /// Tighter than the gap inside the pill, so the thumbnail reads as filling it.
         static let chatAttachmentInset: CGFloat = 3
         /// The clipboard preview's player; `VideoPlayer` expands unbounded without a height.
@@ -191,6 +200,23 @@ enum Theme {
         static let settingsRowIcon: CGFloat = 20
         /// A sidebar glyph inside its tinted tile; the tile's inset brings it to the row icon's size.
         static let settingsSidebarGlyph: CGFloat = 14
+        /// AI Chat's opening size; the user owns it from there, autosaved.
+        static let aiChatWindow = CGSize(width: 960, height: 660)
+        static let aiChatWindowMinimum = CGSize(width: 640, height: 440)
+        static let aiChatSidebarMinimum: CGFloat = 200
+        static let aiChatSidebarMaximum: CGFloat = 340
+        /// The sidebar's search capsule, a row's height so it lines up with the list below it.
+        static let aiChatSearchField: CGFloat = 28
+        static let aiChatDetailMinimum: CGFloat = 440
+        /// The transcript and composer column; past this a line of prose stops being readable.
+        static let aiChatReadingWidth: CGFloat = 760
+        /// The composer grows with its text up to this, then scrolls inside itself.
+        static let aiChatComposerMaxHeight: CGFloat = 180
+        static let chatContextGauge: CGFloat = 14
+        /// A source chip's title before it middle-truncates, so three chips share a row.
+        static let chatSourceTitle: CGFloat = 200
+        /// The context card's width: a label column and a value one, with room for a model name.
+        static let chatContextCard: CGFloat = 300
         /// One "Aa" segment of the Interface Size control; three sit in a grouped row's trailing slot.
         static let interfaceSizeSegment: CGFloat = 40
         /// A grouped `Form` row's control height.
@@ -357,6 +383,16 @@ enum Theme {
         /// Modal separation inside Tinycast: the launcher recedes while its dialog is in front.
         static let dialogDimming = adaptive(
             dark: .srgbInk(0, alpha: 0.34), light: .srgbInk(0, alpha: 0.34))
+        /// Find's marks, the Mac's own yellow: every match faint, the current one solid.
+        static let findMatch = adaptive(
+            dark: NSColor.systemYellow.withAlphaComponent(0.32),
+            light: NSColor.systemYellow.withAlphaComponent(0.4))
+        static let findCurrent = adaptive(
+            dark: NSColor.systemYellow.withAlphaComponent(0.9),
+            light: NSColor.systemYellow.withAlphaComponent(0.95))
+        /// Black on the solid mark in both appearances, as a highlighter's ink stays readable.
+        static let findCurrentInk = adaptive(
+            dark: .srgbInk(0, alpha: 1), light: .srgbInk(0, alpha: 1))
         static let tooltipShadow = adaptive(
             dark: .srgbInk(0, alpha: 0.18), light: .srgbInk(0, alpha: 0.18))
 
@@ -416,6 +452,12 @@ enum Theme {
         static let destructive = Color.red
         /// Success tint: the leading glyph of a `.success` dialog.
         static let success = Color.green
+        /// Caution tint, short of destructive: a chat context nearly full.
+        static let warning = Color.orange
+        /// The window's own page, for a card that must hide the transcript it floats over.
+        static let windowSurface = Color(nsColor: .windowBackgroundColor)
+        /// Where a dropped file will land: the chat window's dashed outline.
+        static let dropTarget = Color.accentColor
         /// Progress tint: the message pill's spinner while the work behind it is still running.
         static let progress = Color.blue
         /// The command output window's page: a flat surface the log sits directly on.

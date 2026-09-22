@@ -122,8 +122,8 @@ struct AIStreamDecoder: Sendable {
         if let choice = chunk.choices?.first {
             if let content = choice.delta?.content, !content.isEmpty {
                 events.append(.text(content))
-            } else if choice.delta?.hasReasoning == true {
-                events.append(.thinking)
+            } else if let reasoning = choice.delta?.reasoningText {
+                events += [.thinking, .reasoning(reasoning)]
             }
             for fragment in choice.delta?.toolCalls ?? [] { absorb(fragment) }
             if choice.finishReason == "tool_calls" { events.append(contentsOf: flushToolCalls()) }
@@ -131,6 +131,9 @@ struct AIStreamDecoder: Sendable {
         if let reported = chunk.usage {
             usage.inputTokens = reported.promptTokens ?? usage.inputTokens
             usage.outputTokens = reported.completionTokens ?? usage.outputTokens
+            usage.reasoningTokens =
+                reported.completionTokensDetails?.reasoningTokens ?? usage.reasoningTokens
+            usage.costUSD = reported.cost ?? usage.costUSD
             events.append(.usage(usage))
         }
         return events
@@ -168,9 +171,15 @@ struct AIStreamDecoder: Sendable {
                 partialToolCalls[event.index ?? 0]?.arguments += event.delta?.partialJSON ?? ""
                 return []
             }
-            return event.delta?.type == "thinking_delta" ? [.thinking] : []
+            guard event.delta?.type == "thinking_delta" else { return [] }
+            guard let thinking = event.delta?.thinking, !thinking.isEmpty else { return [.thinking] }
+            return [.thinking, .reasoning(thinking)]
         case "message_start":
-            usage.inputTokens = event.message?.usage?.inputTokens ?? usage.inputTokens
+            let reported = event.message?.usage
+            usage.inputTokens = reported?.inputTokens ?? usage.inputTokens
+            let cached = [reported?.cacheReadInputTokens, reported?.cacheCreationInputTokens]
+                .compactMap { $0 }
+            if !cached.isEmpty { usage.cachedInputTokens = cached.reduce(0, +) }
             return [.usage(usage)]
         case "message_delta":
             usage.outputTokens = event.usage?.outputTokens ?? usage.outputTokens
@@ -215,16 +224,21 @@ private struct OpenAIChunk: Decodable {
 
             let content: String?
             let reasoning: String?
+            let reasoningContent: String?
             let reasoningDetails: [ReasoningDetail]?
             let toolCalls: [ToolCall]?
 
-            var hasReasoning: Bool {
-                reasoning?.isEmpty == false
-                    || reasoningDetails?.contains(where: { $0.text?.isEmpty == false }) == true
+            /// OpenRouter says `reasoning`, DeepSeek and its copies `reasoning_content`.
+            var reasoningText: String? {
+                let text =
+                    [reasoning, reasoningContent].compactMap { $0 }.first { !$0.isEmpty }
+                    ?? reasoningDetails?.compactMap(\.text).joined()
+                return text?.isEmpty == false ? text : nil
             }
 
             enum CodingKeys: String, CodingKey {
                 case content, reasoning
+                case reasoningContent = "reasoning_content"
                 case reasoningDetails = "reasoning_details"
                 case toolCalls = "tool_calls"
             }
@@ -240,12 +254,25 @@ private struct OpenAIChunk: Decodable {
     }
 
     struct Usage: Decodable {
+        struct CompletionDetails: Decodable {
+            let reasoningTokens: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case reasoningTokens = "reasoning_tokens"
+            }
+        }
+
         let promptTokens: Int?
         let completionTokens: Int?
+        let completionTokensDetails: CompletionDetails?
+        /// OpenRouter's own figure; a vendor API sends none.
+        let cost: Double?
 
         enum CodingKeys: String, CodingKey {
             case promptTokens = "prompt_tokens"
             case completionTokens = "completion_tokens"
+            case completionTokensDetails = "completion_tokens_details"
+            case cost
         }
     }
 
@@ -260,11 +287,12 @@ private struct AnthropicEvent: Decodable {
     struct Delta: Decodable {
         let type: String?
         let text: String?
+        let thinking: String?
         let partialJSON: String?
         let stopReason: String?
 
         enum CodingKeys: String, CodingKey {
-            case type, text
+            case type, text, thinking
             case partialJSON = "partial_json"
             case stopReason = "stop_reason"
         }
@@ -279,10 +307,14 @@ private struct AnthropicEvent: Decodable {
     struct Usage: Decodable {
         let inputTokens: Int?
         let outputTokens: Int?
+        let cacheReadInputTokens: Int?
+        let cacheCreationInputTokens: Int?
 
         enum CodingKeys: String, CodingKey {
             case inputTokens = "input_tokens"
             case outputTokens = "output_tokens"
+            case cacheReadInputTokens = "cache_read_input_tokens"
+            case cacheCreationInputTokens = "cache_creation_input_tokens"
         }
     }
 

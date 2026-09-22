@@ -278,7 +278,7 @@ order name a live row across a rename or a reinstall.
 
 | Fallback | Where the query goes | Offered when |
 | --- | --- | --- |
-| AI Chat | a fresh chat, question already sent (`AIChatCoordinator.ask`) | `aiEnabled` |
+| Quick AI | a fresh Quick AI chat, question already sent (`QuickAICoordinator.ask`) | `aiEnabled` |
 | Search Files | the file-search screen, already narrowed | `fileSearchEnabled` |
 | Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
 | Define Word | the dictionary screen, already showing the entry (see [dictionary.md](dictionary.md)) | the Define Word command is visible in Settings › Commands |
@@ -311,7 +311,7 @@ pane as well as from the launcher, and reorders through ↑/↓ buttons like a f
 introducing this codebase's first drag-reorder.
 
 **A fallback row is not a result, and `LauncherScreen.Row` says so.** `.fallback` is its own case
-with a `fallback-` prefixed id, because AI Chat can be a ranked hit *and* a fallback in the same
+with a `fallback-` prefixed id, because Quick AI can be a ranked hit *and* a fallback in the same
 list, and two rows sharing one id would collapse in `ForEach`. That is also why `LauncherList` takes
 a `selectedRowID` rather than an entry id. Nothing about a fallback row is learned, pinned or
 revealed: `activate` routes to `FallbackCoordinator.run` instead of `LauncherCoordinator.launch`, and

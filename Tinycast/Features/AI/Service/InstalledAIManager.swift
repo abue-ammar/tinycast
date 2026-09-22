@@ -18,6 +18,19 @@ final class InstalledAIManager {
         return FileManager.default.fileExists(atPath: path)
     }
 
+    /// No MCP server at all, for a Claude process that is handed none: a plain turn or a probe.
+    nonisolated static var claudeWithoutMCPArguments: [String] {
+        hasManagedMCPPolicy ? [] : ["--strict-mcp-config", "--mcp-config", #"{"mcpServers":{}}"#]
+    }
+
+    /// A control request answered without a prompt, so the CLI replies without calling a model.
+    nonisolated private static var claudeControlArguments: [String] {
+        [
+            "-p", "--input-format", "stream-json", "--output-format", "stream-json", "--verbose",
+            "--no-session-persistence"
+        ] + claudeWithoutMCPArguments
+    }
+
     init(supportDirectory: URL = AppPaths.applicationSupport()) {
         workspace = supportDirectory.appending(
             path: "InstalledAI/Workspace", directoryHint: .isDirectory)
@@ -121,6 +134,22 @@ final class InstalledAIManager {
         statuses[kind] = InstalledAIStatus()
     }
 
+    /// Claude Code names its own sessions; asking it here costs one small request, not a turn.
+    func claudeTitle(for description: String) async -> String? {
+        guard status(for: .claude).isReady, let executable = status(for: .claude).executable,
+            let request = InstalledAIModel.claudeTitleRequest(description)
+        else { return nil }
+        let output = await InstalledAIProbe.request(
+            executable: executable, arguments: Self.claudeControlArguments,
+            workspace: workspace, input: Data(request.utf8),
+            until: { output in
+                // A whole line: the ID arrives before the title, so a chunk may split between them.
+                output.split(separator: "\n", omittingEmptySubsequences: false).dropLast()
+                    .contains { $0.contains(InstalledAIModel.claudeTitleRequestID) }
+            })
+        return InstalledAIModel.claudeTitle(output).flatMap(ChatTitle.sanitize)
+    }
+
     func provider(
         kind: InstalledAIKind, model: String, effort: String?,
         toolServers: AIToolServerSession? = nil
@@ -166,12 +195,27 @@ final class InstalledAIManager {
                 executable: executable, arguments: ["auth", "status", "--json"],
                 workspace: workspace)
             let loggedIn = InstalledAIProbe.loggedIn(inStatusJSON: auth.output)
+            guard auth.status == 0, loggedIn else {
+                return (
+                    kind,
+                    InstalledAIStatus(
+                        phase: .signInRequired, version: version, executable: executable)
+                )
+            }
+            // No prompt follows the request, so the CLI answers and exits without calling a model.
+            let catalog = await InstalledAIProbe.run(
+                executable: executable, arguments: claudeControlArguments, workspace: workspace,
+                input: Data(InstalledAIModel.claudeInitializeRequest.utf8),
+                // The reader's SessionStart hooks run before the CLI answers, however slow they are.
+                timeout: .seconds(30))
+            let models = InstalledAIModel.claudeCatalog(catalog.output)
             return (
                 kind,
                 InstalledAIStatus(
-                    phase: auth.status == 0 && loggedIn ? .ready : .signInRequired,
-                    version: version, executable: executable,
-                    models: loggedIn ? InstalledAIModel.claude : [])
+                    phase: models.isEmpty
+                        ? .failed("Claude listed no models. Update Claude Code, then Check Again.")
+                        : .ready,
+                    version: version, executable: executable, models: models)
             )
         case .openCode:
             let models = await InstalledAIProbe.run(

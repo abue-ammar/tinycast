@@ -301,10 +301,11 @@ is what refuses every tool the list does not name, since an allow list alone den
 asks no per-call question at all, so it could not express Ask Each Chat. `tool_use` and
 `tool_result` blocks become the two events.
 
-While Codex or Claude is the chat model, Tinycast keeps no connection of its own to a local
-server: the CLI starts its own copy, and a second would only run it twice.
-`MCPServer.runsInTinycast(whileCLIRouteSelected:)` is the rule, and `AppCore` re-applies it
-whenever the chat model changes, so choosing an API model starts the server again. A remote server
+While Codex or Claude is the model of every open chat — Quick AI's and the window's — Tinycast keeps
+no connection of its own to a local server: the CLI starts its own copy, and a second would only run
+it twice. `MCPServer.runsInTinycast(whileCLIRouteSelected:)` is the rule,
+`AIChatCoordinator.everyChatRunsItsOwnTools` the verdict, and `AppCore` re-applies it whenever that
+verdict flips, so choosing an API model in either chat starts the server again. A remote server
 stays connected — a session, not a process — so its row keeps a live status; a local one reads
 Stopped.
 
@@ -328,7 +329,8 @@ caught there rather than in the middle of a conversation.
 - A stdio server (`npx -y @modelcontextprotocol/server-filesystem ~/Desktop`) reaches ready; its
   process is gone ten minutes after the palette closes, and immediately on Quit.
 - A question answered with a tool shows the row inline, spinner then glyph, and the reply continues
-  after it. Reopening that chat from ⌘K → Chat History still shows what ran.
+  after it. Reopening that chat from ⌘K → Chat History or the AI Chat window's sidebar still shows
+  what ran.
 - The first call raises the dialog. Allow This Chat does not ask again in that conversation and does
   in the next; Always Allow survives a relaunch; Escape refuses only that call.
 - `@filesystem list my desktop` shows the tools glyph after the text, sends without the prefix, and

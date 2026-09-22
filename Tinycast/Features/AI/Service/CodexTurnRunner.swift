@@ -1,6 +1,6 @@
 import Foundation
 
-/// One generation at a time over the app-server, streamed back as provider events.
+/// Generations over the app-server, one ephemeral thread each, so chats can run side by side.
 @MainActor
 final class CodexTurnRunner {
     private static let safetyInstructions = """
@@ -23,27 +23,49 @@ final class CodexTurnRunner {
     var connect: (@MainActor ([AIToolServer]) async throws -> [ChatGPTSubscription.Model])?
     var onTurnEnded: (@MainActor () -> Void)?
 
-    /// Reference identity for one stream, so a stale turn's cleanup can't clear its successor.
+    /// One stream's live state; its reference identity keeps a stale cleanup off its successor.
+    private final class Turn {
+        let continuation: AIProviderStream.Continuation
+        /// What this turn may call and who answers; a turn armed with nothing declines every ask.
+        let servers: [AIToolServer]
+        let session: AIToolServerSession?
+        var threadID: String?
+        var turnID: String?
+        /// The summary part the last delta belonged to, so the next part starts a paragraph.
+        var summaryPart: String?
+        /// The tool an elicitation is about: the item that names it always starts before the ask.
+        var startedTools: [String: String] = [:]
+        var spentCalls = 0
+
+        init(
+            continuation: AIProviderStream.Continuation, servers: [AIToolServer],
+            session: AIToolServerSession?
+        ) {
+            self.continuation = continuation
+            self.servers = servers
+            self.session = session
+        }
+
+        var roundCap: Int? { session == nil ? 1 : session?.rounds }
+    }
+
+    /// Reference identity for one stream, handed out before its turn exists.
     private final class TurnToken: Sendable {}
 
     private let client: CodexAppServerClient
-    private var activeContinuation: AIProviderStream.Continuation?
-    private var activeToken: TurnToken?
-    private var activeThreadID: String?
-    private var activeTurnID: String?
-    /// A Stop that beat the turn's ID arms its thread; the first ID to name it spends the Stop.
-    private var pendingInterruptThreadID: String?
-    private var activeServers: [AIToolServer] = []
-    /// The tool an elicitation is about: the item that names it always starts before the ask.
-    private var startedTools: [String: String] = [:]
-    private var spentCalls = 0
-    private var roundCap: Int? = 1
+    private var turns: [ObjectIdentifier: Turn] = [:]
+    /// Threads whose Stop beat the turn's ID; the first ID to name one spends its Stop.
+    private var pendingInterruptThreadIDs: Set<String> = []
 
     init(client: CodexAppServerClient) {
         self.client = client
+        client.onElicitation = { [weak self] elicitation in
+            await self?.consent(to: elicitation) ?? false
+        }
+        client.onRelaunch = { [weak self] in self?.endStrandedTurns() }
     }
 
-    var isActive: Bool { activeThreadID != nil }
+    var isActive: Bool { !turns.isEmpty }
 
     nonisolated func stream(
         _ request: AIRequest, model: String, effort: String?,
@@ -64,94 +86,123 @@ final class CodexTurnRunner {
     }
 
     private func endTurn(_ token: TurnToken) {
-        guard activeToken === token else { return }
-        interruptActiveTurn()
+        guard let turn = turns[ObjectIdentifier(token)] else { return }
+        interrupt(turn, key: ObjectIdentifier(token))
     }
 
     func reset() {
-        interruptActiveTurn()
+        for (key, turn) in turns { interrupt(turn, key: key) }
     }
 
     func handle(method: String, params: [String: JSONValue]) {
-        let thread = params["threadId"]?.stringValue
-        if let thread, thread == pendingInterruptThreadID {
+        guard let thread = params["threadId"]?.stringValue else { return }
+        if pendingInterruptThreadIDs.contains(thread) {
             handleArmed(method: method, params: params, threadID: thread)
             return
         }
-        guard thread == activeThreadID else { return }
+        guard let entry = turns.first(where: { $0.value.threadID == thread }) else { return }
+        let key = entry.key
+        let turn = entry.value
+        let continuation = turn.continuation
         switch method {
         case "item/agentMessage/delta":
             guard let delta = params["delta"]?.stringValue, !delta.isEmpty else { return }
-            activeContinuation?.yield(.text(delta))
+            continuation.yield(.text(delta))
+        // The summary, not raw reasoning: the raw stream is off by default and would repeat it.
+        case "item/reasoning/summaryTextDelta":
+            guard let delta = params["delta"]?.stringValue, !delta.isEmpty else { return }
+            let part = "\(params["itemId"]?.stringValue ?? ""):\(params["summaryIndex"]?.intValue ?? 0)"
+            if let previous = turn.summaryPart, previous != part { continuation.yield(.reasoning("\n\n")) }
+            turn.summaryPart = part
+            continuation.yield(.reasoning(delta))
         case "item/started":
             guard let item = params["item"]?.objectValue else { return }
             switch item["type"]?.stringValue {
-            case "webSearch": activeContinuation?.yield(.searching(item["query"]?.stringValue))
-            case "reasoning": activeContinuation?.yield(.thinking)
-            case "mcpToolCall": startToolCall(item)
+            case "webSearch": continuation.yield(.searching(item["query"]?.stringValue))
+            case "reasoning": continuation.yield(.thinking)
+            case "mcpToolCall": startToolCall(item, in: turn, key: key)
             default: break
             }
         case "item/completed":
             guard let item = params["item"]?.objectValue else { return }
             switch item["type"]?.stringValue {
-            case "webSearch": activeContinuation?.yield(.searched(item["query"]?.stringValue))
+            case "webSearch": continuation.yield(.searched(item["query"]?.stringValue))
             case "mcpToolCall":
                 guard let id = item["id"]?.stringValue else { return }
-                activeContinuation?.yield(
+                continuation.yield(
                     .toolResult(id: id, isError: item["status"]?.stringValue != "completed"))
             default: break
             }
         case "turn/started":
             // Captured eagerly so Stop can interrupt even when the turn/start response never lands.
-            if let id = params["turn"]?.objectValue?["id"]?.stringValue { activeTurnID = id }
+            if let id = params["turn"]?.objectValue?["id"]?.stringValue { turn.turnID = id }
         case "turn/completed":
-            guard let turn = params["turn"]?.objectValue else { return }
-            switch turn["status"]?.stringValue {
+            guard let completed = params["turn"]?.objectValue else { return }
+            switch completed["status"]?.stringValue {
             case "completed":
-                activeContinuation?.yield(.finished)
-                activeContinuation?.finish()
+                continuation.yield(.finished)
+                continuation.finish()
             case "failed":
-                activeContinuation?.finish(
+                continuation.finish(
                     throwing: AIProviderError.responseFailed(
-                        turn["error"]?.objectValue?["message"]?.stringValue
+                        completed["error"]?.objectValue?["message"]?.stringValue
                             ?? "Codex could not finish the response."))
             default:
-                activeContinuation?.finish(
+                continuation.finish(
                     throwing: AIProviderError.responseFailed("The response was interrupted."))
             }
-            clearActiveTurn()
+            clear(key)
         case "error":
             guard params["willRetry"]?.boolValue != true else { return }
-            activeContinuation?.finish(
+            continuation.finish(
                 throwing: AIProviderError.responseFailed(
                     params["error"]?.objectValue?["message"]?.stringValue
                         ?? "Codex returned an error."))
-            clearActiveTurn()
+            clear(key)
         default:
             break
         }
     }
 
     /// A call's row, and the cap: Codex names no round, so it counts calls, which is stricter.
-    private func startToolCall(_ item: [String: JSONValue]) {
+    private func startToolCall(_ item: [String: JSONValue], in turn: Turn, key: ObjectIdentifier) {
         guard let id = item["id"]?.stringValue else { return }
         let name = item["server"]?.stringValue ?? ""
         let handle = CodexMCPLaunch.handle(ofServer: name)
-        if let handle, let tool = item["tool"]?.stringValue { startedTools[handle] = tool }
-        let origin = handle.map { AIToolServerRow.title(of: $0, in: activeServers) }
-        activeContinuation?.yield(
+        if let handle, let tool = item["tool"]?.stringValue { turn.startedTools[handle] = tool }
+        let origin = handle.map { AIToolServerRow.title(of: $0, in: turn.servers) }
+        turn.continuation.yield(
             .toolCall(
                 id: id, origin: origin ?? AIToolServerRow.label(name),
                 title: AIToolServerRow.label(item["tool"]?.stringValue ?? "")))
-        spentCalls += 1
-        guard let roundCap, spentCalls > roundCap else { return }
+        turn.spentCalls += 1
+        guard let roundCap = turn.roundCap, turn.spentCalls > roundCap else { return }
         // Finished before the interrupt, whose own cleanup would otherwise name a different reason.
-        activeContinuation?.finish(
+        turn.continuation.finish(
             throwing: AIProviderError.responseFailed(
                 "Stopped after \(roundCap) rounds of tool calls."))
-        activeContinuation = nil
-        interruptActiveTurn()
-        onTurnEnded?()
+        interrupt(turn, key: key)
+    }
+
+    /// Routed by thread, so each chat's calls are asked about under that chat's own consent.
+    private func consent(to elicitation: CodexElicitation) async -> Bool {
+        guard let turn = turns.values.first(where: { $0.threadID == elicitation.threadID }),
+            !turn.servers.isEmpty, let session = turn.session,
+            let handle = CodexMCPLaunch.handle(ofServer: elicitation.serverName)
+        else { return false }
+        let tool = elicitation.namedTool ?? turn.startedTools[handle] ?? elicitation.toolName
+        return await session.consent(AIToolServerCall(handle: handle, tool: tool))
+    }
+
+    /// The server list is fixed at launch, so a turn armed with another one ends the live threads.
+    private func endStrandedTurns() {
+        pendingInterruptThreadIDs.removeAll()
+        for (key, turn) in turns where turn.threadID != nil {
+            turn.continuation.finish(
+                throwing: AIProviderError.responseFailed(
+                    "Codex restarted to change the tools another chat can use."))
+            clear(key)
+        }
     }
 
     /// A thread Stop already dropped, watched only for the turn ID that Stop lacked.
@@ -163,7 +214,7 @@ final class CodexTurnRunner {
             guard let id = params["turn"]?.objectValue?["id"]?.stringValue else { return }
             interruptOnce(threadID: threadID, turnID: id)
         case "turn/completed", "error":
-            pendingInterruptThreadID = nil
+            pendingInterruptThreadIDs.remove(threadID)
         default:
             break
         }
@@ -188,6 +239,7 @@ final class CodexTurnRunner {
                 throwing: AIProviderError.unavailable("There is no user message to send."))
             return
         }
+        let key = ObjectIdentifier(token)
         var tookOwnership = false
         do {
             let servers = await toolServers?.servers() ?? []
@@ -199,13 +251,9 @@ final class CodexTurnRunner {
                 throw AIProviderError.unavailable(
                     "No Codex model is available for this account.")
             }
-            activeContinuation?.finish(
-                throwing: AIProviderError.responseFailed(
-                    "A newer request replaced this response."))
-            activeContinuation = continuation
-            activeToken = token
+            let turn = Turn(continuation: continuation, servers: servers, session: toolServers)
+            turns[key] = turn
             tookOwnership = true
-            arm(servers, session: toolServers)
 
             guard models.isEmpty || models.contains(where: { $0.id == model }) else {
                 throw AIProviderError.unavailable(
@@ -232,9 +280,9 @@ final class CodexTurnRunner {
                 throw CodexAppServerClient.ClientError.requestFailed(
                     "Codex returned no generation thread.")
             }
-            // Claiming the thread after losing the turn aims `isActive` at a stream nobody reads.
-            guard activeToken === token, !Task.isCancelled else { return }
-            activeThreadID = threadID
+            // A thread claimed after Stop would route events to a stream nobody reads.
+            guard turns[key] === turn, !Task.isCancelled else { return }
+            turn.threadID = threadID
 
             let history = historyItems(from: request.messages[..<promptIndex])
             if !history.isEmpty {
@@ -256,46 +304,26 @@ final class CodexTurnRunner {
                     method: "turn/start", params: turnParameters)
             }
             let turnID = try await turnTask.value["turn"]?.objectValue?["id"]?.stringValue
-            guard activeToken === token, !Task.isCancelled else {
-                if activeToken === token { interruptActiveTurn() }
+            guard turns[key] === turn, !Task.isCancelled else {
+                if turns[key] === turn { interrupt(turn, key: key) }
                 if let turnID { interruptOnce(threadID: threadID, turnID: turnID) }
                 return
             }
-            if let turnID { activeTurnID = turnID }
+            if let turnID { turn.turnID = turnID }
         } catch is CancellationError {
             if tookOwnership {
                 endTurn(token)
-            } else if activeToken == nil {
+            } else if turns.isEmpty {
                 // A pre-ownership Stop still skipped `endTurn`, so the idle timer must re-arm here.
                 onTurnEnded?()
             }
         } catch {
             continuation.finish(throwing: ChatGPTSubscriptionManager.userFacing(error))
-            if activeToken === token {
-                interruptActiveTurn()
-            } else if !tookOwnership, activeToken == nil {
+            if let turn = turns[key] {
+                interrupt(turn, key: key)
+            } else if !tookOwnership, turns.isEmpty {
                 onTurnEnded?()
             }
-        }
-    }
-
-    /// What this turn may call and who answers; cleared with it, so the next one declines again.
-    private func arm(_ servers: [AIToolServer], session: AIToolServerSession?) {
-        activeServers = servers
-        startedTools = [:]
-        spentCalls = 0
-        roundCap = session == nil ? 1 : session?.rounds
-        guard !servers.isEmpty, let session else {
-            client.onElicitation = nil
-            return
-        }
-        client.onElicitation = { [weak self] elicitation in
-            guard let handle = CodexMCPLaunch.handle(ofServer: elicitation.serverName) else {
-                return false
-            }
-            let started = self?.startedTools[handle]
-            let tool = elicitation.namedTool ?? started ?? elicitation.toolName
-            return await session.consent(AIToolServerCall(handle: handle, tool: tool))
         }
     }
 
@@ -336,14 +364,12 @@ final class CodexTurnRunner {
         }
     }
 
-    private func interruptActiveTurn() {
-        let threadID = activeThreadID
-        let turnID = activeTurnID
-        clearActiveTurn()
-        guard let threadID else { return }
-        guard let turnID else {
+    private func interrupt(_ turn: Turn, key: ObjectIdentifier) {
+        clear(key)
+        guard let threadID = turn.threadID else { return }
+        guard let turnID = turn.turnID else {
             // Stop beat the ID: arm the thread rather than lose the turn the server still runs.
-            pendingInterruptThreadID = threadID
+            pendingInterruptThreadIDs.insert(threadID)
             return
         }
         interrupt(threadID: threadID, turnID: turnID)
@@ -351,8 +377,7 @@ final class CodexTurnRunner {
 
     /// Either naming of the turn may arrive first; disarming keeps a Stop from firing twice.
     private func interruptOnce(threadID: String, turnID: String) {
-        guard pendingInterruptThreadID == threadID else { return }
-        pendingInterruptThreadID = nil
+        guard pendingInterruptThreadIDs.remove(threadID) != nil else { return }
         interrupt(threadID: threadID, turnID: turnID)
     }
 
@@ -363,19 +388,12 @@ final class CodexTurnRunner {
         }
     }
 
-    /// Finishing ends a stream the server abandoned; ending a live turn re-arms idle shutdown.
-    private func clearActiveTurn() {
-        let wasLive = activeContinuation != nil
-        activeContinuation?.finish(
+    /// Finishing ends a stream the server abandoned; the last live turn ending re-arms idle shutdown.
+    private func clear(_ key: ObjectIdentifier) {
+        guard let turn = turns.removeValue(forKey: key) else { return }
+        turn.continuation.finish(
             throwing: AIProviderError.responseFailed("The Codex connection was interrupted."))
-        activeContinuation = nil
-        activeToken = nil
-        activeThreadID = nil
-        activeTurnID = nil
-        activeServers = []
-        startedTools = [:]
-        client.onElicitation = nil
-        client.cancelElicitations()
-        if wasLive { onTurnEnded?() }
+        if let threadID = turn.threadID { client.cancelElicitations(threadID: threadID) }
+        if turns.isEmpty { onTurnEnded?() }
     }
 }

@@ -106,7 +106,7 @@ private struct ChatHistoryRow: View {
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(.secondary))
             VStack(alignment: .leading, spacing: metrics.spacing.xxs) {
-                Text(conversation.title)
+                Text(conversation.displayTitle)
                     .font(metrics.typography.rowTitle)
                     .lineLimit(1)
                 if !conversation.preview.isEmpty {
@@ -140,9 +140,12 @@ struct ChatHistoryPreview: View {
         Group {
             if conversationID == chat.session.id, !chat.session.messages.isEmpty {
                 ChatTranscriptView(
-                    messages: chat.session.messages, status: chat.liveStatus, usage: chat.usage)
+                    messages: chat.session.messages, status: chat.liveStatus, usage: chat.usage,
+                    surface: .palette)
             } else if let session {
-                ChatTranscriptView(messages: session.messages, status: nil, usage: nil)
+                ChatTranscriptView(
+                    messages: session.messages, status: nil, usage: nil,
+                    surface: .palette)
             } else if conversationID != nil {
                 ProgressView().controlSize(.small)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

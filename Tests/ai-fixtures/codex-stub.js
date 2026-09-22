@@ -5,8 +5,11 @@
 // `turn/start` response — and either can be arbitrarily late. Each mode withholds one or both so
 // `codex-turn-test` can Stop inside that window and watch what the runner does about it.
 //
+// `parallel` serves one thread per request and holds both replies until the harness releases them,
+// so two turns are live at once.
+//
 // `TC_STUB_ROOT` is the scratch directory the harness and this process signal through;
-// `TC_STUB_MODE` picks which half of the turn ID to withhold.
+// `TC_STUB_MODE` picks which half of the turn ID to withhold, or `parallel`.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -161,6 +164,37 @@ function toolPair(read) {
     }
 }
 
+// The real server refuses every request before `initialize`.
+let initialized = false;
+let threads = 0;
+let turns = 0;
+
+/** Answers at once, then holds the second turn until `release` and finishes both. */
+function parallelTurn(message) {
+    turns += 1;
+    const thread = message.params?.threadId;
+    const turn = `turn-${turns}`;
+    record(`turn-params:${JSON.stringify(message.params ?? {})}`);
+    emit({ id: message.id, result: { turn: { id: turn } } });
+    emit({ method: "turn/started", params: { threadId: thread, turn: { id: turn } } });
+    // Two summary parts, the first split across deltas: only the part change is a paragraph.
+    for (const [summaryIndex, delta] of [[0, "**Planning**"], [0, " done."], [1, "**Checking**"]]) {
+        emit({
+            method: "item/reasoning/summaryTextDelta",
+            params: { threadId: thread, itemId: "rs-1", summaryIndex, delta }
+        });
+    }
+    emit({ method: "item/agentMessage/delta", params: { threadId: thread, delta: `from ${thread}` } });
+    if (turns < 2) return;
+    awaitMark("release");
+    for (let index = 1; index <= 2; index += 1) {
+        emit({
+            method: "turn/completed",
+            params: { threadId: `thread-${index}`, turn: { id: `turn-${index}`, status: "completed" } }
+        });
+    }
+}
+
 const input = lines();
 for (;;) {
     const next = input.next();
@@ -172,9 +206,18 @@ for (;;) {
     const requestID = message.id;
     record(method ?? "?");
 
-    if (method === "thread/start") {
+    if (method === "initialize") {
+        initialized = true;
+        emit({ id: requestID, result: {} });
+    } else if (!initialized && requestID !== undefined && requestID !== null) {
+        emit({ id: requestID, error: { code: -32600, message: "Not initialized" } });
+    } else if (method === "thread/start") {
         record(`thread-params:${JSON.stringify(message.params ?? {})}`);
-        emit({ id: requestID, result: { thread: { id: THREAD } } });
+        threads += 1;
+        const thread = MODE === "parallel" ? `thread-${threads}` : THREAD;
+        emit({ id: requestID, result: { thread: { id: thread } } });
+    } else if (method === "turn/start" && MODE === "parallel") {
+        parallelTurn(message);
     } else if (method === "turn/start") {
         record(`turn-params:${JSON.stringify(message.params ?? {})}`);
         if (MODE.startsWith("mcp")) {

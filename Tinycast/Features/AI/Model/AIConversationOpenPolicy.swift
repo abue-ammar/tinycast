@@ -1,6 +1,6 @@
 import Foundation
 
-/// What summoning AI Chat lands on, decided at open time rather than when the palette hides.
+/// What summoning Quick AI lands on, decided at open time rather than when the palette hides.
 enum AIOpensTo: Int, CaseIterable, Identifiable, Sendable {
     case recent = 0
     case newConversation = 1

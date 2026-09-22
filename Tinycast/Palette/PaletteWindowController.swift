@@ -135,8 +135,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private func attachPastedFile() -> Bool {
         let files = PasteboardFiles.urls(on: .general)
         switch core.palette.mode {
-        case .ai: return core.aiChatCoordinator.attachPastedFile(files: files)
-        case .launcher: return core.aiChatCoordinator.attachPastedFileFromLauncher(files: files)
+        case .ai: return core.quickAICoordinator.attachPastedFile(files: files)
+        case .launcher: return core.quickAICoordinator.attachPastedFileFromLauncher(files: files)
         default: return false
         }
     }
@@ -334,7 +334,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 core.extensionCoordinator.exitExtensionScreen()
                 return true
             }
-            if core.palette.mode == .ai, core.aiChatCoordinator.removeLastAttachment() {
+            if core.palette.mode == .ai, core.quickAICoordinator.removeLastAttachment() {
                 return true
             }
             if core.palette.pop() { return true }

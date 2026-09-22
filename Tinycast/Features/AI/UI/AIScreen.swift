@@ -1,12 +1,12 @@
 import SwiftUI
 
-/// AI chat as one native palette screen: the search field is its composer.
+/// Quick AI: one palette screen whose search field is the composer.
 struct AIScreen: PaletteScreen {
     let vm: PaletteState
     let metrics: InterfaceMetrics
     let chat: AIChatState
-    let settings: AISettingsStore
-    let coordinator: AIChatCoordinator
+    let coordinator: QuickAICoordinator
+    let chatCoordinator: AIChatCoordinator
     /// The staged files' menu is the palette's to hang, like every other header menu.
     let openAttachments: () -> Void
 
@@ -28,12 +28,21 @@ struct AIScreen: PaletteScreen {
                 })
         }
         items.append(
+            PopoverMenuItem(
+                title: chat.session.messages.isEmpty ? "Open AI Chat" : "Continue in AI Chat",
+                systemImage: "bubble.left.and.bubble.right", shortcut: "⌘J"
+            ) {
+                coordinator.continueInChat()
+            })
+        items.append(
             PopoverMenuItem(title: "New Chat", systemImage: "plus.bubble") {
                 coordinator.startNewChat()
             })
         if chat.lastAssistantText != nil {
             items.append(
-                PopoverMenuItem(title: "Copy Last Response", systemImage: "doc.on.doc", startsSection: true) {
+                PopoverMenuItem(
+                    title: "Copy Last Response", systemImage: "doc.on.doc", startsSection: true
+                ) {
                     coordinator.copyLastResponse()
                 })
         }
@@ -54,9 +63,9 @@ struct AIScreen: PaletteScreen {
             })
         items.append(
             PopoverMenuItem(title: "AI Settings", systemImage: "slider.horizontal.3") {
-                coordinator.showSettings()
+                chatCoordinator.showSettings()
             })
-        return PopoverMenuContent(header: chat.session.title, items: items)
+        return PopoverMenuContent(header: chatCoordinator.title(of: chat), items: items)
     }
 
     /// Return and the pill are the same action; an empty composer sends nothing.
@@ -70,11 +79,17 @@ struct AIScreen: PaletteScreen {
 
     func secondary(at selection: Int) -> Bool { false }
 
+    func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        guard shortcut == .continueInChat else { return false }
+        coordinator.continueInChat()
+        return true
+    }
+
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
     ) -> PaletteHeaderAccessory? {
         let attachments = chat.pendingAttachments
-        let addressed = coordinator.addressedServer(in: vm.query)
+        let addressed = chatCoordinator.addressedServer(in: vm.query)
         guard !attachments.isEmpty || addressed != nil else { return nil }
         let width =
             (attachments.isEmpty ? 0 : AttachmentsPill.width(for: attachments, metrics))
@@ -100,22 +115,26 @@ struct AIScreen: PaletteScreen {
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         AnyView(
             AIChatView(
-                chat: chat, settings: settings, availability: coordinator.availability,
-                onConfigure: coordinator.showSettings, onAppear: coordinator.prepareForChat))
+                chat: chat,
+                availability: { chatCoordinator.availability(for: chat) },
+                onConfigure: chatCoordinator.showSettings,
+                onAppear: chatCoordinator.prepareForChat,
+                onChoose: { coordinator.send($0) }))
     }
 }
 
 private struct AIChatView: View {
     let chat: AIChatState
-    let settings: AISettingsStore
     let availability: () -> String?
     let onConfigure: () -> Void
     let onAppear: () -> Void
-    @State private var unavailability: String?
+    let onChoose: (String) -> Void
 
     var body: some View {
         Group {
             if chat.session.messages.isEmpty {
+                // Read in the body, so a CLI signing in or a provider switched on is seen at once.
+                let unavailability = availability()
                 AIEmptyState(
                     message: chat.notice ?? unavailability,
                     canConfigure: chat.notice != nil || unavailability != nil,
@@ -124,74 +143,12 @@ private struct AIChatView: View {
                 ChatTranscriptView(
                     messages: chat.session.messages,
                     status: chat.liveStatus,
-                    usage: chat.usage)
+                    usage: chat.usage,
+                    surface: .palette,
+                    onChoose: chat.isStreaming ? nil : onChoose)
             }
         }
-        .onAppear {
-            unavailability = availability()
-            onAppear()
-        }
-        .onChange(of: settings.defaultModel) { unavailability = availability() }
-    }
-}
-
-private struct AIEmptyState: View {
-
-    @Environment(\.metrics) private var metrics
-    let message: String?
-    let canConfigure: Bool
-    let onConfigure: () -> Void
-
-    var body: some View {
-        VStack(spacing: metrics.spacing.md) {
-            Image(systemName: "sparkles")
-                .font(.largeTitle)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.tertiary)
-            Text("Ask anything")
-                .foregroundStyle(.secondary)
-            if let message {
-                Text(message)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(Theme.Colors.textTertiary)
-                    .multilineTextAlignment(.center)
-                if canConfigure { Button("Configure AI", action: onConfigure) }
-            } else {
-                HStack(spacing: metrics.spacing.sm) {
-                    Text("Send a message")
-                    KeyCapChip(text: "↵")
-                }
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(Theme.Colors.textTertiary)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, metrics.spacing.xxl)
-    }
-}
-
-/// The MCP `@server` pill: its glyph alone, since the handle it confirms is already in the text.
-private struct ComposerChip: View {
-    @Environment(\.metrics) private var metrics
-    let symbol: String
-    let label: String
-
-    /// Load-bearing: part of the strip width that `searchFieldWidth(for:)` takes out of the field.
-    static func width(_ metrics: InterfaceMetrics) -> CGFloat {
-        metrics.size.chatAttachmentGlyph + metrics.spacing.sm * 2
-    }
-
-    var body: some View {
-        Image(systemName: symbol)
-            .font(metrics.typography.chip)
-            .symbolRenderingMode(.hierarchical)
-            .frame(width: metrics.size.chatAttachmentGlyph)
-            .foregroundStyle(Theme.Colors.textSecondary)
-            .padding(.horizontal, metrics.spacing.sm)
-            .padding(.vertical, metrics.spacing.xxs)
-            .background(Capsule().fill(Theme.Colors.controlSurface))
-            .tooltip("Offers only \(label)'s tools", edge: .bottom)
-            .accessibilityLabel("Addressed to \(label)")
+        .onAppear(perform: onAppear)
     }
 }
 

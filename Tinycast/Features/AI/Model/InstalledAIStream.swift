@@ -72,6 +72,14 @@ enum InstalledAIStreamDecoder {
             frame.events = toolEvents(in: object, servers: servers)
             return frame
         }
+        // Summaries arrive as several thinking blocks; a break keeps them from running together.
+        if type == "stream_event", let event = object["event"] as? [String: Any],
+            event["type"] as? String == "content_block_start",
+            (event["content_block"] as? [String: Any])?["type"] as? String == "thinking"
+        {
+            frame.events = [.thinking, .reasoning("\n\n")]
+            return frame
+        }
         if type == "stream_event", let event = object["event"] as? [String: Any],
             let delta = event["delta"] as? [String: Any]
         {
@@ -81,7 +89,8 @@ enum InstalledAIStreamDecoder {
                     frame.events = [.text(text)]
                 }
             case "thinking_delta":
-                frame.events = [.thinking]
+                let thinking = delta["thinking"] as? String ?? ""
+                frame.events = thinking.isEmpty ? [.thinking] : [.thinking, .reasoning(thinking)]
             default:
                 break
             }
@@ -98,11 +107,7 @@ enum InstalledAIStreamDecoder {
             return frame
         }
         if let usage = object["usage"] as? [String: Any] {
-            frame.events.append(
-                .usage(
-                    AIUsage(
-                        inputTokens: integer(usage["input_tokens"]),
-                        outputTokens: integer(usage["output_tokens"]))))
+            frame.events.append(.usage(claudeUsage(usage, result: object)))
         }
         frame.completed = true
         return frame
@@ -131,6 +136,30 @@ enum InstalledAIStreamDecoder {
                 return nil
             }
         }
+    }
+
+    /// Cached prompt tokens sit outside `input_tokens`, and only `modelUsage` names the window.
+    private static func claudeUsage(_ usage: [String: Any], result: [String: Any]) -> AIUsage {
+        let cached = [usage["cache_read_input_tokens"], usage["cache_creation_input_tokens"]]
+            .compactMap(integer)
+        let details = usage["output_tokens_details"] as? [String: Any]
+        // A side model (Haiku) may share the turn; the conversation's read the largest prompt.
+        let model = (result["modelUsage"] as? [String: Any])?.values
+            .compactMap { $0 as? [String: Any] }
+            .max { rank($0) < rank($1) }
+        return AIUsage(
+            inputTokens: integer(usage["input_tokens"]),
+            outputTokens: integer(usage["output_tokens"]),
+            cachedInputTokens: cached.isEmpty ? nil : cached.reduce(0, +),
+            reasoningTokens: integer(details?["thinking_tokens"]),
+            contextWindow: integer(model?["contextWindow"]),
+            costUSD: (result["total_cost_usd"] as? NSNumber)?.doubleValue)
+    }
+
+    private static func rank(_ model: [String: Any]) -> (prompt: Int, window: Int) {
+        let prompt = ["inputTokens", "cacheReadInputTokens", "cacheCreationInputTokens"]
+            .compactMap { integer(model[$0]) }.reduce(0, +)
+        return (prompt, integer(model["contextWindow"]) ?? 0)
     }
 
     private static func cursor(

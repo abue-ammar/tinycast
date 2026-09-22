@@ -510,17 +510,42 @@ run ai-provider-test       Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Settings/AISettingsStore.swift
 run ai-chat-test           Tinycast/Features/AI/Model/AIRequest.swift \
+                           Tinycast/Features/AI/Model/AIConnection.swift \
+                           Tinycast/Features/AI/Model/AppleIntelligence.swift \
                            Tinycast/Features/AI/Model/AIAttachmentPolicy.swift \
                            Tinycast/Features/AI/Model/AIRetention.swift \
                            Tinycast/Features/AI/Model/AITool.swift \
                            Tinycast/Features/AI/Model/JSONValue.swift \
                            Tinycast/Features/AI/Model/ChatMessage.swift \
                            Tinycast/Features/AI/Model/ChatSession.swift \
+                           Tinycast/Features/AI/Model/ChatChoices.swift \
+                           Tinycast/Features/AI/Model/ChatReferences.swift \
+                           Tinycast/Features/AI/Model/ChatTitle.swift \
+                           Tinycast/Features/AI/Model/ChatFind.swift \
+                           Tinycast/Features/AI/Model/ChatCitations.swift \
+                           Tinycast/Features/AI/Model/ChatToolScope.swift \
                            Tinycast/Features/AI/Model/MarkdownBlock.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
                            Tinycast/Features/AI/Service/ChatHistoryStore.swift \
                            Tinycast/Features/AI/Service/AIToolLoopProvider.swift \
-                           Tinycast/Features/AI/UI/AIChatState.swift
+                           Tinycast/Features/AI/UI/AIChatState.swift \
+                           Tinycast/Features/AI/UI/AIChatSurfacesState.swift \
+                           Tinycast/Features/AI/UI/ChatFindState.swift
+run chat-markdown-test     Tinycast/Platform/Appearance.swift \
+                           Tinycast/DesignSystem/Theme.swift \
+                           Tinycast/DesignSystem/InterfaceMetrics.swift \
+                           Tinycast/Features/Settings/InterfaceSize.swift \
+                           Tinycast/Features/AI/Model/AIRequest.swift \
+                           Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/JSONValue.swift \
+                           Tinycast/Features/AI/Model/ChatMessage.swift \
+                           Tinycast/Features/AI/Model/ChatChoices.swift \
+                           Tinycast/Features/AI/Model/ChatReferences.swift \
+                           Tinycast/Features/AI/Model/ChatCitations.swift \
+                           Tinycast/Features/AI/Model/ChatFind.swift \
+                           Tinycast/Features/AI/Model/MarkdownBlock.swift \
+                           Tinycast/Features/AI/UI/ChatTextHighlight.swift \
+                           Tinycast/Features/AI/UI/ChatMarkdownRenderer.swift
 run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \

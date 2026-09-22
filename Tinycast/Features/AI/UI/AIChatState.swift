@@ -7,10 +7,13 @@ final class AIChatState {
     private(set) var session = ChatSession()
     private(set) var isStreaming = false
     private(set) var isThinking = false
-    private(set) var usage: AIUsage?
     private(set) var notice: String?
     /// Files staged for the next message; they go out with whatever is typed next.
     private(set) var pendingAttachments: [ChatAttachment] = []
+    /// The window's unsent text; Quick AI's lives in the palette query instead.
+    var draft = ""
+    /// This chat's tools menu; a new chat starts with every connected server on.
+    var toolScope = ChatToolScope()
 
     /// Every path that consumes or drops the staged images moves this on, so a late decode knows
     @ObservationIgnored private(set) var stagingGeneration = 0
@@ -20,6 +23,11 @@ final class AIChatState {
     @ObservationIgnored private var replyGeneration = 0
     /// Deltas buffered between flushes, so the transcript re-renders per cadence, not per token.
     @ObservationIgnored private var pendingText = ""
+    @ObservationIgnored private var pendingReasoning = ""
+    /// When the reply's latest stretch of thinking began, so its fold can say for how long.
+    @ObservationIgnored private var reasoningStartedAt: Date?
+    /// Told when a reply ends whole, which is when a chat has something to be named by.
+    @ObservationIgnored var onReplyFinished: (@MainActor (AIChatState) -> Void)?
     @ObservationIgnored private var flushTask: Task<Void, Never>?
     @ObservationIgnored private var lastFlush = ContinuousClock().now
 
@@ -31,8 +39,9 @@ final class AIChatState {
 
     @discardableResult
     func send(
-        _ input: String, using provider: any AIProvider, webSearch: Bool = false,
-        instructions: String? = nil, contextBudget: Int = ChatSession.defaultTextBudget
+        _ input: String, using provider: any AIProvider, model: AIModelSelection? = nil,
+        webSearch: Bool = false, instructions: String? = nil,
+        contextBudget: Int = ChatSession.defaultTextBudget, toolScope: String? = nil
     ) -> Bool {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty || !pendingAttachments.isEmpty, !isStreaming else { return false }
@@ -40,15 +49,46 @@ final class AIChatState {
         session.append(
             ChatMessage(
                 role: .user, text: text, images: pendingAttachments.compactMap(\.image),
-                documents: pendingAttachments.compactMap(\.document)))
+                documents: pendingAttachments.compactMap(\.document), toolScope: toolScope))
         clearStaging()
+        if let model { session.model = model }
+        startReply(
+            using: provider, webSearch: webSearch, instructions: instructions,
+            contextBudget: contextBudget)
+        return true
+    }
+
+    /// The chat's own route from now on; a saved chat records it at once, a new one on first send.
+    func setModel(_ model: AIModelSelection) {
+        session.model = model
+        history.setModel(model, id: session.id)
+    }
+
+    /// Asks again for the last reply; the question and its attachments go out as they first did.
+    @discardableResult
+    func regenerate(
+        using provider: any AIProvider, model: AIModelSelection? = nil, webSearch: Bool = false,
+        instructions: String? = nil, contextBudget: Int = ChatSession.defaultTextBudget
+    ) -> Bool {
+        guard !isStreaming, session.dropTrailingReply() else { return false }
+        notice = nil
+        if let model { session.model = model }
+        startReply(
+            using: provider, webSearch: webSearch, instructions: instructions,
+            contextBudget: contextBudget)
+        return true
+    }
+
+    private func startReply(
+        using provider: any AIProvider, webSearch: Bool, instructions: String?, contextBudget: Int
+    ) {
         let request = AIRequest(
             instructions: instructions,
             messages: session.requestMessages(textBudget: contextBudget), webSearch: webSearch)
         session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
         isStreaming = true
         isThinking = false
-        usage = nil
+        reasoningStartedAt = nil
         history.save(session)
 
         replyGeneration += 1
@@ -72,7 +112,6 @@ final class AIChatState {
                 self.finishLast(state: .failed, fallback: error.localizedDescription)
             }
         }
-        return true
     }
 
     func report(_ message: String) {
@@ -128,7 +167,6 @@ final class AIChatState {
     func startNewChat() {
         cancel()
         session = ChatSession()
-        usage = nil
         notice = nil
         clearStaging()
     }
@@ -140,7 +178,6 @@ final class AIChatState {
         guard let loaded = history.session(id: id) else { return false }
         cancel()
         session = loaded
-        usage = nil
         notice = nil
         clearStaging()
         return true
@@ -150,20 +187,20 @@ final class AIChatState {
         if session.id == id {
             cancel()
             session = ChatSession()
-            usage = nil
             notice = nil
             clearStaging()
         }
         history.remove(id: id)
     }
 
-    func deleteAll() {
-        cancel()
-        history.clearAll()
-        session = ChatSession()
-        usage = nil
-        notice = nil
-        clearStaging()
+    /// The latest reply's report, so a reopened chat still knows what its last turn cost.
+    var usage: AIUsage? {
+        session.messages.last { $0.role == .assistant && $0.usage != nil }?.usage
+    }
+
+    /// True when this state is the one showing `id`; an empty chat holds nothing yet.
+    func holds(_ id: UUID) -> Bool {
+        session.id == id && !session.messages.isEmpty
     }
 
     /// The line shown in the empty streaming bubble while nothing has arrived yet.
@@ -178,9 +215,17 @@ final class AIChatState {
         case .text(let text):
             guard let last = session.messages.last, last.role == .assistant else { return }
             if isThinking { isThinking = false }
+            // Buffered in order: thinking before this text must land before it, not after.
+            if !pendingReasoning.isEmpty { flushPendingText() }
             queueDelta(text)
         case .thinking:
             isThinking = true
+        case .reasoning(let text):
+            guard let last = session.messages.last, last.role == .assistant else { return }
+            isThinking = true
+            if !pendingText.isEmpty { flushPendingText() }
+            pendingReasoning += text
+            scheduleFlush()
         case .searching(let query):
             flushPendingText()
             guard var message = session.messages.last, message.role == .assistant else { return }
@@ -215,7 +260,9 @@ final class AIChatState {
         case .toolCallRequested:
             break
         case .usage(let usage):
-            self.usage = usage
+            guard var message = session.messages.last, message.role == .assistant else { return }
+            message.usage = usage
+            session.replaceLast(with: message)
         case .finished:
             finishLast(state: .complete, fallback: "No response")
         }
@@ -224,6 +271,10 @@ final class AIChatState {
     /// A due leading flush keeps the first token instant; the trailing task coalesces the rest.
     private func queueDelta(_ text: String) {
         pendingText += text
+        scheduleFlush()
+    }
+
+    private func scheduleFlush() {
         guard flushTask == nil else { return }
         if ContinuousClock().now - lastFlush >= Self.flushInterval { flushPendingText() }
         flushTask = Task { [weak self] in
@@ -235,13 +286,20 @@ final class AIChatState {
     }
 
     private func flushPendingText() {
-        guard !pendingText.isEmpty else { return }
+        guard !pendingText.isEmpty || !pendingReasoning.isEmpty else { return }
         guard var message = session.messages.last, message.role == .assistant else {
             pendingText = ""
+            pendingReasoning = ""
             return
         }
-        // Text after a search means the search is over, whether or not the route says so.
-        message.searches = message.searches.map { Self.completed($0) }
+        appendReasoning(pendingReasoning, to: &message)
+        pendingReasoning = ""
+        if !pendingText.isEmpty {
+            // Text after a search means the search is over, whether or not the route says so.
+            message.searches = message.searches.map { Self.completed($0) }
+            // The answer resuming is where that stretch of thinking ended.
+            closeReasoning(in: &message)
+        }
         message.text += pendingText
         pendingText = ""
         session.replaceLast(with: message)
@@ -252,6 +310,7 @@ final class AIChatState {
         flushTask?.cancel()
         flushTask = nil
         pendingText = ""
+        pendingReasoning = ""
     }
 
     private func finishLast(state: ChatMessage.State, fallback: String) {
@@ -264,6 +323,7 @@ final class AIChatState {
             message.text = fallback
         }
         message.state = state
+        closeReasoning(in: &message)
         message.searches = message.searches.map { Self.completed($0) }
         // A call still running when the turn ends never reported back, whatever ended the turn.
         message.toolUses = message.toolUses.map { Self.settled($0) }
@@ -272,6 +332,30 @@ final class AIChatState {
         isStreaming = false
         isThinking = false
         replyTask = nil
+        if state == .complete { onReplyFinished?(self) }
+    }
+
+    /// Thinking after answer text is a new stretch, pinned where the answer paused for it.
+    private func appendReasoning(_ text: String, to message: inout ChatMessage) {
+        guard !text.isEmpty else { return }
+        let offset = message.text.count
+        if let last = message.reasoning.last, last.textOffset == offset, last.duration == nil {
+            message.reasoning[message.reasoning.count - 1].text += text
+            return
+        }
+        // A route's block separator opening a stretch is not text the fold should start with.
+        let opening = String(text.drop(while: \.isWhitespace))
+        guard !opening.isEmpty else { return }
+        reasoningStartedAt = Date()
+        message.reasoning.append(ChatReasoning(text: opening, textOffset: offset, duration: nil))
+    }
+
+    private func closeReasoning(in message: inout ChatMessage) {
+        guard let last = message.reasoning.last, last.duration == nil,
+            let started = reasoningStartedAt
+        else { return }
+        message.reasoning[message.reasoning.count - 1].duration = Date().timeIntervalSince(started)
+        reasoningStartedAt = nil
     }
 }
 

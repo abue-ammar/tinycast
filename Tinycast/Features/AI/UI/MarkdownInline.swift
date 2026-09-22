@@ -3,12 +3,7 @@ import SwiftUI
 /// Inline markdown for one block. `Text` renders emphasis on its own but not code or strikethrough.
 enum MarkdownInline {
     static func attributed(_ source: String, _ metrics: InterfaceMetrics) -> AttributedString {
-        var options = AttributedString.MarkdownParsingOptions()
-        options.interpretedSyntax = .inlineOnlyPreservingWhitespace
-        options.failurePolicy = .returnPartiallyParsedIfPossible
-        guard var text = try? AttributedString(markdown: source, options: options) else {
-            return AttributedString(source)
-        }
+        var text = MarkdownBlock.inline(source)
         let intents = text.runs.compactMap { run in run.inlinePresentationIntent.map { ($0, run.range) } }
         for (intent, range) in intents {
             if intent.contains(.code) {

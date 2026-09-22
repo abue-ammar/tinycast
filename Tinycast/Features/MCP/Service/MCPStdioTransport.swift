@@ -73,6 +73,8 @@ final class MCPStdioTransport: MCPTransport {
             throw MCPTransportError.launchFailed(error.localizedDescription)
         }
         self.process = process
+        // A server that dies mid-write must fail the write, not SIGPIPE Tinycast.
+        _ = fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
         input = stdin.fileHandleForWriting
     }
 

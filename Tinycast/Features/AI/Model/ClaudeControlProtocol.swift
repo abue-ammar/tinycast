@@ -59,9 +59,19 @@ enum ClaudeControlProtocol {
     }
 
     /// The single user message a `stream-json` turn is made of, framed for stdin.
-    static func userMessage(_ text: String) -> Data? {
+    static func userMessage(_ text: String, images: [AIImage] = []) -> Data? {
+        let pictures: [[String: Any]] = images.map { image in
+            [
+                "type": "image",
+                "source": [
+                    "type": "base64", "media_type": image.mimeType,
+                    "data": image.data.base64EncodedString()
+                ]
+            ]
+        }
+        let content: Any = images.isEmpty ? text : pictures + [["type": "text", "text": text]]
         var line = try? JSONSerialization.data(
-            withJSONObject: ["type": "user", "message": ["role": "user", "content": text]])
+            withJSONObject: ["type": "user", "message": ["role": "user", "content": content]])
         line?.append(0x0A)
         return line
     }
