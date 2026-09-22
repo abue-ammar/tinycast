@@ -4,6 +4,9 @@ let refreshes = 0;
 let calls = 0;
 let redirects = 0;
 let held = [];
+let registrations = 0;
+const supplied = 'supplied+client';
+const clientAuth = [];
 const issued = { access_token: 'fixture-access', token_type: 'Bearer', refresh_token: 'rotated-refresh', expires_in: 3600 };
 const server = http.createServer(async (req, res) => {
   let raw = '';
@@ -22,6 +25,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.url === '/.well-known/oauth-authorization-server') return send(200, metadata);
   if (req.url === '/register') {
+    registrations++;
     const body = JSON.parse(raw);
     if (body.application_type !== 'native' || body.token_endpoint_auth_method !== 'none' ||
         !body.grant_types.includes('refresh_token') || body.redirect_uris[0] !== 'http://127.0.0.1:4962/callback') {
@@ -31,7 +35,14 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.url === '/token') {
     const fields = new URLSearchParams(raw);
-    if (fields.get('resource') !== base + '/mcp' || fields.get('client_id') !== 'fixture-client') return send(400, {});
+    const client = fields.get('client_id');
+    if (client === supplied) {
+      const basic = (req.headers.authorization || '').replace(/^Basic /, '');
+      const used = [basic && 'basic ' + Buffer.from(basic, 'base64').toString(),
+        fields.has('client_secret') && 'post ' + fields.get('client_secret')].filter(Boolean);
+      clientAuth.push(used.join(' + ') || 'none');
+    } else if (client !== 'fixture-client') return send(400, {});
+    if (fields.get('resource') !== base + '/mcp') return send(400, {});
     if (fields.get('grant_type') === 'refresh_token') {
       if (fields.get('refresh_token') === 'fixture-unavailable') return send(503, {});
       if (fields.get('refresh_token') === 'fixture-dropped') return req.socket.destroy();
@@ -55,7 +66,8 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.url === '/unexpected') { redirects++; return send(200, {}); }
   if (req.url === '/release') { held.splice(0).forEach(reply => reply()); return send(200, {}); }
-  if (req.url === '/counts') return send(200, { refreshes, calls, redirects, held: held.length });
+  if (req.url === '/counts') return send(200, { refreshes, calls, redirects, held: held.length, registrations });
+  if (req.url === '/client-auth') return send(200, clientAuth);
   if (req.url === '/always-401') { calls++; return send(401, {}); }
   if (req.url === '/mcp') {
     calls++;

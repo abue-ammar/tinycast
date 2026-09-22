@@ -256,6 +256,74 @@ struct MCPOAuthTests {
         return (try JSONSerialization.jsonObject(with: data) as? [String: Int])?[name] ?? 0
     }
 
+    /// A supplied client ID wins over registration and authenticates the way the server advertises.
+    static func suppliedClient(_ discovered: MCPOAuthService.Discovery) async throws {
+        let registered = try await count("registrations")
+        func advertising(_ methods: String?) throws -> MCPOAuthService.Discovery {
+            let field = methods.map { #","token_endpoint_auth_methods_supported":\#($0)"# } ?? ""
+            let json = #"{"issuer":"\#(base)","authorization_endpoint":"\#(base)/authorize","#
+                + #""token_endpoint":"\#(base)/token","registration_endpoint":"\#(base)/register","#
+                + #""code_challenge_methods_supported":["S256"]\#(field)}"#
+            return MCPOAuthService.Discovery(
+                resource: discovered.resource, metadata: try MCPOAuth.parseServer(Data(json.utf8), issuer: base),
+                scope: nil)
+        }
+        let pasted = MCPOAuth.Credentials.supplied(clientID: " supplied+client\n", clientSecret: "\ts3cr:t/= \n")
+        expect(pasted.clientID == "supplied+client" && pasted.clientSecret == "s3cr:t/=",
+               "a pasted client ID and secret lose the whitespace a paste brings")
+        let publicClient = MCPOAuth.Credentials.supplied(clientID: "supplied+client", clientSecret: "")
+        let none = try await MCPOAuthService.registration(for: discovered, credentials: publicClient)
+        expect(none.clientID == "supplied+client" && none.clientSecret == nil && none.authMethod == "none",
+               "a supplied client ID takes precedence over dynamic registration")
+        let both = try advertising(#"["client_secret_post","client_secret_basic"]"#)
+        let basic = try await MCPOAuthService.registration(for: both, credentials: pasted)
+        let post = try await MCPOAuthService.registration(
+            for: advertising(#"["none","client_secret_post"]"#), credentials: pasted)
+        let unstated = try await MCPOAuthService.registration(for: advertising(nil), credentials: pasted)
+        expect(basic.authMethod == "client_secret_basic" && post.authMethod == "client_secret_post"
+               && unstated.authMethod == "client_secret_basic",
+               "a secret goes as Basic when advertised or unstated, and in the body when only post is")
+        do {
+            _ = try await MCPOAuthService.registration(for: advertising(#"["none"]"#), credentials: pasted)
+            expect(false, "a secret the token endpoint cannot take must be refused")
+        } catch {
+            expect(error as? MCPOAuth.Failure == .invalidMetadata, "a secret the token endpoint cannot take is refused")
+        }
+        for registration in [none, basic, post] {
+            let token = try await MCPOAuthService.token(
+                registration: registration, code: "fixture-code", verifier: "fixture-verifier")
+            expect(token.accessToken == "fixture-access", "\(registration.authMethod): the code exchange succeeds")
+        }
+        let recorded = try await MCPOAuthHTTP.json(URL(string: base + "/client-auth")!)
+        let authentication = try JSONSerialization.jsonObject(with: recorded) as? [String]
+        expect(authentication == ["none", "basic supplied%2Bclient:s3cr%3At%2F%3D", "post s3cr:t/="],
+               "the token endpoint sees no secret, a form-encoded Basic pair, or one body field")
+        var stored = pasted
+        stored.registration = MCPOAuth.Registration(
+            resource: discovered.resource, issuer: base, clientID: pasted.clientID, clientSecret: pasted.clientSecret,
+            tokenEndpoint: base + "/token", authMethod: "client_secret_post", redirectURI: MCPOAuthListener.redirectURI)
+        let reused = try await MCPOAuthService.registration(for: both, credentials: stored)
+        expect(reused == stored.registration, "a stored supplied registration is reused, not renegotiated")
+        var resecreted = stored
+        resecreted.clientSecret = "rotated"
+        let renewed = try await MCPOAuthService.registration(for: both, credentials: resecreted)
+        expect(renewed.clientSecret == "rotated" && renewed.authMethod == "client_secret_basic",
+               "a changed secret is not answered with the stored registration")
+        var moved = stored
+        moved.registration = MCPOAuth.Registration(
+            resource: discovered.resource, issuer: "https://old.test", clientID: pasted.clientID,
+            clientSecret: pasted.clientSecret, tokenEndpoint: "https://old.test/token",
+            authMethod: "client_secret_basic", redirectURI: MCPOAuthListener.redirectURI)
+        do {
+            _ = try await MCPOAuthService.registration(for: both, credentials: moved)
+            expect(false, "a client ID from another issuer must be refused")
+        } catch {
+            expect(error as? MCPOAuth.Failure == .issuerChanged, "a client ID from another issuer is refused")
+        }
+        let registeredAfter = try await count("registrations")
+        expect(registeredAfter == registered, "a supplied client ID never reaches the registration endpoint")
+    }
+
     static func networkFlow() async throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
@@ -270,6 +338,7 @@ struct MCPOAuthTests {
         expect(discovered.scope == "read", "401 discovery carries requested scopes")
         let registration = try await MCPOAuthService.registration(for: discovered, credentials: MCPOAuth.Credentials())
         expect(registration.clientID == "fixture-client", "native DCR succeeded")
+        try await suppliedClient(discovered)
         let token = try await MCPOAuthService.token(
             registration: registration, code: "fixture-code", verifier: "fixture-verifier")
         expect(token.accessToken == "fixture-access", "code exchange includes resource")

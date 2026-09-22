@@ -67,7 +67,7 @@ the two meet.
 - **`Model/` stays Foundation-only.** `mcp-test` compiles the shipped models and pins the framing,
   handles, tool names, output flattening, trust and addressing; `mcp-stdio-test` drives a real
   subprocess. `mcp-oauth-test` pins OAuth parsing, PKCE, endpoint binding, callback lifetime,
-  registration, refresh coalescing, redirects and bounded 401 recovery.
+  dynamic and supplied client registration, refresh coalescing, redirects and bounded 401 recovery.
 
 ## Transports
 
@@ -102,9 +102,11 @@ owns the Network.framework loopback callback.
 Sign In probes the MCP endpoint without credentials, reads the Bearer `resource_metadata` challenge,
 or tries path-specific then root RFC 9728 discovery. The first advertised authorization server is
 resolved through RFC 8414, with the OIDC discovery locations as fallbacks. Its issuer must match,
-a trailing slash aside — Google advertises one and publishes none — and it must advertise S256. A supplied client ID and optional secret take precedence;
-otherwise Tinycast uses RFC 7591 dynamic registration with a native public client. CIMD and device
-flow are not implemented.
+a trailing slash aside — Google advertises one and publishes none — and it must advertise S256.
+A supplied client ID and optional secret take precedence, trimmed of the whitespace a paste brings;
+the secret goes as HTTP Basic, or in the form body when the server advertises
+`client_secret_post` and not Basic. Otherwise Tinycast uses RFC 7591 dynamic registration with a
+native public client. CIMD and device flow are not implemented.
 
 The canonical configured MCP URL is the RFC 8707 `resource` on authorization and token requests.
 Protected-resource metadata may describe an ancestor path on the same origin, matching current MCP

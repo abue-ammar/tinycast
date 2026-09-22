@@ -247,9 +247,7 @@ struct MCPServerEditor: View {
         }
     }
 
-    // A pasted ID often ends in a newline, and Google answers that with "client not found".
-    private var suppliedClientID: String { clientID.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var suppliedClientSecret: String { clientSecret.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var supplied: MCPOAuth.Credentials { .supplied(clientID: clientID, clientSecret: clientSecret) }
 
     private var authenticationStatus: MCPOAuthManager.Status {
         var server = target.server
@@ -257,7 +255,8 @@ struct MCPServerEditor: View {
             url: url.trimmingCharacters(in: .whitespaces),
             headerName: headerName.trimmingCharacters(in: .whitespaces))
         let status = coordinator.authenticationStatus(server, stored: storedOAuth)
-        guard storedOAuth?.clientID == suppliedClientID, storedOAuth?.clientSecret == suppliedClientSecret,
+        let supplied = supplied
+        guard storedOAuth?.clientID == supplied.clientID, storedOAuth?.clientSecret == supplied.clientSecret,
             storedOAuth?.registration?.resource == (try? MCPOAuth.resource(url)) else {
             if case .signingIn = status { return status }
             if case .failed = status { return status }
@@ -337,8 +336,9 @@ struct MCPServerEditor: View {
             var secrets = MCPSecretStore.Secrets(headerValue: usesOAuth ? "" : headerValue)
             if usesOAuth {
                 var credentials = MCPSecretStore().secrets(for: server.id).oauth ?? MCPOAuth.Credentials()
-                if credentials.clientID != suppliedClientID || credentials.clientSecret != suppliedClientSecret {
-                    credentials = MCPOAuth.Credentials(clientID: suppliedClientID, clientSecret: suppliedClientSecret)
+                let supplied = supplied
+                if credentials.clientID != supplied.clientID || credentials.clientSecret != supplied.clientSecret {
+                    credentials = supplied
                 }
                 if let registration = credentials.registration,
                     registration.resource != (try? MCPOAuth.resource(url)) { credentials.token = nil }

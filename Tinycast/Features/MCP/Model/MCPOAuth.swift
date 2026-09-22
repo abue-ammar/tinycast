@@ -40,6 +40,12 @@ enum MCPOAuth {
         var clientSecret: String = ""
         var registration: Registration?
         var token: Token?
+
+        /// A pasted ID often ends in a newline, and Google answers that with "client not found".
+        static func supplied(clientID: String, clientSecret: String) -> Credentials {
+            Credentials(clientID: clientID.trimmingCharacters(in: .whitespacesAndNewlines),
+                        clientSecret: clientSecret.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
     }
 
     struct Registration: Codable, Equatable, Sendable {
