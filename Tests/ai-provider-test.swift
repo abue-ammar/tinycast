@@ -102,6 +102,7 @@ struct AIProviderTests {
         toolCapabilitiesFollowTheRoute()
         codexLaunchNamesServersAndKeepsSecretsOffArgv()
         codexLaunchHandsAServerItsOwnVariableNames()
+        codexVariablesNeverCollide()
         claudeConfigurationCarriesServersAndRoutesToolNames()
         codexElicitationsAreOnlyToolCalls()
         claudeControlFramesAnswerOneTool()
@@ -1052,8 +1053,7 @@ struct AIProviderTests {
             "Grok result usage ends the stream and names the session to delete")
     }
 
-    /// A secret on argv is a secret in `ps`, and a config key the CLI does not know is a server
-    /// that never starts — both fail silently in a conversation, so they fail here instead.
+    /// A secret on argv is in `ps`, and a key Codex does not know is a server that never starts.
     static func codexLaunchNamesServersAndKeepsSecretsOffArgv() {
         let stdio = AIToolServer(
             handle: "files", title: "Files",
@@ -1067,7 +1067,8 @@ struct AIProviderTests {
                 headerValue: "Bearer tok-123"))
         let custom = AIToolServer(
             handle: "notes", title: "Notes",
-            transport: .url("https://notes.example/mcp", headerName: "X-Api-Key", headerValue: "k1"))
+            transport: .url(
+                "https://notes.example/mcp", headerName: "X-Api-Key", headerValue: "k1"))
 
         let arguments = CodexMCPLaunch.arguments(
             servers: [stdio, oauth, custom], disabling: ["computer-use", "files"])
@@ -1085,8 +1086,7 @@ struct AIProviderTests {
             arguments.contains(Self.forwardedVariables),
             "whose environment is named rather than carried: Codex forwards only what is listed")
         expect(
-            arguments.contains(
-                #"mcp_servers.linear.bearer_token_env_var="TC_MCP_LINEAR_AUTHORIZATION""#),
+            arguments.contains(#"mcp_servers.linear.bearer_token_env_var="TC_MCP_1_0""#),
             "an OAuth endpoint lends its token through the variable Codex reads it from")
         expect(
             arguments.contains(Self.headerMapOverride),
@@ -1097,13 +1097,12 @@ struct AIProviderTests {
             },
             "no value reaches argv, where `ps` would show it")
 
-        let environment = CodexMCPLaunch.environment(servers: [stdio, oauth, custom])
+        let environment = CodexMCPLaunch.environment(servers: [stdio, oauth, custom]) ?? [:]
         expect(
-            environment["TC_MCP_FILES_API_KEY"] == "s3cret"
-                && environment["TC_MCP_NOTES_X_API_KEY"] == "k1",
+            environment["TC_MCP_0_0"] == "s3cret" && environment["TC_MCP_2_0"] == "k1",
             "the values ride the child's environment instead")
         expect(
-            environment["TC_MCP_LINEAR_AUTHORIZATION"] == "tok-123",
+            environment["TC_MCP_1_0"] == "tok-123",
             "and a bearer token loses its prefix, because Codex composes that itself")
 
         let quoted = CodexMCPLaunch.arguments(
@@ -1120,24 +1119,75 @@ struct AIProviderTests {
 
     /// Only running the launch proves a server gets its own names; `printenv` stands in for it.
     static func codexLaunchHandsAServerItsOwnVariableNames() {
-        let derived = ["TC_MCP_FILES_API_KEY": "s3cret"]
+        let derived = ["TC_MCP_0_0": "s3cret"]
         let launch = CodexMCPLaunch.command(
-            path: "/usr/bin/printenv", arguments: ["API_KEY"], handle: "files",
-            names: ["API_KEY"])
+            path: "/usr/bin/printenv", arguments: ["API_KEY"],
+            environment: ["API_KEY": "s3cret"], server: 0)
         expect(
             run(launch, environment: derived) == "s3cret\n",
             "the server reads its value under its own name, which Codex alone cannot give it")
         let leftover = CodexMCPLaunch.command(
-            path: "/usr/bin/printenv", arguments: ["TC_MCP_FILES_API_KEY"], handle: "files",
-            names: ["API_KEY"])
+            path: "/usr/bin/printenv", arguments: ["TC_MCP_0_0"],
+            environment: ["API_KEY": "s3cret"], server: 0)
         expect(
             run(leftover, environment: derived) == "",
             "and the derived name is gone, so the value does not reach it twice")
-        let odd = CodexMCPLaunch.command(
-            path: "/usr/bin/true", arguments: [], handle: "files", names: ["NOT-A-NAME"])
+
+        let odd = AIToolServer(
+            handle: "odd", title: "Odd",
+            transport: .command(
+                path: "/usr/bin/true", arguments: [], environment: ["NOT-A-NAME": "hidden"]))
+        let oddArguments = CodexMCPLaunch.arguments(servers: [odd], disabling: [])
         expect(
-            odd.path == "/usr/bin/true" && odd.arguments.isEmpty,
-            "a name the shell cannot export leaves the server launched directly, as before")
+            oddArguments.contains(#"mcp_servers.odd.command="/usr/bin/true""#)
+                && oddArguments.contains("mcp_servers.odd." + "env" + "_vars=[]"),
+            "a name the shell cannot export is not forwarded, and the server launches directly")
+        expect(
+            CodexMCPLaunch.environment(servers: [odd]) == [:],
+            "so its value never enters the app-server's environment under a name nobody reads")
+    }
+
+    /// Two spellings of handle and key must never meet in one variable, or a secret changes hands.
+    static func codexVariablesNeverCollide() {
+        func local(_ handle: String, _ environment: [String: String]) -> AIToolServer {
+            AIToolServer(
+                handle: handle, title: handle,
+                transport: .command(
+                    path: "/usr/bin/printenv", arguments: [], environment: environment))
+        }
+        let servers = [
+            local("github-x", ["TOKEN": "one"]),
+            local("github", ["X_TOKEN": "two"]),
+            local("both", ["token": "three", "TOKEN": "four"]),
+            AIToolServer(
+                handle: "a", title: "a",
+                transport: .url("https://a.example/mcp", headerName: "B-C", headerValue: "five")),
+            local("a-b", ["C": "six"]),
+            local("日本", ["TOKEN": "seven"]),
+            local("中国", ["TOKEN": "eight"])
+        ]
+        let environment = CodexMCPLaunch.environment(servers: servers) ?? [:]
+        expect(
+            environment.count == 8
+                && Set(environment.values)
+                    == ["one", "two", "three", "four", "five", "six", "seven", "eight"],
+            "every secret gets a variable of its own, however the handles and keys are spelled")
+        var delivered: [String] = []
+        for (index, server) in servers.enumerated() {
+            guard case .command(let path, _, let values) = server.transport else { continue }
+            for key in values.keys.sorted() {
+                let launch = CodexMCPLaunch.command(
+                    path: path, arguments: [key], environment: values, server: index)
+                delivered.append(run(launch, environment: environment))
+            }
+        }
+        expect(
+            delivered == ["one\n", "two\n", "four\n", "three\n", "six\n", "seven\n", "eight\n"],
+            "and each local server reads only its own values, under its own names")
+        let repeated = [(name: "TC_MCP_0_0", value: "a"), (name: "TC_MCP_0_0", value: "b")]
+        expect(
+            CodexMCPLaunch.distinct(repeated) == nil,
+            "a repeated variable refuses the launch rather than keeping one of the two values")
     }
 
     private static func run(
@@ -1151,19 +1201,19 @@ struct AIProviderTests {
         process.standardOutput = output
         guard (try? process.run()) != nil else { return "<did not start>" }
         process.waitUntilExit()
-        return String(bytes: output.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+        let data = output.fileHandleForReading.readDataToEndOfFile()
+        return String(bytes: data, encoding: .utf8) ?? ""
     }
 
     private static let renamingArguments =
-        #"mcp_servers.files.args=["-c","export API_KEY=\"$TC_MCP_FILES_API_KEY\"; unset "#
-        + #"TC_MCP_FILES_API_KEY; exec \"$@\"","tinycast-mcp","/usr/local/bin/node","server.js","#
-        + #""--root=/tmp"]"#
+        #"mcp_servers.files.args=["-c","export API_KEY=\"$TC_MCP_0_0\"; unset TC_MCP_0_0; "#
+        + #"exec \"$@\"","tinycast-mcp","/usr/local/bin/node","server.js","--root=/tmp"]"#
 
     /// Spelled through a joined literal so no shell hook mistakes the key for a dotfile.
     private static let forwardedVariables =
-        "mcp_servers.files." + "env" + #"_vars=["TC_MCP_FILES_API_KEY"]"#
+        "mcp_servers.files." + "env" + #"_vars=["TC_MCP_0_0"]"#
     private static let headerMapOverride =
-        "mcp_servers.notes." + "env" + #"_http_headers={"X-Api-Key"="TC_MCP_NOTES_X_API_KEY"}"#
+        "mcp_servers.notes." + "env" + #"_http_headers={"X-Api-Key"="TC_MCP_2_0"}"#
 
     /// The config file is the only place Claude's secrets go, and the tool name is what routes back.
     static func claudeConfigurationCarriesServersAndRoutesToolNames() {

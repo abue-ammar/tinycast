@@ -201,9 +201,15 @@ is the only place that explanation would fit.
 `CodexMCPLaunch` turns the list into `-c` overrides: `command`/`args`/`env_vars` for a local
 server, `url` with `bearer_token_env_var` — or `env_http_headers` when the header is not
 `Authorization` — for a remote one, and `enabled=false` for each of the user's own. The values live
-in the app-server's environment under `TC_MCP_<HANDLE>_<KEY>`. Codex forwards a variable only under
-the name it already has, so a local server with variables starts through `/bin/sh`, which moves
-each value to the name the server reads and then execs it; the script carries names, never values.
+in the app-server's environment under `TC_MCP_<server>_<key>`, two positions in the launch's own
+list rather than any spelling of the handle and key: `github-x` + `TOKEN` and `github` + `X_TOKEN`
+would upper-case to one name, and so would `token` and `TOKEN`, a header and a local key, or two
+non-Latin handles of the same length — and a shared name hands one server another's secret. A name
+that repeats anyway refuses the launch. Codex forwards a variable only under the name it already
+has, so a local server with variables starts through `/bin/sh`, which moves each value to the name
+the server reads and then execs it; the script carries names, never values. Only a name `export`
+accepts — a letter or `_`, then letters, digits and `_` — can be moved, so a key like `API-TOKEN`
+is not forwarded to Codex's copy at all, where the API route and Claude hand it over as typed.
 That environment is fixed at `exec`,
 so a changed list, a refreshed OAuth token included, is a **relaunch**: `CodexAppServerClient`
 remembers what it was started with and starts again when the next turn wants something else.

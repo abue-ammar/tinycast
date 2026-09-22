@@ -66,7 +66,7 @@ struct CodexTurnTests {
             !argv.contains(where: { $0.contains("s3cret") }),
             "no secret is on argv, where `ps` would show it")
         expect(
-            server.environment["TC_MCP_PROBE_API_KEY"] == "s3cret",
+            server.environment["TC_MCP_0_0"] == "s3cret",
             "the value reached the child's environment instead")
         expect(
             !server.received.contains("config/value/write")

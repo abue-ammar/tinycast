@@ -11,23 +11,25 @@ enum CodexMCPLaunch {
         for name in foreignNames where !servers.contains(where: { $0.handle == name }) {
             arguments += ["-c", "mcp_servers.\(name).enabled=false"]
         }
-        for server in servers {
+        for (index, server) in servers.enumerated() {
             let key = "mcp_servers.\(server.handle)"
             arguments += ["-c", "\(key).enabled=true"]
-            // Codex's default runs a tool its server marks read-only unasked; trust is Tinycast's call.
+            // Codex runs a tool its server calls read-only unasked; trust is Tinycast's call.
             arguments += ["-c", "\(key).default_tools_approval_mode=\(quoted("prompt"))"]
             switch server.transport {
             case .command(let path, let commandArguments, let environment):
                 let launch = command(
-                    path: path, arguments: commandArguments, handle: server.handle,
-                    names: environment.keys.sorted())
+                    path: path, arguments: commandArguments, environment: environment,
+                    server: index)
                 arguments += ["-c", "\(key).command=\(quoted(launch.path))"]
                 arguments += ["-c", "\(key).args=\(array(launch.arguments))"]
-                let names = environment.keys.sorted().map { variable(server.handle, $0) }
+                let names = forwardedNames(environment).indices.map {
+                    variable(server: index, key: $0)
+                }
                 arguments += ["-c", "\(key).env_vars=\(array(names))"]
             case .url(let url, let headerName, let headerValue):
                 arguments += ["-c", "\(key).url=\(quoted(url))"]
-                let name = variable(server.handle, headerName)
+                let name = variable(server: index, key: 0)
                 if bearerToken(headerName: headerName, headerValue: headerValue) != nil {
                     arguments += ["-c", "\(key).bearer_token_env_var=\(quoted(name))"]
                 } else {
@@ -40,37 +42,51 @@ enum CodexMCPLaunch {
         return arguments
     }
 
-    /// The values the overrides above name. They ride the app-server's own environment because
-    /// `ps` shows everything on argv, and Codex hands a stdio server nothing it was not named.
-    static func environment(servers: [AIToolServer]) -> [String: String] {
-        var result: [String: String] = [:]
-        for server in servers {
+    /// The values the overrides name, off argv; `nil` refuses a launch where two would share one.
+    static func environment(servers: [AIToolServer]) -> [String: String]? {
+        var pairs: [(name: String, value: String)] = []
+        for (index, server) in servers.enumerated() {
             switch server.transport {
             case .command(_, _, let environment):
-                for (key, value) in environment { result[variable(server.handle, key)] = value }
+                for (key, name) in forwardedNames(environment).enumerated() {
+                    pairs.append((variable(server: index, key: key), environment[name] ?? ""))
+                }
             case .url(_, let headerName, let headerValue):
-                result[variable(server.handle, headerName)] =
-                    bearerToken(headerName: headerName, headerValue: headerValue) ?? headerValue
+                let value = bearerToken(headerName: headerName, headerValue: headerValue)
+                pairs.append((variable(server: index, key: 0), value ?? headerValue))
             }
+        }
+        return distinct(pairs)
+    }
+
+    /// One value per variable, or `nil`: a repeated name would hand one server another's secret.
+    static func distinct(_ pairs: [(name: String, value: String)]) -> [String: String]? {
+        var result: [String: String] = [:]
+        for pair in pairs {
+            guard result.updateValue(pair.value, forKey: pair.name) == nil else { return nil }
         }
         return result
     }
 
     /// Codex cannot rename a forwarded variable, so `/bin/sh` moves each to its server's name.
     static func command(
-        path: String, arguments: [String], handle: String, names: [String]
+        path: String, arguments: [String], environment: [String: String], server index: Int
     ) -> (path: String, arguments: [String]) {
-        let renamed = names.filter(isShellName)
-        guard !renamed.isEmpty else { return (path, arguments) }
-        let moves = renamed.map { name in
-            let derived = variable(handle, name)
+        let names = forwardedNames(environment)
+        guard !names.isEmpty else { return (path, arguments) }
+        let moves = names.enumerated().map { key, name in
+            let derived = variable(server: index, key: key)
             return "export \(name)=\"$\(derived)\"; unset \(derived)"
         }
         let script = (moves + [#"exec "$@""#]).joined(separator: "; ")
         return ("/bin/sh", ["-c", script, "tinycast-mcp", path] + arguments)
     }
 
-    /// What `export` accepts; any other name stays under its derived one, as it always has here.
+    /// Only a name `export` accepts can reach the server; any other is not forwarded at all.
+    private static func forwardedNames(_ environment: [String: String]) -> [String] {
+        environment.keys.sorted().filter(isShellName)
+    }
+
     private static func isShellName(_ name: String) -> Bool {
         guard let first = name.first, first == "_" || (first.isASCII && first.isLetter) else {
             return false
@@ -78,12 +94,9 @@ enum CodexMCPLaunch {
         return name.allSatisfy { $0 == "_" || ($0.isASCII && ($0.isLetter || $0.isNumber)) }
     }
 
-    /// Prefixed and derived, so a server's own variable names can never shadow the child's PATH.
-    static func variable(_ handle: String, _ key: String) -> String {
-        let sanitized = (handle + "_" + key).uppercased().map { character -> Character in
-            character.isASCII && (character.isLetter || character.isNumber) ? character : "_"
-        }
-        return "TC_MCP_" + String(sanitized)
+    /// Positions rather than a spelling of handle and key, which two servers could share.
+    static func variable(server: Int, key: Int) -> String {
+        "TC_MCP_\(server)_\(key)"
     }
 
     /// Codex composes `Bearer` itself, so only the bare token goes in the variable it reads.

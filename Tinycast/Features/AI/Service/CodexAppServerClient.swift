@@ -96,6 +96,9 @@ final class CodexAppServerClient {
         if isRunning, self.toolServers == toolServers { return }
         // The list is only readable at launch, so the old process cannot be talked into it.
         if isRunning { stop() }
+        guard let secrets = CodexMCPLaunch.environment(servers: toolServers) else {
+            throw ClientError.launchFailed("Two MCP servers' secrets would share one variable.")
+        }
         do {
             try FileManager.default.createDirectory(
                 at: workspace, withIntermediateDirectories: true)
@@ -137,8 +140,7 @@ final class CodexAppServerClient {
                 "PATH": (commandPaths + [inheritedPath]).joined(separator: ":")
             ]
         ) { _, value in value }
-        // Named on argv, carried here: `ps` shows one and not the other.
-        environment.merge(CodexMCPLaunch.environment(servers: toolServers)) { _, new in new }
+        environment.merge(secrets) { _, new in new }
         // Tests can isolate app-server state; production deliberately inherits the user's Codex home.
         if let codexHome { environment["CODEX_HOME"] = codexHome.path }
         process.environment = environment
