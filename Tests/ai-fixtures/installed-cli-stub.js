@@ -36,6 +36,10 @@ function claudeToolLoop() {
     emit({ type: "result", subtype: "error_max_turns", is_error: true, result: "" });
     return;
   }
+  if (modelIndex >= 0 && args[modelIndex + 1] === "pair") {
+    claudeParallelCalls(read, emit);
+    return;
+  }
 
   const id = "toolu_stub";
   emit({
@@ -81,6 +85,32 @@ function claudeToolLoop() {
     is_error: false,
     usage: { input_tokens: 8, output_tokens: 2 },
   });
+}
+
+/** Two calls in one assistant turn, both held open before either is answered. */
+function claudeParallelCalls(read, emit) {
+  const calls = [["toolu_a", "first_tool"], ["toolu_b", "second_tool"]];
+  emit({
+    type: "assistant",
+    message: {
+      content: calls.map(([id, tool]) => ({
+        type: "tool_use", id, name: "mcp__probe__" + tool, input: {},
+      })),
+    },
+  });
+  calls.forEach(([, tool], index) => emit({
+    type: "control_request",
+    request_id: "req_" + index,
+    request: { subtype: "can_use_tool", tool_name: "mcp__probe__" + tool, input: {} },
+  }));
+  for (const _ of calls) record("claude-control.log", read.next().value ?? "{}");
+  emit({
+    type: "user",
+    message: {
+      content: calls.map(([id]) => ({ type: "tool_result", tool_use_id: id, content: "ok" })),
+    },
+  });
+  emit({ type: "result", is_error: false, usage: { input_tokens: 8, output_tokens: 2 } });
 }
 
 const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);

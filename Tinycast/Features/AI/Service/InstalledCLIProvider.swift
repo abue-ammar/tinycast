@@ -66,6 +66,7 @@ private final class InstalledCLITurnRunner {
     private var activeServers: [AIToolServer] = []
     private var mcpConfigURL: URL?
     private var input: FileHandle?
+    private var consents: [Task<Void, Never>] = []
     /// Chained rather than concurrent: two writes racing the same pipe would interleave a line.
     private var writes: Task<Void, Never> = Task {}
 
@@ -446,7 +447,7 @@ private final class InstalledCLITurnRunner {
 
     /// The reader's decision, through the same trust policy and dialog the BYOK loop asks with.
     private func answer(_ request: ClaudeControlProtocol.Request, token: TurnToken) {
-        Task { [weak self] in
+        consents.append(Task { [weak self] in
             let allowed = await self?.toolServers?.consent(request.call) ?? false
             guard let self, self.token === token else { return }
             guard
@@ -455,7 +456,13 @@ private final class InstalledCLITurnRunner {
                     message: "The user declined this tool call.")
             else { return }
             self.write(line, closing: false)
-        }
+        })
+    }
+
+    /// A question still waiting its turn belongs to a turn that is over, so it is never asked.
+    private func cancelConsents() {
+        for consent in consents { consent.cancel() }
+        consents = []
     }
 
     private func consumeError(_ data: Data, token: TurnToken) {
@@ -491,6 +498,7 @@ private final class InstalledCLITurnRunner {
     }
 
     private func cancelActiveTurn() {
+        cancelConsents()
         continuation?.finish(throwing: CancellationError())
         continuation = nil
         process?.terminate()
@@ -572,6 +580,7 @@ private final class InstalledCLITurnRunner {
     }
 
     private func cleanup() {
+        cancelConsents()
         process?.terminationHandler = nil
         (process?.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
         (process?.standardError as? Pipe)?.fileHandleForReading.readabilityHandler = nil

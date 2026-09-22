@@ -376,6 +376,7 @@ final class CodexTurnRunner {
         activeServers = []
         startedTools = [:]
         client.onElicitation = nil
+        client.cancelElicitations()
         if wasLive { onTurnEnded?() }
     }
 }

@@ -42,6 +42,7 @@ final class CodexAppServerClient {
     /// What the running process was launched with. Overrides and environment are fixed at exec,
     /// so a changed list — a refreshed token included — is a relaunch, not a reconfiguration.
     private(set) var toolServers: [AIToolServer] = []
+    private var elicitations: [Task<Void, Never>] = []
     private var pendingLaunch: (id: UUID, servers: [AIToolServer], task: Task<Void, Error>)?
     /// Bumped by `stop`, so a launch still reading the list does not start a process after it.
     private var generation = 0
@@ -254,6 +255,12 @@ final class CodexAppServerClient {
         }
     }
 
+    /// A question still waiting its turn belongs to a turn that is over, so it is never asked.
+    func cancelElicitations() {
+        for elicitation in elicitations { elicitation.cancel() }
+        elicitations = []
+    }
+
     func stop() {
         generation += 1
         stop(error: ClientError.processExited("Codex stopped."))
@@ -314,14 +321,14 @@ final class CodexAppServerClient {
                 declineServerRequest(id: id, method: method)
                 return
             }
-            Task { [weak self] in
+            elicitations.append(Task { [weak self] in
                 let action: CodexElicitation.Action =
                     await onElicitation(elicitation) ? .accept : .decline
                 // `persist` is never answered: only Settings may change a standing decision.
                 try? self?.send(
                     CodexAppServerProtocol.response(
                         id: id, result: ["action": action.rawValue]))
-            }
+            })
         case .invalid:
             break
         }
@@ -379,6 +386,7 @@ final class CodexAppServerClient {
     }
 
     private func cleanup(error: Error) {
+        cancelElicitations()
         toolServers = []
         process?.terminationHandler = nil
         (process?.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil

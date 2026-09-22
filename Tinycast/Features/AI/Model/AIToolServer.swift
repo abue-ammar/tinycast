@@ -36,7 +36,28 @@ struct AIToolServerSession: Sendable {
     ) {
         self.rounds = rounds
         self.servers = servers
-        self.consent = consent
+        let queue = ConsentQueue()
+        self.consent = { call in await queue.ask { await consent(call) } }
+    }
+
+    /// One question at a time: a second would find the dialog busy, and must see the first's grant.
+    @MainActor
+    private final class ConsentQueue {
+        private var isAsking = false
+        private var waiting: [CheckedContinuation<Void, Never>] = []
+
+        func ask(_ question: @Sendable () async -> Bool) async -> Bool {
+            if isAsking {
+                await withCheckedContinuation { waiting.append($0) }
+            } else {
+                isAsking = true
+            }
+            defer {
+                if waiting.isEmpty { isAsking = false } else { waiting.removeFirst().resume() }
+            }
+            guard !Task.isCancelled else { return false }
+            return await question()
+        }
     }
 }
 

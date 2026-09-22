@@ -36,6 +36,7 @@ struct InstalledAITests {
         await claudeRunsTinycastsServersAndAnswersTheirConsent(fixture)
         await aDeclinedCallComesBackAsAnErrorResult(fixture)
         await theRoundCapEndsTheTurnTheWayTheLoopDoes(fixture)
+        await concurrentCallsAreAskedOneAtATime(fixture)
         await aManagedMCPPolicyLeavesBothFlagsOff(fixture)
 
         print("\(passes) passed, \(failures) failed")
@@ -346,6 +347,29 @@ struct InstalledAITests {
             "and never handed a permission update, which it would write to its own settings")
     }
 
+    /// The dialog shows one question at a time, and the second must see what the first granted.
+    private static func concurrentCallsAreAskedOneAtATime(_ fixture: Fixture) async {
+        let reader = GrantingReader()
+        let session = AIToolServerSession(rounds: 25) {
+            await fixture.session(allowing: true, asked: Box()).servers()
+        } consent: { call in
+            await reader.answer(call)
+        }
+        let events = await fixture.events(
+            kind: .claude, model: "pair", effort: nil, toolServers: session)
+        expect(
+            reader.calls.map(\.tool) == ["first_tool", "second_tool"] && reader.mostAtOnce == 1,
+            "two calls held open together are asked about one after the other, in order")
+        expect(
+            reader.dialogs == 1,
+            "and the second is decided after the first dialog closes, so its grant is seen")
+        let answers = fixture.read("claude-control.log").split(separator: "\n").suffix(2)
+        expect(
+            answers.count == 2 && answers.allSatisfy { $0.contains(#""behavior":"allow""#) }
+                && events.last == .finished,
+            "both calls are allowed on the one channel and the turn finishes")
+    }
+
     private static func theRoundCapEndsTheTurnTheWayTheLoopDoes(_ fixture: Fixture) async {
         let error = await fixture.streamError(
             kind: .claude, model: "round-cap", effort: nil,
@@ -385,6 +409,28 @@ struct InstalledAITests {
 @MainActor
 private final class Box {
     var calls: [AIToolServerCall] = []
+}
+
+/// A reader who is asked once, takes a moment over it, and grants the server for the chat.
+@MainActor
+private final class GrantingReader {
+    var calls: [AIToolServerCall] = []
+    var dialogs = 0
+    var mostAtOnce = 0
+    private var atOnce = 0
+    private var granted = false
+
+    func answer(_ call: AIToolServerCall) async -> Bool {
+        calls.append(call)
+        atOnce += 1
+        mostAtOnce = max(mostAtOnce, atOnce)
+        defer { atOnce -= 1 }
+        guard !granted else { return true }
+        dialogs += 1
+        try? await Task.sleep(for: .milliseconds(150))
+        granted = true
+        return true
+    }
 }
 
 @MainActor

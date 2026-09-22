@@ -203,9 +203,13 @@ Tinycast runs itself, and `MCPServer.toolServer` is the one place the mapping ha
 `AIToolServerSession` carries the three things the route needs: what to run, who to ask, and how
 many rounds it may spend. `MCPCoordinator.toolServers` builds the list from `enabledServers`
 honouring `@slug` and dropping `.never`; `MCPCoordinator.permit` answers with `MCPTrustPolicy` and
-the same three-way dialog. An OAuth server with no live session is left out rather than passed
-without one — a CLI cannot turn a 401 into a sentence the model can work around, and a tool result
-is the only place that explanation would fit.
+the same three-way dialog. The session asks one question at a time: a CLI can hold two calls
+open at once, where the API loop never does, and `DialogController` shows one dialog and refuses
+the next, which read as the reader declining a call nobody showed them. So a second question waits
+for the first dialog to close and is then decided afresh, seeing whatever grant it made; one still
+waiting when its turn ends is never asked. An OAuth server with no live session is left out rather
+than passed without one — a CLI cannot turn a 401 into a sentence the model can work around, and a
+tool result is the only place that explanation would fit.
 
 `CodexMCPLaunch` turns the list into `-c` overrides: `command`/`args`/`env_vars` for a local
 server, `url` with `bearer_token_env_var` — or `env_http_headers` when the header is not
