@@ -210,8 +210,8 @@ enum MCPOAuth {
                       "code_challenge_method": "S256", "state": state, "resource": registration.resource]
         fields["scope"] = scope
         let reserved = Set(fields.keys).union(["scope"])
-        parts.queryItems = (parts.queryItems ?? []).filter { !reserved.contains($0.name) }
-            + fields.sorted { $0.key < $1.key }.map { URLQueryItem(name: $0.key, value: $0.value) }
+        parts.percentEncodedQueryItems = (parts.percentEncodedQueryItems ?? []).filter { !reserved.contains($0.name) }
+            + fields.sorted { $0.key < $1.key }.map { URLQueryItem(name: escape($0.key), value: escape($0.value)) }
         guard let url = parts.url else { throw Failure.invalidMetadata }
         return url
     }

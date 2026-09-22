@@ -92,6 +92,16 @@ struct MCPOAuthTests {
         let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         expect(query.contains(URLQueryItem(name: "resource", value: registration.resource)), "authorize resource")
         expect(query.contains(URLQueryItem(name: "code_challenge_method", value: "S256")), "authorize S256")
+        expect(query.contains(URLQueryItem(name: "client_id", value: "test+client"))
+               && url.absoluteString.contains("client_id=test%2Bclient") && url.absoluteString.contains("scope=read%20write"),
+               "a plus in the authorization URL is escaped, so the server cannot read it as a space")
+        let tenantJSON = metadataJSON.replacingOccurrences(
+            of: "auth.test/authorize", with: "auth.test/authorize?tenant=a%2Bb&client_id=spoofed")
+        let tenant = try MCPOAuth.authorizeURL(
+            metadata: MCPOAuth.parseServer(Data(tenantJSON.utf8), issuer: "https://auth.test"),
+            registration: registration, challenge: pkce.challenge, state: "state", scope: nil)
+        expect(tenant.absoluteString.contains("?tenant=a%2Bb&client_id=test%2Bclient&"),
+               "the endpoint's own query keeps its encoding and loses the fields it may not set")
         expect(String(bytes: MCPOAuth.form(["a+b": "&= +"]), encoding: .utf8) == "a%2Bb=%26%3D%20%2B", "form encoding")
         let good = "/callback?code=hello%2Bworld&state=state&iss=https%3A%2F%2Fauth.test"
         expect(try MCPOAuth.callback(good, state: "state", issuer: "https://auth.test", requiresIssuer: true) == "hello+world",
