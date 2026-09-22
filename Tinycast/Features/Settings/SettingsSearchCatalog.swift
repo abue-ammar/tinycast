@@ -560,9 +560,6 @@ enum SettingsSearchCatalog {
             .permissionsAccessibility, "Accessibility",
             keywords: ["paste", "keystrokes", "privacy", "grant"]),
         .init(
-            .permissionsInputMonitoring, "Input Monitoring",
-            keywords: ["globe", "modifier", "hotkey", "keyboard", "privacy"]),
-        .init(
             .permissionsCalendars, "Calendars",
             keywords: ["events", "privacy", "grant", "eventkit"])
     ]

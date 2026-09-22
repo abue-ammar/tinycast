@@ -34,7 +34,7 @@ the keycap rendering — only the _engine_ differs.
 - **The modifier-only detectors stay Foundation-only and pure** for `hotkey-test`; the double-tap
   clock is injected as a parameter. Every `CGEvent` call lives in
   `Service/ModifierTapMonitor.swift`, which is listen-only, installs *only* while a modifier-only
-  shortcut is bound, and never prompts automatically for keyboard access.
+  shortcut is bound, and never prompts for Accessibility.
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyTap` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
@@ -124,18 +124,15 @@ action runs, so the palette never opens with a phantom ⌘ held and focus restor
 and "double-tap and hold" is a deliberate non-event.
 
 `ModifierTapMonitor` is the one platform file. It is a **listen-only** `CGEventTap` and it installs only
-while a modifier-only shortcut is bound, so users who never use the feature pay nothing. Three
+while a modifier-only shortcut is bound, so users who never use the feature pay nothing. Two
 details are load-bearing:
-
-- It needs **Input Monitoring** to receive key-downs outside Tinycast. Accessibility alone can expose
-  modifier transitions but silently omit the letters that must cancel a lone Globe tap.
 
 - It is `.tailAppendEventTap`, unlike the two head-inserted taps, so it observes events **after**
   `HyperKeyTap`'s rewrite. A Hyper-remapped right-side modifier therefore arrives as the full ⌃⌥⇧⌘
   chord and correctly reads as "not a lone modifier" — the left-side twin still double-taps.
-- It also needs **Accessibility**. The binding records regardless; the recorder warns about the missing
-  grant and Settings ▸ Permissions requests Input Monitoring on demand. The one-second health timer
-  installs the tap when both grants are available.
+- Like every keyboard tap it needs the **Accessibility** grant, and it never prompts for it. The
+  binding records regardless; the recorder shows an inline warning that opens System Settings, and the
+  one-second health timer installs the tap the moment the grant lands.
 
 ⇧ is bindable this way even though `KeyShortcut` rejects a bare ⇧ combo: a double-_tap_ is unambiguous
 where a bare ⇧ combo would shadow typing.
