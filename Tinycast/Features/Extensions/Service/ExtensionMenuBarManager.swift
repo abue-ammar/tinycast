@@ -60,10 +60,12 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         }
     }
 
-    init(storage: ExtensionStorage, commandMetadata: ExtensionCommandMetadataStore, supportDirectory: URL,
-         executionTimeout: Duration = .seconds(60), showsStatusItems: Bool = true,
-         makeExecution: @escaping (InstalledExtension, ExtensionCommand, ExtensionLaunchType) -> Execution?,
-         onError: @escaping (String, InstalledExtension, Bool) -> Void) {
+    init(
+        storage: ExtensionStorage, commandMetadata: ExtensionCommandMetadataStore, supportDirectory: URL,
+        executionTimeout: Duration = .seconds(60), showsStatusItems: Bool = true,
+        makeExecution: @escaping (InstalledExtension, ExtensionCommand, ExtensionLaunchType) -> Execution?,
+        onError: @escaping (String, InstalledExtension, Bool) -> Void
+    ) {
         self.storage = storage
         self.commandMetadata = commandMetadata
         self.supportDirectory = supportDirectory
@@ -88,12 +90,15 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         scheduleRefresh()
     }
 
-    func run(_ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:],
-             type: ExtensionLaunchType = .userInitiated, context: [String: RenderValue] = [:]) {
+    func run(
+        _ owner: InstalledExtension, command: ExtensionCommand, arguments: [String: String] = [:],
+        type: ExtensionLaunchType = .userInitiated, context: [String: RenderValue] = [:]
+    ) {
         let reference = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
         if command.mode == .menuBar, !metadata(reference).menuBarEnabled {
-            commandMetadata.setMenuBarEnabled(true, extension: reference.extensionName,
-                                              command: reference.commandName)
+            commandMetadata.setMenuBarEnabled(
+                true, extension: reference.extensionName,
+                command: reference.commandName)
         }
         enqueue(Request(reference: reference, type: type, arguments: arguments, context: context))
     }
@@ -102,8 +107,9 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         requests.removeAll { $0.reference.entryID == entryID }
         controllers.removeValue(forKey: entryID)?.remove()
         if let reference = ExtensionCommandRef(entryID: entryID) {
-            commandMetadata.setMenuBarEnabled(false, extension: reference.extensionName,
-                                              command: reference.commandName)
+            commandMetadata.setMenuBarEnabled(
+                false, extension: reference.extensionName,
+                command: reference.commandName)
         }
         if active?.request.reference.entryID == entryID { finish() }
         runNext()
@@ -161,15 +167,19 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             command.mode == .noView || metadata(request.reference).menuBarEnabled
         else { runNext(); return }
         if command.mode == .menuBar {
-            commandMetadata.recordMenuBarRun(extension: request.reference.extensionName,
-                                             command: request.reference.commandName, now: Date())
+            commandMetadata.recordMenuBarRun(
+                extension: request.reference.extensionName,
+                command: request.reference.commandName, now: Date())
             scheduleRefresh()
         }
 
-        let missing = storage.missingRequiredPreferences(extension: owner.manifest.name,
-                                                         schemas: owner.manifest.preferences + command.preferences)
+        let missing = storage.missingRequiredPreferences(
+            extension: owner.manifest.name,
+            schemas: owner.manifest.preferences + command.preferences)
         guard missing.isEmpty, let bundle = owner.bundleURL(for: command) else {
-            let message = missing.isEmpty ? ExtensionLaunchError.notBuilt(command.title).localizedDescription
+            let message =
+                missing.isEmpty
+                ? ExtensionLaunchError.notBuilt(command.title).localizedDescription
                 : ExtensionLaunchError.missingPreferences(missing).localizedDescription
             controllers[entryID]?.showError(message)
             if request.type == .userInitiated || controllers[entryID]?.isOpen == true {
@@ -188,9 +198,11 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         let context = ExtensionLaunchContext(
             extensionName: owner.manifest.name, extensionTitle: owner.title, commandName: command.name,
             commandMode: command.mode, assetsPath: owner.assetsPath, supportPath: support.path,
-            preferences: storage.resolvedPreferences(extension: owner.manifest.name,
-                                                     schemas: owner.manifest.preferences + command.preferences),
-            caches: storage.caches(extension: owner.manifest.name), arguments: command.completeArguments(request.arguments),
+            preferences: storage.resolvedPreferences(
+                extension: owner.manifest.name,
+                schemas: owner.manifest.preferences + command.preferences),
+            caches: storage.caches(extension: owner.manifest.name),
+            arguments: command.completeArguments(request.arguments),
             fallbackText: nil, launchType: request.type,
             isDarkAppearance: NSApp.effectiveAppearance.isDark, launchContext: request.context)
         launchTask = Task { [weak self] in
@@ -202,7 +214,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                 guard !Task.isCancelled else { return }
                 try await runtime.boot(config: .current(supportDirectory: support))
                 guard !Task.isCancelled else { runtime.shutdown(); return }
-                await runtime.start(session: session.id, code: code, file: bundle, mode: command.mode, context: context)
+                await runtime.start(
+                    session: session.id, code: code, file: bundle, mode: command.mode, context: context)
             } catch {
                 self?.runtime(runtime, session: session.id, didFail: error.localizedDescription)
             }
@@ -210,10 +223,13 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         armDeadline(session)
     }
 
-    func controller(for reference: ExtensionCommandRef, owner: InstalledExtension) -> ExtensionMenuBarController {
+    func controller(
+        for reference: ExtensionCommandRef, owner: InstalledExtension
+    ) -> ExtensionMenuBarController {
         if let controller = controllers[reference.entryID] { return controller }
-        let controller = ExtensionMenuBarController(entryID: reference.entryID, assetsPath: owner.assetsPath,
-                                                     isVisible: showsStatusItems)
+        let controller = ExtensionMenuBarController(
+            entryID: reference.entryID, assetsPath: owner.assetsPath,
+            isVisible: showsStatusItems)
         controller.onOpen = { [weak self] in
             guard let self else { return }
             if self.active?.request.reference == reference {
@@ -222,7 +238,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
                 return
             }
             let queued = self.requests.firstIndex { $0.reference == reference && !$0.scheduled }
-            let request = queued.map { self.requests.remove(at: $0) }
+            let request =
+                queued.map { self.requests.remove(at: $0) }
                 ?? Request(reference: reference, type: .userInitiated)
             self.requests.removeAll { $0.reference == reference && $0.scheduled }
             self.requests.insert(request, at: 0)
@@ -241,9 +258,10 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             active.pendingActions += 1
             self.armDeadline(active)
             Task {
-                await active.runtime.dispatch(session: session, handler: handler,
-                                              payload: ExtensionRuntime.jsonString(from: [["type": type]]),
-                                              completesSession: true)
+                await active.runtime.dispatch(
+                    session: session, handler: handler,
+                    payload: ExtensionRuntime.jsonString(from: [["type": type]]),
+                    completesSession: true)
             }
         }
         controller.onActionUnavailable = { [weak self] in
@@ -260,7 +278,10 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             do { try await Task.sleep(for: timeout) } catch { return }
             guard let self, self.active?.id == session.id else { return }
             if self.controllers[session.request.reference.entryID]?.isOpen == true,
-                !session.isLoading, session.pendingActions == 0 { return }
+                !session.isLoading, session.pendingActions == 0
+            {
+                return
+            }
             self.runtime(session.runtime, session: session.id, didFail: "The menu bar command timed out.")
         }
     }
@@ -302,7 +323,9 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         refreshTask = nil
         guard let next = dueDates().values.min() else { return }
         refreshTask = Task { [weak self] in
-            do { try await Task.sleep(for: .seconds(max(0, next.timeIntervalSinceNow)), tolerance: .seconds(1)) } catch { return }
+            do {
+                try await Task.sleep(for: .seconds(max(0, next.timeIntervalSinceNow)), tolerance: .seconds(1))
+            } catch { return }
             guard !Task.isCancelled, let self else { return }
             let now = Date()
             for (reference, date) in self.dueDates() where date <= now {
@@ -332,7 +355,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
         let reference = active.request.reference
         let root = tree.activeRoot
         guard root == nil || root?.type == "MenuBarExtra" else {
-            self.runtime(runtime, session: session, didFail: "A menu bar command must render MenuBarExtra or null.")
+            self.runtime(
+                runtime, session: session, didFail: "A menu bar command must render MenuBarExtra or null.")
             return
         }
         let wasLoading = active.isLoading
@@ -344,16 +368,19 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             if !active.isLoading || metadata(reference).menuBarSnapshot == nil { controller.update(snapshot) }
             controller.showMenu(root, session: session)
             if !active.isLoading, active.mode == .menuBar {
-                commandMetadata.setMenuBarSnapshot(snapshot, extension: reference.extensionName,
-                                                   command: reference.commandName)
-                commandMetadata.clearBackgroundError(extension: reference.extensionName,
-                                                     command: reference.commandName)
+                commandMetadata.setMenuBarSnapshot(
+                    snapshot, extension: reference.extensionName,
+                    command: reference.commandName)
+                commandMetadata.clearBackgroundError(
+                    extension: reference.extensionName,
+                    command: reference.commandName)
             }
         } else {
             controllers.removeValue(forKey: reference.entryID)?.remove()
             if active.mode == .menuBar {
-                commandMetadata.setMenuBarSnapshot(nil, extension: reference.extensionName,
-                                                   command: reference.commandName)
+                commandMetadata.setMenuBarSnapshot(
+                    nil, extension: reference.extensionName,
+                    command: reference.commandName)
             }
         }
         releaseIfIdle()
@@ -385,7 +412,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
 
     func runtime(_ runtime: ExtensionRuntime, log level: String, message: String) {
         if level == "error" {
-            Logger(subsystem: "com.tinycast", category: "extension-menu-bar").error("\(message, privacy: .public)")
+            Logger(subsystem: "com.tinycast", category: "extension-menu-bar").error(
+                "\(message, privacy: .public)")
         }
     }
 }
@@ -396,7 +424,8 @@ extension ExtensionMenuBarSnapshot {
         title = node.string("title")
         tooltip = node.string("tooltip")
         if let value = node.props["icon"],
-            let data = try? JSONSerialization.data(withJSONObject: value.jsonValue, options: .fragmentsAllowed)
+            let data = try? JSONSerialization.data(
+                withJSONObject: value.jsonValue, options: .fragmentsAllowed)
         {
             iconJSON = String(bytes: data, encoding: .utf8)
         } else {

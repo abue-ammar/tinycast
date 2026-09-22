@@ -27,12 +27,16 @@ enum ExtensionFetchTests {
         return false
     }
 
-    private static func request(_ fetcher: ExtensionFetcher, url: String, token: String = "") async throws -> String {
-        let result = try await fetcher.request(.object([
-            "url": .string(url), "headers": .object(["Authorization": .string(token)])
-        ]))
+    private static func request(
+        _ fetcher: ExtensionFetcher, url: String, token: String = ""
+    ) async throws -> String {
+        let result = try await fetcher.request(
+            .object([
+                "url": .string(url), "headers": .object(["Authorization": .string(token)])
+            ]))
         guard let encoded = result["bodyBase64"] as? String, let data = Data(base64Encoded: encoded),
-            let text = String(data: data, encoding: .utf8) else { return "" }
+            let text = String(data: data, encoding: .utf8)
+        else { return "" }
         return text
     }
 
@@ -54,19 +58,23 @@ enum ExtensionFetchTests {
             _ = try await cancelled.value
             expect(false, "cancelled fetch returns cancellation")
         } catch {
-            expect((error as? URLError)?.code == .cancelled || error is CancellationError,
-                   "cancelled fetch returns cancellation")
+            expect(
+                (error as? URLError)?.code == .cancelled || error is CancellationError,
+                "cancelled fetch returns cancellation")
         }
         let text = try await survivor.value
-        expect(text.contains("fixture-b") && !text.contains("fixture-a"),
-               "cancelling one request preserves another request and its headers")
+        expect(
+            text.contains("fixture-b") && !text.contains("fixture-a"),
+            "cancelling one request preserves another request and its headers")
         let next = try await request(fetcher, url: url + "/echo")
-        expect(next == #"{"authorization":"","cookie":""}"#,
-               "reused transport carries neither previous authorization nor response cookies")
+        expect(
+            next == #"{"authorization":"","cookie":""}"#,
+            "reused transport carries neither previous authorization nor response cookies")
     }
 
     static func runChecks() async {
-        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tinycast-fetch-\(UUID())")
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "tinycast-fetch-\(UUID())")
         let stateFile = directory.appendingPathComponent("state.json")
         let server = Process()
         defer {

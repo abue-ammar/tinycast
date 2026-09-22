@@ -97,14 +97,18 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 supportDirectory: ExtensionCatalog.supportRoot(),
                 makeExecution: { [weak self, weak coordinator] owner, command, type in
                     guard let self, let coordinator else { return nil }
-                    let host = ExtensionMenuBarHost(owner: owner, command: command, launchType: type, storage: self.storage,
-                                                    manager: self, coordinator: coordinator)
+                    let host = ExtensionMenuBarHost(
+                        owner: owner, command: command, launchType: type, storage: self.storage,
+                        manager: self, coordinator: coordinator)
                     let bridge = self.bridge.scoped(to: host)
-                    return .init(runtime: ExtensionRuntime(hostAPI: bridge,
-                                                          priority: type == .background ? .utility : .userInitiated), stop: {
-                        host.stop()
-                        bridge.context = nil
-                    }, enableInteraction: { host.enableInteraction() })
+                    return .init(
+                        runtime: ExtensionRuntime(
+                            hostAPI: bridge,
+                            priority: type == .background ? .utility : .userInitiated),
+                        stop: {
+                            host.stop()
+                            bridge.context = nil
+                        }, enableInteraction: { host.enableInteraction() })
                 },
                 onError: { [weak coordinator] message, owner, needsPreferences in
                     coordinator?.showHUD(message)
@@ -320,7 +324,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     ) async {
         guard isEnabled else { return }
         if command.mode == .menuBar || (command.mode == .noView && launchType == .background) {
-            menuBars?.run(owner, command: command, arguments: arguments, type: launchType, context: launchContext)
+            menuBars?.run(
+                owner, command: command, arguments: arguments, type: launchType, context: launchContext)
             return
         }
         await stop()
@@ -447,7 +452,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     func menuBarIsEnabled(_ reference: ExtensionCommandRef) -> Bool {
         commandMetadata.metadata(
-            extension: reference.extensionName, command: reference.commandName).menuBarEnabled
+            extension: reference.extensionName, command: reference.commandName
+        ).menuBarEnabled
     }
 
     /// Switching one on runs it: the item it draws is whatever that run renders.
@@ -909,11 +915,9 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard let (owner, command) = resolve(link) else {
             throw ExtensionLaunchError.unknownCommand(link.commandName)
         }
-        Task {
-            await run(
-                owner, command: command, arguments: link.arguments,
-                fallbackText: link.fallbackText, launchType: link.launchType)
-        }
+        coordinator?.runExtensionCommand(
+            entry(for: command, in: owner), arguments: link.arguments,
+            fallbackText: link.fallbackText, launchType: link.launchType)
     }
 
     func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult

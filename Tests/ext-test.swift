@@ -281,21 +281,29 @@ struct ExtensionTests {
                 }, alternate: React.createElement(MenuBarExtra.Item, { title: "Alternate", onAction() {} }) }));
             };
             """#
-        await runtime.start(session: "bar", code: code, file: URL(fileURLWithPath: "/tmp/menu.js"),
-                            mode: .menuBar, context: context)
+        await runtime.start(
+            session: "bar", code: code, file: URL(fileURLWithPath: "/tmp/menu.js"),
+            mode: .menuBar, context: context)
         await settle()
         let root = recorder.trees.last?.activeRoot
         check("menu-bar renders in JavaScriptCore", root?.type == "MenuBarExtra", recorder.failures.joined())
-        check("background launch reaches props and environment", root?.string("title") == "background|background")
+        check(
+            "background launch reaches props and environment",
+            root?.string("title") == "background|background")
         check("launch context reaches props", root?.string("tooltip") == "fixture")
-        check("alternate survives serialization", root?.children.first?.node("alternate")?.handler("onAction") != nil)
+        check(
+            "alternate survives serialization",
+            root?.children.first?.node("alternate")?.handler("onAction") != nil)
         if let handler = root?.children.first?.handler("onAction") {
-            await runtime.dispatch(session: "bar", handler: handler, payload: #"[{"type":"right-click"}]"#,
-                                   completesSession: true)
+            await runtime.dispatch(
+                session: "bar", handler: handler, payload: #"[{"type":"right-click"}]"#,
+                completesSession: true)
             check("menu action does not finish before its promise", !recorder.finished)
             await settle()
             check("menu action finishes after its promise", recorder.finished)
-            check("menu action forwards event", recorder.trees.last?.activeRoot?.string("title") == "right-click")
+            check(
+                "menu action forwards event",
+                recorder.trees.last?.activeRoot?.string("title") == "right-click")
         }
         await runtime.stop(session: "bar")
     }
@@ -1688,7 +1696,8 @@ struct ExtensionTests {
             exit(1)
         }
         if target.mode == .menuBar, ProcessInfo.processInfo.environment["EXT_TEST_MENU_BAR"] != nil {
-            await runInstalledMenuBar(InstalledExtension(manifest: manifest, directory: directory), command: target)
+            await runInstalledMenuBar(
+                InstalledExtension(manifest: manifest, directory: directory), command: target)
             exit(failures == 0 ? 0 : 1)
         }
         let bundle = directory.appendingPathComponent("\(target.name).js")
