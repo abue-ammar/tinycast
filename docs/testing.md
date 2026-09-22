@@ -614,6 +614,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### Extensions
 
+- Open a view-command deeplink with `fallbackText=beta`, with the palette hidden and already open:
+  the field shows `beta`; a locally filtered List/Grid shows matching rows, and a command using
+  `onSearchTextChange` receives the query when it mounts. Repeat without fallback text: the field
+  starts empty. A no-view command receives the prop without prefilling the search field.
 - Every command under Settings ▸ Extensions has Add Alias, and Record Hotkey when the mode is
   supported; an alias set there finds the command from its start and shows the chip
 - Hiding the extension from the launcher, or turning off Show in launcher, dims its alias fields

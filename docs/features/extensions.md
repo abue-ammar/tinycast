@@ -571,6 +571,10 @@ so rather than failing silently. `ExtensionDeepLink` owns the claimed schemes an
 covered by `Tests/ext-test.swift`; an extension's own `open("raycast://…")` resolves through the same
 `ExtensionManager.resolve(_:)` instead of launching Raycast.
 
+For view commands, nonempty `fallbackText` also prefills the search field: lists and grids filter
+locally or receive it through `onSearchTextChange` when their handler mounts. It remains available
+in the view command's launch props as well.
+
 ## Background refresh
 
 A `no-view` command declaring `interval` (`"90s"`, `"1m"`, `"12h"`, `"1d"`) re-runs headlessly on that

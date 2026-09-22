@@ -180,6 +180,7 @@ final class ExtensionCoordinator {
             if !paletteCoordinator.isVisible {
                 paletteCoordinator.showPalette(mode: .extensionCommand)
             }
+            if let fallbackText, !fallbackText.isEmpty { palette.query = fallbackText }
         case .noView, .menuBar:
             // A no-view command's own HUD is the feedback, so the palette gets out of the way.
             if launchType == .userInitiated { paletteCoordinator.hidePalette(restoreFocus: false) }
