@@ -90,7 +90,7 @@ struct RootPaletteView: View {
         case .ai:
             return AIScreen(
                 vm: vm, metrics: metrics, chat: core.aiChat, settings: core.aiSettings,
-                coordinator: core.aiChatCoordinator)
+                coordinator: core.aiChatCoordinator, openAttachments: toggleAIAttachments)
         case .aiHistory:
             return ChatHistoryScreen(
                 history: core.chatHistory, chat: core.aiChat, coordinator: core.aiChatCoordinator,
@@ -241,6 +241,11 @@ struct RootPaletteView: View {
             return headerMenu(
                 AIModelMenu.reasoning(
                     coordinator: core.aiChatCoordinator, settings: core.aiSettings),
+                width: metrics.size.menuWidth)
+        case .aiAttachments:
+            guard !core.aiChat.pendingAttachments.isEmpty else { return nil }
+            return headerMenu(
+                AIModelMenu.attachments(chat: core.aiChat, coordinator: core.aiChatCoordinator),
                 width: metrics.size.menuWidth)
         case .argumentOptions:
             guard let field = argumentOptionsField,
@@ -1000,6 +1005,14 @@ struct RootPaletteView: View {
         AIModelMenu.modelHighlight(coordinator: core.aiChatCoordinator, settings: core.aiSettings)
     }
 
+    private func toggleAIAttachments() {
+        if openMenu == .aiAttachments {
+            closeMenus()
+            return
+        }
+        open(.aiAttachments, highlighting: 0)
+    }
+
     private func toggleAIReasoning() {
         if openMenu == .aiReasoning {
             closeMenus()
@@ -1161,7 +1174,7 @@ struct RootPaletteView: View {
         case .actions: .bottomTrailing
         case .argumentOptions: .belowHeaderTrailing
         case .clipboardFilter, .fileSearchFilter, .emojiCategory, .aiModel, .aiReasoning,
-            .extensionAccessory:
+            .aiAttachments, .extensionAccessory:
             .belowHeaderTrailing
         case nil: nil
         }
@@ -1371,6 +1384,7 @@ private enum OpenMenu {
     case emojiCategory
     case aiModel
     case aiReasoning
+    case aiAttachments
 }
 
 /// Reads visibility in its own body, so a summon never re-renders the palette's.

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The chat header's model and reasoning menus, and the row each one opens on.
+/// The chat header's model, reasoning and staged-file menus, and the row each one opens on.
 @MainActor
 enum AIModelMenu {
     /// Every model configured for chat; selecting one updates the app-wide default route.
@@ -44,6 +44,28 @@ enum AIModelMenu {
                     coordinator.selectReasoningEffort(effort)
                 }
             })
+    }
+
+    /// One row per staged file, its ✕ beside the name: picking one takes that file back alone.
+    static func attachments(
+        chat: AIChatState, coordinator: AIChatCoordinator
+    ) -> PopoverMenuContent {
+        var items = chat.pendingAttachments.map { attachment in
+            PopoverMenuItem(
+                title: attachment.name, icon: .symbol(attachment.glyph), detail: "✕"
+            ) {
+                coordinator.removeAttachment(attachment.id)
+            }
+        }
+        if items.count > 1 {
+            items.append(
+                PopoverMenuItem(
+                    title: "Remove All", systemImage: "xmark.circle", startsSection: true
+                ) {
+                    coordinator.clearAttachments()
+                })
+        }
+        return PopoverMenuContent(header: "Attached", items: items)
     }
 
     static func modelHighlight(coordinator: AIChatCoordinator, settings: AISettingsStore) -> Int {

@@ -452,26 +452,23 @@ with a HUD instead of being staged. Because that decode outlives the keystroke, 
 images' lifetime exactly: whatever consumes or clears them — a send, a new chat, Remove Attachments,
 or leaving the conversation for another through history — disowns one still in flight and says so,
 rather than letting it surface on a later message. The counter that decides this sits on
-`AIChatState` beside the staged images, so a route that drops them cannot forget to move it. A
-staged attachment shows as a pill beside the typed text — an image carrying a small preview of
-itself, a PDF and a text file their own glyph, each followed by the file name, or "Image" for a
-screenshot. **Every kind is labelled**, images included: a bare thumbnail beside an ✕ reads as two
-stray marks rather than one pill, and the capsule needs something to wrap. The thumbnail is
-deliberately smaller than the pill's height for the same reason. Each pill carries its own ✕, so a
-mispaste is taken back without clearing the rest — ⌘K → Remove Attachments and bare backspace stay
-as the bulk and last-one routes. **Past two pills the rest collapse into a `+N` count**, because
-the strip's width is taken out of the search field: three named pills leave too little room to read
-what you are typing. The preview is a ~1 KB PNG downsampled on the same detached task that encodes the
-attachment and carried on the staged attachment itself, so a header re-rendered per keystroke
-decodes nothing and there is no cache whose lifetime could drift from the staging counter's.
-Each pill states its own width through `AttachmentChip.width(for:)`, which
-`RootPaletteView.searchFieldWidth(for:)` subtracts from the search field — so the two must move
+`AIChatState` beside the staged images, so a route that drops them cannot forget to move it.
+**Staged attachments share one pill beside the typed text**: the newest one's preview — an image's
+thumbnail, a PDF's or text file's glyph — and `+N` for the rest, because the strip's width is taken
+out of the search field and a named pill per file left too little room to read what you are typing.
+The names are a hover away, one per line, and clicking the pill opens a header menu listing every
+file with its ✕, so a mispaste is taken back without clearing the rest — ⌘K → Remove Attachments
+and bare backspace stay as the bulk and last-one routes. The preview is a ~1 KB PNG downsampled on
+the same detached task that encodes the attachment and carried on the staged attachment itself, so a
+header re-rendered per keystroke decodes nothing and there is no cache whose lifetime could drift
+from the staging counter's. The pill states its own width through `AttachmentsPill.width(for:)`,
+which `RootPaletteView.searchFieldWidth(for:)` subtracts from the search field — so the two must move
 together or the caret drifts. Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to
 its text and the chip follows it rather than the composer growing. Nothing is reserved for the model
 menu: the row itself squeezes a long draft, so the strip stops right before that menu however wide
 its title is. Bare backspace on an empty composer removes the last
 chip before it backs out of chat; ⌘K → Remove Attachments clears them all. Sent images persist in `message_images` and sent PDFs in `message_documents` beside their message;
-the bubble renders images as thumbnails and documents as the same named chips the composer showed.
+the bubble renders images as thumbnails and documents as named chips.
 A text file is already in the message's text and needs no table. The schema is
 `CREATE TABLE IF NOT EXISTS` re-applied on every open, so the table needed no migration, and its
 `ON DELETE CASCADE` leaves `prune` unchanged.

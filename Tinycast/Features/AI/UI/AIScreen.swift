@@ -7,6 +7,8 @@ struct AIScreen: PaletteScreen {
     let chat: AIChatState
     let settings: AISettingsStore
     let coordinator: AIChatCoordinator
+    /// The staged files' menu is the palette's to hang, like every other header menu.
+    let openAttachments: () -> Void
 
     struct Row: Identifiable {
         let id = "ai-chat"
@@ -75,7 +77,7 @@ struct AIScreen: PaletteScreen {
         let addressed = coordinator.addressedServer(in: vm.query)
         guard !attachments.isEmpty || addressed != nil else { return nil }
         let width =
-            PendingAttachmentsChips.width(for: attachments, metrics)
+            (attachments.isEmpty ? 0 : AttachmentsPill.width(for: attachments, metrics))
             + (addressed == nil ? 0 : ComposerChip.width(metrics))
         return PaletteHeaderAccessory(
             width: width + metrics.spacing.md,
@@ -87,9 +89,7 @@ struct AIScreen: PaletteScreen {
                     }
                     // Absent, not empty: an empty stack would still take a gap after the `@` chip.
                     if !attachments.isEmpty {
-                        PendingAttachmentsChips(
-                            attachments: attachments,
-                            onRemove: coordinator.removeAttachment)
+                        AttachmentsPill(attachments: attachments, onOpen: openAttachments)
                     }
                 }
                 // Clear of the caret, so a chip never reads as laid over the last word.
@@ -189,76 +189,69 @@ private struct ComposerChip: View {
             .padding(.horizontal, metrics.spacing.sm)
             .padding(.vertical, metrics.spacing.xxs)
             .background(Capsule().fill(Theme.Colors.controlSurface))
-            .help("Offers only \(label)'s tools")
+            .tooltip("Offers only \(label)'s tools", edge: .bottom)
             .accessibilityLabel("Addressed to \(label)")
     }
 }
 
-/// A staged file: an image states itself, a document names itself, and either can be taken back.
-private struct AttachmentChip: View {
+/// Every staged file in one pill: the newest's preview, a count of the rest, all names on hover.
+private struct AttachmentsPill: View {
     @Environment(\.metrics) private var metrics
-    let attachment: ChatAttachment
-    let onRemove: () -> Void
+    let attachments: [ChatAttachment]
+    let onOpen: () -> Void
 
-    @State private var hovered = false
-
-    /// A long file name is middle-truncated here rather than by layout, so the width is knowable.
-    private static let nameLimit = 16
-
-    /// Every kind is labelled: a bare thumbnail beside an ✕ reads as two stray marks, not a pill.
-    private static func shortened(_ name: String) -> String {
-        guard name.count > nameLimit else { return name }
-        let head = name.prefix(nameLimit - 7)
-        let tail = name.suffix(6)
-        return "\(head)…\(tail)"
+    private static func others(_ attachments: [ChatAttachment]) -> String? {
+        attachments.count > 1 ? "+\(attachments.count - 1)" : nil
     }
 
-    static func width(for attachment: ChatAttachment, _ metrics: InterfaceMetrics) -> CGFloat {
-        let text = (Self.shortened(attachment.name) as NSString).size(
+    /// Load-bearing: `RootPaletteView.searchFieldWidth(for:)` shrinks the field by exactly this.
+    static func width(for attachments: [ChatAttachment], _ metrics: InterfaceMetrics) -> CGFloat {
+        let pill = metrics.size.chatAttachmentInset * 2 + metrics.size.chatAttachmentThumb
+        guard let others = others(attachments) else { return pill }
+        let text = (others as NSString).size(
             withAttributes: [.font: metrics.typography.chipNSFont]
         ).width
-        return metrics.size.chatAttachmentInset * 2 + metrics.size.chatAttachmentThumb
-            + metrics.spacing.sm + text + metrics.spacing.sm + metrics.size.chatAttachmentRemove
+        return pill + metrics.spacing.xs + text + metrics.spacing.xs
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.sm) {
-            leading
-            Text(Self.shortened(attachment.name))
-                .font(metrics.typography.chip)
-                .lineLimit(1)
-                .foregroundStyle(Theme.Colors.textSecondary)
-            Button(action: onRemove) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 9, weight: .semibold))
-                    .frame(
-                        width: metrics.size.chatAttachmentRemove,
-                        height: metrics.size.chatAttachmentRemove
-                    )
-                    .foregroundStyle(hovered ? Theme.Colors.textPrimary : Theme.Colors.textTertiary)
-                    .contentShape(Rectangle())
+        Button(action: onOpen) {
+            HStack(spacing: metrics.spacing.xs) {
+                if let newest = attachments.last { AttachmentPreview(attachment: newest) }
+                if let others = Self.others(attachments) {
+                    Text(others)
+                        .font(metrics.typography.chip)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .padding(.trailing, metrics.spacing.xs)
+                }
             }
-            .buttonStyle(.plain)
-            .help("Remove \(attachment.name)")
+            // Inset under the inner gap, so the thumbnail reads as filling the pill.
+            .padding(metrics.size.chatAttachmentInset)
+            .background(
+                RoundedRectangle(cornerRadius: metrics.radius.attachmentChip, style: .continuous)
+                    .fill(Theme.Colors.controlSurface)
+            )
+            .contentShape(Rectangle())
         }
-        // Inset under the inner gap, so the thumbnail reads as filling the pill.
-        .padding(.horizontal, metrics.size.chatAttachmentInset)
-        .padding(.vertical, metrics.size.chatAttachmentInset)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.attachmentChip, style: .continuous)
-                .fill(Theme.Colors.controlSurface)
-        )
-        .onHover { hovered = $0 }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Attached \(attachment.name)")
+        .buttonStyle(.plain)
+        .tooltip(attachments.map(\.name).joined(separator: "\n"), edge: .bottom)
+        .accessibilityLabel(
+            attachments.count == 1
+                ? "Attached \(attachments[0].name)" : "\(attachments.count) files attached")
     }
+}
 
-    @ViewBuilder private var leading: some View {
+/// An image states itself; a document shows the glyph of its kind.
+private struct AttachmentPreview: View {
+    @Environment(\.metrics) private var metrics
+    let attachment: ChatAttachment
+
+    var body: some View {
         switch attachment.kind {
         case .image:
             ComposerThumbnail(data: attachment.preview, id: attachment.id)
         case .pdf, .text:
-            Image(systemName: attachment.kind == .pdf ? "doc.richtext" : "doc.plaintext")
+            Image(systemName: attachment.glyph)
                 .font(metrics.typography.chip)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Theme.Colors.textSecondary)
@@ -269,7 +262,18 @@ private struct AttachmentChip: View {
     }
 }
 
-/// Decoded once per attachment: `ForEach` keys on its id, so a per-keystroke re-render reuses it.
+extension ChatAttachment {
+    /// One glyph per kind, for the pill's documents and the menu's rows alike.
+    var glyph: String {
+        switch kind {
+        case .image: return "photo"
+        case .pdf: return "doc.richtext"
+        case .text: return "doc.plaintext"
+        }
+    }
+}
+
+/// Decoded once per attachment: the task keys on its id, so a per-keystroke re-render reuses it.
 private struct ComposerThumbnail: View {
     @Environment(\.metrics) private var metrics
     let data: Data?
@@ -290,59 +294,6 @@ private struct ComposerThumbnail: View {
         .frame(width: metrics.size.chatAttachmentThumb, height: metrics.size.chatAttachmentThumb)
         .clipShape(RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous))
         .task(id: id) { image = data.flatMap(NSImage.init(data:)) }
-    }
-}
-
-/// Staged files follow the typed text; past two they become a count, the width being the field's.
-private struct PendingAttachmentsChips: View {
-    @Environment(\.metrics) private var metrics
-    let attachments: [ChatAttachment]
-    let onRemove: (UUID) -> Void
-
-    /// Two, because a third chip plus its name leaves the field too narrow to read what you type.
-    private static let visibleLimit = 2
-
-    private static func visible(_ attachments: [ChatAttachment]) -> [ChatAttachment] {
-        Array(attachments.prefix(visibleLimit))
-    }
-
-    private static func overflowLabel(_ attachments: [ChatAttachment]) -> String? {
-        let hidden = attachments.count - visibleLimit
-        return hidden > 0 ? "+\(hidden)" : nil
-    }
-
-    static func width(for attachments: [ChatAttachment], _ metrics: InterfaceMetrics) -> CGFloat {
-        var total = visible(attachments).reduce(0) { $0 + AttachmentChip.width(for: $1, metrics) }
-        total += CGFloat(max(0, visible(attachments).count - 1)) * metrics.spacing.xs
-        if let label = overflowLabel(attachments) {
-            let text = (label as NSString).size(
-                withAttributes: [.font: metrics.typography.chipNSFont]
-            ).width
-            total += metrics.spacing.xs + text + metrics.spacing.sm * 2
-        }
-        return total
-    }
-
-    var body: some View {
-        HStack(spacing: metrics.spacing.xs) {
-            ForEach(Self.visible(attachments)) { attachment in
-                AttachmentChip(attachment: attachment) { onRemove(attachment.id) }
-            }
-            if let label = Self.overflowLabel(attachments) {
-                Text(label)
-                    .font(metrics.typography.chip)
-                    .foregroundStyle(Theme.Colors.textTertiary)
-                    .padding(.horizontal, metrics.spacing.sm)
-                    .padding(.vertical, metrics.spacing.xs)
-                    .background(
-                        RoundedRectangle(
-                            cornerRadius: metrics.radius.attachmentChip, style: .continuous
-                        ).fill(Theme.Colors.controlSurface)
-                    )
-                    .help("\(attachments.count) files attached")
-                    .accessibilityLabel("\(attachments.count) files attached")
-            }
-        }
     }
 }
 

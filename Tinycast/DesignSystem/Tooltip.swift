@@ -9,6 +9,7 @@ private enum TooltipLabel {
 private struct TooltipModifier: ViewModifier {
     let label: TooltipLabel?
     let alignment: HorizontalAlignment
+    let edge: VerticalEdge
     @Environment(\.metrics) private var metrics
     @State private var hovered = false
     @State private var visible = false
@@ -25,10 +26,12 @@ private struct TooltipModifier: ViewModifier {
                 guard !Task.isCancelled, hovered else { return }
                 withAnimation(.easeOut(duration: Theme.Duration.tooltip)) { visible = true }
             }
-            .overlay(alignment: Alignment(horizontal: alignment, vertical: .top)) {
+            .overlay(alignment: Alignment(horizontal: alignment, vertical: side)) {
                 if let label, visible { tile(label) }
             }
     }
+
+    private var side: VerticalAlignment { edge == .top ? .top : .bottom }
 
     private func tile(_ label: TooltipLabel) -> some View {
         let shape = RoundedRectangle(cornerRadius: metrics.radius.tooltip, style: .continuous)
@@ -43,13 +46,12 @@ private struct TooltipModifier: ViewModifier {
                 y: metrics.spacing.xxs
             )
             .fixedSize()
-            .offset(y: -(tileHeight + metrics.spacing.sm))
+            // A zero-height frame on the control's edge, so a label of any height hangs off it.
+            .frame(height: 0, alignment: edge == .top ? .bottom : .top)
+            .offset(y: edge == .top ? -metrics.spacing.sm : metrics.spacing.sm)
             .transition(.opacity)
             .allowsHitTesting(false)
     }
-
-    /// Both forms seat their content in one cap-sized row, so the clearance is a constant.
-    private var tileHeight: CGFloat { metrics.size.keyCap + metrics.spacing.xs * 2 }
 
     @ViewBuilder private func chip(_ label: TooltipLabel) -> some View {
         switch label {
@@ -67,12 +69,16 @@ private struct TooltipModifier: ViewModifier {
 
 extension View {
     /// What a control does, or — in the `keyCap` form — the shortcut it answers to.
-    /// Align it leading or trailing when the control sits against a window edge.
-    func tooltip(_ text: String?, alignment: HorizontalAlignment = .center) -> some View {
-        modifier(TooltipModifier(label: text.map(TooltipLabel.text), alignment: alignment))
+    /// Align it against a side edge, and hang it `.bottom` from a control at the window's top.
+    func tooltip(
+        _ text: String?, alignment: HorizontalAlignment = .center, edge: VerticalEdge = .top
+    ) -> some View {
+        modifier(
+            TooltipModifier(label: text.map(TooltipLabel.text), alignment: alignment, edge: edge))
     }
 
     func tooltip(keyCap: String?) -> some View {
-        modifier(TooltipModifier(label: keyCap.map(TooltipLabel.keyCap), alignment: .center))
+        modifier(
+            TooltipModifier(label: keyCap.map(TooltipLabel.keyCap), alignment: .center, edge: .top))
     }
 }
