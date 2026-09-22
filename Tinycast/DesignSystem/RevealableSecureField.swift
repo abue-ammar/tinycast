@@ -17,6 +17,8 @@ struct RevealableSecureField: View {
         HStack(spacing: Theme.Spacing.sm) {
             if isRevealed {
                 TextField(title, text: $text, prompt: prompt)
+                    .autocorrectionDisabled()
+                    .writingToolsBehavior(.disabled)
                     .focused($focusedField, equals: .plain)
             } else {
                 SecureField(title, text: $text, prompt: prompt)
