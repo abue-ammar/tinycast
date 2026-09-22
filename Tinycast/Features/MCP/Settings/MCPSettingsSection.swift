@@ -7,6 +7,7 @@ struct MCPSettingsSection: View {
     @Environment(MCPSettingsStore.self) private var store
     @State private var editor: MCPServerEditorTarget?
     @State private var pendingRemoval: MCPServer?
+    @State private var removalError: String?
 
     var body: some View {
         @Bindable var appSettings = appSettings
@@ -37,6 +38,10 @@ struct MCPSettingsSection: View {
                 }
             }
             .settingsEnabled(appSettings.mcpEnabled)
+            if let removalError {
+                Label(removalError, systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.orange)
+            }
         } header: {
             SettingsSectionHeader(.aiMCPServers)
         } footer: {
@@ -73,8 +78,13 @@ struct MCPSettingsSection: View {
     }
 
     private func remove(_ server: MCPServer) {
-        try? coordinator.remove(server.id)
         pendingRemoval = nil
+        do {
+            try coordinator.remove(server.id)
+            removalError = nil
+        } catch {
+            removalError = "\(server.title) was kept: its credentials could not be removed from your login Keychain."
+        }
     }
 }
 
