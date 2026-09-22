@@ -27,6 +27,7 @@ struct CodexTurnTests {
         await concurrentStartsLaunchOnce()
         await aChangedListRelaunchesAndTheSameOneDoesNot()
         await aWithdrawnServerStopsTheIdleHelper()
+        await twoCallsAreAskedAboutByTheirOwnNames()
         await theRoundCapInterruptsTheTurn()
 
         print("\(passes) passed, \(failures) failed")
@@ -191,6 +192,33 @@ struct CodexTurnTests {
             "and one launched with a server that is no longer offered stops without waiting to idle")
     }
 
+    /// Two calls at once: each asked about by its own name, one at a time, after the grant.
+    static func twoCallsAreAskedAboutByTheirOwnNames() async {
+        guard let server = StubServer(mode: "mcp-pair") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+        let reader = GrantingReader()
+        let servers = server.servers()
+        let session = AIToolServerSession(rounds: 10) {
+            servers
+        } consent: { call in
+            await reader.answer(call)
+        }
+        let events = await server.collect(toolServers: session)
+        expect(
+            reader.calls.map(\.tool) == ["first_tool", "second_tool"],
+            "each question names its own call, not whichever of the server's started last")
+        expect(
+            reader.mostAtOnce == 1 && reader.dialogs == 1,
+            "and the second waits for the first dialog, then sees the grant it made")
+        expect(
+            server.received.components(separatedBy: #"{"action":"accept"}"#).count == 3
+                && events.last == .finished,
+            "so both are accepted and the turn finishes")
+    }
+
     /// `.ask` on a CLI route is the same dialog it is on an API one.
     static func anElicitationIsAnsweredByTheTrustDialog() async {
         guard let server = StubServer(mode: "mcp") else {
@@ -331,6 +359,28 @@ struct CodexTurnTests {
 @MainActor
 final class Box {
     var calls: [AIToolServerCall] = []
+}
+
+/// A reader who is asked once, takes a moment over it, and grants the server for the chat.
+@MainActor
+final class GrantingReader {
+    var calls: [AIToolServerCall] = []
+    var dialogs = 0
+    var mostAtOnce = 0
+    private var atOnce = 0
+    private var granted = false
+
+    func answer(_ call: AIToolServerCall) async -> Bool {
+        calls.append(call)
+        atOnce += 1
+        mostAtOnce = max(mostAtOnce, atOnce)
+        defer { atOnce -= 1 }
+        guard !granted else { return true }
+        dialogs += 1
+        try? await Task.sleep(for: .milliseconds(150))
+        granted = true
+        return true
+    }
 }
 
 /// A real client against the stub server in `Tests/ai-fixtures/codex-stub.js`.

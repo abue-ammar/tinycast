@@ -246,9 +246,11 @@ other's, a `stop` that lands while the list is being read keeps the launch from 
 and an exit is only acted on when it is the current process's. Nothing else can deliver it — `config/mcpServer/reload` takes no parameters and re-reads the
 config from disk, and thread-scoped `mcp_servers` on `thread/start` both fails to arm the tools and
 undoes the launch-level disabling, which is why it is not used. A tool call arrives as
-`mcpServer/elicitation/request`, decoded by `CodexElicitation` and answered `accept` or `decline`;
-every other server request is declined as it always was. `item/started` and `item/completed` for an
-`mcpToolCall` become `.toolCall` and `.toolResult`.
+`mcpServer/elicitation/request`, decoded by `CodexElicitation` and answered `accept` or `decline`.
+The question names the tool by `_meta.tool_name` when Codex sends it, since the latest item started
+on that server is a different call whenever two run at once; only without it does that item's name
+stand in. Every other server request is declined as it always was. `item/started` and
+`item/completed` for an `mcpToolCall` become `.toolCall` and `.toolResult`.
 
 `ClaudeMCPLaunch` writes the same list as the CLI's own `mcpServers` record, `0600`, named per turn
 and deleted with it; a crash leaves it, and Grok's prompt file, for `InstalledAIManager` to delete

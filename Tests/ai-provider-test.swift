@@ -1369,8 +1369,19 @@ struct AIProviderTests {
                 ])
             ])
         expect(
-            call?.serverName == "files" && call?.toolName == "read",
+            call?.serverName == "files" && call?.toolName == "read" && call?.namedTool == nil,
             "a tool-call elicitation names its server, and the message names its tool")
+        let named = CodexElicitation(
+            params: [
+                "serverName": .string("files"),
+                "_meta": .object([
+                    "codex_approval_kind": .string("mcp_tool_call"),
+                    "tool_name": .string("write"), "tool_title": .string("Write")
+                ])
+            ])
+        expect(
+            named?.namedTool == "write" && named?.toolName == "write",
+            "and `_meta.tool_name`, when sent, is the name tied to this call")
         expect(
             CodexElicitation(
                 params: [

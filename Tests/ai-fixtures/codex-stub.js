@@ -133,6 +133,35 @@ function toolCall(index, read) {
     });
 }
 
+/** Two calls started together and asked about together, as a parallel turn would. */
+function toolPair(read) {
+    const tools = ["first_tool", "second_tool"];
+    const items = tools.map((tool, index) => ({
+        type: "mcpToolCall", id: `call-${index + 1}`, server: "tinycast-probe", tool,
+        status: "inProgress", arguments: {},
+    }));
+    for (const item of items) emit({ method: "item/started", params: { threadId: THREAD, item } });
+    tools.forEach((tool, index) => emit({
+        id: 900 + index,
+        method: "mcpServer/elicitation/request",
+        params: {
+            serverName: "tinycast-probe", threadId: THREAD, turnId: TURN,
+            message: `Allow the probe MCP server to run tool “${tool}”?`,
+            _meta: { codex_approval_kind: "mcp_tool_call", tool_name: tool },
+        },
+    }));
+    for (const _ of tools) {
+        const reply = JSON.parse(read.next().value ?? "{}");
+        record(`elicitation:${JSON.stringify(reply.result ?? reply.error ?? {})}`);
+    }
+    for (const item of items) {
+        emit({
+            method: "item/completed",
+            params: { threadId: THREAD, item: { ...item, status: "completed" } },
+        });
+    }
+}
+
 const input = lines();
 for (;;) {
     const next = input.next();
@@ -153,7 +182,8 @@ for (;;) {
             emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });
             emit({ id: requestID, result: { turn: { id: TURN } } });
             const calls = MODE === "mcp-rounds" ? 3 : 1;
-            for (let index = 1; index <= calls; index += 1) toolCall(index, input);
+            if (MODE === "mcp-pair") toolPair(input);
+            else for (let index = 1; index <= calls; index += 1) toolCall(index, input);
             emit({
                 method: "turn/completed",
                 params: { threadId: THREAD, turn: { id: TURN, status: "completed" } },

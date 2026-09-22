@@ -295,7 +295,8 @@ final class CodexTurnRunner {
             guard let handle = CodexMCPLaunch.handle(ofServer: elicitation.serverName) else {
                 return false
             }
-            let tool = self?.startedTools[handle] ?? elicitation.toolName
+            let started = self?.startedTools[handle]
+            let tool = elicitation.namedTool ?? started ?? elicitation.toolName
             return await session.consent(AIToolServerCall(handle: handle, tool: tool))
         }
     }

@@ -171,6 +171,8 @@ struct CodexElicitation: Equatable, Sendable {
 
     let serverName: String
     let toolName: String
+    /// `_meta.tool_name`, when Codex sends it: the only name tied to this call and not the latest.
+    let namedTool: String?
 
     /// `nil` for every other elicitation — a form, a sampling request — which stays declined.
     init?(params: [String: JSONValue]) {
@@ -180,8 +182,9 @@ struct CodexElicitation: Equatable, Sendable {
         let meta = params["_meta"]?.objectValue ?? [:]
         guard meta["codex_approval_kind"]?.stringValue == "mcp_tool_call" else { return nil }
         self.serverName = serverName
+        namedTool = meta["tool_name"]?.stringValue
         toolName =
-            meta["tool_name"]?.stringValue ?? meta["tool_title"]?.stringValue
+            namedTool ?? meta["tool_title"]?.stringValue
             ?? Self.quotedName(in: params["message"]?.stringValue ?? "") ?? "a tool"
     }
 
