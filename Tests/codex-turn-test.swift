@@ -25,6 +25,7 @@ struct CodexTurnTests {
         await aForeignServersElicitationIsNeverAsked()
         await aListThatCannotBeReadRefusesToStart()
         await concurrentStartsLaunchOnce()
+        await aChangedListRelaunchesAndTheSameOneDoesNot()
         await theRoundCapInterruptsTheTurn()
 
         print("\(passes) passed, \(failures) failed")
@@ -137,6 +138,25 @@ struct CodexTurnTests {
         expect(
             (try? outcome.get()) == nil && server.launches == 1 && !client.isRunning,
             "and a Stop that lands while a launch reads the list keeps it from starting afterwards")
+    }
+
+    /// The list is fixed at exec, so only a different one is worth a second launch.
+    static func aChangedListRelaunchesAndTheSameOneDoesNot() async {
+        guard let server = StubServer(mode: "mcp") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+        let asked = Box()
+        _ = await server.collect(toolServers: server.session(allowing: true, asked: asked))
+        _ = await server.collect(toolServers: server.session(allowing: true, asked: asked))
+        expect(server.launches == 1, "the same server list twice runs in the one app-server")
+        _ = await server.collect(
+            toolServers: server.session(
+                allowing: true, asked: asked, servers: server.servers(key: "rotated")))
+        expect(
+            server.launches == 2 && server.environment["TC_MCP_0_0"] == "rotated",
+            "a changed list, a refreshed secret included, relaunches it with the new values")
     }
 
     /// `.ask` on a CLI route is the same dialog it is on an API one.
