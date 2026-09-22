@@ -38,17 +38,15 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    /// AppKit-built content; Settings needs it for a real `NSSplitViewController`.
+    /// A prebuilt controller; Settings needs one to bridge its SwiftUI toolbar into the window.
     @discardableResult
     func show(chrome: WindowChrome? = nil, contentViewController: () -> NSViewController) -> Bool {
         if let window {
             raise(window)
             return false
         }
-        let window = makeWindow(content: contentViewController())
-        // After the content so the inset lands on a mounted view; before `raise` to avoid a flash.
+        let window = makeWindow(content: contentViewController(), chrome: chrome)
         self.chrome = chrome
-        chrome?.install(in: window)
         self.window = window
         activation.windowDidOpen(window)
         raise(window)
@@ -92,7 +90,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
 
     // MARK: - Private
 
-    private func makeWindow(content: NSViewController) -> NSWindow {
+    private func makeWindow(content: NSViewController, chrome: WindowChrome?) -> NSWindow {
         var style: NSWindow.StyleMask = [.titled, .closable, .miniaturizable, .fullSizeContentView]
         if isResizable { style.insert(.resizable) }
         let window = NSWindow(
@@ -111,6 +109,8 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         window.isRestorable = false
         window.contentMinSize = contentSize
         window.delegate = self
+        // Before the content: a bridged SwiftUI toolbar restores the title flags it mounted over.
+        chrome?.install(in: window)
 
         window.contentViewController = content
         // `contentViewController` resets the frame to the controller's fitting size.

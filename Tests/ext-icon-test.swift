@@ -63,7 +63,8 @@ struct ExtensionIconTests {
         let known = await drawnInk(circle(stroke: "raycast-green"), isDark: true)
         expect(known != nil, "the known name it shadows still resolves")
 
-        let transparent = "<svg width=\"100\" height=\"100\"><rect width=\"100\" height=\"100\" "
+        let transparent =
+            "<svg width=\"100\" height=\"100\"><rect width=\"100\" height=\"100\" "
             + "fill=\"transparent\"/><circle cx=\"50\" cy=\"50\" r=\"10\" fill=\"#000\"/></svg>"
         let transparentExtent = await drawnInk(transparent, isDark: false) ?? 1
         expect(transparentExtent < 0.3, "transparent fills no canvas")

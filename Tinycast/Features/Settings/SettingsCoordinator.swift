@@ -29,24 +29,15 @@ final class SettingsCoordinator {
         let editorPresenter = SettingsEditorPresenter(core: core, navigation: navigation)
         self.navigation = navigation
         self.editorPresenter = editorPresenter
-        var split: SettingsSplitViewController?
-        window.show(chrome: SettingsToolbarController(navigation: navigation)) {
-            let controller = SettingsSplitViewController(
-                sidebar: inject(SettingsSidebarView(), navigation, editorPresenter),
-                detail: inject(SettingsDetailView(), navigation, editorPresenter))
-            split = controller
-            return controller
-        }
-        editorPresenter.attach(to: split?.view.window)
-    }
-
-    /// Both columns are hosted separately, so each needs the whole environment.
-    private func inject(
-        _ view: some View, _ navigation: SettingsNavigationState,
-        _ editorPresenter: SettingsEditorPresenter
-    ) -> some View {
-        view.settingsEnvironment(
-            core: core, navigation: navigation, editorPresenter: editorPresenter)
+        let hosting = NSHostingController(
+            rootView: SettingsRootView().settingsEnvironment(
+                core: core, navigation: navigation, editorPresenter: editorPresenter))
+        // Keep the window's size authoritative: an unconstrained fill would drive the frame.
+        hosting.sizingOptions = []
+        // The back/forward chevrons, the pane title and the sidebar's search field all ride on it.
+        hosting.sceneBridgingOptions = [.toolbars, .title]
+        window.show(chrome: SettingsWindowChrome()) { hosting }
+        editorPresenter.attach(to: hosting.view.window)
     }
 
     func showAbout() {

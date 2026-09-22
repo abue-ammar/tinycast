@@ -236,7 +236,7 @@ private struct InterfaceSizeRow: View {
             Text("Aa")
                 .font(.system(size: Self.glyph[size] ?? 13, weight: .medium))
                 .foregroundStyle(selected ? Color.primary : Color.secondary)
-                .frame(width: Theme.Size.interfaceSizeSegment, height: Theme.Size.settingsSearchField)
+                .frame(width: Theme.Size.interfaceSizeSegment, height: Theme.Size.settingsControlHeight)
                 // Without this only the glyphs take the click, not the segment around them.
                 .contentShape(shape)
                 .background(shape.fill(selected ? Theme.Colors.controlSurface : Color.clear))

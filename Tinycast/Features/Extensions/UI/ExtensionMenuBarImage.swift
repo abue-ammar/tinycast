@@ -2,9 +2,13 @@ import SwiftUI
 
 @MainActor
 enum ExtensionMenuBarImage {
-    static func loadAdaptive(_ value: RenderValue?, assetsPath: String, size: CGFloat = 18) async -> NSImage? {
-        guard let light = await load(value, assetsPath: assetsPath, isDark: false, size: size) else { return nil }
-        guard let dark = await load(value, assetsPath: assetsPath, isDark: true, size: size), !Task.isCancelled
+    static func loadAdaptive(_ value: RenderValue?, assetsPath: String, size: CGFloat = 18) async -> NSImage?
+    {
+        guard let light = await load(value, assetsPath: assetsPath, isDark: false, size: size) else {
+            return nil
+        }
+        guard let dark = await load(value, assetsPath: assetsPath, isDark: true, size: size),
+            !Task.isCancelled
         else { return light }
         let image = NSImage(size: light.size, flipped: false) { rect in
             let source = NSAppearance.currentDrawing().isDark ? dark : light
@@ -15,8 +19,11 @@ enum ExtensionMenuBarImage {
         return image
     }
 
-    static func load(_ value: RenderValue?, assetsPath: String, isDark: Bool, size: CGFloat) async -> NSImage? {
-        guard let resolved = ExtensionImage.resolve(value, assetsPath: assetsPath, isDark: isDark) else { return nil }
+    static func load(_ value: RenderValue?, assetsPath: String, isDark: Bool, size: CGFloat) async -> NSImage?
+    {
+        guard let resolved = ExtensionImage.resolve(value, assetsPath: assetsPath, isDark: isDark) else {
+            return nil
+        }
         let source: NSImage?
         var template = false
         switch resolved.source {
@@ -25,7 +32,8 @@ enum ExtensionMenuBarImage {
             template = resolved.tint == nil
         case .glyph(let text):
             source = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
-                (text as NSString).draw(in: rect, withAttributes: [.font: NSFont.systemFont(ofSize: size - 2)])
+                (text as NSString).draw(
+                    in: rect, withAttributes: [.font: NSFont.systemFont(ofSize: size - 2)])
                 return true
             }
         default:
@@ -38,9 +46,10 @@ enum ExtensionMenuBarImage {
         let result = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
             if circular { NSBezierPath(ovalIn: rect).addClip() }
             let scale = min(rect.width / source.size.width, rect.height / source.size.height)
-            let fitted = NSRect(x: (rect.width - source.size.width * scale) / 2,
-                                y: (rect.height - source.size.height * scale) / 2,
-                                width: source.size.width * scale, height: source.size.height * scale)
+            let fitted = NSRect(
+                x: (rect.width - source.size.width * scale) / 2,
+                y: (rect.height - source.size.height * scale) / 2,
+                width: source.size.width * scale, height: source.size.height * scale)
             source.draw(in: fitted)
             if let tint {
                 tint.setFill()
@@ -48,9 +57,11 @@ enum ExtensionMenuBarImage {
             }
             return true
         }
-        guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size * 2), pixelsHigh: Int(size * 2),
-                                             bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-                                             colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
+        guard
+            let bitmap = NSBitmapImageRep(
+                bitmapDataPlanes: nil, pixelsWide: Int(size * 2), pixelsHigh: Int(size * 2),
+                bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+                colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0),
             let context = NSGraphicsContext(bitmapImageRep: bitmap)
         else { return nil }
         bitmap.size = NSSize(width: size, height: size)

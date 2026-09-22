@@ -227,7 +227,7 @@ Tinycast/
         Service/    effects — stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator
         Settings/   the feature's own panes
-    Settings/       the Settings shell only: SettingsCoordinator, the sidebar/detail/toolbar and
+    Settings/       the Settings shell only: SettingsCoordinator, the root/sidebar/detail views, the chrome,
                     navigation types, SettingsTab, AppSettings, AppSettingsKey, and Panes/ for the
                     two panes no feature owns
 Tests/              the standalone harnesses, one Swift file each

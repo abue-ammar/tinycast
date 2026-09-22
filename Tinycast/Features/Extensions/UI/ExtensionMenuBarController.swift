@@ -44,10 +44,12 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         case primary(String, String)
     }
 
-    init(entryID: String, assetsPath: String, isVisible: Bool = true,
-         loadImage: @escaping (RenderValue?, String, CGFloat) async -> NSImage? = {
-             await ExtensionMenuBarImage.loadAdaptive($0, assetsPath: $1, size: $2)
-         }) {
+    init(
+        entryID: String, assetsPath: String, isVisible: Bool = true,
+        loadImage: @escaping (RenderValue?, String, CGFloat) async -> NSImage? = {
+            await ExtensionMenuBarImage.loadAdaptive($0, assetsPath: $1, size: $2)
+        }
+    ) {
         self.entryID = entryID
         self.assetsPath = assetsPath
         self.loadImage = loadImage
@@ -86,7 +88,8 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             guard !Task.isCancelled, let self else { return }
             self.iconTask = nil
             self.iconFailed = snapshot.icon != nil && image == nil
-            self.status.button?.image = image
+            self.status.button?.image =
+                image
                 ?? ((snapshot.title ?? "").isEmpty
                     ? NSImage(systemSymbolName: "puzzlepiece.extension", accessibilityDescription: nil) : nil)
         }
@@ -145,9 +148,14 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         guard !hasPreparedContent else { return }
         menuImageTask?.cancel()
         menuImageTask = nil
-        apply([RenderNode(id: -1, type: "MenuBarExtra.Item", props: [
-            "title": .string("Could not refresh"), "tooltip": .string(message)
-        ])], session: nil)
+        apply(
+            [
+                RenderNode(
+                    id: -1, type: "MenuBarExtra.Item",
+                    props: [
+                        "title": .string("Could not refresh"), "tooltip": .string(message)
+                    ])
+            ], session: nil)
     }
 
     private func reconcile(_ nodes: [RenderNode], in menu: NSMenu, session: String?, path: [PathComponent]) {
@@ -159,13 +167,16 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
                     if !entries.isEmpty, entries.last?.role != "separator" {
                         entries.append((node, "separator", nil, path))
                     }
-                    if let title = node.string("title"), !title.isEmpty { entries.append((node, "header", nil, path)) }
+                    if let title = node.string("title"), !title.isEmpty {
+                        entries.append((node, "header", nil, path))
+                    }
                     flatten(node.children, path: path + [.section(node.string("title") ?? "")])
                 case "MenuBarExtra.Separator": entries.append((node, "separator", nil, path))
                 case "MenuBarExtra.Item", "MenuBarExtra.Submenu":
                     entries.append((node, "item", nil, path))
                     if let alternate = node.node("alternate") {
-                        let primary = PathComponent.primary(node.string("title") ?? "", node.string("subtitle") ?? "")
+                        let primary = PathComponent.primary(
+                            node.string("title") ?? "", node.string("subtitle") ?? "")
                         entries.append((alternate, "item", node, path + [primary]))
                     }
                 default: break
@@ -175,13 +186,15 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         flatten(nodes, path: path)
         for (index, entry) in entries.enumerated() {
             let identifier = NSUserInterfaceItemIdentifier("\(entry.node.id)-\(entry.role)")
-            let item = menu.items.first { $0.identifier == identifier } ?? {
-                switch entry.role {
-                case "separator": return NSMenuItem.separator()
-                case "header": return NSMenuItem.sectionHeader(title: entry.node.string("title") ?? "")
-                default: return NSMenuItem(title: "", action: nil, keyEquivalent: "")
-                }
-            }()
+            let item =
+                menu.items.first { $0.identifier == identifier }
+                ?? {
+                    switch entry.role {
+                    case "separator": return NSMenuItem.separator()
+                    case "header": return NSMenuItem.sectionHeader(title: entry.node.string("title") ?? "")
+                    default: return NSMenuItem(title: "", action: nil, keyEquivalent: "")
+                    }
+                }()
             if item.identifier != identifier { item.identifier = identifier }
             if entry.role != "separator" {
                 update(item, from: entry.node, session: session, parent: entry.parent, path: entry.path)
@@ -194,15 +207,21 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         while menu.numberOfItems > entries.count { menu.removeItem(at: menu.numberOfItems - 1) }
     }
 
-    private func update(_ item: NSMenuItem, from node: RenderNode, session: String?, parent: RenderNode?, path: [PathComponent]) {
+    private func update(
+        _ item: NSMenuItem, from node: RenderNode, session: String?, parent: RenderNode?,
+        path: [PathComponent]
+    ) {
         let title = node.string("title") ?? ""
         if item.isSectionHeader {
             if item.title != title { item.title = title }
         } else {
-            let attributed = NSMutableAttributedString(string: title, attributes: [.foregroundColor: NSColor.labelColor])
+            let attributed = NSMutableAttributedString(
+                string: title, attributes: [.foregroundColor: NSColor.labelColor])
             if let subtitle = node.string("subtitle"), !subtitle.isEmpty {
-                attributed.append(NSAttributedString(string: " " + subtitle,
-                                                       attributes: [.foregroundColor: NSColor.secondaryLabelColor]))
+                attributed.append(
+                    NSAttributedString(
+                        string: " " + subtitle,
+                        attributes: [.foregroundColor: NSColor.secondaryLabelColor]))
             }
             if item.attributedTitle != attributed { item.attributedTitle = attributed }
         }
@@ -225,14 +244,17 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             reconcile(node.children, in: submenu, session: session, path: path + [.submenu(item.title)])
             if item.submenu !== submenu { item.submenu = submenu }
             enabled = !submenu.items.isEmpty
-        } else if item.submenu != nil { item.submenu = nil }
+        } else if item.submenu != nil {
+            item.submenu = nil
+        }
         if item.isEnabled != enabled { item.isEnabled = enabled }
         let rawShortcut = (parent ?? node).object("shortcut") ?? [:]
         let shortcut = rawShortcut["macOS"]?.objectValue ?? rawShortcut
         let rawKey = shortcut["key"]?.stringValue ?? ""
         let key = Self.namedKeys[rawKey] ?? rawKey.lowercased()
         if item.keyEquivalent != key { item.keyEquivalent = key }
-        var modifiers = (shortcut["modifiers"]?.arrayValue ?? []).reduce(into: NSEvent.ModifierFlags()) { flags, value in
+        var modifiers = (shortcut["modifiers"]?.arrayValue ?? []).reduce(into: NSEvent.ModifierFlags()) {
+            flags, value in
             switch value.stringValue {
             case "cmd": flags.insert(.command)
             case "ctrl": flags.insert(.control)
@@ -241,12 +263,17 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             default: break
             }
         }
-        if parent != nil { modifiers.insert(.option) } else if node.node("alternate") != nil { modifiers.remove(.option) }
+        if parent != nil {
+            modifiers.insert(.option)
+        } else if node.node("alternate") != nil {
+            modifiers.remove(.option)
+        }
         if item.keyEquivalentModifierMask != modifiers { item.keyEquivalentModifierMask = modifiers }
         if item.isAlternate != (parent != nil) { item.isAlternate = parent != nil }
         if handler != nil {
-            identities[ObjectIdentifier(item)] = ItemIdentity(path: path + [.item(item.title)], key: key,
-                                                            modifiers: modifiers, isAlternate: parent != nil)
+            identities[ObjectIdentifier(item)] = ItemIdentity(
+                path: path + [.item(item.title)], key: key,
+                modifiers: modifiers, isAlternate: parent != nil)
         }
     }
 
@@ -261,12 +288,14 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
 
     @objc private func performAction(_ item: NSMenuItem) {
         let event = NSApp.currentEvent
-        let type = event?.type == .rightMouseUp || event?.type == .rightMouseDown ? "right-click" : "left-click"
+        let type =
+            event?.type == .rightMouseUp || event?.type == .rightMouseDown ? "right-click" : "left-click"
         if let action = item.representedObject as? Action {
             onAction?(action.session, action.handler, type)
         } else {
             guard let identity = identities[ObjectIdentifier(item)],
-                actionItems(in: menu).filter({ identities[ObjectIdentifier($0)] == identity }).count == 1 else {
+                actionItems(in: menu).filter({ identities[ObjectIdentifier($0)] == identity }).count == 1
+            else {
                 onActionUnavailable?()
                 return
             }
@@ -292,7 +321,9 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
             let matches = items.filter { identities[ObjectIdentifier($0)] == request.identity }
             if matches.count == 1, let action = matches.first?.representedObject as? Action {
                 onAction?(action.session, action.handler, request.type)
-            } else { unavailable = true }
+            } else {
+                unavailable = true
+            }
         }
         if unavailable { onActionUnavailable?() }
     }

@@ -10,8 +10,11 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     private weak var coordinator: ExtensionCoordinator?
     private let oauth = ExtensionOAuthSession()
 
-    init(owner: InstalledExtension, command: ExtensionCommand, launchType: ExtensionLaunchType, storage: ExtensionStorage,
-         manager: ExtensionManager, coordinator: ExtensionCoordinator) {
+    init(
+        owner: InstalledExtension, command: ExtensionCommand, launchType: ExtensionLaunchType,
+        storage: ExtensionStorage,
+        manager: ExtensionManager, coordinator: ExtensionCoordinator
+    ) {
         self.owner = owner
         reference = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
         isInteractive = launchType == .userInitiated
@@ -62,7 +65,8 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
 
     func launch(_ link: ExtensionDeepLink) throws { try manager?.launch(link) }
 
-    func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult {
+    func authorizeOAuth(options: ExtensionOAuthAuthorizeOptions) async throws -> ExtensionOAuthAuthorizeResult
+    {
         guard isInteractive else { throw ExtensionHostError.unsupported("Background authorization") }
         return try await oauth.authorize(options: options)
     }

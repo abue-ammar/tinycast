@@ -527,10 +527,13 @@ private struct CommandRows: View {
         }
         if command.mode == .menuBar {
             SettingsCardRow(title: "Show in menu bar", indent: Theme.Spacing.lg) {
-                Toggle("Show in menu bar", isOn: Binding(
-                    get: { core.extensionCoordinator.menuBarIsEnabled(reference) },
-                    set: { core.extensionCoordinator.setMenuBarEnabled($0, reference: reference) }))
-                    .labelsHidden()
+                Toggle(
+                    "Show in menu bar",
+                    isOn: Binding(
+                        get: { core.extensionCoordinator.menuBarIsEnabled(reference) },
+                        set: { core.extensionCoordinator.setMenuBarEnabled($0, reference: reference) })
+                )
+                .labelsHidden()
             }
         }
         // Indented under its command: at the same inset the association is reading order.
