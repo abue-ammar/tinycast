@@ -80,14 +80,17 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   with no opt-out, which is why none of them may be handed a server. On an API route Tinycast is
   the MCP client and `AIToolLoopProvider` runs the loop. On the two subscription routes the vendor
   CLI is the MCP client: `AIModelSelection.runsItsOwnTools` says so, and `AIChatCoordinator` hands
-  the route an `AIToolServerSession` instead of wrapping it. Same server list, same `MCPTrust`, same
+  the route an `AIToolServerSession` instead of wrapping it. The same servers — less an OAuth one
+  nobody is signed into, which a CLI could not explain — the same `MCPTrust` and the same
   `ChatToolUse` rows either way.
 - **A CLI is told what to run, never where to keep it.** Launch arguments, the child's environment
   and files inside Tinycast's own workspace are the whole surface; `~/.codex` and `~/.claude` are
-  never written. Secrets never reach argv, where `ps` would show them: Codex reads them from the
-  app-server's environment through the config keys that name a variable, and Claude reads them from
-  a `0600` file written per turn into the private workspace and deleted when the turn ends — or,
-  when Tinycast did not live to see it end, by `InstalledAIManager` at the next launch. Neither
+  never written. The secrets Tinycast keeps never reach argv, where `ps` would show them: Codex
+  reads them from the app-server's environment through the config keys that name a variable, and
+  Claude reads them from a `0600` file written per turn into the private workspace and deleted when
+  the turn ends — or, when Tinycast did not live to see it end, by `InstalledAIManager` at the next
+  launch. A credential typed into a server's URL is not one of them: it is part of the URL, which
+  Codex takes as a launch argument like the rest of its configuration. Neither
   route is ever told to persist a decision — no Codex `persist`, no Claude `updatedPermissions` —
   because only Settings may change a standing one.
 - **The user's own CLI servers stay out of a Tinycast thread, and never mix with Tinycast's.**
