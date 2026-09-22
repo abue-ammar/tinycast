@@ -5,7 +5,7 @@ struct GlobeTapDetector {
     static let resolutionWindow: Duration = .seconds(
         DoubleTapDetector.maxGap + DoubleTapDetector.maxHold + 0.02)
 
-    enum Gesture: Equatable {
+    enum Gesture {
         case single
         case double
     }
@@ -22,19 +22,14 @@ struct GlobeTapDetector {
         }
         if functionDown {
             guard press == nil else { return nil }
-            let isSecond =
-                pendingReleaseAt.map {
-                    now >= $0 && now - $0 <= DoubleTapDetector.maxGap
-                } ?? false
+            let isSecond = pendingReleaseAt.map { now - $0 <= DoubleTapDetector.maxGap } ?? false
             press = (now, isSecond)
             pendingReleaseAt = nil
             return nil
         }
         guard let press else { return nil }
         self.press = nil
-        guard now >= press.startedAt, now - press.startedAt <= DoubleTapDetector.maxHold else {
-            return nil
-        }
+        guard now - press.startedAt <= DoubleTapDetector.maxHold else { return nil }
         if press.isSecond { return .double }
         pendingReleaseAt = now
         return .single

@@ -41,9 +41,7 @@ final class HotKeyManager {
     let capture = ShortcutCaptureSession()
 
     private let center = HotKeyCenter()
-    private var doubleTaps: [DoubleTapModifier: HotKeyAction] = [:]
-    private var globeAction: HotKeyAction?
-    private var doubleGlobeAction: HotKeyAction?
+    private var modifierTaps: [HotKeyBinding: HotKeyAction] = [:]
     /// Every binding, loaded once in `start()` and written through on change.
     private var bindings: [HotKeyAction: HotKeyBinding] = [:]
     @ObservationIgnored private var candidateActionsCache: [HotKeyAction]?
@@ -77,14 +75,9 @@ final class HotKeyManager {
         // `register` no-ops on an unbound item, so the fixed catalogs need no index of their own.
         for action in candidateActions { register(action) }
 
-        modifierTapMonitor.onDoubleTap = { [weak self] modifier in
-            guard let self, let action = doubleTaps[modifier] else { return }
+        modifierTapMonitor.onTrigger = { [weak self] binding in
+            guard let self, let action = modifierTaps[binding] else { return }
             perform(action)
-        }
-        modifierTapMonitor.onGlobeTap = { [weak self] gesture in
-            guard let self else { return }
-            let action = gesture == .single ? globeAction : doubleGlobeAction
-            if let action { perform(action) }
         }
         modifierTapMonitor.start()
         syncModifierTaps()
@@ -264,20 +257,12 @@ final class HotKeyManager {
 
     /// Rebuilt wholesale, so the map can't drift from what is on disk.
     private func syncModifierTaps() {
-        doubleTaps = [:]
-        globeAction = nil
-        doubleGlobeAction = nil
+        modifierTaps = [:]
         for action in candidateActions {
-            switch binding(for: action) {
-            case .doubleTap(let modifier): doubleTaps[modifier] = action
-            case .globe: globeAction = action
-            case .doubleGlobe: doubleGlobeAction = action
-            case .combo, .none: break
-            }
+            guard let binding = binding(for: action), binding.usesModifierTapMonitor else { continue }
+            modifierTaps[binding] = action
         }
-        modifierTapMonitor.update(
-            bound: Set(doubleTaps.keys), singleGlobeBound: globeAction != nil,
-            doubleGlobeBound: doubleGlobeAction != nil)
+        modifierTapMonitor.update(bound: Set(modifierTaps.keys))
     }
 
     private func perform(_ action: HotKeyAction) {

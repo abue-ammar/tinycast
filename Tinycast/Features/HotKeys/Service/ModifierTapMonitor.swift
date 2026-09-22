@@ -34,9 +34,8 @@ final class ModifierTapMonitor: HealthCheckable {
     /// True while something is bound and the tap can't be created; the recorder surfaces it.
     private(set) var needsAccessibility = false
 
-    /// Fired on the second release, so the modifier is up by the time the action runs.
-    @ObservationIgnored var onDoubleTap: ((DoubleTapModifier) -> Void)?
-    @ObservationIgnored var onGlobeTap: ((GlobeTapDetector.Gesture) -> Void)?
+    /// Fired on the tap's final release, so the key is up by the time the action runs.
+    @ObservationIgnored var onTrigger: ((HotKeyBinding) -> Void)?
 
     /// Set while a recorder captures, so editing a binding can't trigger it.
     var isPaused = false {
@@ -46,9 +45,7 @@ final class ModifierTapMonitor: HealthCheckable {
         }
     }
 
-    private var bound: Set<DoubleTapModifier> = []
-    private var singleGlobeBound = false
-    private var doubleGlobeBound = false
+    private var bound: Set<HotKeyBinding> = []
     /// Advanced by the tap callback on every modifier transition; released by teardown.
     @ObservationIgnored private var doubleTapDetector = DoubleTapDetector()
     @ObservationIgnored private var globeDetector = GlobeTapDetector()
@@ -71,17 +68,10 @@ final class ModifierTapMonitor: HealthCheckable {
         syncTapPresence()
     }
 
-    /// Modifiers currently carrying a binding; an empty set tears the tap down entirely.
-    func update(
-        bound: Set<DoubleTapModifier>, singleGlobeBound: Bool, doubleGlobeBound: Bool
-    ) {
-        guard
-            bound != self.bound || singleGlobeBound != self.singleGlobeBound
-                || doubleGlobeBound != self.doubleGlobeBound
-        else { return }
+    /// Modifier-only bindings currently assigned; an empty set tears the tap down entirely.
+    func update(bound: Set<HotKeyBinding>) {
+        guard bound != self.bound else { return }
         self.bound = bound
-        self.singleGlobeBound = singleGlobeBound
-        self.doubleGlobeBound = doubleGlobeBound
         resetDetectors()
         syncTapPresence()
     }
@@ -90,63 +80,55 @@ final class ModifierTapMonitor: HealthCheckable {
 
     fileprivate func process(isFlagsChanged: Bool, flagsRaw: UInt64, keyCode: Int) {
         guard !isPaused else { return }
-        let flags = CGEventFlags(rawValue: flagsRaw)
-        let modifiers = isFlagsChanged ? Self.modifiers(in: flags) : []
+        // `systemUptime` is monotonic, so a wall-clock adjustment can't turn a tap into a hold.
+        let now = ProcessInfo.processInfo.systemUptime
+        let input: DoubleTapDetector.Input
         if isFlagsChanged {
+            let flags = CGEventFlags(rawValue: flagsRaw)
+            let modifiers = Self.modifiers(in: flags)
             let isGlobeKey = keyCode == kVK_Function
-            let hasOtherModifiers = !modifiers.isEmpty
-            if !isGlobeKey || hasOtherModifiers { cancelPendingSingleGlobe() }
-            if singleGlobeBound || doubleGlobeBound,
-                let gesture = globeDetector.handle(
-                    isGlobeKey: isGlobeKey,
-                    functionDown: flags.contains(.maskSecondaryFn),
-                    hasOtherModifiers: hasOtherModifiers,
-                    at: ProcessInfo.processInfo.systemUptime)
+            if !isGlobeKey || !modifiers.isEmpty { cancelPendingSingleGlobe() }
+            if let gesture = globeDetector.handle(
+                isGlobeKey: isGlobeKey, functionDown: flags.contains(.maskSecondaryFn),
+                hasOtherModifiers: !modifiers.isEmpty, at: now)
             {
                 handleGlobe(gesture)
             }
+            input = .modifiers(modifiers, hasOtherModifiers: Self.hasOtherModifiers(in: flags))
         } else {
             globeDetector.cancel()
             cancelPendingSingleGlobe()
+            input = .otherInput
         }
-        guard !bound.isEmpty else { return }
-        let input: DoubleTapDetector.Input =
-            isFlagsChanged
-            ? .modifiers(
-                modifiers, hasOtherModifiers: Self.hasOtherModifiers(in: flags))
-            : .otherInput
-        // `systemUptime` is monotonic, so a wall-clock adjustment can't turn a tap into a hold.
-        guard
-            let modifier = doubleTapDetector.handle(
-                input, at: ProcessInfo.processInfo.systemUptime),
-            bound.contains(modifier)
+        guard let modifier = doubleTapDetector.handle(input, at: now),
+            bound.contains(.doubleTap(modifier))
         else { return }
-        onDoubleTap?(modifier)
+        onTrigger?(.doubleTap(modifier))
     }
 
     private func handleGlobe(_ gesture: GlobeTapDetector.Gesture) {
         switch gesture {
         case .single:
-            guard singleGlobeBound else { return }
-            guard doubleGlobeBound else {
+            guard bound.contains(.globe) else { return }
+            guard bound.contains(.doubleGlobe) else {
                 globeDetector.cancel()
-                onGlobeTap?(.single)
+                onTrigger?(.globe)
                 return
             }
             if pendingSingleGlobe != nil {
                 cancelPendingSingleGlobe()
-                onGlobeTap?(.single)
+                onTrigger?(.globe)
             }
+            // Every pause, unbind or session change cancels this, so waking needs no re-check.
             pendingSingleGlobe = Task { [weak self] in
                 try? await Task.sleep(for: GlobeTapDetector.resolutionWindow)
                 guard !Task.isCancelled, let self else { return }
-                self.pendingSingleGlobe = nil
-                guard !self.isPaused, self.sessionActive, self.singleGlobeBound else { return }
-                self.onGlobeTap?(.single)
+                pendingSingleGlobe = nil
+                onTrigger?(.globe)
             }
         case .double:
             cancelPendingSingleGlobe()
-            if doubleGlobeBound { onGlobeTap?(.double) }
+            if bound.contains(.doubleGlobe) { onTrigger?(.doubleGlobe) }
         }
     }
 
@@ -206,7 +188,7 @@ final class ModifierTapMonitor: HealthCheckable {
     }
 
     private func syncTapPresence() {
-        guard !bound.isEmpty || singleGlobeBound || doubleGlobeBound, sessionActive else {
+        guard !bound.isEmpty, sessionActive else {
             tearDownTap()
             healthTicker?.unsubscribe(self)
             needsAccessibility = false
@@ -272,9 +254,7 @@ final class ModifierTapMonitor: HealthCheckable {
 
     /// One-second watchdog while something is bound. See docs/features/hotkeys.md#lifecycle.
     func healthCheck() {
-        guard !bound.isEmpty || singleGlobeBound || doubleGlobeBound, sessionActive else {
-            return
-        }
+        guard !bound.isEmpty, sessionActive else { return }
         if tapPort == nil {
             installTapIfNeeded()
         } else if !Permissions.isAccessibilityTrusted() {

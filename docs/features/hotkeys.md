@@ -31,8 +31,8 @@ the keycap rendering — only the _engine_ differs.
   synthesised one.
 - `KeyShortcut`'s hand-written `init(from:)` is a correctness seam, not a format one: it routes every
   decode through the initializer that masks device modifier bits off.
-- **The modifier-only detectors stay Foundation-only and pure** for `hotkey-test`; the double-tap
-  clock is injected as a parameter. Every `CGEvent` call lives in
+- **The modifier-only detectors stay Foundation-only and pure** for `hotkey-test`, with the clock
+  injected as a parameter. Every `CGEvent` call lives in
   `Service/ModifierTapMonitor.swift`, which is listen-only, installs *only* while a modifier-only
   shortcut is bound, and never prompts for Accessibility.
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
@@ -94,12 +94,11 @@ Globe/fn can be bound once (`.globe`) or twice (`.doubleGlobe`). The recorder wa
 first release so another press can select the double binding; otherwise it saves the single one.
 Globally, a single Globe fires on release when no double Globe action is bound. When both are bound,
 the single action waits until the double-tap window expires. Another modifier, key, or mouse click
-cancels the gesture, even while a single tap awaits the second. The recognizer checks the physical
-`kVK_Function` keycode, not just the fn flag, because F-keys also carry that flag.
+cancels the gesture, even while a single tap awaits the second. Both the monitor and the recorder
+check the physical `kVK_Function` keycode, not just the fn flag, because F-keys also carry that flag.
 It shares the double-tap's listen-only monitor, permission warning, lifecycle and pause while
 recording. macOS may perform its own Globe action too; set “Press fn/Globe key to” to “Do Nothing” in
-Keyboard settings if it conflicts. Globe+key chords use Carbon registration, like other combos. The
-recorder tracks the physical Globe press so an F-key's incidental fn flag is not mistaken for Globe.
+Keyboard settings if it conflicts. Globe+key chords use Carbon registration, like other combos.
 
 ## Double-tap modifiers
 
