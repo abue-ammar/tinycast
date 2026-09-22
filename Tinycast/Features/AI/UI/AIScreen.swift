@@ -79,6 +79,7 @@ struct AIScreen: PaletteScreen {
         let width =
             (attachments.isEmpty ? 0 : AttachmentsPill.width(for: attachments, metrics))
             + (addressed == nil ? 0 : ComposerChip.width(metrics))
+            + (attachments.isEmpty || addressed == nil ? 0 : metrics.spacing.sm)
         return PaletteHeaderAccessory(
             width: width + metrics.spacing.md,
             fieldNames: [], firstIncompleteField: nil,
@@ -175,7 +176,7 @@ private struct ComposerChip: View {
     let symbol: String
     let label: String
 
-    /// Load-bearing: `RootPaletteView.searchFieldWidth(for:)` shrinks the field by exactly this.
+    /// Load-bearing: part of the strip width that `searchFieldWidth(for:)` takes out of the field.
     static func width(_ metrics: InterfaceMetrics) -> CGFloat {
         metrics.size.chatAttachmentGlyph + metrics.spacing.sm * 2
     }
@@ -204,7 +205,7 @@ private struct AttachmentsPill: View {
         attachments.count > 1 ? "+\(attachments.count - 1)" : nil
     }
 
-    /// Load-bearing: `RootPaletteView.searchFieldWidth(for:)` shrinks the field by exactly this.
+    /// Load-bearing: part of the strip width that `searchFieldWidth(for:)` takes out of the field.
     static func width(for attachments: [ChatAttachment], _ metrics: InterfaceMetrics) -> CGFloat {
         let pill = metrics.size.chatAttachmentInset * 2 + metrics.size.chatAttachmentThumb
         guard let others = others(attachments) else { return pill }

@@ -468,9 +468,10 @@ under it would shift the rows, and clicking Remove All would take back only that
 is a ~1 KB PNG downsampled on
 the same detached task that encodes the attachment and carried on the staged attachment itself, so a
 header re-rendered per keystroke decodes nothing and there is no cache whose lifetime could drift
-from the staging counter's. The pill states its own width through `AttachmentsPill.width(for:)`,
-which `RootPaletteView.searchFieldWidth(for:)` subtracts from the search field — so the two must move
-together or the caret drifts. Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to
+from the staging counter's. The strip states its own width — `AttachmentsPill.width(for:)`, the `@`
+chip's, and every gap it lays out, the one between the two chips included — which
+`RootPaletteView.searchFieldWidth(for:)` subtracts from the search field, so they must move together
+or the caret drifts. Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to
 its text and the chip follows it rather than the composer growing. Nothing is reserved for the model
 menu: the row itself squeezes a long draft, so the strip stops right before that menu however wide
 its title is. Bare backspace on an empty composer removes the last
