@@ -26,6 +26,7 @@ struct CodexTurnTests {
         await aListThatCannotBeReadRefusesToStart()
         await concurrentStartsLaunchOnce()
         await aChangedListRelaunchesAndTheSameOneDoesNot()
+        await aWithdrawnServerStopsTheIdleHelper()
         await theRoundCapInterruptsTheTurn()
 
         print("\(passes) passed, \(failures) failed")
@@ -157,6 +158,37 @@ struct CodexTurnTests {
         expect(
             server.launches == 2 && server.environment["TC_MCP_0_0"] == "rotated",
             "a changed list, a refreshed secret included, relaunches it with the new values")
+    }
+
+    /// Off means off: a server withdrawn from chat must not live on in an idle helper.
+    static func aWithdrawnServerStopsTheIdleHelper() async {
+        guard let server = StubServer(mode: "mcp") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        let manager = ChatGPTSubscriptionManager(supportDirectory: server.root)
+        defer {
+            manager.stop()
+            server.tearDown()
+        }
+        let stream = manager.turns.stream(
+            AIRequest(messages: [AIMessage(role: .user, text: "Hello")]), model: "gpt-5-codex",
+            effort: nil, toolServers: server.session(allowing: true, asked: Box()))
+        var finished = false
+        do {
+            for try await event in stream where event == .finished { finished = true }
+        } catch {}
+        manager.dropWithdrawnServers(keeping: ["probe", "other"])
+        let closedEarly = await server.awaitCondition(timeout: .milliseconds(300)) {
+            server.received.contains("stdin-closed")
+        }
+        expect(
+            finished && !closedEarly,
+            "a helper whose servers are all still offered keeps running between turns")
+        manager.dropWithdrawnServers(keeping: ["other"])
+        expect(
+            await server.awaitLog("stdin-closed"),
+            "and one launched with a server that is no longer offered stops without waiting to idle")
     }
 
     /// `.ask` on a CLI route is the same dialog it is on an API one.

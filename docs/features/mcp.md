@@ -13,7 +13,10 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
 - **MCP is off out of the box, and off means fully off.** `AppSettings.mcpEnabled` is the flag and
   `MCPCoordinator.applyEnabled()` is the only place that projects it: no connection opened, no local
   process resident, no tool named to any model. `aiEnabled` off does the same, because chat is the
-  only consumer. Both flags and `mcpServers` are excluded from settings backups — a server list is a
+  only consumer. That reaches the Codex helper too, which keeps what it was launched with until it
+  exits: when MCP goes off, or a server it runs is removed, set to Never Allow or signed out of,
+  `ChatGPTSubscriptionManager.dropWithdrawnServers` stops it between turns rather than leave the
+  server process and any lent token in it for its ten idle minutes. Both flags and `mcpServers` are excluded from settings backups — a server list is a
   source of executable code and a destination for chat context, and the flag doubles as consent to
   run it, so an import can never arrive having connected one.
 - **Credentials live only in the login Keychain.** `MCPServer` persists the endpoint, authentication
@@ -305,7 +308,8 @@ caught there rather than in the middle of a conversation.
   rather than sending the old token; Codex's own `~/.codex/config.toml` is byte-identical after.
 - With `/Library/Application Support/ClaudeCode/managed-mcp.json` present, the Claude row says MCP
   is managed by your organization and the turn runs with no MCP flags at all.
-- Switching MCP off, then AI off, leaves no server process resident.
+- Switching MCP off, then AI off, leaves no server process resident — including right after a
+  Codex turn that used a local server.
 - A settings backup carries neither a server nor the flag.
 - Harnesses: `mcp-test`, `mcp-stdio-test` and `mcp-oauth-test`, plus the tool halves of `ai-provider-test`
   (catalog and turn encoding, fragmented argument decoding, both CLIs' launch encodings and their

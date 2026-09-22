@@ -60,6 +60,15 @@ final class ChatGPTSubscriptionManager {
         client.stop()
     }
 
+    /// A helper launched with a server no longer offered stops now, not ten idle minutes later.
+    func dropWithdrawnServers(keeping offered: Set<String>) {
+        guard !turns.isActive, client.toolServers.contains(where: { !offered.contains($0.handle) })
+        else { return }
+        idleTask?.cancel()
+        turns.reset()
+        client.stop()
+    }
+
     /// What a turn needs before it starts: a running server and a signed-in account.
     private func ensureConnected(toolServers: [AIToolServer]) async throws {
         idleTask?.cancel()

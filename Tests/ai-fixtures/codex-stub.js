@@ -166,6 +166,8 @@ for (;;) {
         // `hold-turn` never answers the request: the interrupt has to come from the notification
         // alone. `hold-both` answers it too, so a turn named twice is still interrupted once.
         if (MODE === "hold-both") emit({ id: requestID, result: { turn: { id: TURN } } });
+    } else if (method === "account/read") {
+        emit({ id: requestID, result: { account: { type: "chatgpt", planType: "plus" } } });
     } else if (method === "turn/interrupt") {
         const params = message.params ?? {};
         record(`interrupt:${params.threadId}:${params.turnId}`);
@@ -174,3 +176,4 @@ for (;;) {
         emit({ id: requestID, result: {} });
     }
 }
+record("stdin-closed");

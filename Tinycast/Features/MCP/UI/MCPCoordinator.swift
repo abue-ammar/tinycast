@@ -26,12 +26,20 @@ final class MCPCoordinator {
 
     /// Off means off: no connection, no resident process, and nothing offered to a model.
     func applyEnabled() {
+        defer { dropWithdrawnServers() }
         guard isActive else {
             core.mcpOAuth.stop()
             manager.stop()
             return
         }
         manager.reconcile(ownServers)
+    }
+
+    /// The Codex helper keeps what it was launched with, so a server taken away is taken from it.
+    private func dropWithdrawnServers(besides withdrawn: UUID? = nil) {
+        let offered = store.enabledServers.filter { $0.trust != .never && $0.id != withdrawn }
+        core.chatGPTSubscription.dropWithdrawnServers(
+            keeping: isActive ? Set(offered.map(\.slug)) : [])
     }
 
     /// Connecting on the way into chat, so the first send does not wait on every handshake.
@@ -123,6 +131,7 @@ final class MCPCoordinator {
     func signOut(_ id: UUID) throws {
         manager.disconnect(id)
         try core.mcpOAuth.signOut(id)
+        dropWithdrawnServers(besides: id)
     }
 
     func cancelSignIn(_ id: UUID) { core.mcpOAuth.cancelSignIn(id) }
