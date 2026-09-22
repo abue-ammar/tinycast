@@ -83,6 +83,8 @@ struct InterfaceSizeTests {
         expect(m.size.panelHeight, Theme.Size.panelHeight, "size.panelHeight")
         expect(m.size.headerHeight, Theme.Size.headerHeight, "size.headerHeight")
         expect(m.size.headerIconSlot, Theme.Size.headerIconSlot, "size.headerIconSlot")
+        expect(
+            m.size.searchFieldMinWidth, Theme.Size.searchFieldMinWidth, "size.searchFieldMinWidth")
         expect(m.size.headerPadding, Theme.Size.headerPadding, "size.headerPadding")
         expect(m.size.compactHeight, Theme.Size.compactHeight, "size.compactHeight")
         expect(m.size.bottomBarHeight, Theme.Size.bottomBarHeight, "size.bottomBarHeight")
@@ -284,6 +286,7 @@ struct InterfaceSizeTests {
             ("size.panelWidth", m.size.panelWidth), ("size.panelHeight", m.size.panelHeight),
             ("size.headerHeight", m.size.headerHeight),
             ("size.headerIconSlot", m.size.headerIconSlot),
+            ("size.searchFieldMinWidth", m.size.searchFieldMinWidth),
             ("size.headerPadding", m.size.headerPadding),
             ("size.compactHeight", m.size.compactHeight),
             ("size.bottomBarHeight", m.size.bottomBarHeight),

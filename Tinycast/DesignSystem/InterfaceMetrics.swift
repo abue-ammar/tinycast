@@ -60,6 +60,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var panelHeight: CGFloat { scaledPoints(Theme.Size.panelHeight, scale) }
         var headerHeight: CGFloat { scaledPoints(Theme.Size.headerHeight, scale) }
         var headerIconSlot: CGFloat { scaledPoints(Theme.Size.headerIconSlot, scale) }
+        var searchFieldMinWidth: CGFloat { scaledPoints(Theme.Size.searchFieldMinWidth, scale) }
         var headerPadding: CGFloat { scaledPoints(Theme.Size.headerPadding, scale) }
         /// Derived, not scaled: the compact bar must stay exactly the header in symmetric slack.
         var compactHeight: CGFloat { headerHeight + headerPadding * 2 }

@@ -87,6 +87,8 @@ enum Theme {
         static let headerHeight: CGFloat = 44
         /// Fixed slot for the header glyph, so the field starts at one x in every mode.
         static let headerIconSlot: CGFloat = 22
+        /// The narrowest a strip squeezes the search field to: the caret and a few characters.
+        static let searchFieldMinWidth: CGFloat = 60
         /// Room above the search row, constant so typing never shifts the bar.
         static let headerPadding: CGFloat = 10
         /// Collapsed compact bar: the search row centered in symmetric `headerPadding` slack.

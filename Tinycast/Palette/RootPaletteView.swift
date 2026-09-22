@@ -782,8 +782,9 @@ struct RootPaletteView: View {
         return headerAccessory.map(searchFieldWidth)
     }
 
-    /// As narrow as a crowded row may push it: the caret and a few characters stay in view.
-    private var searchFieldFloor: CGFloat? { searchFieldWidth.map { min($0, metrics.scaled(60)) } }
+    private var searchFieldFloor: CGFloat? {
+        searchFieldWidth.map { min($0, metrics.size.searchFieldMinWidth) }
+    }
 
     /// The field's own text, floored for the caret and capped so the strip stays on screen.
     /// Empty, that is the prompt where one is drawn — which is what seats the strip right after it.
@@ -792,10 +793,11 @@ struct RootPaletteView: View {
         let text = vm.query.isEmpty ? searchPrompt : vm.query
         let typed = (text as NSString).size(withAttributes: [.font: font]).width
         let chrome = metrics.size.headerIconSlot + metrics.spacing.md * 4
+        let room = metrics.size.panelWidth - accessory.width - chrome
         // +3pt so the caret sits after the last glyph rather than on top of it.
         return min(
             max(typed + metrics.scaled(3), metrics.scaled(18)),
-            max(metrics.size.panelWidth - accessory.width - chrome, metrics.scaled(60)))
+            max(room, metrics.size.searchFieldMinWidth))
     }
 
     private var searchPrompt: String {
