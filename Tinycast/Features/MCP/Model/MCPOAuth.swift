@@ -64,8 +64,8 @@ enum MCPOAuth {
         let expiresAt: Date?
         let scope: String?
 
-        func needsRefresh(now: Date) -> Bool {
-            expiresAt.map { $0.timeIntervalSince(now) <= 60 } ?? false
+        func needsRefresh(now: Date, within margin: TimeInterval = 60) -> Bool {
+            expiresAt.map { $0.timeIntervalSince(now) <= margin } ?? false
         }
     }
 

@@ -85,7 +85,7 @@ final class MCPCoordinator {
         where server.trust != .never && (slug == nil || server.slug == slug) {
             let stored = secrets.secrets(for: server.id)
             var bearer: String?
-            if server.oauth == true { bearer = try? await core.mcpOAuth.accessToken(for: server) }
+            if server.oauth == true { bearer = try? await core.mcpOAuth.lentToken(for: server) }
             guard
                 let toolServer = server.toolServer(
                     headerValue: stored.headerValue, environment: stored.environment,

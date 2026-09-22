@@ -106,7 +106,20 @@ final class MCPOAuthManager {
         if let signingIn { cancelSignIn(signingIn) }
     }
 
-    func accessToken(for server: MCPServer, rejectedToken: String? = nil) async throws -> String {
+    /// A CLI holds a lent token for its whole turn, so it gets one with ten minutes left if it can.
+    func lentToken(for server: MCPServer) async throws -> String {
+        do {
+            return try await accessToken(for: server, lasting: 600)
+        } catch let failure as MCPOAuth.Failure where failure == .signInRequired {
+            throw failure
+        } catch {
+            return try await accessToken(for: server)
+        }
+    }
+
+    func accessToken(
+        for server: MCPServer, rejectedToken: String? = nil, lasting margin: TimeInterval = 60
+    ) async throws -> String {
         guard statuses[server.id] != .required else { throw MCPOAuth.Failure.signInRequired }
         let credentials = secrets.secrets(for: server.id).oauth
         guard let registration = credentials?.registration, registration.resource == Self.resource(of: server),
@@ -115,7 +128,11 @@ final class MCPOAuthManager {
             throw MCPOAuth.Failure.signInRequired
         }
         if let pending = refreshes[server.id] { return try await pending.value }
-        if rejectedToken != token.accessToken, !token.needsRefresh(now: Date()) { return token.accessToken }
+        // Without a refresh token nothing can extend it, and asking for one would end the session.
+        let within = token.refreshToken == nil ? 60 : margin
+        if rejectedToken != token.accessToken, !token.needsRefresh(now: Date(), within: within) {
+            return token.accessToken
+        }
         let revision = revisions[server.id] ?? UUID()
         revisions[server.id] = revision
         let task = Task { [weak self] in

@@ -123,6 +123,9 @@ struct MCPOAuthTests {
                                            previous: nil, now: now)
         expect(!token.needsRefresh(now: now.addingTimeInterval(3539)), "refresh not premature")
         expect(token.needsRefresh(now: now.addingTimeInterval(3540)), "refresh at skew boundary")
+        expect(token.needsRefresh(now: now.addingTimeInterval(3000), within: 600)
+               && !token.needsRefresh(now: now.addingTimeInterval(2999), within: 600),
+               "a wider margin moves the boundary with it")
         let rotated = try MCPOAuth.parseToken(Data(#"{"access_token":"b","token_type":"bearer","refresh_token":"r2"}"#.utf8),
                                              previous: token, now: now)
         expect(rotated.refreshToken == "r2", "refresh rotates")
@@ -249,6 +252,36 @@ struct MCPOAuthTests {
         do { late = try await abandoned } catch { late = nil }
         expect(polls < 200 && late == nil && secrets.secrets(for: server.id).oauth?.token == nil,
                "sign-out still discards a refresh in flight")
+    }
+
+    /// A CLI keeps a lent token for its whole turn, so one about to expire is refreshed first.
+    static func lendingOutlastsTheTurn(
+        registration: MCPOAuth.Registration, secrets: MCPSecretStore, manager: MCPOAuthManager
+    ) async throws {
+        var configured = MCPServer(name: "Lent", transport: .http(url: base + "/mcp", headerName: ""))
+        configured.oauth = true
+        let server = configured
+        defer { try? secrets.remove(for: server.id) }
+        func store(refresh: String?) throws {
+            var stored = MCPSecretStore.Secrets()
+            stored.oauth = MCPOAuth.Credentials(registration: registration,
+                token: MCPOAuth.Token(accessToken: "five-minutes", refreshToken: refresh,
+                                      expiresAt: Date().addingTimeInterval(300), scope: "read"))
+            try secrets.save(stored, for: server.id)
+        }
+        try store(refresh: "fixture-refresh")
+        let used = try await manager.accessToken(for: server)
+        let lent = try await manager.lentToken(for: server)
+        expect(used == "five-minutes" && lent == "fixture-access",
+               "five minutes serve Tinycast's own request; a CLI's whole turn gets a refreshed token")
+        try store(refresh: nil)
+        let unrefreshable = try await manager.lentToken(for: server)
+        expect(unrefreshable == "five-minutes",
+               "with no refresh token it is lent as it is, rather than ending a session")
+        try store(refresh: "fixture-unavailable")
+        let offline = try await manager.lentToken(for: server)
+        expect(offline == "five-minutes",
+               "and a refresh the server cannot serve still lends the minutes that are left")
     }
 
     static func count(_ name: String) async throws -> Int {
@@ -416,6 +449,7 @@ struct MCPOAuthTests {
                 refresh, registration: registration, secrets: secrets, manager: manager)
         }
         try await refreshOutlivesEditor(registration: registration, secrets: secrets, manager: manager)
+        try await lendingOutlastsTheTurn(registration: registration, secrets: secrets, manager: manager)
         var moved = server
         moved.transport = .http(url: base + "/other", headerName: "")
         do {

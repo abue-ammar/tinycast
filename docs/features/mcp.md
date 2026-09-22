@@ -161,7 +161,11 @@ Protected-resource metadata may describe an ancestor path on the same origin, ma
 SDK behavior; sibling paths and other origins are rejected. Saved tokens remain bound to the exact
 configured endpoint. This is deliberately broader than RFC 9728's exact resource-match wording.
 
-Access tokens refresh within 60 seconds of expiry. Concurrent requests share one refresh, and
+Access tokens refresh within 60 seconds of expiry. A token lent to a CLI route refreshes within ten
+minutes instead (`MCPOAuthManager.lentToken`): the CLI holds it for its whole turn and cannot ask
+for another, while a turn that starts at 61 seconds left can easily outlast them. One with no
+refresh token, or whose refresh could not be served, is lent as it is rather than withheld.
+Concurrent requests share one refresh, and
 rotated refresh tokens replace the old token in the same Keychain item. Closing or saving the editor
 leaves a refresh in flight to finish, because a server that rotates refresh tokens may already have
 spent the old one; only Sign In and Sign Out discard it. A 401 permits one refresh
