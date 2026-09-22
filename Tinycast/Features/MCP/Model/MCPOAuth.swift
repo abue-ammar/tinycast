@@ -160,7 +160,7 @@ enum MCPOAuth {
         return metadata
     }
 
-    /// Google advertises `https://accounts.google.com/` and publishes `https://accounts.google.com`.
+    /// Google advertises `https://accounts.google.com/` and publishes it without the slash.
     static func sameIssuer(_ first: String, _ second: String) -> Bool {
         func bare(_ value: String) -> String { value.hasSuffix("/") ? String(value.dropLast()) : value }
         return bare(first) == bare(second)
