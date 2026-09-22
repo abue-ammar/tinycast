@@ -36,7 +36,7 @@ struct RevealableSecureField: View {
             .accessibilityLabel(isRevealed ? "Hide \(title)" : "Show \(title)")
         }
         .onChange(of: text.isEmpty) { _, isEmpty in
-            if isEmpty { isRevealed = false }
+            if isEmpty, isRevealed { setRevealed(false) }
         }
         .onChange(of: focusedField) { _, field in
             guard field != nil, let selection = carriedSelection else { return }
