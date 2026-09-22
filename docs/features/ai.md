@@ -243,9 +243,11 @@ palette is hidden or showing another screen — the state is `AppCore`'s, not th
 saved when it finishes; only Stop, New Chat, deleting the chat or quitting cut it short.
 
 Tool activity persists in `message_tools` beside `message_searches`, and `ChatMessage.segments`
-interleaves the two by text offset so a reply renders what it did in the order it did it. A call
-loaded still marked running belonged to a process that is gone, so it reads back as failed — the same
-repair a message left streaming gets.
+interleaves the two by text offset so a reply renders what it did in the order it did it. Consecutive
+tool calls render as one run: the latest running call while live, then an expandable count with any
+failures once done. Text and searches separate runs; a single call keeps its own row. A call loaded
+still marked running belonged to a process that is gone, so it reads back as failed — the same repair
+a message left streaming gets.
 
 `ChatHistoryStore` writes `ai-chats.sqlite3` below the bundle-specific Application Support directory.
 It uses the system SQLite already linked by Tinycast, stores no provider credentials, and repairs a

@@ -46,7 +46,7 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     var segments: [ChatSegment] {
         let interruptions =
             (searches.map { (offset: $0.textOffset, segment: ChatSegment.search($0)) }
-            + toolUses.map { (offset: $0.textOffset, segment: ChatSegment.tool($0)) })
+            + toolUses.map { (offset: $0.textOffset, segment: ChatSegment.tools([$0])) })
             .sorted { $0.offset < $1.offset }
         var segments: [ChatSegment] = []
         var rest = Substring(text)
@@ -54,7 +54,13 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         for interruption in interruptions {
             let take = max(0, min(interruption.offset - consumed, rest.count))
             if take > 0 { segments.append(.text(String(rest.prefix(take)))) }
-            segments.append(interruption.segment)
+            if case .tools(let uses) = interruption.segment,
+                case .tools(let previous) = segments.last
+            {
+                segments[segments.count - 1] = .tools(previous + uses)
+            } else {
+                segments.append(interruption.segment)
+            }
             rest = rest.dropFirst(take)
             consumed += take
         }
@@ -91,8 +97,20 @@ struct ChatToolUse: Equatable, Hashable, Sendable {
     }
 }
 
+extension Array where Element == ChatToolUse {
+    var runningCall: ChatToolUse? { last { $0.state == .running } }
+    var isLive: Bool { runningCall != nil }
+    var failedCount: Int { count { $0.state == .failed } }
+
+    var completedLabel: String {
+        let label = "Called \(count) tools"
+        let failures = failedCount
+        return failures == 0 ? label : "\(label) · \(failures) failed"
+    }
+}
+
 enum ChatSegment: Equatable, Hashable {
     case text(String)
     case search(ChatSearch)
-    case tool(ChatToolUse)
+    case tools([ChatToolUse])
 }

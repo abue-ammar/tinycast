@@ -210,8 +210,8 @@ private struct ChatMessageView: View {
                         MarkdownView(blocks: MarkdownBlock.parse(text))
                     case .search(let search):
                         ChatSearchRow(search: search)
-                    case .tool(let use):
-                        ChatToolRow(use: use)
+                    case .tools(let uses):
+                        ChatToolRun(uses: uses)
                     }
                 }
             }
@@ -265,6 +265,62 @@ struct ChatImageThumbnail: View {
         .frame(width: edge, height: edge)
         .clipShape(RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous))
         .task(id: image) { decoded = NSImage(data: image.data) }
+    }
+}
+
+/// Calls with nothing between them: the one running while live, then a count that opens to each.
+private struct ChatToolRun: View {
+    @Environment(\.metrics) private var metrics
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let uses: [ChatToolUse]
+    @State private var isExpanded = false
+
+    var body: some View {
+        if uses.count == 1, let use = uses.first {
+            ChatToolRow(use: use)
+        } else {
+            VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+                if let running = uses.runningCall {
+                    ChatToolRow(use: running)
+                } else {
+                    Button { isExpanded.toggle() } label: {
+                        HStack(spacing: metrics.spacing.sm) {
+                            Image(systemName: uses.failedCount > 0
+                                ? "exclamationmark.triangle" : "wrench.and.screwdriver")
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(uses.failedCount > 0
+                                    ? Theme.Colors.destructive : Theme.Colors.textSecondary)
+                            Text(uses.completedLabel)
+                                .lineLimit(1)
+                            Image(systemName: "chevron.down")
+                                .font(metrics.typography.disclosure)
+                                .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                                .animation(
+                                    reduceMotion ? nil : Theme.MenuMotion.chevronAnimation,
+                                    value: isExpanded)
+                        }
+                        .font(metrics.typography.rowTrailing)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(uses.completedLabel)
+                    .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+                    if isExpanded {
+                        VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+                            ForEach(uses, id: \.callID) { use in
+                                ChatToolRow(use: use)
+                            }
+                        }
+                        .padding(.leading, metrics.spacing.xxl)
+                    }
+                }
+            }
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: Theme.Duration.chatFooter), value: uses)
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: Theme.Duration.chatFooter), value: isExpanded)
+        }
     }
 }
 

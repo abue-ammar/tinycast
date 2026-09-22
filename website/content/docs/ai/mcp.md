@@ -37,8 +37,9 @@ A local server runs with your own user account, so only add commands you trust.
 ## Using tools in a chat
 
 Tools from every enabled server are offered to the model. When it calls one, a row shows inline in
-the reply, with a spinner while it runs. The reply carries on after it, and the row is saved with
-the chat.
+the reply, with a spinner while it runs. Several calls in a row share one line: the call running
+now, then how many it called once they finish, and any that failed. Click that line to see each
+call. The reply carries on after it, and the calls are saved with the chat.
 
 ### Talking to one server
 

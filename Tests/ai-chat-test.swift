@@ -34,6 +34,11 @@ struct AIChatTests {
         leavingAConversationDropsItsStagedImages()
         retentionPrunesByAgeAndCascades()
         segmentsInterleaveSearchesAndTools()
+        consecutiveToolCallsMerge()
+        searchesSeparateToolRuns()
+        textSeparatesToolRuns()
+        singleToolCallsStaySingle()
+        toolRunsDescribeTheirState()
         await theToolLoopRunsUntilTheModelStopsAsking()
         await theToolLoopRefusesToRunForever()
         await toolOutputIsBoundedBeforeItIsBilled()
@@ -55,10 +60,10 @@ struct AIChatTests {
         expect(
             message.segments == [
                 .text("ab"),
-                .tool(
+                .tools([
                     ChatToolUse(
                         callID: "1", origin: "Files", title: "read", state: .completed,
-                        textOffset: 2)),
+                        textOffset: 2)]),
                 .text("cd"),
                 .search(ChatSearch(query: "q", isComplete: true, textOffset: 4)),
                 .text("ef")
@@ -70,6 +75,81 @@ struct AIChatTests {
             ).label
                 == "Calling Files · read",
             "a running call says so, and names the server it is calling")
+    }
+
+    static func consecutiveToolCallsMerge() {
+        let uses = [
+            ChatToolUse(callID: "1", origin: "Files", title: "read", state: .completed, textOffset: 2),
+            ChatToolUse(callID: "2", origin: "Files", title: "list", state: .failed, textOffset: 2),
+            ChatToolUse(callID: "3", origin: "Files", title: "find", state: .running, textOffset: 2)
+        ]
+        let message = ChatMessage(role: .assistant, text: "abcd", toolUses: uses)
+        expect(
+            message.segments == [.text("ab"), .tools(uses), .text("cd")],
+            "consecutive calls form one run in call order, regardless of state")
+    }
+
+    static func searchesSeparateToolRuns() {
+        let first = ChatToolUse(
+            callID: "1", origin: "Files", title: "read", state: .completed, textOffset: 0)
+        let last = ChatToolUse(
+            callID: "2", origin: "Files", title: "list", state: .completed, textOffset: 2)
+        let searches = [
+            ChatSearch(query: "one", isComplete: true, textOffset: 1),
+            ChatSearch(query: "two", isComplete: true, textOffset: 1)
+        ]
+        let message = ChatMessage(
+            role: .assistant, text: "", searches: searches, toolUses: [first, last])
+        expect(
+            message.segments == [
+                .tools([first]), .search(searches[0]), .search(searches[1]), .tools([last])
+            ],
+            "searches stay separate and break tool runs even with no text at clamped offsets")
+    }
+
+    static func textSeparatesToolRuns() {
+        let first = ChatToolUse(
+            callID: "1", origin: "Files", title: "read", state: .completed, textOffset: 0)
+        let last = ChatToolUse(
+            callID: "2", origin: "Files", title: "list", state: .completed, textOffset: 1)
+        let message = ChatMessage(role: .assistant, text: " ", toolUses: [first, last])
+        expect(
+            message.segments == [.tools([first]), .text(" "), .tools([last])],
+            "even whitespace between calls separates their runs")
+    }
+
+    static func singleToolCallsStaySingle() {
+        let use = ChatToolUse(
+            callID: "1", origin: "Files", title: "read", state: .completed, textOffset: 0)
+        let message = ChatMessage(role: .assistant, text: "", toolUses: [use])
+        expect(message.segments == [.tools([use])], "a lone call remains a run of one")
+        expect(
+            ChatMessage(role: .assistant, text: "").segments.isEmpty,
+            "a reply without calls never creates an empty run")
+    }
+
+    static func toolRunsDescribeTheirState() {
+        var uses = [
+            ChatToolUse(callID: "1", origin: "Files", title: "read", state: .running, textOffset: 0),
+            ChatToolUse(callID: "2", origin: "Files", title: "list", state: .running, textOffset: 0),
+            ChatToolUse(callID: "3", origin: "Files", title: "find", state: .failed, textOffset: 0)
+        ]
+        expect(uses.isLive, "any running call keeps the run live")
+        expect(uses.runningCall == uses[1], "the latest running call owns the live line")
+        expect(uses.failedCount == 1, "failures are counted while other calls are running")
+        uses[1].state = .completed
+        expect(uses.isLive, "finishing one call cannot settle another that is still running")
+        expect(uses.runningCall == uses[0], "the remaining running call owns the live line")
+        uses[0].state = .completed
+        expect(!uses.isLive && uses.runningCall == nil, "a settled run has no running call")
+        expect(uses.completedLabel == "Called 3 tools · 1 failed", "the summary names one failure")
+        uses[0].state = .failed
+        expect(uses.failedCount == 2, "every failed call is counted")
+        expect(uses.completedLabel == "Called 3 tools · 2 failed", "the summary names all failures")
+        uses[0].state = .completed
+        uses[2].state = .completed
+        expect(uses.failedCount == 0, "successful runs have no failures")
+        expect(uses.completedLabel == "Called 3 tools", "successful summaries omit failures")
     }
 
     static func theToolLoopRunsUntilTheModelStopsAsking() async {
