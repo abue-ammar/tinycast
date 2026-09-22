@@ -88,7 +88,8 @@ A refused or failed call is not an error. The model is told what happened and ca
 **API connections** are offered tools — OpenAI API, Anthropic Claude, Google Gemini, OpenRouter and
 OpenAI Compatible endpoints — and so are the installed **Codex** and **Claude** commands. On those
 two the CLI calls the tools itself; the servers, the confirmation and the rows in the reply are the
-same ones you see everywhere else. Nothing is written to either command's settings.
+same ones you see everywhere else, except that an OAuth server you are not signed into is left out.
+Nothing is written to either command's settings.
 
 Your own Codex and Claude MCP servers stay out of a Tinycast chat. Claude is told to use Tinycast's
 list alone. Codex is handed Tinycast's servers under names of their own, like `tinycast-github`,
@@ -97,8 +98,16 @@ named `github` never mixes with Tinycast's `@github`. If Tinycast cannot read wh
 Codex configuration has, or one of them has a dot or `=` in its name, Codex does not start from
 Tinycast at all, and the Codex row in Settings says why.
 
-One thing is different on Codex: adding, removing or re-authorizing a server restarts its helper,
-which takes about a second on the next message.
+A few things are different on Codex:
+
+- Adding, removing or re-authorizing a server restarts its helper, which takes about a second on
+  the next message. So does moving between a message that starts with a handle, like `@github`,
+  and one that does not, since each offers a different set of servers.
+- Switching MCP off, or setting a server to **Never Allow**, removing it or signing out of it,
+  stops the helper at once, so the server does not keep running inside it. If a reply is running
+  at that moment, the helper keeps the server until your next message or ten idle minutes.
+- An environment variable reaches a server Codex starts only if its name is letters, digits and
+  `_`, not starting with a digit. `API_TOKEN` works; `API-TOKEN` is not passed on.
 
 Apple Intelligence and the installed Grok, OpenCode and Cursor commands never get tools. For those,
 chat works exactly as it does without MCP.

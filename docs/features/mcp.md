@@ -16,7 +16,8 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   only consumer. That reaches the Codex helper too, which keeps what it was launched with until it
   exits: when MCP goes off, or a server it runs is removed, set to Never Allow or signed out of,
   `ChatGPTSubscriptionManager.dropWithdrawnServers` stops it between turns rather than leave the
-  server process and any lent token in it for its ten idle minutes. Both flags and `mcpServers`
+  server process and any lent token in it for its ten idle minutes; a change made mid-turn leaves it
+  to the next turn's relaunch or that idle stop. Both flags and `mcpServers`
   are excluded from settings backups — a server list is a source of executable code and a
   destination for chat context, and the flag doubles as consent to run it, so an import can never
   arrive having connected one.
