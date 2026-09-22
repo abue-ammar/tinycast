@@ -308,6 +308,13 @@ struct MCPOAuthTests {
         } catch {
             expect(error as? MCPOAuth.Failure == .signInRequired, "resource binding survives URL edit")
         }
+        let edited = MCPServerConnection(server: moved, secrets: stored, oauth: manager)
+        await edited.start()
+        let kept: String?
+        do { kept = try await manager.accessToken(for: server) } catch { kept = nil }
+        expect(edited.status == .signInRequired && kept == "fixture-access"
+               && manager.status(for: server, stored: secrets.secrets(for: server.id).oauth) == .signedIn,
+               "testing an edited URL leaves the saved server signed in")
         try manager.signOut(server.id)
         expect(secrets.secrets(for: server.id).oauth?.token == nil, "sign-out deletes access and refresh tokens")
         do {

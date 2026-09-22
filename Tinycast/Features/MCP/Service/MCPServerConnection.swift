@@ -80,7 +80,7 @@ final class MCPServerConnection {
     private func requireSignIn() {
         stop()
         status = .signInRequired
-        oauth?.requireSignIn(server.id)
+        oauth?.requireSignIn(server)
     }
 
     private func fail(_ message: String) {

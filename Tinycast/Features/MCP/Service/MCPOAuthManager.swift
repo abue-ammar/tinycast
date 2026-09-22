@@ -34,9 +34,8 @@ final class MCPOAuthManager {
     /// Takes the caller's credentials: a view body asks this and must not read the Keychain.
     func status(for server: MCPServer, stored credentials: MCPOAuth.Credentials?) -> Status {
         if let status = statuses[server.id] { return status }
-        guard case .http(let url, _) = server.transport, let credentials,
-            let registration = credentials.registration,
-            registration.resource == (try? MCPOAuth.resource(url)), let token = credentials.token else { return .signedOut }
+        guard let registration = credentials?.registration, registration.resource == Self.resource(of: server),
+            let token = credentials?.token else { return .signedOut }
         return token.needsRefresh(now: Date()) && token.refreshToken == nil ? .required : .signedIn
     }
 
@@ -106,11 +105,10 @@ final class MCPOAuthManager {
 
     func accessToken(for server: MCPServer, rejectedToken: String? = nil) async throws -> String {
         guard statuses[server.id] != .required else { throw MCPOAuth.Failure.signInRequired }
-        guard case .http(let url, _) = server.transport,
-            let credentials = secrets.secrets(for: server.id).oauth,
-            let registration = credentials.registration, registration.resource == (try? MCPOAuth.resource(url)),
-            let token = credentials.token else {
-            statuses[server.id] = .required
+        let credentials = secrets.secrets(for: server.id).oauth
+        guard let registration = credentials?.registration, registration.resource == Self.resource(of: server),
+            let token = credentials?.token else {
+            requireSignIn(server, stored: credentials)
             throw MCPOAuth.Failure.signInRequired
         }
         if let pending = refreshes[server.id] { return try await pending.value }
@@ -141,8 +139,19 @@ final class MCPOAuthManager {
         }
     }
 
-    func requireSignIn(_ id: UUID) {
-        statuses[id] = .required
+    func requireSignIn(_ server: MCPServer) {
+        requireSignIn(server, stored: secrets.secrets(for: server.id).oauth)
+    }
+
+    /// Test Connection on an edited URL says nothing about the session the saved server holds.
+    private func requireSignIn(_ server: MCPServer, stored: MCPOAuth.Credentials?) {
+        if let resource = stored?.registration?.resource, resource != Self.resource(of: server) { return }
+        statuses[server.id] = .required
+    }
+
+    private static func resource(of server: MCPServer) -> String? {
+        guard case .http(let url, _) = server.transport else { return nil }
+        return try? MCPOAuth.resource(url)
     }
 
     private func checkRevision(_ id: UUID, _ revision: UUID) throws {
