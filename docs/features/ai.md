@@ -353,7 +353,8 @@ and `MCPCoordinator` the twentieth.
   Codex framing, on-device routing, the two MCP launch encodings and the two consent channels),
   `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore`, `AIToolLoopProvider`),
   `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
-  turn ID, plus the MCP launch boundary, the elicitation, the rows and the call cap),
+  turn ID, plus the MCP launch boundary, one launch for concurrent starts, the elicitation, the
+  rows and the call cap),
   `installed-ai-test` (Claude/Grok/OpenCode/Cursor flags, prompt
   framing, streaming and cleanup, and Claude's private MCP configuration, control channel, round
   cap and managed-policy branch) and `apple-intelligence-test` (status copy, snapshot deltas,

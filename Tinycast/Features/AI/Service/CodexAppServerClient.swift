@@ -33,6 +33,7 @@ final class CodexAppServerClient {
     private let codexHome: URL?
     let workspace: URL
     private var process: Process?
+    private var processID: UUID?
     private var input: FileHandle?
     private var outputBuffer = Data()
     private var stderrBuffer = Data()
@@ -41,6 +42,9 @@ final class CodexAppServerClient {
     /// What the running process was launched with. Overrides and environment are fixed at exec,
     /// so a changed list — a refreshed token included — is a relaunch, not a reconfiguration.
     private(set) var toolServers: [AIToolServer] = []
+    private var pendingLaunch: (id: UUID, servers: [AIToolServer], task: Task<Void, Error>)?
+    /// Bumped by `stop`, so a launch still reading the list does not start a process after it.
+    private var generation = 0
 
     init(codexHome: URL? = nil, workspace: URL) {
         self.codexHome = codexHome
@@ -83,15 +87,30 @@ final class CodexAppServerClient {
 
     var isRunning: Bool { process?.isRunning == true }
 
+    /// One launch at a time, handshake included; every caller for the same list awaits it.
     func start(toolServers: [AIToolServer] = []) async throws {
+        while let pending = pendingLaunch {
+            if pending.servers == toolServers { return try await pending.task.value }
+            _ = await pending.task.result
+        }
         if isRunning, self.toolServers == toolServers { return }
+        let id = UUID()
+        let task = Task {
+            defer { if pendingLaunch?.id == id { pendingLaunch = nil } }
+            try await launch(toolServers)
+        }
+        pendingLaunch = (id, toolServers, task)
+        try await task.value
+    }
+
+    private func launch(_ toolServers: [AIToolServer]) async throws {
+        let generation = self.generation
         guard let executable = await ExecutableLocator.locate("codex") else {
             throw ClientError.executableMissing
         }
-        // A second caller may have started it during the lookup.
-        if isRunning, self.toolServers == toolServers { return }
+        try checkNotStopped(since: generation)
         // The list is only readable at launch, so the old process cannot be talked into it.
-        if isRunning { stop() }
+        if isRunning { stop(error: ClientError.processExited("Codex stopped.")) }
         guard let secrets = CodexMCPLaunch.environment(servers: toolServers) else {
             throw ClientError.launchFailed("Two MCP servers' secrets would share one variable.")
         }
@@ -120,6 +139,7 @@ final class CodexAppServerClient {
                     + "could not keep them out of the chat. Run \u{201C}codex mcp list\u{201D} "
                     + "in Terminal to see why.")
         }
+        try checkNotStopped(since: generation)
         if let name = CodexMCPLaunch.unaddressableName(foreign) {
             throw ClientError.launchFailed(
                 "Your Codex MCP server \u{201C}\(name)\u{201D} cannot be kept out of a Tinycast "
@@ -170,9 +190,10 @@ final class CodexAppServerClient {
             guard !data.isEmpty else { return }
             Task { @MainActor in self?.consumeStderr(data) }
         }
+        let launchID = UUID()
         process.terminationHandler = { [weak self] process in
             let status = process.terminationStatus
-            Task { @MainActor in self?.didExit(status: status) }
+            Task { @MainActor in self?.didExit(launchID, status: status) }
         }
         do {
             try process.run()
@@ -182,6 +203,7 @@ final class CodexAppServerClient {
             throw ClientError.launchFailed(error.localizedDescription)
         }
         self.process = process
+        processID = launchID
         input = stdin.fileHandleForWriting
         self.toolServers = toolServers
 
@@ -233,7 +255,15 @@ final class CodexAppServerClient {
     }
 
     func stop() {
+        generation += 1
         stop(error: ClientError.processExited("Codex stopped."))
+    }
+
+    /// A `stop` that landed while a launch was reading the list outranks the launch.
+    private func checkNotStopped(since generation: Int) throws {
+        guard generation == self.generation else {
+            throw ClientError.processExited("Codex stopped.")
+        }
     }
 
     /// Closing stdin is the clean exit — the server leaves on EOF — and SIGTERM is the backstop.
@@ -338,7 +368,9 @@ final class CodexAppServerClient {
         request.continuation.resume(with: result)
     }
 
-    private func didExit(status: Int32) {
+    /// A process this client already replaced or stopped has nothing left to tear down.
+    private func didExit(_ exited: UUID, status: Int32) {
+        guard exited == processID else { return }
         let detail = String(decoding: stderrBuffer, as: UTF8.self)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         let message = detail.isEmpty ? "Codex exited with status \(status)." : detail
@@ -353,6 +385,7 @@ final class CodexAppServerClient {
         (process?.standardError as? Pipe)?.fileHandleForReading.readabilityHandler = nil
         try? input?.close()
         process = nil
+        processID = nil
         input = nil
         outputBuffer.removeAll(keepingCapacity: false)
         stderrBuffer.removeAll(keepingCapacity: false)

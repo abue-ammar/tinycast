@@ -225,7 +225,10 @@ is not forwarded to Codex's copy at all, where the API route and Claude hand it 
 That environment is fixed at `exec`,
 so a changed list, a refreshed OAuth token included, is a **relaunch**: `CodexAppServerClient`
 remembers what it was started with and starts again when the next turn wants something else.
-Nothing else can deliver it — `config/mcpServer/reload` takes no parameters and re-reads the
+A launch is single-flight, handshake included: a status check racing a turn, or two quick sends,
+await the one in progress rather than each start a process whose exit would then tear down the
+other's, a `stop` that lands while the list is being read keeps the launch from starting after it,
+and an exit is only acted on when it is the current process's. Nothing else can deliver it — `config/mcpServer/reload` takes no parameters and re-reads the
 config from disk, and thread-scoped `mcp_servers` on `thread/start` both fails to arm the tools and
 undoes the launch-level disabling, which is why it is not used. A tool call arrives as
 `mcpServer/elicitation/request`, decoded by `CodexElicitation` and answered `accept` or `decline`;
@@ -297,6 +300,7 @@ caught there rather than in the middle of a conversation.
 - Harnesses: `mcp-test`, `mcp-stdio-test` and `mcp-oauth-test`, plus the tool halves of `ai-provider-test`
   (catalog and turn encoding, fragmented argument decoding, both CLIs' launch encodings and their
   two consent channels), `ai-chat-test` (the loop, its cap, its output bounds, and tool-use
-  persistence), `codex-turn-test` (the launch boundary, the elicitation, the rows and the call cap)
+  persistence), `codex-turn-test` (the launch boundary and its failing closed, one launch for concurrent
+  starts, the elicitation, the rows and the call cap)
   and `installed-ai-test` (the flags, the `0600` configuration and its deletion, the control
   channel, the round cap and the managed-policy branch).

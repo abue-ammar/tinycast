@@ -24,6 +24,7 @@ struct CodexTurnTests {
         await aRefusedCallIsAFailedRowAndAnHonestReply()
         await aForeignServersElicitationIsNeverAsked()
         await aListThatCannotBeReadRefusesToStart()
+        await concurrentStartsLaunchOnce()
         await theRoundCapInterruptsTheTurn()
 
         print("\(passes) passed, \(failures) failed")
@@ -107,6 +108,35 @@ struct CodexTurnTests {
                 "\(mode): Codex does not start, and says why, rather than run the reader's servers")
             server.tearDown()
         }
+    }
+
+    /// A status check racing a turn, or two quick sends, must share one app-server.
+    static func concurrentStartsLaunchOnce() async {
+        guard let server = StubServer(mode: "mcp") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        setenv("TC_STUB_LIST_DELAY", "300", 1)
+        defer {
+            unsetenv("TC_STUB_LIST_DELAY")
+            server.tearDown()
+        }
+        let client = server.client
+        async let first: Void = client.start()
+        async let second: Void = client.start()
+        let firstStarted = (try? await first) != nil
+        let secondStarted = (try? await second) != nil
+        expect(
+            firstStarted && secondStarted && server.launches == 1 && client.isRunning,
+            "two starts at once launch one app-server, and both callers get the running one")
+
+        let stopped = Task { try await client.start(toolServers: server.servers(key: "one")) }
+        _ = await server.awaitCondition { server.launches == 1 && server.listed == 2 }
+        client.stop()
+        let outcome = await stopped.result
+        expect(
+            (try? outcome.get()) == nil && server.launches == 1 && !client.isRunning,
+            "and a Stop that lands while a launch reads the list keeps it from starting afterwards")
     }
 
     /// `.ask` on a CLI route is the same dialog it is on an API one.
@@ -334,16 +364,23 @@ final class StubServer {
         }
     }
 
-    /// One local server, and a reader who answers every call the same way.
-    func session(allowing: Bool, asked: Box, rounds: Int = 10) -> AIToolServerSession {
-        AIToolServerSession(rounds: rounds) {
-            [
-                AIToolServer(
-                    handle: "probe", title: "Probe",
-                    transport: .command(
-                        path: "/bin/echo", arguments: ["probe"],
-                        environment: ["API_KEY": "s3cret"]))
-            ]
+    /// One local server, whose secret tells two launches' lists apart.
+    func servers(key: String = "s3cret") -> [AIToolServer] {
+        [
+            AIToolServer(
+                handle: "probe", title: "Probe",
+                transport: .command(
+                    path: "/bin/echo", arguments: ["probe"], environment: ["API_KEY": key]))
+        ]
+    }
+
+    /// A reader who answers every call the same way.
+    func session(
+        allowing: Bool, asked: Box, rounds: Int = 10, servers: [AIToolServer]? = nil
+    ) -> AIToolServerSession {
+        let servers = servers ?? self.servers()
+        return AIToolServerSession(rounds: rounds) {
+            servers
         } consent: { call in
             await MainActor.run { asked.calls.append(call) }
             return allowing
@@ -356,6 +393,16 @@ final class StubServer {
 
     var argv: [String] {
         decode(root.appending(path: "argv.log"))
+    }
+
+    /// App-servers started, one `argv.log` line each; a listing is not one of them.
+    var launches: Int {
+        text(root.appending(path: "argv.log")).split(separator: "\n").count
+    }
+
+    /// Listings started, one `list-argv.log` line each.
+    var listed: Int {
+        text(root.appending(path: "list-argv.log")).split(separator: "\n").count
     }
 
     var listArgv: [String] {

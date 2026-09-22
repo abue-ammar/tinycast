@@ -61,7 +61,9 @@ function* lines() {
 // `mcp list --json` is a separate, short-lived invocation: it is how the app-server's launch
 // learns which of the user's own servers to disable, without starting a single one of them.
 if (ARGV.includes("mcp") && ARGV.includes("list")) {
-    fs.writeFileSync(path.join(ROOT, "list-argv.log"), JSON.stringify(ARGV) + "\n");
+    fs.appendFileSync(path.join(ROOT, "list-argv.log"), JSON.stringify(ARGV) + "\n");
+    // Held open so two launches, or a launch and a Stop, can overlap inside the read.
+    sleep(Number(process.env.TC_STUB_LIST_DELAY ?? 0));
     if (MODE === "list-fails") process.exit(1);
     if (MODE === "list-garbage") {
         fs.writeSync(1, "warning: this is not the list\n");
