@@ -488,7 +488,9 @@ final class ClipboardStore {
     func search(_ query: String, filter: ClipboardFilter) -> [ClipboardItem] {
         // Load-bearing: a settled OCR query changes the answer without `items` changing.
         _ = searchRevision
-        let q = query.trimmingCharacters(in: .whitespaces)
+        let parsed = ClipboardQuery(query)
+        let q = parsed.text
+        let filter = parsed.filter ?? filter
         updateTextSearch(q, filter: filter)
         // The filter joins the key: `rows` rebuilds per render, so a query-only memo goes stale.
         if let searchCache, searchCache.query == q, searchCache.filter == filter {

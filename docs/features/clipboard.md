@@ -197,9 +197,9 @@ an empty result centres **No Results** in one row. Escape clears a non-empty que
 The filter is not gated on the list having rows: an over-narrow filter empties it, and the button is
 the way back out.
 
-`ClipboardFilter` owns the seven cases and everything the UI needs from them — title, glyph, and the
-`emptyMessage` that stops "Clipboard history is empty" from appearing over a history that only looks
-empty. The cases are **exclusive**: a copied URL is a link, not a narrower kind of text, so *Text
+`ClipboardFilter` owns the seven cases and everything the UI needs from them — title, glyph, typed
+names, and the `emptyMessage` that stops "Clipboard history is empty" from appearing over a history
+that only looks empty. The cases are **exclusive**: a copied URL is a link, not a narrower kind of text, so *Text
 Only* means prose, and *Colors Only* takes `#FF5733` out of it.
 
 `ClipboardItem.textForm` derives `plain`/`color`/`link`/`email` from the text on demand — nil for an
@@ -220,6 +220,20 @@ in pin order, and the filter joins the search memo's key — keying on the query
 stale rows for a render or more, since the filter changes without the query moving. One consequence
 of filtering after the fact: the FTS statement's `LIMIT 200` applies to the *unfiltered* matches, so
 a narrow filter over a broad query can show fewer rows than the history holds.
+
+### Typed filters
+
+The query can name the filter too, the way Raycast reads it. `ClipboardQuery` lifts it out before
+anything searches: **`is:` and a type** (`is:image cat`) sets the filter anywhere in the query and
+the rest is searched, and a query that is **only** a type name (`image`, `Links`) lists that type.
+The names are each type's singular and plural, plus `colour`. The price of the bare form is that a
+lone `image` cannot search for the word; `image of a cat` still does. An unknown `is:banana` stays
+in the query as text.
+
+A typed filter **outranks the menu's**: `PaletteState.activeClipboardFilter` resolves the two, and
+the header button, the menu's highlight and the empty message all read it. Picking from the menu
+drops the typed token, which would otherwise keep outranking the pick. The store parses the raw
+query itself in `search(_:filter:)`, so the memo, OCR search and ⌘1…⌘0 all see the same split.
 
 ## Colours
 

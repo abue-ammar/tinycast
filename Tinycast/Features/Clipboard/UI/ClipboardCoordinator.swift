@@ -53,7 +53,7 @@ final class ClipboardCoordinator {
 
     func followSearchResults(query: String, previous: [ClipboardItem], current: [ClipboardItem]) {
         guard palette.isVisible, palette.mode == .clipboard,
-            palette.query.trimmingCharacters(in: .whitespaces) == query,
+            ClipboardQuery(palette.query).text == query,
             previous.indices.contains(palette.selection)
         else { return }
         let selectedID = previous[palette.selection].id

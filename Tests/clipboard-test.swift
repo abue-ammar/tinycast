@@ -21,6 +21,8 @@ struct ClipboardTests {
         colorFormatsRoundTrip()
         typeFilterSplitsTheHistory()
         typeFilterJoinsTheSearchMemo()
+        typedFiltersParse()
+        typedFiltersNarrowTheSearch()
         persistence()
         exportSeesPastTheMemoryWindow()
         importedImagesArriveOnce()
@@ -472,6 +474,53 @@ struct ClipboardTests {
                 store.search("shared", filter: .text).map(\.text) == ["shared token prose"],
                 "and switching filters again re-runs rather than reusing")
             expect(store.search("shared", filter: .all).count == 2, "back to both")
+        }
+    }
+
+    /// An `is:` token or a lone type name lifts out; everything else stays searchable.
+    static func typedFiltersParse() {
+        let cases: [(String, String, ClipboardFilter?)] = [
+            ("image", "", .image),
+            ("  Images ", "", .image),
+            ("colour", "", .color),
+            ("is:image", "", .image),
+            ("IS:Link apple", "apple", .link),
+            ("apple is:links", "apple", .link),
+            ("is:text is:email hi", "hi", .email),
+            ("image of a cat", "image of a cat", nil),
+            ("is:banana split", "is:banana split", nil),
+            ("is:", "is:", nil),
+            ("plain  spaced   query", "plain  spaced   query", nil),
+        ]
+        for (raw, text, filter) in cases {
+            let parsed = ClipboardQuery(raw)
+            expect(
+                parsed.text == text && parsed.filter == filter,
+                "\"\(raw)\" parses to (\"\(text)\", \(String(describing: filter)))")
+        }
+    }
+
+    /// A typed filter outranks the menu's, and the rest of the query still searches.
+    static func typedFiltersNarrowTheSearch() {
+        withStore { store, _ in
+            store.addText("apple pie recipe", sourceBundleID: nil)
+            store.addText("https://apple.com", sourceBundleID: nil)
+            store.addText("https://swift.org", sourceBundleID: nil)
+            store.addText("#FF5733", sourceBundleID: nil)
+
+            expect(
+                store.search("links", filter: .all).map(\.text)
+                    == ["https://swift.org", "https://apple.com"],
+                "a lone type name lists that type")
+            expect(
+                store.search("is:link apple", filter: .all).map(\.text) == ["https://apple.com"],
+                "is: narrows a search that keeps going")
+            expect(
+                store.search("is:color", filter: .text).map(\.text) == ["#FF5733"],
+                "a typed filter outranks the menu's")
+            expect(
+                store.search("apple", filter: .text).map(\.text) == ["apple pie recipe"],
+                "without one, the menu's filter still applies")
         }
     }
 

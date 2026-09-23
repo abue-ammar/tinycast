@@ -65,6 +65,64 @@ enum ClipboardFilter: CaseIterable, Sendable {
     func apply(to items: [ClipboardItem]) -> [ClipboardItem] {
         self == .all ? items : items.filter(matches)
     }
+
+    /// What `is:` takes, or a query on its own; `all` has none, since no query means it.
+    private var names: [String] {
+        switch self {
+        case .all: return []
+        case .text: return ["text", "texts"]
+        case .image: return ["image", "images"]
+        case .file: return ["file", "files"]
+        case .color: return ["color", "colors", "colour", "colours"]
+        case .link: return ["link", "links"]
+        case .email: return ["email", "emails"]
+        }
+    }
+
+    init?(name: some StringProtocol) {
+        let word = name.lowercased()
+        guard let match = Self.allCases.first(where: { $0.names.contains(word) }) else {
+            return nil
+        }
+        self = match
+    }
+}
+
+/// A query with its typed filter lifted out. See docs/features/clipboard.md#typed-filters.
+struct ClipboardQuery: Sendable {
+    /// What is left to search for, trimmed.
+    let text: String
+    /// The typed filter, which outranks the menu's; nil when the query names none.
+    let filter: ClipboardFilter?
+
+    private static let typePrefix = "is:"
+    /// Longer than any type name, so a pasted multi-MB query skips the lookup.
+    private static let nameLimit = 16
+
+    init(_ raw: String) {
+        let trimmed = raw.trimmingCharacters(in: .whitespaces)
+        if trimmed.utf8.count <= Self.nameLimit, let filter = ClipboardFilter(name: trimmed) {
+            text = ""
+            self.filter = filter
+            return
+        }
+        var filter: ClipboardFilter?
+        var kept: [Substring] = []
+        for token in trimmed.split(whereSeparator: \.isWhitespace) {
+            if let typed = Self.typedFilter(token) { filter = typed } else { kept.append(token) }
+        }
+        // Rejoined only when a token went, so an ordinary query keeps its own spacing.
+        text = filter == nil ? trimmed : kept.joined(separator: " ")
+        self.filter = filter
+    }
+
+    /// An unknown `is:foo` is left as text, so it still searches for what was typed.
+    private static func typedFilter(_ token: Substring) -> ClipboardFilter? {
+        guard token.range(of: typePrefix, options: [.caseInsensitive, .anchored]) != nil else {
+            return nil
+        }
+        return ClipboardFilter(name: token.dropFirst(typePrefix.count))
+    }
 }
 
 extension ClipboardItem {

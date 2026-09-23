@@ -20,6 +20,8 @@ final class PaletteState {
     var isComposing = false
     /// The clipboard screen's type filter, reset with the rest of the screen state on each summon.
     var clipboardFilter: ClipboardFilter = .all
+    /// The filter the clipboard list obeys: one typed into the query outranks the menu's.
+    var activeClipboardFilter: ClipboardFilter { ClipboardQuery(query).filter ?? clipboardFilter }
     /// The file search screen's type filter, reset on each summon like the clipboard's.
     var fileSearchFilter: FileSearchFilter = .all
     /// The emoji picker's visible category, reset with the rest of a freshly opened screen.

@@ -150,6 +150,9 @@ struct RootPaletteView: View {
                     startsSection: index == 1
                 ) {
                     vm.clipboardFilter = filter
+                    // A typed filter left in the query would outrank the one just picked.
+                    let typed = ClipboardQuery(vm.query)
+                    if typed.filter != nil { vm.query = typed.text }
                 }
             })
     }
@@ -657,7 +660,7 @@ struct RootPaletteView: View {
             if !isCollapsed, vm.mode == .clipboard {
                 headerGutter(width: metrics.spacing.md)
                 ClipboardFilterButton(
-                    filter: vm.clipboardFilter, isOpen: openMenu == .clipboardFilter,
+                    filter: vm.activeClipboardFilter, isOpen: openMenu == .clipboardFilter,
                     action: toggleClipboardFilter)
             }
             if !isCollapsed, vm.mode == .fileSearch {
@@ -941,7 +944,7 @@ struct RootPaletteView: View {
             closeMenus()
             return
         }
-        let active = ClipboardFilter.allCases.firstIndex(of: vm.clipboardFilter) ?? 0
+        let active = ClipboardFilter.allCases.firstIndex(of: vm.activeClipboardFilter) ?? 0
         open(.clipboardFilter, highlighting: active)
     }
 
