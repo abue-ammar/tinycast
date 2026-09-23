@@ -24,15 +24,15 @@ Three fresh processes per case; values are median physical footprint in MiB.
 
 | Entries | Row pixels | Current main | Repair | 96px entries, both |
 | ---: | ---: | ---: | ---: | ---: |
-| 100 | 48 | 7.91 | 7.88 | 0 |
-| 500 | 48 | 14.50 | 14.63 | 0 |
-| 500 | 52 | 14.63 | 14.61 | 0 |
-| 500 | 58 | 14.64 | 14.64 | 0 |
+| 100 | 48 | 8.00 | 7.89 | 0 |
+| 500 | 48 | 14.81 | 14.75 | 0 |
+| 500 | 52 | 14.89 | 14.86 | 0 |
+| 500 | 58 | 14.81 | 14.86 | 0 |
 
 For 500 entries at 48px, both retained 4,608,000 bytes of row bitmap data
-and no 96px entries. The 0.13 MiB process difference is smaller than the
-variation between fresh runs. These are synthetic cache workloads: 500 keys
-cycle six source icons, not 500 distinct installed apps.
+and no 96px entries. The process medians differ by at most 0.11 MiB across
+these cases. These are synthetic cache workloads: 500 keys cycle six source
+icons, not 500 distinct installed apps.
 
 ## Debug application
 
@@ -56,13 +56,17 @@ repeat run after the foreground app changed. `leaks` was not run on these builds
 
 ## Behavior and visual check
 
-- `ZDOTDIR=/tmp TINYCAST_TEST_JOBS=4 ./Scripts/run-tests.sh`: 75/75 passed.
+- `ZDOTDIR=/tmp TINYCAST_TEST_JOBS=1 ./Scripts/run-tests.sh`: 75/75 passed.
+  Under concurrent CPU load, a four-worker run failed timing assertions in
+  `ext-test` and `clipboard-text-test`; both passed individually and in the
+  single-worker full run.
   Without the temporary `ZDOTDIR`, two AI harnesses picked real installed CLIs
   through the user's login-shell configuration instead of their test stubs;
   both failed identically on unmodified current main.
 - `icon-cache-test` covers a cold 48px row without a 96px cache entry, warm
-  full-size reuse, replacement, and 72 final-size byte comparisons across six
-  icons, three sizes, two scales and two appearances.
+  full-size reuse, replacement, a measured 96px resize fallback, and 72
+  final-size byte comparisons across six icons, three sizes, two scales and
+  two appearances.
 - Both Debug builds passed with the same existing Clipboard compiler warnings.
   Lint passed with existing warnings; the Model import check and `git diff
   --check` passed.
@@ -77,4 +81,6 @@ The repair uses a 96px file icon only when that cache is already warm. A
 row-only request retains only its smaller row bitmap. If resizing fails, all
 bitmap representations are charged to the row cache; a source that cannot be
 measured is returned without caching. This addresses the memory regression
-raised on PR #858 and the fallback-cost review comment.
+raised on PR #858 and the fallback-cost review comment. Row lookup, warm-source
+lookup and insertion use the same captured style-generation key, so an icon
+decoded across an appearance invalidation cannot publish under the new key.

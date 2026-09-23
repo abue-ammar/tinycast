@@ -104,6 +104,13 @@ struct IconCacheTests {
         expect(IconCache.cached(forFile: finder, stamp: 2, size: size) == nil, "restyle clears rows")
         let newer = IconCache.icon(forFile: finder, stamp: 2, size: size)
         expect(newer !== changed, "a style change regenerates a row")
+        let fallbackSize = IconSize(points: 48, scale: 2)
+        let fallback = IconCache.icon(forFile: finder, stamp: 3, size: fallbackSize)
+        expect(pixelWidth(fallback) == 96, "the full-size resize fallback keeps its pixels")
+        expect(
+            IconCache.cached(forFile: finder, stamp: 3, size: fallbackSize) === fallback,
+            "a measured resize fallback is cached")
+        expect(IconCache.cached(forFile: finder, stamp: 3) == nil, "the fallback stays row-only")
     }
 
     static func rowLifetime() {
