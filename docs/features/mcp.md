@@ -118,7 +118,12 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   a tool its server annotates `readOnlyHint: true` without raising an elicitation, even under
   `approvalPolicy: "untrusted"` — and that annotation is the server's own claim. So each server is
   passed with `default_tools_approval_mode="prompt"`, which makes Codex ask for every tool; the
-  answer then comes from `MCPTrustPolicy`, exactly as it does on an API route.
+  answer then comes from `MCPTrustPolicy`, exactly as it does on an API route. Reading a server's
+  resources does not ask: Codex adds `list_mcp_resources`, `list_mcp_resource_templates` and
+  `read_mcp_resource` whenever any server is configured, and none of its settings removes them or
+  routes them through approval (codex-rs `spec_plan.rs`, `read_mcp_resource.rs`, 0.156). So on
+  Codex **Ask Each Chat** covers a server's tools, not its resources; **Never Allow** still keeps
+  the server out, because it is never passed.
 - **Tinycast exposes nothing back.** A server request — sampling, elicitation, roots — is declined
   with a JSON-RPC error. The client advertises no capabilities in `initialize`.
 - **`Model/` stays Foundation-only.** `mcp-test` compiles the shipped models and pins the framing,

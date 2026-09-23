@@ -108,6 +108,9 @@ A few things are different on Codex:
   at that moment, the helper keeps the server until your next message or ten idle minutes.
 - An environment variable reaches a server Codex starts only if its name is letters, digits and
   `_`, not starting with a digit. `API_TOKEN` works; `API-TOKEN` is not passed on.
+- Codex can also read what a server publishes for reading, like Notion's guides, without asking.
+  **Ask Each Chat** covers a server's tools on Codex, not those reads; **Never Allow** still keeps
+  a server out entirely.
 
 Apple Intelligence and the installed Grok, OpenCode and Cursor commands never get tools. For those,
 chat works exactly as it does without MCP.
