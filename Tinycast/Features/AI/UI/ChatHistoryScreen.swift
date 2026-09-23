@@ -38,6 +38,10 @@ struct ChatHistoryScreen: PaletteScreen {
         case .deleteAll:
             deleteAll()
             return true
+        case .continueInChat:
+            guard let conversation = conversation(at: selection) else { return false }
+            coordinator.continueInChat(id: conversation.id)
+            return true
         default: return false
         }
     }
@@ -94,9 +98,15 @@ enum ChatHistoryActionsMenu {
             header: conversation.displayTitle,
             items: [
                 PopoverMenuItem(
-                    title: "Open Chat", systemImage: "bubble.left.and.bubble.right", shortcut: "↵"
+                    title: "Open Chat", systemImage: "sparkles", shortcut: "↵"
                 ) {
                     coordinator.openChat(id: conversation.id)
+                },
+                PopoverMenuItem(
+                    title: "Continue in AI Chat", systemImage: "bubble.left.and.bubble.right",
+                    shortcut: "⌘J"
+                ) {
+                    coordinator.continueInChat(id: conversation.id)
                 },
                 PopoverMenuItem(
                     title: "Delete Chat", systemImage: "trash", startsSection: true, shortcut: "⌃X",

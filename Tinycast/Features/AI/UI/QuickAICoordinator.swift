@@ -106,14 +106,19 @@ final class QuickAICoordinator {
     /// A chat the window holds opens there, since two writers would each save over the other.
     func openChat(id: UUID) {
         guard chats.openInQuickAI(id: id) else {
-            paletteCoordinator.hidePalette(restoreFocus: false)
-            chatCoordinator.openChat(id: id)
-            chatCoordinator.showWindow()
+            continueInChat(id: id)
             return
         }
         // History is left behind rather than stacked under, so one back step leaves chat for good.
         _ = palette.pop()
         palette.replace(mode: .ai)
+    }
+
+    /// Chat History's ⌘J: a saved chat opens in the window, taken over from Quick AI if it is there.
+    func continueInChat(id: UUID) {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        chatCoordinator.openChat(id: id)
+        chatCoordinator.showWindow()
     }
 
     func deleteChat(id: UUID) {

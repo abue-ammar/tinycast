@@ -24,9 +24,7 @@ struct AIChatSidebarView: View {
         var sections: [ChatSection] = []
         let pinned = results.filter(\.isPinned)
         if !pinned.isEmpty { sections.append(ChatSection(title: "Pinned", conversations: pinned)) }
-        var unpinned = results.filter { !$0.isPinned }
-        if let draft { unpinned.insert(draft, at: 0) }
-        for conversation in unpinned {
+        for conversation in results where !conversation.isPinned {
             let title = DateBucket(for: conversation.updatedAt).title
             if sections.last?.title == title {
                 sections[sections.count - 1].conversations.append(conversation)
@@ -51,6 +49,8 @@ struct AIChatSidebarView: View {
 
     @ViewBuilder private var list: some View {
         let sections = sections
+        let answering = chats.answeringIDs
+        let openID = chats.window.session.id
         if sections.isEmpty {
             emptyState.frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
@@ -58,14 +58,17 @@ struct AIChatSidebarView: View {
                 ForEach(sections) { section in
                     Section(section.title) {
                         ForEach(section.conversations) { conversation in
-                            row(conversation).tag(conversation.id)
+                            row(
+                                conversation, isAnswering: answering.contains(conversation.id),
+                                isSelected: conversation.id == openID
+                            )
+                            .tag(conversation.id)
                         }
                     }
                 }
             }
             .listStyle(.sidebar)
             .contextMenu(forSelectionType: UUID.self) { ids in
-                // The unsaved new chat has nothing to pin, rename, copy or delete yet.
                 if let id = ids.first, let conversation = history.conversation(id: id) {
                     menu(for: conversation)
                 }
@@ -76,15 +79,6 @@ struct AIChatSidebarView: View {
                 Task { await coordinator.deleteChat(id: id) }
             }
         }
-    }
-
-    /// The open chat before its first message: unsaved, yet it is where you are, so it has a row.
-    private var draft: ChatConversation? {
-        let session = chats.window.session
-        guard query.isEmpty, history.conversation(id: session.id) == nil else { return nil }
-        return ChatConversation(
-            id: session.id, title: "New Chat", preview: "", createdAt: session.createdAt,
-            updatedAt: Date(), messageCount: 0)
     }
 
     @ViewBuilder private var emptyState: some View {
@@ -101,7 +95,9 @@ struct AIChatSidebarView: View {
         }
     }
 
-    @ViewBuilder private func row(_ conversation: ChatConversation) -> some View {
+    @ViewBuilder private func row(
+        _ conversation: ChatConversation, isAnswering: Bool, isSelected: Bool
+    ) -> some View {
         if renaming == conversation.id {
             TextField("Chat name", text: $renameText, prompt: Text(conversation.title))
                 .textFieldStyle(.plain)
@@ -112,18 +108,8 @@ struct AIChatSidebarView: View {
                     if !focused { commitRename(conversation.id) }
                 }
         } else {
-            HStack(spacing: Theme.Spacing.sm) {
-                Text(conversation.displayTitle)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                Spacer(minLength: 0)
-                if chats.answeringIDs.contains(conversation.id) {
-                    ProgressView()
-                        .controlSize(.mini)
-                        .accessibilityLabel("Answering")
-                }
-            }
-            .help(conversation.displayTitle)
+            ChatSidebarRow(
+                conversation: conversation, isAnswering: isAnswering, isSelected: isSelected)
         }
     }
 
@@ -161,7 +147,7 @@ struct AIChatSidebarView: View {
         coordinator.rename(id: id, to: renameText)
     }
 
-    /// The open chat is always the selected row, the unsaved new one included.
+    /// The open chat is the selected row; a new one has no row until its first message.
     private var selection: Binding<UUID?> {
         Binding(
             get: { chats.window.session.id },
@@ -172,6 +158,49 @@ struct AIChatSidebarView: View {
         )
     }
 
+}
+
+/// A chat's title, then a spinner while it answers or a pin; hover is a fainter selection.
+private struct ChatSidebarRow: View {
+    let conversation: ChatConversation
+    let isAnswering: Bool
+    let isSelected: Bool
+    @State private var isHovered = false
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.sm) {
+            Text(conversation.displayTitle)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 0)
+            if isAnswering {
+                ProgressView()
+                    .controlSize(.mini)
+                    .accessibilityLabel("Answering")
+            } else if conversation.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .accessibilityLabel("Pinned")
+            }
+        }
+        // The whole cell, so the pointer never crosses a gap where no row is hovered.
+        .frame(maxHeight: .infinity)
+        .listRowInsets(EdgeInsets())
+        .contentShape(.rect)
+        .onHover { isHovered = $0 }
+        .listRowBackground(hoverFill)
+        .help(conversation.displayTitle)
+    }
+
+    /// Inset and rounded as the system's selection is, so the two read as one shape.
+    @ViewBuilder private var hoverFill: some View {
+        if isHovered, !isSelected {
+            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                .fill(Theme.Colors.rowHover)
+                .padding(.horizontal, Theme.Spacing.lg)
+        }
+    }
 }
 
 /// The sidebar's search field, drawn the way Settings' own is so the two windows match.

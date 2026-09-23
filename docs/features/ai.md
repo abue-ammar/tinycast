@@ -358,9 +358,9 @@ The second footer control is the palette's normal Actions (`⌘K`) menu. It owns
 Remove Attachments when those apply. The chords are Raycast's where it has one, and `AIScreen.perform`
 maps each `PaletteShortcut` to its action. AI Settings takes ⌥⌘, because ⌘, stays the app's own
 Settings on every screen. Continuing closes the palette and carries the half-typed line into the
-window's composer with the conversation. Chat History is the palette's own browser over the same saved chats the window's
-sidebar lists: opening one there opens it in Quick AI, or in the window when the window already
-holds it.
+window's composer with the conversation. Chat History is the palette's own browser over the same
+saved chats the window's sidebar lists: ↵ opens one in Quick AI, or in the window when the window
+already holds it, and Continue in AI Chat (`⌘J`) takes it to the window either way.
 
 ### AI Chat
 
@@ -400,9 +400,11 @@ key monitor for ⌘V, ⌘F, ⌘G / ⇧⌘G, ⌘K and the Actions menu's own chor
   toolbar button whether the click or ⌘K opened it.
 
 - **Sidebar** (`AIChatSidebarView`): a filter field over a `List` of every saved chat, Pinned
-  first and then bucketed by day like Clipboard. The open chat is always the selected row: before
-  its first message it is an unsaved `New Chat` at the top of Today, with no actions until it has
-  something to act on. A row shows a spinner while its reply streams.
+  first and then bucketed by day like Clipboard. The open chat is the selected row. A new chat has
+  none until its first message saves it, so starting one or leaving an empty one never adds or
+  drops a row under the pointer. A row shows a spinner while its reply streams, else a pin when
+  pinned. Its content fills the whole cell, so hover — a fainter fill in the selection's own
+  shape — never blinks off crossing between rows.
   The context menu pins, renames in place, copies or exports the chat as Markdown
   (`ChatSession.markdownTranscript`), and deletes one or all through `DialogController`; ⌫ deletes
   the selected chat the same way.
