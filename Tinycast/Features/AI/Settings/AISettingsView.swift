@@ -130,7 +130,8 @@ struct AISettingsView: View {
                 ForEach(AIToolRounds.allCases) { Text($0.title).tag($0) }
             } label: {
                 SettingsRowTitle(.aiChat, "Tool call rounds")
-                Text("A reply stops after this many. API connections only.")
+                Text(
+                    "A reply stops after this many; Unlimited runs until Stop. API connections only.")
             }
         } header: {
             SettingsSectionHeader(.aiChat)

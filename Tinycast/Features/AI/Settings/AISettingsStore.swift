@@ -84,7 +84,7 @@ final class AISettingsStore {
             ?? .fiveMinutes
         toolRounds =
             AIToolRounds(rawValue: defaults.integer(forKey: AppSettingsKey.aiToolRounds.rawValue))
-            ?? .ten
+            ?? .twentyFive
         enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
             defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
         if case .api(let connection, let model, _) = defaultModel,

@@ -37,12 +37,14 @@ the two meet.
 - **A refused or failed call is content, never a thrown error.** It comes back as an `AIToolResult`
   the model can read and work around, so a declined tool ends in an honest sentence rather than a
   failed turn.
-- **Every turn is bounded three ways.** The round cap is `AISettingsStore.toolRounds` — Settings → AI
-  → Chat → Tool call rounds, an `AIToolRounds` of 10, 25, 50 or 100, 10 unless changed — after which
-  the turn fails saying so: a model that only calls has stopped answering, but a long chain of calls
-  is also honest work, which is why it is a choice and not a constant. Each result is cut to
-  `maxResultBytes`, and a turn's results together to `maxTurnResultBytes`, because tool output is
-  appended inside the turn and so never passes through `ChatSession.boundedContext`.
+- **Every turn is bounded three ways.** The round cap is `AISettingsStore.toolRounds` — Settings →
+  AI → Chat → Tool call rounds, an `AIToolRounds` of 10, 25, 50, 100 or Unlimited, 25 unless changed
+  — after which the turn fails saying so: a model that only calls has stopped answering, but a long
+  chain of calls is also honest work, which is why it is a choice and not a constant. Unlimited
+  hands the loop no cap, so only the model or Stop ends the turn, even while the palette is hidden;
+  the byte ceilings still bound what the rounds feed back, not how many are billed. Each result is
+  cut to `maxResultBytes`, and a turn's results together to `maxTurnResultBytes`, because tool
+  output is appended inside the turn and so never passes through `ChatSession.boundedContext`.
 - **A server's handle is derived, never typed.** `MCPSlug` makes it from the name and uniques it, so
   `@slug` can never name two servers or nothing at all. An unknown handle is not an address: the text
   is sent exactly as it was typed.

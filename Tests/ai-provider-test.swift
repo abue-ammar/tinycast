@@ -801,7 +801,7 @@ struct AIProviderTests {
         expect(fresh.retention == .forever, "retention defaults to Forever, so upgrading deletes nothing")
         expect(fresh.opensTo == .recent, "chat reopens on the recent conversation by default")
         expect(fresh.newChatAfter == .fiveMinutes, "the idle window defaults to five minutes")
-        expect(fresh.toolRounds == .ten, "a reply's tool rounds default to the ten it shipped with")
+        expect(fresh.toolRounds == .twentyFive, "a reply's tool rounds default to 25")
 
         fresh.retention = .week
         fresh.opensTo = .newConversation
@@ -809,10 +809,20 @@ struct AIProviderTests {
         fresh.toolRounds = .fifty
         let reopened = AISettingsStore(defaults: defaults)
         expect(reopened.toolRounds == .fifty, "the tool round cap persists")
+        reopened.toolRounds = .unlimited
+        expect(
+            AISettingsStore(defaults: defaults).toolRounds == .unlimited,
+            "Unlimited persists rather than reading as the default")
+        expect(AIToolRounds.unlimited.limit == nil, "and hands the loop no cap")
+        expect(AIToolRounds.fifty.limit == 50, "while a step hands it its own number")
         defaults.set(7, forKey: AppSettingsKey.aiToolRounds.rawValue)
         expect(
-            AISettingsStore(defaults: defaults).toolRounds == .ten,
+            AISettingsStore(defaults: defaults).toolRounds == .twentyFive,
             "a stored cap no case carries reads as the default rather than an arbitrary number")
+        defaults.set(0, forKey: AppSettingsKey.aiToolRounds.rawValue)
+        expect(
+            AISettingsStore(defaults: defaults).toolRounds == .twentyFive,
+            "and so does a 0, which is neither a step nor Unlimited")
         expect(reopened.retention == .week, "retention persists")
         expect(reopened.opensTo == .newConversation, "the open policy persists")
         expect(reopened.newChatAfter == .never, "Never persists rather than reading as the default")

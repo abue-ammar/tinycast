@@ -6,8 +6,12 @@ enum AIToolRounds: Int, CaseIterable, Identifiable, Sendable {
     case twentyFive = 25
     case fifty = 50
     case hundred = 100
+    case unlimited = -1
 
     var id: Int { rawValue }
 
-    var title: String { "\(rawValue)" }
+    var title: String { limit.map { "\($0)" } ?? "Unlimited" }
+
+    /// `nil` is no cap: the reply runs until the model stops asking or Stop is pressed.
+    var limit: Int? { self == .unlimited ? nil : rawValue }
 }

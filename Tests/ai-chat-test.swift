@@ -36,6 +36,7 @@ struct AIChatTests {
         segmentsInterleaveSearchesAndTools()
         await theToolLoopRunsUntilTheModelStopsAsking()
         await theToolLoopRefusesToRunForever()
+        await anUnlimitedToolLoopRunsPastEveryStep()
         await toolOutputIsBoundedBeforeItIsBilled()
         toolUsesPersistAndSettleOnReload()
 
@@ -128,6 +129,21 @@ struct AIChatTests {
             "and the turn fails with a sentence naming the cap it stopped at")
     }
 
+    /// Unlimited has no cap to hit, so only the model's own last answer ends the turn.
+    static func anUnlimitedToolLoopRunsPastEveryStep() async {
+        let round: [AIStreamEvent] = [
+            .toolCallRequested(AIToolCall(id: "c", name: "fs__read", arguments: "{}"))
+        ]
+        let base = ScriptedProvider(
+            rounds: Array(repeating: round, count: 120) + [[.text("done"), .finished]])
+        let invoker = RecordingInvoker(result: "again")
+        let events = await collect(loop(base, invoker, maxRounds: nil))
+        expect(
+            base.requests.count == 121,
+            "the loop keeps going past 100 rounds when it has no cap")
+        expect(events.last == .finished, "and finishes on the model's answer instead of failing")
+    }
+
     static func toolOutputIsBoundedBeforeItIsBilled() async {
         let base = ScriptedProvider(rounds: [
             [.toolCallRequested(AIToolCall(id: "c1", name: "fs__read", arguments: "{}"))],
@@ -177,7 +193,7 @@ struct AIChatTests {
     private static let turn = AIRequest(messages: [AIMessage(role: .user, text: "go")])
 
     private static func loop(
-        _ base: ScriptedProvider, _ invoker: RecordingInvoker, maxRounds: Int = 10
+        _ base: ScriptedProvider, _ invoker: RecordingInvoker, maxRounds: Int? = 10
     ) -> AIToolLoopProvider {
         AIToolLoopProvider(
             base: base,
