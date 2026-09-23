@@ -103,8 +103,7 @@ final class ChatGPTSubscriptionManager {
     private func refreshNow() async {
         phase = .starting
         do {
-            // A check is not a turn: it keeps the running list rather than relaunch around it.
-            try await client.start(toolServers: client.toolServers)
+            try await client.startForCheck()
             guard try await restoreAccount() else {
                 phase = .signedOut
                 client.stop()

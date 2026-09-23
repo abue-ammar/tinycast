@@ -102,6 +102,14 @@ final class CodexAppServerClient {
         try await task.value
     }
 
+    /// A status check has no list of its own: it joins whatever launch is pending or running.
+    func startForCheck() async throws {
+        // A failed launch does not answer the check, which then starts plainly on its own.
+        while let pending = pendingLaunch { _ = await pending.task.result }
+        if isRunning { return }
+        try await start()
+    }
+
     private func launch(_ toolServers: [AIToolServer]) async throws {
         let generation = self.generation
         guard let executable = await ExecutableLocator.locate("codex") else {

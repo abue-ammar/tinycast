@@ -25,6 +25,7 @@ struct CodexTurnTests {
         await aForeignServersElicitationIsNeverAsked()
         await aListThatCannotBeReadRefusesToStart()
         await concurrentStartsLaunchOnce()
+        await aStatusCheckJoinsATurnsPendingLaunch()
         await aChangedListRelaunchesAndTheSameOneDoesNot()
         await aWithdrawnServerStopsTheIdleHelper()
         await twoCallsAreAskedAboutByTheirOwnNames()
@@ -140,6 +141,38 @@ struct CodexTurnTests {
         expect(
             (try? outcome.get()) == nil && server.launches == 1 && !client.isRunning,
             "and a Stop that lands while a launch reads the list keeps it from starting afterwards")
+    }
+
+    /// A check has no list of its own, so it must never relaunch a turn's app-server without one.
+    static func aStatusCheckJoinsATurnsPendingLaunch() async {
+        guard let server = StubServer(mode: "mcp") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        let manager = ChatGPTSubscriptionManager(supportDirectory: server.root)
+        setenv("TC_STUB_LIST_DELAY", "300", 1)
+        defer {
+            unsetenv("TC_STUB_LIST_DELAY")
+            manager.stop()
+            server.tearDown()
+        }
+        let stream = manager.turns.stream(
+            AIRequest(messages: [AIMessage(role: .user, text: "Hello")]), model: "gpt-5-codex",
+            effort: nil, toolServers: server.session(allowing: true, asked: Box()))
+        let turn = Task {
+            var finished = false
+            do {
+                for try await event in stream where event == .finished { finished = true }
+            } catch {}
+            return finished
+        }
+        _ = await server.awaitCondition { server.listed == 1 }
+        await manager.refresh().value
+        let finished = await turn.value
+        expect(
+            finished && server.launches == 1
+                && server.argv.contains { $0.hasPrefix("mcp_servers.tinycast-probe.") },
+            "a status check during a turn's launch joins it, and the turn keeps its servers")
     }
 
     /// The list is fixed at exec, so only a different one is worth a second launch.
