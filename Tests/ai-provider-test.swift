@@ -1239,6 +1239,27 @@ struct AIProviderTests {
         expect(
             delivered == ["one\n", "two\n", "four\n", "three\n", "six\n", "seven\n", "eight\n"],
             "and each local server reads only its own values, under its own names")
+        let shadowing = ["TC_MCP_0_0": "zero", "TC_MCP_0_1": "one", "Z": "zed"]
+        let shadowingDerived = CodexMCPLaunch.environment(servers: [local("s", shadowing)]) ?? [:]
+        let shadowingReads = ["TC_MCP_0_0", "TC_MCP_0_1", "Z", "TC_MCP_0_2"].map { key in
+            let launch = CodexMCPLaunch.command(
+                path: "/usr/bin/printenv", arguments: [key], environment: shadowing, server: 0)
+            return run(launch, environment: shadowingDerived)
+        }
+        expect(
+            shadowingReads == ["zero\n", "one\n", "zed\n", ""],
+            "a key spelled like a derived name still reads its own value, as do the keys after it")
+        let many = Dictionary(uniqueKeysWithValues: (0...10).map { ("K\($0)", "v\($0)") })
+        let manyDerived = CodexMCPLaunch.environment(servers: [local("m", many)]) ?? [:]
+        let manyReads = many.keys.sorted().map { key in
+            run(
+                CodexMCPLaunch.command(
+                    path: "/usr/bin/printenv", arguments: [key], environment: many, server: 0),
+                environment: manyDerived)
+        }
+        expect(
+            manyReads == many.keys.sorted().map { many[$0]! + "\n" },
+            "a tenth value and beyond reads whole, not as the first followed by a digit")
         let repeated = [(name: "TC_MCP_0_0", value: "a"), (name: "TC_MCP_0_0", value: "b")]
         expect(
             CodexMCPLaunch.distinct(repeated) == nil,
@@ -1268,8 +1289,8 @@ struct AIProviderTests {
     }
 
     private static let renamingArguments =
-        #"mcp_servers.tinycast-files.args=["-c","export API_KEY=\"$TC_MCP_0_0\"; "#
-        + #"unset TC_MCP_0_0; "#
+        #"mcp_servers.tinycast-files.args=["-c","set -- \"$TC_MCP_0_0\" \"$@\"; "#
+        + #"unset TC_MCP_0_0; export API_KEY=\"${1}\"; shift 1; "#
         + #"exec \"$@\"","tinycast-mcp","/usr/local/bin/node","server.js","--root=/tmp"]"#
 
     /// Spelled through a joined literal so no shell hook mistakes the key for a dotfile.

@@ -105,11 +105,14 @@ enum CodexMCPLaunch {
     ) -> (path: String, arguments: [String]) {
         let names = forwardedNames(environment)
         guard !names.isEmpty else { return (path, arguments) }
-        let moves = names.enumerated().map { key, name in
-            let derived = variable(server: index, key: key)
-            return "export \(name)=\"$\(derived)\"; unset \(derived)"
-        }
-        let script = (moves + [#"exec "$@""#]).joined(separator: "; ")
+        let derived = names.indices.map { variable(server: index, key: $0) }
+        // Read all before any export: a server's own key may be spelled like a derived name.
+        let capture = "set -- " + derived.map { "\"$\($0)\"" }.joined(separator: " ") + #" "$@""#
+        let exports = names.enumerated().map { key, name in "export \(name)=\"${\(key + 1)}\"" }
+        let script = (
+            [capture, "unset " + derived.joined(separator: " ")] + exports
+                + ["shift \(names.count)", #"exec "$@""#]
+        ).joined(separator: "; ")
         return ("/bin/sh", ["-c", script, "tinycast-mcp", path] + arguments)
     }
 
