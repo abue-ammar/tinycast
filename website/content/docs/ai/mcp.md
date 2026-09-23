@@ -41,7 +41,7 @@ A local server runs with your own user account, so only add commands you trust.
 Choose **HTTP**, paste the server's MCP URL, and select **OAuth**. Choose **Sign In**, complete the
 provider's browser sign-in and review its access request. Return to Tinycast when the browser says
 you can close the tab. **Signed in** confirms completion; **Test Connection** checks the authenticated
-session and reports its tool count. Save the server to use it in an API chat.
+session and reports its tool count. Save the server to use it in chat.
 
 Leave Client ID and Client secret blank when the provider supports automatic registration. If it
 requires your own registered OAuth client, enter its client ID and any required secret. Register

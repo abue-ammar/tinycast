@@ -12,10 +12,13 @@ final class MCPOAuthListener {
 
     isolated deinit { task?.cancel() }
 
-    func start(state: String, issuer: String, requiresIssuer: Bool, timeout: Duration = .seconds(300)) async throws {
+    func start(
+        state: String, issuer: String, requiresIssuer: Bool, timeout: Duration = .seconds(300)
+    ) async throws {
         guard result == nil else { throw CancellationError() }
-        let listener = try NetworkListener(using: .parameters { TCP() }
-            .localEndpoint(.hostPort(host: .ipv4(.loopback), port: 4962)))
+        let listener = try NetworkListener(
+            using: .parameters { TCP() }
+                .localEndpoint(.hostPort(host: .ipv4(.loopback), port: 4962)))
         listener.newConnectionLimit = 16
         try await withTaskCancellationHandler {
             try Task.checkCancellation()
@@ -25,7 +28,8 @@ final class MCPOAuthListener {
                     do {
                         try await withThrowingTaskGroup(of: Void.self) { group in
                             group.addTask { [weak self] in
-                                try await self?.run(listener, state: state, issuer: issuer, requiresIssuer: requiresIssuer)
+                                try await self?.run(
+                                    listener, state: state, issuer: issuer, requiresIssuer: requiresIssuer)
                             }
                             group.addTask {
                                 try await Task.sleep(for: timeout)
@@ -95,22 +99,27 @@ final class MCPOAuthListener {
             if message.metadata.endOfStream { return }
         }
         guard !accepted else { return }
-        guard let request = String(bytes: bytes, encoding: .utf8), request.contains("\r\n\r\n") else { return }
+        guard let request = String(bytes: bytes, encoding: .utf8), request.contains("\r\n\r\n") else {
+            return
+        }
         let line = request.components(separatedBy: "\r\n").first ?? ""
         let parts = line.split(separator: " ")
         var outcome: Result<String, Error>?
         if parts.count == 3, parts[0] == "GET" {
             do {
-                let code = try MCPOAuth.callback(String(parts[1]), state: state, issuer: issuer,
-                                               requiresIssuer: requiresIssuer)
+                let code = try MCPOAuth.callback(
+                    String(parts[1]), state: state, issuer: issuer,
+                    requiresIssuer: requiresIssuer)
                 outcome = .success(code)
             } catch MCPOAuth.Failure.denied {
                 outcome = .failure(MCPOAuth.Failure.denied)
             } catch { outcome = nil }
         }
         let status = outcome == nil ? "400 Bad Request" : "200 OK"
-        let page = outcome == nil ? "Invalid sign-in response." : "Return to Tinycast. You can close this tab."
-        let response = "HTTP/1.1 \(status)\r\nContent-Type: text/html; charset=utf-8\r\n"
+        let page =
+            outcome == nil ? "Invalid sign-in response." : "Return to Tinycast. You can close this tab."
+        let response =
+            "HTTP/1.1 \(status)\r\nContent-Type: text/html; charset=utf-8\r\n"
             + "Cache-Control: no-store\r\nContent-Security-Policy: default-src 'none'\r\n"
             + "Connection: close\r\nContent-Length: \(page.utf8.count)\r\n\r\n\(page)"
         if outcome != nil { self.accepted = true }
@@ -129,7 +138,8 @@ final class MCPOAuthListener {
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask { [weak self] in
-                    try await self?.read(connection, state: state, issuer: issuer, requiresIssuer: requiresIssuer)
+                    try await self?.read(
+                        connection, state: state, issuer: issuer, requiresIssuer: requiresIssuer)
                 }
                 group.addTask { try await Task.sleep(for: .seconds(5)) }
                 defer { group.cancelAll() }

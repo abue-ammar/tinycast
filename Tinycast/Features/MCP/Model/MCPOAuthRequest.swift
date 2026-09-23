@@ -13,11 +13,14 @@ enum MCPOAuthRequest {
         } else if let refresh = previous?.refreshToken, !refresh.isEmpty {
             fields["grant_type"] = "refresh_token"
             fields["refresh_token"] = refresh
-        } else { throw MCPOAuth.Failure.signInRequired }
+        } else {
+            throw MCPOAuth.Failure.signInRequired
+        }
         var request = URLRequest(url: try MCPOAuth.endpoint(registration.tokenEndpoint), timeoutInterval: 30)
         if registration.authMethod == "client_secret_basic", let secret = registration.clientSecret {
             let basic = MCPOAuth.escape(registration.clientID) + ":" + MCPOAuth.escape(secret)
-            request.setValue("Basic " + Data(basic.utf8).base64EncodedString(), forHTTPHeaderField: "Authorization")
+            request.setValue(
+                "Basic " + Data(basic.utf8).base64EncodedString(), forHTTPHeaderField: "Authorization")
         } else if registration.authMethod == "client_secret_post" {
             fields["client_secret"] = registration.clientSecret
         }
@@ -33,6 +36,7 @@ enum MCPOAuthRequest {
             "client_name": "Tinycast", "application_type": "native",
             "redirect_uris": [redirectURI],
             "grant_types": ["authorization_code", "refresh_token"], "response_types": ["code"],
-            "token_endpoint_auth_method": "none"])
+            "token_endpoint_auth_method": "none"
+        ])
     }
 }

@@ -391,7 +391,7 @@ was never the process's to begin with. See [MCP](mcp.md) for what goes on the la
 It creates an ephemeral thread for each request, injects prior user/assistant messages, and
 streams agent-message deltas, plus `item/started` for the reasoning and web-search items that feed the
 bubble's status line. System messages become developer instructions alongside Tinycast's fixed
-no-tools boundary. Cancellation interrupts the active turn, including one the server has started but
+boundary, which forbids every tool except the MCP tools an armed turn supplies. Cancellation interrupts the active turn, including one the server has started but
 not yet named: Stop arms that thread, and whichever of `turn/started` or the `turn/start` response
 names the turn first spends a single `turn/interrupt` on it.
 
@@ -566,9 +566,10 @@ rides along on every turn, because it is billed on every turn and nothing else i
 box already withholds their own text, so a switch that spared the preamble would add nothing; the
 preamble is the part that is billed on every turn for every user and has no other way off. Off
 disables the editor rather than hiding it, so what is being withheld stays readable. One thing it
-deliberately cannot reach: the Codex route always prepends its own instruction never to invoke
-tools, run commands or touch files. That is a sandbox boundary on a local CLI, not Tinycast
-describing itself, and a user switch must not be able to lift it.
+deliberately cannot reach: every installed CLI route prepends its own instruction never to run
+commands or touch files, and never to invoke a tool beyond the MCP tools an armed Codex or Claude
+turn supplies. That is a sandbox boundary on a local CLI, not Tinycast describing itself, and a user
+switch must not be able to lift it.
 
 `mcpEnabled` and `mcpServers` are excluded for the reasons in [mcp.md](mcp.md).
 `aiConnections`, `aiDefaultModel`, `aiSystemPrompt` and `aiSystemPromptEnabled` are deliberately

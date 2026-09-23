@@ -34,8 +34,10 @@ final class MCPOAuthManager {
     /// Takes the caller's credentials: a view body asks this and must not read the Keychain.
     func status(for server: MCPServer, stored credentials: MCPOAuth.Credentials?) -> Status {
         if let status = statuses[server.id] { return status }
-        guard let registration = credentials?.registration, registration.resource == Self.resource(of: server),
-            let token = credentials?.token else { return .signedOut }
+        guard let registration = credentials?.registration,
+            registration.resource == Self.resource(of: server),
+            let token = credentials?.token
+        else { return .signedOut }
         return token.needsRefresh(now: Date()) && token.refreshToken == nil ? .required : .signedIn
     }
 
@@ -57,17 +59,21 @@ final class MCPOAuthManager {
         do {
             let discovery = try await MCPOAuthService.discover(url)
             try checkRevision(server.id, revision)
-            let registration = try await MCPOAuthService.registration(for: discovery, credentials: credentials)
+            let registration = try await MCPOAuthService.registration(
+                for: discovery, credentials: credentials)
             let pair = try MCPOAuthService.pkce()
             let state = MCPOAuth.base64URL(try MCPOAuthService.random())
-            try await callback.start(state: state, issuer: registration.issuer,
-                                     requiresIssuer: discovery.metadata.authorization_response_iss_parameter_supported == true)
-            let authorize = try MCPOAuth.authorizeURL(metadata: discovery.metadata, registration: registration,
-                                                    challenge: pair.challenge, state: state, scope: discovery.scope)
+            try await callback.start(
+                state: state, issuer: registration.issuer,
+                requiresIssuer: discovery.metadata.authorization_response_iss_parameter_supported == true)
+            let authorize = try MCPOAuth.authorizeURL(
+                metadata: discovery.metadata, registration: registration,
+                challenge: pair.challenge, state: state, scope: discovery.scope)
             try checkRevision(server.id, revision)
             guard NSWorkspace.shared.open(authorize) else { throw MCPOAuth.Failure.network }
             let code = try await callback.code()
-            let token = try await MCPOAuthService.token(registration: registration, code: code, verifier: pair.verifier)
+            let token = try await MCPOAuthService.token(
+                registration: registration, code: code, verifier: pair.verifier)
             try checkRevision(server.id, revision)
             var stored = secrets.secrets(for: server.id)
             var signedIn = credentials
@@ -78,7 +84,8 @@ final class MCPOAuthManager {
             statuses[server.id] = .signedIn
         } catch {
             if revisions[server.id] == revision {
-                statuses[server.id] = error is CancellationError ? .signedOut : .failed(error.localizedDescription)
+                statuses[server.id] =
+                    error is CancellationError ? .signedOut : .failed(error.localizedDescription)
             }
             throw error
         }
@@ -122,8 +129,10 @@ final class MCPOAuthManager {
     ) async throws -> String {
         guard statuses[server.id] != .required else { throw MCPOAuth.Failure.signInRequired }
         let credentials = secrets.secrets(for: server.id).oauth
-        guard let registration = credentials?.registration, registration.resource == Self.resource(of: server),
-            let token = credentials?.token else {
+        guard let registration = credentials?.registration,
+            registration.resource == Self.resource(of: server),
+            let token = credentials?.token
+        else {
             requireSignIn(server, stored: credentials)
             throw MCPOAuth.Failure.signInRequired
         }
@@ -146,7 +155,7 @@ final class MCPOAuthManager {
             return refreshed.accessToken
         }
         refreshes[server.id] = task
-        defer { if revisions[server.id] == revision { refreshes[server.id] = nil } }
+        defer { if refreshes[server.id] == task { refreshes[server.id] = nil } }
         do {
             let value = try await task.value
             try checkRevision(server.id, revision)

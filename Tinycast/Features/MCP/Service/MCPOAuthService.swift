@@ -13,14 +13,18 @@ enum MCPOAuthService {
         let resource = try MCPOAuth.resource(url)
         var probe = URLRequest(url: try MCPOAuth.endpoint(url), timeoutInterval: 15)
         probe.httpMethod = "POST"
-        probe.httpBody = try MCPProtocol.request(id: 1, method: "initialize", params: [
-            "protocolVersion": MCPProtocol.version, "capabilities": [:],
-            "clientInfo": ["name": "tinycast", "version": "1"]])
+        probe.httpBody = try MCPProtocol.request(
+            id: 1, method: "initialize",
+            params: [
+                "protocolVersion": MCPProtocol.version, "capabilities": [:],
+                "clientInfo": ["name": "tinycast", "version": "1"]
+            ])
         probe.setValue("application/json", forHTTPHeaderField: "Content-Type")
         probe.setValue("application/json, text/event-stream", forHTTPHeaderField: "Accept")
         let (_, response) = try await MCPOAuthHTTP.send(probe)
         let challenge = MCPOAuthChallenge.parse(response.value(forHTTPHeaderField: "WWW-Authenticate"))
-        let resourceData = try await discoverDocument(MCPOAuth.protectedMetadataURLs(resource: resource, challenge: challenge))
+        let resourceData = try await discoverDocument(
+            MCPOAuth.protectedMetadataURLs(resource: resource, challenge: challenge))
         let protected = try MCPOAuth.parseResource(resourceData, expected: resource)
         let issuer = protected.authorization_servers[0]
         let serverData = try await discoverDocument(MCPOAuth.serverMetadataURLs(issuer: issuer))
@@ -38,7 +42,9 @@ enum MCPOAuthService {
         for url in urls {
             let (data, response) = try await MCPOAuthHTTP.send(URLRequest(url: url, timeoutInterval: 15))
             if (200...299).contains(response.statusCode) { return data }
-            guard response.statusCode == 404 || response.statusCode == 405 else { throw MCPOAuth.Failure.invalidMetadata }
+            guard response.statusCode == 404 || response.statusCode == 405 else {
+                throw MCPOAuth.Failure.invalidMetadata
+            }
         }
         throw MCPOAuth.Failure.invalidMetadata
     }
@@ -49,9 +55,14 @@ enum MCPOAuthService {
         let metadata = discovery.metadata
         if let stored = credentials.registration,
             stored.resource == discovery.resource, stored.issuer == metadata.issuer,
-            stored.tokenEndpoint == metadata.token_endpoint, stored.redirectURI == MCPOAuthListener.redirectURI,
-            credentials.clientID.isEmpty || (stored.clientID == credentials.clientID
-                && stored.clientSecret == credentials.clientSecret.nilIfEmpty) { return stored }
+            stored.tokenEndpoint == metadata.token_endpoint,
+            stored.redirectURI == MCPOAuthListener.redirectURI,
+            credentials.clientID.isEmpty
+                || (stored.clientID == credentials.clientID
+                    && stored.clientSecret == credentials.clientSecret.nilIfEmpty)
+        {
+            return stored
+        }
         if !credentials.clientID.isEmpty {
             if let stored = credentials.registration, stored.issuer != metadata.issuer {
                 throw MCPOAuth.Failure.issuerChanged
@@ -67,10 +78,11 @@ enum MCPOAuthService {
             } else {
                 throw MCPOAuth.Failure.invalidMetadata
             }
-            return MCPOAuth.Registration(resource: discovery.resource, issuer: metadata.issuer,
-                                        clientID: credentials.clientID, clientSecret: credentials.clientSecret.nilIfEmpty,
-                                        tokenEndpoint: metadata.token_endpoint, authMethod: method,
-                                        redirectURI: MCPOAuthListener.redirectURI)
+            return MCPOAuth.Registration(
+                resource: discovery.resource, issuer: metadata.issuer,
+                clientID: credentials.clientID, clientSecret: credentials.clientSecret.nilIfEmpty,
+                tokenEndpoint: metadata.token_endpoint, authMethod: method,
+                redirectURI: MCPOAuthListener.redirectURI)
         }
         guard let endpoint = metadata.registration_endpoint else { throw MCPOAuth.Failure.clientRequired }
         let body = try MCPOAuthRequest.registration(redirectURI: MCPOAuthListener.redirectURI)
@@ -87,22 +99,25 @@ enum MCPOAuthService {
             let token_endpoint_auth_method: String?
             let redirect_uris: [String]?
         }
-        guard let response = try? JSONDecoder().decode(Registered.self, from: data), !response.client_id.isEmpty,
+        guard let response = try? JSONDecoder().decode(Registered.self, from: data),
+            !response.client_id.isEmpty,
             response.redirect_uris?.contains(MCPOAuthListener.redirectURI) ?? true,
             response.token_endpoint_auth_method == nil || response.token_endpoint_auth_method == "none"
         else { throw MCPOAuth.Failure.registration }
-        return MCPOAuth.Registration(resource: discovery.resource, issuer: metadata.issuer,
-                                    clientID: response.client_id, clientSecret: response.client_secret,
-                                    tokenEndpoint: metadata.token_endpoint, authMethod: "none",
-                                    redirectURI: MCPOAuthListener.redirectURI)
+        return MCPOAuth.Registration(
+            resource: discovery.resource, issuer: metadata.issuer,
+            clientID: response.client_id, clientSecret: response.client_secret,
+            tokenEndpoint: metadata.token_endpoint, authMethod: "none",
+            redirectURI: MCPOAuthListener.redirectURI)
     }
 
     static func token(
         registration: MCPOAuth.Registration, code: String? = nil, verifier: String? = nil,
         previous: MCPOAuth.Token? = nil
     ) async throws -> MCPOAuth.Token {
-        let request = try MCPOAuthRequest.token(registration: registration, code: code,
-                                              verifier: verifier, previous: previous)
+        let request = try MCPOAuthRequest.token(
+            registration: registration, code: code,
+            verifier: verifier, previous: previous)
         let (data, response) = try await MCPOAuthHTTP.send(request)
         guard (200...299).contains(response.statusCode) else {
             throw MCPOAuth.tokenFailure(status: response.statusCode)

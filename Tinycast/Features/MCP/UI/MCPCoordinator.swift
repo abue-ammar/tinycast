@@ -167,7 +167,8 @@ final class MCPCoordinator {
         if server.oauth == true {
             let stored = MCPSecretStore().secrets(for: server.id).oauth
             guard stored?.clientID == secrets.oauth?.clientID,
-                stored?.clientSecret == secrets.oauth?.clientSecret else { return .signInRequired }
+                stored?.clientSecret == secrets.oauth?.clientSecret
+            else { return .signInRequired }
         }
         let connection = MCPServerConnection(server: server, secrets: secrets, oauth: core.mcpOAuth)
         defer { connection.stop() }

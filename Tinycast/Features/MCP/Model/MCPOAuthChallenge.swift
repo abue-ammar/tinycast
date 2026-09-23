@@ -11,7 +11,11 @@ enum MCPOAuthChallenge {
             if escaped { segment.append(character); escaped = false; continue }
             if character == "\\", quoted { segment.append(character); escaped = true; continue }
             if character == "\"" { quoted.toggle() }
-            if character == ",", !quoted { segments.append(segment); segment = "" } else { segment.append(character) }
+            if character == ",", !quoted {
+                segments.append(segment); segment = ""
+            } else {
+                segment.append(character)
+            }
         }
         guard !quoted, !escaped else { return [:] }
         segments.append(segment)

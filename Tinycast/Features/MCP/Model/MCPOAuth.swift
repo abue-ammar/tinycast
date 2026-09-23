@@ -20,15 +20,19 @@ enum MCPOAuth {
             switch self {
             case .invalidMetadata: return "The server's OAuth metadata is invalid."
             case .unsupportedPKCE: return "The authorization server must advertise PKCE S256 support."
-            case .clientRequired: return "Enter a registered client ID. This server cannot register Tinycast automatically."
-            case .issuerChanged: return "The authorization server changed. Enter client credentials for the new server."
+            case .clientRequired:
+                return "Enter a registered client ID. This server cannot register Tinycast automatically."
+            case .issuerChanged:
+                return "The authorization server changed. Enter client credentials for the new server."
             case .invalidCallback: return "The sign-in response could not be verified."
             case .denied: return "Sign-in was declined."
             case .invalidToken: return "The authorization server did not return a usable bearer token."
             case .signInRequired: return "Sign-in required. Open this MCP server in Settings to sign in."
             case .network: return "The OAuth request failed. Check the connection and try again."
-            case .registration: return "Client registration failed. Enter a registered client ID and try again."
-            case .listenerUnavailable: return "Sign-in could not open loopback port 4962. Close the app using it and retry."
+            case .registration:
+                return "Client registration failed. Enter a registered client ID and try again."
+            case .listenerUnavailable:
+                return "Sign-in could not open loopback port 4962. Close the app using it and retry."
             case .signInInProgress: return "Another sign-in is still waiting. Finish it first."
             case .timedOut: return "Sign-in timed out. Try again."
             }
@@ -43,8 +47,9 @@ enum MCPOAuth {
 
         /// A pasted ID often ends in a newline, and Google answers that with "client not found".
         static func supplied(clientID: String, clientSecret: String) -> Credentials {
-            Credentials(clientID: clientID.trimmingCharacters(in: .whitespacesAndNewlines),
-                        clientSecret: clientSecret.trimmingCharacters(in: .whitespacesAndNewlines))
+            Credentials(
+                clientID: clientID.trimmingCharacters(in: .whitespacesAndNewlines),
+                clientSecret: clientSecret.trimmingCharacters(in: .whitespacesAndNewlines))
         }
     }
 
@@ -106,13 +111,15 @@ enum MCPOAuth {
 
     static func protectedMetadataURLs(resource: String, challenge: [String: String]) throws -> [URL] {
         if let location = challenge["resource_metadata"] { return [try endpoint(location)] }
-        return try wellKnown(resource, suffixes: ["oauth-protected-resource"], appendOIDC: false, rootFallback: true)
+        return try wellKnown(
+            resource, suffixes: ["oauth-protected-resource"], appendOIDC: false, rootFallback: true)
     }
 
     static func serverMetadataURLs(issuer: String) throws -> [URL] {
         let url = try endpoint(issuer)
         guard url.query == nil else { throw Failure.invalidMetadata }
-        return try wellKnown(issuer, suffixes: ["oauth-authorization-server", "openid-configuration"], appendOIDC: true)
+        return try wellKnown(
+            issuer, suffixes: ["oauth-authorization-server", "openid-configuration"], appendOIDC: true)
     }
 
     private static func wellKnown(
@@ -152,7 +159,8 @@ enum MCPOAuth {
         let parent = try Self.endpoint(resource)
         let child = try Self.endpoint(endpoint)
         guard sameOrigin(parent, child),
-            parent.query == nil || parent.query == child.query else { return false }
+            parent.query == nil || parent.query == child.query
+        else { return false }
         let parentPath = parent.path.hasSuffix("/") ? parent.path : parent.path + "/"
         let childPath = child.path.hasSuffix("/") ? child.path : child.path + "/"
         return childPath.hasPrefix(parentPath)
@@ -196,12 +204,14 @@ enum MCPOAuth {
     }
 
     static func form(_ fields: [String: String]) -> Data {
-        Data(fields.sorted { $0.key < $1.key }.map { "\(escape($0.key))=\(escape($0.value))" }
-            .joined(separator: "&").utf8)
+        Data(
+            fields.sorted { $0.key < $1.key }.map { "\(escape($0.key))=\(escape($0.value))" }
+                .joined(separator: "&").utf8)
     }
 
     static func escape(_ value: String) -> String {
-        let allowed = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+        let allowed = CharacterSet(
+            charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
         return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
     }
 
@@ -212,32 +222,42 @@ enum MCPOAuth {
         guard var parts = URLComponents(url: endpoint, resolvingAgainstBaseURL: false) else {
             throw Failure.invalidMetadata
         }
-        var fields = ["response_type": "code", "client_id": registration.clientID,
-                      "redirect_uri": registration.redirectURI, "code_challenge": challenge,
-                      "code_challenge_method": "S256", "state": state, "resource": registration.resource]
+        var fields = [
+            "response_type": "code", "client_id": registration.clientID,
+            "redirect_uri": registration.redirectURI, "code_challenge": challenge,
+            "code_challenge_method": "S256", "state": state, "resource": registration.resource
+        ]
         fields["scope"] = scope
         let reserved = Set(fields.keys).union(["scope"])
-        parts.percentEncodedQueryItems = (parts.percentEncodedQueryItems ?? []).filter { !reserved.contains($0.name) }
-            + fields.sorted { $0.key < $1.key }.map { URLQueryItem(name: escape($0.key), value: escape($0.value)) }
+        parts.percentEncodedQueryItems =
+            (parts.percentEncodedQueryItems ?? []).filter { !reserved.contains($0.name) }
+            + fields.sorted { $0.key < $1.key }.map {
+                URLQueryItem(name: escape($0.key), value: escape($0.value))
+            }
         guard let url = parts.url else { throw Failure.invalidMetadata }
         return url
     }
 
-    static func callback(_ target: String, state: String, issuer: String, requiresIssuer: Bool) throws -> String {
+    static func callback(
+        _ target: String, state: String, issuer: String, requiresIssuer: Bool
+    ) throws -> String {
         guard target.hasPrefix("/callback?"),
             let parts = URLComponents(string: "http://127.0.0.1" + target), parts.path == "/callback",
-            parts.fragment == nil else { throw Failure.invalidCallback }
+            parts.fragment == nil
+        else { throw Failure.invalidCallback }
         var fields: [String: String] = [:]
         for part in (parts.percentEncodedQuery ?? "").split(separator: "&") {
             let pair = part.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
             guard pair.count == 2,
                 let key = String(pair[0]).replacingOccurrences(of: "+", with: " ").removingPercentEncoding,
                 let value = String(pair[1]).replacingOccurrences(of: "+", with: " ").removingPercentEncoding,
-                fields[key] == nil else { throw Failure.invalidCallback }
+                fields[key] == nil
+            else { throw Failure.invalidCallback }
             fields[key] = value
         }
         guard fields["state"] == state,
-            fields["iss"].map({ $0 == issuer }) ?? !requiresIssuer else { throw Failure.invalidCallback }
+            fields["iss"].map({ $0 == issuer }) ?? !requiresIssuer
+        else { throw Failure.invalidCallback }
         if fields["error"] != nil { throw Failure.denied }
         guard let code = fields["code"], !code.isEmpty else { throw Failure.invalidCallback }
         return code
@@ -261,9 +281,10 @@ enum MCPOAuth {
             response.access_token.utf8.allSatisfy({ $0 > 32 && $0 < 127 }),
             response.expires_in.map({ $0.isFinite && $0 > 0 }) ?? true
         else { throw Failure.invalidToken }
-        return Token(accessToken: response.access_token,
-                     refreshToken: response.refresh_token ?? previous?.refreshToken,
-                     expiresAt: response.expires_in.map { now.addingTimeInterval($0) },
-                     scope: response.scope ?? previous?.scope)
+        return Token(
+            accessToken: response.access_token,
+            refreshToken: response.refresh_token ?? previous?.refreshToken,
+            expiresAt: response.expires_in.map { now.addingTimeInterval($0) },
+            scope: response.scope ?? previous?.scope)
     }
 }

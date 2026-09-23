@@ -83,7 +83,8 @@ struct MCPSettingsSection: View {
             try coordinator.remove(server.id)
             removalError = nil
         } catch {
-            removalError = "\(server.title) was kept: its credentials could not be removed from your login Keychain."
+            removalError =
+                "\(server.title) was kept: its credentials could not be removed from your login Keychain."
         }
     }
 }

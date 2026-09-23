@@ -327,14 +327,15 @@ final class CodexAppServerClient {
                 declineServerRequest(id: id, method: method)
                 return
             }
-            elicitations.append(Task { [weak self] in
-                let action: CodexElicitation.Action =
-                    await onElicitation(elicitation) ? .accept : .decline
-                // `persist` is never answered: only Settings may change a standing decision.
-                try? self?.send(
-                    CodexAppServerProtocol.response(
-                        id: id, result: ["action": action.rawValue]))
-            })
+            elicitations.append(
+                Task { [weak self] in
+                    let action: CodexElicitation.Action =
+                        await onElicitation(elicitation) ? .accept : .decline
+                    // `persist` is never answered: only Settings may change a standing decision.
+                    try? self?.send(
+                        CodexAppServerProtocol.response(
+                            id: id, result: ["action": action.rawValue]))
+                })
         case .invalid:
             break
         }

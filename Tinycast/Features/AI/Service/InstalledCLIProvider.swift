@@ -246,6 +246,7 @@ private final class InstalledCLITurnRunner {
     /// A pipe write past the buffer blocks until the child drains it, so never on the main actor.
     private func write(_ data: Data, closing: Bool) {
         guard let input else { return }
+        if closing { self.input = nil }
         let previous = writes
         writes = Task.detached {
             await previous.value
@@ -458,16 +459,17 @@ private final class InstalledCLITurnRunner {
 
     /// The reader's decision, through the same trust policy and dialog the BYOK loop asks with.
     private func answer(_ request: ClaudeControlProtocol.Request, token: TurnToken) {
-        consents.append(Task { [weak self] in
-            let allowed = await self?.toolServers?.consent(request.call) ?? false
-            guard let self, self.token === token else { return }
-            guard
-                let line = ClaudeControlProtocol.response(
-                    to: request, allowed: allowed,
-                    message: "The user declined this tool call.")
-            else { return }
-            self.write(line, closing: false)
-        })
+        consents.append(
+            Task { [weak self] in
+                let allowed = await self?.toolServers?.consent(request.call) ?? false
+                guard let self, self.token === token else { return }
+                guard
+                    let line = ClaudeControlProtocol.response(
+                        to: request, allowed: allowed,
+                        message: "The user declined this tool call.")
+                else { return }
+                self.write(line, closing: false)
+            })
     }
 
     /// A question still waiting its turn belongs to a turn that is over, so it is never asked.
@@ -604,7 +606,6 @@ private final class InstalledCLITurnRunner {
         removePrivateFiles()
         activeExecutable = nil
         activeServers = []
-        try? input?.close()
-        input = nil
+        write(Data(), closing: true)
     }
 }

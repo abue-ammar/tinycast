@@ -68,7 +68,8 @@ struct AIChatTests {
                 .tools([
                     ChatToolUse(
                         callID: "1", origin: "Files", title: "read", state: .completed,
-                        textOffset: 2, sequence: 0)]),
+                        textOffset: 2, sequence: 0)
+                ]),
                 .text("cd"),
                 .search(ChatSearch(query: "q", isComplete: true, textOffset: 4, sequence: 1)),
                 .text("ef")

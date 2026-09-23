@@ -10,7 +10,8 @@ final class MCPOAuthHTTP: NSObject, URLSessionTaskDelegate, Sendable {
         newRequest request: URLRequest, completionHandler: @escaping @Sendable (URLRequest?) -> Void
     ) {
         guard followsSameOrigin, let from = response.url, let to = request.url,
-            MCPOAuth.sameOrigin(from, to) else { return completionHandler(nil) }
+            MCPOAuth.sameOrigin(from, to)
+        else { return completionHandler(nil) }
         // URLSession strips Authorization on a redirect; inside one origin it is safe to restore.
         var next = request
         for (name, value) in task.originalRequest?.allHTTPHeaderFields ?? [:]
@@ -54,7 +55,9 @@ final class MCPOAuthHTTP: NSObject, URLSessionTaskDelegate, Sendable {
         }
     }
 
-    static func json(_ url: URL, body: Data? = nil, contentType: String = "application/json") async throws -> Data {
+    static func json(
+        _ url: URL, body: Data? = nil, contentType: String = "application/json"
+    ) async throws -> Data {
         var request = URLRequest(url: url, timeoutInterval: 30)
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let body {

@@ -283,12 +283,17 @@ private struct ChatToolRun: View {
                 if let running = uses.runningCall {
                     ChatToolRow(use: running)
                 } else {
-                    Button { isExpanded.toggle() } label: {
+                    Button {
+                        isExpanded.toggle()
+                    } label: {
                         HStack(spacing: metrics.spacing.sm) {
-                            Image(systemName: uses.failedCount > 0
-                                ? "exclamationmark.triangle" : "wrench.and.screwdriver")
-                                .symbolRenderingMode(.hierarchical)
-                                .foregroundStyle(uses.failedCount > 0
+                            Image(
+                                systemName: uses.failedCount > 0
+                                    ? "exclamationmark.triangle" : "wrench.and.screwdriver"
+                            )
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(
+                                uses.failedCount > 0
                                     ? Theme.Colors.destructive : Theme.Colors.textSecondary)
                             Text(uses.completedLabel)
                                 .lineLimit(1)
@@ -317,7 +322,8 @@ private struct ChatToolRun: View {
                 }
             }
             .animation(
-                reduceMotion ? nil : .easeOut(duration: Theme.Duration.chatFooter), value: uses)
+                reduceMotion ? nil : .easeOut(duration: Theme.Duration.chatFooter), value: uses
+            )
             .animation(
                 reduceMotion ? nil : .easeOut(duration: Theme.Duration.chatFooter), value: isExpanded)
         }

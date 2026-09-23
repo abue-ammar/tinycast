@@ -131,8 +131,10 @@ struct MCPServerEditor: View {
                                     .settingsEditorTextField()
                             }
                             field("Value") {
-                                RevealableSecureField(title: "Value", text: $headerValue, prompt: Text("Bearer …"))
-                                    .settingsEditorTextField()
+                                RevealableSecureField(
+                                    title: "Value", text: $headerValue, prompt: Text("Bearer …")
+                                )
+                                .settingsEditorTextField()
                             }
                         }
                     } else {
@@ -257,7 +259,8 @@ struct MCPServerEditor: View {
         let status = coordinator.authenticationStatus(server, stored: storedOAuth)
         let supplied = supplied
         guard storedOAuth?.clientID == supplied.clientID, storedOAuth?.clientSecret == supplied.clientSecret,
-            storedOAuth?.registration?.resource == (try? MCPOAuth.resource(url)) else {
+            storedOAuth?.registration?.resource == (try? MCPOAuth.resource(url))
+        else {
             if case .signingIn = status { return status }
             if case .failed = status { return status }
             return .signedOut
@@ -337,11 +340,16 @@ struct MCPServerEditor: View {
             if usesOAuth {
                 var credentials = MCPSecretStore().secrets(for: server.id).oauth ?? MCPOAuth.Credentials()
                 let supplied = supplied
-                if credentials.clientID != supplied.clientID || credentials.clientSecret != supplied.clientSecret {
+                if credentials.clientID != supplied.clientID
+                    || credentials.clientSecret != supplied.clientSecret
+                {
                     credentials = supplied
                 }
                 if let registration = credentials.registration,
-                    registration.resource != (try? MCPOAuth.resource(url)) { credentials.token = nil }
+                    registration.resource != (try? MCPOAuth.resource(url))
+                {
+                    credentials.token = nil
+                }
                 secrets.oauth = credentials
             }
             return (server, secrets)

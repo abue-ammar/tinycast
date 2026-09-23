@@ -437,7 +437,11 @@ struct InstalledAITests {
                 && error?.contains("Stopped after") == false,
             "a max-turns result under no cap names no number, since Tinycast set none")
 
-        let nothingToCall = AIToolServerSession(rounds: nil) { [] } consent: { _ in false }
+        let nothingToCall = AIToolServerSession(rounds: nil) {
+            []
+        } consent: { _ in
+            false
+        }
         _ = await fixture.events(
             kind: .claude, model: "sonnet", effort: nil, toolServers: nothingToCall)
         let bare = fixture.lastArguments("claude-args.log")

@@ -299,9 +299,12 @@ struct MCPTests {
             local.toolServer(headerValue: "", environment: [:], bearerToken: nil)?.title == "Files",
             "and both kinds keep the handle and title a transcript row is written from")
         expect(
-            MCPServer(name: "Empty", slug: "empty", transport: .stdio(
-                command: "", arguments: [], environmentKeys: []))
-                .toolServer(headerValue: "", environment: [:], bearerToken: nil) == nil,
+            MCPServer(
+                name: "Empty", slug: "empty",
+                transport: .stdio(
+                    command: "", arguments: [], environmentKeys: [])
+            )
+            .toolServer(headerValue: "", environment: [:], bearerToken: nil) == nil,
             "a server with no command is nothing a CLI could start")
     }
 
