@@ -25,11 +25,11 @@ struct AIToolServerCall: Equatable, Sendable {
 struct AIToolServerSession: Sendable {
     let servers: @Sendable () async -> [AIToolServer]
     let consent: @Sendable (AIToolServerCall) async -> Bool
-    /// The bound the BYOK loop uses, applied to the CLI's own loop so a reply stops alike.
-    let rounds: Int
+    /// The BYOK loop's bound, `nil` for none, applied to the CLI's own loop so a reply stops alike.
+    let rounds: Int?
 
     init(
-        rounds: Int,
+        rounds: Int?,
         servers: @escaping @Sendable () async -> [AIToolServer],
         consent: @escaping @Sendable (AIToolServerCall) async -> Bool
     ) {

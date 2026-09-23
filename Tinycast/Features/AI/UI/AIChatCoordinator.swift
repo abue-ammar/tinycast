@@ -134,7 +134,7 @@ final class AIChatCoordinator {
         }
         let chatID = chat.session.id
         let mcp = core.mcpCoordinator
-        return AIToolServerSession(rounds: core.aiSettings.toolRounds.rawValue) {
+        return AIToolServerSession(rounds: core.aiSettings.toolRounds.limit) {
             await mcp.toolServers(scopedTo: slug)
         } consent: { call in
             await mcp.permit(call, in: chatID)

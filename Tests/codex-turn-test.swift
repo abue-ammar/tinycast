@@ -29,6 +29,7 @@ struct CodexTurnTests {
         await aWithdrawnServerStopsTheIdleHelper()
         await twoCallsAreAskedAboutByTheirOwnNames()
         await theRoundCapInterruptsTheTurn()
+        await unlimitedNeverStopsOnACount()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -298,6 +299,37 @@ struct CodexTurnTests {
             "and the turn Codex is still running is interrupted rather than left to finish")
     }
 
+    /// Unlimited hands Codex no count at all, so only the model's own answer ends the turn.
+    static func unlimitedNeverStopsOnACount() async {
+        guard let server = StubServer(mode: "mcp-many") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+
+        let events = await server.collect(
+            toolServers: server.session(allowing: true, asked: Box(), rounds: nil))
+        let calls = events.count {
+            if case .toolCall = $0 { return true }
+            return false
+        }
+        expect(calls == 120, "all 120 calls run, past the largest step Settings offers")
+        expect(
+            events.contains(.text("done")) && events.last == .finished && server.interrupts == 0,
+            "and the turn finishes on the model's answer, never interrupted")
+
+        guard let capped = StubServer(mode: "mcp-many") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { capped.tearDown() }
+        let error = await capped.streamError(
+            toolServers: capped.session(allowing: true, asked: Box(), rounds: 100))
+        expect(
+            error?.contains("Stopped after 100 rounds of tool calls.") == true,
+            "while the largest step stops that same turn, naming its own number")
+    }
+
     /// Stop arrives before anything names the turn, and `turn/start` never answers.
     static func stopBeforeTurnStartedStillInterrupts() async {
         guard let server = StubServer(mode: "hold-turn") else {
@@ -477,7 +509,7 @@ final class StubServer {
 
     /// A reader who answers every call the same way.
     func session(
-        allowing: Bool, asked: Box, rounds: Int = 10, servers: [AIToolServer]? = nil
+        allowing: Bool, asked: Box, rounds: Int? = 10, servers: [AIToolServer]? = nil
     ) -> AIToolServerSession {
         let servers = servers ?? self.servers()
         return AIToolServerSession(rounds: rounds) {

@@ -37,7 +37,7 @@ final class CodexTurnRunner {
     /// The tool an elicitation is about: the item that names it always starts before the ask.
     private var startedTools: [String: String] = [:]
     private var spentCalls = 0
-    private var roundCap = 1
+    private var roundCap: Int? = 1
 
     init(client: CodexAppServerClient) {
         self.client = client
@@ -144,7 +144,7 @@ final class CodexTurnRunner {
                 id: id, origin: origin ?? AIToolServerRow.label(name),
                 title: AIToolServerRow.label(item["tool"]?.stringValue ?? "")))
         spentCalls += 1
-        guard spentCalls > roundCap else { return }
+        guard let roundCap, spentCalls > roundCap else { return }
         // Finished before the interrupt, whose own cleanup would otherwise name a different reason.
         activeContinuation?.finish(
             throwing: AIProviderError.responseFailed(
@@ -284,7 +284,7 @@ final class CodexTurnRunner {
         activeServers = servers
         startedTools = [:]
         spentCalls = 0
-        roundCap = session?.rounds ?? 1
+        roundCap = session == nil ? 1 : session?.rounds
         guard !servers.isEmpty, let session else {
             client.onElicitation = nil
             return

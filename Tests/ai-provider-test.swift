@@ -1329,8 +1329,14 @@ struct AIProviderTests {
         expect(
             arguments.contains("--strict-mcp-config") && arguments.contains("/tmp/m.json")
                 && arguments.contains("--permission-prompt-tool")
-                && arguments.contains("stdio") && arguments.contains("25"),
+                && arguments.contains("stdio")
+                && value(after: "--max-turns", in: arguments) == "25",
             "the flags name the file, route consent to Tinycast and cap the turn")
+        let uncapped = ClaudeMCPLaunch.arguments(
+            configurationPath: "/tmp/m.json", handles: ["files"], rounds: nil)
+        expect(
+            uncapped.contains("--mcp-config") && !uncapped.contains("--max-turns"),
+            "Unlimited passes no --max-turns at all, since Claude has no cap without one")
         expect(
             !arguments.contains("--disallowedTools"),
             "and never deny every tool, which would take the MCP ones with it")

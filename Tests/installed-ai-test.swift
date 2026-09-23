@@ -36,6 +36,7 @@ struct InstalledAITests {
         await claudeRunsTinycastsServersAndAnswersTheirConsent(fixture)
         await aDeclinedCallComesBackAsAnErrorResult(fixture)
         await theRoundCapEndsTheTurnTheWayTheLoopDoes(fixture)
+        await unlimitedPassesNoTurnCap(fixture)
         await concurrentCallsAreAskedOneAtATime(fixture)
         await aCrashedTurnsFilesAreRemovedAtLaunch(fixture)
         await aManagedMCPPolicyLeavesBothFlagsOff(fixture)
@@ -168,6 +169,10 @@ struct InstalledAITests {
         expect(
             arguments.contains("--effort") && arguments.contains("xhigh"),
             "Claude receives the chosen reasoning effort")
+        let argv = fixture.arguments("claude-args.log")
+        expect(
+            argv.firstIndex(of: "--max-turns").map { argv[$0 + 1] } == "1",
+            "a turn with nothing to call is held to one request")
         fixture.expectPrompt("claude-prompt.log")
     }
 
@@ -328,7 +333,7 @@ struct InstalledAITests {
                 && argv[(argv.firstIndex(of: "--input-format") ?? 0) + 1] == "stream-json",
             "stream-json input is what the consent channel answers on")
         expect(
-            argv.contains("--max-turns") && argv.contains("25"),
+            argv.firstIndex(of: "--max-turns").map { argv[$0 + 1] } == "25",
             "and the turn is capped at the setting's rounds rather than one")
         guard let index = argv.firstIndex(of: "--mcp-config"), index + 1 < argv.count else {
             expect(false, "Claude is given a configuration path")
@@ -411,6 +416,35 @@ struct InstalledAITests {
         expect(
             error?.contains("Stopped after 25 rounds of tool calls.") == true,
             "the CLI's own cap is reported in the sentence the BYOK loop uses")
+    }
+
+    /// Claude has no turn cap unless one is passed, so Unlimited is the flag's absence.
+    private static func unlimitedPassesNoTurnCap(_ fixture: Fixture) async {
+        let events = await fixture.events(
+            kind: .claude, model: "sonnet", effort: nil,
+            toolServers: fixture.session(allowing: true, asked: Box(), rounds: nil))
+        let argv = fixture.lastArguments("claude-args.log")
+        expect(
+            argv.contains("--mcp-config") && !argv.contains("--max-turns"),
+            "an armed turn on Unlimited passes no --max-turns at all")
+        expect(events.last == .finished, "and ends on the CLI's own result")
+
+        let error = await fixture.streamError(
+            kind: .claude, model: "round-cap", effort: nil,
+            toolServers: fixture.session(allowing: true, asked: Box(), rounds: nil))
+        expect(
+            error?.contains("Claude could not finish the response.") == true
+                && error?.contains("Stopped after") == false,
+            "a max-turns result under no cap names no number, since Tinycast set none")
+
+        let nothingToCall = AIToolServerSession(rounds: nil) { [] } consent: { _ in false }
+        _ = await fixture.events(
+            kind: .claude, model: "sonnet", effort: nil, toolServers: nothingToCall)
+        let bare = fixture.lastArguments("claude-args.log")
+        expect(
+            bare.firstIndex(of: "--max-turns").map { bare[$0 + 1] } == "1"
+                && bare.contains("--disallowedTools"),
+            "while one on Unlimited with no server to run is still a single request")
     }
 
     /// An admin's policy makes the CLI reject both flags, so the route passes neither.
@@ -539,8 +573,8 @@ private final class Fixture {
     }
 
     /// One local server, and a reader who answers every call the same way.
-    func session(allowing: Bool, asked: Box) -> AIToolServerSession {
-        AIToolServerSession(rounds: 25) {
+    func session(allowing: Bool, asked: Box, rounds: Int? = 25) -> AIToolServerSession {
+        AIToolServerSession(rounds: rounds) {
             [
                 AIToolServer(
                     handle: "probe", title: "Probe",

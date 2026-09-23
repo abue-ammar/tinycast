@@ -68,7 +68,11 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   `--max-turns`, which bounds model requests exactly as the loop's rounds do, and Codex — which
   names no round at all — is interrupted once a turn has spent that many **calls**, which is
   stricter, never looser. Neither result size is Tinycast's to cut there: the output goes back to
-  the model inside the CLI, and what the transcript keeps is the row.
+  the model inside the CLI, and what the transcript keeps is the row. Unlimited reaches a CLI route
+  as an `AIToolServerSession.rounds` of `nil`: Claude is given no `--max-turns`, since it has no
+  cap without one, and Codex counts nothing, so there too only the model or Stop ends the turn. A
+  Claude turn with no server to run is a different case and keeps `--max-turns 1` whatever the
+  setting.
 - **A server's handle is derived, never typed.** `MCPSlug` makes it from the name and uniques it, so
   `@slug` can never name two servers or nothing at all. An unknown handle is not an address: the text
   is sent exactly as it was typed.
@@ -327,6 +331,8 @@ caught there rather than in the middle of a conversation.
 - On Apple Intelligence, Grok, OpenCode or Cursor, no tool is offered and the reply streams as before.
 - On Codex and on the Claude command the same question answers with the same rows, the same dialog
   and the same `@slug` scoping; `ps` during a turn shows no secret on either command line.
+- With Tool call rounds on Unlimited, `ps` shows no `--max-turns` on an armed Claude turn, and a
+  Codex reply that calls a tool more than 100 times still ends on its own answer.
 - A Codex turn with the user's own `~/.codex` servers configured runs none of them: nothing they
   would have printed appears, and their processes never start.
 - Signing out of an OAuth server mid-conversation, then asking again, relaunches the app-server

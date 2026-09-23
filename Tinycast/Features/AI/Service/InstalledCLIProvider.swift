@@ -279,6 +279,9 @@ private final class InstalledCLITurnRunner {
         return await toolServers.servers()
     }
 
+    /// Nothing to call is one request; an armed turn takes the reader's cap, which may be none.
+    private var roundCap: Int? { activeServers.isEmpty ? 1 : toolServers?.rounds }
+
     private func arguments(promptFile: URL? = nil, mcpConfig: URL? = nil) -> [String] {
         switch kind {
         case .claude:
@@ -300,7 +303,7 @@ private final class InstalledCLITurnRunner {
             if let mcpConfig {
                 result += ClaudeMCPLaunch.arguments(
                     configurationPath: mcpConfig.path, handles: activeServers.map(\.handle),
-                    rounds: toolServers?.rounds ?? 1)
+                    rounds: roundCap)
             } else {
                 // A route with nothing to call keeps every tool off and the turn to one request.
                 result += ["--disallowedTools", "*", "--max-turns", "1"]
@@ -439,7 +442,9 @@ private final class InstalledCLITurnRunner {
         }
         for event in frame.events { continuation?.yield(event) }
         if frame.stoppedAtRoundCap {
-            fail("Stopped after \(toolServers?.rounds ?? 1) rounds of tool calls.")
+            fail(
+                roundCap.map { "Stopped after \($0) rounds of tool calls." }
+                    ?? kind.title + " could not finish the response.")
         } else if let error = frame.error {
             fail(error)
         } else if frame.completed {

@@ -121,8 +121,9 @@ and Tinycast passes no servers to it. The Providers row says so.
   through: **25** by default, or 10, 50, 100 or **Unlimited**. A model that only keeps calling tools
   has stopped answering, so at that limit the reply ends and says it stopped after that many rounds.
   On Codex the count is tool calls rather than rounds, which stops a runaway reply sooner. On
-  Unlimited only the model or **Stop** ends it, unless the reply's tool history grows past
-  1 MB, and a reply keeps running while the palette is hidden, each round billed to your provider.
+  Unlimited only the model or **Stop** ends it, or on an API connection a tool history past 1 MB,
+  and a reply keeps running while the palette is hidden, each round billed by your provider or
+  counted against your plan.
 - Each tool result, and all results in one reply together, are capped in size.
 - Servers start when you use chat and stop after **10 idle minutes**, or when Tinycast quits.
   While Codex or Claude is the chat model, a server that runs on your Mac is started by that

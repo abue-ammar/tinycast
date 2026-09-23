@@ -180,9 +180,16 @@ for (;;) {
         if (MODE.startsWith("mcp")) {
             emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });
             emit({ id: requestID, result: { turn: { id: TURN } } });
-            const calls = MODE === "mcp-rounds" ? 3 : 1;
+            // `mcp-many` calls past the largest step Settings offers, then answers.
+            const calls = { "mcp-rounds": 3, "mcp-many": 120 }[MODE] ?? 1;
             if (MODE === "mcp-pair") toolPair(input);
             else for (let index = 1; index <= calls; index += 1) toolCall(index, input);
+            if (MODE === "mcp-many") {
+                emit({
+                    method: "item/agentMessage/delta",
+                    params: { threadId: THREAD, delta: "done" },
+                });
+            }
             emit({
                 method: "turn/completed",
                 params: { threadId: THREAD, turn: { id: TURN, status: "completed" } },

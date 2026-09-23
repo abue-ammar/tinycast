@@ -32,15 +32,17 @@ enum ClaudeMCPLaunch {
     }
 
     /// The flags that arm the servers; `--disallowedTools *` would take the MCP tools with it.
-    static func arguments(configurationPath: String, handles: [String], rounds: Int) -> [String] {
-        [
+    static func arguments(configurationPath: String, handles: [String], rounds: Int?) -> [String] {
+        var result = [
             "--strict-mcp-config",
             "--mcp-config", configurationPath,
             "--permission-prompt-tool", "stdio",
             "--permission-mode", "default",
-            "--settings", askSettings(handles: handles),
-            "--max-turns", "\(rounds)"
+            "--settings", askSettings(handles: handles)
         ]
+        // Claude has no turn cap of its own, so no flag is what Unlimited means.
+        if let rounds { result += ["--max-turns", "\(rounds)"] }
+        return result
     }
 
     /// An ask rule outranks the reader's allow rules, so their settings never pre-approve a call.
