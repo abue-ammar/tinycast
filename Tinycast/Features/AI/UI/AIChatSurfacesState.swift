@@ -130,7 +130,7 @@ final class AIChatSurfacesState {
     }
 
     /// A parked chat that has finished is already saved, so only one still answering counts.
-    private var live: [AIChatState] {
+    var live: [AIChatState] {
         [quickAI, window] + answeringElsewhere.values.filter(\.isStreaming)
     }
 }

@@ -43,6 +43,7 @@ struct ChatMarkdownTests {
     static func main() {
         everyMatchLandsOnItsWord()
         textReadsAsTheReplyDoes()
+        onlyWebAndMailLinksOpen()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -107,5 +108,21 @@ struct ChatMarkdownTests {
             rendered.codeBlocks.map(\.code) == ["let apple = 1"]
                 && rendered.codeBlocks.first?.language == "swift",
             "each code block is known, for its Copy button")
+    }
+
+    /// A reply is untrusted: one click on a `file:` or app-scheme link must launch nothing.
+    static func onlyWebAndMailLinksOpen() {
+        let text = """
+            [web](https://example.com) [mail](mailto:a@example.com) \
+            [file](file:///Applications/Calculator.app) [app](x-apple.systempreferences:security)
+            """
+        let rendered = render(ChatMessage(role: .assistant, text: text), current: nil).string
+        var links: [String] = []
+        rendered.enumerateAttribute(.link, in: NSRange(location: 0, length: rendered.length)) { value, _, _ in
+            if let url = value as? URL { links.append(url.absoluteString) }
+        }
+        expect(
+            links == ["https://example.com", "mailto:a@example.com"],
+            "only web and mail links stay clickable, got \(links)")
     }
 }

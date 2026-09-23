@@ -369,9 +369,9 @@ The `AI Chat` command (`command:ai-chat-window`, `HotKeyAction.command(.aiChat)`
 way Settings is — an `AIChatSplitViewController` with a native sidebar item, here collapsible, and a
 unified toolbar whose title is the open chat's — so it takes the system's own sidebar, toolbar and
 menus rather than the palette's scrim. `AIChatWindowChrome` owns the toolbar — the sidebar toggle
-and New Chat on one piece of glass over the sidebar (an `NSToolbarItemGroup`, since AppKit would
-give each its own), then Find in Chat and Actions alone at the trailing edge — the title, and one
-key monitor for ⌘V, ⌘F, ⌘G / ⇧⌘G, ⌘K and the Actions menu's own chords, and dies with the window.
+and New Chat as two round buttons at the sidebar's trailing edge, then Find in Chat and Actions
+alone at the window's — the title, and one key monitor for ⌘V, ⌘F, ⌘G / ⇧⌘G, ⌘K and the Actions
+menu's own chords, and dies with the window.
 
 - **Find in Chat** (⌘F): the system's `NSSearchToolbarItem`, as is. `ChatFindState` is one per
   window and steps match by match, not message by message:
@@ -554,8 +554,9 @@ names no absolute executable does it fall back to the app's PATH, the normal Hom
 locations and every nvm Node version, newest first — a fallback that can pick a different copy. The
 commands are never installed by Tinycast; Settings links to their own install docs and offers a sign-in
 command to copy. `InstalledAIManager` probes Claude, Grok, OpenCode and Cursor off-main, in parallel.
-Claude's auth status gates three model aliases; a successful Grok or OpenCode model list is both its auth
-check and catalog; Cursor's `status --format json` gates `--list-models`.
+Claude's auth status gates an `initialize` control request, and `InstalledAIModel.claudeCatalog` builds
+its model list from the answer; a successful Grok or OpenCode model list is both its auth check and
+catalog; Cursor's `status --format json` gates `--list-models`.
 
 `ChatGPTSubscriptionManager` retains its historical type name but now owns only the installed Codex
 app-server lifecycle and discovered account metadata. Production never sets `CODEX_HOME`, so the
@@ -587,8 +588,8 @@ out as `image` input parts with data URLs, and as `input_image` when prior turns
 `InstalledCLITurnRunner` handles Claude, Grok, OpenCode and Cursor behind the same provider protocol. It
 frames Tinycast's instructions and bounded conversation history as stdin (or a private `--prompt-file` for
 Grok, whose CLI requires a path), consumes newline-delimited JSON, and never puts prompt text on the
-process command line. Claude uses stream JSON, `--effort` and no session persistence. With servers
-armed it takes its turn as one framed `stream-json` line instead, keeps stdin open for the consent
+process command line. Claude uses stream JSON, `--effort` and no session persistence, and takes every
+turn as one framed `stream-json` user line. With servers armed it keeps stdin open for the consent
 channel and closes it on the CLI's own result frame; writes are chained rather than concurrent,
 because two racing the same pipe would interleave a line.
 Grok uses `streaming-messages-json` and `--effort`, with `--deny *` so tools cannot run even when the

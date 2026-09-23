@@ -174,7 +174,7 @@ private struct AIChatComposer: View {
             ComposerIconButton(symbol: "paperclip", help: attachHelp) {
                 coordinator.chooseFiles(for: chat)
             }
-            AIModelPicker(chat: chat, coordinator: coordinator)
+            AIModelPicker(chat: chat, selected: coordinator.model(for: chat), coordinator: coordinator)
             AIReasoningPicker(chat: chat, coordinator: coordinator)
             AIToolsPicker(chat: chat, coordinator: coordinator)
             if coordinator.capabilities(for: chat).webSearch {
@@ -239,11 +239,12 @@ private struct ComposerIconButton: View {
 /// Every configured model, grouped by where it runs; the pick belongs to this chat.
 private struct AIModelPicker: View {
     let chat: AIChatState
+    /// Handed in, never read from `chat`: a reply writes the session on every streaming flush.
+    let selected: AIModelSelection?
     let coordinator: AIChatCoordinator
 
     var body: some View {
         let groups = coordinator.modelGroups
-        let selected = coordinator.model(for: chat)
         Menu {
             if coordinator.isModelCatalogLoading {
                 Text("Loading models…")
@@ -270,9 +271,9 @@ private struct AIModelPicker: View {
             }
         } label: {
             Label {
-                Text(coordinator.selectedModelTitle(for: chat))
+                Text(coordinator.modelTitle(of: selected, among: groups.flatMap(\.options)))
             } icon: {
-                MenuIconImage(icon: coordinator.selectedModelIcon(for: chat))
+                MenuIconImage(icon: coordinator.modelIcon(of: selected))
             }
             .labelStyle(.titleAndIcon)
         }

@@ -13,7 +13,7 @@ final class AIChatCoordinator {
     private unowned let core: AppCore
     private let window: AppWindowController
     /// Chats with a title request in flight, so a quick second reply never asks twice.
-    @ObservationIgnored private var naming: Set<UUID> = []
+    @ObservationIgnored private var naming: [UUID: Task<Void, Never>] = [:]
 
     init(
         chats: AIChatSurfacesState, settings: AppSettings, appIndex: AppIndex,
@@ -36,6 +36,8 @@ final class AIChatCoordinator {
     func applyEnabled() {
         appIndex.setCommandsVisible([.aiChat, .quickAI], settings.aiEnabled)
         guard settings.aiEnabled else {
+            for request in naming.values { request.cancel() }
+            naming = [:]
             // Before the handle closes: cancelling an open reply saves the conversation it ends.
             chats.reset()
             window.close()
@@ -191,17 +193,17 @@ final class AIChatCoordinator {
         guard let conversation = core.chatHistory.conversation(id: session.id),
             conversation.customTitle == nil, conversation.generatedTitle == nil,
             let description = ChatTitle.description(of: session),
-            naming.insert(session.id).inserted
+            naming[session.id] == nil
         else { return }
         let selection = model(for: chat)
         let servers = titleServers(for: chat, on: selection)
-        Task {
-            defer { naming.remove(session.id) }
-            guard
-                let title = await self.title(
-                    describing: description, with: selection, servers: servers)
-            else { return }
-            core.chatHistory.setGeneratedTitle(title, id: session.id)
+        naming[session.id] = Task {
+            let title = await self.title(
+                describing: description, with: selection, servers: servers)
+            // Whoever cancelled already cleared the entry, which may now be a newer request's.
+            guard !Task.isCancelled else { return }
+            naming[session.id] = nil
+            if let title { core.chatHistory.setGeneratedTitle(title, id: session.id) }
         }
     }
 
@@ -566,15 +568,19 @@ final class AIChatCoordinator {
             toolServers: toolServers)
     }
 
-    /// Tinycast runs a local server itself only while some open chat's route cannot.
+    /// Tinycast runs a local server itself only while some live chat's route cannot.
     var everyChatRunsItsOwnTools: Bool {
-        [chats.quickAI, chats.window].allSatisfy { model(for: $0)?.runsItsOwnTools == true }
+        chats.live.allSatisfy { model(for: $0)?.runsItsOwnTools == true }
+    }
+
+    func selectedModelTitle(for chat: AIChatState) -> String {
+        modelTitle(of: model(for: chat), among: modelOptions)
     }
 
     /// Shortened here, not by layout: a flexible label would take the row from the search field.
-    func selectedModelTitle(for chat: AIChatState) -> String {
-        guard let selected = model(for: chat) else { return "Choose Model" }
-        let title = modelOptions.first { $0.matches(selected) }?.title ?? selected.model
+    func modelTitle(of selected: AIModelSelection?, among options: [AIModelOption]) -> String {
+        guard let selected else { return "Choose Model" }
+        let title = options.first { $0.matches(selected) }?.title ?? selected.model
         guard title.count > Self.maxModelTitleLength else { return title }
         let keep = Self.maxModelTitleLength / 2
         return "\(title.prefix(keep))…\(title.suffix(keep))"
@@ -582,9 +588,13 @@ final class AIChatCoordinator {
 
     private static let maxModelTitleLength = 26
 
-    /// From the selection, not the loaded list: the list arrives after the picker first paints.
     func selectedModelIcon(for chat: AIChatState) -> PopoverMenuIcon {
-        switch model(for: chat) {
+        modelIcon(of: model(for: chat))
+    }
+
+    /// From the selection, not the loaded list: the list arrives after the picker first paints.
+    func modelIcon(of selected: AIModelSelection?) -> PopoverMenuIcon {
+        switch selected {
         case .appleIntelligence?: return AIModelOption.appleIntelligenceIcon
         case .codex?: return .asset(AIBrand.openAI.assetName)
         case .claude?: return .asset(AIBrand.claude.assetName)

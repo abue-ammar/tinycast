@@ -301,9 +301,10 @@ is what refuses every tool the list does not name, since an allow list alone den
 asks no per-call question at all, so it could not express Ask Each Chat. `tool_use` and
 `tool_result` blocks become the two events.
 
-While Codex or Claude is the model of every open chat — Quick AI's and the window's — Tinycast keeps
-no connection of its own to a local server: the CLI starts its own copy, and a second would only run
-it twice. `MCPServer.runsInTinycast(whileCLIRouteSelected:)` is the rule,
+While Codex or Claude is the model of every live chat — Quick AI's, the window's and any window chat
+still answering after the reader left it — Tinycast keeps no connection of its own to a local server:
+the CLI starts its own copy, and a second would only run it twice.
+`MCPServer.runsInTinycast(whileCLIRouteSelected:)` is the rule,
 `AIChatCoordinator.everyChatRunsItsOwnTools` the verdict, and `AppCore` re-applies it whenever that
 verdict flips, so choosing an API model in either chat starts the server again. A remote server
 stays connected — a session, not a process — so its row keeps a live status; a local one reads

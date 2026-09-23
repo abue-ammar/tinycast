@@ -202,8 +202,8 @@ enum Theme {
         static let settingsSidebarGlyph: CGFloat = 14
         /// AI Chat's opening size; the user owns it from there, autosaved.
         static let aiChatWindow = CGSize(width: 960, height: 660)
-        static let aiChatWindowMinimum = CGSize(width: 640, height: 440)
-        static let aiChatSidebarMinimum: CGFloat = 200
+        static let aiChatWindowMinimum = CGSize(width: 680, height: 440)
+        static let aiChatSidebarMinimum: CGFloat = 240
         static let aiChatSidebarMaximum: CGFloat = 340
         /// The sidebar's search capsule, a row's height so it lines up with the list below it.
         static let aiChatSearchField: CGFloat = 28

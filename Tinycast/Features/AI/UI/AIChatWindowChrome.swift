@@ -4,7 +4,8 @@ import AppKit
 @MainActor
 final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSearchFieldDelegate {
     static let windowIdentifier = NSUserInterfaceItemIdentifier("AIChatWindow")
-    private static let navigation = NSToolbarItem.Identifier("AIChatNavigation")
+    private static let sidebar = NSToolbarItem.Identifier("AIChatToggleSidebar")
+    private static let newChat = NSToolbarItem.Identifier("AIChatNewChat")
     private static let search = NSToolbarItem.Identifier("AIChatSearch")
     private static let actions = NSToolbarItem.Identifier("AIChatActions")
 
@@ -24,7 +25,7 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
         self.find = find
         searchItem = NSSearchToolbarItem(itemIdentifier: Self.search)
         actionsButton = NSButton(
-            image: NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: "Actions")
+            image: NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "Actions")
                 ?? NSImage(),
             target: nil, action: nil)
         super.init()
@@ -70,7 +71,10 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [Self.navigation, .sidebarTrackingSeparator, .flexibleSpace, Self.search, Self.actions]
+        [
+            .flexibleSpace, Self.sidebar, .space, Self.newChat, .sidebarTrackingSeparator,
+            .flexibleSpace, Self.search, Self.actions
+        ]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -82,8 +86,14 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
         switch identifier {
-        case Self.navigation:
-            return navigationGroup()
+        case Self.sidebar:
+            return button(
+                identifier, symbol: "sidebar.left", label: "Sidebar", toolTip: "Show or Hide Sidebar",
+                action: #selector(toggleSidebar))
+        case Self.newChat:
+            return button(
+                identifier, symbol: "square.and.pencil", label: "New Chat", toolTip: "New Chat  ⌘N",
+                action: #selector(newChatAction))
         case Self.search:
             return searchItem
         case Self.actions:
@@ -96,25 +106,17 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
         }
     }
 
-    /// One piece of glass over the sidebar: AppKit would otherwise give each button its own.
-    private func navigationGroup() -> NSToolbarItemGroup {
-        let sidebar = NSToolbarItem(itemIdentifier: .init("AIChatToggleSidebar"))
-        sidebar.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: nil)
-        sidebar.label = "Sidebar"
-        sidebar.toolTip = "Show or Hide Sidebar"
-        sidebar.target = self
-        sidebar.action = #selector(toggleSidebar)
-
-        let newChat = NSToolbarItem(itemIdentifier: .init("AIChatNewChat"))
-        newChat.image = NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: nil)
-        newChat.label = "New Chat"
-        newChat.toolTip = "New Chat  ⌘N"
-        newChat.target = self
-        newChat.action = #selector(newChatAction)
-
-        let group = NSToolbarItemGroup(itemIdentifier: Self.navigation)
-        group.subitems = [sidebar, newChat]
-        return group
+    private func button(
+        _ identifier: NSToolbarItem.Identifier, symbol: String, label: String, toolTip: String,
+        action: Selector
+    ) -> NSToolbarItem {
+        let item = NSToolbarItem(itemIdentifier: identifier)
+        item.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+        item.label = label
+        item.toolTip = toolTip
+        item.target = self
+        item.action = action
+        return item
     }
 
     // MARK: - NSSearchFieldDelegate

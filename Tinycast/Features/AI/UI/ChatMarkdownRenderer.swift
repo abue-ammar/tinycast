@@ -32,6 +32,8 @@ struct ChatMarkdownRenderer {
     static let codeHeaderHeight: CGFloat = 16
     /// Marks the current match while the string is built; citations inserted later move it.
     private static let currentMatch = NSAttributedString.Key("TinycastChatFindCurrent")
+    /// A reply is untrusted text, so a `file:` or app-scheme link must never open on a click.
+    private static let openableSchemes: Set<String> = ["http", "https", "mailto"]
 
     private let source: ChatMarkdownSource
     private var typography: InterfaceMetrics.Typography { source.metrics.typography }
@@ -207,7 +209,11 @@ struct ChatMarkdownRenderer {
                     attributes[.strikethroughStyle] = NSUnderlineStyle.single.rawValue
                 }
             }
-            if let link = run.link { attributes[.link] = link }
+            if let link = run.link, let scheme = link.scheme?.lowercased(),
+                Self.openableSchemes.contains(scheme)
+            {
+                attributes[.link] = link
+            }
             attributes[.font] = runFont
             result.append(
                 NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
