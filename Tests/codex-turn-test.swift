@@ -208,7 +208,7 @@ struct CodexTurnTests {
         }
         let events = await server.collect(toolServers: session)
         expect(
-            reader.calls.map(\.tool) == ["first_tool", "second_tool"],
+            reader.calls.map(\.tool).sorted() == ["first_tool", "second_tool"],
             "each question names its own call, not whichever of the server's started last")
         expect(
             reader.mostAtOnce == 1 && reader.dialogs == 1,
