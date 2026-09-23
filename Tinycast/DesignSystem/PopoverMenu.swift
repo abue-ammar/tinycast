@@ -213,7 +213,8 @@ struct PopoverMenu: View {
     private var rows: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
+                // Lazy: a model menu runs to hundreds of rows, and only the viewport's are ever seen.
+                LazyVStack(alignment: .leading, spacing: 0) {
                     if let header {
                         headerLabel(header)
                         Color.clear.frame(height: metrics.size.menuRowSpacing)
