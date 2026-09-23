@@ -77,6 +77,9 @@ struct IconCacheTests {
 
     static func rowSizes() {
         IconCache.invalidateStyled()
+        let rowOnly = IconCache.icon(forFile: finder, size: IconSize(points: 24, scale: 2))
+        expect(pixelWidth(rowOnly) == 48, "a cold row rasterizes at its requested size")
+        expect(IconCache.cached(forFile: finder) == nil, "a row alone does not retain a 96px source")
         let full = IconCache.icon(forFile: finder)
         expect(pixelWidth(full) == 96, "unsized consumers retain 96px")
         for scale: CGFloat in [1, 2] {

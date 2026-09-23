@@ -290,6 +290,8 @@ run callout-test           Tinycast/Platform/Appearance.swift \
                            Tinycast/Features/HotKeys/UI/CalloutPlacement.swift
 run icon-cache-test        Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift
+run index icon-cache-performance Tinycast/Platform/Appearance.swift \
+                           Tinycast/Platform/Images/IconCache.swift
 run entry-icon-test        Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \
                            Tinycast/Platform/Images/FileIconStamp.swift

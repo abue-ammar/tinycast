@@ -221,10 +221,17 @@ enum IconCache {
     private static func rowIcon(forFile path: String, stamp: Int, size: IconSize) -> NSImage {
         if let warm = cached(forFile: path, stamp: stamp, size: size) { return warm }
         let (image, cost) = autoreleasepool { () -> (NSImage, Int) in
-            let (source, sourceCost) = downsampled(NSWorkspace.shared.icon(forFile: path))
-            return resized(source, to: size) ?? (source, sourceCost)
+            let source = cached(forFile: path, stamp: stamp)
+                ?? downsampled(NSWorkspace.shared.icon(forFile: path)).0
+            if let row = resized(source, to: size) { return row }
+            let bitmaps = source.representations.compactMap { $0 as? NSBitmapImageRep }
+            guard bitmaps.count == source.representations.count else { return (source, 0) }
+            let cost = bitmaps.reduce(0) { $0 + $1.bytesPerRow * $1.pixelsHigh }
+            return (source, cost)
         }
-        rowCache.setObject(RowImage(size: size, image: image), forKey: fileKey(path, stamp), cost: cost)
+        if cost > 0 {
+            rowCache.setObject(RowImage(size: size, image: image), forKey: fileKey(path, stamp), cost: cost)
+        }
         return image
     }
 

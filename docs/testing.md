@@ -265,6 +265,11 @@ swiftc -O -swift-version 6 Tinycast/Features/Emoji/Model/{EmojiCatalog,EmojiData
 /tmp/emoji-search-performance --names
 ```
 
+`Tests/icon-cache-performance.swift` measures row bitmap bytes, retained 96px entries, and
+process physical footprint in fresh hosts. Compare the same entry count, point size, scale and
+`-O` build across revisions; [the row-source validation record](validation/icon-cache-row-source.md)
+shows the current-main and repaired results.
+
 `Tests/notes-editor-performance.swift` installs a 100,000-character note in a real rendered editor and
 prints, as JSON, the median over 30 runs of the install with its full restyle, one typed character at
 the end, middle and start, and a caret move between distant lines. The budget is 150 ms, 8 ms (end and
