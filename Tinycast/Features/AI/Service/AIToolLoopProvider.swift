@@ -11,6 +11,8 @@ struct AIToolLoopProvider: AIProvider {
     static let maxResultBytes = 32_768
     /// Results bypass `boundedContext`, so the turn carries its own ceiling for what they add.
     static let maxTurnResultBytes = 131_072
+    /// Each round resends the whole turn, so with no round cap its growth has to end somewhere.
+    static let maxTurnHistoryBytes = 1_048_576
 
     init(
         base: any AIProvider, tools: [AITool], maxRounds: Int?,
@@ -43,8 +45,9 @@ struct AIToolLoopProvider: AIProvider {
     ) async throws {
         var messages = request.messages
         var spent = 0
+        var carried = 0
         var rounds = 0
-        while maxRounds.map({ rounds < $0 }) ?? true {
+        while maxRounds.map({ rounds < $0 }) ?? (carried < Self.maxTurnHistoryBytes) {
             rounds += 1
             let round = try await streamRound(
                 request.continuing(with: messages, tools: tools), into: continuation)
@@ -54,6 +57,7 @@ struct AIToolLoopProvider: AIProvider {
             }
             messages.append(
                 AIMessage(role: .assistant, text: round.text, toolCalls: round.calls))
+            carried += round.text.utf8.count + round.calls.reduce(0) { $0 + $1.arguments.utf8.count }
             for call in round.calls {
                 try Task.checkCancellation()
                 let tool = tools.first { $0.name == call.name }
@@ -62,6 +66,7 @@ struct AIToolLoopProvider: AIProvider {
                         id: call.id, origin: tool?.origin ?? "", title: tool?.title ?? call.name))
                 let result = await bounded(invoke(call), spent: &spent)
                 continuation.yield(.toolResult(id: call.id, isError: result.isError))
+                carried += result.content.utf8.count
                 messages.append(AIMessage(role: .tool, text: "", toolResult: result))
             }
         }

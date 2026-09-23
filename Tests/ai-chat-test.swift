@@ -37,6 +37,7 @@ struct AIChatTests {
         await theToolLoopRunsUntilTheModelStopsAsking()
         await theToolLoopRefusesToRunForever()
         await anUnlimitedToolLoopRunsPastEveryStep()
+        await anUnlimitedToolLoopStopsWhenItsHistoryIsFull()
         await toolOutputIsBoundedBeforeItIsBilled()
         toolUsesPersistAndSettleOnReload()
 
@@ -142,6 +143,28 @@ struct AIChatTests {
             base.requests.count == 121,
             "the loop keeps going past 100 rounds when it has no cap")
         expect(events.last == .finished, "and finishes on the model's answer instead of failing")
+    }
+
+    /// Every round resends the turn, so Unlimited still ends before its history grows without bound.
+    static func anUnlimitedToolLoopStopsWhenItsHistoryIsFull() async {
+        let arguments = String(repeating: "x", count: AIToolLoopProvider.maxTurnHistoryBytes / 16)
+        let round: [AIStreamEvent] = [
+            .toolCallRequested(AIToolCall(id: "c", name: "fs__read", arguments: arguments))
+        ]
+        let base = ScriptedProvider(rounds: Array(repeating: round, count: 40))
+        let invoker = RecordingInvoker(result: "again")
+        var failure: String?
+        do {
+            for try await _ in loop(base, invoker, maxRounds: nil).stream(Self.turn) {}
+        } catch {
+            failure = error.localizedDescription
+        }
+        expect(
+            base.requests.count == 16,
+            "the loop stops on the round whose calls and results fill the turn's history")
+        expect(
+            failure?.contains("16 rounds") == true,
+            "and the turn fails with a sentence naming the rounds it ran")
     }
 
     static func toolOutputIsBoundedBeforeItIsBilled() async {

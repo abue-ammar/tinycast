@@ -73,8 +73,8 @@ chat works exactly as it does without MCP.
 - **Settings → AI → Chat → Tool call rounds** sets how many rounds of tool calls one reply can go
   through: **25** by default, or 10, 50, 100 or **Unlimited**. A model that only keeps calling tools
   has stopped answering, so at that limit the reply ends and says it stopped after that many rounds.
-  On Unlimited nothing stops it but the model or **Stop**, and a reply keeps running while the
-  palette is hidden, each round billed to your provider.
+  On Unlimited only the model or **Stop** ends it, unless the reply's tool history grows past
+  1 MB, and a reply keeps running while the palette is hidden, each round billed to your provider.
 - Each tool result, and all results in one reply together, are capped in size.
 - Servers start when you use chat and stop after **10 idle minutes**, or when Tinycast quits.
 - Tinycast offers nothing back to a server. Requests from a server, like sampling, are declined.
