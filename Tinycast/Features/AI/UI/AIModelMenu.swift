@@ -52,7 +52,7 @@ enum AIModelMenu {
     ) -> PopoverMenuContent {
         var items = chat.pendingAttachments.map { attachment in
             PopoverMenuItem(
-                title: attachment.name, icon: .symbol(attachment.glyph), detail: "✕"
+                title: attachment.name, icon: attachment.menuIcon, detail: "✕"
             ) {
                 coordinator.removeAttachment(attachment.id)
             }

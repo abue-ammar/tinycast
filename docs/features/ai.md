@@ -457,18 +457,17 @@ images' lifetime exactly: whatever consumes or clears them — a send, a new cha
 or leaving the conversation for another through history — disowns one still in flight and says so,
 rather than letting it surface on a later message. The counter that decides this sits on
 `AIChatState` beside the staged images, so a route that drops them cannot forget to move it.
-**Staged attachments share one pill beside the typed text**: the newest one's preview — an image's
-thumbnail, a PDF's or text file's glyph — and `+N` for the rest, because the strip's width is taken
-out of the search field and a named pill per file left too little room to read what you are typing.
-The names are a hover away, one per line, and clicking the pill opens a header menu listing every
-file with its ✕, so a mispaste is taken back without clearing the rest — ⌘K → Remove Attachments
+**Staged attachments share one pill beside the typed text**: the newest one's kind as a glyph — a
+photo, a PDF, a text file — and `+N` for the rest, because the strip's width is taken out of the
+search field and a named pill per file left too little room to read what you are typing. The names
+are a hover away, one per line, and clicking the pill opens a header menu listing every file, an
+image by its own thumbnail, with its ✕, so a mispaste is taken back without clearing the rest — ⌘K → Remove Attachments
 and bare backspace stay as the bulk and last-one routes. A row runs by its index, so the open menu
 is re-laid whenever the staged list changes and closes once it empties; left stale, a file decoded
-under it would shift the rows, and clicking Remove All would take back only that file. The preview
-is a ~1 KB PNG downsampled on
-the same detached task that encodes the attachment and carried on the staged attachment itself, so a
-header re-rendered per keystroke decodes nothing and there is no cache whose lifetime could drift
-from the staging counter's. The strip states its own width — `AttachmentsPill.width(for:)`, the `@`
+under it would shift the rows, and clicking Remove All would take back only that file. The menu's
+thumbnail is the ~1 KB PNG downsampled on the same detached task that encodes the attachment and
+carried on the staged attachment itself, decoded once per row, so there is no cache whose lifetime
+could drift from the staging counter's. The strip states its own width — `AttachmentsPill.width(for:)`, the `@`
 chip's, and every gap it lays out, the one between the two chips included — which
 `RootPaletteView.searchFieldWidth(for:)` subtracts from the search field, so they must move together
 or the caret drifts. Pills ride the same `headerAccessory` the launcher's argument fields use, so the field shrinks to

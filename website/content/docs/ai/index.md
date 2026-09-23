@@ -133,8 +133,9 @@ Press <kbd>⌘</kbd><kbd>V</kbd> in the message box to attach what is on your cl
 - **A PDF.**
 - **A text file**, like a CSV, Markdown or source file. Its contents go into the message.
 
-Attachments show as one small pill after what you type: a preview of the newest, and `+2` or so for
-the rest. Hover over it to see their names, or click it to list them and remove any one with its ✕.
+Attachments show as one small pill after what you type: an icon for the newest, and `+2` or so for
+the rest. Hover over it to see their names, or click it to list them, each image with a small
+preview, and remove any one with its ✕.
 <kbd>delete</kbd> in an empty message box removes the last one.
 
 Not every model can take every kind. Tinycast refuses at the moment you attach, and says why, rather

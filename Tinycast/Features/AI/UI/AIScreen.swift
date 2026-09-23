@@ -195,7 +195,7 @@ private struct ComposerChip: View {
     }
 }
 
-/// Every staged file in one pill: the newest's preview, a count of the rest, all names on hover.
+/// Every staged file in one pill: the newest's glyph, a count of the rest, all names on hover.
 private struct AttachmentsPill: View {
     @Environment(\.metrics) private var metrics
     let attachments: [ChatAttachment]
@@ -218,7 +218,7 @@ private struct AttachmentsPill: View {
     var body: some View {
         Button(action: onOpen) {
             HStack(spacing: metrics.spacing.xs) {
-                if let newest = attachments.last { AttachmentPreview(attachment: newest) }
+                if let newest = attachments.last { AttachmentGlyph(attachment: newest) }
                 if let others = Self.others(attachments) {
                     Text(others)
                         .font(metrics.typography.chip)
@@ -226,7 +226,6 @@ private struct AttachmentsPill: View {
                         .padding(.trailing, metrics.spacing.xs)
                 }
             }
-            // Inset under the inner gap, so the thumbnail reads as filling the pill.
             .padding(metrics.size.chatAttachmentInset)
             .background(
                 RoundedRectangle(cornerRadius: metrics.radius.attachmentChip, style: .continuous)
@@ -242,29 +241,22 @@ private struct AttachmentsPill: View {
     }
 }
 
-/// An image states itself; a document shows the glyph of its kind.
-private struct AttachmentPreview: View {
+/// The newest file's kind as a glyph; its picture waits in the menu, where a row has the room.
+private struct AttachmentGlyph: View {
     @Environment(\.metrics) private var metrics
     let attachment: ChatAttachment
 
     var body: some View {
-        switch attachment.kind {
-        case .image:
-            ComposerThumbnail(data: attachment.preview, id: attachment.id)
-        case .pdf, .text:
-            Image(systemName: attachment.glyph)
-                .font(metrics.typography.chip)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(
-                    width: metrics.size.chatAttachmentThumb,
-                    height: metrics.size.chatAttachmentThumb)
-        }
+        Image(systemName: attachment.glyph)
+            .font(metrics.typography.chip)
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(Theme.Colors.textSecondary)
+            .frame(width: metrics.size.chatAttachmentThumb, height: metrics.size.chatAttachmentThumb)
     }
 }
 
 extension ChatAttachment {
-    /// One glyph per kind, for the pill's documents and the menu's rows alike.
+    /// One glyph per kind: the pill's, and a menu row's when there is no picture to show.
     var glyph: String {
         switch kind {
         case .image: return "photo"
@@ -272,29 +264,10 @@ extension ChatAttachment {
         case .text: return "doc.plaintext"
         }
     }
-}
 
-/// Decoded once per attachment: the task keys on its id, so a per-keystroke re-render reuses it.
-private struct ComposerThumbnail: View {
-    @Environment(\.metrics) private var metrics
-    let data: Data?
-    let id: UUID
-
-    @State private var image: NSImage?
-
-    var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image).resizable().scaledToFill()
-            } else {
-                Image(systemName: "photo")
-                    .font(metrics.typography.chip)
-                    .symbolRenderingMode(.hierarchical)
-            }
-        }
-        .frame(width: metrics.size.chatAttachmentThumb, height: metrics.size.chatAttachmentThumb)
-        .clipShape(RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous))
-        .task(id: id) { image = data.flatMap(NSImage.init(data:)) }
+    var menuIcon: PopoverMenuIcon {
+        guard case .image = kind, let preview else { return .symbol(glyph) }
+        return .thumbnail(id: id, data: preview)
     }
 }
 

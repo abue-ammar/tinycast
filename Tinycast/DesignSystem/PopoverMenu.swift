@@ -5,6 +5,8 @@ enum PopoverMenuIcon: Equatable {
     case symbol(String)
     case asset(String)
     case file(path: String)
+    /// A picture's own preview, decoded once per id: a staged file's row shows what it removes.
+    case thumbnail(id: UUID, data: Data)
     /// No glyph and no slot: a run of rows under one repeated icon says more without it.
     case blank
 
@@ -366,6 +368,8 @@ private struct PopoverMenuRow: View {
                             .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     case .file(let path):
                         MenuFileIcon(path: path)
+                    case .thumbnail(let id, let data):
+                        MenuThumbnail(id: id, data: data)
                     }
                 }
                 Text(item.title)
@@ -405,6 +409,27 @@ private struct PopoverMenuRow: View {
         }
         .buttonStyle(.plain)
         .disabled(!item.isSelectable)
+    }
+}
+
+/// A menu row's picture, cropped to the icon slot; the task keys on the id, so a redraw reuses it.
+struct MenuThumbnail: View {
+    let id: UUID
+    let data: Data
+    @State private var image: NSImage?
+    @Environment(\.metrics) private var metrics
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(nsImage: image).resizable().scaledToFill()
+            } else {
+                Color.clear
+            }
+        }
+        .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
+        .clipShape(RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous))
+        .task(id: id) { image = NSImage(data: data) }
     }
 }
 

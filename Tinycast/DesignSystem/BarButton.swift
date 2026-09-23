@@ -109,6 +109,8 @@ struct HeaderMenuButton: View {
                         .frame(width: metrics.size.barBrandIcon, height: metrics.size.barBrandIcon)
                 case .file(let path):
                     MenuFileIcon(path: path)
+                case .thumbnail(let id, let data):
+                    MenuThumbnail(id: id, data: data)
                 }
                 Text(title)
                     .font(metrics.typography.bar)
