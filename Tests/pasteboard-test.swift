@@ -2,6 +2,7 @@
 // Every case drives `NSPasteboard.withUniqueName()`: writing to `.general` would land in the
 // reader's own running Tinycast as a genuine copy.
 import AppKit
+import Darwin
 
 @main
 @MainActor
@@ -11,6 +12,10 @@ struct PasteboardTests {
     static let cap = ClipboardManager.maxCapturedFiles
 
     static func main() {
+        if CommandLine.arguments.dropFirst().first == "--owner" {
+            DelayedOwner.serve(seconds: Double(CommandLine.arguments[2]) ?? 1.5)
+            return
+        }
         finderCopyReadsAsAFileNotItsName()
         everyFileFlavourIsRead()
         multipleFilesReadNewestLast()
@@ -22,6 +27,13 @@ struct PasteboardTests {
         aModernFileURLSuppressesTheLegacyFallback()
         fileEntriesWriteBackAsFiles()
         aVanishedFileWritesNothing()
+        var finished = false
+        Task {
+            await delayedOwnerDoesNotBlockTheMainThread()
+            await aStuckOwnerDoesNotHoldTinycastWritesForever()
+            finished = true
+        }
+        while !finished { RunLoop.main.run(until: Date().addingTimeInterval(0.05)) }
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -310,6 +322,97 @@ struct PasteboardTests {
 
     static func board() -> NSPasteboard { NSPasteboard.withUniqueName() }
 
+    static func delayedOwnerDoesNotBlockTheMainThread() async {
+        guard let owner = launchOwner() else {
+            fail("could not start the delayed pasteboard owner")
+            return
+        }
+        let pasteboard = owner.board
+        defer { if owner.process.isRunning { owner.process.terminate() } }
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-slow-pasteboard-\(UUID().uuidString)")
+        let store = ClipboardStore(directory: directory)
+        let manager = ClipboardManager(
+            store: store, settings: AppSettings(), pasteboard: pasteboard)
+        manager.start()
+        defer {
+            manager.stop()
+            pasteboard.releaseGlobally()
+            try? FileManager.default.removeItem(at: directory)
+        }
+        let ticks = Tick()
+        let timer = Timer(timeInterval: 0.05, repeats: true) { _ in ticks.bump() }
+        RunLoop.main.add(timer, forMode: .common)
+        let started = ContinuousClock.now
+        let capture = Task {
+            manager.captureCurrentPasteboardForTesting()
+            return await manager.prepareForTinycastPasteboardMutation()
+        }
+        try? await Task.sleep(for: .milliseconds(650))
+        timer.invalidate()
+        expect(started.duration(to: .now) < .seconds(1), "the delayed read did not block the main actor")
+        expect(ticks.read() >= 5, "main run loop stays responsive while the owner waits")
+        expect(store.items.isEmpty, "the owner has not supplied its promised text yet")
+        let drained = await capture.value
+        expect(drained, "the delayed owner finishes before a Tinycast write")
+        expect(store.items.first?.text == "from-slow-owner", "the delayed text reaches history")
+    }
+
+    static func aStuckOwnerDoesNotHoldTinycastWritesForever() async {
+        guard let owner = launchOwner(seconds: 3) else {
+            fail("could not start the stuck pasteboard owner")
+            return
+        }
+        defer { if owner.process.isRunning { owner.process.terminate() } }
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-stuck-pasteboard-\(UUID().uuidString)")
+        let store = ClipboardStore(directory: directory)
+        let manager = ClipboardManager(store: store, settings: AppSettings(), pasteboard: owner.board)
+        manager.start()
+        defer {
+            manager.stop()
+            owner.board.releaseGlobally()
+            try? FileManager.default.removeItem(at: directory)
+        }
+        manager.captureCurrentPasteboardForTesting()
+        let started = ContinuousClock.now
+        let drained = await manager.prepareForTinycastPasteboardMutation()
+        expect(!drained, "a stuck owner cannot authorize a pasteboard write")
+        expect(started.duration(to: .now) < .seconds(3), "a stuck owner cannot hold a Tinycast write")
+        manager.stop()
+        try? await Task.sleep(for: .milliseconds(1500))
+        expect(store.items.isEmpty, "a stopped capture does not publish delayed data")
+    }
+
+    static func launchOwner(seconds: TimeInterval = 1.5) -> (process: Process, board: NSPasteboard)? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: CommandLine.arguments[0])
+        process.arguments = ["--owner", String(seconds)]
+        let output = Pipe()
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        guard (try? process.run()) != nil else { return nil }
+        guard let name = readLine(from: output.fileHandleForReading) else {
+            if process.isRunning { process.terminate() }
+            return nil
+        }
+        return (process, NSPasteboard(name: .init(name)))
+    }
+
+    static func readLine(from handle: FileHandle) -> String? {
+        var line = Data()
+        var byte: UInt8 = 0
+        while line.count < 256 {
+            var state = pollfd(fd: handle.fileDescriptor, events: Int16(POLLIN), revents: 0)
+            guard Darwin.poll(&state, 1, 2_000) > 0,
+                Darwin.read(handle.fileDescriptor, &byte, 1) == 1
+            else { return nil }
+            if byte == 10 { return String(data: line, encoding: .utf8) }
+            line.append(byte)
+        }
+        return nil
+    }
+
     static func withScratch(_ body: (URL) -> Void) {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("tinycast-pasteboard-test-\(UUID().uuidString)", isDirectory: true)
@@ -345,4 +448,40 @@ enum Permissions {
 
 final class NotificationToken {
     init(_ observer: Any, center: NotificationCenter) {}
+}
+
+private final class Tick: @unchecked Sendable {
+    // The timer and async test read the count through the same lock.
+    private let lock = NSLock()
+    private var count = 0
+    func bump() { lock.withLock { count += 1 } }
+    func read() -> Int { lock.withLock { count } }
+}
+
+private final class DelayedOwner: NSObject, NSPasteboardItemDataProvider {
+    // The owner must stay alive until the other process asks for its promised data.
+    nonisolated(unsafe) static var retained: DelayedOwner?
+    let seconds: TimeInterval
+
+    init(seconds: TimeInterval) { self.seconds = seconds }
+
+    static func serve(seconds: TimeInterval) {
+        let owner = DelayedOwner(seconds: seconds)
+        retained = owner
+        let item = NSPasteboardItem()
+        item.setDataProvider(owner, forTypes: [.string])
+        let board = NSPasteboard.withUniqueName()
+        board.writeObjects([item])
+        print(board.name.rawValue)
+        fflush(stdout)
+        RunLoop.main.run()
+    }
+
+    func pasteboard(
+        _ pasteboard: NSPasteboard?, item: NSPasteboardItem,
+        provideDataForType type: NSPasteboard.PasteboardType
+    ) {
+        Thread.sleep(forTimeInterval: seconds)
+        item.setString("from-slow-owner", forType: type)
+    }
 }
