@@ -136,6 +136,10 @@ final class QuickAICoordinator {
         chatCoordinator.stopResponse(in: chat)
     }
 
+    func regenerate() {
+        chatCoordinator.regenerate(in: chat)
+    }
+
     func copyLastResponse() {
         chatCoordinator.copyLastResponse(in: chat)
     }

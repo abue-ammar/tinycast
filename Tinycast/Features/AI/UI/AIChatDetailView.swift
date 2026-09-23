@@ -57,11 +57,12 @@ struct AIChatDetailView: View {
         .dropDestination(for: URL.self) { files, _ in
             coordinator.attach(files: files, to: chat)
             return true
-        } isTargeted: { isDropTargeted = $0 }
+        } isTargeted: {
+            isDropTargeted = $0
+        }
         .overlay {
             if isDropTargeted { dropHint }
         }
-        .background(shortcuts)
     }
 
     @ViewBuilder private var content: some View {
@@ -104,19 +105,10 @@ struct AIChatDetailView: View {
         RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
             .strokeBorder(
                 Theme.Colors.dropTarget,
-                style: StrokeStyle(lineWidth: Theme.Size.dropHintStroke, dash: [Theme.Size.dropHintDash]))
+                style: StrokeStyle(lineWidth: Theme.Size.dropHintStroke, dash: [Theme.Size.dropHintDash])
+            )
             .padding(Theme.Spacing.md)
             .allowsHitTesting(false)
-    }
-
-    /// ⌘N with no menu item to hang it on; zero-sized so it only ever contributes the shortcut.
-    private var shortcuts: some View {
-        Button("New Chat") { coordinator.newChat() }
-            .keyboardShortcut("n", modifiers: .command)
-            .buttonStyle(.plain)
-            .frame(width: 0, height: 0)
-            .opacity(0)
-            .accessibilityHidden(true)
     }
 }
 
@@ -379,12 +371,20 @@ private struct FindCounter: View {
                 .font(.callout)
                 .monospacedDigit()
                 .foregroundStyle(.secondary)
-            Button { step(-1) } label: { Image(systemName: "chevron.up") }
-                .help("Previous Match  ⇧⌘G")
-                .disabled(count == 0)
-            Button { step(1) } label: { Image(systemName: "chevron.down") }
-                .help("Next Match  ⌘G")
-                .disabled(count == 0)
+            Button {
+                step(-1)
+            } label: {
+                Image(systemName: "chevron.up")
+            }
+            .help("Previous Match  ⇧⌘G")
+            .disabled(count == 0)
+            Button {
+                step(1)
+            } label: {
+                Image(systemName: "chevron.down")
+            }
+            .help("Next Match  ⌘G")
+            .disabled(count == 0)
         }
         .buttonStyle(.borderless)
         .padding(.horizontal, Theme.Spacing.lg)

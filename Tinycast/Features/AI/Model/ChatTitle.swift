@@ -27,7 +27,8 @@ enum ChatTitle {
 
     /// A model asked for a title still wraps it in quotes, a heading or a full stop now and then.
     static func sanitize(_ raw: String) -> String? {
-        let firstLine = raw.split(whereSeparator: \.isNewline)
+        let firstLine =
+            raw.split(whereSeparator: \.isNewline)
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .first { !$0.isEmpty } ?? ""
         var title = firstLine

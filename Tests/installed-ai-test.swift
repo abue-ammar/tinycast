@@ -190,11 +190,15 @@ struct InstalledAITests {
             models.first?.efforts.map(\.id) == ["low", "high"],
             "a Claude model carries only the efforts the CLI says it supports")
         let frame = InstalledAIStreamDecoder.decode(
-            Data(#"{"type":"stream_event","event":{"delta":{"type":"thinking_delta","thinking":"Plan"}}}"#.utf8),
+            Data(
+                #"{"type":"stream_event","event":{"delta":{"type":"thinking_delta","thinking":"Plan"}}}"#.utf8
+            ),
             kind: .claude)
         expect(frame.events == [.thinking, .reasoning("Plan")], "Claude thinking reaches the fold")
         let opening = InstalledAIStreamDecoder.decode(
-            Data(#"{"type":"stream_event","event":{"type":"content_block_start","content_block":{"type":"thinking"}}}"#.utf8),
+            Data(
+                #"{"type":"stream_event","event":{"type":"content_block_start","content_block":{"type":"thinking"}}}"#
+                    .utf8),
             kind: .claude)
         expect(
             opening.events == [.thinking, .reasoning("\n\n")],

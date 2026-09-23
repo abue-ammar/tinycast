@@ -128,16 +128,23 @@ struct AIChatSidebarView: View {
     }
 
     @ViewBuilder private func menu(for conversation: ChatConversation) -> some View {
-        Button(conversation.isPinned ? "Unpin" : "Pin") {
+        Button(
+            conversation.isPinned ? "Unpin Chat" : "Pin Chat",
+            systemImage: conversation.isPinned ? "pin.slash" : "pin"
+        ) {
             coordinator.togglePin(id: conversation.id)
         }
-        Button("Rename…") { beginRename(conversation) }
-        Button("Copy Chat") { coordinator.copyChat(id: conversation.id) }
+        Button("Rename…", systemImage: "pencil") { beginRename(conversation) }
         Divider()
-        Button("Delete Chat…", role: .destructive) {
+        Button("Copy Chat", systemImage: "doc.on.doc") { coordinator.copyChat(id: conversation.id) }
+        Button("Export as Markdown…", systemImage: "square.and.arrow.up") {
+            coordinator.exportChat(id: conversation.id)
+        }
+        Divider()
+        Button("Delete Chat…", systemImage: "trash", role: .destructive) {
             Task { await coordinator.deleteChat(id: conversation.id) }
         }
-        Button("Delete All Chats…", role: .destructive) {
+        Button("Delete All Chats…", systemImage: "trash.slash", role: .destructive) {
             Task { await coordinator.deleteAllChats() }
         }
     }

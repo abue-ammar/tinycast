@@ -4,9 +4,9 @@ import AppKit
 @MainActor
 final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSearchFieldDelegate {
     static let windowIdentifier = NSUserInterfaceItemIdentifier("AIChatWindow")
+    private static let navigation = NSToolbarItem.Identifier("AIChatNavigation")
     private static let search = NSToolbarItem.Identifier("AIChatSearch")
     private static let actions = NSToolbarItem.Identifier("AIChatActions")
-    private static let newChat = NSToolbarItem.Identifier("AIChatNewChat")
 
     private let coordinator: AIChatCoordinator
     private let chats: AIChatSurfacesState
@@ -15,6 +15,8 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
     private var keyMonitor: Any?
     private let searchItem: NSSearchToolbarItem
     private let actionsButton: NSButton
+
+    private var chat: AIChatState { chats.window }
 
     init(coordinator: AIChatCoordinator, chats: AIChatSurfacesState, find: ChatFindState) {
         self.coordinator = coordinator
@@ -68,10 +70,7 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
     // MARK: - NSToolbarDelegate
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        [
-            .toggleSidebar, .sidebarTrackingSeparator, .flexibleSpace, Self.search, Self.actions,
-            Self.newChat
-        ]
+        [Self.navigation, .sidebarTrackingSeparator, .flexibleSpace, Self.search, Self.actions]
     }
 
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -83,6 +82,8 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
         willBeInsertedIntoToolbar flag: Bool
     ) -> NSToolbarItem? {
         switch identifier {
+        case Self.navigation:
+            return navigationGroup()
         case Self.search:
             return searchItem
         case Self.actions:
@@ -90,19 +91,30 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
             item.view = actionsButton
             item.label = "Actions"
             return item
-        case Self.newChat:
-            let item = NSToolbarItem(itemIdentifier: identifier)
-            item.image = NSImage(
-                systemSymbolName: "square.and.pencil", accessibilityDescription: nil)
-            item.label = "New Chat"
-            item.toolTip = "New Chat  ⌘N"
-            item.isBordered = true
-            item.target = self
-            item.action = #selector(newChat)
-            return item
         default:
             return nil
         }
+    }
+
+    /// One piece of glass over the sidebar: AppKit would otherwise give each button its own.
+    private func navigationGroup() -> NSToolbarItemGroup {
+        let sidebar = NSToolbarItem(itemIdentifier: .init("AIChatToggleSidebar"))
+        sidebar.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: nil)
+        sidebar.label = "Sidebar"
+        sidebar.toolTip = "Show or Hide Sidebar"
+        sidebar.target = self
+        sidebar.action = #selector(toggleSidebar)
+
+        let newChat = NSToolbarItem(itemIdentifier: .init("AIChatNewChat"))
+        newChat.image = NSImage(systemSymbolName: "square.and.pencil", accessibilityDescription: nil)
+        newChat.label = "New Chat"
+        newChat.toolTip = "New Chat  ⌘N"
+        newChat.target = self
+        newChat.action = #selector(newChatAction)
+
+        let group = NSToolbarItemGroup(itemIdentifier: Self.navigation)
+        group.subitems = [sidebar, newChat]
+        return group
     }
 
     // MARK: - NSSearchFieldDelegate
@@ -117,7 +129,7 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
     ) -> Bool {
         guard selector == #selector(NSResponder.insertNewline(_:)) else { return false }
         let backwards = NSApp.currentEvent?.modifierFlags.contains(.shift) == true
-        find.step(backwards ? -1 : 1, in: chats.window.session.messages)
+        find.step(backwards ? -1 : 1, in: chat.session.messages)
         return true
     }
 
@@ -127,20 +139,20 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
 
     // MARK: - Actions
 
-    @objc private func newChat() { coordinator.newChat() }
+    @objc private func newChatAction() { coordinator.newChat() }
+
+    @objc private func toggleSidebar() {
+        (window?.contentViewController as? NSSplitViewController)?.toggleSidebar(nil)
+    }
 
     @objc private func showActions() {
         let menu = AIChatActionsMenu.build(
-            chat: chats.window, coordinator: coordinator,
-            findInChat: { [weak self] in self?.beginFind() })
+            chat: chat, coordinator: coordinator,
+            findInChat: { [weak self] in self?.searchItem.beginSearchInteraction() })
         menu.popUp(
             positioning: nil,
             at: NSPoint(x: 0, y: actionsButton.bounds.maxY + Theme.Spacing.xs),
             in: actionsButton)
-    }
-
-    private func beginFind() {
-        searchItem.beginSearchInteraction()
     }
 
     // MARK: - Private
@@ -148,13 +160,13 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
     /// Re-armed after every read; the hop is because `onChange` fires before the write lands.
     private func observeTitle() {
         withObservationTracking {
-            window?.title = coordinator.title(of: chats.window)
+            window?.title = coordinator.title(of: chat)
         } onChange: { [weak self] in
             Task { @MainActor in self?.observeTitle() }
         }
     }
 
-    /// ⌘V, ⌘F, ⌘G and ⌘K have no menu item to hang on, so the window claims them before AppKit.
+    /// The Actions menu's chords work with it closed too, so the window claims them before AppKit.
     private func installKeyMonitor() {
         keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self, let window = self.window, event.window === window, window.isKeyWindow,
@@ -170,28 +182,40 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
             .lowercased()
         switch (modifiers, key) {
         case ([.command], "f"):
-            beginFind()
-            return true
+            searchItem.beginSearchInteraction()
         case ([.command], "g"), ([.command, .shift], "g"):
-            find.step(modifiers.contains(.shift) ? -1 : 1, in: chats.window.session.messages)
-            return true
+            find.step(modifiers.contains(.shift) ? -1 : 1, in: chat.session.messages)
         case ([.command], "k"):
             showActions()
-            return true
+        case ([.command], "n"):
+            coordinator.newChat()
+        case ([.command], "r") where AIChatActionsMenu.canRegenerate(chat):
+            coordinator.regenerate(in: chat)
+        case ([.command, .shift], "c") where chat.lastAssistantText != nil:
+            coordinator.copyLastResponse(in: chat)
+        case ([.command], ".") where chat.isStreaming:
+            coordinator.stopResponse(in: chat)
+        case ([.command, .option], ","):
+            coordinator.showSettings()
         case ([.command], "v"):
             // The search and rename fields take a paste as text, whatever the board holds.
             guard (window.firstResponder as? NSTextView)?.isFieldEditor != true else { return false }
-            let files = PasteboardFiles.urls(on: .general)
-            return coordinator.attachPastedFile(files: files, to: chats.window)
+            return coordinator.attachPastedFile(
+                files: PasteboardFiles.urls(on: .general), to: chat)
         default:
             return false
         }
+        return true
     }
 }
 
 /// The window's ⌘K menu: Quick AI's actions, plus what only a saved chat in a window can do.
 @MainActor
 enum AIChatActionsMenu {
+    static func canRegenerate(_ chat: AIChatState) -> Bool {
+        !chat.isStreaming && chat.session.messages.last?.role == .assistant
+    }
+
     static func build(
         chat: AIChatState, coordinator: AIChatCoordinator, findInChat: @escaping () -> Void
     ) -> NSMenu {
@@ -199,7 +223,7 @@ enum AIChatActionsMenu {
         let saved = coordinator.isSaved(chat)
         if chat.isStreaming {
             menu.addItem(
-                ClosureMenuItem("Stop Response", symbol: "stop.fill") {
+                ClosureMenuItem("Stop Response", symbol: "stop.fill", key: ".") {
                     coordinator.stopResponse(in: chat)
                 })
         }
@@ -207,16 +231,18 @@ enum AIChatActionsMenu {
             ClosureMenuItem("New Chat", symbol: "square.and.pencil", key: "n") {
                 coordinator.newChat()
             })
-        if !chat.isStreaming, chat.session.messages.last?.role == .assistant {
+        if canRegenerate(chat) {
             menu.addItem(
-                ClosureMenuItem("Regenerate Response", symbol: "arrow.clockwise") {
+                ClosureMenuItem("Regenerate Response", symbol: "arrow.clockwise", key: "r") {
                     coordinator.regenerate(in: chat)
                 })
         }
         menu.addItem(.separator())
         if chat.lastAssistantText != nil {
             menu.addItem(
-                ClosureMenuItem("Copy Last Response", symbol: "doc.on.doc") {
+                ClosureMenuItem(
+                    "Copy Last Response", symbol: "doc.on.doc", key: "c", modifiers: [.command, .shift]
+                ) {
                     coordinator.copyLastResponse(in: chat)
                 })
         }
@@ -248,7 +274,9 @@ enum AIChatActionsMenu {
         menu.addItem(
             ClosureMenuItem("Find in Chat", symbol: "magnifyingglass", key: "f", findInChat))
         menu.addItem(
-            ClosureMenuItem("AI Settings", symbol: "slider.horizontal.3") {
+            ClosureMenuItem(
+                "AI Settings", symbol: "slider.horizontal.3", key: ",", modifiers: [.command, .option]
+            ) {
                 coordinator.showSettings()
             })
         return menu
@@ -259,9 +287,13 @@ enum AIChatActionsMenu {
 private final class ClosureMenuItem: NSMenuItem {
     private let run: () -> Void
 
-    init(_ title: String, symbol: String, key: String = "", _ run: @escaping () -> Void) {
+    init(
+        _ title: String, symbol: String, key: String = "",
+        modifiers: NSEvent.ModifierFlags = .command, _ run: @escaping () -> Void
+    ) {
         self.run = run
         super.init(title: title, action: #selector(runAction), keyEquivalent: key)
+        keyEquivalentModifierMask = modifiers
         target = self
         image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
     }

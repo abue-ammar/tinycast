@@ -55,7 +55,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   has one, then to another usable API model, then to no selection. Discovering an installed command
   never silently selects a networked model.
 - **Every chat keeps its own model.** `ChatSession.model` is stamped on the first send and changed by
-  either surface's picker; `conversation_meta` stores it, so reopening a chat reopens its model and
+  either surface's picker; `conversation_details` stores it, so reopening a chat reopens its model and
   effort. A pick also moves the app default, which is only what a *new* chat starts on. A chat whose
   route was removed in Settings answers on the default rather than failing
   (`AIChatCoordinator.model(for:)`), and keeps its stored pick in case the route comes back.
@@ -76,7 +76,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   other route with one side request to the chat's own model (`ChatTitle.instructions`). The Claude
   request holds stdin open and reads with `availableData` until the answering line is whole: a
   `read(upToCount:)` waits for a full chunk or EOF, which left every title waiting on the watchdog.
-  `ChatTitle.sanitize` strips labels, quotes and full stops; `conversation_meta` keeps the
+  `ChatTitle.sanitize` strips labels, quotes and full stops; `conversation_details` keeps the
   result, and `displayTitle` prefers a rename, then this, then the first question.
 - **A reply's links are its sources.** `ChatReferences.extract` gathers the web links of a finished
   reply — Markdown links by their own names, bare URLs by host and path — in the order cited, one
@@ -104,7 +104,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
 - **Token usage belongs to the reply that reported it.** `AIUsage` carries input, output, cached
   prompt and thinking tokens, and the model's window and cost where a route says them — Claude's CLI
   reports all of it, the Anthropic API its cache, OpenAI-shaped routes their reasoning tokens and
-  OpenRouter its cost. `ChatMessage.usage` holds it and `message_meta` keeps it, so a reopened chat
+  OpenRouter its cost. `ChatMessage.usage` holds it and `message_details` keeps it, so a reopened chat
   still knows its last turn.
 - **The on-device route is configured by having a Mac.** `.appleIntelligence` takes no key, opens no
   socket and names no endpoint, so the Keychain, HTTPS and ephemeral-session rules below have nothing
@@ -226,10 +226,10 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
 - **History is local and lazy.** Conversation summaries stay in memory while transcripts load from the
   system SQLite database only for the opened chat. Empty chats are never saved.
 - **A rename and a pin are the reader's, and nothing derived overwrites them.** Both live in
-  `conversation_meta` beside `conversations`, whose `title` stays the first question: every save
+  `conversation_details` beside `conversations`, whose `title` stays the first question: every save
   rewrites that summary, so a rename stored there would be undone by the next turn. A blank rename
   hands the title back. The same row holds the harness's title and the chat's model, each column
-  upserted on its own so no write clobbers another; `message_meta` is its per-message twin, for a
+  upserted on its own so no write clobbers another; `message_details` is its per-message twin, for a
   question's `@server` scope and a reply's usage. Both tables are `CREATE TABLE IF NOT EXISTS` with
   `ON DELETE CASCADE`, so they needed no migration and a deleted chat takes its facts with it.
 - **Pinned chats are the ones asked to be kept.** Retention skips them, and so does Delete All Chats
@@ -353,10 +353,12 @@ portable effort contract. Neither change interrupts a response already streaming
 the pill's job, so the header never has to fit a third control beside the switcher.
 
 The second footer control is the palette's normal Actions (`⌘K`) menu. It owns Continue in AI Chat
-(`⌘J`, `PaletteShortcut.continueInChat`; Open AI Chat while the chat is empty), New Chat, Chat
-History and AI Settings, plus Stop Response, Copy Last Response and Remove Attachments when those
-apply. Continuing closes the palette and carries the half-typed line into the window's composer with
-the conversation. Chat History is the palette's own browser over the same saved chats the window's
+(`⌘J`; Open AI Chat while the chat is empty), New Chat (`⌘N`), Chat History (`⌘Y`) and AI Settings
+(`⌥⌘,`), plus Stop Response (`⌘.`), Regenerate Response (`⌘R`), Copy Last Response (`⇧⌘C`) and
+Remove Attachments when those apply. The chords are Raycast's where it has one, and `AIScreen.perform`
+maps each `PaletteShortcut` to its action. AI Settings takes ⌥⌘, because ⌘, stays the app's own
+Settings on every screen. Continuing closes the palette and carries the half-typed line into the
+window's composer with the conversation. Chat History is the palette's own browser over the same saved chats the window's
 sidebar lists: opening one there opens it in Quick AI, or in the window when the window already
 holds it.
 
@@ -366,12 +368,13 @@ The `AI Chat` command (`command:ai-chat-window`, `HotKeyAction.command(.aiChat)`
 `AppWindowController` window owned by `AIChatCoordinator`, autosaved as `AIChatWindow`. It is built the
 way Settings is — an `AIChatSplitViewController` with a native sidebar item, here collapsible, and a
 unified toolbar whose title is the open chat's — so it takes the system's own sidebar, toolbar and
-menus rather than the palette's scrim. `AIChatWindowChrome` owns the toolbar — sidebar toggle,
-Find in Chat, Actions and New Chat — the title, and one key monitor for ⌘V, ⌘F, ⌘G / ⇧⌘G and ⌘K,
-and dies with the window.
+menus rather than the palette's scrim. `AIChatWindowChrome` owns the toolbar — the sidebar toggle
+and New Chat on one piece of glass over the sidebar (an `NSToolbarItemGroup`, since AppKit would
+give each its own), then Find in Chat and Actions alone at the trailing edge — the title, and one
+key monitor for ⌘V, ⌘F, ⌘G / ⇧⌘G, ⌘K and the Actions menu's own chords, and dies with the window.
 
-- **Find in Chat** (⌘F): an `NSSearchToolbarItem`, so it is a button until used and a field while
-  it is. `ChatFindState` is one per window and steps match by match, not message by message:
+- **Find in Chat** (⌘F): the system's `NSSearchToolbarItem`, as is. `ChatFindState` is one per
+  window and steps match by match, not message by message:
   `ChatFindIndex` walks each message exactly as the transcript draws it — reasoning folds, every
   paragraph, list item, code block and table cell, in order — and lists every occurrence as
   (message, drawn text, index within it). A reply's hidden choices fence never matches. A drawn
@@ -390,16 +393,17 @@ and dies with the window.
   and tool rows stay separate views, so a drag spans one segment's text. A fold holding a match
   opens. A glass counter at the transcript's top edge says "3 of 17" with the same steps as
   Return / ⇧↩ in the field and ⌘G / ⇧⌘G anywhere. The sidebar's own filter is still there, by click.
-- **Actions** (⌘K): Quick AI's ⌘K menu for a window — Stop Response, New Chat, Regenerate, Copy Last
-  Response, Remove Attachments, Find in Chat and AI Settings — plus what only a saved chat has: Copy
-  Chat, Pin and Delete. `AIChatActionsMenu` builds it per open from the chat's state, as an `NSMenu`
-  hung under the toolbar button whether the click or ⌘K opened it.
+- **Actions** (⌘K): Quick AI's ⌘K menu for a window, on the same chords — Stop Response (`⌘.`), New
+  Chat (`⌘N`), Regenerate (`⌘R`), Copy Last Response (`⇧⌘C`), Remove Attachments, Find in Chat
+  (`⌘F`) and AI Settings (`⌥⌘,`) — plus what only a saved chat has: Copy Chat, Pin and Delete.
+  `AIChatActionsMenu` builds it per open from the chat's state, as an `NSMenu` hung under the
+  toolbar button whether the click or ⌘K opened it.
 
 - **Sidebar** (`AIChatSidebarView`): a filter field over a `List` of every saved chat, Pinned
   first and then bucketed by day like Clipboard. The open chat is always the selected row: before
   its first message it is an unsaved `New Chat` at the top of Today, with no actions until it has
   something to act on. A row shows a spinner while its reply streams.
-  The context menu pins, renames in place, copies the chat as Markdown
+  The context menu pins, renames in place, copies or exports the chat as Markdown
   (`ChatSession.markdownTranscript`), and deletes one or all through `DialogController`; ⌫ deletes
   the selected chat the same way.
 - **Transcript**: `ChatTranscriptView` with `surface: .window`, which drops the palette's edge

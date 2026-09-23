@@ -44,26 +44,30 @@ private struct ChatTextRepresentable: NSViewRepresentable {
     func makeNSView(context: Context) -> ChatSelectableTextView { ChatSelectableTextView() }
 
     func updateNSView(_ view: ChatSelectableTextView, context: Context) {
+        view.onCurrentMatch = onCurrentMatch
         view.show(source)
     }
 
+    /// An open width asks for the ideal, as `Text` answers it: every paragraph on one line.
     func sizeThatFits(
         _ proposal: ProposedViewSize, nsView view: ChatSelectableTextView, context: Context
     ) -> CGSize? {
-        let size = view.fit(width: proposal.width ?? .greatestFiniteMagnitude)
-        let rect = view.currentMatchRect
-        // After this pass: state set while SwiftUI sizes a view is dropped with a warning.
-        Task { @MainActor in onCurrentMatch(rect) }
-        return CGSize(width: proposal.width ?? size.width, height: size.height)
+        guard let width = proposal.width, width.isFinite else { return view.measure(width: nil) }
+        return CGSize(width: width, height: view.measure(width: width).height)
     }
 }
 
-/// Read-only and backgroundless; it sizes to its text and leaves scrolling to the transcript.
+/// Read-only and backgroundless; it wraps to its frame and leaves scrolling to the transcript.
 final class ChatSelectableTextView: NSTextView {
+    var onCurrentMatch: ((CGRect?) -> Void)?
     private var source: ChatMarkdownSource?
     private var rendered: ChatRenderedText?
-    private var laidOutWidth: CGFloat?
     private var headers: [ChatCodeHeader] = []
+    private var reportedMatch: CGRect?
+    /// A second layout of the same storage, so SwiftUI's size probes never re-wrap the drawn one.
+    private let measurer = NSLayoutManager()
+    private let measuringContainer = NSTextContainer(size: .zero)
+    private var measured: (width: CGFloat?, size: CGSize)?
 
     init() {
         let storage = NSTextStorage()
@@ -71,9 +75,12 @@ final class ChatSelectableTextView: NSTextView {
         storage.addLayoutManager(layout)
         let container = NSTextContainer(
             size: CGSize(width: 0, height: CGFloat.greatestFiniteMagnitude))
-        container.widthTracksTextView = false
+        container.widthTracksTextView = true
         container.lineFragmentPadding = 0
         layout.addTextContainer(container)
+        measuringContainer.lineFragmentPadding = 0
+        measurer.addTextContainer(measuringContainer)
+        storage.addLayoutManager(measurer)
         super.init(frame: .zero, textContainer: container)
         isEditable = false
         isSelectable = true
@@ -100,38 +107,49 @@ final class ChatSelectableTextView: NSTextView {
         source = next
         let output = ChatMarkdownRenderer(next).render()
         rendered = output
+        measured = nil
         textStorage?.setAttributedString(output.string)
-        laidOutWidth = nil
-        if let width = frame.width > 0 ? frame.width : nil { _ = fit(width: width) }
-        invalidateIntrinsicContentSize()
+        layoutOverlays()
         needsDisplay = true
     }
 
-    func fit(width: CGFloat) -> CGSize {
-        guard let container = textContainer, let layout = layoutManager else { return .zero }
-        if laidOutWidth != width {
-            container.size = CGSize(width: width, height: .greatestFiniteMagnitude)
-            laidOutWidth = width
+    /// `nil` is the ideal width. SwiftUI asks the same width repeatedly, so the last answer is kept.
+    func measure(width: CGFloat?) -> CGSize {
+        if let measured, measured.width == width { return measured.size }
+        measuringContainer.size = CGSize(
+            width: width ?? .greatestFiniteMagnitude, height: .greatestFiniteMagnitude)
+        measurer.ensureLayout(for: measuringContainer)
+        let used = measurer.usedRect(for: measuringContainer)
+        let size = CGSize(width: ceil(used.width), height: ceil(used.height))
+        measured = (width, size)
+        return size
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        layoutOverlays()
+    }
+
+    /// The code headers and find's anchor sit on the drawn layout, which tracks the frame.
+    private func layoutOverlays() {
+        guard frame.width > 0, let layout = layoutManager, let container = textContainer else {
+            return
         }
         layout.ensureLayout(for: container)
-        let used = layout.usedRect(for: container)
-        placeHeaders()
-        return CGSize(width: ceil(used.width), height: ceil(used.height))
+        placeHeaders(in: layout)
+        let match = rendered?.current.map { range in
+            layout.boundingRect(
+                forGlyphRange: layout.glyphRange(forCharacterRange: range, actualCharacterRange: nil),
+                in: container)
+        }
+        guard match != reportedMatch else { return }
+        reportedMatch = match
+        let report = onCurrentMatch
+        // After this pass: state set while SwiftUI lays a view out is dropped with a warning.
+        Task { @MainActor in report?(match) }
     }
 
-    var currentMatchRect: CGRect? {
-        guard let range = rendered?.current, let layout = layoutManager, let container = textContainer
-        else { return nil }
-        let glyphs = layout.glyphRange(forCharacterRange: range, actualCharacterRange: nil)
-        return layout.boundingRect(forGlyphRange: glyphs, in: container)
-    }
-
-    override func layout() {
-        super.layout()
-        if bounds.width > 0, laidOutWidth != bounds.width { _ = fit(width: bounds.width) }
-    }
-
-    private func placeHeaders() {
+    private func placeHeaders(in layout: NSLayoutManager) {
         let blocks = rendered?.codeBlocks ?? []
         while headers.count > blocks.count { headers.removeLast().removeFromSuperview() }
         while headers.count < blocks.count {
@@ -139,7 +157,7 @@ final class ChatSelectableTextView: NSTextView {
             addSubview(header)
             headers.append(header)
         }
-        guard let layout = layoutManager, let metrics = source?.metrics else { return }
+        guard let metrics = source?.metrics else { return }
         for (header, block) in zip(headers, blocks) {
             header.show(code: block.code, language: block.language, metrics: metrics)
             let glyphs = layout.glyphRange(forCharacterRange: block.range, actualCharacterRange: nil)

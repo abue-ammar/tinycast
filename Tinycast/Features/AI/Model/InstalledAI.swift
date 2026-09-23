@@ -184,7 +184,8 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
         let described = (entry["description"] as? String)?
             .components(separatedBy: " · ").first?
             .trimmingCharacters(in: .whitespaces)
-        let name = described.flatMap { $0.isEmpty ? nil : $0 }
+        let name =
+            described.flatMap { $0.isEmpty ? nil : $0 }
             ?? entry["displayName"] as? String ?? fallback
         return name.hasPrefix("Claude") ? name : "Claude " + name
     }

@@ -1110,8 +1110,9 @@ extension AIChatTests {
             reopened.conversations.map(\.id) == [pinned],
             "Delete All keeps the pinned chat and nothing else")
         expect(
-            count(directory.appendingPathComponent("ai-chats.sqlite3"),
-                "SELECT COUNT(*) FROM conversation_meta") == 1,
+            count(
+                directory.appendingPathComponent("ai-chats.sqlite3"),
+                "SELECT COUNT(*) FROM conversation_details") == 1,
             "a deleted chat's rename cascades away with it")
     }
 
@@ -1442,7 +1443,8 @@ extension AIChatTests {
             ChatChoices.split("**Choices:**\n1. Yes\n2. No").choices == ["Yes", "No"],
             "the label may be bold, capitalised or end in a colon")
         let proseAfter = "choices\n- A\n- B\n\nThat is all."
-        expect(ChatChoices.split(proseAfter).choices.isEmpty, "a list followed by prose is not the reply's end")
+        expect(
+            ChatChoices.split(proseAfter).choices.isEmpty, "a list followed by prose is not the reply's end")
         expect(
             ChatChoices.split("Your choices matter.\n- A").choices.isEmpty,
             "the word inside a sentence is not a label")

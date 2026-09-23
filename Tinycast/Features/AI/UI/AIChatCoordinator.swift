@@ -134,11 +134,32 @@ final class AIChatCoordinator {
     }
 
     func copyChat(id: UUID) {
-        let session = chats.holder(of: id)?.session ?? core.chatHistory.session(id: id)
-        guard let session else { return }
-        let title = core.chatHistory.conversation(id: id)?.displayTitle ?? session.title
-        Paster.copyPlainText(session.markdownTranscript(title: title))
+        guard let markdown = markdownTranscript(of: id) else { return }
+        Paster.copyPlainText(markdown.text)
         core.showMessage("Chat copied")
+    }
+
+    /// The same Markdown Copy Chat makes, written where the reader chooses.
+    func exportChat(id: UUID) {
+        guard let markdown = markdownTranscript(of: id) else { return }
+        let panel = NSSavePanel()
+        // A title may hold a slash or a colon, neither of which a file name can.
+        panel.nameFieldStringValue = markdown.title.replacing(/[\/:]/, with: "-") + ".md"
+        NSApp.activate()
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try Data(markdown.text.utf8).write(to: url, options: .atomic)
+        } catch {
+            core.showMessage("The chat could not be exported.", tone: .danger)
+        }
+    }
+
+    /// Live wherever a surface holds the chat, so an answer still arriving is included.
+    private func markdownTranscript(of id: UUID) -> (title: String, text: String)? {
+        guard let session = chats.holder(of: id)?.session ?? core.chatHistory.session(id: id)
+        else { return nil }
+        let title = core.chatHistory.conversation(id: id)?.displayTitle ?? session.title
+        return (title, session.markdownTranscript(title: title))
     }
 
     func deleteChat(id: UUID) async {

@@ -62,7 +62,7 @@ final class ChatHistoryStore {
           text_offset INTEGER NOT NULL,
           PRIMARY KEY(message_id, position)
         );
-        CREATE TABLE IF NOT EXISTS conversation_meta(
+        CREATE TABLE IF NOT EXISTS conversation_details(
           conversation_id TEXT PRIMARY KEY NOT NULL
             REFERENCES conversations(id) ON DELETE CASCADE,
           custom_title TEXT,
@@ -70,7 +70,7 @@ final class ChatHistoryStore {
           pinned INTEGER NOT NULL DEFAULT 0,
           model TEXT
         );
-        CREATE TABLE IF NOT EXISTS message_meta(
+        CREATE TABLE IF NOT EXISTS message_details(
           message_id TEXT PRIMARY KEY NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
           tool_scope TEXT,
           input_tokens INTEGER,
@@ -111,7 +111,7 @@ final class ChatHistoryStore {
             SELECT c.id, c.title, c.preview, c.created_at, c.updated_at, c.message_count,
               m.custom_title, COALESCE(m.pinned, 0), m.generated_title
             FROM conversations c
-            LEFT JOIN conversation_meta m ON m.conversation_id = c.id
+            LEFT JOIN conversation_details m ON m.conversation_id = c.id
             ORDER BY c.updated_at DESC;
             """
         guard let statement = prepare(sql, in: database) else { return }
@@ -287,7 +287,7 @@ final class ChatHistoryStore {
         guard ensureDatabase(), let database else { return false }
         let column = meta.column
         let sql = """
-            INSERT INTO conversation_meta(conversation_id, \(column)) VALUES(?, ?)
+            INSERT INTO conversation_details(conversation_id, \(column)) VALUES(?, ?)
             ON CONFLICT(conversation_id) DO UPDATE SET \(column) = excluded.\(column);
             """
         guard let statement = prepare(sql, in: database) else { return false }
@@ -327,7 +327,7 @@ final class ChatHistoryStore {
     }
 
     private static let pinnedIDs =
-        "SELECT conversation_id FROM conversation_meta WHERE pinned = 1"
+        "SELECT conversation_id FROM conversation_details WHERE pinned = 1"
 
     /// Inline BLOBs make this the one store where a delete frees pages without shrinking the file.
     @discardableResult
@@ -557,7 +557,7 @@ final class ChatHistoryStore {
     private func model(forConversation id: UUID, in database: OpaquePointer) -> AIModelSelection? {
         guard
             let statement = prepare(
-                "SELECT model FROM conversation_meta WHERE conversation_id = ? AND model IS NOT NULL;",
+                "SELECT model FROM conversation_details WHERE conversation_id = ? AND model IS NOT NULL;",
                 in: database)
         else { return nil }
         defer { sqlite3_finalize(statement) }
@@ -623,7 +623,7 @@ final class ChatHistoryStore {
     private func saveMeta(of message: ChatMessage, in database: OpaquePointer) -> Bool {
         guard message.toolScope != nil || message.usage != nil else { return true }
         let sql = """
-            INSERT INTO message_meta(message_id, tool_scope, input_tokens, output_tokens,
+            INSERT INTO message_details(message_id, tool_scope, input_tokens, output_tokens,
               cached_tokens, reasoning_tokens, context_window, cost_usd)
             VALUES(?, ?, ?, ?, ?, ?, ?, ?);
             """
@@ -651,7 +651,7 @@ final class ChatHistoryStore {
         let sql = """
             SELECT x.message_id, x.tool_scope, x.input_tokens, x.output_tokens, x.cached_tokens,
               x.reasoning_tokens, x.context_window, x.cost_usd
-            FROM message_meta x JOIN messages m ON m.id = x.message_id
+            FROM message_details x JOIN messages m ON m.id = x.message_id
             WHERE m.conversation_id = ?;
             """
         guard let statement = prepare(sql, in: database) else { return [:] }

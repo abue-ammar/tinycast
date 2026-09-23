@@ -71,7 +71,8 @@ struct ChatTranscriptView: View {
                 .padding(.top, metrics.spacing.xl)
                 .padding(
                     .bottom,
-                    surface == .palette ? metrics.spacing.chatTranscriptBottom : metrics.spacing.xl)
+                    surface == .palette ? metrics.spacing.chatTranscriptBottom : metrics.spacing.xl
+                )
                 .lineSpacing(metrics.spacing.chatLine)
                 // A window can be any width; a line of prose past this stops being readable.
                 .frame(maxWidth: surface == .window ? Theme.Size.aiChatReadingWidth : nil)

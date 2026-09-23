@@ -23,7 +23,7 @@ struct AIScreen: PaletteScreen {
         var items: [PopoverMenuItem] = []
         if chat.isStreaming {
             items.append(
-                PopoverMenuItem(title: "Stop Response", systemImage: "stop.fill") {
+                PopoverMenuItem(title: "Stop Response", systemImage: "stop.fill", shortcut: "⌘.") {
                     coordinator.stopResponse()
                 })
         }
@@ -35,13 +35,22 @@ struct AIScreen: PaletteScreen {
                 coordinator.continueInChat()
             })
         items.append(
-            PopoverMenuItem(title: "New Chat", systemImage: "plus.bubble") {
+            PopoverMenuItem(title: "New Chat", systemImage: "plus.bubble", shortcut: "⌘N") {
                 coordinator.startNewChat()
             })
+        if canRegenerate {
+            items.append(
+                PopoverMenuItem(
+                    title: "Regenerate Response", systemImage: "arrow.clockwise", shortcut: "⌘R"
+                ) {
+                    coordinator.regenerate()
+                })
+        }
         if chat.lastAssistantText != nil {
             items.append(
                 PopoverMenuItem(
-                    title: "Copy Last Response", systemImage: "doc.on.doc", startsSection: true
+                    title: "Copy Last Response", systemImage: "doc.on.doc", startsSection: true,
+                    shortcut: "⇧⌘C"
                 ) {
                     coordinator.copyLastResponse()
                 })
@@ -57,12 +66,15 @@ struct AIScreen: PaletteScreen {
         }
         items.append(
             PopoverMenuItem(
-                title: "Chat History", systemImage: "clock.arrow.circlepath", startsSection: true
+                title: "Chat History", systemImage: "clock.arrow.circlepath", startsSection: true,
+                shortcut: "⌘Y"
             ) {
                 coordinator.showHistory()
             })
         items.append(
-            PopoverMenuItem(title: "AI Settings", systemImage: "slider.horizontal.3") {
+            PopoverMenuItem(
+                title: "AI Settings", systemImage: "slider.horizontal.3", shortcut: "⌥⌘,"
+            ) {
                 chatCoordinator.showSettings()
             })
         return PopoverMenuContent(header: chatCoordinator.title(of: chat), items: items)
@@ -79,10 +91,23 @@ struct AIScreen: PaletteScreen {
 
     func secondary(at selection: Int) -> Bool { false }
 
+    /// Raycast's chords where it has one; ⌘Y is History, as in Safari, and ⌘. is Stop.
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
-        guard shortcut == .continueInChat else { return false }
-        coordinator.continueInChat()
+        switch shortcut {
+        case .continueInChat: coordinator.continueInChat()
+        case .newItem: coordinator.startNewChat()
+        case .restart where canRegenerate: coordinator.regenerate()
+        case .copyFile where chat.lastAssistantText != nil: coordinator.copyLastResponse()
+        case .quickLook: coordinator.showHistory()
+        case .pin where chat.isStreaming: coordinator.stopResponse()
+        case .settings: chatCoordinator.showSettings()
+        default: return false
+        }
         return true
+    }
+
+    private var canRegenerate: Bool {
+        !chat.isStreaming && chat.session.messages.last?.role == .assistant
     }
 
     func headerAccessory(
@@ -256,6 +281,7 @@ struct AIReasoningButton: View {
         HeaderMenuButton(
             title: title,
             systemImage: "brain",
+            symbolSize: Theme.Size.barBrandIcon,
             isOpen: isOpen,
             help: "Change reasoning effort",
             action: action
