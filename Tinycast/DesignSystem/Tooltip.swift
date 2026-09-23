@@ -68,7 +68,6 @@ private struct TooltipModifier: ViewModifier {
 }
 
 extension View {
-    /// What a control does, or — in the `keyCap` form — the shortcut it answers to.
     /// Align it against a side edge, and hang it `.bottom` from a control at the window's top.
     func tooltip(
         _ text: String?, alignment: HorizontalAlignment = .center, edge: VerticalEdge = .top
