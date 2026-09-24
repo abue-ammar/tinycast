@@ -397,8 +397,9 @@ closes the open menu rather than reopening it on that row.
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
 
-`PopoverMenuItem.startsSection` draws a separator with 6pt above and below it. That height joins the
-menu's exact sizing, but the separator takes no selection index, so navigation still walks only rows.
+`PopoverMenuItem.startsSection` draws a separator with the list inset (8pt) above and below it, so a
+row sits as far from it as from the search field's hairline. That height joins the menu's exact
+sizing, but the separator takes no selection index, so navigation still walks only rows.
 Built-in action menus mark boundaries between opening or copying, managing the item, settings, and
 deletion. Menus offering one kind of action, such as calculator copies, color formats, or emoji
 transfers, keep their rows in one group.

@@ -9,7 +9,6 @@ private struct Metrics {
     /// The glyph slot plus its breathing room — the tallest thing a row contains.
     var rowHeight: CGFloat { interface.size.menuIcon + interface.spacing.md * 2 }
     var rowSpacing: CGFloat { 1 }
-    var separatorSpacing: CGFloat { interface.spacing.sm }
     var listInset: CGFloat { interface.spacing.md }
     /// Five rows and half of the sixth, so a long panel reads as scrollable rather than clipped.
     var visibleRows: CGFloat { 5.5 }
@@ -23,7 +22,7 @@ private struct Metrics {
         let rows = CGFloat(items.count)
         let separators = CGFloat(items.dropFirst().filter(\.startsSection).count)
         let regularGaps = max(rows - 1 - separators, 0)
-        let separatorHeight = separatorSpacing * 2 + Theme.Size.hairline
+        let separatorHeight = listInset * 2 + Theme.Size.hairline
         let header = hasHeader ? headerHeight : 0
         return header + rows * rowHeight + regularGaps * rowSpacing
             + separators * separatorHeight
@@ -157,7 +156,8 @@ struct ExtensionActionsPanel: View {
                 .fill(Theme.Colors.separator)
                 .frame(height: Theme.Size.hairline)
                 .padding(.horizontal, metrics.spacing.md)
-                .padding(.vertical, panel.separatorSpacing)
+                // The list inset, so a row sits as far from this hairline as from the search one.
+                .padding(.vertical, panel.listInset)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         } else if index > 0 {

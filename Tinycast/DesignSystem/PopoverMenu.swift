@@ -266,7 +266,8 @@ struct PopoverMenu: View {
                 .fill(Theme.Colors.separator)
                 .frame(height: Theme.Size.hairline)
                 .padding(.horizontal, metrics.spacing.md)
-                .padding(.vertical, metrics.spacing.sm)
+                // The list inset, so a row sits as far from this hairline as from the search one.
+                .padding(.vertical, listInset)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
         } else if index > 0 {
@@ -285,7 +286,7 @@ struct PopoverMenu: View {
         let rows = CGFloat(items.count)
         let separators = CGFloat(items.dropFirst().filter(\.startsSection).count)
         let regularGaps = max(rows - 1 - separators, 0)
-        let separatorHeight = metrics.spacing.sm * 2 + Theme.Size.hairline
+        let separatorHeight = listInset * 2 + Theme.Size.hairline
         var contentHeight =
             headerExtent
             + rows * metrics.size.menuRowHeight + regularGaps * metrics.size.menuRowSpacing

@@ -389,10 +389,10 @@ screens hold (see [palette.md](palette.md)).
   extension icon and keeps its `tintColor` — which is what makes a palette of `{Icon.Circle, tintColor}`
   rows read as colours rather than a column of grey circles. Untinted symbols use the extension's
   14pt Medium monochrome treatment; a destructive action with no tint of its own falls back to red.
-  Section boundaries add 6pt above and below their separator without moving ordinary rows. The
-  title shares the elastic scroller with the actions. A native, row-height search field below it
-  filters titles through the launcher's fuzzy matcher, preserves section boundaries and centres
-  **No Results** in one row when empty; the scrolling edge beside that field has no dissolve. The
+  Section boundaries add the list inset (8pt) above and below their separator without moving
+  ordinary rows. The title shares the elastic scroller with the actions. A native, row-height search
+  field below it filters titles through the launcher's fuzzy matcher, preserves section boundaries
+  and centres **No Results** in one row when empty; the scrolling edge beside that field has no dissolve. The
   8pt resting inset scrolls with the actions, so rows can reach the panel edge without shifting their
   initial position; hover keeps the shared 10pt menu-row corner. The panel opens and closes from its
   bottom-right attachment with extension-owned opacity and scale timing, briefly reaching 1.003;
