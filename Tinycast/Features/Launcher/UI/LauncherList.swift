@@ -19,9 +19,16 @@ struct LauncherList: View {
     let onActivate: (AppEntry) -> Void
     let onActions: (AppEntry) -> Void
     let onDropped: () -> Void
+    /// Returned only for an unmatched query, before the ordinary fuzzy results.
+    var choices: ChoiceSection?
     /// The `Use "…" with` section, always last; nil when nothing is typed.
     var fallbacks: FallbackSection?
     @Environment(RunningAppsMonitor.self) private var runningApps
+
+    struct ChoiceSection {
+        let entries: [AppEntry]
+        let onActivate: (Int) -> Void
+    }
 
     /// What the fallback section draws and where its rows go, addressed by position.
     struct FallbackSection {
@@ -57,18 +64,22 @@ struct LauncherList: View {
 
     private enum Row: Identifiable {
         case header(String)
+        case choiceHeader
         /// Its own case, because only this header carries a gear.
         case fallbackHeader(String)
         case card(LeadCard)
         /// `slot` is the row's ⌘-digit, carried from the section build rather than searched.
         case app(AppEntry, slot: Character?)
+        case choice(AppEntry, index: Int)
         case fallback(AppEntry, index: Int)
         var id: String {
             switch self {
             case .header(let title): return "header-" + title
+            case .choiceHeader: return "natural-choice-header"
             case .fallbackHeader: return "fallback-header"
             case .card(let card): return card.rowID
             case .app(let app, _): return app.id
+            case .choice(let app, _): return "natural-choice-" + app.id
             case .fallback(let app, _): return "fallback-" + app.id
             }
         }
@@ -76,7 +87,16 @@ struct LauncherList: View {
 
     /// Whether the selection sits on flat index 0: the card, else the first result.
     private var firstRowSelected: Bool {
-        card != nil ? cardSelected : selectedRowID != nil && selectedRowID == results.first?.id
+        if let first = choices?.entries.first {
+            return selectedRowID == "natural-choice-" + first.id
+        }
+        return card != nil ? cardSelected : selectedRowID != nil && selectedRowID == results.first?.id
+    }
+
+    private var choiceRows: [Row] {
+        guard let choices, !choices.entries.isEmpty else { return [] }
+        return [.choiceHeader]
+            + choices.entries.enumerated().map { Row.choice($1, index: $0) }
     }
 
     /// Every row the fallback section contributes, always after the results.
@@ -90,8 +110,8 @@ struct LauncherList: View {
         var cardRows: [Row] = []
         if let card { cardRows = [.header(card.sectionTitle), .card(card)] }
         guard showSections else {
-            guard !results.isEmpty else { return cardRows + fallbackRows }
-            return cardRows + [.header("Results")] + results.map { .app($0, slot: nil) }
+            guard !results.isEmpty else { return choiceRows + cardRows + fallbackRows }
+            return choiceRows + cardRows + [.header("Results")] + results.map { .app($0, slot: nil) }
                 + fallbackRows
         }
         var rows: [Row] = cardRows
@@ -127,13 +147,13 @@ struct LauncherList: View {
             grouped.keys.allSatisfy(kinds.contains),
             "kind missing from the launcher's section order: "
                 + grouped.keys.filter { !kinds.contains($0) }.map(\.rawValue).joined(separator: ", "))
-        return rows + fallbackRows
+        return choiceRows + rows + fallbackRows
     }
 
     var body: some View {
         let rows = rows
         return Group {
-            if results.isEmpty && card == nil && fallbacks == nil {
+            if results.isEmpty && card == nil && choices == nil && fallbacks == nil {
                 EmptyResults(text: "No apps found")
             } else {
                 ScrollViewReader { proxy in
@@ -143,6 +163,8 @@ struct LauncherList: View {
                                 switch row {
                                 case .header(let title):
                                     SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                case .choiceHeader:
+                                    SectionHeader(title: "TypeSafe Suggestions", isFirst: row.id == rows.first?.id)
                                 case .fallbackHeader(let title):
                                     SectionHeader(
                                         title: title, isFirst: row.id == rows.first?.id,
@@ -166,6 +188,14 @@ struct LauncherList: View {
                                     .onRowTap(drag: drag(for: app)) { onActivate(app) }
                                     .onRightClick { onActions(app) }
                                     .selectionFrame(app.id == selectedRowID)
+                                case .choice(let app, let index):
+                                    AppRow(
+                                        app: app, selected: row.id == selectedRowID, running: false,
+                                        slot: nil
+                                    )
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { choices?.onActivate(index) }
+                                    .selectionFrame(row.id == selectedRowID)
                                 case .fallback(let app, let index):
                                     AppRow(
                                         app: app, selected: row.id == selectedRowID, running: false,

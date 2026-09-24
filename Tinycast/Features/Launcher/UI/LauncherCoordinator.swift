@@ -187,7 +187,7 @@ final class LauncherCoordinator {
             Task { await core.cameraCoordinator.show() }
         case .define:
             core.dictionaryCoordinator.show()
-        case .openInBrowser, .runShellCommand, .interpretNaturalCommand:
+        case .openInBrowser, .runShellCommand:
             break  // Query-driven: each runs where the typed text is, never through this funnel.
         case .joinNextMeeting:
             calendarCoordinator.joinNextMeeting()

@@ -404,11 +404,13 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Learned ranking still surfaces your habitual result for a short query
 - An application row drags onto the Dock and into a Finder window as a copy, never a move, and a
   landed drop hides the palette; a click still launches; no other kind of row drags
-- With Natural Commands off, fuzzy results and the ordinary fallback list are unchanged; with it on and a
-  TypeSafe key saved, its fallback stays below every result, sends only after activation, previews the
-  selected built-in command, and Cancel runs nothing
-- Change the query or close the palette while interpretation is pending: no old result opens a dialog;
-  disable Natural Commands or hide the chosen command before Run and nothing executes
+- With Natural Commands off, fuzzy results and ordinary fallbacks are unchanged. With it on and a
+  TypeSafe key saved, a local result prevents a request; an unmatched query of at least three characters
+  sends only after typing pauses, then up to three command rows appear above the ordinary results
+- A TypeSafe response alone runs nothing. Arrow keys, Enter, and click select a command row; Cancel in
+  the confirmation runs nothing and leaves the choices available
+- Change the query, gain a local result, or close the palette while interpretation is pending: no stale
+  choices appear; disable Natural Commands or hide a choice before Run and nothing executes
 
 Run `Scripts/evaluate-natural-commands.sh Tests/natural-command-corpus.json --validate` to verify
 the corpus without a key. For live interpretation checks, pass a TypeSafe key on standard input to

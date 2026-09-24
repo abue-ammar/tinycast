@@ -40,19 +40,21 @@ enum NaturalCommand {
     }
 
     struct Run: Sendable {
-        enum Phase: Sendable { case requesting, confirming }
+        enum Phase: Equatable, Sendable { case requesting, choosing, confirming }
 
         let id: UUID
         let query: String
         let candidates: Set<Candidate>
         private(set) var phase: Phase = .requesting
 
+        mutating func beginChoosing() { phase = .choosing }
         mutating func beginConfirmation() { phase = .confirming }
+        mutating func resumeChoosing() { phase = .choosing }
 
-        func shouldCancelPending(
+        func shouldClearForContext(
             currentQuery: String, isLauncherVisible: Bool, enabled: Bool, hasKey: Bool
         ) -> Bool {
-            phase == .requesting
+            phase != .confirming
                 && (!isLauncherVisible || currentQuery != query || !enabled || !hasKey)
         }
 
@@ -60,14 +62,26 @@ enum NaturalCommand {
             currentQuery: String, isLauncherVisible: Bool, enabled: Bool, hasKey: Bool,
             currentCandidates: Set<Candidate>
         ) -> Bool {
-            phase == .requesting && !shouldCancelPending(
+            phase == .requesting && !shouldClearForContext(
                 currentQuery: currentQuery, isLauncherVisible: isLauncherVisible,
                 enabled: enabled, hasKey: hasKey)
                 && currentCandidates == candidates
         }
 
-        func mayExecute(enabled: Bool, hasKey: Bool, targetStillAvailable: Bool) -> Bool {
-            phase == .confirming && enabled && hasKey && targetStillAvailable
+        func mayChoose(
+            currentQuery: String, isLauncherVisible: Bool, enabled: Bool, hasKey: Bool,
+            currentCandidates: Set<Candidate>
+        ) -> Bool {
+            phase == .choosing && !shouldClearForContext(
+                currentQuery: currentQuery, isLauncherVisible: isLauncherVisible,
+                enabled: enabled, hasKey: hasKey)
+                && currentCandidates == candidates
+        }
+
+        func mayExecute(
+            currentQuery: String, enabled: Bool, hasKey: Bool, targetStillAvailable: Bool
+        ) -> Bool {
+            phase == .confirming && currentQuery == query && enabled && hasKey && targetStillAvailable
         }
     }
 
@@ -81,6 +95,13 @@ enum NaturalCommand {
             case .invalidResponse: return "The service returned an invalid command interpretation."
             }
         }
+    }
+
+    static func shouldInterpret(
+        query: String, hasLocalAnswer: Bool, enabled: Bool, hasKey: Bool
+    ) -> Bool {
+        !hasLocalAnswer && enabled && hasKey
+            && query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 3
     }
 
     /// Makes the complete, typed evaluation request. The model can only choose these IDs or no match.
@@ -127,6 +148,19 @@ enum NaturalCommand {
         guard candidates.contains(where: { $0.id == answer.choice }) else { return .invalid }
         guard answer.probabilities[answer.choice] != nil else { return .invalid }
         return .candidate(answer.choice)
+    }
+
+    static func suggestedIDs(_ answer: ChoiceAnswer, candidates: [Candidate], limit: Int = 3) -> [String] {
+        guard case .candidate(let selected) = resolve(answer, candidates: candidates), limit > 0 else {
+            return []
+        }
+        let available = Set(candidates.map(\.id))
+        let alternatives = answer.probabilities
+            .filter { available.contains($0.key) && $0.key != selected && $0.value > 0 }
+            .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+            .prefix(limit - 1)
+            .map(\.key)
+        return [selected] + alternatives
     }
 }
 

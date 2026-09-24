@@ -33,6 +33,9 @@ struct LauncherScreen: PaletteScreen {
     private let suggestionCount: Int
     /// The `Use "…" with` section, below every result; empty unless something is typed.
     private let fallbacks: [(fallback: Fallback, entry: AppEntry)]
+    /// Populated only when an unmatched query receives a confident TypeSafe response.
+    private let choices: [AppEntry]
+    private let hasLocalAnswer: Bool
     /// Resolved in `init`: the palette indexes this several times per event, so it can't recompute.
     let rows: [Row]
 
@@ -75,27 +78,33 @@ struct LauncherScreen: PaletteScreen {
         // After the calculator: `#FF5733` is never arithmetic, so the two can't both answer.
         let color = calc == nil && pinned == nil ? ColorValue.parse(vm.query) : nil
         let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
-        let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespaces).isEmpty
         // At most one of them leads, so the flat index keeps a single-row offset.
         let meeting = pinsFavorites ? meeting : nil
+        let hasLocalAnswer = !results.isEmpty || calc != nil || color != nil || meeting != nil
+        let choices = core.naturalCommandCoordinator.choices(
+            for: vm.query, hasLocalAnswer: hasLocalAnswer)
+        let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
+        let choiceRows = choices.map(Row.choice)
         self.meeting = meeting
         self.results = results
         self.calc = calc
         self.fallbacks = fallbacks
+        self.choices = choices
+        self.hasLocalAnswer = hasLocalAnswer
         self.color = color
         self.showSections = pinsFavorites || AppEntry.Kind.named(by: vm.query) != nil
         self.pinsFavorites = pinsFavorites
         self.favoriteCount = pinsFavorites ? ordered.favoriteCount : 0
         self.suggestionCount = pinsFavorites ? ordered.suggestionCount : 0
         if let calc {
-            self.rows = [.calc(calc)] + entries
+            self.rows = choiceRows + [.calc(calc)] + entries
         } else if let color {
-            self.rows = [.color(color)] + entries
+            self.rows = choiceRows + [.color(color)] + entries
         } else if let meeting {
-            self.rows = [.meeting(meeting)] + entries
+            self.rows = choiceRows + [.meeting(meeting)] + entries
         } else {
-            self.rows = entries
+            self.rows = choiceRows + entries
         }
     }
 
@@ -104,6 +113,7 @@ struct LauncherScreen: PaletteScreen {
         case calc(CalcResult)
         case meeting(MeetingEvent)
         case color(ColorValue)
+        case choice(AppEntry)
         case entry(AppEntry)
         /// Prefixed, because the same command can also be a ranked hit above its own fallback row.
         case fallback(Fallback, AppEntry)
@@ -113,6 +123,7 @@ struct LauncherScreen: PaletteScreen {
             case .calc: return "calc-card"
             case .meeting: return "meeting-card"
             case .color: return "color-card"
+            case .choice(let app): return "natural-choice-" + app.id
             case .entry(let app): return app.id
             case .fallback(let fallback, _): return "fallback-" + fallback.id
             }
@@ -131,6 +142,7 @@ struct LauncherScreen: PaletteScreen {
         case .color: return "Copy Color"
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
+        case .choice: return "Review Command"
         case .entry(let app): return app.kind.descriptor.openVerb
         case .fallback(let fallback, _): return fallback.openVerb
         case nil: return "Open Application"
@@ -203,7 +215,7 @@ struct LauncherScreen: PaletteScreen {
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
         case .calc, .meeting, .color: return true
-        case .entry, .fallback, nil: return false
+        case .choice, .entry, .fallback, nil: return false
         }
     }
 
@@ -220,6 +232,11 @@ struct LauncherScreen: PaletteScreen {
         return result.isActionable
     }
 
+    func hasActions(at selection: Int) -> Bool {
+        guard case .choice = row(at: selection) else { return true }
+        return false
+    }
+
     func actions(at selection: Int) -> PopoverMenuContent? {
         switch row(at: selection) {
         case .calc(let result):
@@ -228,6 +245,7 @@ struct LauncherScreen: PaletteScreen {
             return ColorActionsMenu.content(color: color, core: core)
         case .meeting(let meeting):
             return MeetingActionsMenu.content(meeting: meeting, core: core)
+        case .choice: return nil
         case .entry(let app):
             return AppActionsMenu.content(
                 app: app, searchQuery: vm.query, core: core, running: running,
@@ -253,6 +271,7 @@ struct LauncherScreen: PaletteScreen {
         case .color(let color):
             core.clipboardCoordinator.copyColor(color, as: ColorFormat.primary(for: color))
         case .meeting(let meeting): core.calendarCoordinator.activateMeeting(id: meeting.id)
+        case .choice(let app): core.naturalCommandCoordinator.select(app.id)
         case .entry(let app):
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))
@@ -400,7 +419,26 @@ struct LauncherScreen: PaletteScreen {
     var hasUnshownFavorites: Bool { favoriteCount > compactFavorites.count }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
-        AnyView(content(selection: selection, scroll: scroll))
+        AnyView(
+            content(selection: selection, scroll: scroll)
+                .task(id: fallbackTrigger) {
+                    core.naturalCommandCoordinator.considerFallback(
+                        query: vm.query, hasLocalAnswer: hasLocalAnswer)
+                })
+    }
+
+    private struct FallbackTrigger: Equatable {
+        let query: String
+        let hasLocalAnswer: Bool
+        let enabled: Bool
+        let hasKey: Bool
+    }
+
+    private var fallbackTrigger: FallbackTrigger {
+        FallbackTrigger(
+            query: vm.query, hasLocalAnswer: hasLocalAnswer,
+            enabled: core.settings.naturalCommandsEnabled,
+            hasKey: core.naturalCommandSettings.hasAPIKey)
     }
 
     @ViewBuilder
@@ -432,8 +470,16 @@ struct LauncherScreen: PaletteScreen {
                 openActions()
             },
             onDropped: { core.paletteCoordinator.dragLanded() },
+            choices: choiceSection,
             fallbacks: fallbackSection
         )
+    }
+
+    private var choiceSection: LauncherList.ChoiceSection? {
+        guard !choices.isEmpty else { return nil }
+        return LauncherList.ChoiceSection(
+            entries: choices,
+            onActivate: { activate(at: $0) })
     }
 
     /// Nil when nothing is typed, which is the one state the section has no input for.

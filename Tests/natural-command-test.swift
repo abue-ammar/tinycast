@@ -31,6 +31,8 @@ struct NaturalCommandTests {
         unknownChoiceDoesNotChooseACommand()
         malformedResponseIsRejected()
         duplicateCandidateIDsAreRejected()
+        automaticFallbackRequiresAnEmptyLocalSearch()
+        responseOffersRankedChoicesWithoutRunningOne()
         requestContextRejectsStaleResults()
         windowMeaningsDistinguishSimilarCommands()
 
@@ -120,6 +122,42 @@ struct NaturalCommandTests {
         }
     }
 
+    static func automaticFallbackRequiresAnEmptyLocalSearch() {
+        check("an unmatched query can use TypeSafe", NaturalCommand.shouldInterpret(
+            query: "move window right", hasLocalAnswer: false, enabled: true, hasKey: true))
+        check("a fuzzy match prevents TypeSafe", !NaturalCommand.shouldInterpret(
+            query: "move window right", hasLocalAnswer: true, enabled: true, hasKey: true))
+        check("a short query stays local", !NaturalCommand.shouldInterpret(
+            query: "go", hasLocalAnswer: false, enabled: true, hasKey: true))
+        check("the feature switch prevents TypeSafe", !NaturalCommand.shouldInterpret(
+            query: "move window right", hasLocalAnswer: false, enabled: false, hasKey: true))
+        check("a missing key prevents TypeSafe", !NaturalCommand.shouldInterpret(
+            query: "move window right", hasLocalAnswer: false, enabled: true, hasKey: false))
+    }
+
+    static func responseOffersRankedChoicesWithoutRunningOne() {
+        let answer = decode(
+            choice: candidates[0].id, confidence: 0.88,
+            probabilities: [candidates[0].id: 0.78, candidates[1].id: 0.17,
+                            NaturalCommand.noMatchID: 0.05])
+        check(
+            "a confident response offers the chosen command and an alternative",
+            NaturalCommand.suggestedIDs(answer, candidates: candidates)
+                == candidates.map(\.id))
+        check(
+            "no match offers no command rows",
+            NaturalCommand.suggestedIDs(
+                decode(choice: NaturalCommand.noMatchID, confidence: 0.92,
+                       probabilities: [NaturalCommand.noMatchID: 0.92, candidates[0].id: 0.08]),
+                candidates: candidates).isEmpty)
+        check(
+            "low confidence offers no command rows",
+            NaturalCommand.suggestedIDs(
+                decode(choice: candidates[0].id, confidence: 0.49,
+                       probabilities: [candidates[0].id: 0.51, NaturalCommand.noMatchID: 0.49]),
+                candidates: candidates).isEmpty)
+    }
+
     static func requestContextRejectsStaleResults() {
         var run = NaturalCommand.Run(
             id: UUID(), query: "move window right", candidates: Set(candidates))
@@ -131,12 +169,12 @@ struct NaturalCommandTests {
                 currentCandidates: current))
         check(
             "editing the query cancels the pending request",
-            run.shouldCancelPending(
+            run.shouldClearForContext(
                 currentQuery: "move window left", isLauncherVisible: true,
                 enabled: true, hasKey: true))
         check(
             "closing the launcher cancels the pending request",
-            run.shouldCancelPending(
+            run.shouldClearForContext(
                 currentQuery: run.query, isLauncherVisible: false,
                 enabled: true, hasKey: true))
         check(
@@ -144,19 +182,52 @@ struct NaturalCommandTests {
             !run.mayPresent(
                 currentQuery: run.query, isLauncherVisible: true, enabled: true, hasKey: true,
                 currentCandidates: [candidates[0]]))
+        run.beginChoosing()
+        check(
+            "a stable result may be chosen",
+            run.mayChoose(
+                currentQuery: run.query, isLauncherVisible: true, enabled: true, hasKey: true,
+                currentCandidates: current))
+        check(
+            "publishing choices does not authorize execution",
+            !run.mayExecute(
+                currentQuery: run.query, enabled: true, hasKey: true,
+                targetStillAvailable: true))
+        check(
+            "a changed catalog removes the visible choices",
+            !run.mayChoose(
+                currentQuery: run.query, isLauncherVisible: true, enabled: true, hasKey: true,
+                currentCandidates: [candidates[0]]))
+        check(
+            "a visible choice is cleared when its search changes",
+            run.shouldClearForContext(
+                currentQuery: "move window left", isLauncherVisible: true,
+                enabled: true, hasKey: true))
+        check(
+            "a visible choice is cleared when the launcher closes",
+            run.shouldClearForContext(
+                currentQuery: run.query, isLauncherVisible: false,
+                enabled: true, hasKey: true))
         run.beginConfirmation()
         check(
             "a dialog can finish after the palette loses focus",
-            !run.shouldCancelPending(
+            !run.shouldClearForContext(
                 currentQuery: run.query, isLauncherVisible: false, enabled: true, hasKey: true))
         check("an available confirmed command may run", run.mayExecute(
-            enabled: true, hasKey: true, targetStillAvailable: true))
+            currentQuery: run.query, enabled: true, hasKey: true, targetStillAvailable: true))
+        check("a changed query prevents confirmed execution", !run.mayExecute(
+            currentQuery: "move window left", enabled: true, hasKey: true,
+            targetStillAvailable: true))
         check("disabling the feature prevents the confirmed command", !run.mayExecute(
-            enabled: false, hasKey: true, targetStillAvailable: true))
+            currentQuery: run.query, enabled: false, hasKey: true, targetStillAvailable: true))
         check("removing the key prevents the confirmed command", !run.mayExecute(
-            enabled: true, hasKey: false, targetStillAvailable: true))
+            currentQuery: run.query, enabled: true, hasKey: false, targetStillAvailable: true))
         check("hiding the command prevents the confirmed command", !run.mayExecute(
-            enabled: true, hasKey: true, targetStillAvailable: false))
+            currentQuery: run.query, enabled: true, hasKey: true, targetStillAvailable: false))
+        run.resumeChoosing()
+        check("canceling a dialog returns to choices", run.mayChoose(
+            currentQuery: run.query, isLauncherVisible: true, enabled: true, hasKey: true,
+            currentCandidates: current))
     }
 
     static func windowMeaningsDistinguishSimilarCommands() {

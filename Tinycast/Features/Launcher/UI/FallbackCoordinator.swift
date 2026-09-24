@@ -46,7 +46,6 @@ final class FallbackCoordinator {
         case .builtin(.quickAI): core.quickAICoordinator.ask(query)
         case .builtin(.searchFiles): core.fileSearchCoordinator.show(query: query)
         case .builtin(.runShellCommand): core.customCommandCoordinator.runShellCommand(query)
-        case .builtin(.interpretNaturalCommand): core.naturalCommandCoordinator.interpret(query)
         case .builtin(.define): core.dictionaryCoordinator.show(term: query)
         case .quicklink(let id): core.quicklinkCoordinator.openQuicklink(id: id, filling: query)
         }
@@ -75,8 +74,6 @@ final class FallbackCoordinator {
         case .searchFiles: return settings.fileSearchEnabled
         // Its own capability: this shell is not the custom-command library's switch to hold.
         case .runShellCommand: return true
-        case .interpretNaturalCommand:
-            return settings.naturalCommandsEnabled && core.naturalCommandSettings.hasAPIKey
         // Settings › Commands is Define's only switch, so hiding the command there hides this too.
         case .define: return visibility.isVisible(CommandCatalog.makeEntry(.define))
         }

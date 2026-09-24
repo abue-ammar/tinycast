@@ -1,7 +1,8 @@
 import Foundation
 
-/// Coordinates an opt-in interpretation, its confidence gate, and the user's final confirmation.
+/// Publishes bounded command choices after interpretation and confirms an explicit selection.
 @MainActor
+@Observable
 final class NaturalCommandCoordinator {
     private struct CandidateEntry: Sendable {
         let candidate: NaturalCommand.Candidate
@@ -15,8 +16,11 @@ final class NaturalCommandCoordinator {
     private let client = NaturalCommandClient()
     private unowned let core: AppCore
     @ObservationIgnored private var interpretationTask: Task<Void, Never>?
-    private var run: NaturalCommand.Run?
-    private var progressID: UUID?
+    @ObservationIgnored private var confirmationTask: Task<Void, Never>?
+    @ObservationIgnored private var run: NaturalCommand.Run?
+    @ObservationIgnored private var progressID: UUID?
+    private(set) var suggestions: [AppEntry] = []
+    private(set) var suggestionRunID: UUID?
 
     init(
         settings: AppSettings, connection: NaturalCommandSettingsStore, appIndex: AppIndex,
@@ -29,31 +33,42 @@ final class NaturalCommandCoordinator {
         self.core = core
     }
 
-    func interpret(_ query: String) {
+    func considerFallback(query: String, hasLocalAnswer: Bool) {
+        guard NaturalCommand.shouldInterpret(
+            query: query, hasLocalAnswer: hasLocalAnswer,
+            enabled: settings.naturalCommandsEnabled, hasKey: connection.hasAPIKey)
+        else {
+            cancel()
+            return
+        }
+        if run?.query == query { return }
         cancel()
-        guard settings.naturalCommandsEnabled else { return }
-
         let candidates = availableCandidates()
-        guard !candidates.isEmpty else {
-            core.showMessage("No Tinycast commands are available to interpret.", tone: .neutral)
-            return
-        }
-
-        let apiKey: String
-        do {
-            apiKey = try connection.apiKey()
-        } catch {
-            core.showMessage("Add a TypeSafe API key in Settings → Natural Commands.", tone: .danger)
-            return
-        }
-
+        guard !candidates.isEmpty else { return }
         let requestID = UUID()
         run = .init(id: requestID, query: query, candidates: Set(candidates.map(\.candidate)))
-        progressID = requestID
-        core.showProgress("Interpreting command…")
-        interpretationTask = Task { [weak self, candidates, apiKey, requestID] in
+        interpretationTask = Task { [weak self, candidates, requestID] in
             guard let self else { return }
             defer { self.hideProgress(for: requestID) }
+            do {
+                try await Task.sleep(for: .milliseconds(650))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled, self.isRequestCurrent(requestID) else {
+                self.cancelIfCurrent(requestID)
+                return
+            }
+            let apiKey: String
+            do {
+                apiKey = try self.connection.apiKey()
+            } catch {
+                self.finishInterpretation(for: requestID)
+                self.core.showMessage("The TypeSafe API key could not be read.", tone: .danger)
+                return
+            }
+            self.progressID = requestID
+            self.core.showProgress("Interpreting command…")
             do {
                 let answer = try await self.client.interpret(
                     query: query, candidates: candidates.map(\.candidate), apiKey: apiKey)
@@ -63,8 +78,7 @@ final class NaturalCommandCoordinator {
                     return
                 }
                 self.hideProgress(for: requestID)
-                await self.present(
-                    answer: answer, query: query, candidates: candidates, requestID: requestID)
+                self.publish(answer: answer, candidates: candidates, requestID: requestID)
             } catch is CancellationError {
                 return
             } catch {
@@ -80,8 +94,8 @@ final class NaturalCommandCoordinator {
         }
     }
 
-    func cancelPendingIfContextChanged() {
-        guard let run, run.shouldCancelPending(
+    func clearIfContextChanged() {
+        guard let run, run.shouldClearForContext(
             currentQuery: core.palette.query,
             isLauncherVisible: core.paletteCoordinator.isShowing(.launcher),
             enabled: settings.naturalCommandsEnabled, hasKey: connection.hasAPIKey)
@@ -96,11 +110,60 @@ final class NaturalCommandCoordinator {
     func cancel() {
         interpretationTask?.cancel()
         interpretationTask = nil
+        confirmationTask?.cancel()
+        confirmationTask = nil
         if let run { hideProgress(for: run.id) }
         run = nil
+        suggestions = []
+        suggestionRunID = nil
     }
 
     func prepareForTermination() { cancel() }
+
+    func choices(for query: String, hasLocalAnswer: Bool) -> [AppEntry] {
+        guard !hasLocalAnswer, isChoiceCurrent(query: query) else { return [] }
+        return suggestions
+    }
+
+    func select(_ id: String) {
+        guard let run, run.phase == .choosing else { return }
+        guard isChoiceCurrent(query: core.palette.query),
+            suggestions.contains(where: { $0.id == id }),
+            let target = availableCandidates().first(where: { $0.candidate.id == id })
+        else {
+            cancel()
+            return
+        }
+        self.run?.beginConfirmation()
+        confirmationTask = Task { [weak self, requestID = run.id, target] in
+            guard let self else { return }
+            let shouldRun = await self.core.confirm(
+                title: "Run “\(target.entry.name)”?",
+                message: "Tinycast interpreted “\(run.query)” as this command.",
+                symbol: self.symbol(for: target.entry),
+                confirmTitle: "Run Command", tone: .neutral, confirmRole: .standard)
+            guard self.isCurrent(requestID) else { return }
+            self.confirmationTask = nil
+            guard shouldRun else {
+                self.run?.resumeChoosing()
+                self.clearIfContextChanged()
+                return
+            }
+            guard self.run?.mayExecute(
+                currentQuery: self.core.palette.query,
+                enabled: self.settings.naturalCommandsEnabled,
+                hasKey: self.connection.hasAPIKey,
+                targetStillAvailable: self.availableCandidates().contains {
+                    $0.candidate == target.candidate
+                }) == true
+            else {
+                self.cancel()
+                return
+            }
+            self.finishInterpretation(for: requestID)
+            self.core.launcherCoordinator.launch(target.entry)
+        }
+    }
 
     private func availableCandidates() -> [CandidateEntry] {
         appIndex.apps.compactMap { entry in
@@ -127,39 +190,19 @@ final class NaturalCommandCoordinator {
         }
     }
 
-    private func present(
-        answer: NaturalCommand.ChoiceAnswer, query: String, candidates: [CandidateEntry], requestID: UUID
-    ) async {
-        let resolution = NaturalCommand.resolve(answer, candidates: candidates.map(\.candidate))
-        guard case .candidate(let id) = resolution,
-            let target = candidates.first(where: { $0.candidate.id == id })
-        else {
-            finishInterpretation(for: requestID)
-            core.showMessage("No confident Tinycast command matched that request.", tone: .neutral)
-            return
-        }
-
-        run?.beginConfirmation()
-        let shouldRun = await core.confirm(
-            title: "Run “\(target.entry.name)”?",
-            message: "Tinycast interpreted “\(query)” as this command.",
-            symbol: symbol(for: target.entry),
-            confirmTitle: "Run Command", tone: .neutral, confirmRole: .standard)
-        guard shouldRun else {
+    private func publish(
+        answer: NaturalCommand.ChoiceAnswer, candidates: [CandidateEntry], requestID: UUID
+    ) {
+        let ids = NaturalCommand.suggestedIDs(answer, candidates: candidates.map(\.candidate))
+        guard !ids.isEmpty else {
             finishInterpretation(for: requestID)
             return
         }
-        guard isCurrent(requestID), run?.mayExecute(
-            enabled: settings.naturalCommandsEnabled, hasKey: connection.hasAPIKey,
-            targetStillAvailable: availableCandidates().contains {
-                $0.candidate == target.candidate
-            }) == true
-        else {
-            cancelIfCurrent(requestID)
-            return
-        }
-        finishInterpretation(for: requestID)
-        core.launcherCoordinator.launch(target.entry)
+        let byID = Dictionary(uniqueKeysWithValues: candidates.map { ($0.candidate.id, $0.entry) })
+        run?.beginChoosing()
+        interpretationTask = nil
+        suggestions = ids.compactMap { byID[$0] }
+        suggestionRunID = requestID
     }
 
     private func isCurrent(_ requestID: UUID) -> Bool { run?.id == requestID }
@@ -167,6 +210,14 @@ final class NaturalCommandCoordinator {
     private func isRequestCurrent(_ requestID: UUID) -> Bool {
         isCurrent(requestID) && run?.mayPresent(
             currentQuery: core.palette.query,
+            isLauncherVisible: core.paletteCoordinator.isShowing(.launcher),
+            enabled: settings.naturalCommandsEnabled, hasKey: connection.hasAPIKey,
+            currentCandidates: Set(availableCandidates().map(\.candidate))) == true
+    }
+
+    private func isChoiceCurrent(query: String) -> Bool {
+        run?.mayChoose(
+            currentQuery: query,
             isLauncherVisible: core.paletteCoordinator.isShowing(.launcher),
             enabled: settings.naturalCommandsEnabled, hasKey: connection.hasAPIKey,
             currentCandidates: Set(availableCandidates().map(\.candidate))) == true
@@ -186,6 +237,9 @@ final class NaturalCommandCoordinator {
         guard isCurrent(requestID) else { return }
         run = nil
         interpretationTask = nil
+        confirmationTask = nil
+        suggestions = []
+        suggestionRunID = nil
         hideProgress(for: requestID)
     }
 

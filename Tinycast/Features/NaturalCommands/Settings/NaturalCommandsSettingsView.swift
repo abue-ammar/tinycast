@@ -12,7 +12,7 @@ struct NaturalCommandsSettingsView: View {
             Section {
                 Toggle(isOn: $appSettings.naturalCommandsEnabled) {
                     SettingsRowTitle(.naturalCommandsNaturalCommands, "Enable natural-language commands")
-                    Text("TypeSafe is contacted only after you select its fallback.")
+                    Text("Unmatched searches are sent to TypeSafe after you stop typing.")
                 }
                 SettingsRow(
                     title: "TypeSafe API key", subtitle: connectionSubtitle,
@@ -24,7 +24,8 @@ struct NaturalCommandsSettingsView: View {
                 SettingsSectionHeader(.naturalCommandsNaturalCommands)
             } footer: {
                 Text(
-                    "Tinycast sends the typed request plus built-in command names, IDs, kinds, and "
+                    "When local search finds nothing, Tinycast sends the typed request plus "
+                        + "built-in command names, IDs, kinds, and "
                         + "fixed window-command descriptions to TypeSafe. "
                         + "It never sends app names, clipboard contents, custom commands, or quicklinks. "
                         + "A matched command always asks before it runs.")
