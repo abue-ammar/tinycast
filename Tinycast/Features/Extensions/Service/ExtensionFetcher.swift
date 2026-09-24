@@ -93,7 +93,7 @@ enum ExtensionAsyncProcess {
         }
 
         /// Signals the pid rather than the `Process`, which a `@Sendable` timer handler cannot capture.
-        private func terminationWatchdog(after seconds: Double) -> DispatchSourceTimer {
+        fileprivate func terminationWatchdog(after seconds: Double) -> DispatchSourceTimer {
             let pid = task.processIdentifier
             let timer = DispatchSource.makeTimerSource(queue: .global(qos: .utility))
             timer.schedule(deadline: .now() + seconds)
@@ -104,7 +104,7 @@ enum ExtensionAsyncProcess {
     }
 
     /// Started by `enqueue` and not yet claimed by `wait`, keyed by pid.
-    private static let uncollected = Mutex<[Int32: (child: Child, timeout: Double?)]>([:])
+    private static let uncollected = Mutex<[Int32: (child: Child, watchdog: DispatchSourceTimer?)]>([:])
 
     /// An app bundle inherits no login shell, so a bare `brew` would otherwise fail.
     static func resolveExecutable(_ command: String) -> URL? {
@@ -130,7 +130,9 @@ enum ExtensionAsyncProcess {
     }
 
     static func enqueue(_ child: Child, timeout: Double?) {
-        uncollected.withLock { $0[child.task.processIdentifier] = (child, timeout) }
+        // Armed at launch: `wait` only starts once streaming output has ended.
+        let watchdog = timeout.flatMap { $0 > 0 ? child.terminationWatchdog(after: $0 / 1000) : nil }
+        uncollected.withLock { $0[child.task.processIdentifier] = (child, watchdog) }
     }
 
     /// Next chunk of fd 1 or 2, nil at EOF; `wait` then finds both pipes drained.
@@ -152,11 +154,14 @@ enum ExtensionAsyncProcess {
             let entry = uncollected.withLock({ $0.removeValue(forKey: pid) })
         else { throw ProcessError.notStarted }
 
-        return await withCheckedContinuation { continuation in
+        let child = entry.child
+        let result = await withCheckedContinuation { continuation in
             // The drain blocks until the child closes its output, which can be minutes away.
             DispatchQueue.global(qos: .userInitiated).async {
-                continuation.resume(returning: entry.child.collect(timeout: entry.timeout))
+                continuation.resume(returning: child.collect(timeout: nil))
             }
         }
+        entry.watchdog?.cancel()
+        return result
     }
 }

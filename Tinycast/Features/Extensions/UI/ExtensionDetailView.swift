@@ -487,11 +487,12 @@ private struct ExtensionMarkdownImage: View {
         .task(id: ExtensionImage.LoadKey(source: source, isDark: isDark)) {
             // A slow remote load must not show the previous row's image meanwhile.
             if url.scheme != "data" { image = nil }
-            image =
+            let loaded =
                 url.scheme == "data"
                 ? await ExtensionIconCache.loadInlineAsync(
                     url, palette: ExtensionImage.svgPalette(isDark: isDark))
                 : await ExtensionIconCache.loadRemoteAsync(url, asIcon: false)
+            if !Task.isCancelled { image = loaded }
         }
     }
 

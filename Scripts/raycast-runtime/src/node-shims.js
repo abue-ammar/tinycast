@@ -1069,7 +1069,24 @@ function startChild(spec, drain) {
 }
 
 async function pipeChild(pid, fd, stream) {
-  for (let chunk; (chunk = await hostCall("proc", "read", [pid, fd])); ) stream.write(Buffer.from(base64ToBytes(chunk)));
+  let held = Buffer.alloc(0);
+  for (let chunk; (chunk = await hostCall("proc", "read", [pid, fd])); ) {
+    const bytes = Buffer.concat([held, Buffer.from(base64ToBytes(chunk))]);
+    const cut = utf8Boundary(bytes);
+    held = bytes.subarray(cut);
+    if (cut) stream.write(bytes.subarray(0, cut));
+  }
+  if (held.length) stream.write(held);
+}
+
+/// Holds back a trailing partial UTF-8 character so a chunk never splits one.
+function utf8Boundary(bytes) {
+  for (let i = bytes.length - 1; i >= Math.max(0, bytes.length - 3); i--) {
+    if ((bytes[i] & 0xc0) === 0x80) continue;
+    const need = bytes[i] >= 0xf0 ? 4 : bytes[i] >= 0xe0 ? 3 : bytes[i] >= 0xc0 ? 2 : 1;
+    return bytes.length - i < need ? i : bytes.length;
+  }
+  return bytes.length;
 }
 
 /// Node's `ChildProcess.kill` reports an undeliverable signal by returning false, never by throwing.
