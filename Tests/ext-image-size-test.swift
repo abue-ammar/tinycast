@@ -48,17 +48,6 @@ struct ExtensionImageSizeTests {
             hint("data:image/png;base64,AAAA") == nil,
             "an inline image with no query asks for no size")
 
-        expect(ExtensionImageSize.maxHeight(for: nil) == 220, "no hint keeps the 220pt cap")
-        expect(
-            ExtensionImageSize.maxHeight(for: ExtensionImageSize(width: nil, height: 120)) == 120,
-            "a height under the cap shrinks the image")
-        expect(
-            ExtensionImageSize.maxHeight(for: ExtensionImageSize(width: nil, height: 400)) == 220,
-            "a height over the cap is held to it")
-        expect(
-            ExtensionImageSize.maxHeight(for: ExtensionImageSize(width: 2000, height: nil)) == 220,
-            "a width alone never lifts the height cap")
-
         if failures > 0 {
             print("\(failures) failure(s)")
             exit(1)

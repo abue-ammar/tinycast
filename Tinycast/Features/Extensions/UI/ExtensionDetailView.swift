@@ -460,7 +460,7 @@ extension String {
     }
 }
 
-/// An image inside a Detail's markdown, capped so a large asset can't push the layout around.
+/// An image inside a Detail's markdown, at its own size or the one its URL asks for.
 private struct ExtensionMarkdownImage: View {
     @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
@@ -477,7 +477,7 @@ private struct ExtensionMarkdownImage: View {
                         Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
                     }
                 }
-                .frame(maxWidth: maxWidth, maxHeight: maxHeight)
+                .frame(maxWidth: maxWidth ?? image.size.width, maxHeight: maxHeight)
                 .clipShape(RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous))
                 .frame(maxWidth: .infinity)
             } else {
@@ -505,7 +505,7 @@ private struct ExtensionMarkdownImage: View {
 
     private var size: ExtensionImageSize? { ExtensionImageSize(url: url) }
 
-    private var maxWidth: CGFloat { size?.width.map { CGFloat($0) } ?? .infinity }
+    private var maxWidth: CGFloat? { size?.width.map { CGFloat($0) } }
 
-    private var maxHeight: CGFloat { CGFloat(ExtensionImageSize.maxHeight(for: size)) }
+    private var maxHeight: CGFloat { size?.height.map { CGFloat($0) } ?? .infinity }
 }

@@ -22,13 +22,6 @@ struct ExtensionImageSize: Equatable {
         if width == nil && height == nil { return nil }
     }
 
-    /// Hints only shrink an image, so this cap still stops a large asset pushing the layout around.
-    static let heightCap = 220.0
-
-    static func maxHeight(for size: ExtensionImageSize?) -> Double {
-        min(size?.height ?? heightCap, heightCap)
-    }
-
     init(width: Double?, height: Double?) {
         self.width = width
         self.height = height

@@ -272,8 +272,8 @@ screens hold (see [palette.md](palette.md)).
 - **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, tables, fetched
   and inline images) with `AttributedString` handling inline styling, plus `Detail.Metadata` — a
   sidebar on a Detail screen, appended below the markdown in a `List`'s detail pane. An image
-  is full-width and at most 220pt tall; `?raycast-width=` / `?raycast-height=` on its URL, read by
-  `ExtensionImageSize`, can only shrink it within that, never lift the cap. A rowless Detail's screen
+  draws at its own size, shrunk to fit the pane and never enlarged, unless `?raycast-width=` /
+  `?raycast-height=` on its URL, read by `ExtensionImageSize`, size it. A rowless Detail's screen
   actions remain available through the primary ⏎ action and the ⌘K Actions panel.
 - **Appearance** — `environment.appearance` reports the real one, so an extension that branches on it
   is told the truth. It is an injected field on `ExtensionLaunchContext` (a `Model/` type owns no
