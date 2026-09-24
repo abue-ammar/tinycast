@@ -320,9 +320,10 @@ struct ExtensionMarkdownView: View {
         var paragraph: [String] = []
         var fence: [String]?
         var numberedIndex = 0
-        var tableOpen = false
+        var table: [[String]] = []
 
         func flushParagraph() {
+            if !table.isEmpty { blocks.append(.table(table)); table.removeAll() }
             guard !paragraph.isEmpty else { return }
             blocks.append(.paragraph(paragraph.joined(separator: " ")))
             paragraph.removeAll()
@@ -351,7 +352,6 @@ struct ExtensionMarkdownView: View {
             if trimmed.isEmpty {
                 flushParagraph()
                 numberedIndex = 0
-                tableOpen = false
                 continue
             }
             if trimmed == "---" || trimmed == "***" || trimmed == "___" {
@@ -360,19 +360,14 @@ struct ExtensionMarkdownView: View {
                 continue
             }
             if trimmed.hasPrefix("|") {
-                flushParagraph()
+                if !paragraph.isEmpty { flushParagraph() }
                 let row = trimmed.replacingOccurrences(
                     of: #"(?<!\\)((?:\\\\)*)\\\|"#, with: "$1\u{0}", options: .regularExpression)
                 let cells = row.split(separator: "|", omittingEmptySubsequences: false).dropFirst()
                     .dropLast(row.hasSuffix("|") ? 1 : 0)
                     .map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\u{0}", with: "|") }
                 if cells.allSatisfy({ $0.contains("-") && $0.allSatisfy(":-".contains) }) { continue }
-                if tableOpen, case .table(let rows) = blocks.last {
-                    blocks[blocks.count - 1] = .table(rows + [cells])
-                } else {
-                    blocks.append(.table([cells]))
-                }
-                tableOpen = true
+                table.append(cells)
                 continue
             }
             // A standalone image is the one block AttributedString can't show inline.
