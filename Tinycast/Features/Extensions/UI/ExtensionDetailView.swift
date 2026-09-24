@@ -134,7 +134,7 @@ struct ExtensionMetadataView: View {
         title: String?, index: Int, @ViewBuilder content: () -> Content
     ) -> some View {
         if inline {
-            HStack(spacing: metrics.spacing.xl) {
+            HStack(alignment: .firstTextBaseline, spacing: metrics.spacing.xl) {
                 Text(title ?? "")
                     .font(metrics.typography.rowTitle)
                     .foregroundStyle(.secondary)
@@ -145,6 +145,7 @@ struct ExtensionMetadataView: View {
                     .truncationMode(.middle)
             }
             .padding(.horizontal, metrics.spacing.md)
+            .padding(.vertical, metrics.spacing.xs)
             .frame(minHeight: metrics.scaled(Self.inlineRowHeight))
             .background(
                 RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
