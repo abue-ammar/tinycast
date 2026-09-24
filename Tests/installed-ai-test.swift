@@ -661,6 +661,11 @@ private final class Fixture {
             setenv("PATH", bin.path + ":" + inheritedPath, 1)
             // The locator asks a login shell first; the user's rc files would put real CLIs ahead.
             setenv("ZDOTDIR", root.path, 1)
+            // `/etc/zprofile`'s path_helper puts Homebrew's CLIs ahead of the stubs; undo that.
+            try #"export TINYCAST_SAVED_PATH="$PATH""#.write(
+                to: root.appending(path: ".zshenv"), atomically: true, encoding: .utf8)
+            try #"[ -n "$TINYCAST_SAVED_PATH" ] && export PATH="$TINYCAST_SAVED_PATH""#.write(
+                to: root.appending(path: ".zprofile"), atomically: true, encoding: .utf8)
             setenv("TC_INSTALLED_STUB_ROOT", root.path, 1)
             setenv("TC_CURSOR_CHATS_ROOT", cursorChats.path, 1)
         } catch {
