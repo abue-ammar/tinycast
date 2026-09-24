@@ -108,6 +108,7 @@ enum LauncherOrder {
         let titleExact: Bool
         /// The best of the title and alternate titles; an exact hit is `Int.max`.
         let title: Int
+        let titlePrefix: Bool
         let subtitleExact: Bool
         let subtitle: Int
         let term: TermHit
@@ -136,6 +137,9 @@ enum LauncherOrder {
 
             titleExact = titleMatch == .exact || alternates.contains { $0 == .exact }
             title = alternates.reduce(Self.value(titleMatch)) { max($0, Self.value($1)) }
+            titlePrefix =
+                profile.title.units.starts(with: query.latin.units)
+                || alternateTitles.contains { $0.units.starts(with: query.typed.units) }
             subtitleExact = subtitleMatch == .exact
             subtitle = Self.value(subtitleMatch)
             term = Self.termHit(signals.usage.searchTerms, query.latin.units)
@@ -229,13 +233,14 @@ enum LauncherOrder {
         if y.term.isLongOverbounds, x.term == .none { return 1 }
         let order = first(
             descending(max(x.title, x.subtitle), max(y.title, y.subtitle)), frecency(a, b),
-            descending(x.title, y.title), descending(a.signals.priority, b.signals.priority))
+            descending(x.title, y.title), descending(x.titlePrefix, y.titlePrefix),
+            descending(a.signals.priority, b.signals.priority))
         return order ?? collate(a, b)
     }
 
     /// What decides two entries the query cannot tell apart.
     private static func tiebreak(_ a: Candidate, _ b: Candidate) -> Int {
-        let aliased = descending(a.signals.alias == nil ? 0 : 1, b.signals.alias == nil ? 0 : 1)
+        let aliased = descending(a.signals.alias != nil, b.signals.alias != nil)
         return first(frecency(a, b), aliased, descending(a.signals.priority, b.signals.priority))
             ?? collate(a, b)
     }
@@ -261,6 +266,10 @@ enum LauncherOrder {
 
     private static func descending<Value: Comparable>(_ left: Value, _ right: Value) -> Int {
         left == right ? 0 : (left > right ? -1 : 1)
+    }
+
+    private static func descending(_ left: Bool, _ right: Bool) -> Int {
+        left == right ? 0 : (left ? -1 : 1)
     }
 
     private static func first(_ orders: Int...) -> Int? {

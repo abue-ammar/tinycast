@@ -602,10 +602,9 @@ final class AppSettings {
         launcherShowsSuggestions =
             defaults.object(forKey: Key.launcherShowsSuggestions.rawValue) == nil
             || defaults.bool(forKey: Key.launcherShowsSuggestions.rawValue)
-        // High by default: it keeps letter soup out of the results.
         rootSearchSensitivity =
             defaults.string(forKey: Key.rootSearchSensitivity.rawValue)
-            .flatMap(SearchSensitivity.init) ?? .high
+            .flatMap(SearchSensitivity.init) ?? .default
         openOnCursorScreen =
             defaults.object(forKey: Key.openOnCursorScreen.rawValue) == nil
             || defaults.bool(forKey: Key.openOnCursorScreen.rawValue)

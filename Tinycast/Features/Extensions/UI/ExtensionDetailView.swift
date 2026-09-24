@@ -39,7 +39,8 @@ struct ExtensionDetailBody: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(
-                .horizontal, stacksMetadata ? metrics.scaled(Self.stackedInset) : metrics.spacing.lg)
+                .horizontal, stacksMetadata ? metrics.scaled(Self.stackedInset) : metrics.spacing.lg
+            )
             .padding(.vertical, metrics.spacing.md)
             .hideNativeScrollers()
         }
@@ -405,7 +406,9 @@ struct ExtensionMarkdownView: View {
                     of: #"(?<!\\)((?:\\\\)*)\\\|"#, with: "$1\u{0}", options: .regularExpression)
                 let cells = row.split(separator: "|", omittingEmptySubsequences: false).dropFirst()
                     .dropLast(row.hasSuffix("|") ? 1 : 0)
-                    .map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\u{0}", with: "|") }
+                    .map {
+                        $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\u{0}", with: "|")
+                    }
                 if cells.allSatisfy({ $0.contains("-") && $0.allSatisfy(":-".contains) }) { continue }
                 table.append(cells)
                 continue

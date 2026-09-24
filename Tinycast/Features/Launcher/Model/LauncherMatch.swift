@@ -4,7 +4,7 @@ import Foundation
 struct SearchText: Sendable, Hashable {
     /// UTF-16, because the scorer walks it by index on every keystroke.
     let units: [UInt16]
-    /// Word starts the fold erased: `Stack` in `OrbStack`.
+    /// Word starts no separator marks, such as a capital after a lowercase letter.
     let humps: [Int]
 
     var isEmpty: Bool { units.isEmpty }
@@ -29,14 +29,26 @@ struct SearchText: Sendable, Hashable {
             humps: humps + other.humps.map { $0 + units.count + 1 })
     }
 
+    private static let lowercase = UInt8(ascii: "a")...UInt8(ascii: "z")
+    private static let uppercase = UInt8(ascii: "A")...UInt8(ascii: "Z")
+    private static let digit = UInt8(ascii: "0")...UInt8(ascii: "9")
+
     /// ASCII only: its fold keeps every index, where a non-ASCII fold can shift them.
     private static func humps(in raw: String) -> [Int] {
         var humps: [Int] = []
-        var previous: UInt8 = 0
+        var (beforePrevious, previous): (UInt8, UInt8) = (0, 0)
         for (offset, byte) in raw.utf8.enumerated() {
             guard byte < 0x80 else { return [] }
-            if (0x61...0x7A).contains(previous), (0x41...0x5A).contains(byte) { humps.append(offset) }
-            previous = byte
+            switch (beforePrevious, previous, byte) {
+            case (_, lowercase, uppercase), (_, digit, lowercase), (_, digit, uppercase):
+                humps.append(offset)
+            // The capital before this lowercase letter ends an acronym and starts a word.
+            case (uppercase, uppercase, lowercase):
+                humps.append(offset - 1)
+            default:
+                break
+            }
+            (beforePrevious, previous) = (previous, byte)
         }
         return humps
     }
@@ -155,7 +167,6 @@ enum LauncherMatch {
         return best == .min ? nil : .scored(score: best, skipped: skipped)
     }
 
-    /// A word start earns 3.
     private static func wordPoints(_ t: [UInt16], _ column: Int, humps: [Int]) -> Int {
         (isSeparator(t[column - 1]) && !isSeparator(t[column])) || humps.contains(column) ? 3 : 2
     }
@@ -166,6 +177,8 @@ enum SearchSensitivity: String, CaseIterable, Identifiable, Sendable {
     case low
     case medium
     case high
+
+    static let `default`: Self = .medium
 
     var id: String { rawValue }
 

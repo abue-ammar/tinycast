@@ -69,6 +69,9 @@ struct FuzzTest {
             "matched separators never push a row past the name",
             outcome("a--", "a---") == .scored(score: 8, skipped: 0))
         check("a camelCase hump starts a word", score("p", "TablePlus") == 3)
+        check("…as does a letter after a digit", score("p", "1Password") == 3)
+        check("…and an acronym's last capital", score("e", "HTMLEditor") == 3)
+        check("…never the capital before it", score("l", "HTMLEditor") == 2)
         check(
             "…and survives a join",
             SearchText("Search", transliterated: true).joined(
@@ -91,9 +94,12 @@ struct FuzzTest {
         check("…which Medium lets through", passes("olu", "Set Volume", .medium))
         check("High turns away a mid-word hit", !passes("code", "Xcode", .high))
         check("…which Medium lets through", passes("code", "Xcode", .medium))
+        check("…and so does the default", passes("pec", "Accessibility Inspector", .default))
         check("High still finds initials", passes("vsc", "Visual Studio Code", .high))
         check("High still finds a later word", passes("chrome", "Google Chrome", .high))
         check("…and a camelCase one", passes("stack", "OrbStack", .high))
+        check("…one after a digit", passes("password", "1Password", .high))
+        check("…and one after an acronym", passes("edit", "BBEdit", .high))
         check("one letter must start a word", !passes("s", "Clipboard History", .medium))
         check("…and does when it does", passes("s", "Clipboard History", .low))
         check("an exact hit passes every level", SearchSensitivity.high.accepts(.exact, queryLength: 99))
@@ -261,6 +267,17 @@ struct FuzzTest {
         check(
             "a title hit beats the same score on a subtitle",
             first("ma", [Item(name: "Search", subtitle: "Maps"), Item(name: "Maps")]) == "Maps")
+        check(
+            "a title the query starts beats the same score skipping to a later word",
+            first("ap", [Item(name: "AirPort Utility"), Item(name: "App Store")]) == "App Store")
+        check(
+            "…ahead of kind priority",
+            first("dev", [Item(name: "Desk View", priority: 4), Item(name: "Device Hub", priority: 1)])
+                == "Device Hub")
+        check(
+            "…but behind frecency",
+            first("ap", [Item(name: "App Store"), Item(name: "AirPort Utility", frecency: 200)])
+                == "AirPort Utility")
         check(
             "an app wins the tie a Tinycast command ties it on",
             first(

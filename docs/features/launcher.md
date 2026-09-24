@@ -97,10 +97,11 @@ executable names are not matched.
 | a separator on a different one, like a space on `-` | 1 |
 | not adjacent to the previous match | −1 |
 
-Separators are space, tab, newline and `- . / ( ) [ ]`. In an ASCII name a lowercase letter followed by
-an uppercase one starts a word too, so `stack` finds OrbStack while `code` stays mid-word in Xcode.
-A query separator with nothing to land on is skipped. An equal text is `exact`, above every score.
-The alignment keeps a running maximum, so a row costs O(text).
+Separators are space, tab, newline and `- . / ( ) [ ]`. In an ASCII name a word also starts at a capital
+after a lowercase letter (`OrbStack`), at a letter after a digit (`1Password`), and at the last capital
+of a run that a lowercase letter follows (`BBEdit`), so `stack` finds OrbStack while `code` stays
+mid-word in Xcode. A query separator with nothing to land on is skipped. An equal text is `exact`, above
+every score. The alignment keeps a running maximum, so a row costs O(text).
 
 ### Sensitivity
 
@@ -110,11 +111,13 @@ length less its skipped separators:
 | Setting | A hit shows when |
 | --- | --- |
 | Low | it aligns at all |
-| Medium | `score ≥ 1.5·(L−2)+4` |
-| High, the default | `score > 2·L` |
+| Medium, the default | `score ≥ 1.5·(L−2)+4` |
+| High | `score > 2·L` |
 
-High is the default: it keeps letter soup (`olu` for Set Volume) and mid-word hits (`code` for
-Xcode) out, while initials (`vsc`) and later words (`chrome`) still land.
+Medium is the default: a run inside a word (`code` for Xcode, `pec` for Accessibility Inspector) shows,
+and so does a gapped hit that starts on a word (`pec` for Previous Track), each ranked below the
+stronger hits. High keeps both out while initials (`vsc`) and later words (`chrome`) still land; Low
+shows anything that aligns.
 
 ### The comparator
 
@@ -131,8 +134,10 @@ The first rule that separates two entries decides:
 9. The best score over the title, alternate titles and subtitle.
 10. Frecency.
 11. The title's own score.
-12. Kind priority.
-13. The name, compared numerically.
+12. A title or alternate title that starts with the query, so `ap` puts App Store above AirPort
+    Utility, which reaches the same score by skipping to `Port`.
+13. Kind priority.
+14. The name, compared numerically.
 
 Two entries that both meet rule 3 go by search-term strength, then frecency; both meeting rule 4 go by
 frecency; both meeting rule 5 go by frecency, then the title's own score. The tiebreak settles the rest —
@@ -180,13 +185,13 @@ with Russian under it labelled them `Советы` and `Аккаунт Apple`. A
 replaces the base name outright — `VoiceMemos.app` does ship `en`, so `Voice Memos` is its English
 name, and a pane's `TrackpadExtension` is never indexed for `text` to find. The app scan still adds
 every file name as an alternate title. Reading the `en_GB` those bundles *do* carry is the wrong
-repair: it relabels `Print Center` as `Print Centre`. Below the development region the walk carries
-on, so every language under it stays indexed as an alternate title. The region is canonicalized before it is matched, because
-`CFBundleDevelopmentRegion` still ships its pre-BCP-47 spelling — Safari's and Terminal's read
-`English`. `AppDisplayName.inInfo` reads the `-macos` variant of
-each key before the bare one, the way `CFBundle` does: Image Playground's loctable spells the bare
-`CFBundleDisplayName` `Playground` and only the suffixed key `Image Playground`. A non-English user finds their app by the name they
-see *and* by the English name the vendor advertises.
+repair: it relabels `Print Center` as `Print Centre`. Below the development region the walk carries on,
+so every language under it stays indexed as an alternate title. The region is canonicalized before it is
+matched, because `CFBundleDevelopmentRegion` still ships its pre-BCP-47 spelling — Safari's and
+Terminal's read `English`. `AppDisplayName.inInfo` reads the `-macos` variant of each key before the
+bare one, the way `CFBundle` does: Image Playground's loctable spells the bare `CFBundleDisplayName`
+`Playground` and only the suffixed key `Image Playground`. A non-English user finds their app by the
+name they see *and* by the English name the vendor advertises.
 
 ### Non-Latin names
 

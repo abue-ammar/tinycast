@@ -682,7 +682,7 @@ final class AppIndex {
         }
     }
 
-    private var sensitivity: SearchSensitivity { settings?.rootSearchSensitivity ?? .high }
+    private var sensitivity: SearchSensitivity { settings?.rootSearchSensitivity ?? .default }
 
     private func matchKey(_ query: String) -> MatchKey {
         MatchKey(
