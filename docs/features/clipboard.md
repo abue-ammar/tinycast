@@ -291,7 +291,7 @@ persisted as a `pinned_at` column on `items` —
 a stamp rather than a flag, because the Pinned section is ordered by _when you pinned_, not by
 recency.
 
-Pins change four things:
+Pins change five things:
 
 - **Order.** `search` returns pinned rows first — for the empty query and for FTS hits alike — under
   one "Pinned" section above the date buckets, in pin order with the oldest pin at the top, so a new
@@ -310,6 +310,10 @@ Pins change four things:
 - **Selection.** Pinning lifts a row out of its date bucket, so `ClipboardCoordinator.togglePinnedClip` moves the
   palette selection to the row's new index in the _current_ results and bumps `palette.followToken`,
   which is what makes the list scroll the highlight back into view.
+- **Landing.** A pin shapes the order, never the default selection. Every reset — opening the screen,
+  clearing the query, changing the type filter — lands on the newest clip below the Pinned section
+  (`ClipboardStore.landingIndex`), and the palette centres it so the pins stay in view above. A typed
+  query lands on its first match instead, pinned or not: the pins are results then, not a shelf.
 
 Pasting a pinned entry deliberately does **not** promote it: it holds its place in the Pinned
 section, so `promote` skips pinned rows instead of rewriting the row and its FTS entry for no

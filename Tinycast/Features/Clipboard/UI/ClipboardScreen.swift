@@ -12,6 +12,8 @@ struct ClipboardScreen: PaletteScreen {
 
     var rows: [ClipboardItem] { store.search(vm.query, filter: vm.clipboardFilter) }
 
+    var landingSelection: Int { store.landingIndex(in: vm.query, filter: vm.clipboardFilter) }
+
     var primaryActionTitle: String {
         let defaultAction = core.settings.clipboardDefaultAction
         let action = item(at: vm.selection).flatMap { defaultAction.action(for: .return, on: $0) }

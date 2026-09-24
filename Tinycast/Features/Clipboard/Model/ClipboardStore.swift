@@ -555,6 +555,12 @@ final class ClipboardStore {
         return search(query, filter: filter).prefix(while: \.isPinned).dropFirst(index).first
     }
 
+    /// Where a reset lands: past the pins to the newest clip, or on the first match once typed.
+    func landingIndex(in query: String, filter: ClipboardFilter) -> Int {
+        guard query.trimmingCharacters(in: .whitespaces).isEmpty else { return 0 }
+        return search(query, filter: filter).firstIndex { !$0.isPinned } ?? 0
+    }
+
     private func unfiltered(_ q: String, filter: ClipboardFilter) -> [ClipboardItem] {
         guard !q.isEmpty else { return orderedItems }
         // Pins are matched in memory: all resident, and the LIMIT would otherwise drop one.

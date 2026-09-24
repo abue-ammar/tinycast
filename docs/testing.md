@@ -380,6 +380,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - The type filter searches from its top band, retains its active checkmark when matched, and shows
   centred **No Results** without changing the clipboard query; its native field supports selection
 - ⌘. pins and the highlight follows the row into Pinned; ⌘⌫ deletes; ⌘↵ copies without pasting
+- With enough pins to fill the list, opening it — the first show after launch too — highlights the
+  newest clip, centred with pins above; clearing a query or the filter lands there again
 - ⌃X deletes the selected entry and ⌃⇧X clears the history, from the list and from an open ⌘K menu
 - ⌃⇧X asks first, through Tinycast's own dialog; Cancel and Esc both leave every entry in place
 - ↵ pastes into the previous app; ⌥↵ pastes without closing the palette

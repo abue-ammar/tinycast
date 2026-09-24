@@ -14,6 +14,7 @@ struct ClipboardTests {
         pinsSurvivePruningAndTheWindow()
         pinsLeadFilteredSearches()
         pinnedSlotResolutionUsesVisiblePins()
+        landingSkipsThePins()
         textFormClassification()
         colorParsing()
         colorFormatting()
@@ -193,6 +194,42 @@ struct ClipboardTests {
             expect(
                 store.pinnedItem(at: 0, in: "", filter: .link) == nil,
                 "filter applies before pinned slot mapping")
+        }
+    }
+
+    /// A reset passes the pins for the newest clip; a typed query lands on its first match.
+    static func landingSkipsThePins() {
+        withStore { store, _ in
+            store.addText("alpha one", sourceBundleID: nil)
+            store.addText("beta two", sourceBundleID: nil)
+            store.addText("https://example.com", sourceBundleID: nil)
+            store.addText("beta three", sourceBundleID: nil)
+            expect(
+                store.landingIndex(in: "", filter: .all) == 0, "no pins: the newest clip is row 0")
+
+            store.togglePinned(item(store, "alpha one"))
+            store.togglePinned(item(store, "beta two"))
+            let landing = store.landingIndex(in: "", filter: .all)
+            expect(landing == 2, "nothing typed: the landing passes both pins")
+            expect(
+                store.search("", filter: .all)[landing].text == "beta three",
+                "and lands on the most recent copy")
+            expect(store.landingIndex(in: "  ", filter: .all) == 2, "a blank query is no query")
+            expect(
+                store.landingIndex(in: "beta", filter: .all) == 0,
+                "a typed query lands on its first match, even a pinned one")
+            expect(
+                store.landingIndex(in: "", filter: .text) == 2,
+                "a filter still passes the pins it shows")
+            expect(
+                store.landingIndex(in: "", filter: .link) == 0,
+                "and lands on its first row when it shows none")
+
+            store.togglePinned(item(store, "https://example.com"))
+            store.togglePinned(item(store, "beta three"))
+            expect(
+                store.landingIndex(in: "", filter: .all) == 0,
+                "an all-pinned list has no clip to pass to, so it stays on row 0")
         }
     }
 

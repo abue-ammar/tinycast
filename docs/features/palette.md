@@ -75,6 +75,13 @@ A chord aimed at the selected row — ⌃X, ⇧⌘F, ⌘Y and the rest — follo
 `PaletteShortcut` recognises the key and carries its compact-bar and open-menu guards, and the screen
 answers through `perform(_:at:)`, so a new chord never adds a cast to the shell.
 
+Where a reset leaves the highlight is the screen's to say too. Every reset — an open, a new query, a
+new filter — goes through `RootPaletteView.land()`, which reads `landingSelection`, so handlers that
+fire in one update agree whatever order they run in. `onAppear` lands as well: the first show builds
+the view after `prepare` has run, so no change handler ever sees that reset. The landing is row 0 on
+every screen but the clipboard, which lands past its pins
+([clipboard.md](clipboard.md#pinned-entries)).
+
 | Mode | Screen | Inner list |
 | --- | --- | --- |
 | `.launcher` | `LauncherScreen` | `LauncherList` |
@@ -118,8 +125,8 @@ that returning looks like never having left — and offers four motions over it:
 | `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring |
 | `pop()` | restore the screen underneath; `false` when this one is the root |
 
-`pop()` bumps `followToken` rather than `resetToken`: the reset token exists to snap a list to the
-top, which would throw away the very selection being restored.
+`pop()` bumps `followToken` rather than `resetToken`: the reset token exists to land a list afresh,
+which would throw away the very selection being restored.
 
 **Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
 leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
