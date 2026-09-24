@@ -280,11 +280,15 @@ struct ExtensionMarkdownView: View {
                 case .image(let url):
                     ExtensionMarkdownImage(url: url)
                 case .table(let rows):
-                    Grid(horizontalSpacing: metrics.spacing.lg, verticalSpacing: metrics.spacing.xs) {
+                    Grid(horizontalSpacing: 0, verticalSpacing: 0) {
                         ForEach(rows.indices, id: \.self) { r in
                             GridRow {
                                 ForEach(rows[r].indices, id: \.self) { c in
                                     Text(inline(rows[r][c])).fontWeight(r == 0 ? .semibold : nil)
+                                        .padding(.vertical, metrics.spacing.lg)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        .background(r == 0 ? ExtensionColors.detailCardFill : .clear)
+                                        .border(Theme.Colors.separator, width: 0.5)
                                 }
                             }
                         }
