@@ -368,8 +368,9 @@ struct RootPaletteView: View {
             .modifier(PaletteHideObserver { if menuOpen { closeMenus() } })
             .onChange(of: vm.query) {
                 if vm.collapseQueryLineBreaks() { return }
-                vm.selection = 0
-                scroll = ScrollIntent(kind: .top)
+                let restored = core.extensionCoordinator.consumeRestoredSelection()
+                vm.selection = restored ?? 0
+                scroll = ScrollIntent(kind: restored == nil ? .top : .follow)
                 if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
                 if vm.mode == .dictionary { dictionary.lookUp(vm.query) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
@@ -385,6 +386,9 @@ struct RootPaletteView: View {
                 extensions.dispatch(handler: handler, arguments: [vm.query])
             }
             .modifier(ExtensionSelectionForwarder(screen: extensionScreen, selection: vm.selection))
+            .onChange(of: extensions.navigationDepth) { old, new in
+                core.extensionCoordinator.navigationDepthChanged(from: old, to: new)
+            }
             // A narrower list means the old index points at a different row, or at none.
             .onChange(of: vm.clipboardFilter) {
                 vm.selection = 0

@@ -426,6 +426,11 @@ would, so a command that took the search text over sees the empty string. Only o
 Escape and a bare backspace pop the extension's own navigation stack, and only leave the command once
 it's at its root. Pushed screens stay mounted, so popping back restores their state.
 
+**Each pushed screen opens on an empty search field**, as in Raycast. The palette owns one query,
+so `ExtensionCoordinator.navigationDepthChanged` keeps the parent's query and row per depth and
+hands them back on pop; carrying the parent's text into a pushed `List` filtered it to "No results"
+on arrival.
+
 ## Turning it on
 
 Extensions are **off until asked for**, and the switch is a real one rather than a filter: while it is

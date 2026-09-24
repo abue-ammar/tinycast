@@ -10,6 +10,9 @@ final class ExtensionCoordinator {
     private let settings: AppSettings
     /// Message-HUD presentation only — never for state this type owns.
     private unowned let core: AppCore
+    /// The search field under each pushed screen, root first: Raycast gives every screen its own.
+    private var parentSearches: [(query: String, selection: Int)] = []
+    private var restoredSelection: Int?
 
     init(
         extensions: ExtensionManager,
@@ -181,6 +184,7 @@ final class ExtensionCoordinator {
     ) {
         switch command.mode {
         case .view:
+            parentSearches.removeAll()
             // Switch the palette over first, so the launching state is what the user sees.
             paletteCoordinator.navigate(to: .extensionCommand)
             // A shortcut fires while hidden, where a view command has nowhere to render.
@@ -222,6 +226,31 @@ final class ExtensionCoordinator {
             await extensions.stop()
             if !palette.pop() { paletteCoordinator.hidePalette() }
         }
+    }
+
+    /// A push opens on an empty search field; a pop hands the parent back its query and row.
+    func navigationDepthChanged(from old: Int, to new: Int) {
+        guard new != old, palette.mode == .extensionCommand else { return }
+        if new > old {
+            parentSearches.removeLast(max(0, parentSearches.count - (old - 1)))
+            parentSearches.append((palette.query, palette.selection))
+            while parentSearches.count < new - 1 { parentSearches.append(("", 0)) }
+            palette.query = ""
+            palette.selection = 0
+            return
+        }
+        guard new >= 1, parentSearches.count >= new else { return }
+        let parent = parentSearches[new - 1]
+        parentSearches.removeLast(parentSearches.count - (new - 1))
+        restoredSelection = palette.query == parent.query ? nil : parent.selection
+        palette.query = parent.query
+        palette.selection = parent.selection
+    }
+
+    /// The row a pop restored, for the query-change reset that would otherwise send it back to 0.
+    func consumeRestoredSelection() -> Int? {
+        defer { restoredSelection = nil }
+        return restoredSelection
     }
 
     /// `popToRoot()` from an extension — back to a fresh root search, command torn down.
