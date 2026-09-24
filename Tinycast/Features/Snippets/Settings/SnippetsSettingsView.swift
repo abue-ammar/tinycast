@@ -19,7 +19,9 @@ struct SnippetsSettingsView: View {
                 isEnabled: Binding(
                     get: { settings.snippetsEnabled },
                     set: { core.snippetCoordinator.setSnippetsEnabled($0) }),
-                showsInLauncher: $settings.snippetsShowInLauncher)
+                showsInLauncher: $settings.snippetsShowInLauncher,
+                showsIcon: true,
+                showsHeader: false)
 
             if settings.snippetsEnabled, core.snippetListener.status == .needsAccessibility {
                 Section {

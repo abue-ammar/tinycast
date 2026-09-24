@@ -4,6 +4,9 @@ import SwiftUI
 struct SystemSettingsSettingsView: View {
     var body: some View {
         Form {
+            LauncherCategorySwitchSection(
+                kind: .systemSettings, anchor: .systemSettingsSystemSettings)
+
             LauncherItemsSection(
                 kind: .systemSettings,
                 anchor: .systemSettingsSystemSettings,
@@ -13,4 +16,5 @@ struct SystemSettingsSettingsView: View {
         .settingsScrollTarget(.systemSettings)
         .releasesFocusOnOutsideClick()
     }
+
 }

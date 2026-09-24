@@ -28,7 +28,8 @@ struct ExtensionsSettingsView: View {
                 isEnabled: Binding(
                     get: { settings.extensionsEnabled },
                     set: { core.extensionCoordinator.setExtensionsEnabled($0) }),
-                showsInLauncher: $settings.extensionsShowInLauncher)
+                showsInLauncher: $settings.extensionsShowInLauncher,
+                showsIcon: true)
 
             Group {
                 install

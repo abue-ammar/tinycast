@@ -1,10 +1,15 @@
 import SwiftUI
 
 struct ApplicationsSettingsView: View {
+    @Environment(VisibilityStore.self) private var visibility
+
     var body: some View {
         Form {
-            // Scopes first: they decide what gets indexed, so they read before the results.
+            LauncherCategorySwitchSection(
+                kind: .application, anchor: .applicationsApplications)
+
             SearchScopesSection()
+                .settingsEnabled(isEnabled)
 
             LauncherItemsSection(
                 kind: .application,
@@ -15,4 +20,6 @@ struct ApplicationsSettingsView: View {
         .settingsScrollTarget(.applications)
         .releasesFocusOnOutsideClick()
     }
+
+    private var isEnabled: Bool { visibility.isKindEnabled(.application) }
 }

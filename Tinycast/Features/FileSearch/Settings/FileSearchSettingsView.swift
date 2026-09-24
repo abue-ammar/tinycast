@@ -8,12 +8,12 @@ struct FileSearchSettingsView: View {
         return Form {
             Section {
                 Toggle(isOn: $settings.fileSearchEnabled) {
-                    SettingsRowTitle(.fileSearchFileSearch, "Enable File Search")
-                    Text("Uses the Spotlight index, only when you search.")
+                    SettingsFeatureToggleLabel(
+                        anchor: .fileSearchFileSearch, title: "Enable File Search",
+                        subtitle: "Uses the Spotlight index, only when you search.")
                 }
-            } header: {
-                SettingsSectionHeader(.fileSearchFileSearch)
             }
+            .settingsAnchor(.fileSearchFileSearch)
 
             FeatureCommandsSection(owner: .fileSearch, anchor: .fileSearchCommands)
                 .settingsEnabled(settings.fileSearchEnabled)

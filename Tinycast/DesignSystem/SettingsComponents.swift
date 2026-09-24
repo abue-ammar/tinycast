@@ -3,6 +3,50 @@ import SwiftUI
 
 // The few pieces more than one Settings pane or editor needs; everything else stays feature-owned.
 
+/// The Settings sidebar tile, shared with the matching feature switches.
+struct SettingsTabIcon: View {
+    let systemImage: String
+    let tint: Color
+    var size = Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2
+
+    var body: some View {
+        let scale = size / (Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2)
+        Image(systemName: systemImage)
+            .resizable()
+            .scaledToFit()
+            .frame(
+                width: Theme.Size.settingsSidebarGlyph * scale,
+                height: Theme.Size.settingsSidebarGlyph * scale)
+            .foregroundStyle(tint)
+            .padding(Theme.Spacing.xs * scale)
+            .background(
+                tint.opacity(0.1),
+                in: RoundedRectangle(
+                    cornerRadius: Theme.Radius.thumbnail * scale, style: .continuous))
+    }
+}
+
+struct SettingsFeatureToggleLabel: View {
+    let anchor: SettingsAnchor
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        HStack(spacing: Theme.Spacing.lg) {
+            SettingsTabIcon(
+                systemImage: anchor.tab.systemImage, tint: .accentColor,
+                size: Theme.Size.settingsRowIcon * 1.5)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                SettingsRowTitle(anchor, title)
+                    .fontWeight(.semibold)
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
 /// Not `LabeledContent`: its selectable text field eats the taps a `ShortcutRecorder` needs.
 struct SettingsRow<Icon: View, Trailing: View>: View {
     let title: String
@@ -166,18 +210,33 @@ struct FeatureSwitchSection: View {
     var enableSubtitle: String?
     @Binding var isEnabled: Bool
     @Binding var showsInLauncher: Bool
+    var showsIcon = false
+    var showsHeader = true
 
     var body: some View {
+        if showsHeader {
+            section
+        } else {
+            section.settingsAnchor(anchor)
+        }
+    }
+
+    private var section: some View {
         Section {
             Toggle(isOn: $isEnabled) {
-                SettingsRowTitle(anchor, enableTitle)
-                if let enableSubtitle { Text(enableSubtitle) }
+                if showsIcon, let enableSubtitle {
+                    SettingsFeatureToggleLabel(
+                        anchor: anchor, title: enableTitle, subtitle: enableSubtitle)
+                } else {
+                    SettingsRowTitle(anchor, enableTitle)
+                    if let enableSubtitle { Text(enableSubtitle) }
+                }
             }
             Toggle("Show in launcher", isOn: $showsInLauncher)
                 // The switch above stays live so the feature can always be turned back on.
                 .settingsEnabled(isEnabled)
         } header: {
-            SettingsSectionHeader(anchor)
+            if showsHeader { SettingsSectionHeader(anchor) }
         }
     }
 }

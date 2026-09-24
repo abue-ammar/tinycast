@@ -11,9 +11,10 @@ earliest scope wins).
   `LauncherList.rows`, in that order.
 - **A category's switch is a master switch, not a list filter.** `VisibilityStore.isKindEnabled` gates
   `orderedResults` *and* `HotKeyManager.perform`, so `Enable Applications` off stops the per-app chords
-  as well as the rows — the guard sits in the one dispatch funnel, the way each feature switch already
-  guards its own. The per-item checkbox beside it is the narrow tool: it hides one row and leaves that
-  row's shortcut firing, and **Hide from Search** in the ⌘K menu ticks that same checkbox off for the
+  as well as the rows. Its Settings switch stays available while both Search Scopes and the application
+  list disable beneath it — the guard sits in the one dispatch funnel, the way each feature switch
+  already guards its own. The per-item checkbox beside it is the narrow tool: it hides one row and
+  leaves that row's shortcut firing, and **Hide from Search** in the ⌘K menu ticks that checkbox off for the
   kinds whose pane can tick it back on. A new category must be wired into
   `VisibilityStore.allowsHotKey`, or its chords keep running while its pane reads off.
 - **One command, one pane, one switch.** `SettingsTab.ownedCommands` is the whole table of which pane

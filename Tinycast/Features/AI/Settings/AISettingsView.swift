@@ -22,8 +22,17 @@ struct AISettingsView: View {
         return Form {
             Section {
                 Toggle(isOn: $appSettings.aiEnabled) {
-                    SettingsRowTitle(.aiAI, "Enable AI")
-                    Text("Nothing is loaded or sent while it is off.")
+                    HStack(spacing: Theme.Spacing.lg) {
+                        SettingsTabIcon(
+                            systemImage: SettingsTab.ai.systemImage, tint: .accentColor,
+                            size: Theme.Size.settingsRowIcon * 1.5)
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                            SettingsRowTitle(.aiAI, "Enable AI")
+                            Text("Nothing is loaded or sent while it is off.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 SettingsRow(
                     title: "Providers", subtitle: providerSummary, anchor: .aiProviders

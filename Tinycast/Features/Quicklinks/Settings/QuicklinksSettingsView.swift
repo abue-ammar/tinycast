@@ -15,8 +15,11 @@ struct QuicklinksSettingsView: View {
             FeatureSwitchSection(
                 anchor: .quicklinksQuicklinks,
                 enableTitle: "Enable quicklinks",
+                enableSubtitle: "Open saved links and searches from the launcher.",
                 isEnabled: $settings.quicklinksEnabled,
-                showsInLauncher: $settings.quicklinksShowInLauncher)
+                showsInLauncher: $settings.quicklinksShowInLauncher,
+                showsIcon: true,
+                showsHeader: false)
 
             Group {
                 if !store.isAvailable { storageNotice }

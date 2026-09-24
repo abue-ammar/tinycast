@@ -660,6 +660,8 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   titlebar they were tuned for. Never hand-draw a header band; a main surface takes the system's
   material, not `glassEffect`.
 - `SettingsComponents.swift` holds only what more than one pane or editor needs: **`SettingsRow`**,
+  **`SettingsTabIcon`** (the sidebar tile reused by feature switches),
+  **`SettingsFeatureToggleLabel`** (the icon, title and subtitle of a feature's master switch),
   **`FeatureSwitchSection`** (a feature's master switch plus its launcher-visibility companion),
   **`SettingsFilterField`** (the filter row above a long list), **`launcherVisibilityHelp()`**, and the
   Settings editor header, fields and surface. `ModalActionButtonStyle.swift` keeps every borderless surface's actions on one

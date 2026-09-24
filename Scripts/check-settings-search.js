@@ -55,6 +55,7 @@ for (const m of catalog.matchAll(/\.init\(\s*\.(\w+),\s*"((?:[^"\\]|\\.)*)"/g)) 
   const quoted = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const marked =
     source.includes(`SettingsRowTitle(.${anchor}, "${title}")`) ||
+    new RegExp(`SettingsFeatureToggleLabel\\(\\s*anchor: \\.${anchor}, title: "${quoted}"`).test(source) ||
     // A `SettingsRow` renders the pill from its own title.
     new RegExp(`SettingsRow\\(\\s*title: "${quoted}",[\\s\\S]*?anchor: \\.${anchor}`).test(source) ||
     // A feature pane's master switch, rendered by `FeatureSwitchSection`.

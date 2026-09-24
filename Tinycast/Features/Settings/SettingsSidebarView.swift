@@ -117,21 +117,3 @@ private struct CenteredLabelStyle: LabelStyle {
         }
     }
 }
-
-/// The glyph on a tinted tile, so every row's icon reads at one weight whatever its symbol's shape.
-private struct SettingsTabIcon: View {
-    let systemImage: String
-    let tint: Color
-
-    var body: some View {
-        Image(systemName: systemImage)
-            .resizable()
-            .scaledToFit()
-            .frame(width: Theme.Size.settingsSidebarGlyph, height: Theme.Size.settingsSidebarGlyph)
-            .foregroundStyle(tint)
-            .padding(Theme.Spacing.xs)
-            .background(
-                tint.opacity(0.1),
-                in: RoundedRectangle(cornerRadius: Theme.Radius.thumbnail, style: .continuous))
-    }
-}

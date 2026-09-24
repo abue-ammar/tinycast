@@ -177,11 +177,11 @@ enum SettingsSearchCatalog {
     private static let applications: [SettingsSearchEntry] = [
         .init(pane: .applications, keywords: ["apps", "index", "launcher"]),
         .init(
-            group: .applicationsSearchScopes, "Search Scopes",
-            keywords: ["folders", "indexed", "locations", "add folder"]),
-        .init(
             .applicationsApplications, "Enable Applications",
             keywords: ["hide apps", "visibility"]),
+        .init(
+            group: .applicationsSearchScopes, "Search Scopes",
+            keywords: ["folders", "indexed", "locations", "add folder"]),
         .init(
             group: .applicationsApplications, "Aliases and shortcuts",
             keywords: ["alias", "hotkey", "per app", "hide"])
@@ -349,10 +349,10 @@ enum SettingsSearchCatalog {
             .notesNotes, "Enable Notes",
             keywords: ["markdown", "scratchpad"]),
         .init(
-            .notesNotes, "Render Markdown",
+            .notesOptions, "Render Markdown",
             keywords: ["markdown", "formatting", "preview", "raw", "source"]),
         .init(
-            .notesNotes, "Show Formatting Bar",
+            .notesOptions, "Show Formatting Bar",
             keywords: ["toolbar", "format bar", "buttons", "bold", "heading", "markdown"]),
         .init(
             group: .notesCommands, "Notes commands",

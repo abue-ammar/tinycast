@@ -15,7 +15,9 @@ struct CalendarSettingsView: View {
                     "Reads \(core.calendarCoordinator.span.possessivePhrase) events for join links. "
                     + "Nothing leaves this Mac.",
                 isEnabled: enabledBinding,
-                showsInLauncher: $settings.calendarShowInLauncher)
+                showsInLauncher: $settings.calendarShowInLauncher,
+                showsIcon: true,
+                showsHeader: false)
 
             Section {
                 Picker(selection: $settings.calendarLauncherLimit) {

@@ -20,8 +20,9 @@ struct QuickActionsSettingsView: View {
         Form {
             Section {
                 Toggle(isOn: enabledBinding) {
-                    SettingsRowTitle(.quickActionsQuickActions, "Enable Quick Actions")
-                    Text("Act on selected text. Nothing is read until you press a shortcut.")
+                    SettingsFeatureToggleLabel(
+                        anchor: .quickActionsQuickActions, title: "Enable Quick Actions",
+                        subtitle: "Act on selected text. Nothing is read until you press a shortcut.")
                 }
                 if appSettings.quickActionsEnabled, !isTrusted {
                     // Every shortcut fails without it; better said here than found one press later.

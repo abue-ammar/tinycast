@@ -10,12 +10,12 @@ struct NavigationSettingsView: View {
         return Form {
             Section {
                 Toggle(isOn: $settings.navigationEnabled) {
-                    SettingsRowTitle(.navigationNavigation, "Enable navigation")
-                    Text("Switch windows and search menu bar items.")
+                    SettingsFeatureToggleLabel(
+                        anchor: .navigationNavigation, title: "Enable navigation",
+                        subtitle: "Switch windows and search menu bar items.")
                 }
-            } header: {
-                SettingsSectionHeader(.navigationNavigation)
             }
+            .settingsAnchor(.navigationNavigation)
 
             // No "show in launcher" switch: the per-command checkboxes below already are one.
             FeatureCommandsSection(
