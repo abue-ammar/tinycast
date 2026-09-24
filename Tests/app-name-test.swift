@@ -176,8 +176,14 @@ struct AppNameTest {
             "VoiceMemos.app",
             table: ["en": ["CFBundleName": "Voice Memos"], "ru": ["CFBundleName": "Диктофон"]])
         check(
-            "a translated English name still beats the file name it was written for",
-            names(memos, ["en-US", "ru-RU"]) == ["Voice Memos", "VoiceMemos", "Диктофон"])
+            "a translated English name replaces the file name it was written for",
+            names(memos, ["en-US", "ru-RU"]) == ["Voice Memos", "Диктофон"])
+
+        let trackpad = makeLocalizedApp(
+            "TrackpadExtension.appex", table: ["en": ["CFBundleDisplayName": "Trackpad"]])
+        check(
+            "an identifier its own table renames is never indexed",
+            names(trackpad, ["en-US", "ru-RU"]) == ["Trackpad"])
 
         try? fm.removeItem(at: root)
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")

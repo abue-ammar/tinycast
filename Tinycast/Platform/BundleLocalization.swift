@@ -34,7 +34,7 @@ enum BundleLocalization {
     }
 
     /// Every name the bundle carries, most preferred language first. `base` — an app's file name, a
-    /// pane's `Info.plist` — ranks with the language it is written in, which ships no table.
+    /// pane's `Info.plist` — ranks with the language it is written in, unless that one renames it.
     nonisolated static func names(
         for bundleURL: URL, base: String, developmentRegion: String?, languages: [String]
     ) -> [String] {
@@ -43,24 +43,25 @@ enum BundleLocalization {
         let development = developmentRegion.flatMap { languageCode(of: $0) }
         var result: [String] = []
         var seen = Set<String>()
+        var isBaseRenamed = false
 
-        func append(_ name: String?) {
-            guard let name, seen.insert(FuzzyMatch.normalized(name)).inserted else { return }
+        func append(_ name: String) {
+            guard seen.insert(FuzzyMatch.normalized(name)).inserted else { return }
             result.append(name)
         }
 
         for code in languages {
             let strings = plist(
                 at: resources.appendingPathComponent("\(code).lproj/InfoPlist.strings"))
-            for source in [table?[code] as? [String: Any], strings] {
-                append(source.flatMap(AppDisplayName.inInfo))
-            }
+            let translated = [table?[code] as? [String: Any], strings]
+                .compactMap { $0.flatMap(AppDisplayName.inInfo) }
+            translated.forEach(append)
             if let development, code.caseInsensitiveCompare(development) == .orderedSame {
-                append(base)
+                if translated.isEmpty { append(base) } else { isBaseRenamed = true }
             }
         }
         // A development region this Mac doesn't read still leaves the name searchable.
-        append(base)
+        if !isBaseRenamed { append(base) }
         return result
     }
 

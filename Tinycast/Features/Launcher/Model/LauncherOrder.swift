@@ -118,7 +118,9 @@ enum LauncherOrder {
             alias = signals.alias.map { Self.aliasHit($0, query.typed) } ?? .none
             isBoosted = signals.boostedTerms.contains(query.term)
             let titleMatch = LauncherMatch.match(query.latin, in: profile.title)
-            let alternates = profile.alternateTitles.map { LauncherMatch.match(query.typed, in: $0) }
+            var alternateTitles = profile.alternateTitles
+            if alias == .none, let text = signals.alias { alternateTitles.append(text) }
+            let alternates = alternateTitles.map { LauncherMatch.match(query.typed, in: $0) }
             let subtitleMatch = profile.subtitle.flatMap { LauncherMatch.match(query.latin, in: $0) }
 
             func passes(_ outcome: LauncherMatch.Outcome?, _ length: Int) -> Bool {

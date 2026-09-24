@@ -50,13 +50,15 @@ enum SettingsPaneScanner {
                 !skippedBundleIDs.contains(bundleID),
                 let base = AppDisplayName.inInfo(info)
             else { continue }
-            let names = BundleLocalization.names(
-                for: url, base: base,
-                developmentRegion: info["CFBundleDevelopmentRegion"] as? String,
-                languages: languages)
+            let names =
+                nameOverrides[bundleID].map { [$0] }
+                ?? BundleLocalization.names(
+                    for: url, base: base,
+                    developmentRegion: info["CFBundleDevelopmentRegion"] as? String,
+                    languages: languages)
             result.append(
                 AppEntry(
-                    id: url.path, name: nameOverrides[bundleID] ?? names.first ?? base, url: url,
+                    id: url.path, name: names.first ?? base, url: url,
                     bundleID: bundleID, kind: .systemSettings,
                     // `EntryNaming` drops whatever repeats the name, so the whole list can go in.
                     alternateTitles: names, iconOverride: iconOverrides[bundleID]))

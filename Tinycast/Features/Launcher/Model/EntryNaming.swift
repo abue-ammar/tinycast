@@ -22,7 +22,7 @@ enum EntryNaming {
             .map { SearchText($0, transliterated: false) }
         let subtitle = sources.subtitle
             .map { SearchText($0, transliterated: true) }
-            .flatMap { $0.isEmpty || $0 == title ? nil : $0 }
+            .flatMap { $0.isEmpty || $0.units == title.units ? nil : $0 }
         var keywords = usable(sources.keywords, rejecting: [sources.name] + sources.alternateTitles)
             .map { SearchText($0, transliterated: true) }
         if let subtitle { keywords += [title.joined(with: subtitle), subtitle.joined(with: title)] }

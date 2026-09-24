@@ -68,7 +68,14 @@ struct FuzzTest {
         check(
             "matched separators never push a row past the name",
             outcome("a--", "a---") == .scored(score: 8, skipped: 0))
-        check("camelCase is no word boundary in root search", score("p", "TablePlus") == 2)
+        check("a camelCase hump starts a word", score("p", "TablePlus") == 3)
+        check(
+            "…and survives a join",
+            SearchText("Search", transliterated: true).joined(
+                with: SearchText("OrbStack", transliterated: true)
+            )
+            .humps == [10])
+        check("…but not in a name the fold can shift", score("s", "CaféStack") == 2)
     }
 
     // MARK: - Sensitivity
@@ -86,6 +93,7 @@ struct FuzzTest {
         check("…which Medium lets through", passes("code", "Xcode", .medium))
         check("High still finds initials", passes("vsc", "Visual Studio Code", .high))
         check("High still finds a later word", passes("chrome", "Google Chrome", .high))
+        check("…and a camelCase one", passes("stack", "OrbStack", .high))
         check("one letter must start a word", !passes("s", "Clipboard History", .medium))
         check("…and does when it does", passes("s", "Clipboard History", .low))
         check("an exact hit passes every level", SearchSensitivity.high.accepts(.exact, queryLength: 99))
@@ -219,6 +227,16 @@ struct FuzzTest {
         check(
             "an alias prefix beats a stronger alignment",
             first("sp", [Item(name: "Spotify"), Item(name: "Arc", alias: "spaces")]) == "Arc")
+        let appearance = Item(name: "Toggle System Appearance", alias: "toggle light / dark")
+        check(
+            "a later word of an alias finds its entry",
+            rank("dark", [Item(name: "Safari"), appearance]) == ["Toggle System Appearance"])
+        check(
+            "…ranked by its score, so a title prefix still wins",
+            rank("dark", [appearance, Item(name: "Darkroom")]) == ["Darkroom", "Toggle System Appearance"])
+        check(
+            "a mid-word alias hit stays under the sensitivity",
+            rank("term", [Item(name: "Ghostty", alias: "myterm")]).isEmpty)
         check(
             "a term the query prefixes reaches back to shorter queries",
             first(
