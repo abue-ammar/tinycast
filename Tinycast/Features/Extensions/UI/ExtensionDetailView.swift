@@ -364,7 +364,7 @@ struct ExtensionMarkdownView: View {
                 let cells = row.split(separator: "|", omittingEmptySubsequences: false).dropFirst()
                     .dropLast(row.hasSuffix("|") ? 1 : 0)
                     .map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\u{0}", with: "|") }
-                if cells.allSatisfy({ !$0.isEmpty && $0.allSatisfy(":-".contains) }) { continue }
+                if cells.allSatisfy({ $0.contains("-") && $0.allSatisfy(":-".contains) }) { continue }
                 if case .table(let rows) = blocks.last {
                     blocks[blocks.count - 1] = .table(rows + [cells])
                 } else {
