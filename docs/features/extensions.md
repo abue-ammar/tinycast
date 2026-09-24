@@ -270,7 +270,8 @@ screens hold (see [palette.md](palette.md)).
   A tile may be a bare `{color}` swatch instead of an image, stated in any notation `ColorValue`
   reads — a colour picker writes `oklch()`, not hex.
 - **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, tables, fetched
-  and inline images) with `AttributedString` handling inline styling, plus `Detail.Metadata`. An image
+  and inline images) with `AttributedString` handling inline styling, plus `Detail.Metadata` — a
+  sidebar on a Detail screen, appended below the markdown in a `List`'s detail pane. An image
   is full-width and at most 220pt tall; `?raycast-width=` / `?raycast-height=` on its URL, read by
   `ExtensionImageSize`, can only shrink it within that, never lift the cap. A rowless Detail's screen
   actions remain available through the primary ⏎ action and the ⌘K Actions panel.

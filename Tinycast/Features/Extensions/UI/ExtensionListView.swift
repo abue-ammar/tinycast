@@ -13,8 +13,7 @@ struct ExtensionListView: View {
     let onActivate: (Int) -> Void
     let onActions: (Int) -> Void
 
-    /// The row column beside a detail pane; narrower than Clipboard's so the markdown stays widest.
-    private static let detailListWidth: CGFloat = 220
+    private static let detailListWidth: CGFloat = 290
 
     var body: some View {
         Group {
@@ -159,7 +158,8 @@ struct ExtensionListView: View {
         {
             ExtensionDetailBody(
                 markdown: detail.string("markdown"), metadata: detail.node("metadata"),
-                isLoading: detail.bool("isLoading") ?? false, assetsPath: assetsPath)
+                isLoading: detail.bool("isLoading") ?? false, assetsPath: assetsPath,
+                stacksMetadata: true)
         } else {
             Color.clear
         }

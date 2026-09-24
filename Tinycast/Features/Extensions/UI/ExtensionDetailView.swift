@@ -7,11 +7,15 @@ struct ExtensionDetailBody: View {
     let metadata: RenderNode?
     let isLoading: Bool
     let assetsPath: String?
+    /// A list's detail pane is too narrow for a metadata sidebar.
+    var stacksMetadata = false
+
+    private static let stackedInset: CGFloat = 16
 
     var body: some View {
         HStack(spacing: 0) {
-            markdownPane
-            if let metadata {
+            markdownPane(trailing: stacksMetadata ? metadata : nil)
+            if !stacksMetadata, let metadata {
                 Rectangle().fill(Theme.Colors.separator).frame(width: 1)
                 metadataPane(metadata)
             }
@@ -19,7 +23,7 @@ struct ExtensionDetailBody: View {
         .frame(maxWidth: .infinity)
     }
 
-    private var markdownPane: some View {
+    private func markdownPane(trailing metadata: RenderNode?) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: metrics.spacing.md) {
                 if isLoading && (markdown ?? "").isEmpty {
@@ -28,9 +32,14 @@ struct ExtensionDetailBody: View {
                 if let markdown, !markdown.isEmpty {
                     ExtensionMarkdownView(markdown: markdown)
                 }
+                if let metadata {
+                    ExtensionMetadataView(metadata: metadata, assetsPath: assetsPath, inline: true)
+                        .padding(.top, (markdown ?? "").isEmpty ? 0 : metrics.spacing.xxl)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, metrics.spacing.lg)
+            .padding(
+                .horizontal, stacksMetadata ? metrics.scaled(Self.stackedInset) : metrics.spacing.lg)
             .padding(.vertical, metrics.spacing.md)
             .hideNativeScrollers()
         }
@@ -62,13 +71,16 @@ struct ExtensionMetadataView: View {
     @Environment(\.isDarkAppearance) private var isDark
     let metadata: RenderNode
     let assetsPath: String?
+    var inline = false
+
+    private static let inlineRowHeight: CGFloat = 28
 
     var body: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.lg) {
-            ForEach(metadata.children) { child in
+        VStack(alignment: .leading, spacing: inline ? 0 : metrics.spacing.lg) {
+            ForEach(Array(metadata.children.enumerated()), id: \.element.id) { index, child in
                 switch child.type {
                 case "Detail.Metadata.Label":
-                    row(title: child.string("title")) {
+                    row(title: child.string("title"), index: index) {
                         HStack(spacing: metrics.spacing.xs) {
                             if let icon = child.props["icon"] {
                                 ExtensionIconView(
@@ -82,7 +94,7 @@ struct ExtensionMetadataView: View {
                         }
                     }
                 case "Detail.Metadata.Link":
-                    row(title: child.string("title")) {
+                    row(title: child.string("title"), index: index) {
                         if let target = child.string("target"), let url = URL(string: target) {
                             Link(child.string("text") ?? target, destination: url)
                                 .font(metrics.typography.rowTitle)
@@ -91,11 +103,12 @@ struct ExtensionMetadataView: View {
                         }
                     }
                 case "Detail.Metadata.TagList":
-                    row(title: child.string("title")) {
+                    row(title: child.string("title"), index: index) {
                         ExtensionTagListView(tags: child.children, assetsPath: assetsPath)
                     }
                 case "Detail.Metadata.Separator":
                     Rectangle().fill(Theme.Colors.separator).frame(height: 1)
+                        .padding(.vertical, inline ? metrics.spacing.xs : 0)
                 default:
                     EmptyView()
                 }
@@ -111,14 +124,34 @@ struct ExtensionMetadataView: View {
     }
 
     @ViewBuilder
-    private func row<Content: View>(title: String?, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if let title, !title.isEmpty {
-                Text(title)
-                    .font(metrics.typography.sectionHeader)
+    private func row<Content: View>(
+        title: String?, index: Int, @ViewBuilder content: () -> Content
+    ) -> some View {
+        if inline {
+            HStack(spacing: metrics.spacing.xl) {
+                Text(title ?? "")
+                    .font(metrics.typography.rowTitle)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+                content()
+                    .lineLimit(1)
+                    .truncationMode(.middle)
             }
-            content()
+            .padding(.horizontal, metrics.spacing.md)
+            .frame(minHeight: metrics.scaled(Self.inlineRowHeight))
+            .background(
+                RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
+                    .fill(index.isMultiple(of: 2) ? ExtensionColors.detailCardFill : .clear))
+        } else {
+            VStack(alignment: .leading, spacing: 2) {
+                if let title, !title.isEmpty {
+                    Text(title)
+                        .font(metrics.typography.sectionHeader)
+                        .foregroundStyle(.secondary)
+                }
+                content()
+            }
         }
     }
 }
