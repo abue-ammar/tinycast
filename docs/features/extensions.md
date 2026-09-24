@@ -269,7 +269,7 @@ screens hold (see [palette.md](palette.md)).
   since the grid draws one column count throughout.
   A tile may be a bare `{color}` swatch instead of an image, stated in any notation `ColorValue`
   reads — a colour picker writes `oklch()`, not hex.
-- **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, fetched
+- **Detail** — markdown rendered block-by-block (headings, lists, code fences, quotes, rules, tables, fetched
   and inline images) with `AttributedString` handling inline styling, plus `Detail.Metadata`. An image
   is full-width and at most 220pt tall; `?raycast-width=` / `?raycast-height=` on its URL, read by
   `ExtensionImageSize`, can only shrink it within that, never lift the cap. A rowless Detail's screen

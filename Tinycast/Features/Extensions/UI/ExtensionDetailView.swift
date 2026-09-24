@@ -216,6 +216,7 @@ struct ExtensionMarkdownView: View {
         case code(String)
         case rule
         case image(URL)
+        case table([[String]])
 
         var id: String {
             switch self {
@@ -227,6 +228,7 @@ struct ExtensionMarkdownView: View {
             case .code(let text): return "c:\(text)"
             case .rule: return "rule:\(UUID().uuidString)"
             case .image(let url): return "img:\(url.absoluteString)"
+            case .table(let rows): return "t:\(rows)"
             }
         }
     }
@@ -277,6 +279,17 @@ struct ExtensionMarkdownView: View {
                     Rectangle().fill(Theme.Colors.separator).frame(height: 1)
                 case .image(let url):
                     ExtensionMarkdownImage(url: url)
+                case .table(let rows):
+                    Grid(horizontalSpacing: metrics.spacing.lg, verticalSpacing: metrics.spacing.xs) {
+                        ForEach(rows.indices, id: \.self) { r in
+                            GridRow {
+                                ForEach(rows[r].indices, id: \.self) { c in
+                                    Text(inline(rows[r][c])).fontWeight(r == 0 ? .semibold : nil)
+                                }
+                            }
+                        }
+                    }
+                    .font(metrics.typography.rowTitle).monospacedDigit()
                 }
             }
         }
@@ -338,6 +351,18 @@ struct ExtensionMarkdownView: View {
             if trimmed == "---" || trimmed == "***" || trimmed == "___" {
                 flushParagraph()
                 blocks.append(.rule)
+                continue
+            }
+            if trimmed.hasPrefix("|") {
+                flushParagraph()
+                let cells = trimmed.split(separator: "|", omittingEmptySubsequences: false).dropFirst()
+                    .dropLast(trimmed.hasSuffix("|") ? 1 : 0).map { $0.trimmingCharacters(in: .whitespaces) }
+                if cells.allSatisfy({ !$0.isEmpty && $0.allSatisfy(":-".contains) }) { continue }
+                if case .table(let rows) = blocks.last {
+                    blocks[blocks.count - 1] = .table(rows + [cells])
+                } else {
+                    blocks.append(.table([cells]))
+                }
                 continue
             }
             // A standalone image is the one block AttributedString can't show inline.
