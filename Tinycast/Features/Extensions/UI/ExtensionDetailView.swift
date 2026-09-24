@@ -359,8 +359,10 @@ struct ExtensionMarkdownView: View {
             }
             if trimmed.hasPrefix("|") {
                 flushParagraph()
-                let cells = trimmed.split(separator: "|", omittingEmptySubsequences: false).dropFirst()
-                    .dropLast(trimmed.hasSuffix("|") ? 1 : 0).map { $0.trimmingCharacters(in: .whitespaces) }
+                let row = trimmed.replacingOccurrences(of: "\\|", with: "\u{0}")
+                let cells = row.split(separator: "|", omittingEmptySubsequences: false).dropFirst()
+                    .dropLast(row.hasSuffix("|") ? 1 : 0)
+                    .map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\u{0}", with: "\\|") }
                 if cells.allSatisfy({ !$0.isEmpty && $0.allSatisfy(":-".contains) }) { continue }
                 if case .table(let rows) = blocks.last {
                     blocks[blocks.count - 1] = .table(rows + [cells])
