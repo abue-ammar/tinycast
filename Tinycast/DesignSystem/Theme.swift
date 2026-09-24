@@ -376,6 +376,10 @@ enum Theme {
         static let separator = ramp(dark: 0.10, light: 0.12)
         /// Small control surfaces: kbd chips, glyph tiles.
         static let controlSurface = ramp(dark: 0.10, light: 0.08)
+        /// A pointer over a control should lift it above its resting surface.
+        static let controlHover = ramp(dark: 0.16, light: 0.14)
+        /// A held control is stronger than hover, so mouse-down always reads.
+        static let controlPressed = ramp(dark: 0.24, light: 0.20)
         /// Control borders: outlined kbd chips.
         static let border = ramp(dark: 0.20, light: 0.18)
         /// Alpha 1, so a call site can dim it with `.opacity` and land on the value it replaced.
