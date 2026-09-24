@@ -9,10 +9,12 @@ struct LauncherCategorySwitchSection: View {
 
     var body: some View {
         Section {
-            Toggle(isOn: Binding(
-                get: { visibility.isKindEnabled(kind) },
-                set: { visibility.setKindEnabled($0, for: kind) }
-            )) {
+            Toggle(
+                isOn: Binding(
+                    get: { visibility.isKindEnabled(kind) },
+                    set: { visibility.setKindEnabled($0, for: kind) }
+                )
+            ) {
                 SettingsFeatureToggleLabel(
                     anchor: anchor, title: "Enable \(anchor.title)",
                     subtitle: "Off hides all of them and stops their shortcuts.")

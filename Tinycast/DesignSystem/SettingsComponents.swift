@@ -16,7 +16,8 @@ struct SettingsTabIcon: View {
             .scaledToFit()
             .frame(
                 width: Theme.Size.settingsSidebarGlyph * scale,
-                height: Theme.Size.settingsSidebarGlyph * scale)
+                height: Theme.Size.settingsSidebarGlyph * scale
+            )
             .foregroundStyle(tint)
             .padding(Theme.Spacing.xs * scale)
             .background(

@@ -15,5 +15,4 @@ struct SystemActionsSettingsView: View {
         .settingsScrollTarget(.systemActions)
         .releasesFocusOnOutsideClick()
     }
-
 }
