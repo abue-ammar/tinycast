@@ -320,6 +320,7 @@ struct ExtensionMarkdownView: View {
         var paragraph: [String] = []
         var fence: [String]?
         var numberedIndex = 0
+        var tableOpen = false
 
         func flushParagraph() {
             guard !paragraph.isEmpty else { return }
@@ -350,6 +351,7 @@ struct ExtensionMarkdownView: View {
             if trimmed.isEmpty {
                 flushParagraph()
                 numberedIndex = 0
+                tableOpen = false
                 continue
             }
             if trimmed == "---" || trimmed == "***" || trimmed == "___" {
@@ -365,11 +367,12 @@ struct ExtensionMarkdownView: View {
                     .dropLast(row.hasSuffix("|") ? 1 : 0)
                     .map { $0.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "\u{0}", with: "|") }
                 if cells.allSatisfy({ $0.contains("-") && $0.allSatisfy(":-".contains) }) { continue }
-                if case .table(let rows) = blocks.last {
+                if tableOpen, case .table(let rows) = blocks.last {
                     blocks[blocks.count - 1] = .table(rows + [cells])
                 } else {
                     blocks.append(.table([cells]))
                 }
+                tableOpen = true
                 continue
             }
             // A standalone image is the one block AttributedString can't show inline.
