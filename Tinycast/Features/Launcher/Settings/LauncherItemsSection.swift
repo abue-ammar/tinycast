@@ -42,13 +42,14 @@ struct LauncherItemsSection: View {
     }
 
     var body: some View {
-        Section(anchor.title) {
+        Section {
             SettingsFilterField(prompt: searchPrompt, query: $query)
             LauncherItemsList(
                 entries: entries, query: query, isEnabled: visibility.isKindEnabled(kind))
+        } header: {
+            SettingsSectionHeader(anchor)
         }
         .settingsEnabled(visibility.isKindEnabled(kind))
-        .settingsAnchor(anchor)
     }
 }
 
