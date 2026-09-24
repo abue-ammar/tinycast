@@ -970,11 +970,11 @@ class ChildProcess extends EventEmitter {
       detached: !!options.detached && (Array.isArray(options.stdio) ? options.stdio[1] : options.stdio) === "ignore",
     }, (pid) => Promise.all([pipeChild(pid, 1, this.stdout), pipeChild(pid, 2, this.stderr)]));
     this.pid = pid;
+    if (pid) queueMicrotask(() => this.emit("spawn"));
     exit.then(
       (raw) => {
         this.exitCode = raw.status;
         this.stdin.emit("finish");
-        this.emit("spawn");
         this.stdout.end(Buffer.from(base64ToBytes(raw.stdout)));
         this.stderr.end(Buffer.from(base64ToBytes(raw.stderr)));
         // One host reply carries both, but a reader still expects the output before the exit code.

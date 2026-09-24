@@ -38,7 +38,7 @@ async function run(name, source, mode, verify, options) {
   harness.boot(bootConfig());
   const code = compile(source);
   harness.start("s1", code, "/fixtures/cmd.js", "/fixtures", mode, {});
-  await wait();
+  await wait(options?.settle);
   await verify(harness);
   harness.stop("s1");
 }
@@ -357,7 +357,15 @@ export default async function Command() {
     child.on("close", () => resolve(chunks.join("")));
   });
 
-  globalThis.__spawn = { iterated: iterated.join(""), late, grouped };
+  const streamed = await new Promise((resolve) => {
+    const events = [];
+    const child = spawn("/bin/sh", ["-c", "echo a; sleep 0.2; echo b"]);
+    child.on("spawn", () => events.push("spawn"));
+    child.stdout.once("data", () => events.push(child.exitCode === null ? "live" : "after-exit"));
+    child.on("close", () => resolve(events.join(",")));
+  });
+
+  globalThis.__spawn = { iterated: iterated.join(""), late, grouped, streamed };
 }
 `;
 
@@ -971,7 +979,8 @@ export async function runFixtures() {
     check("async iteration collects stdout", result?.iterated === "hello\n", JSON.stringify(result?.iterated));
     check("a listener attached after exit still gets it", result?.late === "world\n", JSON.stringify(result?.late));
     check("a detached child that pipes stdout is still awaited", result?.grouped === "group\n", JSON.stringify(result?.grouped));
-  });
+    check("output streams before exit, after spawn", result?.streamed === "spawn,live", JSON.stringify(result?.streamed));
+  }, { settle: 800 });
 
   const httpSpecs = [];
   await run(

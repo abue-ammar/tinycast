@@ -246,21 +246,11 @@ function syncHostCall(api, method, args) {
       if (child.pid === undefined) throw Object.assign(new Error(`ENOENT: spawn '${spec.command}'`), { code: "ENOENT" });
       if (spec.detached) return child.pid;
       if (spec.input) child.stdin.end(Buffer.from(spec.input, "base64"));
-      const stdout = [];
-      const stderr = [];
-      child.stdout.on("data", (chunk) => stdout.push(chunk));
-      child.stderr.on("data", (chunk) => stderr.push(chunk));
+      const readers = { 1: child.stdout[Symbol.asyncIterator](), 2: child.stderr[Symbol.asyncIterator]() };
       const exit = new Promise((done) =>
-        child.on("close", (status, signal) =>
-          done({
-            stdout: Buffer.concat(stdout).toString("base64"),
-            stderr: Buffer.concat(stderr).toString("base64"),
-            status: status ?? 1,
-            signal,
-          }),
-        ),
+        child.on("close", (status, signal) => done({ stdout: "", stderr: "", status: status ?? 1, signal })),
       );
-      runningChildren.set(child.pid, exit);
+      runningChildren.set(child.pid, { readers, exit });
       return child.pid;
     }
     case "proc.kill":
@@ -334,12 +324,15 @@ async function stubHostCall(api, method, args) {
       };
     }
     case "proc.wait": {
-      const exit = runningChildren.get(args[0]);
+      const exit = runningChildren.get(args[0])?.exit;
       runningChildren.delete(args[0]);
       return exit;
     }
-    case "proc.read":
-      return null;
+    // Streams like the Swift side: one chunk per call, null at EOF.
+    case "proc.read": {
+      const next = await runningChildren.get(args[0])?.readers[args[1]].next();
+      return next && !next.done ? Buffer.from(next.value).toString("base64") : null;
+    }
     // Node's own WebSocket stands in for `URLSessionWebSocketTask`: same one-message-at-a-time read.
     case "websocket.open":
       return openSocket(args[0]);
