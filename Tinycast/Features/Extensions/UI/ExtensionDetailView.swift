@@ -75,9 +75,16 @@ struct ExtensionMetadataView: View {
 
     private static let inlineRowHeight: CGFloat = 28
 
+    /// Stripes must count only real rows, so separators are dropped here.
+    private var visibleChildren: [RenderNode] {
+        inline
+            ? metadata.children.filter { $0.type != "Detail.Metadata.Separator" }
+            : metadata.children
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: inline ? 0 : metrics.spacing.lg) {
-            ForEach(Array(metadata.children.enumerated()), id: \.element.id) { index, child in
+            ForEach(Array(visibleChildren.enumerated()), id: \.element.id) { index, child in
                 switch child.type {
                 case "Detail.Metadata.Label":
                     row(title: child.string("title"), index: index) {
@@ -108,7 +115,6 @@ struct ExtensionMetadataView: View {
                     }
                 case "Detail.Metadata.Separator":
                     Rectangle().fill(Theme.Colors.separator).frame(height: 1)
-                        .padding(.vertical, inline ? metrics.spacing.xs : 0)
                 default:
                     EmptyView()
                 }
