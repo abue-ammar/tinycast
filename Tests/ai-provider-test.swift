@@ -107,9 +107,59 @@ struct AIProviderTests {
         codexElicitationsAreOnlyToolCalls()
         claudeControlFramesAnswerOneTool()
         aGatewayOffersNoneAsItsReasoningEffort()
+        thinkingTagsFoldIntoReasoning()
+        aMidReplyTagStillClosesTheFold()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
+    }
+
+    /// some models insert thinking tags in the content; they should fold like a reasoning field.
+    static func thinkingTagsFoldIntoReasoning() {
+        var decoder = AIStreamDecoder(shape: .openAICompatible)
+        var events: [AIStreamEvent] = []
+        for chunk in [
+            #"{"choices":[{"delta":{"content":"<thi"}}]}"#,
+            #"{"choices":[{"delta":{"content":"nk>\nReason."}}]}"#,
+            #"{"choices":[{"delta":{"content":" Hard."}}]}"#,
+            #"{"choices":[{"delta":{"content":"</"}}]}"#,
+            #"{"choices":[{"delta":{"content":"think>\nThe answer"}}]}"#,
+            "[DONE]",
+        ] {
+            events += (try? decoder.feed(Data(("data: " + chunk + "\n\n").utf8))) ?? []
+        }
+        events += (try? decoder.finish()) ?? []
+        expect(
+            events.contains(.thinking) && events.contains(.reasoning("Reason.")),
+            "inline thinking tags open the reasoning fold, never the answer text")
+        expect(
+            events.contains(.reasoning(" Hard.")) && events.contains(.text("The answer")),
+            "thinking continues across chunks and the answer resumes after the closing tag")
+        expect(
+            !events.contains { if case .text(let text) = $0 { return text.contains("<") } else { return false } },
+            "no tag fragment leaks into the answer text")
+        expect(events.last == .finished, "the stream still terminates")
+    }
+
+    /// The gateway's deltas carried the closing tag mid-content after thinking prose.
+    static func aMidReplyTagStillClosesTheFold() {
+        var decoder = AIStreamDecoder(shape: .openAICompatible)
+        var events: [AIStreamEvent] = []
+        for chunk in [
+            #"{"choices":[{"delta":{"content":"open"}}]}"#,
+            #"{"choices":[{"delta":{"content":"\u003Cthink>"}}]}"#,
+            #"{"choices":[{"delta":{"content":"inside\u003C/think> after"}}]}"#,
+            "[DONE]",
+        ] {
+            events += (try? decoder.feed(Data(("data: " + chunk + "\n\n").utf8))) ?? []
+        }
+        events += (try? decoder.finish()) ?? []
+        expect(events.contains(.text("open")), "text before the tag is answer text")
+        expect(
+            events.contains(.thinking) && events.contains(.reasoning("inside")),
+            "the tag opens the reasoning fold mid-reply")
+        expect(events.contains(.text("after")), "the closing tag mid-delta resumes the answer")
+        expect(events.last == .finished, "the stream still terminates")
     }
 
     /// Both providers stream a call's arguments in pieces; a half-parsed call would be uncallable.

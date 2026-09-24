@@ -56,9 +56,55 @@ struct AIStreamDecoder: Sendable {
         var arguments = ""
     }
 
+    /// Some models served over an openai-compatible api share their thinking as raw tags inside streamed content, split like any other delta.
+    private struct ThinkingTagScanner {
+        private static let openTag = "<think>"
+        private static let closeTag = "</think>"
+        private var inside = false
+        private var pending = ""
+
+        /// Content becomes answer text or reasoning as the tags say; a partial trailing tag waits.
+        mutating func feed(_ delta: String) -> [AIStreamEvent] {
+            pending += delta
+            var text = ""
+            var reasoning = ""
+            func emit(_ piece: Substring, asReasoning: Bool) {
+                guard !piece.isEmpty else { return }
+                if asReasoning { reasoning += piece } else { text += piece }
+            }
+            while !pending.isEmpty {
+                let tag = inside ? Self.closeTag : Self.openTag
+                if let hit = pending.range(of: tag) {
+                    emit(pending[..<hit.lowerBound], asReasoning: inside)
+                    pending.removeSubrange(pending.startIndex..<hit.upperBound)
+                    inside.toggle()
+                    // The tags ride alone on their own lines, so their newline is not content.
+                    pending.removeFirst(pending.prefix(while: \.isWhitespace).count)
+                    continue
+                }
+                // Hold back only a trailing fragment that could still grow into the tag.
+                let held = (1..<tag.count).reversed().first { tag.hasPrefix(pending.suffix($0)) } ?? 0
+                guard pending.count > held else { break }
+                emit(pending[..<pending.index(pending.startIndex, offsetBy: pending.count - held)], asReasoning: inside)
+                pending.removeFirst(pending.count - held)
+            }
+            var events: [AIStreamEvent] = []
+            if !text.isEmpty { events.append(.text(text)) }
+            if !reasoning.isEmpty { events += [.thinking, .reasoning(reasoning)] }
+            return events
+        }
+
+        mutating func finish() -> [AIStreamEvent] {
+            defer { pending = "" }
+            guard !pending.isEmpty else { return [] }
+            return inside ? [.reasoning(pending)] : [.text(pending)]
+        }
+    }
+
     private let shape: AIHTTPConfiguration.APIShape
     private var parser = SSEParser()
     private var usage = AIUsage()
+    private var thinkingTags = ThinkingTagScanner()
     private var partialToolCalls: [Int: PartialToolCall] = [:]
     private(set) var isTerminal = false
 
@@ -83,7 +129,9 @@ struct AIStreamDecoder: Sendable {
     }
 
     mutating func finish() throws -> [AIStreamEvent] {
-        try decode(parser.finish())
+        var events = try decode(parser.finish())
+        events.append(contentsOf: thinkingTags.finish())
+        return events
     }
 
     private mutating func decode(_ payloads: [String]) throws -> [AIStreamEvent] {
@@ -121,7 +169,7 @@ struct AIStreamDecoder: Sendable {
         var events: [AIStreamEvent] = []
         if let choice = chunk.choices?.first {
             if let content = choice.delta?.content, !content.isEmpty {
-                events.append(.text(content))
+                events.append(contentsOf: thinkingTags.feed(content))
             } else if let reasoning = choice.delta?.reasoningText {
                 events += [.thinking, .reasoning(reasoning)]
             }
