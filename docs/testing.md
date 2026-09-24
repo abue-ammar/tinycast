@@ -585,6 +585,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - ↵ joins: a Zoom link opens the Zoom app, and the browser where no app claims the scheme
 - Typing a character swaps the card for the calculator's; ↑/↓ never lands on a phantom row
 - Unchecking a calendar drops its events from the launcher and My Schedule, and survives a relaunch
+- `Show in launcher` off drops the meeting entries from the launcher, yet typing `My Schedule`
+  still finds the command, and it still lists the meetings
 - Adding or deleting an event in Calendar.app updates an open palette without a reopen
 - A meeting with no link is listed and searchable, and answers Open in Calendar rather than Join
 - Import a backup taken with Calendar on: it comes back **off**, and no calendar toggle travels

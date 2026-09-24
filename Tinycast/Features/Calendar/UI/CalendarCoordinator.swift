@@ -118,11 +118,8 @@ final class CalendarCoordinator {
     /// Publishes or withdraws everything the feature contributes to the launcher.
     func applyEnabled() {
         let enabled = settings.calendarEnabled
-        let commands: Set<CommandID> = [
-            .joinNextMeeting, .copyMeetingLink, .mySchedule, .openInCalendar, .createEvent
-        ]
-        appIndex.setCommandsVisible(commands, enabled)
-        appIndex.setCommandsListed(commands, settings.calendarShowInLauncher)
+        appIndex.setCommandsVisible(
+            [.joinNextMeeting, .copyMeetingLink, .mySchedule, .openInCalendar, .createEvent], enabled)
         guard enabled else {
             store.stop()
             clock.stop()
@@ -206,7 +203,8 @@ final class CalendarCoordinator {
         join(meeting, uninvited: true)
     }
 
-    private func publishEntries() {
+    /// "Show in launcher" gates only these rows, so My Schedule stays findable with meetings off.
+    func publishEntries() {
         guard settings.calendarEnabled, settings.calendarShowInLauncher else {
             appIndex.setMeetings([])
             return
