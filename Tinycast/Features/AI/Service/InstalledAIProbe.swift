@@ -50,7 +50,8 @@ enum InstalledAIProbe {
                     process.executableURL = executable
                     process.arguments = arguments
                     process.currentDirectoryURL = workspace
-                    if let environment { process.environment = environment }
+                    process.environment =
+                        environment ?? ExecutableLocator.environment(running: executable)
                     let stdin = input.map { _ in Pipe() }
                     process.standardInput = stdin ?? FileHandle.nullDevice
                     process.standardOutput = output
@@ -99,6 +100,7 @@ enum InstalledAIProbe {
             process.executableURL = executable
             process.arguments = arguments
             process.currentDirectoryURL = workspace
+            process.environment = ExecutableLocator.environment(running: executable)
             process.standardInput = stdin
             process.standardOutput = output
             process.standardError = FileHandle.nullDevice

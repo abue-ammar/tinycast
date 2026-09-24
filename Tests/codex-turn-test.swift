@@ -24,6 +24,7 @@ struct CodexTurnTests {
         await aRefusedCallIsAFailedRowAndAnHonestReply()
         await aForeignServersElicitationIsNeverAsked()
         await aListThatCannotBeReadRefusesToStart()
+        await theListingRunsUnderFindersPath()
         await concurrentStartsLaunchOnce()
         await aStatusCheckJoinsATurnsPendingLaunch()
         await aChangedListRelaunchesAndTheSameOneDoesNot()
@@ -116,6 +117,56 @@ struct CodexTurnTests {
                 "\(mode): Codex does not start, and says why, rather than run the reader's servers")
             server.tearDown()
         }
+    }
+
+    /// A Finder-launched app's PATH has no `node`, and an npm or Homebrew `codex` is `env node`.
+    static func theListingRunsUnderFindersPath() async {
+        let rule = ExecutableLocator.environment(
+            running: URL(fileURLWithPath: "/opt/tools/bin/codex"),
+            adding: ["PATH": "/elsewhere", "NO_COLOR": "0", "TOKEN": "t"],
+            inherited: ["PATH": "/usr/bin:/bin", "HOME": "/Users/reader"])
+        expect(
+            rule["PATH"] == "/opt/tools/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin",
+            "a CLI's own folder leads its PATH, then Homebrew's, then the PATH the app inherited")
+        expect(
+            rule["NO_COLOR"] == "1" && rule["TOKEN"] == "t" && rule["HOME"] == "/Users/reader",
+            "added variables arrive, but never override the PATH or NO_COLOR")
+
+        guard let server = StubServer(mode: "mcp") else {
+            expect(false, "the stub app-server installs")
+            return
+        }
+        defer { server.tearDown() }
+        let bin = server.root.appending(path: "bin", directoryHint: .isDirectory)
+        let codex = bin.appending(path: "codex")
+        let work = server.root.appending(path: "work", directoryHint: .isDirectory)
+        let node = (ProcessInfo.processInfo.environment["PATH"] ?? "").split(separator: ":")
+            .map { URL(fileURLWithPath: String($0)).appending(path: "node") }
+            .first { FileManager.default.isExecutableFile(atPath: $0.path) }
+        // Beside the CLI, as npm and nvm keep it, so finding it needs no Homebrew on this machine.
+        guard let node, (try? FileManager.default.createSymbolicLink(
+            at: bin.appending(path: "node"), withDestinationURL: node)) != nil
+        else {
+            expect(false, "node is linked beside the stub")
+            return
+        }
+        var finder = ProcessInfo.processInfo.environment
+        finder["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin"
+
+        let names = await CodexAppServerClient.foreignServerNames(
+            executable: codex, workspace: work,
+            codexHome: server.root.appending(path: "home", directoryHint: .isDirectory),
+            inherited: finder)
+        expect(
+            names?.contains("probe") == true,
+            "the reader's servers are read under Finder's PATH, so Codex can start")
+
+        let shellPath = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        setenv("PATH", finder["PATH"] ?? "", 1)
+        let probe = await InstalledAIProbe.run(
+            executable: codex, arguments: ["mcp", "list", "--json"], workspace: work)
+        setenv("PATH", shellPath, 1)
+        expect(probe.status == 0, "a status probe of an `env node` CLI runs under Finder's PATH too")
     }
 
     /// A status check racing a turn, or two quick sends, must share one app-server.

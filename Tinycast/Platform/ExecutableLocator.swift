@@ -17,6 +17,21 @@ enum ExecutableLocator {
             .first(where: isExecutable)
     }
 
+    /// An npm or Homebrew CLI is `env node`, and Finder's PATH has no `node` for it to find.
+    nonisolated static func environment(
+        running executable: URL,
+        adding extra: [String: String] = [:],
+        inherited: [String: String] = ProcessInfo.processInfo.environment
+    ) -> [String: String] {
+        let paths =
+            [executable.deletingLastPathComponent().path, "/opt/homebrew/bin", "/usr/local/bin"]
+            + [inherited["PATH"] ?? "/usr/bin:/bin"]
+        return
+            inherited
+            .merging(extra) { _, new in new }
+            .merging(["NO_COLOR": "1", "PATH": paths.joined(separator: ":")]) { _, new in new }
+    }
+
     nonisolated private static func wellKnown(
         _ command: String, extraHomePaths: [String], environment: [String: String]
     ) -> [URL] {

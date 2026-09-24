@@ -366,13 +366,7 @@ private final class InstalledCLITurnRunner {
     }
 
     private func environment(for executable: URL) -> [String: String] {
-        let inheritedPath = ProcessInfo.processInfo.environment["PATH"] ?? "/usr/bin:/bin"
-        var result = ProcessInfo.processInfo.environment.merging(
-            [
-                "NO_COLOR": "1",
-                "PATH": executable.deletingLastPathComponent().path + ":" + inheritedPath
-            ]
-        ) { _, value in value }
+        var result = ExecutableLocator.environment(running: executable)
         switch kind {
         case .claude:
             result["CLAUDE_CODE_SKIP_PROMPT_HISTORY"] = "1"
