@@ -12,7 +12,7 @@ struct NaturalCommandsSettingsView: View {
             Section {
                 Toggle(isOn: $appSettings.naturalCommandsEnabled) {
                     SettingsRowTitle(.naturalCommandsNaturalCommands, "Enable natural-language commands")
-                    Text("Unmatched searches are sent to TypeSafe after you stop typing.")
+                    Text("Suggests built-in commands when local search finds nothing.")
                 }
                 SettingsRow(
                     title: "TypeSafe API key", subtitle: connectionSubtitle,
@@ -23,12 +23,7 @@ struct NaturalCommandsSettingsView: View {
             } header: {
                 SettingsSectionHeader(.naturalCommandsNaturalCommands)
             } footer: {
-                Text(
-                    "When local search finds nothing, Tinycast sends the typed request plus "
-                        + "built-in command names, IDs, kinds, and "
-                        + "fixed window-command descriptions to TypeSafe. "
-                        + "It never sends app names, clipboard contents, custom commands, or quicklinks. "
-                        + "A matched command always asks before it runs.")
+                Text("TypeSafe receives your search and built-in commands. Confirm before running.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -68,7 +63,9 @@ private struct NaturalCommandsKeyEditor: View {
                     SettingsEditorField("API Key", labelFont: .callout.weight(.medium)) {
                         RevealableSecureField(
                             title: "API Key", text: $key,
-                            prompt: Text(connection.hasAPIKey ? "Leave blank to keep saved key" : "Paste API key"))
+                            prompt: Text(
+                                connection.hasAPIKey ? "Leave blank to keep saved key" : "Paste API key")
+                        )
                         .settingsEditorTextField()
                     }
                     if connection.hasAPIKey {
