@@ -173,6 +173,11 @@ matches, and is learned, under the same key. ASCII text skips ICU entirely on a 
 `InfoPlist.strings`, and every app under `/System/Applications` translates in the loctable alone — so
 all 65 of them read English on every Mac, whatever language it is set to.
 
+A tag carrying a script is read under two more codes, because no one folder name covers it: a
+`zh-Hans-CN` Mac also reads `zh-Hans`, the folder most third-party apps ship, then `zh_CN`, the key
+Apple's own loctables use. A script-only `zh-Hans` maximizes to reach the same region. A tag without a
+script, every English one included, produces exactly the codes it always did.
+
 The user's own language wins the **display name**, so a row reads the way Finder reads it. The rest,
 English included, ride along as alternate titles, matched as typed and never transliterated.
 

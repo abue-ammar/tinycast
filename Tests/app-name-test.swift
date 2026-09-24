@@ -99,6 +99,10 @@ struct AppNameTest {
             "a Simplified Chinese Mac looks up the zh_CN Apple actually keys by",
             codes(["zh-Hans-CN"]).contains("zh_CN"))
         check(
+            "a script-bearing tag also reads the zh-Hans folder most apps ship, before its region",
+            codes(["zh-Hans-US"])
+                == ["zh-Hans-US", "zh_Hans_US", "zh-Hans", "zh_Hans", "zh-US", "zh_US", "zh", "en"])
+        check(
             "a script-only tag maximizes to reach the same key",
             codes(["zh-Hans"]).contains("zh_CN"))
         check(
@@ -142,6 +146,16 @@ struct AppNameTest {
         check(
             "an English Mac indexes only the English name",
             names(monitor, ["en-US"]) == ["Activity Monitor"])
+
+        // WeChat names itself only in `zh-Hans.lproj`, which a `zh-Hans-US` Mac never reached.
+        let weChat = root.appendingPathComponent("WeChat.app")
+        let hans = weChat.appendingPathComponent("Contents/Resources/zh-Hans.lproj")
+        try? fm.createDirectory(at: hans, withIntermediateDirectories: true)
+        try? Data("\"CFBundleDisplayName\" = \"微信\";\n".utf8)
+            .write(to: hans.appendingPathComponent("InfoPlist.strings"))
+        check(
+            "a strings-only app is found by the name in its zh-Hans folder",
+            names(weChat, ["zh-Hans-US", "en-US"]) == ["微信", "WeChat"])
 
         // Tips.app ships every language but its own: `en` is the one key Apple's loctables omit.
         let tips = makeLocalizedApp(
