@@ -57,6 +57,7 @@ final class AppCore {
     let aiChats: AIChatSurfacesState
     let aiSettings = AISettingsStore(
         isAppleIntelligenceAvailable: { AppleIntelligenceProvider.status().isAvailable })
+    let naturalCommandSettings = NaturalCommandSettingsStore()
     let mcpSettings = MCPSettingsStore()
     let mcpOAuth = MCPOAuthManager()
     @ObservationIgnored private(set) lazy var mcp = MCPServerManager(oauth: mcpOAuth)
@@ -156,6 +157,9 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
         store: fallbacks, quicklinks: quicklinks, settings: settings, visibility: visibility,
         core: self)
+    @ObservationIgnored private(set) lazy var naturalCommandCoordinator = NaturalCommandCoordinator(
+        settings: settings, connection: naturalCommandSettings, appIndex: appIndex,
+        visibility: visibility, core: self)
     @ObservationIgnored private(set) lazy var clipboardCoordinator = ClipboardCoordinator(
         clipboardStore: clipboardStore, clipboardManager: clipboardManager, settings: settings,
         appIndex: appIndex, palette: palette, windowController: windowController,
@@ -249,6 +253,9 @@ final class AppCore {
             observeEffectiveAppearance()
             pinnedEmoji.onPersistenceFailure = { [weak self] in
                 self?.showMessage("Couldn't save Emoji & Symbols pins", tone: .danger)
+            }
+            naturalCommandSettings.onKeyRemoved = { [weak self] in
+                self?.naturalCommandCoordinator.cancel()
             }
 
             appIndex.start(settings: settings)
@@ -493,6 +500,7 @@ final class AppCore {
         snippetListener.stop()
         snippetsStore.stop()
         aiChats.reset()
+        naturalCommandCoordinator.prepareForTermination()
         chatGPTSubscription.stop()
         mcpOAuth.stop()
         mcp.stop()
@@ -575,6 +583,9 @@ final class AppCore {
             })
         track({ _ = $0.notesEnabled }, reproject: { $0.notesCoordinator.applyEnabled() })
         track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })
+        track(
+            { _ = $0.naturalCommandsEnabled },
+            reproject: { $0.naturalCommandCoordinator.cancelIfDisabled() })
         track(
             {
                 _ = $0.aiEnabled

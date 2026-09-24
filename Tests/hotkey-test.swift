@@ -171,8 +171,8 @@ struct DoubleTapDetectorTests {
     static func commandActions() {
         let unbindable = Set(CommandID.allCases.filter { $0.hotKeyAction == nil })
         expect(
-            unbindable == [.openInBrowser, .runShellCommand, .quit],
-            "only the query-driven pair and Quit are unbindable — got \(unbindable.map(\.name))")
+            unbindable == [.openInBrowser, .runShellCommand, .interpretNaturalCommand, .quit],
+            "only query-driven commands and Quit are unbindable — got \(unbindable.map(\.name))")
         expect(
             CommandID.allCases.allSatisfy {
                 unbindable.contains($0) || $0.hotKeyAction == .command($0)

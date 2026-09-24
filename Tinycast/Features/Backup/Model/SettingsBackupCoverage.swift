@@ -98,6 +98,9 @@ enum SettingsBackupCoverage {
         AppSettingsKey.aiEnabled.rawValue:
             "No other AI setting travels in a backup, so an import would arm a feature it cannot "
             + "configure.",
+        AppSettingsKey.naturalCommandsEnabled.rawValue:
+            "Permits typed queries to leave this Mac for TypeSafe, so an import must not grant that "
+            + "network capability.",
         AppSettingsKey.aiInstalledProviders.rawValue:
             "Installed commands and their accounts belong to this Mac; an import must not enable "
             + "their discovery on another one.",

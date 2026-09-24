@@ -103,6 +103,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `GlobeTapDetector.swift`, `HotKeyBinding.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
 | `fallback-test` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
+| `natural-command-test` | `NaturalCommands/Model/` — bounded TypeSafe requests, window meanings, response validation, confidence floor, and stale-run refusal |
 | `dictionary-test` | `Dictionary/Model/DictionaryEntry.swift`, `DictionaryMarkup.swift` — a real XHTML record and the plain-text fallback, read into page blocks |
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
 | `system-action-test` | `SystemActions/Model/SystemAction.swift` |
@@ -403,6 +404,19 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Learned ranking still surfaces your habitual result for a short query
 - An application row drags onto the Dock and into a Finder window as a copy, never a move, and a
   landed drop hides the palette; a click still launches; no other kind of row drags
+- With Natural Commands off, fuzzy results and the ordinary fallback list are unchanged; with it on and a
+  TypeSafe key saved, its fallback stays below every result, sends only after activation, previews the
+  selected built-in command, and Cancel runs nothing
+- Change the query or close the palette while interpretation is pending: no old result opens a dialog;
+  disable Natural Commands or hide the chosen command before Run and nothing executes
+
+Run `Scripts/evaluate-natural-commands.sh Tests/natural-command-corpus.json --validate` to verify
+the corpus without a key. For live interpretation checks, pass a TypeSafe key on standard input to
+`Scripts/evaluate-natural-commands.sh Tests/natural-command-corpus.json`. Add `--baseline` to run the
+same cases without window-command descriptions. The corpus includes English and Indonesian requests,
+ambiguous requests, and commands outside the candidate set. It uses a representative command list;
+results and confidence cutoffs must be checked again with each active command catalog and model version.
+Do not put the key in the command line or commit evaluation output containing private requests.
 
 ### Hotkeys
 

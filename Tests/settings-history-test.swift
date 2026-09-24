@@ -153,7 +153,8 @@ struct SettingsHistoryTests {
             ("paste history", .clipboard),
             ("window manage", .windowManagement),
             ("skin tone", .emoji),
-            ("mcp", .ai)
+            ("mcp", .ai),
+            ("natural language", .naturalCommands)
         ]
         for (query, tab) in cases {
             let found = SettingsSearchCatalog.results(for: query).first

@@ -307,6 +307,11 @@ final class AppSettings {
         didSet { defaults.set(aiEnabled, forKey: Key.aiEnabled.rawValue) }
     }
 
+    /// Off by default: turning it on permits typed fallback queries to reach TypeSafe.
+    var naturalCommandsEnabled: Bool {
+        didSet { defaults.set(naturalCommandsEnabled, forKey: Key.naturalCommandsEnabled.rawValue) }
+    }
+
     var customCommandsEnabled: Bool {
         didSet { defaults.set(customCommandsEnabled, forKey: Key.customCommandsEnabled.rawValue) }
     }
@@ -629,6 +634,7 @@ final class AppSettings {
             defaults.object(forKey: Key.notesShowsFormattingBar.rawValue) == nil
             || defaults.bool(forKey: Key.notesShowsFormattingBar.rawValue)
         aiEnabled = defaults.bool(forKey: Key.aiEnabled.rawValue)
+        naturalCommandsEnabled = defaults.bool(forKey: Key.naturalCommandsEnabled.rawValue)
         mcpEnabled = defaults.bool(forKey: Key.mcpEnabled.rawValue)
         customCommandsEnabled = defaults.bool(forKey: Key.customCommandsEnabled.rawValue)
         // These default on, so absence must be distinguished from a stored `false`.

@@ -109,7 +109,7 @@ enum SettingsSearchCatalog {
 
     static let entries: [SettingsSearchEntry] =
         general + applications + systemSettings + systemActions + commands + quicklinks
-        + appleShortcuts + fallbacks + clipboard + snippets + fileSearch + windowManagement
+        + appleShortcuts + fallbacks + naturalCommands + clipboard + snippets + fileSearch + windowManagement
         + navigation + notes + calendar + emoji + ai + quickActions + extensions + permissions
         + backup + about
 
@@ -265,6 +265,18 @@ enum SettingsSearchCatalog {
         .init(
             pane: .fallbacks,
             keywords: ["no results", "empty", "search web", "order"])
+    ]
+
+    private static let naturalCommands: [SettingsSearchEntry] = [
+        .init(
+            pane: .naturalCommands,
+            keywords: ["typesafe", "ai", "intent", "natural language", "fallback"]),
+        .init(
+            .naturalCommandsNaturalCommands, "Enable natural-language commands",
+            keywords: ["typesafe", "ai", "intent", "fallback", "network"]),
+        .init(
+            .naturalCommandsConnection, "TypeSafe API key",
+            keywords: ["credential", "keychain", "token", "connection"])
     ]
 
     private static let ai: [SettingsSearchEntry] = [

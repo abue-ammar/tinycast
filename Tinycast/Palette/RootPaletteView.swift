@@ -365,9 +365,13 @@ struct RootPaletteView: View {
                 searchFocused = !screen.hidesSearchField
             }
             // A preserved screen re-summons as it was left, so a menu must end with the palette.
-            .modifier(PaletteHideObserver { if menuOpen { closeMenus() } })
+            .modifier(PaletteHideObserver {
+                if menuOpen { closeMenus() }
+                core.naturalCommandCoordinator.cancelPendingIfContextChanged()
+            })
             .onChange(of: vm.query) {
                 if vm.collapseQueryLineBreaks() { return }
+                core.naturalCommandCoordinator.cancelPendingIfContextChanged()
                 vm.selection = 0
                 scroll = ScrollIntent(kind: .top)
                 if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
@@ -397,6 +401,7 @@ struct RootPaletteView: View {
                 fileSearch.search(vm.query, filter: vm.fileSearchFilter)
             }
             .onChange(of: vm.mode) {
+                core.naturalCommandCoordinator.cancelPendingIfContextChanged()
                 vm.selection = 0
                 vm.clipboardFilter = .all
                 vm.fileSearchFilter = .all

@@ -7,6 +7,7 @@ enum Fallback: Hashable, Sendable {
         case quickAI
         case searchFiles
         case runShellCommand
+        case interpretNaturalCommand
         case define
 
         /// Where its name and glyph come from, so a fallback row reads like the command it runs.
@@ -15,6 +16,7 @@ enum Fallback: Hashable, Sendable {
             case .quickAI: return .quickAI
             case .searchFiles: return .searchFiles
             case .runShellCommand: return .runShellCommand
+            case .interpretNaturalCommand: return .interpretNaturalCommand
             case .define: return .define
             }
         }
@@ -49,6 +51,7 @@ enum Fallback: Hashable, Sendable {
         case .builtin(.quickAI): return "Ask Quick AI"
         case .builtin(.searchFiles): return "Search Files"
         case .builtin(.runShellCommand): return "Run Shell Command"
+        case .builtin(.interpretNaturalCommand): return "Interpret Command"
         case .builtin(.define): return "Define Word"
         case .quicklink: return "Open Quicklink"
         }

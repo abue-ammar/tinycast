@@ -266,6 +266,9 @@ run fallback-test          Tinycast/Features/Launcher/Model/Fallback.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/SystemActions/Model/SystemAction.swift \
                            Tinycast/Features/WindowManagement/Model/WindowCommand.swift
+run natural-command-test   Tinycast/Features/NaturalCommands/Model/NaturalCommand.swift \
+                           Tinycast/Features/NaturalCommands/Model/NaturalCommandWindowMeaning.swift \
+                           Tinycast/Features/WindowManagement/Model/WindowCommand.swift
 run dictionary-test        Tinycast/Features/Dictionary/Model/DictionaryEntry.swift \
                            Tinycast/Features/Dictionary/Model/DictionaryMarkup.swift
 run hotkey-test            Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \

@@ -565,6 +565,8 @@ final class StubServer {
     let root: URL
     let client: CodexAppServerClient
     let runner: CodexTurnRunner
+    private let previousPath: String?
+    private let previousZDOTDIR: String?
 
     init?(mode: String) {
         let root = URL(fileURLWithPath: NSTemporaryDirectory())
@@ -584,6 +586,8 @@ final class StubServer {
 
         // The locator walks PATH, so the stub only sits in front of any real `codex`.
         let inherited = ProcessInfo.processInfo.environment["PATH"] ?? ""
+        previousPath = ProcessInfo.processInfo.environment["PATH"]
+        previousZDOTDIR = ProcessInfo.processInfo.environment["ZDOTDIR"]
         setenv("PATH", "\(executable.deletingLastPathComponent().path):\(inherited)", 1)
         // The locator asks a login shell first; the user's rc files would put a real `codex` ahead.
         setenv("ZDOTDIR", root.path, 1)
@@ -767,6 +771,12 @@ final class StubServer {
 
     func tearDown() {
         client.stop()
+        restoreEnvironment()
         try? FileManager.default.removeItem(at: root)
+    }
+
+    private func restoreEnvironment() {
+        if let previousPath { setenv("PATH", previousPath, 1) } else { unsetenv("PATH") }
+        if let previousZDOTDIR { setenv("ZDOTDIR", previousZDOTDIR, 1) } else { unsetenv("ZDOTDIR") }
     }
 }

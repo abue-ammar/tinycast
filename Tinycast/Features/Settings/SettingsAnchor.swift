@@ -35,6 +35,9 @@ extension SettingsAnchor {
 
     static let fallbacksFallbacks = Self(tab: .fallbacks, title: "Fallbacks")
 
+    static let naturalCommandsNaturalCommands = Self(tab: .naturalCommands, title: "Natural Commands")
+    static let naturalCommandsConnection = Self(tab: .naturalCommands, title: "Connection")
+
     static let aiAI = Self(tab: .ai, title: "AI")
     static let aiProviders = Self(tab: .ai, title: "Providers")
     static let aiDefault = Self(tab: .ai, title: "Default")

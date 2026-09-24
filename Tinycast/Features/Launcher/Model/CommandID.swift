@@ -18,6 +18,7 @@ enum CommandID: String, CaseIterable, Sendable {
     case openCamera = "command:open-camera"
     case openInBrowser = "command:open-in-browser"
     case runShellCommand = "command:run-shell-command"
+    case interpretNaturalCommand = "command:interpret-natural-command"
     case define = "command:define"
     case joinNextMeeting = "command:join-next-meeting"
     case mySchedule = "command:my-schedule"
@@ -61,6 +62,7 @@ enum CommandID: String, CaseIterable, Sendable {
         case .openCamera: return "Open Camera"
         case .openInBrowser: return "Open in Browser"
         case .runShellCommand: return "Run Shell Command"
+        case .interpretNaturalCommand: return "Interpret as Tinycast Command"
         case .define: return "Define Word"
         case .joinNextMeeting: return "Join Next Meeting"
         case .mySchedule: return "My Schedule"
@@ -106,6 +108,7 @@ enum CommandID: String, CaseIterable, Sendable {
         case .openCamera: return "camera"
         case .openInBrowser: return "globe"
         case .runShellCommand: return "terminal"
+        case .interpretNaturalCommand: return "wand.and.stars"
         case .define: return "book.closed"
         case .joinNextMeeting: return "video.fill"
         case .mySchedule: return "calendar"
@@ -177,7 +180,7 @@ enum CommandID: String, CaseIterable, Sendable {
 
     /// Query-driven: the typed text is their input, so they are built where offered, never listed.
     var isQueryDriven: Bool {
-        self == .openInBrowser || self == .runShellCommand
+        self == .openInBrowser || self == .runShellCommand || self == .interpretNaturalCommand
     }
 
     /// A chord carries no query, and none should be able to terminate the app outright.

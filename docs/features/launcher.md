@@ -270,9 +270,9 @@ A **fallback** is the other half of the query-driven idea: a command the query i
 offered under a `Use “…” with…` header **below every result**, whatever the query says. A contextual
 row leads because it recognised the query; a fallback trails because nothing did.
 
-`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the four shipped
+`Fallback` (`Launcher/Model/`) is the whole vocabulary — `.builtin(Builtin)` for the five shipped
 destinations and `.quicklink(UUID)` for a user's own. `Builtin` exists rather than a bare `CommandID`
-so `FallbackCoordinator.run` is **exhaustive**: a fifth built-in cannot compile without saying where
+so `FallbackCoordinator.run` is **exhaustive**: a new built-in cannot compile without saying where
 its query goes. `Fallback.id` is deliberately the row's own `AppEntry.id`, which is what lets a stored
 order name a live row across a rename or a reinstall.
 
@@ -281,6 +281,7 @@ order name a live row across a rename or a reinstall.
 | Quick AI | a fresh Quick AI chat, question already sent (`QuickAICoordinator.ask`) | `aiEnabled` |
 | Search Files | the file-search screen, already narrowed | `fileSearchEnabled` |
 | Run Shell Command | `/bin/zsh`, streamed into the Command Output window | always |
+| Interpret as Tinycast Command | a TypeSafe Choice over currently visible built-in commands | Natural Commands is enabled and has a TypeSafe key |
 | Define Word | the dictionary screen, already showing the entry (see [dictionary.md](dictionary.md)) | the Define Word command is visible in Settings › Commands |
 | a quicklink | its first `{argument}` | `quicklinksEnabled`, and the link has a placeholder |
 
@@ -298,6 +299,23 @@ deliberately. The fallback's checkbox is the switch. The run is an ad-hoc `Custo
 never stored — same streaming window, same Stop button — so `CustomCommandCoordinator` keeps
 `lastShellCommand` for the window's Rerun, which has no library entry to look up. It sources the
 shell config (`ll` should mean the reader's own alias) and takes the runner's default home directory.
+
+**Interpret as Tinycast Command never replaces fuzzy search.** It is a separately enabled fallback,
+always below ordinary matches, and only runs when the reader selects its row. It sends that typed query
+plus the names, ids, and kinds of Tinycast's visible built-in commands, system actions, and window commands
+to TypeSafe System One. Window commands also carry fixed descriptions of their effect, so "Last Third"
+identifies the rightmost third. Applications, custom commands, quicklinks, extensions, clipboard contents and
+saved command arguments are never candidates or request data. The response may select only a candidate
+id or `no_match`; an unknown id, low confidence, or `no_match` does nothing beyond a neutral message.
+Even a confident match opens Tinycast's confirmation dialog before it re-enters the existing command
+execution funnel, so a system action keeps its own confirmation as well. The endpoint and model are
+fixed (`https://api.typesafe.ai/v1/systemone`, `jev-1.13.0`); the key stays in the login Keychain and
+each request uses an ephemeral, cacheless session. Settings › Natural Commands is off on a fresh install
+and its capability switch is excluded from settings backups.
+
+Changing the query, leaving the launcher, or closing the palette cancels a pending interpretation.
+Disabling Natural Commands or removing its key cancels it too. A changed candidate set cannot produce a
+preview from an older response, and the chosen command must still be visible when the user confirms.
 
 **The order and the checkboxes are not in a settings backup.** The fallback list is where an import
 could arm shell execution from the launcher, which is the line `snippetsEnabled` already draws:
