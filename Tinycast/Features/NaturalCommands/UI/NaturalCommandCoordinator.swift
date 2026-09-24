@@ -18,7 +18,6 @@ final class NaturalCommandCoordinator {
     @ObservationIgnored private var interpretationTask: Task<Void, Never>?
     @ObservationIgnored private var confirmationTask: Task<Void, Never>?
     @ObservationIgnored private var run: NaturalCommand.Run?
-    @ObservationIgnored private var progressID: UUID?
     private(set) var suggestions: [AppEntry] = []
     private(set) var suggestionRunID: UUID?
 
@@ -49,7 +48,6 @@ final class NaturalCommandCoordinator {
         run = .init(id: requestID, query: query, candidates: Set(candidates.map(\.candidate)))
         interpretationTask = Task { [weak self, candidates, requestID] in
             guard let self else { return }
-            defer { self.hideProgress(for: requestID) }
             do {
                 try await Task.sleep(for: .milliseconds(650))
             } catch {
@@ -67,8 +65,6 @@ final class NaturalCommandCoordinator {
                 self.core.showMessage("The TypeSafe API key could not be read.", tone: .danger)
                 return
             }
-            self.progressID = requestID
-            self.core.showProgress("Interpreting command…")
             do {
                 let answer = try await self.client.interpret(
                     query: query, candidates: candidates.map(\.candidate), apiKey: apiKey)
@@ -77,7 +73,6 @@ final class NaturalCommandCoordinator {
                     self.cancelIfCurrent(requestID)
                     return
                 }
-                self.hideProgress(for: requestID)
                 self.publish(answer: answer, candidates: candidates, requestID: requestID)
             } catch is CancellationError {
                 return
@@ -112,7 +107,6 @@ final class NaturalCommandCoordinator {
         interpretationTask = nil
         confirmationTask?.cancel()
         confirmationTask = nil
-        if let run { hideProgress(for: run.id) }
         run = nil
         suggestions = []
         suggestionRunID = nil
@@ -227,12 +221,6 @@ final class NaturalCommandCoordinator {
         if isCurrent(requestID) { cancel() }
     }
 
-    private func hideProgress(for requestID: UUID) {
-        guard progressID == requestID else { return }
-        progressID = nil
-        core.hideProgress()
-    }
-
     private func finishInterpretation(for requestID: UUID) {
         guard isCurrent(requestID) else { return }
         run = nil
@@ -240,7 +228,6 @@ final class NaturalCommandCoordinator {
         confirmationTask = nil
         suggestions = []
         suggestionRunID = nil
-        hideProgress(for: requestID)
     }
 
     private func symbol(for entry: AppEntry) -> String? {
