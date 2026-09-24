@@ -362,6 +362,8 @@
 		8477CC22949D92F8AC89DB7D /* AppleIntelligence.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACE6ED15B0E898574BA11B6E /* AppleIntelligence.swift */; };
 		84A1F72DA5038C3725DCA201 /* FileSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B96B69CB4E52319BB3EC7D /* FileSearchService.swift */; };
 		84DC02099149C542C886B019 /* EmojiCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B710F99B5B4E42FFB3EAA8FB /* EmojiCatalog.swift */; };
+		1F8D3A6C5B2E4970D4C8A1F3 /* JevEmojiRanking.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A91E2B7D6F4083A1B5C9E0 /* JevEmojiRanking.swift */; };
+		6A1C8D3F5E7B4290A4D2C8B1 /* JevEmojiSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E2B7C4A1D8F4650B3A6E9C2 /* JevEmojiSearch.swift */; };
 		85B372E9A8F8D00D3A5FA260 /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95BFA41B0D7F369A8CF1E013 /* HyperKey.swift */; };
 		85FF7D441BD782A29EDD95A8 /* TextTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0371F4748011D45C185444 /* TextTranslator.swift */; };
 		867B82EDC8A12BBC51592786 /* Tooltip.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADD4CE330F75BC5FE5EAD99E /* Tooltip.swift */; };
@@ -1232,6 +1234,8 @@
 		B6A96350EBE68EC79497FA2D /* AppPaths.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPaths.swift; sourceTree = "<group>"; };
 		B6BE90FB09366A3518C2D4E5 /* EmojiData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiData.generated.swift; sourceTree = "<group>"; };
 		B710F99B5B4E42FFB3EAA8FB /* EmojiCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmojiCatalog.swift; sourceTree = "<group>"; };
+		C4A91E2B7D6F4083A1B5C9E0 /* JevEmojiRanking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JevEmojiRanking.swift; sourceTree = "<group>"; };
+		9E2B7C4A1D8F4650B3A6E9C2 /* JevEmojiSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JevEmojiSearch.swift; sourceTree = "<group>"; };
 		B715A0256D2D0DDE1D28FC98 /* ChatHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryStore.swift; sourceTree = "<group>"; };
 		B7DE05BCC5E8CD91E8B0A26E /* DictionaryCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryCoordinator.swift; sourceTree = "<group>"; };
 		B7F46DBF8D46FE35742C4D36 /* DictionaryMarkup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryMarkup.swift; sourceTree = "<group>"; };
@@ -1835,6 +1839,7 @@
 			isa = PBXGroup;
 			children = (
 				316A544BF6628C0465DE28D8 /* EmojiIndex.swift */,
+				9E2B7C4A1D8F4650B3A6E9C2 /* JevEmojiSearch.swift */,
 				7D35CA0655717E1798AFDA7B /* FrequentEmojiStore.swift */,
 				114F2E3148CA76595B795B37 /* PinnedEmojiStore.swift */,
 			);
@@ -2464,6 +2469,7 @@
 			isa = PBXGroup;
 			children = (
 				B710F99B5B4E42FFB3EAA8FB /* EmojiCatalog.swift */,
+				C4A91E2B7D6F4083A1B5C9E0 /* JevEmojiRanking.swift */,
 				B6BE90FB09366A3518C2D4E5 /* EmojiData.generated.swift */,
 				0966995230FE7B7072C0018B /* EmojiGridGeometry.swift */,
 			);
@@ -3568,6 +3574,8 @@
 				DFB25A4CDD35071B745F2EF9 /* DoubleTapModifier.swift in Sources */,
 				364CB97064000DC67178DDE8 /* EdgeDissolve.swift in Sources */,
 				84DC02099149C542C886B019 /* EmojiCatalog.swift in Sources */,
+				1F8D3A6C5B2E4970D4C8A1F3 /* JevEmojiRanking.swift in Sources */,
+				6A1C8D3F5E7B4290A4D2C8B1 /* JevEmojiSearch.swift in Sources */,
 				64AD2324BDA6293464C98913 /* EmojiCoordinator.swift in Sources */,
 				309320CB6B5424EA558A4823 /* EmojiData.generated.swift in Sources */,
 				BE1540DC6EE5F095F89CED5F /* EmojiGridGeometry.swift in Sources */,

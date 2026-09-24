@@ -32,7 +32,8 @@ struct EmojiScreen: PaletteScreen {
     private var sections: [EmojiGridSection] {
         EmojiGrid.sections(
             query: vm.query, index: index, frequent: frequent, pinned: pinned,
-            filter: vm.emojiCategoryFilter)
+            filter: vm.emojiCategoryFilter, jevGlyphs: core.jevEmoji.glyphs,
+            askingJev: core.jevEmoji.isAsking)
     }
 
     /// Flat grid order across sections — what the selection indexes.
@@ -114,24 +115,32 @@ struct EmojiScreen: PaletteScreen {
     @ViewBuilder
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         let sections = sections
-        if !index.isLoaded {
-            EmptyResults(text: "Loading emoji…")
-        } else if sections.isEmpty {
-            EmptyResults(text: "No emoji found")
-        } else {
-            EmojiGridView(
-                sections: sections,
-                selection: selection,
-                tone: tone,
-                columns: columns,
-                scroll: scroll,
-                onSelect: { vm.selection = $0 },
-                onActivate: { activate(at: vm.selection) },
-                onActions: { flat in
-                    vm.selection = flat
-                    openActions()
-                }
-            )
+        Group {
+            if !index.isLoaded {
+                EmptyResults(text: "Loading emoji…")
+            } else if sections.isEmpty {
+                EmptyResults(text: "No emoji found")
+            } else {
+                EmojiGridView(
+                    sections: sections,
+                    selection: selection,
+                    tone: tone,
+                    columns: columns,
+                    scroll: scroll,
+                    onSelect: { vm.selection = $0 },
+                    onActivate: { activate(at: vm.selection) },
+                    onActions: { flat in
+                        vm.selection = flat
+                        openActions()
+                    }
+                )
+            }
+        }
+        .onChange(of: vm.query, initial: true) { _, _ in
+            core.jevEmoji.note(vm.query, index: index)
+        }
+        .onChange(of: index.isLoaded) { _, _ in
+            core.jevEmoji.note(vm.query, index: index)
         }
     }
 

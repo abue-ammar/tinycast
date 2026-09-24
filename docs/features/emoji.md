@@ -16,7 +16,9 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 | `Model/EmojiCatalog.swift` | The catalog model — groups, names, keywords |
 | `Model/EmojiGridGeometry.swift` | Pure grid math — columns, item sizing |
 | `Model/EmojiData.generated.swift` | The dataset |
+| `Model/JevEmojiRanking.swift` | Request and ranking for an optional Jev call |
 | `Service/EmojiIndex.swift` | Search index over the catalog |
+| `Service/JevEmojiSearch.swift` | Keychain key and the debounced Jev request |
 | `Service/FrequentEmojiStore.swift` | Persisted most-frequently-used emoji |
 | `Service/PinnedEmojiStore.swift` | Persisted pins, in the order the user set |
 | `UI/EmojiGridView.swift` | The SwiftUI grid |
@@ -37,6 +39,12 @@ are pure.
 - **Colon-wrapped queries are unwrapped**, so `:+1:` reuses CLDR's `+1` annotation with no alias table.
 - **Usage breaks ties, never tiers.** The top 100 glyphs from `FrequentEmojiStore.top` add a 100…1
   bonus, and the store's identity and revision are in the search memo key.
+- **Jev is off until a key is saved.** Emoji settings stores an optional TypeSafe key in the
+  Keychain, never in a backup. A query of at least three characters then asks `jev-latest` once:
+  the catalog is split into shards of 200, each shard is a Choice in that same request, and `none`
+  lets a shard decline. Hits that beat `none` lead the grid under **Jev**; the local **Results**
+  stay, without those glyphs repeated. A missing key, a short query, or a failed call changes nothing
+  about the local index.
 
 ## Rendering
 

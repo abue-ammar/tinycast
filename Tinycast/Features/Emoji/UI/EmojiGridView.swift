@@ -5,6 +5,7 @@ struct EmojiGridSection: Identifiable {
     let title: String
     let entries: [EmojiEntry]
     let start: Int
+    var showsCount = true
 
     var id: String { title }
 }
@@ -14,13 +15,16 @@ enum EmojiGrid {
     @MainActor
     static func sections(
         query: String, index: EmojiIndex, frequent: FrequentEmojiStore,
-        pinned: PinnedEmojiStore, filter: EmojiCategoryFilter
+        pinned: PinnedEmojiStore, filter: EmojiCategoryFilter,
+        jevGlyphs: [String] = [], askingJev: Bool = false
     ) -> [EmojiGridSection] {
         var sections: [EmojiGridSection] = []
         var start = 0
-        func append(_ title: String, _ entries: [EmojiEntry]) {
-            guard !entries.isEmpty else { return }
-            sections.append(EmojiGridSection(title: title, entries: entries, start: start))
+        func append(_ title: String, _ entries: [EmojiEntry], showsCount: Bool = true) {
+            guard !entries.isEmpty || !showsCount else { return }
+            sections.append(
+                EmojiGridSection(
+                    title: title, entries: entries, start: start, showsCount: showsCount))
             start += entries.count
         }
 
@@ -43,21 +47,29 @@ enum EmojiGrid {
                 }
             }
         } else {
-            let results = index.search(query, frequent: frequent)
-            let filtered: [EmojiEntry]
-            switch filter {
-            case .all:
-                filtered = results
-            case .pinned:
-                let glyphs = Set(pinned.glyphs)
-                filtered = results.filter { glyphs.contains($0.glyph) }
-            case .frequentlyUsed:
-                let glyphs = Set(frequent.top())
-                filtered = results.filter { glyphs.contains($0.glyph) }
-            case .category(let category):
-                filtered = results.filter { $0.category == category }
+            let ranked = index.search(query, frequent: frequent)
+            func narrow(_ entries: [EmojiEntry]) -> [EmojiEntry] {
+                switch filter {
+                case .all:
+                    return entries
+                case .pinned:
+                    let glyphs = Set(pinned.glyphs)
+                    return entries.filter { glyphs.contains($0.glyph) }
+                case .frequentlyUsed:
+                    let glyphs = Set(frequent.top())
+                    return entries.filter { glyphs.contains($0.glyph) }
+                case .category(let category):
+                    return entries.filter { $0.category == category }
+                }
             }
-            append("Results", filtered)
+            let jev = narrow(jevGlyphs.compactMap(index.entry(for:)))
+            let jevSet = Set(jev.map(\.glyph))
+            if !jev.isEmpty {
+                append("Jev", jev)
+            } else if askingJev {
+                append("Asking Jev…", [], showsCount: false)
+            }
+            append("Results", narrow(ranked).filter { !jevSet.contains($0.glyph) })
         }
         return sections
     }
@@ -77,12 +89,12 @@ private struct EmojiGridRow: Identifiable {
 
 /// Flat render order for one query: section headers and grid rows interleaved.
 private enum EmojiGridItem: Identifiable {
-    case header(id: String, title: String, count: Int)
+    case header(id: String, title: String, count: Int, showsCount: Bool)
     case row(EmojiGridRow)
 
     var id: String {
         switch self {
-        case .header(let id, _, _): return id
+        case .header(let id, _, _, _): return id
         case .row(let row): return row.id
         }
     }
@@ -109,7 +121,7 @@ struct EmojiGridView: View {
             items.append(
                 .header(
                     id: section.id + "-header", title: section.title,
-                    count: section.entries.count))
+                    count: section.entries.count, showsCount: section.showsCount))
             var offset = 0
             var row = 0
             while offset < section.entries.count {
@@ -146,9 +158,10 @@ struct EmojiGridView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(items) { item in
                         switch item {
-                        case .header(_, let title, let count):
+                        case .header(_, let title, let count, let showsCount):
                             EmojiSectionHeader(
-                                title: title, count: count, isFirst: item.id == items.first?.id)
+                                title: title, count: count, showsCount: showsCount,
+                                isFirst: item.id == items.first?.id)
                         case .row(let row):
                             EmojiGridRowView(
                                 row: row, selection: selection, tone: tone, columns: columns,
@@ -183,15 +196,18 @@ private struct EmojiSectionHeader: View {
     @Environment(\.metrics) private var metrics
     let title: String
     let count: Int
+    var showsCount = true
     let isFirst: Bool
 
     var body: some View {
         HStack(spacing: metrics.spacing.sm) {
             Text(title)
                 .foregroundStyle(Theme.Colors.textSecondary)
-            Text(count, format: .number)
-                .foregroundStyle(Theme.Colors.textTertiary)
-                .monospacedDigit()
+            if showsCount {
+                Text(count, format: .number)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+                    .monospacedDigit()
+            }
             Spacer(minLength: 0)
         }
         .font(metrics.typography.sectionHeader)

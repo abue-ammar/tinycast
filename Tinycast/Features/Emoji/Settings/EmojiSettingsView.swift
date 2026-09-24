@@ -2,11 +2,28 @@ import SwiftUI
 
 struct EmojiSettingsView: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(AppCore.self) private var core
+    @State private var jevKey = ""
+    @State private var didLoadJevKey = false
 
     var body: some View {
         @Bindable var settings = settings
         return Form {
             FeatureCommandsSection(owner: .emoji, anchor: .emojiCommands)
+
+            Section {
+                RevealableSecureField(
+                    title: "API Key", text: $jevKey, prompt: Text("Optional")
+                )
+            } header: {
+                SettingsSectionHeader(.emojiJev)
+            } footer: {
+                Text(
+                    "Semantic matches, such as a misspelled or conceptual query. "
+                        + "Leave this empty and emoji search stays on the local index. "
+                        + "The key stays in the Keychain and is not part of a backup."
+                )
+            }
 
             Section {
                 EmojiColumnCountPicker(selection: $settings.emojiGridColumns)
@@ -25,6 +42,15 @@ struct EmojiSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.emoji)
+        .onAppear {
+            guard !didLoadJevKey else { return }
+            didLoadJevKey = true
+            jevKey = core.jevEmoji.storedKey() ?? ""
+        }
+        .onChange(of: jevKey) { _, key in
+            guard didLoadJevKey else { return }
+            core.jevEmoji.saveKey(key)
+        }
     }
 }
 
