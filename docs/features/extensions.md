@@ -390,14 +390,15 @@ screens hold (see [palette.md](palette.md)).
   rows read as colours rather than a column of grey circles. Untinted symbols use the extension's
   14pt Medium monochrome treatment; a destructive action with no tint of its own falls back to red.
   Section boundaries add the list inset (8pt) above and below their separator without moving
-  ordinary rows. The title shares the elastic scroller with the actions. A native, row-height search
-  field below it filters titles through the launcher's fuzzy matcher, preserves section boundaries
-  and centres **No Results** in one row when empty; the scrolling edge beside that field has no dissolve. The
-  8pt resting inset scrolls with the actions, so rows can reach the panel edge without shifting their
-  initial position; hover keeps the shared 10pt menu-row corner. The panel opens and closes from its
-  bottom-right attachment with extension-owned opacity and scale timing, briefly reaching 1.003;
-  its attached corner matches the footer button. The first action is the primary ↵ action; an
-  action's own `shortcut` is matched against modified keystrokes.
+  ordinary rows; a capped panel ends mid-row, so its edge never lands on a separator, and every
+  hairline is one device pixel. The title shares the elastic scroller with the actions. A native,
+  row-height search field below it filters titles through the launcher's fuzzy matcher, preserves
+  section boundaries and centres **No Results** in one row when empty; the scrolling edge beside that
+  field has no dissolve. The 8pt resting inset scrolls with the actions, so rows can reach the panel
+  edge without shifting their initial position; hover keeps the shared 10pt menu-row corner. The
+  panel opens and closes from its bottom-right attachment with extension-owned opacity and scale
+  timing, briefly reaching 1.003; its attached corner matches the footer button. The first action is
+  the primary ↵ action; an action's own `shortcut` is matched against modified keystrokes.
   `ExtensionCommandScreen.menuContent` hands the whole panel to the palette as a
   `PaletteMenuContent`, so the palette never learns the row type — and a row's handler is taken from
   the flattened `ExtensionAction` list rather than the drawn rows, so ↵ and the panel fire the same

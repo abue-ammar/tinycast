@@ -4,6 +4,7 @@ import SwiftUI
 struct ExtensionPickerList: View {
     private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
     @Environment(\.metrics) private var metrics
+    @Environment(\.displayScale) private var displayScale
     @Environment(\.isDarkAppearance) private var isDark
     /// Read for `hoverHighlightArmed`: a list landing under the pointer must light no row.
     @Environment(PaletteState.self) private var palette
@@ -28,7 +29,8 @@ struct ExtensionPickerList: View {
                     verticalOffset: 0)
                 Rectangle()
                     .fill(Theme.Colors.separator)
-                    .frame(height: Theme.Size.hairline)
+                    // One device pixel, matching the actions panel's hairline.
+                    .frame(height: 1 / displayScale)
                     .accessibilityHidden(true)
             }
             list
