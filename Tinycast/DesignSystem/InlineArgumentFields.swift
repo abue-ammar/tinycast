@@ -139,7 +139,6 @@ private struct ArgumentField: View {
         .font(metrics.typography.rowTrailing)
         .tint(Theme.Colors.textPrimary)
         .onSubmit(onSubmit)
-        .multilineTextAlignment(.center)
         .modifier(
             ArgumentFieldChrome(
                 argument: argument, isFocused: isFocused, isOwed: isOwed && text.isEmpty,

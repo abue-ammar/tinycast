@@ -144,8 +144,9 @@ struct CodexTurnTests {
             .map { URL(fileURLWithPath: String($0)).appending(path: "node") }
             .first { FileManager.default.isExecutableFile(atPath: $0.path) }
         // Beside the CLI, as npm and nvm keep it, so finding it needs no Homebrew on this machine.
-        guard let node, (try? FileManager.default.createSymbolicLink(
-            at: bin.appending(path: "node"), withDestinationURL: node)) != nil
+        guard let node,
+            (try? FileManager.default.createSymbolicLink(
+                at: bin.appending(path: "node"), withDestinationURL: node)) != nil
         else {
             expect(false, "node is linked beside the stub")
             return

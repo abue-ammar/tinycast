@@ -78,7 +78,6 @@ private struct ArgumentField: View {
         .font(metrics.typography.rowTrailing)
         .tint(.white)
         .onSubmit(onSubmit)
-        .multilineTextAlignment(.center)
         // Sized to the placeholder so a three-argument command still fits.
         .frame(width: CommandArgumentsRow.fieldWidth(for: argument, metrics: metrics))
         .padding(.horizontal, metrics.spacing.sm)
