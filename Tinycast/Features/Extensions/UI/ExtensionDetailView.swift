@@ -247,7 +247,7 @@ struct ExtensionMarkdownView: View {
     @Environment(\.metrics) private var metrics
     let markdown: String
 
-    private enum Block: Identifiable {
+    private enum Block {
         case heading(level: Int, text: String)
         case paragraph(String)
         case bullet(String)
@@ -257,25 +257,12 @@ struct ExtensionMarkdownView: View {
         case rule
         case image(URL)
         case table([[String]])
-
-        var id: String {
-            switch self {
-            case .heading(let level, let text): return "h\(level):\(text)"
-            case .paragraph(let text): return "p:\(text)"
-            case .bullet(let text): return "b:\(text)"
-            case .numbered(let index, let text): return "n\(index):\(text)"
-            case .quote(let text): return "q:\(text)"
-            case .code(let text): return "c:\(text)"
-            case .rule: return "rule:\(UUID().uuidString)"
-            case .image(let url): return "img:\(url.absoluteString)"
-            case .table(let rows): return "t:\(rows)"
-            }
-        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: metrics.spacing.sm) {
-            ForEach(Self.parse(markdown)) { block in
+            // Positional, so a live image keeps its last frame while the next one decodes.
+            ForEach(Array(Self.parse(markdown).enumerated()), id: \.offset) { _, block in
                 switch block {
                 case .heading(let level, let text):
                     Text(inline(text))
@@ -498,6 +485,8 @@ private struct ExtensionMarkdownImage: View {
         }
         // Keyed on the appearance too: an inline SVG's palette resolves at decode, not in the URL.
         .task(id: ExtensionImage.LoadKey(source: source, isDark: isDark)) {
+            // A slow remote load must not show the previous row's image meanwhile.
+            if url.scheme != "data" { image = nil }
             image =
                 url.scheme == "data"
                 ? await ExtensionIconCache.loadInlineAsync(
