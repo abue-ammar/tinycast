@@ -133,6 +133,20 @@ enum ExtensionAsyncProcess {
         uncollected.withLock { $0[child.task.processIdentifier] = (child, timeout) }
     }
 
+    /// Next chunk of fd 1 or 2, nil at EOF; `wait` then finds both pipes drained.
+    static func read(_ arguments: [RenderValue]) async throws -> String? {
+        guard let pid = arguments.first?.doubleValue.flatMap({ Int32(exactly: $0) }),
+            let child = uncollected.withLock({ $0[pid]?.child })
+        else { throw ProcessError.notStarted }
+        let pipe = arguments[safe: 1]?.doubleValue == 2 ? child.stderr : child.stdout
+        return await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let data = pipe.fileHandleForReading.availableData
+                continuation.resume(returning: data.isEmpty ? nil : data.base64EncodedString())
+            }
+        }
+    }
+
     static func wait(_ pid: RenderValue?) async throws -> [String: Any] {
         guard let pid = pid?.doubleValue.flatMap({ Int32(exactly: $0) }),
             let entry = uncollected.withLock({ $0.removeValue(forKey: pid) })

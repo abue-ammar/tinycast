@@ -34,6 +34,9 @@ struct ExtensionTests {
                 return ExtensionRuntime.jsonString(
                     from: try await ExtensionAsyncProcess.wait(arguments.first))
             }
+            if api == "proc", method == "read" {
+                return ExtensionRuntime.jsonString(from: try await ExtensionAsyncProcess.read(arguments))
+            }
             if api == "fetch" {
                 return ExtensionRuntime.jsonString(from: try await fetcher.request(arguments.first))
             }

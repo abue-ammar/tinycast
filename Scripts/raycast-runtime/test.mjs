@@ -338,6 +338,8 @@ async function stubHostCall(api, method, args) {
       runningChildren.delete(args[0]);
       return exit;
     }
+    case "proc.read":
+      return null;
     // Node's own WebSocket stands in for `URLSessionWebSocketTask`: same one-message-at-a-time read.
     case "websocket.open":
       return openSocket(args[0]);

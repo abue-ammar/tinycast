@@ -654,7 +654,7 @@ would launch Raycast itself.
 
 **Node built-ins** — `path`, `fs` (+ `fs/promises`, `createReadStream`/`createWriteStream`, a snapshot-backed `opendir`, and
 the descriptor calls `tar` unpacks through), `os`,
-`child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a buffered `spawn`,
+`child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a streaming `spawn`,
 each async form reporting the child's real `pid` for `process.kill` — Timers pauses that way),
 `crypto` (hashes, HMAC, PBKDF2, AES-CBC/ECB, random, UUID), `zlib` (gzip/zlib/raw deflate, both
 directions), `http`/`https` (`request`, `get` and `Agent`, buffered over the same URLSession bridge
@@ -729,8 +729,8 @@ address question and nothing else: a service enumeration, or anything sent to an
 **Bundled helpers** — compiled Mach-O files and shebang scripts live in `assets/`. GitHub's raw-file
 downloads and some store zips lose their executable mode, so installation preserves Git tree mode
 `100755`; discovery also repairs known executable payloads already installed as `644`. That covers
-both generated wrappers and extensions that call a helper directly with `execFile`. The buffered
-`spawn` covers the rest of a Swift wrapper. Color Picker is the reference case.
+both generated wrappers and extensions that call a helper directly with `execFile`. `spawn` covers
+the rest of a Swift wrapper. Color Picker is the reference case.
 
 **Command modes** — `view` renders into the palette; `no-view` runs headless with the palette closed.
 Both receive `props.arguments` and `props.launchType`. A `no-view` command declaring `interval`
@@ -751,7 +751,7 @@ OAuth extensions it excluded are not counted yet — re-measure before quoting t
 | **`AI`, `BrowserExtension`, `WindowManagement`** | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason. |
 | **A WebSocket to a host with a certificate macOS distrusts** | `ws`'s `rejectUnauthorized: false` is ignored — URLSession validates the chain either way. |
 | **Aborting a `fetch` already in flight** | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |
-| **Streaming `child_process.spawn`** | `spawn` runs the child to completion and emits its output as one chunk (async-iterable, which is what `get-stream`/`execa` consume). True duplex streaming would need a bidirectional channel across the bridge. Extensions built on `execa`'s deeper stream API can still fail. |
+| **Interactive `spawn` stdin** | stdout and stderr stream, but stdin is sent once as the child starts: whatever was written in the same tick. A later `stdin.write` is dropped. |
 | **`net` / `tls`** | Resolve but throw on use. Nothing bridges a raw socket; a bundled `ws` reaches the network through the WebSocket bridge instead. `tls.TLSSocket` is the one exception: `http2-wrapper`, inside `got`, derives a class from one at import time, so it constructs as an inert duplex. |
 | **Streaming HTTP** | The bridge answers a request with the whole body at once, so `http.request` delivers one chunk and `Response.body` replays bytes that already arrived. Server-sent events, network-level progress and backpressure onto the socket are all out of reach; `stream` itself is real enough to carry them the day the bridge is. |
 | **Tool/AI-extension entry points (`tools/`)** | Not surfaced. |

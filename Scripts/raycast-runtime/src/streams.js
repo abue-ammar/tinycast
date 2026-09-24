@@ -80,6 +80,7 @@ export class Readable extends Stream {
       else if (!(chunk instanceof Buffer)) chunk = Buffer.from(chunk);
       if (state.encoding) chunk = chunk.toString(state.encoding);
     }
+    if (!sizeOf(chunk, state.objectMode)) return true;
     state.buffer.push(chunk);
     state.length += sizeOf(chunk, state.objectMode);
     this._schedule();
