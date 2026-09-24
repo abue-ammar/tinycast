@@ -20,6 +20,7 @@
   {"query":"open Safari","expected":"no_match"},
   {"query":"run my deploy shortcut","expected":"no_match"},
   {"query":"delete all my files","expected":"no_match"},
-  {"query":"move the window","expected":"no_match"},
+  {"query":"move the window","expected_any":["window-command:move-left","window-command:move-right","window-command:move-up","window-command:move-down","window-command:next-display","window-command:previous-display"]},
+  {"query":"pindah","expected_any":["window-command:move-left","window-command:move-right","window-command:move-up","window-command:move-down","window-command:next-display","window-command:previous-display"]},
   {"query":"right","expected":"no_match"}
 ]

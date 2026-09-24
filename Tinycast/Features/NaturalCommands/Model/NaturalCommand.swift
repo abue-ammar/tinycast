@@ -4,7 +4,8 @@ import Foundation
 enum NaturalCommand {
     static let model = "jev-1.13.0"
     static let noMatchID = "no_match"
-    static let minimumConfidence = 0.70
+    static let minimumRelevance = 0.70
+    static let maximumSuggestions = 6
 
     struct Candidate: Hashable, Sendable {
         let id: String
@@ -30,13 +31,7 @@ enum NaturalCommand {
         let choice: String
         let confidence: Double
         let probabilities: [String: Double]
-    }
-
-    enum Resolution: Equatable, Sendable {
-        case candidate(String)
-        case noMatch
-        case uncertain
-        case invalid
+        let relevance: Double
     }
 
     struct Run: Sendable {
@@ -104,24 +99,32 @@ enum NaturalCommand {
             && query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 3
     }
 
-    /// Makes the complete, typed evaluation request. The model can only choose these IDs or no match.
+    /// Makes the complete, typed evaluation request over the available command IDs.
     static func requestData(query: String, candidates: [Candidate]) throws -> Data {
         let ids = candidates.map(\.id)
         guard Set(ids).count == ids.count, !ids.contains(noMatchID) else {
             throw Error.duplicateCandidateID
         }
 
-        var criteria = Dictionary(uniqueKeysWithValues: candidates.map { ($0.id, $0.criterion) })
-        criteria[noMatchID] = "The request does not clearly map to one available Tinycast command."
+        let criteria = Dictionary(uniqueKeysWithValues: candidates.map { ($0.id, $0.criterion) })
         let request = Request(
             state: .init(query: query, availableCommands: candidates), model: model,
             questions: [
                 "command": .init(
                     type: "choice",
                     instructions:
-                        "Choose the one available Tinycast command that best matches the request. "
-                        + "Choose no_match whenever no command is a clear fit.",
-                    criteria: criteria)
+                        "Rank available Tinycast commands as search results for the query. "
+                        + "If several commands fit a broad query, consider each relevant.",
+                    criteria: criteria),
+                "related": .init(
+                    type: "noul",
+                    instructions:
+                        "Does the query refer to at least one command in `available_commands`? "
+                        + "A broad request can match several commands without naming one exactly.",
+                    criteria: [
+                        "true": "At least one available command is relevant to the query.",
+                        "false": "No available command is relevant to the query."
+                    ])
             ])
         return try JSONEncoder().encode(request)
     }
@@ -130,37 +133,45 @@ enum NaturalCommand {
         let response = try JSONDecoder().decode(Response.self, from: data)
         guard
             let answer = response.answers["command"],
+            let related = response.answers["related"],
             answer.type == "choice",
-            answer.confidence.isFinite,
-            (0...1).contains(answer.confidence),
-            answer.probabilities.values.allSatisfy({ $0.isFinite && (0...1).contains($0) }),
-            answer.probabilities[answer.choice] != nil
+            related.type == "noul",
+            let choice = answer.choice,
+            let confidence = answer.confidence,
+            let probabilities = answer.probabilities,
+            let relevance = related.noul,
+            relevance.isFinite,
+            (0...1).contains(relevance),
+            confidence.isFinite,
+            (0...1).contains(confidence),
+            probabilities.values.allSatisfy({ $0.isFinite && (0...1).contains($0) }),
+            probabilities[choice] != nil
         else { throw Error.invalidResponse }
         return ChoiceAnswer(
-            model: response.model, choice: answer.choice, confidence: answer.confidence,
-            probabilities: answer.probabilities)
+            model: response.model, choice: choice, confidence: confidence,
+            probabilities: probabilities, relevance: relevance)
     }
 
-    /// IDs not in the supplied candidate list are never trusted, whatever the remote response says.
-    static func resolve(_ answer: ChoiceAnswer, candidates: [Candidate]) -> Resolution {
-        if answer.choice == noMatchID { return .noMatch }
-        guard answer.confidence >= minimumConfidence else { return .uncertain }
-        guard candidates.contains(where: { $0.id == answer.choice }) else { return .invalid }
-        guard answer.probabilities[answer.choice] != nil else { return .invalid }
-        return .candidate(answer.choice)
-    }
-
-    static func suggestedIDs(_ answer: ChoiceAnswer, candidates: [Candidate], limit: Int = 3) -> [String] {
-        guard case .candidate(let selected) = resolve(answer, candidates: candidates), limit > 0 else {
+    /// The existence judgment gates search results; Choice confidence may be low for a broad query.
+    static func suggestedIDs(
+        _ answer: ChoiceAnswer, candidates: [Candidate], limit: Int = maximumSuggestions,
+        minimumRelevance: Double = NaturalCommand.minimumRelevance
+    ) -> [String] {
+        let available = Set(candidates.map(\.id))
+        guard
+            limit > 0, answer.relevance >= minimumRelevance,
+            available.contains(answer.choice),
+            Set(answer.probabilities.keys).isSubset(of: available),
+            let leadingProbability = answer.probabilities[answer.choice], leadingProbability > 0
+        else {
             return []
         }
-        let available = Set(candidates.map(\.id))
-        let alternatives = answer.probabilities
-            .filter { available.contains($0.key) && $0.key != selected && $0.value > 0 }
+        let floor = leadingProbability * 0.25
+        return answer.probabilities
+            .filter { available.contains($0.key) && $0.value >= floor }
             .sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
-            .prefix(limit - 1)
+            .prefix(limit)
             .map(\.key)
-        return [selected] + alternatives
     }
 }
 
@@ -190,9 +201,10 @@ private extension NaturalCommand {
     struct Response: Decodable {
         struct Answer: Decodable {
             let type: String
-            let choice: String
-            let confidence: Double
-            let probabilities: [String: Double]
+            let choice: String?
+            let confidence: Double?
+            let probabilities: [String: Double]?
+            let noul: Double?
         }
 
         let model: String?

@@ -25,10 +25,9 @@ struct NaturalCommandTests {
 
     static func main() {
         requestContainsOnlyTheBoundedVocabulary()
-        validChoiceResolvesToTheCandidate()
-        noMatchDoesNotChooseACommand()
-        lowConfidenceDoesNotChooseACommand()
-        unknownChoiceDoesNotChooseACommand()
+        validChoiceOffersTheCandidate()
+        unrelatedQueryOffersNoCommand()
+        unknownChoiceOffersNoCommand()
         malformedResponseIsRejected()
         duplicateCandidateIDsAreRejected()
         automaticFallbackRequiresAnEmptyLocalSearch()
@@ -47,59 +46,57 @@ struct NaturalCommandTests {
             let request = try JSONSerialization.jsonObject(with: data) as? [String: Any]
             let state = request?["state"] as? [String: Any]
             let question = (request?["questions"] as? [String: Any])?["command"] as? [String: Any]
+            let related = (request?["questions"] as? [String: Any])?["related"] as? [String: Any]
             let criteria = question?["criteria"] as? [String: String]
 
             check("request pins the TypeSafe model", request?["model"] as? String == "jev-1.13.0")
             check("request carries the typed query", state?["query"] as? String == "Move Window to Right Third")
             check(
                 "request carries only supplied command IDs",
-                Set(criteria.map { Array($0.keys) } ?? [])
-                    == Set(candidates.map(\.id) + [NaturalCommand.noMatchID]))
+                Set(criteria.map { Array($0.keys) } ?? []) == Set(candidates.map(\.id)))
             check(
                 "request describes each candidate",
                 criteria?[candidates[0].id]?.contains("rightmost third") == true)
             let available = state?["available_commands"] as? [[String: String]]
             check("state carries the same fixed meaning", available?.first?["meaning"] == candidates[0].meaning)
-            check("request includes an explicit no-match option", criteria?[NaturalCommand.noMatchID] != nil)
+            check("Choice has no competing no-match option", criteria?[NaturalCommand.noMatchID] == nil)
+            check("request checks if any candidate is related", related?["type"] as? String == "noul")
         } catch {
             check("request encodes", false)
         }
     }
 
-    static func validChoiceResolvesToTheCandidate() {
+    static func validChoiceOffersTheCandidate() {
         let answer = decode(
             choice: candidates[0].id, confidence: 0.91,
-            probabilities: [candidates[0].id: 0.91, NaturalCommand.noMatchID: 0.09])
+            probabilities: [candidates[0].id: 0.91, candidates[1].id: 0.09])
         check(
-            "a confident approved choice resolves",
-            NaturalCommand.resolve(answer, candidates: candidates) == .candidate(candidates[0].id))
+            "a relevant approved choice is offered",
+            NaturalCommand.suggestedIDs(answer, candidates: candidates) == [candidates[0].id])
+        check(
+            "omitted zero-probability candidates do not hide a valid choice",
+            NaturalCommand.suggestedIDs(
+                decode(choice: candidates[0].id, confidence: 1,
+                       probabilities: [candidates[0].id: 1]),
+                candidates: candidates) == [candidates[0].id])
     }
 
-    static func noMatchDoesNotChooseACommand() {
+    static func unrelatedQueryOffersNoCommand() {
         let answer = decode(
-            choice: NaturalCommand.noMatchID, confidence: 0.95,
-            probabilities: [candidates[0].id: 0.05, NaturalCommand.noMatchID: 0.95])
+            choice: candidates[0].id, confidence: 0.95,
+            probabilities: [candidates[0].id: 0.95, candidates[1].id: 0.05], relevance: 0.12)
         check(
-            "no-match remains no-match",
-            NaturalCommand.resolve(answer, candidates: candidates) == .noMatch)
+            "an unrelated query offers no command",
+            NaturalCommand.suggestedIDs(answer, candidates: candidates).isEmpty)
     }
 
-    static func lowConfidenceDoesNotChooseACommand() {
-        let answer = decode(
-            choice: candidates[0].id, confidence: NaturalCommand.minimumConfidence - 0.01,
-            probabilities: [candidates[0].id: 0.52, NaturalCommand.noMatchID: 0.48])
-        check(
-            "a low-confidence choice remains uncertain",
-            NaturalCommand.resolve(answer, candidates: candidates) == .uncertain)
-    }
-
-    static func unknownChoiceDoesNotChooseACommand() {
+    static func unknownChoiceOffersNoCommand() {
         let answer = decode(
             choice: "system-action:shut-down", confidence: 0.99,
-            probabilities: ["system-action:shut-down": 0.99, NaturalCommand.noMatchID: 0.01])
+            probabilities: ["system-action:shut-down": 0.99, candidates[0].id: 0.01])
         check(
-            "an unapproved response ID is invalid",
-            NaturalCommand.resolve(answer, candidates: candidates) == .invalid)
+            "an unapproved response ID offers no command",
+            NaturalCommand.suggestedIDs(answer, candidates: candidates).isEmpty)
     }
 
     static func malformedResponseIsRejected() {
@@ -109,6 +106,17 @@ struct NaturalCommandTests {
             check("a malformed response is rejected", false)
         } catch {
             check("a malformed response is rejected", true)
+        }
+        let missingRelevance = Data(
+            """
+            {"answers":{"command":{"type":"choice","choice":"x","confidence":1,
+            "probabilities":{"x":1}}}}
+            """.utf8)
+        do {
+            _ = try NaturalCommand.decodeChoiceAnswer(from: missingRelevance)
+            check("a response without a relevance answer is rejected", false)
+        } catch {
+            check("a response without a relevance answer is rejected", true)
         }
     }
 
@@ -138,24 +146,34 @@ struct NaturalCommandTests {
     static func responseOffersRankedChoicesWithoutRunningOne() {
         let answer = decode(
             choice: candidates[0].id, confidence: 0.88,
-            probabilities: [candidates[0].id: 0.78, candidates[1].id: 0.17,
-                            NaturalCommand.noMatchID: 0.05])
+            probabilities: [candidates[0].id: 0.75, candidates[1].id: 0.25])
         check(
-            "a confident response offers the chosen command and an alternative",
+            "a response can offer the chosen command and an alternative",
             NaturalCommand.suggestedIDs(answer, candidates: candidates)
                 == candidates.map(\.id))
+        let moving = WindowCommandCatalog.all.filter { $0.group == .moving }.map { command in
+            NaturalCommand.Candidate(
+                id: command.entryID, name: command.name, kind: "Window Command",
+                meaning: NaturalCommandWindowMeaning.describe(command.id))
+        }
+        var broadProbabilities = Dictionary(uniqueKeysWithValues: moving.map { ($0.id, 0.15) })
+        broadProbabilities[moving[0].id] = 0.25
         check(
-            "no match offers no command rows",
-            NaturalCommand.suggestedIDs(
-                decode(choice: NaturalCommand.noMatchID, confidence: 0.92,
-                       probabilities: [NaturalCommand.noMatchID: 0.92, candidates[0].id: 0.08]),
-                candidates: candidates).isEmpty)
+            "a broad request can show all six related Move choices",
+            Set(NaturalCommand.suggestedIDs(
+                decode(choice: moving[0].id, confidence: 0.14,
+                       probabilities: broadProbabilities), candidates: moving))
+                == Set(moving.map(\.id)))
+        let windows = WindowCommandCatalog.all.map { command in
+            NaturalCommand.Candidate(id: command.entryID, name: command.name, kind: "Window Command")
+        }
+        let diffuse = Dictionary(
+            uniqueKeysWithValues: windows.map { ($0.id, 1.0 / Double(windows.count)) })
         check(
-            "low confidence offers no command rows",
+            "a broad request still offers choices from a large command family",
             NaturalCommand.suggestedIDs(
-                decode(choice: candidates[0].id, confidence: 0.49,
-                       probabilities: [candidates[0].id: 0.51, NaturalCommand.noMatchID: 0.49]),
-                candidates: candidates).isEmpty)
+                decode(choice: windows[0].id, confidence: 0.01,
+                       probabilities: diffuse), candidates: windows).count == 6)
     }
 
     static func requestContextRejectsStaleResults() {
@@ -245,13 +263,14 @@ struct NaturalCommandTests {
     }
 
     static func decode(
-        choice: String, confidence: Double, probabilities: [String: Double]
+        choice: String, confidence: Double, probabilities: [String: Double], relevance: Double = 0.95
     ) -> NaturalCommand.ChoiceAnswer {
         let probabilityData = probabilities.map { "\"\($0.key)\":\($0.value)" }
             .joined(separator: ",")
         let command = "\"type\":\"choice\",\"choice\":\"\(choice)\",\"confidence\":\(confidence)"
         let json = """
-            {"answers":{"command":{\(command),"probabilities":{\(probabilityData)}}}}
+            {"answers":{"command":{\(command),"probabilities":{\(probabilityData)}},
+            "related":{"type":"noul","noul":\(relevance)}}}
             """
         do {
             return try NaturalCommand.decodeChoiceAnswer(from: Data(json.utf8))

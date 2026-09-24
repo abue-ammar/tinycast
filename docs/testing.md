@@ -406,7 +406,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   landed drop hides the palette; a click still launches; no other kind of row drags
 - With Natural Commands off, fuzzy results and ordinary fallbacks are unchanged. With it on and a
   TypeSafe key saved, a local result prevents a request; an unmatched query of at least three characters
-  sends only after typing pauses, then up to three command rows appear above the ordinary results
+  sends only after typing pauses, then up to six command rows appear above the ordinary results
+- A broad unmatched query such as `pindah` shows related Move choices without adding aliases to the
+  local search index; an unrelated query shows none
 - A TypeSafe response alone runs nothing. Arrow keys, Enter, and click select a command row; Cancel in
   the confirmation runs nothing and leaves the choices available
 - Change the query, gain a local result, or close the palette while interpretation is pending: no stale
@@ -416,8 +418,8 @@ Run `Scripts/evaluate-natural-commands.sh Tests/natural-command-corpus.json --va
 the corpus without a key. For live interpretation checks, pass a TypeSafe key on standard input to
 `Scripts/evaluate-natural-commands.sh Tests/natural-command-corpus.json`. Add `--baseline` to run the
 same cases without window-command descriptions. The corpus includes English and Indonesian requests,
-ambiguous requests, and commands outside the candidate set. It uses a representative command list;
-results and confidence cutoffs must be checked again with each active command catalog and model version.
+broad requests, and commands outside the candidate set. It uses a representative command list;
+results and relevance cutoffs must be checked again with each active command catalog and model version.
 Do not put the key in the command line or commit evaluation output containing private requests.
 
 ### Hotkeys

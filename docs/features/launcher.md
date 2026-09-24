@@ -307,10 +307,13 @@ third. Applications, custom commands, quicklinks, extensions, clipboard contents
 arguments are never candidates or request data. A local fuzzy match or calculator/color answer prevents
 the request entirely.
 
-A confident TypeSafe response places up to three command choices above the ordinary launcher results.
+TypeSafe checks whether any available command is relevant and ranks those commands in the same request.
+A broad query can show up to six choices above the ordinary launcher results, even when no one command
+has high Choice confidence. For example, `pindah` can show the Move commands without an Indonesian
+alias for each row. Specific requests usually show fewer choices.
 Nothing runs when the response arrives. Arrow keys, Enter, and a click select a row; that selection opens
 Tinycast's confirmation dialog before the existing command execution funnel runs it. A system action
-keeps its own confirmation as well. Unknown ids, low confidence, and `no_match` produce no choices.
+keeps its own confirmation as well. Unknown ids and low relevance produce no choices.
 The endpoint and model are fixed (`https://api.typesafe.ai/v1/systemone`, `jev-1.13.0`); the key stays
 in the login Keychain and each request uses an ephemeral, cacheless session. Settings › Natural Commands
 is off on a fresh install and its capability switch is excluded from settings backups.
