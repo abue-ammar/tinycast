@@ -1,15 +1,12 @@
 import SwiftUI
 
 struct ApplicationsSettingsView: View {
-    @Environment(VisibilityStore.self) private var visibility
-
     var body: some View {
         Form {
             LauncherCategorySwitchSection(
                 kind: .application, anchor: .applicationsApplications)
 
             SearchScopesSection()
-                .settingsEnabled(isEnabled)
 
             LauncherItemsSection(
                 kind: .application,
@@ -21,5 +18,4 @@ struct ApplicationsSettingsView: View {
         .releasesFocusOnOutsideClick()
     }
 
-    private var isEnabled: Bool { visibility.isKindEnabled(.application) }
 }
