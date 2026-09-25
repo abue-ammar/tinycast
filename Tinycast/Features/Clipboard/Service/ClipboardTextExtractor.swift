@@ -79,7 +79,8 @@ nonisolated enum ClipboardTextExtractor {
         let observations = try await request.perform(on: strip)
         try Task.checkCancellation()
         let size = CGSize(width: strip.width, height: strip.height)
-        return observations
+        return
+            observations
             .filter { rows.contains($0.boundingBox.toImageCoordinates(size, origin: .upperLeft).midY) }
             .compactMap { $0.topCandidates(1).first?.string }
             .joined(separator: "\n")

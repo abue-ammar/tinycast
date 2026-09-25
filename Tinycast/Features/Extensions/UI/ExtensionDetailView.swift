@@ -477,7 +477,9 @@ private struct ExtensionMarkdownImage: View {
                         Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
                     }
                 }
-                .frame(maxWidth: maxWidth ?? (size == nil ? image.size.width : .infinity), maxHeight: maxHeight)
+                .frame(
+                    maxWidth: maxWidth ?? (size == nil ? image.size.width : .infinity), maxHeight: maxHeight
+                )
                 .clipShape(RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous))
                 .frame(maxWidth: .infinity)
             } else {
