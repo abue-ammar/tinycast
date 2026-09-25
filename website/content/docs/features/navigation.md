@@ -29,6 +29,11 @@ front-to-back order. **Minimized windows come last.** Type to filter by window t
 If the app quit between opening the list and pressing <kbd>return</kbd>, Tinycast tells you instead of
 doing nothing.
 
+Press the Switch Windows shortcut again while the list is open to step to the next window. Keep the
+shortcut's modifier held while you step, and letting go switches to the selected window, like
+<kbd>⌘</kbd><kbd>tab</kbd>. For example, bind <kbd>⌥</kbd><kbd>tab</kbd>: hold <kbd>⌥</kbd>, tap
+<kbd>tab</kbd> to step, release to switch. A single press still opens the list for searching.
+
 ## Search Menu Bar Items
 
 Open it over any app and every menu item appears as a row: the app's icon, the item's name, where it

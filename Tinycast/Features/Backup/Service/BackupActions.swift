@@ -302,6 +302,7 @@ enum BackupActions {
         if s.customCommands > 0 { parts.append("\(s.customCommands) custom commands") }
         if s.quicklinks > 0 { parts.append("\(s.quicklinks) quicklinks") }
         if s.windowLayouts > 0 { parts.append("\(s.windowLayouts) window layouts") }
+        if s.windowRooms > 0 { parts.append("\(s.windowRooms) rooms") }
         if s.customWindowSizes > 0 {
             parts.append("\(s.customWindowSizes) custom window sizes")
         }

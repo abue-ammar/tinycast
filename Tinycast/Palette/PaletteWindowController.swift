@@ -45,6 +45,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     var isVisible: Bool { panel?.isVisible ?? false }
 
+    /// Where the panel sits in screen coordinates, so an overlay drawn under it can avoid it.
+    var visibleFrame: CGRect? { panel.flatMap { $0.isVisible ? $0.frame : nil } }
+
     /// What the palette covered when it was summoned, for anything it expands into on dismissal.
     var previousTarget: InjectionTarget? {
         InjectionTarget.behindPalette(ownWindow: previousOwnWindow, app: previousApp)
@@ -146,6 +149,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         commandEscapeTap.disable()
         core.inputSourceSwitcher.endSession()
         core.calendarCoordinator.paletteDidHide()
+        core.roomCoordinator.paletteDidHide()
         core.palette.noteVisible(false)
         core.clipboardStore.setTextSearchActive(false)
         // Drop the anchor, so the next summon re-resolves for the screen in use then.

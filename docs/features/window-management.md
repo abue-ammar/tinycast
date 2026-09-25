@@ -51,7 +51,9 @@ entries and a still-registered shortcut moves nothing.
 | `UI/CustomWindowSizeCoordinator.swift` | Foundation                 | Custom sizes' launcher presence, edits and a deletion's cleanup     |
 
 The feature also owns **[Window Layouts](window-layouts.md)** — saved multi-display arrangements
-applied in one pass. They share this feature's switch, its Accessibility grant and its gap setting.
+applied in one pass — and **[Rooms](window-rooms.md)**, named sets of windows that tile on the
+display you are on while everything else steps back. Both share this feature's switch, its
+Accessibility grant and its gap setting.
 
 The first four compile into `Tests/window-command-test.swift` and `SpaceGesture.swift` compiles into
 `Tests/space-gesture-test.swift`, so none of them may gain an AppKit, SwiftUI or `NSScreen`

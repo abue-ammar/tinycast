@@ -11,7 +11,7 @@ your snippets.
 
 | Category             | What travels                                                                            |
 | -------------------- | --------------------------------------------------------------------------------------- |
-| Settings & Shortcuts | Shortcuts, custom commands, quicklinks, window layouts, favorites, aliases, preferences |
+| Settings & Shortcuts | Shortcuts, custom commands, quicklinks, window layouts, rooms, favorites, aliases, preferences |
 | Clipboard History    | Text and image clips with their images, and references to copied files                  |
 | Snippets             | Your snippet Markdown files                                                             |
 | Notes                | Your note Markdown files                                                                |

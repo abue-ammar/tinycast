@@ -580,6 +580,23 @@ per-scroll-view shim: chasing that flip after the fact is what caused the flash.
 
 ---
 
+## The room preview
+
+The one full-screen surface besides the drop guides, and like them a readout: one click-through,
+never-key panel per display at `.paletteDropGuide`, under the palette. It is the exception to "glass
+only on floating controls" in the other direction — the whole desk is `NSVisualEffectView`
+`.fullScreenUI` blurred behind the window and dimmed by `roomPreviewDim`, so only the cards read.
+
+A card is a solid window-to-be, not a row: `Theme.Radius.roomCard` (16), `roomCardFill` in both
+appearances so the desk never shows through it, a `roomCardStroke` accent border, and one shadow.
+Its title bar carries three quiet dots, the app name (`.headline`) and the window title. The icon
+grows to `roomCardIconLarge` on a card larger than 320 pt both ways, hides on one shorter than 160,
+and moves out from under the palette.
+
+Motion is `Theme.RoomMotion.glide` for a card that changes place, a fade for one that arrives or
+leaves, and `fadeIn`/`fadeOut` for the panels; Reduce Motion removes all of it. See
+[features/window-rooms.md](features/window-rooms.md#the-preview).
+
 ## The camera preview panel
 
 `CameraPreviewPanel` is the third borderless surface, beside the dialog and the notes panel. It takes

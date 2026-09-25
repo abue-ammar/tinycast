@@ -50,6 +50,8 @@ enum Theme {
         /// A pill holding a square thumbnail; a full capsule fights the thumbnail's own corners.
         static let attachmentChip: CGFloat = 8
         static let card: CGFloat = 10
+        /// A window-to-be in the room preview, rounded like a real window rather than a row.
+        static let roomCard: CGFloat = 16
         static let keyCap: CGFloat = 6
         /// Settings shortcut-recorder keycap — smaller than the palette's `keyCap` chip.
         static let recorderKeyCap: CGFloat = 4
@@ -279,6 +281,18 @@ enum Theme {
         static let volumeTrackHeight: CGFloat = 6
         /// Fixed slot for the level readout, sized to the widest string it ever holds.
         static let volumeReadout: CGFloat = 38
+        /// A room preview card: its title bar, its stroke, its shadow and its dots.
+        static let roomCardTitleBar: CGFloat = 40
+        static let roomCardStroke: CGFloat = 2
+        static let roomCardShadowRadius: CGFloat = 24
+        static let roomCardShadowOffset: CGFloat = 8
+        static let roomCardDot: CGFloat = 8
+        /// The app icon on a room card, and on a card large enough to carry the bigger one.
+        static let roomCardIcon: CGFloat = 64
+        static let roomCardIconLarge: CGFloat = 96
+        /// Below this a card is a sliver, too short for its icon.
+        static let roomCardIconMinHeight: CGFloat = 160
+        static let roomCardLargeIconMinSide: CGFloat = 320
     }
 
     enum Duration {
@@ -304,6 +318,17 @@ enum Theme {
         static let settingsReveal: TimeInterval = 0.28
         static let settingsFlash: TimeInterval = 2.0
         static let settingsFlashOut: TimeInterval = 0.6
+        /// A room preview card gliding to its next place; arriving and leaving cards fade.
+        static let roomGlide: TimeInterval = 0.32
+        static let roomCardEnter: TimeInterval = 0.2
+        static let roomCardExit: TimeInterval = 0.18
+        /// The preview's fade once the windows have moved in under it.
+        static let roomSettle: TimeInterval = 0.25
+    }
+
+    enum RoomMotion {
+        /// Quick to leave, long to settle, so a card reads as the window it is about to become.
+        static let glide = Animation.timingCurve(0.2, 0, 0, 1, duration: Theme.Duration.roomGlide)
     }
 
     enum DialogMotion {
@@ -440,6 +465,16 @@ enum Theme {
         /// The preview's plate: a display is dark in both appearances, so `adaptive`, not `ramp`.
         static let layoutPreviewGround = adaptive(
             dark: .srgbInk(0, alpha: 0.55), light: .srgbInk(0, alpha: 0.50))
+        /// The blurred desk behind a room preview, darkened so only the new layout reads.
+        static let roomPreviewDim = adaptive(
+            dark: .srgbInk(0, alpha: 0.18), light: .srgbInk(0, alpha: 0.18))
+        /// A room card is a solid window in both appearances, so the desk never shows through.
+        static let roomCardFill = adaptive(
+            dark: .srgbInk(0.16, alpha: 0.94), light: .srgbInk(0.98, alpha: 0.94))
+        static let roomCardStroke = Color.accentColor
+        static let roomCardShadow = adaptive(
+            dark: .srgbInk(0, alpha: 0.25), light: .srgbInk(0, alpha: 0.25))
+        static let roomCardDot = ramp(dark: 0.25, light: 0.25)
         /// The pill behind the header of the section a Settings search jumped to.
         static let searchFlash = Color.accentColor.opacity(0.35)
         /// The two squares of a checkerboard, behind a colour with alpha to show.

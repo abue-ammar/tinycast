@@ -10,6 +10,9 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case fileSearch
     case menuSearch
     case switchWindows
+    case rooms
+    /// Choosing a room's windows and apps; the room was named on the Rooms screen.
+    case roomWindows
     case schedule
     case uninstall
     case quicklinks
@@ -31,6 +34,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .fileSearch: return "doc.text.magnifyingglass"
         case .menuSearch: return "menubar.rectangle"
         case .switchWindows: return "macwindow.on.rectangle"
+        case .rooms: return "door.left.hand.open"
+        case .roomWindows: return "macwindow.badge.plus"
         case .schedule: return "calendar"
         case .uninstall: return "trash"
         case .quicklinks: return Quicklink.sfSymbol
@@ -50,6 +55,8 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .fileSearch: return "Search files and folders…"
         case .menuSearch: return "Search menu bar items…"
         case .switchWindows: return "Search open windows…"
+        case .rooms: return "Search rooms, or name a new one…"
+        case .roomWindows: return "Search windows, or type an app to add…"
         case .schedule: return "Search your schedule…"
         case .uninstall: return "Filter files and folders by name…"
         case .quicklinks: return "Search quicklinks…"

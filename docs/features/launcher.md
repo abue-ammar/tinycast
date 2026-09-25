@@ -526,6 +526,14 @@ and launcher checkbox live in Settings › Window Management beside the commands
 `windowLayoutsShowInLauncher` takes the section and its two commands out together. See
 [window-layouts.md](window-layouts.md).
 
+## Rooms
+
+`RoomStore` supplies the `.windowRoom` slice the same way, sorted by name and published between the
+window layouts and the window commands; `LauncherList.rows` mirrors that position. ↵ on a room
+enters it through `RoomCoordinator.enterRoom(id:)`, which hides the palette itself. The section and
+the three room commands leave together with `windowRoomsShowInLauncher`. See
+[window-rooms.md](window-rooms.md).
+
 ## Quicklinks
 
 `QuicklinkStore` supplies its slice the same way custom commands do, sorted pinned-first then
@@ -700,7 +708,7 @@ favorite, alias and learned ranking survive the round trip, and its shortcut kee
 
 The row is offered only where Settings can undo it, and `KindDescriptor.canHideFromSearch` is that
 rule — per kind, and a new `Kind` case has to answer it to compile. Applications, System Settings,
-Commands, Quick Actions, System Actions, Window Commands, Window Layouts and extension commands each
+Commands, Quick Actions, System Actions, Window Commands, Window Layouts, Rooms and extension commands each
 draw a per-row checkbox in their pane, so they carry it. Custom commands, quicklinks and snippets do
 not: their panes list a record with its own switches, not a launcher checkbox — a hide nothing in
 Settings can visibly undo is a trap, not a shortcut.

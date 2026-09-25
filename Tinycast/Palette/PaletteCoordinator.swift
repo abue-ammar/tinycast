@@ -37,6 +37,8 @@ final class PaletteCoordinator {
 
     var isVisible: Bool { windowController.isVisible }
 
+    var panelFrame: CGRect? { windowController.visibleFrame }
+
     /// The app an action acts on: the one displaced, else what a hotkey found frontmost.
     var targetApp: NSRunningApplication? {
         windowController.isVisible

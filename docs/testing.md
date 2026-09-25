@@ -109,6 +109,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `volume-test` | `SystemActions/Model/VolumeLevel.swift` |
 | `window-command-test` | `WindowManagement/WindowCommand.swift`, `WindowPlacementEngine.swift`, `WindowActionMemory.swift` |
 | `window-layout-test` | `WindowManagement/Model/WindowLayout*.swift` and `CustomWindowSize*.swift` — the layout record, its geometry and its inverse, the plan and the store; custom sizes' units, frames and store |
+| `window-room-test` | `WindowManagement/Model/Room*.swift` — every room layout and its minimum sizes, the grid, arrangement reading, window matching, parking, the plan, Tab's choices and the three stores |
 | `custom-command-test` | `CustomCommands/Model/CustomCommand.swift`, `Service/ShellCommandRunner.swift` |
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
 | `quicklink-test` | all of `Quicklinks/Model/` |
@@ -642,6 +643,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Cycling, Restore, custom sizes and display moves all work on Notes and on Settings
 - Fullscreen on Settings toggles it; on the Notes window it does nothing
 - With the note switcher open a command places Notes; the switcher and HUDs are never placed
+- Rooms: create one from Switch Room; ⇥ glides the preview through its layouts; ↵ lands its windows
+  with the gap, hides other apps and parks their extra windows; Show All Windows, quitting,
+  `kill -9` then relaunching, and turning Window Management off each bring every window back.
+  Repeat on two displays and with Reduce Motion on
 
 ### Extensions
 

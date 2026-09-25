@@ -411,6 +411,7 @@ extension View {
             .environment(core.snippetsStore)
             .environment(core.quicklinks)
             .environment(core.windowLayouts)
+            .environment(core.rooms)
             .environment(core.customWindowSizes)
             .environment(core.customWindowSizeCoordinator)
             .environment(core.calendarStore)

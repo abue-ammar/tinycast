@@ -58,7 +58,9 @@ call needs no Screen Recording grant.
 
 The rank is therefore **per app, not per window**: mapping a `CGWindowID` onto an `AXUIElement` needs
 the private `_AXUIElementGetWindow`, and the app's own `kAXWindowsAttribute` order already gives the
-windows inside one app front-to-back. An app with nothing on screen — everything minimized, or every
+windows inside one app front-to-back. [Rooms](window-rooms.md#invariants) do resolve that symbol, in
+`AXWindowAccess.windowID(of:)`, because a parked window's way back must outlive its element; the
+switcher keeps its per-app rank, which needs nothing private. An app with nothing on screen — everything minimized, or every
 window on another Space — gets no rank at all and sorts after the ranked ones by name.
 
 The alternative was a long-lived `NSWorkspace.didActivateApplicationNotification` observer with its
@@ -79,6 +81,15 @@ one hung app cannot stall the summon.
 The app icon rides on the entry as a `FileIconStamp` and its bundle URL, and the row draws it through
 `EntryIconView(source: .file(stamp:))` — so `IconCache` decodes once per app however many windows it
 contributes.
+
+## Stepping with the shortcut
+
+Pressed again while the switcher is open, its shortcut steps the selection down the list instead of
+closing the palette; the first step lands on the window behind the current one. A step made with
+the chord's modifiers still held arms one `flagsChanged` local monitor, and letting go switches to
+the selection, as ⌘Tab does. A single press never arms it, so pressing once and typing still
+searches; Escape hides the palette, and the next modifier change finds it gone and switches
+nothing.
 
 ## Raising
 

@@ -412,8 +412,11 @@ enum SettingsSearchCatalog {
             group: .windowManagementOptions, "Window commands",
             keywords: ["shortcut", "left half", "maximize", "center"]),
         .init(
-            group: .windowManagementLayoutCommands, "Layout commands",
-            keywords: ["shortcut", "launcher", "create layout", "capture"]),
+            group: .windowManagementLayoutCommands, "Layout and room commands",
+            keywords: [
+                "shortcut", "launcher", "create layout", "capture", "switch room", "create room",
+                "show all windows"
+            ]),
         .init(
             group: .windowManagementLayouts, "Window Layouts",
             keywords: [
@@ -429,6 +432,21 @@ enum SettingsSearchCatalog {
         .init(
             .windowManagementLayouts, "Create Layout from Current Windows",
             keywords: ["capture", "snapshot", "current", "save arrangement"]),
+        .init(
+            group: .windowManagementRooms, "Rooms",
+            keywords: [
+                "room", "project", "workspace", "tile", "focus", "columns", "grid", "stack",
+                "hide other apps", "switch project"
+            ]),
+        .init(
+            .windowManagementRooms, "Show rooms in launcher",
+            keywords: ["hide", "visibility", "search"]),
+        .init(
+            .windowManagementRooms, "New Room",
+            keywords: ["add", "create", "project", "windows"]),
+        .init(
+            .windowManagementRooms, "Show All Windows",
+            keywords: ["restore", "unhide", "parked", "leave room", "show everything"]),
         .init(
             group: .windowManagementCustomSizes, "Custom Sizes",
             keywords: ["custom", "size", "resize", "dimensions", "pixels", "points", "percent"]),

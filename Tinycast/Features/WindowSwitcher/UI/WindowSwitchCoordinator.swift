@@ -8,6 +8,9 @@ final class WindowSwitchCoordinator {
     private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
     private unowned let core: AppCore
+    /// Armed by a repeat press with its modifiers held: letting go switches, as ⌘Tab does.
+    private var releaseMonitor: Any?
+    private static let chordModifiers: NSEvent.ModifierFlags = [.command, .option, .control, .shift]
 
     init(
         settings: AppSettings, appIndex: AppIndex, session: WindowSwitchSession,
@@ -34,7 +37,39 @@ final class WindowSwitchCoordinator {
             Task { await self.reportPermissionFailure() }
             return
         }
+        // Pressed again while open, the shortcut steps down the list rather than closing it.
+        if paletteCoordinator.isShowing(.switchWindows) { return step() }
         paletteCoordinator.togglePalette(mode: .switchWindows)
+    }
+
+    /// The first step lands on the window behind the current one, which the list opens on.
+    private func step() {
+        let count = session.filtered.count
+        guard count > 0 else { return }
+        palette.selection = (palette.selection + 1) % count
+        palette.followToken = UUID()
+        armSwitchOnRelease()
+    }
+
+    /// A single press still searches: only a held chord, stepped again, switches on release.
+    private func armSwitchOnRelease() {
+        let held = NSEvent.modifierFlags.intersection(Self.chordModifiers)
+        guard !held.isEmpty, releaseMonitor == nil else { return }
+        releaseMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] in
+            let event = $0
+            guard let self, event.modifierFlags.isDisjoint(with: held) else { return event }
+            self.switchOnRelease()
+            return event
+        }
+    }
+
+    private func switchOnRelease() {
+        if let releaseMonitor { NSEvent.removeMonitor(releaseMonitor) }
+        releaseMonitor = nil
+        let rows = session.filtered
+        guard paletteCoordinator.isShowing(.switchWindows), rows.indices.contains(palette.selection)
+        else { return }
+        activate(rows[palette.selection])
     }
 
     /// Every open sweeps anew, a restore included: hiding dropped the last snapshot.

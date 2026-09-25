@@ -148,6 +148,18 @@ With **Default action** set to Copy to Clipboard, <kbd>return</kbd> and <kbd>⌘
 | <kbd>esc</kbd>                | Close the switcher, then hide   |
 | <kbd>⌘</kbd><kbd>delete</kbd> | Move the selected note to Trash |
 
+## Switch Room
+
+| Shortcut                                | Action                                  |
+| --------------------------------------- | --------------------------------------- |
+| <kbd>↵</kbd>                            | Enter the room                          |
+| <kbd>tab</kbd> / <kbd>⇧</kbd><kbd>tab</kbd> | Next or previous layout that fits      |
+| <kbd>⌘</kbd><kbd>K</kbd>                | Room actions                            |
+| <kbd>⌘</kbd><kbd>N</kbd>                | Create a room                           |
+| <kbd>⌘</kbd><kbd>delete</kbd>           | Delete the room; its windows stay open  |
+
+In the window picker, <kbd>↵</kbd> adds or removes a window and <kbd>⌘</kbd><kbd>↵</kbd> saves the room.
+
 ## Window layout editor
 
 | Key                           | Does |

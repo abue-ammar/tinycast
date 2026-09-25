@@ -13,8 +13,8 @@ description: Recording global shortcuts, double-tap modifiers, and the Hyper key
 - Every app, and every System Settings pane
 - Every quicklink, custom command, custom Quick Action and extension command
 - All 31 [system actions](/docs/launcher/system-actions)
-- All 35 [window commands](/docs/features/window-management), and every
-  [window layout](/docs/features/window-layouts)
+- All 35 [window commands](/docs/features/window-management), every
+  [window layout](/docs/features/window-layouts) and every [room](/docs/features/rooms)
 
 Each shortcut is recorded on the item's row in its Settings pane, and shows as keycaps on its
 launcher row.

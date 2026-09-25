@@ -11,6 +11,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case systemAction
         case windowCommand
         case windowLayout
+        case windowRoom
         case quicklink
         case appleShortcut
         case extensionCommand
@@ -63,6 +64,11 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                     label: "Window Layout", sectionTitle: "Window Layouts",
                     openVerb: "Arrange Windows", canHideFromSearch: true,
                     canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+            case .windowRoom:
+                return KindDescriptor(
+                    label: "Room", sectionTitle: "Rooms", openVerb: "Enter Room",
+                    canHideFromSearch: true, canRevealInFinder: false, canDragOut: false,
+                    isSymbolIcon: true, rankPriority: 3)
             case .quicklink:
                 return KindDescriptor(
                     label: "Quicklink", sectionTitle: "Quicklinks",
@@ -184,6 +190,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return CustomWindowSize.id(fromEntryID: id).map { .customWindowSize(id: $0) }
         case .windowLayout:
             return WindowLayout.id(fromEntryID: id).map { .windowLayout(id: $0) }
+        case .windowRoom:
+            return Room.id(fromEntryID: id).map { .windowRoom(id: $0) }
         case .quicklink:
             return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
         case .appleShortcut:
@@ -222,6 +230,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol
                 ?? CustomWindowSize.sfSymbol
         case .windowLayout: return WindowLayout.sfSymbol
+        case .windowRoom: return Room.sfSymbol
         case .meeting: return "video.fill"
         case .application, .systemSettings, .appleShortcut, .extensionCommand: return "questionmark"
         }
@@ -244,6 +253,14 @@ extension AppEntry {
             id: layout.entryID, name: layout.name,
             url: URL(string: "tinycast://window-layout/" + layout.id.uuidString)!,
             bundleID: nil, kind: .windowLayout, symbolName: layout.iconSymbol)
+    }
+
+    /// The one row a room draws, wherever it is offered from.
+    init(_ room: Room) {
+        self.init(
+            id: room.entryID, name: room.name,
+            url: URL(string: "tinycast://window-room/" + room.id.uuidString)!,
+            bundleID: nil, kind: .windowRoom)
     }
 
     /// A custom size shares the window commands' kind and section, as custom Quick Actions do.
@@ -362,6 +379,7 @@ final class AppIndex {
     private var windowCommandEntries: [AppEntry] = []
     private var customWindowSizeEntries: [AppEntry] = []
     private var windowLayoutEntries: [AppEntry] = []
+    private var windowRoomEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
     private var appleShortcutEntries: [AppEntry] = []
     private var customQuickActionEntries: [AppEntry] = []
@@ -498,6 +516,14 @@ final class AppIndex {
         publishEntries()
     }
 
+    /// Replaces the room slice, which publishes between the layouts and the window commands.
+    func setWindowRooms(_ rooms: [Room]) {
+        let entries = rooms.sorted(by: Room.precedes).map(AppEntry.init)
+        guard entries != windowRoomEntries else { return }
+        windowRoomEntries = entries
+        publishEntries()
+    }
+
     func updateSnippets(_ records: [StoredSnippet]) {
         let entries =
             records
@@ -630,7 +656,8 @@ final class AppIndex {
             Self.named(meetingEntries) + discoveredEntries
             + Self.named(
                 extensionEntries + quicklinkEntries + appleShortcutEntries + snippetEntries
-                    + Self.systemActionEntries + windowLayoutEntries + windowCommandEntries
+                    + Self.systemActionEntries + windowLayoutEntries + windowRoomEntries
+                    + windowCommandEntries
                     + customWindowSizeEntries + customCommandEntries + quickActionEntries
                     + commandEntries)
         guard updated != apps else { return }

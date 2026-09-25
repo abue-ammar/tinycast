@@ -58,7 +58,8 @@ extension SettingsTab {
         case .notes: [.showNotes, .createNote, .searchNotes]
         case .snippets: [.searchSnippets, .createSnippet]
         case .navigation: [.switchWindows, .searchMenuItems]
-        case .windowManagement: [.createWindowLayout, .captureWindowLayout]
+        case .windowManagement:
+            [.createWindowLayout, .captureWindowLayout, .switchRoom, .createRoom, .showAllWindows]
         case .clipboard: [.clipboardHistory]
         case .emoji: [.searchEmoji]
         case .calendar:

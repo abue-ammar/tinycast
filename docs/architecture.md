@@ -20,7 +20,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ Calculator/* · EmojiCatalog · EmojiGridGeometry · SystemAction ·            │
 │ VolumeLevel ·                                                              │
 │ WindowCommand · WindowPlacementEngine · WindowActionMemory · WindowLayout/* ·      │
-│ CustomWindowSize{,Store} ·                                                 │
+│ CustomWindowSize{,Store} · Room/* ·                                        │
 │ PaletteRowIndex ·                                                          │
 │ Uninstall{Target,SearchRoot,Rules,Protection,Plan} ·                       │
 │ Quicklink{,Destination,Store,Archive} · AppleShortcut · Notes/Model/* ·    │
@@ -37,6 +37,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ All platform I/O, one folder per feature.                                  │
 │ AppIndex · FileSearchService · SettingsPaneScanner ·                       │
 │ AXWindowAccess · AXScreens · WindowInventory · WindowLayoutRunner ·        │
+│ RoomWindowSweep · RoomRunner ·                                             │
 │ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │
 │ SystemActionRunner · QuicklinkLauncher · TextInjector ·             │
 │ SnippetKeywordListener · NotesRepository · CurrencyRateStore · Paster ·    │
