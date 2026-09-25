@@ -550,8 +550,8 @@ window, and every chat action either surface sends — is the nineteenth feature
 
 `ExecutableLocator` finds `codex`, `claude`, `grok`, `opencode` and `agent` by asking the account's
 login shell, so a stale copy in another prefix never shadows the one Terminal runs. zsh, bash and fish
-are asked in their own syntax, any other shell through zsh, and the answer is the last line printed, so
-an rc file that prints a greeting cannot hide it. Only when the shell names no absolute executable does
+are asked in their own syntax, any other shell through zsh, and the answer comes back behind a marker,
+so an rc or logout file that prints cannot hide it. Only when the shell names no absolute executable does
 it fall back to the app's PATH, the normal Homebrew and local-bin locations, mise's and asdf's shims and
 every nvm Node version, newest first — a fallback that can pick a different copy. What a
 found command runs under is `ExecutableLocator.environment`: its own folder, `/opt/homebrew/bin` and

@@ -72,7 +72,7 @@ struct InstalledAITests {
         expect(zsh == nil, "the zsh that fish users fell back to cannot see that CLI")
     }
 
-    /// An rc file's own output lands ahead of the lookup's answer.
+    /// Startup files print ahead of the lookup's answer, and logout files after it.
     private static func anRcFileThatPrintsStillAnswers(_ fixture: Fixture) async {
         let zdot = fixture.root.appending(path: "zdot-greeting", directoryHint: .isDirectory)
         let tools = fixture.root.appending(path: "zsh-tools", directoryHint: .isDirectory)
@@ -84,6 +84,8 @@ struct InstalledAITests {
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: cli.path)
             try "echo 'Good morning'\nexport PATH=\"\(tools.path):$PATH\"\n".write(
                 to: zdot.appending(path: ".zshrc"), atomically: true, encoding: .utf8)
+            try "echo 'Goodbye'\n".write(
+                to: zdot.appending(path: ".zlogout"), atomically: true, encoding: .utf8)
         } catch {
             expect(false, "the zsh fixture is written: \(error)")
             return
@@ -92,7 +94,7 @@ struct InstalledAITests {
         defer { setenv("ZDOTDIR", fixture.root.path, 1) }
         let zsh = await ExecutableLocator.shellLookup(
             "tc-zshrc-only-cli", shell: URL(fileURLWithPath: "/bin/zsh"))
-        expect(zsh == cli.path, "a .zshrc that prints a greeting still leaves the lookup its answer")
+        expect(zsh == cli.path, "a .zshrc greeting and a .zlogout farewell leave the lookup its answer")
         let nu = await ExecutableLocator.shellLookup(
             "tc-zshrc-only-cli", shell: URL(fileURLWithPath: "/opt/homebrew/bin/nu"))
         expect(nu == cli.path, "a login shell with neither syntax, like nushell, still asks zsh")

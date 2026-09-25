@@ -89,21 +89,27 @@ enum ExecutableLocator {
             process.waitUntilExit()
             watchdog.cancel()
             guard process.terminationStatus == 0 else { return nil }
-            // An rc file that prints goes first, so the lookup's answer is the last line.
+            // Startup and logout files can print on either side of the lookup's answer.
             let path = String(decoding: data, as: UTF8.self)
-                .split(whereSeparator: \.isNewline).last?
+                .split(whereSeparator: \.isNewline)
+                .last { $0.hasPrefix(answerMarker) }?
+                .dropFirst(answerMarker.count)
                 .trimmingCharacters(in: .whitespaces) ?? ""
             return path.hasPrefix("/") ? path : nil
         }.value
     }
 
+    nonisolated private static let answerMarker = "tinycast-locator:"
+
     /// fish binds `-c` arguments to `$argv`, not `$1`; any other shell falls back to zsh.
     nonisolated private static func lookup(_ command: String, in shell: URL) -> (URL, [String]) {
         switch shell.lastPathComponent {
         case "fish":
-            return (shell, ["-ilc", "command -v -- $argv[1]", command])
+            let script = #"printf '\#(answerMarker)%s\n' (command -v -- $argv[1])"#
+            return (shell, ["-ilc", script, command])
         case "zsh", "bash", "sh", "ksh", "dash":
-            return (shell, ["-ilc", #"command -v -- "$1""#, "tinycast-locator", command])
+            let script = #"printf '\#(answerMarker)%s\n' "$(command -v -- "$1")""#
+            return (shell, ["-ilc", script, "tinycast-locator", command])
         default:
             return lookup(command, in: URL(fileURLWithPath: "/bin/zsh"))
         }
