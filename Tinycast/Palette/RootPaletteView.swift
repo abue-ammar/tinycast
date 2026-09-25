@@ -522,6 +522,11 @@ struct RootPaletteView: View {
                 if command, press.modifiers.contains(.control), screen.tertiary(at: selection) {
                     return .handled
                 }
+                if command, press.modifiers.contains(.shift),
+                    screen.perform(.copyCalculation, at: selection)
+                {
+                    return .handled
+                }
                 if command { return screen.secondary(at: selection) ? .handled : .ignored }
                 return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
             }

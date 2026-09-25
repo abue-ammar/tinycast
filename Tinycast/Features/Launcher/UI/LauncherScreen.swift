@@ -284,8 +284,15 @@ struct LauncherScreen: PaletteScreen {
         case .quit: return quit(at: selection)
         case .restart: return restart(at: selection)
         case .favoriteSlot(let index): return launchFavorite(at: index)
+        case .copyCalculation: return copyCalculation(at: selection)
         default: return false
         }
+    }
+
+    private func copyCalculation(at selection: Int) -> Bool {
+        guard case .calc(let result) = row(at: selection), result.isActionable else { return false }
+        core.calculatorCoordinator.copyCalculationWithExpression(result)
+        return true
     }
 
     /// ⌃⇧Q — the screen owns the chord, but only a running application has anything to quit.

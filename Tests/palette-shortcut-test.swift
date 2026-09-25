@@ -94,7 +94,7 @@ struct PaletteShortcutTests {
         ]
         let anywhere: [PaletteShortcut] = [
             .commandDelete, .delete, .deleteAll, .pin, .favoriteSlot(0), .continueInChat, .newItem,
-            .settings
+            .settings, .copyCalculation
         ]
         for shortcut in expanded {
             expect(shortcut.requiresExpanded, "\(shortcut) is skipped in the compact bar")
@@ -104,8 +104,8 @@ struct PaletteShortcutTests {
         }
 
         let closing: [PaletteShortcut] = [
-            .delete, .deleteAll, .copyFile, .copyName, .copyPath, .copyText, .quickLook,
-            .toggleFavorite, .hideFromSearch, .newItem, .settings
+            .delete, .deleteAll, .copyFile, .copyName, .copyPath, .copyText, .copyCalculation,
+            .quickLook, .toggleFavorite, .hideFromSearch, .newItem, .settings
         ]
         let leaving: [PaletteShortcut] = [
             .commandDelete, .pasteFile, .quit, .restart, .pin, .favoriteSlot(0), .continueInChat

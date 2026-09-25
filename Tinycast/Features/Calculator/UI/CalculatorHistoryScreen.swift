@@ -90,6 +90,10 @@ struct CalculatorHistoryScreen: PaletteScreen {
         case .deleteAll:
             deleteAll()
             return true
+        case .copyCalculation:
+            guard case .calc(let result) = row(at: selection), result.isActionable else { return false }
+            core.calculatorCoordinator.copyCalculationWithExpression(result)
+            return true
         default: return false
         }
     }
