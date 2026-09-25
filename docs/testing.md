@@ -395,6 +395,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Copy Text on a vanished row reports by kind — "That file has moved or been deleted." for a
   referenced file, "That image is no longer available." for a pruned blob
 - Copy Text works with clipboard text search off: the helper is bundled either way
+- Copying something else while "Reading text…" shows leaves that copy on the pasteboard, and the
+  pill says **Clipboard changed, text not copied**
+- A tall phone screenshot and a full-width Retina screenshot copy each line once, whole, in order
 - A copy from an excluded app (Settings ▸ Clipboard ▸ Disabled Applications) is **not** recorded
 - Password-manager copies are still not recorded
 - Off (Settings ▸ Clipboard ▸ Enable Clipboard History): nothing new is recorded, the launcher row

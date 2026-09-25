@@ -57,6 +57,30 @@ struct ClipboardTextTests {
         }.value
         expect(tallText.contains("7391"), "small relative text survives tall screenshot downsampling")
 
+        let phoneURL = directory.appendingPathComponent("phone.png")
+        let phone = makeCanvas(width: 1170, height: 2532)
+        draw("OVERLAP LINE 5150", in: phone, at: CGPoint(x: 40, y: 600))
+        writePNG(phone.makeImage()!, to: phoneURL)
+        let phoneText = try await Task.detached {
+            try await ClipboardTextExtractor.extract(at: phoneURL, isPDF: false)
+        }.value
+        expect(
+            phoneText.components(separatedBy: "5150").count == 2,
+            "a line where two strips overlap is read once")
+
+        let wideURL = directory.appendingPathComponent("wide.png")
+        let wide = makeCanvas(width: 3456, height: 2234)
+        draw(
+            "FIRSTWORD alpha bravo charlie delta echo foxtrot golf hotel india juliet LASTWORD",
+            in: wide, size: 76)
+        writePNG(wide.makeImage()!, to: wideURL)
+        let wideText = try await Task.detached {
+            try await ClipboardTextExtractor.extract(at: wideURL, isPDF: false)
+        }.value
+        expect(
+            wideText.split(separator: "\n").contains { $0.contains("FIRSTWORD") && $0.contains("LASTWORD") },
+            "a line wider than 2048 pixels stays whole")
+
         let missing = ClipboardItem(
             filePath: directory.appendingPathComponent("missing.pdf").path,
             sourceBundleID: nil)
@@ -310,13 +334,32 @@ struct ClipboardTextTests {
         context.closePDF()
     }
 
-    static func draw(_ text: String, in context: CGContext) {
+    static func makeCanvas(width: Int, height: Int) -> CGContext {
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8,
+            bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        return context
+    }
+
+    static func writePNG(_ image: CGImage, to url: URL) {
+        let destination = CGImageDestinationCreateWithURL(url as CFURL, "public.png" as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, image, nil)
+        expect(CGImageDestinationFinalize(destination), "write \(url.lastPathComponent) fixture")
+    }
+
+    static func draw(
+        _ text: String, in context: CGContext, at origin: CGPoint = CGPoint(x: 40, y: 150),
+        size: CGFloat = 48
+    ) {
         let attributes: [NSAttributedString.Key: Any] = [
             NSAttributedString.Key(kCTFontAttributeName as String): CTFontCreateWithName(
-                "Helvetica" as CFString, 48, nil)
+                "Helvetica" as CFString, size, nil)
         ]
         let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: attributes))
-        context.textPosition = CGPoint(x: 40, y: 150)
+        context.textPosition = origin
         CTLineDraw(line, context)
     }
 

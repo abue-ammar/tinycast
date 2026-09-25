@@ -8,9 +8,10 @@ nonisolated enum ClipboardTextExtractor {
     private static let maximumFileBytes = 32_000_000
     private static let maximumPages = 64
     private static let maximumDimension = 4096
-    private static let tileDimension = 2048
-    private static let tileOverlap = 256
-    private static let maximumPixels = tileDimension * tileDimension
+    private static let maximumPixels = 2048 * 2048
+    private static let stripHeight = 2048
+    /// Taller than any line of text, so every line lies whole inside at least one strip.
+    private static let stripOverlap = 256
 
     enum Failure: Error { case unreadable }
 
@@ -43,33 +44,45 @@ nonisolated enum ClipboardTextExtractor {
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 
+    /// Full-width strips, so no line is cut across columns and the text keeps its reading order.
     private static func recognize(_ image: CGImage) async throws -> String {
         var text = ""
-        for y in stride(from: 0, to: max(1, image.height - tileOverlap), by: tileDimension - tileOverlap) {
-            for x in stride(from: 0, to: max(1, image.width - tileOverlap), by: tileDimension - tileOverlap) {
-                try Task.checkCancellation()
-                let rect = CGRect(
-                    x: x, y: y, width: min(tileDimension, image.width - x),
-                    height: min(tileDimension, image.height - y))
-                guard let tile = image.cropping(to: rect) else { continue }
-                let content = try await recognizeTile(tile)
-                if !text.isEmpty, !content.isEmpty { text += "\n" }
-                text += bounded(content, bytes: maximumTextBytes - text.utf8.count)
-                if text.utf8.count >= maximumTextBytes - 4 { return text }
-            }
+        for top in stride(from: 0, to: max(1, image.height - stripOverlap), by: stripHeight - stripOverlap) {
+            try Task.checkCancellation()
+            let height = min(stripHeight, image.height - top)
+            let rect = CGRect(x: 0, y: top, width: image.width, height: height)
+            guard let strip = image.cropping(to: rect) else { continue }
+            let owned = ownedRows(isFirst: top == 0, isLast: top + height == image.height, height: height)
+            let content = try await recognizeStrip(strip, keepingCentresIn: owned)
+            if !text.isEmpty, !content.isEmpty { text += "\n" }
+            text += bounded(content, bytes: maximumTextBytes - text.utf8.count)
+            if text.utf8.count >= maximumTextBytes - 4 { return text }
         }
         return text
     }
 
-    private static func recognizeTile(_ image: CGImage) async throws -> String {
+    /// Adjacent strips split their overlap down the middle, so a line there is kept exactly once.
+    private static func ownedRows(isFirst: Bool, isLast: Bool, height: Int) -> Range<Double> {
+        let lower = isFirst ? -.infinity : Double(stripOverlap / 2)
+        let upper = isLast ? .infinity : Double(height - stripOverlap / 2)
+        return lower..<upper
+    }
+
+    private static func recognizeStrip(
+        _ strip: CGImage, keepingCentresIn rows: Range<Double>
+    ) async throws -> String {
         try Task.checkCancellation()
         var request = RecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.minimumTextHeightFraction = 0
         request.automaticallyDetectsLanguage = true
-        let observations = try await request.perform(on: image)
+        let observations = try await request.perform(on: strip)
         try Task.checkCancellation()
-        return observations.compactMap { $0.topCandidates(1).first?.string }.joined(separator: "\n")
+        let size = CGSize(width: strip.width, height: strip.height)
+        return observations
+            .filter { rows.contains($0.boundingBox.toImageCoordinates(size, origin: .upperLeft).midY) }
+            .compactMap { $0.topCandidates(1).first?.string }
+            .joined(separator: "\n")
     }
 
     private static func extractPDF(_ url: URL) async throws -> String {

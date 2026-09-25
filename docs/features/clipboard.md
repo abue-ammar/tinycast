@@ -190,9 +190,11 @@ is a completed attempt. Failed recognition, a locked or unreadable input and a h
 `item_text_failures` instead: up to three attempts 30 seconds apart, which never block another item.
 Success and deletion clear that state. Enabling text search resets failures and earlier empty
 attempts so they can be tried again, keeping recognized text that is not empty — so an empty input
-may be reprocessed on a later launch, but nothing retries forever inside one session. Long bitmaps
-are recognized in overlapping 2048-pixel tiles, with Vision's relative minimum text-height cutoff
-disabled so it cannot discard small text on a tall screenshot or page. A referenced file is read once
+may be reprocessed on a later launch, but nothing retries forever inside one session. Tall bitmaps
+are recognized in full-width 2048-pixel strips overlapping by 256 pixels, with Vision's relative
+minimum text-height cutoff disabled so it cannot discard small text on a tall screenshot or page.
+Strips never split a line across columns, and each keeps only the lines centred in its half of an
+overlap, so a line is read once and the text keeps its reading order. A referenced file is read once
 when it is indexed; editing it later does not refresh the historical search text. Backups carry the
 original content and references, and a restored entry is recognized again.
 
@@ -205,20 +207,25 @@ chords, and closes an open menu). `ClipboardItem.offersTextExtraction` is the on
 answer — a captured `.image` entry, or a `.file` entry whose kind is an image (a screenshot copied
 in Finder) — and it is never a PDF, which stays a background-indexing capability.
 
-The action closes the palette first, then stats the file: a vanished referenced file raises the
+The action closes the palette and shows a "Reading text…" progress pill, then stats the file off
+the main actor, since a stat on an unmounted volume can stall: a vanished referenced file raises the
 HUD every action on that row uses, and a pruned blob says "That image is no longer available." —
-the palette is already down, so a HUD is the only thing that can speak. A "Reading text…" progress
-pill follows while `ClipboardTextWorker` spawns the bundled helper: no Vision runs in the app
-process, nothing reads the `item_text` table, and nothing depends on the text-search switch, whose
-helper is bundled either way. The extracted text is written with `Paster.copyPlainText`,
-**unmarked**, so the copy enters history like Copy Path does, and the pill is replaced by the
-outcome — **Copied text**, **No text found** when the helper succeeded but recognized nothing, or
-**Couldn’t read the text** when it failed.
+the palette is already down, so a HUD is the only thing that can speak. `ClipboardTextWorker` then
+spawns the bundled helper: no Vision runs in the app process, nothing reads the `item_text` table,
+and nothing depends on the text-search switch, whose helper is bundled either way. The extracted
+text is written with `Paster.copyPlainText`, **unmarked**, so the copy enters history like Copy
+Path does, and the pill is replaced by the outcome — **Copied text**, **No text found** when the
+helper succeeded but recognized nothing, or **Couldn’t read the text** when it failed.
+
+Only one extraction is in flight: a second trigger cancels the first, whose helper is terminated
+and which reports nothing. A result never overwrites a newer copy — when the pasteboard's
+`changeCount` moved while the helper ran, the text is dropped and the pill says **Clipboard
+changed, text not copied**.
 
 The bounds are the indexer's, stated precisely: the helper truncates its output at 32,000 UTF-8
 bytes, so a text-dense scan can copy *partial* text under a success HUD, and an input over 32 MB
-extracts as empty and lands in **No text found**. There is no in-flight guard and no promotion of
-the source row — a copy is not a paste; a second trigger just runs a second bounded helper.
+extracts as empty and lands in **No text found**. The source row is not promoted — a copy is not a
+paste.
 
 ## Type filter
 

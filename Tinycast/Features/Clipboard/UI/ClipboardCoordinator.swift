@@ -12,6 +12,8 @@ final class ClipboardCoordinator {
     private let paletteCoordinator: PaletteCoordinator
     /// Dialogs, for the one action here that can't be undone.
     private unowned let core: AppCore
+    /// One Copy Text at a time: a newer trigger cancels the helper an older one is waiting on.
+    private var textTask: Task<Void, Never>?
 
     init(
         clipboardStore: ClipboardStore,
@@ -114,7 +116,7 @@ final class ClipboardCoordinator {
         }
     }
 
-    /// A vanished file is the only failure, and a palette that just closes explains nothing.
+    /// A write only fails on a vanished file, and a palette that just closes explains nothing.
     private func reportUnavailable(_ item: ClipboardItem) {
         guard item.kind == .file else { return }
         core.showMessage("That file has moved or been deleted.", tone: .danger)
@@ -182,34 +184,33 @@ final class ClipboardCoordinator {
 
     /// ⇧⌘T / “Copy Text” — OCRs the image in the bundled helper and copies what it reads.
     func copyImageText(_ item: ClipboardItem) {
+        guard let path = item.imagePath ?? item.filePath else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)
-        guard textImageURL(for: item) != nil else { return }
         core.showProgress("Reading text…")
-        Task {
+        let changeCount = NSPasteboard.general.changeCount
+        textTask?.cancel()
+        textTask = Task {
             do {
+                // A stat on an unmounted or network volume can stall, so it stays off the main actor.
+                let exists = await Task.detached { FileManager.default.fileExists(atPath: path) }.value
+                try Task.checkCancellation()
+                guard exists else {
+                    return item.kind == .file
+                        ? reportUnavailable(item)
+                        : core.showMessage("That image is no longer available.", tone: .danger)
+                }
                 let text = try await ClipboardTextWorker.extract(item)
-                guard !text.isEmpty else {
-                    core.showMessage("No text found", tone: .neutral)
-                    return
+                guard !text.isEmpty else { return core.showMessage("No text found", tone: .neutral) }
+                guard NSPasteboard.general.changeCount == changeCount else {
+                    return core.showMessage("Clipboard changed, text not copied", tone: .neutral)
                 }
                 Paster.copyPlainText(text)
                 core.showMessage("Copied text")
+            } catch is CancellationError {
             } catch {
                 core.showMessage("Couldn’t read the text", tone: .danger)
             }
         }
-    }
-
-    /// The file OCR reads, stat-checked so a vanished row raises the HUD its kind already uses.
-    private func textImageURL(for item: ClipboardItem) -> URL? {
-        let url = item.kind == .image ? clipboardStore.imageURL(for: item)
-            : clipboardStore.fileURL(for: item)
-        guard let url, FileManager.default.fileExists(atPath: url.path) else {
-            if item.kind == .file { reportUnavailable(item) }
-            else { core.showMessage("That image is no longer available.", tone: .danger) }
-            return nil
-        }
-        return url
     }
 
     /// Nil once the file is gone, so every action reports rather than silently no-opping.
