@@ -10,8 +10,30 @@ struct MessageHUDView: View {
 
     let message: String
     let accessory: Accessory
+    var onCancel: (() -> Void)? = nil
+    @State private var hovered = false
 
     var body: some View {
+        Group {
+            if let onCancel {
+                Button(action: onCancel) {
+                    content
+                }
+                .buttonStyle(.plain)
+            } else {
+                content
+            }
+        }
+        .onHover { isHovered in
+            if onCancel != nil {
+                withAnimation(.easeOut(duration: Theme.Duration.hover)) {
+                    hovered = isHovered
+                }
+            }
+        }
+    }
+
+    private var content: some View {
         HStack(spacing: Theme.Spacing.md) {
             Text(message)
                 .font(Theme.Typography.bar)
@@ -24,16 +46,31 @@ struct MessageHUDView: View {
         .frame(maxWidth: Theme.Size.hudMaxWidth, alignment: .leading)
         .fixedSize()
         // Not glass: with nothing to lens it falls back to an opaque backing and shows.
-        .background(Theme.Colors.panelScrim)
+        .background(hovered ? Theme.Colors.controlHover : Theme.Colors.panelScrim)
         .background(GlassEffectView())
         .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .strokeBorder(hovered ? Theme.Colors.border : Color.clear, lineWidth: 1)
+        )
     }
 
     /// One box for both marks, so swapping a spinner for its outcome cannot resize the pill.
     private var mark: some View {
-        symbol
-            .font(Theme.Typography.menuIcon)
-            .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+        Group {
+            if hovered, onCancel != nil {
+                Image(systemName: "xmark")
+                    .font(Theme.Typography.menuIcon.weight(.semibold))
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                    .transition(.opacity)
+            } else {
+                symbol
+                    .font(Theme.Typography.menuIcon)
+                    .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                    .transition(.opacity)
+            }
+        }
     }
 
     @ViewBuilder

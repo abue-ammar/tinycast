@@ -248,7 +248,7 @@ final class QuickActionCoordinator {
         _ state: QuickActionPanelState, previewing: Bool
     ) async throws -> String {
         guard !previewing else { return try await generate(state, streaming: true) }
-        core.showProgress(state.action.progressTitle)
+        core.showProgress(state.action.progressTitle, onCancel: { [weak self] in self?.cancel() })
         defer { core.hideProgress() }
         return try await generate(state, streaming: false)
     }
