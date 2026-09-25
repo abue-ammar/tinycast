@@ -531,7 +531,7 @@ and launcher checkbox live in Settings › Window Management beside the commands
 `RoomStore` supplies the `.windowRoom` slice the same way, sorted by name and published between the
 window layouts and the window commands; `LauncherList.rows` mirrors that position. ↵ on a room
 enters it through `RoomCoordinator.enterRoom(id:)`, which hides the palette itself. The section and
-the three room commands leave together with `windowRoomsShowInLauncher`. See
+the two room commands leave together with `windowRoomsShowInLauncher`. See
 [window-rooms.md](window-rooms.md).
 
 ## Quicklinks

@@ -81,12 +81,6 @@ struct RoomsScreen: PaletteScreen {
                     coordinator.editWindows(of: room)
                 },
                 PopoverMenuItem(
-                    title: "Show All Windows", systemImage: CommandID.showAllWindows.sfSymbol,
-                    startsSection: true
-                ) {
-                    coordinator.showAllWindows()
-                },
-                PopoverMenuItem(
                     title: "Delete Room", systemImage: "trash", startsSection: true, shortcut: "⌘⌫",
                     isDestructive: true
                 ) {

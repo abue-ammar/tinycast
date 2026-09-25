@@ -56,7 +56,7 @@ final class RoomCoordinator {
         self.core = core
     }
 
-    private static let commands: Set<CommandID> = [.switchRoom, .createRoom, .showAllWindows]
+    private static let commands: Set<CommandID> = [.switchRoom, .createRoom]
 
     // MARK: - Feature presence
 
@@ -77,7 +77,7 @@ final class RoomCoordinator {
             return inTurn { [ledger] in RoomRunner.returnParkedWindows(ledger: ledger) }
         }
         currentRoomID = nil
-        inTurn { [ledger] in _ = await RoomRunner.showAllWindows(ledger: ledger) }
+        inTurn { [ledger] in await RoomRunner.restoreEverything(ledger: ledger) }
     }
 
     /// Windows a crash left parked come home at launch; nothing is unhidden, nothing else moves.
@@ -229,19 +229,6 @@ final class RoomCoordinator {
                 self.store.markEntered(id: room.id, at: Date())
             }
             await self.report(outcome, for: room)
-        }
-    }
-
-    /// Every parked window home and every hidden app shown: the way out of any room.
-    func showAllWindows() {
-        guard Permissions.ensureAccessibility() else {
-            Task { await reportPermissionFailure() }
-            return
-        }
-        currentRoomID = nil
-        inTurn { [weak self, ledger] in
-            let shown = await RoomRunner.showAllWindows(ledger: ledger)
-            self?.report(shown)
         }
     }
 
@@ -539,19 +526,6 @@ final class RoomCoordinator {
         guard !missing.isEmpty else { return }
         core.showMessage(
             "\(room.name) — \(missing.joined(separator: ", ")) not open", tone: .neutral)
-    }
-
-    /// Said either way, so a press with nothing hidden never looks like a dead button.
-    private func report(_ shown: RoomRunner.Shown) {
-        var parts: [String] = []
-        if shown.apps > 0 { parts.append(shown.apps == 1 ? "1 app" : "\(shown.apps) apps") }
-        if shown.windows > 0 {
-            parts.append(shown.windows == 1 ? "1 window" : "\(shown.windows) windows")
-        }
-        guard !parts.isEmpty else {
-            return core.showMessage("Nothing was hidden", tone: .neutral)
-        }
-        core.showMessage("Showed " + parts.joined(separator: " and "), tone: .success)
     }
 
     private func reportPermissionFailure() async {

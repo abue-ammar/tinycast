@@ -89,17 +89,12 @@ enum RoomRunner {
         return outcome
     }
 
-    struct Shown: Sendable {
-        var apps = 0
-        var windows = 0
-    }
-
     /// Every hidden app, then every parked window: a just-unhidden app ignores moves until back.
-    static func showAllWindows(ledger: RoomParkingLedger) async -> Shown {
+    static func restoreEverything(ledger: RoomParkingLedger) async {
         let hidden = WindowInventory.candidates().filter(\.isHidden)
         hidden.forEach(show)
         await wait(for: unhideDeadline, every: unhidePoll) { hidden.allSatisfy { !$0.isHidden } }
-        return Shown(apps: hidden.count, windows: returnParkedWindows(ledger: ledger))
+        returnParkedWindows(ledger: ledger)
     }
 
     /// Every parked window home, how many came back. Synchronous, so quitting runs it through.

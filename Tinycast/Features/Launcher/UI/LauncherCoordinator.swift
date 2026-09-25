@@ -231,9 +231,6 @@ final class LauncherCoordinator {
             core.roomCoordinator.showRooms()
         case .createRoom:
             core.roomCoordinator.createRoom()
-        case .showAllWindows:
-            dismissPalette()
-            core.roomCoordinator.showAllWindows()
         case .createQuicklink:
             dismissPalette()
             quicklinkCoordinator.editQuicklink(nil)

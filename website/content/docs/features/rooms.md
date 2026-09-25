@@ -31,7 +31,7 @@ Run **Switch Room**. The selected room is previewed over your blurred desk.
 | ↑ ↓    | Pick a room; the preview glides to it                                |
 | ⇥ / ⇧⇥ | Try the next or previous layout that fits this display               |
 | ↵      | Enter the room                                                       |
-| ⌘K     | Remember Arrangement, Choose Windows, Show All Windows, Delete Room  |
+| ⌘K     | Remember Arrangement, Choose Windows, Delete Room                    |
 | ⌘⌫     | Delete the room; its windows stay open                               |
 
 Every room is also a launcher entry, and each can have its own global shortcut in
@@ -58,8 +58,8 @@ the layouts make room for them.
 
 ## Getting everything back
 
-**Show All Windows** brings back every parked window and every app a room hid. Quitting Tinycast,
-turning Window Management off, or opening Tinycast again after a crash also brings parked windows
-back: each one's way home is written to disk before it moves.
+Quitting Tinycast, turning Window Management off, or opening Tinycast again after a crash brings
+every parked window back: each one's way home is written to disk before it moves. Turning Window
+Management off inside a room also shows the apps it hid.
 
 Rooms work with ordinary windows on the current Space. Full-screen windows are left alone.

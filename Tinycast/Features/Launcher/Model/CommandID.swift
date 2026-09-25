@@ -31,7 +31,6 @@ enum CommandID: String, CaseIterable, Sendable {
     case captureWindowLayout = "command:capture-window-layout"
     case switchRoom = "command:switch-room"
     case createRoom = "command:create-room"
-    case showAllWindows = "command:show-all-windows"
     case createQuicklink = "command:create-quicklink"
     case searchQuicklinks = "command:search-quicklinks"
     case importQuicklinks = "command:import-quicklinks"
@@ -77,7 +76,6 @@ enum CommandID: String, CaseIterable, Sendable {
         case .captureWindowLayout: return "Create Layout from Current Windows"
         case .switchRoom: return "Switch Room"
         case .createRoom: return "Create Room"
-        case .showAllWindows: return "Show All Windows"
         case .createQuicklink: return "Create Quicklink"
         case .searchQuicklinks: return "Search Quicklinks"
         case .importQuicklinks: return "Import Quicklinks"
@@ -125,7 +123,6 @@ enum CommandID: String, CaseIterable, Sendable {
         case .captureWindowLayout: return "macwindow.badge.plus"
         case .switchRoom: return "door.left.hand.open"
         case .createRoom: return "rectangle.stack.badge.plus"
-        case .showAllWindows: return "rectangle.on.rectangle.angled"
         case .createQuicklink: return "link.badge.plus"
         case .searchQuicklinks: return Quicklink.sfSymbol
         case .importQuicklinks: return "square.and.arrow.down"

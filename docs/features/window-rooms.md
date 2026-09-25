@@ -18,10 +18,11 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
   synchronously and returns false when the write fails, and then the window is not parked. An
   entry is forgotten only once its window is confirmed back — mostly inside its room spot, or
   within 16 pt of its saved frame — so a busy app keeps its way back for the next try.
-- **Every parked window comes home** on Show All Windows, on quit (`prepareForTermination`, which
-  is synchronous for that reason), when the feature switch turns off, and at the next launch
-  after a crash (`recoverParkedWindows`). Only Show All Windows, and switching the feature off
-  while in a room, also unhide apps: a launch must never undo a ⌘H the user made themselves.
+- **Every parked window comes home** on quit (`prepareForTermination`, which is synchronous for
+  that reason), when the feature switch turns off, and at the next launch after a crash
+  (`recoverParkedWindows`). Only switching the feature off while in a room also unhides apps: a
+  launch must never undo a ⌘H the user made themselves. Entering another room returns any parked
+  window whose app it hides.
 - **Parking needs the window-server number.** `AXWindowAccess.windowID(of:)` resolves the private
   `_AXUIElementGetWindow` at run time; without it the room still lays out and hides other apps,
   but no window parks. This reverses [Navigation](navigation.md#recency-without-a-private-symbol)'s
@@ -36,7 +37,7 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
   `WindowPlacementEngine.sanitizedGap` and tiles inside `WindowPlacementEngine.canvas`, so a room
   and a snapped half sit on the same lines. Gap 0 tiles edge to edge.
 - **Window work runs one at a time, in order.** `RoomCoordinator.inTurn` chains every enter and
-  every Show All Windows: two passes at once would each hide what the other just showed.
+  every restore: two passes at once would each hide what the other just showed.
 - **The runner never touches `WindowActionMemory`**, exactly as layouts do not.
 - **`Model/` stays Foundation + CoreGraphics.** Screens arrive as `WindowLayoutScreen`, windows as
   handle-based `RoomLiveWindow`s, minimum sizes as a dictionary; `window-room-test` compiles the
@@ -57,7 +58,7 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
 | `Model/RoomMinimumSizeStore.swift` | Minimum sizes learned by trying (`roomMinimumWindowSizes`) |
 | `Model/RoomParkingLedger.swift` | Parked windows' ways back, `room-parking.json` in Application Support |
 | `Service/RoomWindowSweep.swift` | One AX sweep, minimized and hidden apps' windows included |
-| `Service/RoomRunner.swift` | Enters a room; Show All Windows |
+| `Service/RoomRunner.swift` | Enters a room; returns parked windows |
 | `Service/RoomSession.swift` | The Rooms screens' state while open |
 | `UI/RoomCoordinator.swift` | The one funnel, the preview, the picker, the library, cleanup |
 | `UI/RoomsScreen.swift`, `RoomsList.swift` | Switch Room |
@@ -97,8 +98,7 @@ entered comes first, so the room you just left is one row away. Typing a new nam
 - **↵** enters the selected room. **⇥ / ⇧⇥** step through `RoomPlan.layoutChoices` — the layouts
   that fit its open windows here, each drawn differently; Stack only when nothing tidier fits — and
   store the choice for this display. A single choice says so in a message.
-- **⌘K** holds Enter Room, Next Layout, Remember Arrangement, Choose Windows…, Show All Windows and
-  Delete Room (**⌘⌫**, confirmed through `DialogController`). **⌘N** creates a room.
+- **⌘K** holds Enter Room, Next Layout, Remember Arrangement, Choose Windows… and Delete Room (**⌘⌫**, confirmed through `DialogController`). **⌘N** creates a room.
 - The screen claims ⇥ through `PaletteScreen.tab(at:backwards:)`, asked before `tabTarget` and the
   palette's ring; every other screen keeps today's Tab.
 
@@ -146,8 +146,8 @@ and Settings' Enter button. It hides the palette with `restoreFocus: false`, the
 
 A clean enter says nothing; a missing window names its app in a message, and a room with no open
 window is a notice — and steps nothing back, since hiding everything around an empty room would
-leave an empty desk. Show All Windows unhides first and waits for the apps to come back before
-returning parked windows, then says what it showed, or that nothing was hidden.
+leave an empty desk. Switching the feature off in a room unhides first and waits for the apps to
+come back before returning parked windows.
 
 ## Wiring
 
@@ -155,7 +155,7 @@ returning parked windows, then says what it showed, or that nothing was hidden.
   between the window-layout and window-command slices; `LauncherList.rows` mirrors that order.
 - **`HotKeyAction.windowRoom(id:)`**, persisted under `hotkey.windowRoom.<uuid>` with a
   `boundWindowRoomIDs` index, dispatched to `enterRoom(id:)`.
-- **Commands**: Switch Room, Create Room and Show All Windows, owned by
+- **Commands**: Switch Room and Create Room, owned by
   `SettingsTab.windowManagement` and gated with the feature.
 - **Settings**: `windowRoomsShowInLauncher` (on). Rooms and their shortcuts ride in settings
   backups; learned minimum sizes and the ledger do not — one is a cache, the other this Mac's state.
@@ -171,6 +171,5 @@ with a scratch suite and a temporary directory.
 
 `RoomWindowSweep`, `RoomRunner` and the preview need the manual sweep in
 [testing.md](../testing.md#manual-regression-sweep): make a room from the palette; Tab through its
-layouts and watch the cards glide; enter it and check other apps hide and extra windows park; Show
-All Windows, quit, `kill -9` then relaunch, and turning the feature off must each bring every window
-home; repeat with gap 0 and 16, on two displays, and with Reduce Motion on.
+layouts and watch the cards glide; enter it and check other apps hide and extra windows park; quit,
+`kill -9` then relaunch, and turning the feature off must each bring every window home; repeat with gap 0 and 16, on two displays, and with Reduce Motion on.

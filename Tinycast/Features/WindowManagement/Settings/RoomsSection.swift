@@ -27,11 +27,6 @@ struct RoomsSection: View {
             } label: {
                 SettingsRowTitle(.windowManagementRooms, "New Room")
             }
-            Button {
-                core.roomCoordinator.showAllWindows()
-            } label: {
-                SettingsRowTitle(.windowManagementRooms, "Show All Windows")
-            }
         } header: {
             SettingsSectionHeader(.windowManagementRooms)
         }

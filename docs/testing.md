@@ -644,8 +644,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Fullscreen on Settings toggles it; on the Notes window it does nothing
 - With the note switcher open a command places Notes; the switcher and HUDs are never placed
 - Rooms: create one from Switch Room; ⇥ glides the preview through its layouts; ↵ lands its windows
-  with the gap, hides other apps and parks their extra windows; Show All Windows, quitting,
-  `kill -9` then relaunching, and turning Window Management off each bring every window back.
+  with the gap, hides other apps and parks their extra windows; quitting, `kill -9` then relaunching, and
+  turning Window Management off each bring every window back.
   Repeat on two displays and with Reduce Motion on
 
 ### Extensions

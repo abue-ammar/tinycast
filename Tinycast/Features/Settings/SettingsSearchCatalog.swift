@@ -414,8 +414,7 @@ enum SettingsSearchCatalog {
         .init(
             group: .windowManagementLayoutCommands, "Layout and room commands",
             keywords: [
-                "shortcut", "launcher", "create layout", "capture", "switch room", "create room",
-                "show all windows"
+                "shortcut", "launcher", "create layout", "capture", "switch room", "create room"
             ]),
         .init(
             group: .windowManagementLayouts, "Window Layouts",
@@ -444,9 +443,6 @@ enum SettingsSearchCatalog {
         .init(
             .windowManagementRooms, "New Room",
             keywords: ["add", "create", "project", "windows"]),
-        .init(
-            .windowManagementRooms, "Show All Windows",
-            keywords: ["restore", "unhide", "parked", "leave room", "show everything"]),
         .init(
             group: .windowManagementCustomSizes, "Custom Sizes",
             keywords: ["custom", "size", "resize", "dimensions", "pixels", "points", "percent"]),
