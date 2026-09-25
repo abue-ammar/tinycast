@@ -15,7 +15,8 @@ final class RoomStore {
         self.defaults = defaults
         let decoded =
             defaults.data(forKey: Self.defaultsKey)
-            .flatMap { try? JSONDecoder().decode([Room].self, from: $0) } ?? []
+            .flatMap { try? JSONDecoder().decode([LossyRoom].self, from: $0) }?
+            .compactMap(\.room) ?? []
         rooms = Self.sanitized(decoded)
         if rooms != decoded { persist() }
     }
@@ -112,6 +113,15 @@ final class RoomStore {
     private func persist() {
         guard let data = try? JSONEncoder().encode(rooms) else { return }
         defaults.set(data, forKey: Self.defaultsKey)
+    }
+
+    /// Decodes one record on its own, so a bad one is dropped without taking the library with it.
+    private struct LossyRoom: Decodable {
+        let room: Room?
+
+        init(from decoder: Decoder) throws {
+            room = try? Room(from: decoder)
+        }
     }
 
     private static func sanitized(_ values: [Room]) -> [Room] {

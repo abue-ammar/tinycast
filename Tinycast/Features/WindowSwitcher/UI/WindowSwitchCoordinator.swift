@@ -37,8 +37,8 @@ final class WindowSwitchCoordinator {
             Task { await self.reportPermissionFailure() }
             return
         }
-        // Pressed again while open, the shortcut steps down the list rather than closing it.
         if paletteCoordinator.isShowing(.switchWindows) { return step() }
+        disarmSwitchOnRelease()
         paletteCoordinator.togglePalette(mode: .switchWindows)
     }
 
@@ -63,9 +63,13 @@ final class WindowSwitchCoordinator {
         }
     }
 
-    private func switchOnRelease() {
+    private func disarmSwitchOnRelease() {
         if let releaseMonitor { NSEvent.removeMonitor(releaseMonitor) }
         releaseMonitor = nil
+    }
+
+    private func switchOnRelease() {
+        disarmSwitchOnRelease()
         let rows = session.filtered
         guard paletteCoordinator.isShowing(.switchWindows), rows.indices.contains(palette.selection)
         else { return }

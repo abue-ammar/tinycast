@@ -412,6 +412,7 @@ extension View {
             .environment(core.quicklinks)
             .environment(core.windowLayouts)
             .environment(core.rooms)
+            .environment(core.roomCoordinator)
             .environment(core.customWindowSizes)
             .environment(core.customWindowSizeCoordinator)
             .environment(core.calendarStore)

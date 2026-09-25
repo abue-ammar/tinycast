@@ -7,7 +7,6 @@ enum RoomLayoutEngine {
     static let comfortable = CGSize(width: 480, height: 360)
     /// The least a tidy layout gives a window, so an unknown minimum is never squeezed to nothing.
     static let usable = CGSize(width: 320, height: 240)
-    /// How much of each stacked window's title bar stays in view.
     static let peek: CGFloat = 32
 
     /// The box windows tile inside, and the one gap every layout uses, both sanitized once.
@@ -278,7 +277,6 @@ enum RoomLayoutEngine {
             }
     }
 
-    /// The narrowest a column of rows can be: its widest row of minimum widths.
     private static func rowMinimumWidth(
         _ order: [Int], columns: Int, minimums: [CGSize], gap: CGFloat
     ) -> CGFloat {
@@ -288,7 +286,6 @@ enum RoomLayoutEngine {
         }.max() ?? 0
     }
 
-    /// On screen, and every window at least `usable`.
     private static func works(_ rects: [CGRect], in box: CGRect) -> Bool {
         overflow(rects, in: box) < 1
             && rects.allSatisfy {
@@ -296,7 +293,6 @@ enum RoomLayoutEngine {
             }
     }
 
-    /// How far, in points, the rects spill outside the box, summed.
     private static func overflow(_ rects: [CGRect], in box: CGRect) -> CGFloat {
         rects.reduce(0) { sum, rect in
             sum + max(0, box.minX - rect.minX) + max(0, rect.maxX - box.maxX)

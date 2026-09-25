@@ -22,9 +22,7 @@ final class RoomSession {
     private(set) var isLoaded = false
     /// Every window the picker offers: visible ones front to back, then parked, hidden, minimized.
     private(set) var pickable: [RoomLiveWindow] = []
-    /// Room order; the first is the main window.
     private(set) var picked: [Pick] = []
-    /// The room the picker edits, or nil for a new one.
     private(set) var editingID: UUID?
     /// The picker's search field filters, so the room's name is held here.
     private(set) var roomName = ""

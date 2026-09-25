@@ -112,7 +112,6 @@ private struct RoomPickerRowView: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
-    /// The member's place in the room, or an empty ring where it could go.
     private var badge: some View {
         ZStack {
             Circle()

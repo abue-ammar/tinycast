@@ -3,7 +3,7 @@ import SwiftUI
 /// The room library, inside the Window Management pane: rooms tile with its gap and its grant.
 struct RoomsSection: View {
     @Environment(RoomStore.self) private var store
-    @Environment(AppCore.self) private var core
+    @Environment(RoomCoordinator.self) private var coordinator
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
@@ -23,7 +23,7 @@ struct RoomsSection: View {
             }
 
             Button {
-                core.roomCoordinator.createRoom()
+                coordinator.createRoom()
             } label: {
                 SettingsRowTitle(.windowManagementRooms, "New Room")
             }
@@ -37,11 +37,11 @@ struct RoomsSection: View {
 private struct RoomSettingsRow: View {
     let room: Room
 
-    @Environment(AppCore.self) private var core
+    @Environment(RoomCoordinator.self) private var coordinator
     @Environment(VisibilityStore.self) private var visibility
 
     private var subtitle: String {
-        "\(room.summary) · \(core.roomCoordinator.layout(of: room).title)"
+        "\(room.summary) · \(coordinator.layout(of: room).title)"
     }
 
     var body: some View {
@@ -51,7 +51,7 @@ private struct RoomSettingsRow: View {
             ShortcutRecorder(action: .windowRoom(id: room.id))
 
             Button {
-                core.roomCoordinator.enterRoom(id: room.id)
+                coordinator.enterRoom(id: room.id)
             } label: {
                 Image(systemName: "play")
             }
@@ -60,7 +60,7 @@ private struct RoomSettingsRow: View {
             .accessibilityLabel("Enter \(room.name)")
 
             Button {
-                core.roomCoordinator.editWindows(of: room)
+                coordinator.editWindows(of: room)
             } label: {
                 Image(systemName: "macwindow.badge.plus")
             }
@@ -69,7 +69,7 @@ private struct RoomSettingsRow: View {
             .accessibilityLabel("Choose windows for \(room.name)")
 
             Button {
-                core.roomCoordinator.deleteRoom(room)
+                coordinator.deleteRoom(room)
             } label: {
                 Image(systemName: "trash")
                     .foregroundStyle(Theme.Colors.destructive)

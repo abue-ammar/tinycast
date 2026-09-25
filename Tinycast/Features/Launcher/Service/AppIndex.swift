@@ -255,7 +255,6 @@ extension AppEntry {
             bundleID: nil, kind: .windowLayout, symbolName: layout.iconSymbol)
     }
 
-    /// The one row a room draws, wherever it is offered from.
     init(_ room: Room) {
         self.init(
             id: room.entryID, name: room.name,

@@ -6,11 +6,9 @@ enum RoomLayoutKind: String, Codable, CaseIterable, Sendable {
     /// Focus, Columns or Grid, whichever gives every window a comfortable size; Stack otherwise.
     case auto
     case focus
-    /// Focus with the side windows overlapping, each title bar left in view.
     case stack
     case columns
     case grid
-    /// The room's own arrangement, snapped to `RoomGrid` with even gaps.
     case custom
     /// Exactly where the windows were when the arrangement was remembered.
     case saved

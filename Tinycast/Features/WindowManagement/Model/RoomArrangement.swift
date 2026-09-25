@@ -52,10 +52,11 @@ enum RoomArrangement {
         return Reading(kind: .saved, order: Array(0..<count), distance: best.distance)
     }
 
-    /// `room` rebuilt from open windows; `keepsOrder` trusts their order over their places.
+    /// `room` rebuilt from open windows, then `kept`: the members no open window filled.
     static func learn(
-        _ room: Room, from windows: [RoomLiveWindow], on screen: WindowLayoutScreen,
-        spansDisplays: Bool, gap: CGFloat, minimums: [CGSize], keepsOrder: Bool
+        _ room: Room, from windows: [RoomLiveWindow], keeping kept: [RoomWindow] = [],
+        on screen: WindowLayoutScreen, spansDisplays: Bool, gap: CGFloat, minimums: [CGSize],
+        keepsOrder: Bool
     ) -> (room: Room, reading: Reading) {
         let visible = screen.screen.visibleFrame
         var reading = read(windows.map(\.frame), in: visible, gap: gap, minimums: minimums)
@@ -74,13 +75,6 @@ enum RoomArrangement {
         if reading.kind == .custom, let cells = reading.cells, cells.count == learned.count {
             for index in learned.indices { learned[index].cell = cells[index] }
         }
-        // Remembering keeps the room's closed windows; the picker replaces the whole set.
-        let kept =
-            keepsOrder
-            ? []
-            : room.windows.filter { saved in
-                !windows.contains { $0.windowID != nil && $0.windowID == saved.windowID }
-            }
         var updated = room
         updated.windows = learned + kept
         updated.layoutsByDisplay[screen.display.uuid.lowercased()] = reading.kind

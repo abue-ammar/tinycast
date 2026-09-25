@@ -9,6 +9,8 @@ struct RoomPreviewView: View {
     let origin: CGPoint
     let size: CGSize
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     private var bounds: CGRect { CGRect(origin: origin, size: size) }
 
     var body: some View {
@@ -21,15 +23,19 @@ struct RoomPreviewView: View {
                 )
                 .frame(width: card.frame.width, height: card.frame.height)
                 .offset(x: card.frame.minX - origin.x, y: card.frame.minY - origin.y)
-                .transition(
-                    .asymmetric(
-                        insertion: .opacity.animation(.easeOut(duration: Theme.Duration.roomCardEnter)),
-                        removal: .opacity.animation(.easeIn(duration: Theme.Duration.roomCardExit))))
+                .transition(cardTransition)
             }
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
         .background(DeskBlur())
         .accessibilityHidden(true)
+    }
+
+    private var cardTransition: AnyTransition {
+        guard !reduceMotion else { return .identity }
+        return .asymmetric(
+            insertion: .opacity.animation(.easeOut(duration: Theme.Duration.roomCardEnter)),
+            removal: .opacity.animation(.easeIn(duration: Theme.Duration.roomCardExit)))
     }
 }
 

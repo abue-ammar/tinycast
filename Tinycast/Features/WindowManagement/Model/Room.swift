@@ -67,10 +67,11 @@ struct Room: Codable, Hashable, Identifiable, Sendable {
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         name = try container.decode(String.self, forKey: .name)
         windows = try container.decodeIfPresent([RoomWindow].self, forKey: .windows) ?? []
-        layout = try container.decodeIfPresent(RoomLayoutKind.self, forKey: .layout) ?? .auto
-        layoutsByDisplay =
-            try container.decodeIfPresent([String: RoomLayoutKind].self, forKey: .layoutsByDisplay)
-            ?? [:]
+        // A layout this build does not know resets to Auto rather than losing the room.
+        layout = (try? container.decodeIfPresent(RoomLayoutKind.self, forKey: .layout)) ?? .auto
+        let stored =
+            (try? container.decodeIfPresent([String: String].self, forKey: .layoutsByDisplay)) ?? [:]
+        layoutsByDisplay = stored.compactMapValues(RoomLayoutKind.init(rawValue:))
         lastEnteredAt = try container.decodeIfPresent(Date.self, forKey: .lastEnteredAt)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
     }

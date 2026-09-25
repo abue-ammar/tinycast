@@ -27,6 +27,8 @@ final class RoomCoordinator {
     @ObservationIgnored private var isEntering = false
     /// The room whose windows the picker starts with, held until the desk has been read.
     @ObservationIgnored private var pendingPreselection: Room?
+    /// Apps rooms hid since the feature was last switched off; a ⌘H of the user's is never here.
+    @ObservationIgnored private var hiddenByRooms = Set<pid_t>()
     /// The desk read in flight, so two openings in one turn sweep once.
     @ObservationIgnored private var loading: Task<Void, Never>?
 
@@ -72,12 +74,10 @@ final class RoomCoordinator {
         applyRoomsPresence()
         guard !settings.windowManagementEnabled else { return }
         if palette.mode == .rooms || palette.mode == .roomWindows { palette.prepare(mode: .launcher) }
-        // Hidden apps come back only when a room hid them, never a ⌘H of the user's own.
-        guard currentRoomID != nil else {
-            return inTurn { [ledger] in RoomRunner.returnParkedWindows(ledger: ledger) }
-        }
+        let hidden = hiddenByRooms
+        hiddenByRooms = []
         currentRoomID = nil
-        inTurn { [ledger] in await RoomRunner.restoreEverything(ledger: ledger) }
+        inTurn { [ledger] in await RoomRunner.restoreEverything(hiddenApps: hidden, ledger: ledger) }
     }
 
     /// Windows a crash left parked come home at launch; nothing is unhidden, nothing else moves.
@@ -142,7 +142,6 @@ final class RoomCoordinator {
         palette.isVisible && (palette.mode == .rooms || palette.mode == .roomWindows)
     }
 
-    /// Rooms ranked for `query`: the most recently entered first when there is none.
     func rows(for query: String) -> [RoomRow] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let recent = store.rooms.sorted(by: Room.enteredMoreRecently)
@@ -167,7 +166,6 @@ final class RoomCoordinator {
         return rows
     }
 
-    /// The layout the room takes on the display it would land on now.
     func layout(of room: Room) -> RoomLayoutKind {
         room.layout(onDisplay: targetDisplayUUID)
     }
@@ -224,6 +222,7 @@ final class RoomCoordinator {
             self.isEntering = false
             self.preview.hide(settling: true)
             self.session.reset()
+            self.hiddenByRooms.formUnion(outcome.hiddenApps)
             if outcome.placed > 0 {
                 self.currentRoomID = room.id
                 self.store.markEntered(id: room.id, at: Date())
@@ -232,7 +231,6 @@ final class RoomCoordinator {
         }
     }
 
-    /// Runs `body` after whatever window work is already under way.
     private func inTurn(_ body: @escaping @MainActor () async -> Void) {
         let previous = work
         work = Task {
@@ -417,7 +415,6 @@ final class RoomCoordinator {
             core.showMessage(error.errorDescription ?? "Couldn't save the room", tone: .danger)
             return
         }
-        // You walk into the room you just made, as on any switch.
         enterRoom(id: room.id)
     }
 
@@ -426,13 +423,20 @@ final class RoomCoordinator {
         guard let snapshot = session.snapshot else { return }
         let assignment = RoomWindowMatcher.assign(
             room.windows, to: snapshot.windows, claimed: store.claimedWindowIDs(excluding: room.id))
-        let windows = room.windows.indices.compactMap { assignment[$0].map { snapshot.windows[$0] } }
-            .filter { !$0.isMinimized && !$0.isAppHidden }
+        let arranged = room.windows.indices.filter { index in
+            assignment[index].map { !snapshot.windows[$0].isMinimized && !snapshot.windows[$0].isAppHidden }
+                ?? false
+        }
+        let windows = arranged.compactMap { assignment[$0].map { snapshot.windows[$0] } }
+        // A member filled by title or by app has a new ID, so only the matcher knows it is here.
+        let kept = room.windows.indices.filter { !arranged.contains($0) }.map { room.windows[$0] }
         guard !windows.isEmpty else {
             core.showMessage("None of \(room.name)’s windows are open", tone: .neutral)
             return
         }
-        guard let (updated, reading) = learn(room, from: windows, in: snapshot, keepsOrder: false)
+        guard
+            let (updated, reading) = learn(
+                room, from: windows, keeping: kept, in: snapshot, keepsOrder: false)
         else { return }
         do {
             try store.update(updated)
@@ -445,8 +449,8 @@ final class RoomCoordinator {
 
     /// Read on the display most of the windows share, which is where their arrangement is.
     private func learn(
-        _ room: Room, from windows: [RoomLiveWindow], in snapshot: RoomWindowSweep.Snapshot,
-        keepsOrder: Bool
+        _ room: Room, from windows: [RoomLiveWindow], keeping kept: [RoomWindow] = [],
+        in snapshot: RoomWindowSweep.Snapshot, keepsOrder: Bool
     ) -> (Room, RoomArrangement.Reading)? {
         let screens = snapshot.screens.map(\.screen)
         let hosts = windows.map { WindowPlacementEngine.screen(containing: $0.frame, in: screens)?.id }
@@ -457,7 +461,7 @@ final class RoomCoordinator {
                 ?? snapshot.screen(uuid: targetDisplayUUID)
         else { return nil }
         let result = RoomArrangement.learn(
-            room, from: windows, on: screen, spansDisplays: counts.count > 1, gap: gap,
+            room, from: windows, keeping: kept, on: screen, spansDisplays: counts.count > 1, gap: gap,
             minimums: windows.map { minimums.size(for: $0.bundleID) }, keepsOrder: keepsOrder)
         return (result.room, result.reading)
     }

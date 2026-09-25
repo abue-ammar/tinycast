@@ -494,7 +494,6 @@ final class AppSettings {
         }
     }
 
-    /// Its own flag, like the layouts': rooms are a handful of rows, and the likelier keep.
     var windowRoomsShowInLauncher: Bool {
         didSet {
             defaults.set(windowRoomsShowInLauncher, forKey: Key.windowRoomsShowInLauncher.rawValue)

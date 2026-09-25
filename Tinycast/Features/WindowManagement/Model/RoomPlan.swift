@@ -14,14 +14,12 @@ struct RoomLiveWindow: Equatable, Sendable {
     var isAppHidden = false
     /// The window server's front-to-back order; `.max` when it is not on screen.
     var frontRank = Int.max
-    /// The app bundle, for the icon a row or a preview card draws.
     var appURL: URL?
 }
 
 /// Everything entering a room does on one display, decided before a single AX write. Pure.
 struct RoomPlan: Equatable, Sendable {
     struct Placement: Equatable, Sendable {
-        /// Index into the room's `windows`.
         var index: Int
         var handle: Int
         var frame: CGRect
@@ -29,11 +27,9 @@ struct RoomPlan: Equatable, Sendable {
 
     /// Room order, main window first: raised in reverse, it ends frontmost.
     var placements: [Placement]
-    /// Room windows no open window could fill, by index.
     var missing: [Int]
     /// Other windows of the room's apps: they park, since hiding them would hide the room too.
     var parks: [Int]
-    /// Apps that stay visible. Every other app hides.
     var keeps: Set<String>
 
     /// The desktop's own app comes back whenever another hides, so its windows park instead.

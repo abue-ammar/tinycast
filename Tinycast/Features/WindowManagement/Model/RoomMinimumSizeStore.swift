@@ -8,7 +8,6 @@ final class RoomMinimumSizeStore {
     private static let defaultsKey = "roomMinimumWindowSizes"
 
     private let defaults: UserDefaults
-    /// Bundle ID → the smallest size its app accepts, handed to the pure plan as it is.
     private(set) var sizes: [String: CGSize]
 
     init(defaults: UserDefaults = .standard) {

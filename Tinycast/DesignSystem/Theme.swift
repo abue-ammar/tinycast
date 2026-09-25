@@ -281,13 +281,11 @@ enum Theme {
         static let volumeTrackHeight: CGFloat = 6
         /// Fixed slot for the level readout, sized to the widest string it ever holds.
         static let volumeReadout: CGFloat = 38
-        /// A room preview card: its title bar, its stroke, its shadow and its dots.
         static let roomCardTitleBar: CGFloat = 40
         static let roomCardStroke: CGFloat = 2
         static let roomCardShadowRadius: CGFloat = 24
         static let roomCardShadowOffset: CGFloat = 8
         static let roomCardDot: CGFloat = 8
-        /// The app icon on a room card, and on a card large enough to carry the bigger one.
         static let roomCardIcon: CGFloat = 64
         static let roomCardIconLarge: CGFloat = 96
         /// Below this a card is a sliver, too short for its icon.
@@ -322,7 +320,6 @@ enum Theme {
         static let roomGlide: TimeInterval = 0.32
         static let roomCardEnter: TimeInterval = 0.2
         static let roomCardExit: TimeInterval = 0.18
-        /// The preview's fade once the windows have moved in under it.
         static let roomSettle: TimeInterval = 0.25
     }
 

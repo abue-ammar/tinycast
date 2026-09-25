@@ -497,7 +497,7 @@ struct WindowRoomTests {
         let room = Room(name: "Build", windows: [window("app.gone", title: "Closed", id: 99)])
 
         let remembered = RoomArrangement.learn(
-            room, from: windows, on: display, spansDisplays: false, gap: gap,
+            room, from: windows, keeping: room.windows, on: display, spansDisplays: false, gap: gap,
             minimums: [.zero, .zero], keepsOrder: false)
         expect(remembered.reading.kind == .columns, "remembering reads the layout")
         expect(
@@ -507,6 +507,11 @@ struct WindowRoomTests {
             remembered.room.layout(onDisplay: "monitor") == .columns,
             "the layout is kept for this display, whatever its case")
         expect(remembered.room.layout(onDisplay: "laptop") == .auto, "other displays keep the room's layout")
+
+        let relearned = RoomArrangement.learn(
+            remembered.room, from: windows, keeping: [room.windows[0]], on: display,
+            spansDisplays: false, gap: gap, minimums: [.zero, .zero], keepsOrder: false)
+        expect(relearned.room.windows.count == 3, "remembering again never duplicates a member")
 
         let picked = RoomArrangement.learn(
             room, from: windows, on: display, spansDisplays: false, gap: gap,
@@ -811,6 +816,15 @@ struct WindowRoomTests {
         store.setLayout(.columns, for: buildID, onDisplay: "DISPLAY")
         store.markEntered(id: buildID, at: Date(timeIntervalSince1970: 100))
         let reloaded = RoomStore(defaults: defaults)
+        let mixed = #"[{"name":"Kept","layout":"someday","windows":[{"bundleID":"a"}]},{"windows":[]}]"#
+        let mixedSuite = suite + "-mixed"
+        if let other = UserDefaults(suiteName: mixedSuite) {
+            other.set(Data(mixed.utf8), forKey: "windowRooms")
+            let survivor = RoomStore(defaults: other).rooms
+            expect(survivor.map(\.name) == ["Kept"], "one bad record never costs the library")
+            expect(survivor.first?.layout == .auto, "an unknown layout resets to Auto")
+            other.removePersistentDomain(forName: mixedSuite)
+        }
         expect(
             reloaded.room(id: buildID)?.layout(onDisplay: "display") == .columns, "a display layout persists")
         expect(

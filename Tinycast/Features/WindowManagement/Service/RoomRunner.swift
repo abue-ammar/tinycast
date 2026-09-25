@@ -2,7 +2,7 @@
 import AppKit
 @preconcurrency import ApplicationServices
 
-/// Walks into a room: its windows land on one display, everything else steps back. See rooms.md.
+/// Walks into a room: its windows land on one display, everything else steps back. See window-rooms.md.
 @MainActor
 enum RoomRunner {
     /// Long enough for a cold app to draw, short enough a stuck one cannot hold the room.
@@ -36,8 +36,8 @@ enum RoomRunner {
     struct Outcome: Sendable {
         var placed = 0
         var parked = 0
-        var hiddenApps = 0
-        /// App names of room windows that are not open.
+        /// The apps this pass hid, so only they come back later, never one hidden by hand.
+        var hiddenApps = Set<pid_t>()
         var missing: [String] = []
         var isBlockedOnPermission = false
     }
@@ -89,9 +89,11 @@ enum RoomRunner {
         return outcome
     }
 
-    /// Every hidden app, then every parked window: a just-unhidden app ignores moves until back.
-    static func restoreEverything(ledger: RoomParkingLedger) async {
-        let hidden = WindowInventory.candidates().filter(\.isHidden)
+    /// The apps rooms hid, then every parked window: a just-unhidden app ignores moves until back.
+    static func restoreEverything(hiddenApps: Set<pid_t>, ledger: RoomParkingLedger) async {
+        let hidden = WindowInventory.candidates().filter {
+            $0.isHidden && hiddenApps.contains($0.processIdentifier)
+        }
         hidden.forEach(show)
         await wait(for: unhideDeadline, every: unhidePoll) { hidden.allSatisfy { !$0.isHidden } }
         returnParkedWindows(ledger: ledger)
@@ -321,15 +323,15 @@ enum RoomRunner {
     }
 
     /// The active app cannot hide, which is why the room's main window is focused first.
-    private static func hideApps(keeping keeps: Set<String>) -> Int {
-        var hidden = 0
+    private static func hideApps(keeping keeps: Set<String>) -> Set<pid_t> {
+        var hidden = Set<pid_t>()
         for app in WindowInventory.candidates()
         where !app.isHidden && !keeps.contains(app.bundleIdentifier ?? "") {
             if !app.hide() {
                 AXWindowAccess.setHidden(
                     true, application: AXWindowAccess.application(for: app.processIdentifier))
             }
-            hidden += 1
+            hidden.insert(app.processIdentifier)
         }
         return hidden
     }

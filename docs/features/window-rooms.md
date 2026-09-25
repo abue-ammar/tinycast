@@ -20,8 +20,8 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
   within 16 pt of its saved frame — so a busy app keeps its way back for the next try.
 - **Every parked window comes home** on quit (`prepareForTermination`, which is synchronous for
   that reason), when the feature switch turns off, and at the next launch after a crash
-  (`recoverParkedWindows`). Only switching the feature off while in a room also unhides apps: a
-  launch must never undo a ⌘H the user made themselves. Entering another room returns any parked
+  (`recoverParkedWindows`). Switching the feature off also unhides the apps rooms hid, and only
+  those: neither it nor a launch may undo a ⌘H the user made themselves. Entering another room returns any parked
   window whose app it hides.
 - **Parking needs the window-server number.** `AXWindowAccess.windowID(of:)` resolves the private
   `_AXUIElementGetWindow` at run time; without it the room still lays out and hides other apps,
@@ -146,8 +146,8 @@ and Settings' Enter button. It hides the palette with `restoreFocus: false`, the
 
 A clean enter says nothing; a missing window names its app in a message, and a room with no open
 window is a notice — and steps nothing back, since hiding everything around an empty room would
-leave an empty desk. Switching the feature off in a room unhides first and waits for the apps to
-come back before returning parked windows.
+leave an empty desk. Switching the feature off unhides the apps rooms hid first and waits for them
+to come back before returning parked windows.
 
 ## Wiring
 

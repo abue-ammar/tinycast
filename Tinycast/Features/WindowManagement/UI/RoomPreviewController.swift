@@ -47,6 +47,11 @@ final class RoomPreviewController {
         guard isShowing else { return }
         let closing = panels
         panels = []
+        guard !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion else {
+            closing.forEach { $0.orderOut(nil) }
+            model.cards = []
+            return
+        }
         let duration = settling ? Theme.Duration.roomSettle : Theme.Duration.exit
         for panel in closing {
             panel.fadeOut(duration: duration) { [weak self] in

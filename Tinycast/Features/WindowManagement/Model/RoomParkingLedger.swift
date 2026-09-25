@@ -39,7 +39,6 @@ final class RoomParkingLedger {
         if entries.count != before { save() }
     }
 
-    /// Drops entries whose app is gone: its windows went with it.
     func keepOnly(bundleIDs: Set<String>) {
         let kept = entries.filter { bundleIDs.contains($0.value.bundleID) }
         guard kept.count != entries.count else { return }

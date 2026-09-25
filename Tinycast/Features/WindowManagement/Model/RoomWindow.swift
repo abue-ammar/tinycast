@@ -12,7 +12,6 @@ struct RoomWindow: Codable, Hashable, Sendable {
     var windowID: UInt32?
     /// Where it sits under `.saved`, as a fraction of the display's visible frame.
     var unitFrame: CGRect
-    /// Its place under `.custom`.
     var cell: RoomGrid.Cell?
 
     init(
