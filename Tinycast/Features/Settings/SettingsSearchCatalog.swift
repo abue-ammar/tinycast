@@ -275,7 +275,8 @@ enum SettingsSearchCatalog {
             .aiProviders, "Providers",
             keywords: [
                 "sign in", "connect", "codex", "claude", "grok", "xai", "opencode", "cursor", "agent",
-                "api key", "connection", "base url", "openai", "anthropic", "ollama"
+                "api key", "connection", "base url", "openai", "anthropic", "ollama", "models",
+                "hide models"
             ]),
         .init(.aiDefault, "Default model", keywords: ["llm", "gpt", "claude", "grok"]),
         .init(.aiDefault, "Reasoning effort", keywords: ["thinking", "effort", "deepseek"]),

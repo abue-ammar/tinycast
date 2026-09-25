@@ -133,11 +133,7 @@ struct AIProvidersPanel: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            Spacer(minLength: Theme.Spacing.sm)
-            if case .installed(let kind) = route {
-                enabledToggle(kind)
-                    .controlSize(.mini)
-            }
+            Spacer(minLength: 0)
         }
         .tag(route)
     }
@@ -232,6 +228,7 @@ struct AIProvidersPanel: View {
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
+                enabledToggle(kind)
             case .api(let id):
                 if let connection = settings.connection(id: id) {
                     Button("Edit…") { edit(connection) }
@@ -289,10 +286,10 @@ struct AIProvidersPanel: View {
         } else {
             Section {
                 LabeledContent {
-                    Button("Turn On") { settings.setInstalledProviderEnabled(true, for: kind) }
+                    EmptyView()
                 } label: {
                     Label("Turned off", systemImage: "pause.circle")
-                    Text("Its models stay out of every model picker.")
+                    Text("Tinycast leaves it alone, and its models stay out of every model picker.")
                 }
             } footer: {
                 Text(installedFooter(kind))
@@ -449,15 +446,11 @@ struct AIProvidersPanel: View {
     private func installedModels(_ kind: InstalledAIKind) -> [ProviderModel] {
         if kind == .codex {
             guard subscription.isConnected else { return [] }
-            return subscription.models.map {
-                ProviderModel(id: $0.id, name: $0.name, efforts: $0.efforts.map(\.title))
-            }
+            return subscription.models.map { ProviderModel(id: $0.id, name: $0.name) }
         }
         let status = installedAI.status(for: kind)
         guard status.isReady else { return [] }
-        return status.models.map {
-            ProviderModel(id: $0.id, name: $0.name, efforts: $0.efforts.map(\.title))
-        }
+        return status.models.map { ProviderModel(id: $0.id, name: $0.name) }
     }
 
     // MARK: API connections
@@ -492,13 +485,7 @@ struct AIProvidersPanel: View {
         }
         modelsSection(
             route: .api(connection.id),
-            models: connection.models.map { model in
-                ProviderModel(
-                    id: model, name: model,
-                    efforts: connection.reasoningOptions(for: model)?.efforts.map {
-                        ChatGPTSubscription.Effort(id: $0, detail: nil).title
-                    } ?? [])
-            })
+            models: connection.models.map { ProviderModel(id: $0, name: $0) })
     }
 
     // MARK: Models
@@ -506,39 +493,63 @@ struct AIProvidersPanel: View {
     @ViewBuilder
     private func modelsSection(route: AIProviderRoute, models: [ProviderModel]) -> some View {
         if !models.isEmpty {
-            let shown = filtered(models)
+            let source = route.source
+            let shownCount = models.filter { settings.isModelShown($0.id, in: source) }.count
+            let matches = filtered(models)
             Section {
+                LabeledContent {
+                    HStack(spacing: Theme.Spacing.sm) {
+                        Button("Show All") { settings.showAllModels(in: source) }
+                            .disabled(shownCount == models.count)
+                        Button("Hide All") { settings.hideAllModels(in: source) }
+                    }
+                    .fixedSize()
+                } label: {
+                    Text("\(shownCount) of \(modelCount(models.count)) in the model picker")
+                }
                 if models.count > Self.filterThreshold {
                     SettingsFilterField(prompt: "Filter models", query: $modelQuery)
                 }
-                if shown.isEmpty {
+                if matches.isEmpty {
                     Text("No model matches “\(modelQuery)”.")
                         .foregroundStyle(.secondary)
                 }
-                ForEach(shown) { model in
-                    LabeledContent {
-                        if isDefault(model.id, route: route) {
-                            Text("Default").foregroundStyle(.secondary)
-                        }
-                    } label: {
-                        Text(model.name)
-                        if !model.efforts.isEmpty {
-                            Text(model.efforts.joined(separator: " · "))
-                        }
-                    }
+                ForEach(matches) { model in
+                    modelRow(model, route: route, all: models)
                 }
             } header: {
-                HStack {
-                    Text("Models")
-                    Spacer()
-                    Text(modelCount(models.count))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Models")
             } footer: {
-                Text("Choose the default model on the AI pane.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                Text(
+                    "Ticked models appear in the model picker. The default model always does; "
+                        + "choose it on the AI pane."
+                )
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func modelRow(
+        _ model: ProviderModel, route: AIProviderRoute, all: [ProviderModel]
+    ) -> some View {
+        let isDefault = isDefault(model.id, route: route)
+        HStack {
+            Toggle(
+                model.name,
+                isOn: Binding(
+                    get: { isDefault || settings.isModelShown(model.id, in: route.source) },
+                    set: {
+                        settings.setModel(
+                            model.id, shown: $0, in: route.source, available: all.map(\.id))
+                    })
+            )
+            .toggleStyle(.checkbox)
+            .disabled(isDefault)
+            Spacer(minLength: Theme.Spacing.lg)
+            if isDefault {
+                Text("Default").foregroundStyle(.secondary)
             }
         }
     }
@@ -763,7 +774,6 @@ struct AIProvidersPanel: View {
 private struct ProviderModel: Identifiable {
     let id: String
     let name: String
-    let efforts: [String]
 }
 
 /// The list and header glyph: a brand mark or symbol on the tile `SettingsTabIcon` draws.

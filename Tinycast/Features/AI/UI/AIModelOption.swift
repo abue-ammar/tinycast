@@ -18,15 +18,28 @@ struct AIModelOption: Identifiable {
         let grok = installedAI.status(for: .grok)
         let openCode = installedAI.status(for: .openCode)
         let cursor = installedAI.status(for: .cursor)
+        // The default stays listed even when unticked, or the picker could not show what it holds.
+        func shown(_ model: String, _ source: AIModelSource) -> Bool {
+            settings.isModelShown(model, in: source)
+                || (settings.defaultModel?.source == source && settings.defaultModel?.model == model)
+        }
+        func shown(_ models: [InstalledAIModel], _ source: AIModelSource) -> [InstalledAIModel] {
+            models.filter { shown($0.id, source) }
+        }
         return groupedCatalog(
             appleIntelligence: settings.isAppleIntelligenceAvailable(),
             codex: enabled.contains(.codex) && subscription.isConnected
-                ? subscription.models : [],
-            claude: enabled.contains(.claude) && claude.isReady ? claude.models : [],
-            grok: enabled.contains(.grok) && grok.isReady ? grok.models : [],
-            openCode: enabled.contains(.openCode) && openCode.isReady ? openCode.models : [],
-            cursor: enabled.contains(.cursor) && cursor.isReady ? cursor.models : [],
-            connections: settings.connections)
+                ? subscription.models.filter { shown($0.id, .codex) } : [],
+            claude: enabled.contains(.claude) && claude.isReady ? shown(claude.models, .claude) : [],
+            grok: enabled.contains(.grok) && grok.isReady ? shown(grok.models, .grok) : [],
+            openCode: enabled.contains(.openCode) && openCode.isReady
+                ? shown(openCode.models, .openCode) : [],
+            cursor: enabled.contains(.cursor) && cursor.isReady ? shown(cursor.models, .cursor) : [],
+            connections: settings.connections.map { connection in
+                var trimmed = connection
+                trimmed.models.removeAll { !shown($0, .api(connection.id)) }
+                return trimmed
+            })
     }
 
     /// An unrecognised model keeps the generic sparkle rather than borrowing someone's mark.

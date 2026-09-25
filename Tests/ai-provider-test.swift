@@ -94,6 +94,7 @@ struct AIProviderTests {
         installedCLIStreamsDecode()
         settingsPersistAndRepairSelections()
         installedModelLoadingPreferencePersists()
+        shownModelsFilterThePicker()
         subscriptionSelectionsReconcile()
         onDeviceSelectionsRoundTripAndLead()
         conversationSettingsPersistAndDecide()
@@ -962,6 +963,44 @@ struct AIProviderTests {
         expect(
             !reopened.enabledInstalledProviders.contains(.openCode),
             "a provider toggle survives a restart")
+    }
+
+    static func shownModelsFilterThePicker() {
+        let suite = "AIProviderTests.shownModels"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+        let store = AISettingsStore(defaults: defaults)
+        let available = ["a", "b", "c"]
+        expect(
+            available.allSatisfy { store.isModelShown($0, in: .openCode) },
+            "a route nobody has trimmed lists every model")
+        store.setModel("b", shown: false, in: .openCode, available: available)
+        let reopened = AISettingsStore(defaults: defaults)
+        expect(
+            reopened.isModelShown("a", in: .openCode) && !reopened.isModelShown("b", in: .openCode),
+            "an unticked model stays out of the picker after a restart")
+        expect(
+            !reopened.isModelShown("d", in: .openCode),
+            "a trimmed route does not list a model it adds later")
+        expect(
+            reopened.isModelShown("b", in: .claude),
+            "trimming one route leaves the others listing everything")
+        reopened.setModel("b", shown: true, in: .openCode, available: available)
+        expect(
+            reopened.shownModels[AIModelSource.openCode.storageKey] == nil
+                && reopened.isModelShown("d", in: .openCode),
+            "ticking every model back returns the route to listing all, later ones included")
+        reopened.hideAllModels(in: .openCode)
+        expect(
+            available.allSatisfy { !reopened.isModelShown($0, in: .openCode) },
+            "Hide All leaves nothing but the default listed")
+        let connection = AIConnection(provider: .openRouter, models: ["x", "y"])
+        reopened.save(connection)
+        reopened.setModel("y", shown: false, in: .api(connection.id), available: connection.models)
+        reopened.removeConnection(id: connection.id)
+        expect(
+            reopened.shownModels[AIModelSource.api(connection.id).storageKey] == nil,
+            "removing a connection forgets which of its models were shown")
     }
 
     static func subscriptionSelectionsReconcile() {

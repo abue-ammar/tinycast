@@ -134,6 +134,21 @@ enum AIModelSource: Codable, Equatable, Hashable, Sendable {
     case api(UUID)
 }
 
+extension AIModelSource {
+    /// A stable name for settings keyed by route, since a connection is only known by its id.
+    var storageKey: String {
+        switch self {
+        case .appleIntelligence: return "appleIntelligence"
+        case .codex: return "codex"
+        case .claude: return "claude"
+        case .grok: return "grok"
+        case .openCode: return "openCode"
+        case .cursor: return "cursor"
+        case .api(let id): return "api:" + id.uuidString
+        }
+    }
+}
+
 enum AIModelSelection: Codable, Equatable, Hashable, Sendable {
     case appleIntelligence
     case codex(model: String, effort: String?)

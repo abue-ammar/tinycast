@@ -41,6 +41,10 @@ final class AISettingsStore {
     var toolRounds: AIToolRounds {
         didSet { defaults.set(toolRounds.rawValue, forKey: AppSettingsKey.aiToolRounds.rawValue) }
     }
+    /// Per route, the models its picker lists; no entry lists all it offers, later ones too.
+    private(set) var shownModels: [String: [String]] {
+        didSet { defaults.set(shownModels, forKey: AppSettingsKey.aiShownModels.rawValue) }
+    }
     var enabledInstalledProviders: Set<InstalledAIKind> {
         didSet {
             guard
@@ -85,6 +89,9 @@ final class AISettingsStore {
         toolRounds =
             AIToolRounds(rawValue: defaults.integer(forKey: AppSettingsKey.aiToolRounds.rawValue))
             ?? .twentyFive
+        shownModels =
+            defaults.dictionary(forKey: AppSettingsKey.aiShownModels.rawValue) as? [String: [String]]
+            ?? [:]
         enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
             defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
         if case .api(let connection, let model, _) = defaultModel,
@@ -137,6 +144,7 @@ final class AISettingsStore {
 
     func removeConnection(id: UUID) {
         connections.removeAll { $0.id == id }
+        shownModels[AIModelSource.api(id).storageKey] = nil
         guard case .api(id, _, _) = defaultModel else { return }
         defaultModel = firstAvailableSelection()
     }
@@ -201,6 +209,33 @@ final class AISettingsStore {
     func resolveDefaultModel() {
         guard defaultModel == nil, let selection = firstAvailableSelection() else { return }
         defaultModel = selection
+    }
+
+    func isModelShown(_ model: String, in source: AIModelSource) -> Bool {
+        shownModels[source.storageKey]?.contains(model) ?? true
+    }
+
+    /// `available` is the route's whole list, needed the first time one model is hidden from it.
+    func setModel(
+        _ model: String, shown: Bool, in source: AIModelSource, available: [String]
+    ) {
+        var shownList = shownModels[source.storageKey] ?? available
+        shownList.removeAll { $0 == model }
+        if shown { shownList.append(model) }
+        // All shown again drops the entry, so a model the route adds later appears too.
+        let everything = Set(available)
+        shownModels[source.storageKey] =
+            everything.isSubset(of: shownList) ? nil : shownList.filter(everything.contains)
+    }
+
+    func showAllModels(in source: AIModelSource) {
+        shownModels[source.storageKey] = nil
+    }
+
+    /// The default model stays listed, since the picker must be able to show what is selected.
+    func hideAllModels(in source: AIModelSource) {
+        let kept = defaultModel.flatMap { $0.source == source ? [$0.model] : nil } ?? []
+        shownModels[source.storageKey] = kept
     }
 
     func setInstalledProviderEnabled(_ enabled: Bool, for kind: InstalledAIKind) {
