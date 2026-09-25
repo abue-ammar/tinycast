@@ -132,8 +132,7 @@ struct QuickActionResultView: View {
             // One `Text` per chunk would break the wrap, so the runs are styled inside one string.
             prose(Text(attributed(chunks)))
         } else if state.action == .summarize {
-            MarkdownView(blocks: MarkdownBlock.parse(state.output))
-                .textSelection(.enabled)
+            ChatMarkdownText(blocks: MarkdownBlock.parse(state.output))
         } else {
             prose(Text(state.output))
         }

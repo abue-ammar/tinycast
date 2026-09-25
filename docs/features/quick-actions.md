@@ -9,8 +9,8 @@ action.
 A **custom Quick Action** is a name, a glyph and a prompt, run through the same provider. It takes a
 shortcut and a launcher row like any other.
 
-Quick Actions is the provider layer's second consumer. It shares nothing with AI Chat but the
-provider protocol and the connections behind it.
+Quick Actions is the provider layer's second consumer. It shares the provider connections and
+selectable Markdown renderer with AI Chat.
 
 ## Invariants
 
@@ -183,8 +183,8 @@ which is a closed two-case enum measured once at present time — a growing stre
 Non-activating, so the target app keeps its selection while the panel holds key. Keys go through
 `sendEvent`: `↵` replaces, `⌘C` copies, `esc` dismisses; click-away dismisses like every other
 borderless surface. The panel is anchored by its **top-left** and re-measured as the reply arrives —
-centring on every measure would walk it up the screen. `MarkdownView` and `MarkdownBlock.parse` are
-reused from chat; neither takes palette state.
+centring on every measure would walk it up the screen. Summarize uses chat's `ChatMarkdownText` and
+`MarkdownBlock.parse`, keeping its whole result selectable across paragraphs and headings.
 
 The body is a `ScrollView` with its height **set** rather than capped: a scroll view has no ideal
 height, so `NSHostingView.fittingSize` measures it as nothing and the body collapses to a slot. The

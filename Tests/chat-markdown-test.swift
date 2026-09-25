@@ -38,6 +38,10 @@ struct ChatMarkdownTests {
         | - | - |
         | One | apple |
         | Two | apple |
+
+        ## Second section
+
+        A final paragraph.
         """
 
     static func main() {
@@ -96,6 +100,7 @@ struct ChatMarkdownTests {
             citations: ["https://example.com/guide": 1])
         let text = rendered.string.string
         expect(text.hasPrefix("Apple notes\n"), "a heading is its own line")
+        expect(text.contains("Second section\nA final paragraph"), "both sections share one rendered string")
         expect(
             text.contains("says the guide. [1]Another") || text.contains("says the guide.[1] Another"),
             "the citation closes the sentence that cited it: \(text.debugDescription)")
