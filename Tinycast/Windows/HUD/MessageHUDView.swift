@@ -20,6 +20,7 @@ struct MessageHUDView: View {
                     content
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Cancel \(message)")
             } else {
                 content
             }

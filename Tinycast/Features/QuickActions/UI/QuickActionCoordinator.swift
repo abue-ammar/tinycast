@@ -24,6 +24,8 @@ final class QuickActionCoordinator {
     /// One at a time: two runs race for one selection, and the second overwrites the first's work.
     @ObservationIgnored private var running: Task<Void, Never>?
     @ObservationIgnored private var generation = 0
+    /// Cancellation is cooperative, so a cancelled run must not hide the pill a newer run showed.
+    @ObservationIgnored private var progressOwner: Int?
 
     init(
         settings: AppSettings, store: QuickActionSettingsStore,
@@ -169,6 +171,7 @@ final class QuickActionCoordinator {
         generation += 1
         running?.cancel()
         running = nil
+        hideProgress(ownedBy: progressOwner)
         panels.dismiss()
     }
 
@@ -248,9 +251,17 @@ final class QuickActionCoordinator {
         _ state: QuickActionPanelState, previewing: Bool
     ) async throws -> String {
         guard !previewing else { return try await generate(state, streaming: true) }
+        let mine = generation
+        progressOwner = mine
         core.showProgress(state.action.progressTitle, onCancel: { [weak self] in self?.cancel() })
-        defer { core.hideProgress() }
+        defer { hideProgress(ownedBy: mine) }
         return try await generate(state, streaming: false)
+    }
+
+    private func hideProgress(ownedBy owner: Int?) {
+        guard let owner, progressOwner == owner else { return }
+        progressOwner = nil
+        core.hideProgress()
     }
 
     private func generate(
