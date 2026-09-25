@@ -549,9 +549,11 @@ window, and every chat action either surface sends — is the nineteenth feature
 ## Installed commands
 
 `ExecutableLocator` finds `codex`, `claude`, `grok`, `opencode` and `agent` by asking the account's
-login shell, so a stale copy in another prefix never shadows the one Terminal runs. Only when the shell
-names no absolute executable does it fall back to the app's PATH, the normal Homebrew and local-bin
-locations and every nvm Node version, newest first — a fallback that can pick a different copy. What a
+login shell, so a stale copy in another prefix never shadows the one Terminal runs. zsh, bash and fish
+are asked in their own syntax, any other shell through zsh, and the answer is the last line printed, so
+an rc file that prints a greeting cannot hide it. Only when the shell names no absolute executable does
+it fall back to the app's PATH, the normal Homebrew and local-bin locations, mise's and asdf's shims and
+every nvm Node version, newest first — a fallback that can pick a different copy. What a
 found command runs under is `ExecutableLocator.environment`: its own folder, `/opt/homebrew/bin` and
 `/usr/local/bin` ahead of the inherited PATH, for every probe, turn, Codex `mcp list` read and local MCP
 server — a Finder-launched app's PATH is `/usr/bin:/bin:/usr/sbin:/sbin`, and an npm or Homebrew CLI is
