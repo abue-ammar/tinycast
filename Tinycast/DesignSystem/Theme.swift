@@ -245,6 +245,11 @@ enum Theme {
         static let layoutPositionStroke: CGFloat = 1.5
         /// A position cell's clickable row; the glyph floats inside it, so the whole cell hits.
         static let layoutPositionCell: CGFloat = 34
+        /// AI Providers: Mail's Accounts shape, a provider list beside the selected one's detail.
+        static let aiProvidersPanel = CGSize(width: 840, height: 520)
+        static let aiProvidersList: CGFloat = 262
+        /// A Codex usage window's meter, beside its "72% left" readout.
+        static let aiUsageBar: CGFloat = 110
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
         /// The multi-line box inside those modals; it scrolls rather than grows the panel.
