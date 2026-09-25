@@ -173,7 +173,9 @@ struct RenderNode: Sendable, Hashable, Identifiable {
 
     // MARK: - Prop access
 
-    func string(_ key: String) -> String? { props[key]?.stringValue }
+    func string(_ key: String) -> String? {
+        props[key]?.stringValue ?? props[key]?.objectValue?["value"]?.stringValue
+    }
     func bool(_ key: String) -> Bool? { props[key]?.boolValue }
     func double(_ key: String) -> Double? { props[key]?.doubleValue }
     func date(_ key: String) -> Date? { props[key]?.dateValue }
