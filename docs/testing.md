@@ -254,7 +254,7 @@ per build with identical `-O` settings:
 
 ```sh
 swiftc -O -swift-version 6 Tinycast/Platform/PasteboardFiles.swift \
-    Tinycast/Features/Clipboard/Model/{ClipboardStore,ClipboardFilter,ColorValue,ColorFormat,ColorSpaces}.swift \
+    Tinycast/Features/Clipboard/Model/{ClipboardStore,ClipboardFilter,ClipboardFileKind,ColorValue,ColorFormat,ColorSpaces}.swift \
     Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
     Tests/clipboard-file-performance.swift -o /tmp/clipboard-file-performance
 /tmp/clipboard-file-performance
@@ -388,6 +388,13 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - ⌃⌘↵ pastes as plain text: a text entry as typed, a file entry as its path rather than the file
 - Default action ▸ Paste as Plain Text: ↵ pastes plain, ⌃⌘↵ pastes, ⌘↵ still copies; an image
   entry's ↵ still pastes the image and its ⌘K menu has no plain row
+- ⇧⌘T on an image row and on an image-file row copies the recognized text, and the ⌘K menu carries
+  the same Copy Text row
+- The "Reading text…" progress pill appears while the helper runs and is replaced by the outcome:
+  **Copied text**, or **No text found** when nothing was recognized
+- Copy Text on a vanished row reports by kind — "That file has moved or been deleted." for a
+  referenced file, "That image is no longer available." for a pruned blob
+- Copy Text works with clipboard text search off: the helper is bundled either way
 - A copy from an excluded app (Settings ▸ Clipboard ▸ Disabled Applications) is **not** recorded
 - Password-manager copies are still not recorded
 - Off (Settings ▸ Clipboard ▸ Enable Clipboard History): nothing new is recorded, the launcher row

@@ -46,6 +46,10 @@ struct ClipboardScreen: PaletteScreen {
             return true
         case .pin: return pin(at: selection)
         case .favoriteSlot(let index): return activatePinned(at: index)
+        case .copyText:
+            guard let item = item(at: selection), item.offersTextExtraction else { return false }
+            core.clipboardCoordinator.copyImageText(item)
+            return true
         default: return false
         }
     }
@@ -198,9 +202,21 @@ enum ClipboardActionsMenu {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         }
+        if item.offersTextExtraction {
+            items.append(
+                PopoverMenuItem(
+                    title: "Copy Text", systemImage: "doc.text.viewfinder",
+                    startsSection: true, shortcut: "⇧⌘T"
+                ) {
+                    core.clipboardCoordinator.copyImageText(item)
+                })
+        }
         if item.kind == .image || item.kind == .file {
             items.append(
-                PopoverMenuItem(title: "Show in Finder", systemImage: "folder", startsSection: true) {
+                PopoverMenuItem(
+                    title: "Show in Finder", systemImage: "folder",
+                    startsSection: !item.offersTextExtraction
+                ) {
                     core.clipboardCoordinator.revealClip(item)
                 })
         }

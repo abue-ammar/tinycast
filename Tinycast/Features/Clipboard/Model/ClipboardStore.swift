@@ -27,6 +27,15 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
     /// What Paste as Plain Text writes: the text, or a file's path in place of the file.
     var plainText: String? { kind == .image ? nil : text }
 
+    /// Whether Copy Text (⇧⌘T) applies: a captured image, or an image file copied in Finder.
+    var offersTextExtraction: Bool {
+        switch kind {
+        case .image: return imagePath != nil
+        case .file: return filePath.map { ClipboardFileKind.of(path: $0) == .image } ?? false
+        case .text: return false
+        }
+    }
+
     init(text: String, sourceBundleID: String?) {
         self.init(
             id: UUID(), kind: .text, text: text, imagePath: nil, createdAt: Date(),

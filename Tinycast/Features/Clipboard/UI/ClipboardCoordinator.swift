@@ -114,7 +114,7 @@ final class ClipboardCoordinator {
         }
     }
 
-    /// A write only fails on a vanished file, and a palette that just closes explains nothing.
+    /// A vanished file is the only failure, and a palette that just closes explains nothing.
     private func reportUnavailable(_ item: ClipboardItem) {
         guard item.kind == .file else { return }
         core.showMessage("That file has moved or been deleted.", tone: .danger)
@@ -178,6 +178,38 @@ final class ClipboardCoordinator {
         paletteCoordinator.hidePalette(restoreFocus: false)
         Paster.copyPlainText(path)
         core.showMessage("Copied path")
+    }
+
+    /// ⇧⌘T / “Copy Text” — OCRs the image in the bundled helper and copies what it reads.
+    func copyImageText(_ item: ClipboardItem) {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        guard textImageURL(for: item) != nil else { return }
+        core.showProgress("Reading text…")
+        Task {
+            do {
+                let text = try await ClipboardTextWorker.extract(item)
+                guard !text.isEmpty else {
+                    core.showMessage("No text found", tone: .neutral)
+                    return
+                }
+                Paster.copyPlainText(text)
+                core.showMessage("Copied text")
+            } catch {
+                core.showMessage("Couldn’t read the text", tone: .danger)
+            }
+        }
+    }
+
+    /// The file OCR reads, stat-checked so a vanished row raises the HUD its kind already uses.
+    private func textImageURL(for item: ClipboardItem) -> URL? {
+        let url = item.kind == .image ? clipboardStore.imageURL(for: item)
+            : clipboardStore.fileURL(for: item)
+        guard let url, FileManager.default.fileExists(atPath: url.path) else {
+            if item.kind == .file { reportUnavailable(item) }
+            else { core.showMessage("That image is no longer available.", tone: .danger) }
+            return nil
+        }
+        return url
     }
 
     /// Nil once the file is gone, so every action reports rather than silently no-opping.
