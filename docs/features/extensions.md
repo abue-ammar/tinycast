@@ -80,8 +80,8 @@ work is not in the interpreter, it's in the `@raycast/api` shim and the Node sur
 same either way. A bare `JSContext` has the full modern language (checked: `Object.groupBy`,
 `Array.fromAsync`, `Intl`, lookbehind regex) and nothing else, so the runtime supplies `console`,
 timers, `fetch`, `URL`, `URLSearchParams`, `Blob`/`File`/`FormData`, `DOMException`,
-`TextEncoder`/`TextDecoder`, `AbortController`, `atob`/`btoa`,
-`ReadableStream`/`WritableStream`/`TransformStream` and `structuredClone` itself.
+`TextEncoder`/`TextDecoder`, `AbortController`, `Event`/`EventTarget`, `MessageChannel`/`MessagePort`,
+`atob`/`btoa`, `ReadableStream`/`WritableStream`/`TransformStream` and `structuredClone` itself.
 
 ## The JS runtime
 
