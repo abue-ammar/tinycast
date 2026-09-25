@@ -31,7 +31,7 @@ There are 21 panes in four groups.
 | Background transparency           | Less to More, with Reset                                                      | Middle                            |
 | Compact mode                      | On · Off                                                                      | Off                               |
 | Show favorites in compact mode    | On · Off                                                                      | **On**                            |
-| Follow the cursor across displays | On · Off                                                                      | **On**                            |
+| Open on                           | Mouse display · Focused window display · Primary display                       | **Mouse display** (existing choices preserved) |
 | Drag to reposition                | On · Off                                                                      | Off                               |
 | Launch at login                   | On · Off                                                                      | Off                               |
 | Show in menu bar                  | On · Off                                                                      | **On**                            |

@@ -12,7 +12,12 @@ final class MessageHUDController {
         presenter = HUDPresenter(
             anchor: .edgeInset(Theme.Size.hudEdgeOffset),
             dwell: Theme.Duration.messageHUD,
-            screen: { settings.openOnCursorScreen ? .underCursor : .primary })
+            screen: {
+                if settings.paletteDisplay == .focusedWindow, let screen = NSApp.keyWindow?.screen {
+                    return screen
+                }
+                return PaletteDisplayTarget.screen(for: settings.paletteDisplay)
+            })
     }
 
     func show(message: String, tone: DialogTone = .success) {

@@ -146,8 +146,8 @@ enum SettingsSearchCatalog {
             .generalAppearance, "Show favorites in compact mode",
             keywords: ["pinned", "apps", "compact"]),
         .init(
-            .generalAppearance, "Follow the cursor across displays",
-            keywords: ["monitor", "screen", "pointer", "multi display"]),
+            .generalAppearance, "Open on",
+            keywords: ["monitor", "screen", "display", "mouse", "focused window", "pointer"]),
         .init(
             .generalAppearance, "Drag to reposition",
             keywords: ["move", "position", "window"]),

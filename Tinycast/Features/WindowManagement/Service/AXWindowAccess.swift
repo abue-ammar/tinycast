@@ -16,6 +16,21 @@ enum AXWindowAccess {
 
     // MARK: - Finding windows
 
+    static func focusedExternalWindowFrame(timeout: Float) -> CGRect? {
+        let system = AXUIElementCreateSystemWide()
+        AXUIElementSetMessagingTimeout(system, timeout)
+        guard let application = element(system, kAXFocusedApplicationAttribute) else { return nil }
+        var pid: pid_t = 0
+        guard AXUIElementGetPid(application, &pid) == .success,
+            pid != NSRunningApplication.current.processIdentifier
+        else { return nil }
+        AXUIElementSetMessagingTimeout(application, timeout)
+        guard let window = element(application, kAXFocusedWindowAttribute) else { return nil }
+        AXUIElementSetMessagingTimeout(window, timeout)
+        guard bool(window, kAXMinimizedAttribute) != true else { return nil }
+        return frame(of: window)
+    }
+
     static func application(for pid: pid_t, timeout: Float = messagingTimeout) -> AXUIElement {
         let application = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(application, timeout)

@@ -65,6 +65,7 @@ struct SettingsBackupTest {
         check(
             "emoji grid density rides the settings backup",
             mirrored["emojiGridColumns"] == .emojiGridColumns)
+        check("palette display rides the settings backup", mirrored["paletteDisplay"] == .paletteDisplay)
 
         // Named one by one: a backup now carries content, so it is far likelier to be sent on.
         for key: AppSettingsKey in [

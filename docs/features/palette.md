@@ -285,18 +285,21 @@ the guides clears that display's entry.
 The position is deliberately **not** in a settings backup — it is machine-local geometry, the same
 reason the Settings window autosaves its frame instead ([backup.md](backup.md)).
 
-Which display the palette anchors to depends on the **Follow the cursor across displays**
-setting (`AppSettings.openOnCursorScreen`, on by default):
+**Settings → General → Appearance → Open on** (`AppSettings.paletteDisplay`, Mouse display by
+default) selects:
 
-- **On** — `NSScreen.underCursor`: the screen holding `NSEvent.mouseLocation`, i.e. the display under
-  the pointer.
-- **Off** — `NSScreen.primary`: the screen at the global origin, i.e. the one with the menu bar.
+- **Mouse display** — the screen under `NSEvent.mouseLocation`.
+- **Focused window display** — the screen with the greatest overlap with the focused external window.
+- **Primary display** — the screen at the global origin, i.e. the one with the menu bar.
 
-**Neither case may use `NSScreen.main`**, which is documented as the screen of the window with keyboard
-focus — the frontmost app's, wherever the user last clicked. It therefore follows the user across
-displays, which is the wrong answer for both settings and made the off case do exactly what turning it
-off was meant to stop ([#270](https://github.com/abue-ammar/tinycast/issues/270)). The menu-bar display
-is the one whose `frame.origin` is `.zero`, which is what `primary` looks for.
+Focused-window geometry comes from the system-wide `AXFocusedApplication` and
+`AXFocusedWindow` before the palette opens. Accessibility is requested once on first use per launch;
+that summon falls back to Mouse display while macOS waits for approval. Missing focus, permission, usable
+geometry or a connected-screen overlap also falls back to Mouse display, then Primary if the pointer
+matches no screen. A focused window spanning displays follows its largest overlap.
+
+No choice uses `NSScreen.main`: it can name Tinycast's key window rather than the target application.
+`NSScreen.primary` is the display whose frame origin is `.zero`.
 
 The cursor hit test is `NSMouseInRect(mouse, screen.frame, false)`, **not** `CGRect.contains`. A mouse
 location is the CoreGraphics cursor position flipped about the primary display's height, so a screen's

@@ -233,9 +233,8 @@ final class AppSettings {
         }
     }
 
-    /// Summon the palette on the display under the pointer instead of the one holding the menu bar.
-    var openOnCursorScreen: Bool {
-        didSet { defaults.set(openOnCursorScreen, forKey: Key.openOnCursorScreen.rawValue) }
+    var paletteDisplay: PaletteDisplay {
+        didSet { defaults.set(paletteDisplay.rawValue, forKey: Key.paletteDisplay.rawValue) }
     }
 
     var autoSwitchInputSourceID: String? {
@@ -605,9 +604,10 @@ final class AppSettings {
         rootSearchSensitivity =
             defaults.string(forKey: Key.rootSearchSensitivity.rawValue)
             .flatMap(SearchSensitivity.init) ?? .default
-        openOnCursorScreen =
-            defaults.object(forKey: Key.openOnCursorScreen.rawValue) == nil
-            || defaults.bool(forKey: Key.openOnCursorScreen.rawValue)
+        paletteDisplay = PaletteDisplay.stored(
+            rawValue: defaults.string(forKey: Key.paletteDisplay.rawValue),
+            openOnCursorScreen: defaults.object(forKey: Key.openOnCursorScreen.rawValue) as? Bool
+        ) ?? .mouse
         autoSwitchInputSourceID = defaults.string(forKey: Key.autoSwitchInputSource.rawValue)
         paletteDraggable = defaults.bool(forKey: Key.paletteDraggable.rawValue)
         palettePositions =

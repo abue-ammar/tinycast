@@ -90,8 +90,11 @@ Either way, the first press clears any text you typed.
 
 **Settings → General → Appearance** holds both placement settings.
 
-**Follow the cursor across displays** (on by default) opens the palette on the display your pointer
-is on. Turn it off to always use the display with the menu bar.
+**Open on** offers **Mouse display**, **Focused window display**, and **Primary display**. Focused
+Mouse display remains the default; saved cursor/primary choices are preserved. Focused window uses the
+external window with the greatest overlap. Its first use per launch asks for
+Accessibility, and that summon falls back to the mouse while macOS waits for approval. Without usable
+focus or access, it uses the mouse display, then primary.
 
 **Drag to reposition** (off by default) lets you move the panel. Grab the thin strip above the search
 field, the empty space in the header, or the search field itself while it is empty.

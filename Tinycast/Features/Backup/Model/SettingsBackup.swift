@@ -41,6 +41,7 @@ struct SettingsBackup: Codable {
         var launcherShowsSuggestions: Bool?
         var rootSearchSensitivity: String?
         var openOnCursorScreen: Bool?
+        var paletteDisplay: String?
         // Safe to carry: it grants no permission class, just repositions the window.
         var paletteDraggable: Bool?
         var fileSearchEnabled: Bool?
@@ -148,7 +149,7 @@ extension SettingsBackup {
             searchScopes: s.searchScopes,
             launcherShowsSuggestions: s.launcherShowsSuggestions,
             rootSearchSensitivity: s.rootSearchSensitivity.rawValue,
-            openOnCursorScreen: s.openOnCursorScreen,
+            paletteDisplay: s.paletteDisplay.rawValue,
             paletteDraggable: s.paletteDraggable,
             fileSearchEnabled: s.fileSearchEnabled,
             fileSearchScopes: s.fileSearchScopes,
@@ -370,8 +371,10 @@ extension SettingsBackup {
             settings.rootSearchSensitivity = sensitivity
             count += 1
         }
-        if let flag = s.openOnCursorScreen {
-            settings.openOnCursorScreen = flag
+        if let display = PaletteDisplay.stored(
+            rawValue: s.paletteDisplay, openOnCursorScreen: s.openOnCursorScreen)
+        {
+            settings.paletteDisplay = display
             count += 1
         }
         if let flag = s.paletteDraggable {

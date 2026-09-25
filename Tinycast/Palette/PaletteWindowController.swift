@@ -16,6 +16,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private(set) var isPoppedToRoot = false
     /// Resolved once per show; the top edge is the one that must not drift.
     private var anchor: CGPoint?
+    private var summonScreen: NSScreen?
     /// Live only between mouse-down and mouse-up on a drag handle; nil means a move was ours.
     private var drag: DragSession?
     private let dropGuides = PaletteDropGuideController()
@@ -52,6 +53,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     func show() {
         Signposts.interval("PaletteWindowController.show") {
+            if !isVisible { summonScreen = PaletteDisplayTarget.screen(for: core.settings.paletteDisplay) }
             isPoppedToRoot = false
             // Summoned over one of our own windows: there is no external paste or focus target.
             let frontmost = NSWorkspace.shared.frontmostApplication
@@ -150,6 +152,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         core.clipboardStore.setTextSearchActive(false)
         // Drop the anchor, so the next summon re-resolves for the screen in use then.
         anchor = nil
+        summonScreen = nil
         // The guides must never outlive the panel they point at.
         drag = nil
         dropGuides.hide()
@@ -294,6 +297,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     private func trackDrag(to moved: CGPoint) {
         guard var session = drag else { return }
         if let screen = panel?.screen, screen.frame != session.screenFrame {
+            summonScreen = screen
             session.screenFrame = screen.frame
             session.visibleFrame = screen.visibleFrame
             session.displayKey = screen.displayKey
@@ -406,9 +410,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.setFrame(frame, display: true)
     }
 
-    /// The display to anchor to; never `NSScreen.main`, which follows the focused window.
+    /// The setting chooses the display; `NSScreen.main` cannot represent these options.
     private func targetScreen() -> NSScreen? {
-        core.settings.openOnCursorScreen ? NSScreen.underCursor : NSScreen.primary
+        summonScreen ?? PaletteDisplayTarget.screen(for: core.settings.paletteDisplay)
     }
 
     /// Cached until hide, so both placements read one `visibleFrame`; a drag outranks the setting.

@@ -24,6 +24,7 @@ enum SettingsBackupCoverage {
         "launcherShowsSuggestions": .launcherShowsSuggestions,
         "rootSearchSensitivity": .rootSearchSensitivity,
         "openOnCursorScreen": .openOnCursorScreen,
+        "paletteDisplay": .paletteDisplay,
         "paletteDraggable": .paletteDraggable,
         "fileSearchEnabled": .fileSearchEnabled,
         "fileSearchScopes": .fileSearchScopes,

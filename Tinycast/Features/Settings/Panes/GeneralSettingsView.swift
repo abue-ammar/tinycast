@@ -85,8 +85,13 @@ struct GeneralSettingsView: View {
                     Text("Launch them with ⌘1–⌘5.")
                 }
                 .settingsEnabled(settings.compactMode)
-                Toggle(isOn: $settings.openOnCursorScreen) {
-                    SettingsRowTitle(.generalAppearance, "Follow the cursor across displays")
+                Picker(selection: $settings.paletteDisplay) {
+                    ForEach(PaletteDisplay.allCases) { display in
+                        Text(display.title).tag(display)
+                    }
+                } label: {
+                    SettingsRowTitle(.generalAppearance, "Open on")
+                    Text("Focused window asks for Accessibility on first use; otherwise falls back to mouse display.")
                 }
                 Toggle(isOn: $settings.paletteDraggable) {
                     SettingsRowTitle(.generalAppearance, "Drag to reposition")

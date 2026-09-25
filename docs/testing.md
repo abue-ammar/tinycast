@@ -101,6 +101,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `interface-size-test` | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
+| `palette-display-test` | `Settings/PaletteDisplay.swift`, `Palette/PaletteDisplaySelection.swift`, screen overlap and preference migration |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `GlobeTapDetector.swift`, `HotKeyBinding.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
 | `fallback-test` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
 | `dictionary-test` | `Dictionary/Model/DictionaryEntry.swift`, `DictionaryMarkup.swift` — a real XHTML record and the plain-text fallback, read into page blocks |
@@ -344,6 +345,11 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - General ▸ Escape Key Behavior set to `Close window and pop to root`: Escape on any screen closes
   the window, and reopening lands on the root search whatever Pop to Root Search says
 - Reopening focuses the search field with an empty query, in the same position and at the same size
+- General → Appearance → Open on: place the pointer and focused window on different displays and
+  verify Mouse, Focused window and Primary each target the selected display. A spanning window follows
+  its largest overlap. The first focused-display summon asks for Accessibility and falls back to the
+  mouse; after approval (and relaunch if needed), it follows the focused window. Dismissing the prompt
+  does not repeat it until restart; no focused window still falls back to the mouse.
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - With a CJK IME: the placeholder clears as soon as composition starts and the composing text never
   overlaps it; cancelling composition brings the placeholder back, and the list filters only once the
