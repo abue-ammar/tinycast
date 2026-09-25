@@ -670,6 +670,12 @@ a member it cannot see arrives as `undefined`, which `class … extends` reports
 out a real `AsyncLocalStorage` and `AsyncResource` rather than a stub for the same reason: undici
 extends the latter at module scope, and running the callback in place is the whole of it here.
 
+**WebAssembly** — `compile`, `instantiate` and their streaming forms run through the synchronous
+`Module` and `Instance` constructors. JavaScriptCore settles the promise forms from a run-loop timer on
+the thread that owns the VM, and the runtime's queue never spins one, so they stayed pending forever.
+sql.js loads that way; Zotero is the reference case, whose Search Database sat on Loading… with no
+error.
+
 **Streams** — the stream core is Node's real contract, not a stand-in: an extension that ships
 `stream-chain` and `stream-json` to walk a package index builds object-mode pipelines out of it, and
 `Homebrew` is the reference case. `fetch` responses expose `body` as a `ReadableStream`, so

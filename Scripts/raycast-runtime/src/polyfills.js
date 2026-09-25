@@ -71,6 +71,29 @@ if (!g.queueMicrotask) {
   };
 }
 
+// ─── WebAssembly ────────────────────────────────────────────────────
+// JSC settles the promise forms on a run loop the JS queue never spins; constructors don't wait.
+
+if (g.WebAssembly) {
+  const { Module, Instance } = g.WebAssembly;
+  const compile = (bytes) => new Promise((resolve) => resolve(new Module(bytes)));
+  const instantiate = (source, imports) =>
+    new Promise((resolve) => {
+      if (source instanceof Module) {
+        resolve(new Instance(source, imports));
+        return;
+      }
+      const module = new Module(source);
+      resolve({ module, instance: new Instance(module, imports) });
+    });
+  const bytesOf = async (source) => new Uint8Array(await (await source).arrayBuffer());
+  g.WebAssembly.compile = compile;
+  g.WebAssembly.instantiate = instantiate;
+  g.WebAssembly.compileStreaming = async (source) => compile(await bytesOf(source));
+  g.WebAssembly.instantiateStreaming = async (source, imports) =>
+    instantiate(await bytesOf(source), imports);
+}
+
 // ─── Error reporting ────────────────────────────────────────────────
 
 let uncaughtSink = (error) => log("error", ["Uncaught:", error]);

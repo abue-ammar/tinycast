@@ -199,6 +199,7 @@ struct ExtensionTests {
         await runtimeChecks()
         await searchAccessoryRuntimeChecks()
         await nodeContractChecks()
+        await webAssemblyChecks()
         await asyncComponentChecks()
         await menuBarRuntimeChecks()
         await menuBarHostChecks()
@@ -1506,6 +1507,36 @@ struct ExtensionTests {
             "node file, zlib and stream contracts", host.huds == ["archive IO passed"],
             recorder.failures.joined(separator: "|"))
         await runtime.stop(session: "archive")
+        runtime.shutdown()
+    }
+
+    /// sql.js loads through `WebAssembly.instantiate`, whose promise never settled on the JS queue.
+    @MainActor
+    static func webAssemblyChecks() async {
+        let (runtime, host, recorder) = makeRuntime()
+        try? await runtime.boot(
+            config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        let command = """
+            module.exports.default = async () => {
+              const add = "AGFzbQEAAAABBwFgAn9/AX8DAgEABwcBA2FkZAAACgkBBwAgACABags=";
+              const bytes = Buffer.from(add, "base64");
+              const { module, instance } = await WebAssembly.instantiate(bytes);
+              const compiled = await WebAssembly.instantiate(await WebAssembly.compile(bytes));
+              const invalid = await WebAssembly.instantiate(new Uint8Array([0, 1, 2])).then(
+                () => "resolved", (error) => error instanceof WebAssembly.CompileError);
+              const sum = instance.exports.add(2, 3) + compiled.exports.add(4, 5);
+              const isModule = module instanceof WebAssembly.Module;
+              await require("@raycast/api").showHUD(`${isModule} ${sum} ${invalid}`);
+            };
+            """
+        await runtime.start(
+            session: "wasm", code: command, file: URL(fileURLWithPath: "/tmp/wasm.js"),
+            mode: .noView, context: launchContext(mode: .noView))
+        await settle()
+        check(
+            "WebAssembly promise APIs settle", host.huds == ["true 14 true"],
+            "\(host.huds) \(recorder.failures.joined(separator: "|"))")
+        await runtime.stop(session: "wasm")
         runtime.shutdown()
     }
 
