@@ -29,6 +29,75 @@ struct InstalledAITests {
         expect(answer.isEmpty, "a request whose child ignores stdin still returns")
     }
 
+    /// A fish user's PATH lives in config.fish, which the zsh fallback never reads.
+    private static func aFishLoginShellFindsWhatConfigFishAdds(_ fixture: Fixture) async {
+        guard
+            let fish = ["/opt/homebrew/bin/fish", "/usr/local/bin/fish"]
+                .map({ URL(fileURLWithPath: $0) })
+                .first(where: { FileManager.default.isExecutableFile(atPath: $0.path) })
+        else {
+            print("skip  fish login shell — fish is not installed")
+            return
+        }
+        let config = fixture.root.appending(path: "fish-config", directoryHint: .isDirectory)
+        let tools = fixture.root.appending(path: "fish-tools", directoryHint: .isDirectory)
+        let cli = tools.appending(path: "tc-fish-only-cli")
+        do {
+            try FileManager.default.createDirectory(
+                at: config.appending(path: "fish"), withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: tools, withIntermediateDirectories: true)
+            try "#!/bin/sh\n".write(to: cli, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: cli.path)
+            // The shape `mise activate fish` takes: PATH set only when interactive, after a greeting.
+            try """
+                echo 'Welcome to fish'
+                if status is-interactive
+                    set -gx PATH \(tools.path) $PATH
+                end
+                """.write(
+                to: config.appending(path: "fish/config.fish"), atomically: true, encoding: .utf8)
+        } catch {
+            expect(false, "the fish fixture is written: \(error)")
+            return
+        }
+        let saved = ProcessInfo.processInfo.environment["XDG_CONFIG_HOME"]
+        setenv("XDG_CONFIG_HOME", config.path, 1)
+        defer {
+            if let saved { setenv("XDG_CONFIG_HOME", saved, 1) } else { unsetenv("XDG_CONFIG_HOME") }
+        }
+        let found = await ExecutableLocator.shellLookup("tc-fish-only-cli", shell: fish)
+        expect(found == cli.path, "a fish login shell finds a CLI only config.fish puts on PATH")
+        let zsh = await ExecutableLocator.shellLookup(
+            "tc-fish-only-cli", shell: URL(fileURLWithPath: "/bin/zsh"))
+        expect(zsh == nil, "the zsh that fish users fell back to cannot see that CLI")
+    }
+
+    /// An rc file's own output lands ahead of the lookup's answer.
+    private static func anRcFileThatPrintsStillAnswers(_ fixture: Fixture) async {
+        let zdot = fixture.root.appending(path: "zdot-greeting", directoryHint: .isDirectory)
+        let tools = fixture.root.appending(path: "zsh-tools", directoryHint: .isDirectory)
+        let cli = tools.appending(path: "tc-zshrc-only-cli")
+        do {
+            try FileManager.default.createDirectory(at: zdot, withIntermediateDirectories: true)
+            try FileManager.default.createDirectory(at: tools, withIntermediateDirectories: true)
+            try "#!/bin/sh\n".write(to: cli, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: cli.path)
+            try "echo 'Good morning'\nexport PATH=\"\(tools.path):$PATH\"\n".write(
+                to: zdot.appending(path: ".zshrc"), atomically: true, encoding: .utf8)
+        } catch {
+            expect(false, "the zsh fixture is written: \(error)")
+            return
+        }
+        setenv("ZDOTDIR", zdot.path, 1)
+        defer { setenv("ZDOTDIR", fixture.root.path, 1) }
+        let zsh = await ExecutableLocator.shellLookup(
+            "tc-zshrc-only-cli", shell: URL(fileURLWithPath: "/bin/zsh"))
+        expect(zsh == cli.path, "a .zshrc that prints a greeting still leaves the lookup its answer")
+        let nu = await ExecutableLocator.shellLookup(
+            "tc-zshrc-only-cli", shell: URL(fileURLWithPath: "/opt/homebrew/bin/nu"))
+        expect(nu == cli.path, "a login shell with neither syntax, like nushell, still asks zsh")
+    }
+
     static func main() async {
         guard let fixture = Fixture() else {
             expect(false, "the installed CLI fixture starts")
@@ -57,6 +126,8 @@ struct InstalledAITests {
         await aCrashedTurnsFilesAreRemovedAtLaunch(fixture)
         await aManagedMCPPolicyLeavesBothFlagsOff(fixture)
         await aChildThatNeverReadsCannotKillTheApp()
+        await aFishLoginShellFindsWhatConfigFishAdds(fixture)
+        await anRcFileThatPrintsStillAnswers(fixture)
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
