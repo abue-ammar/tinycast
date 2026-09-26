@@ -13,6 +13,7 @@ RESOURCE_ENTITLEMENTS=(
     NSMicrophoneUsageDescription=com.apple.security.device.audio-input
     NSCalendarsFullAccessUsageDescription=com.apple.security.personal-information.calendars
     NSCalendarsWriteOnlyAccessUsageDescription=com.apple.security.personal-information.calendars
+    NSRemindersFullAccessUsageDescription=com.apple.security.personal-information.calendars
     NSContactsUsageDescription=com.apple.security.personal-information.addressbook
     NSLocationWhenInUseUsageDescription=com.apple.security.personal-information.location
     NSPhotoLibraryUsageDescription=com.apple.security.personal-information.photos-library
