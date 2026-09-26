@@ -24,6 +24,9 @@ struct SettingsBackupTest {
         let external = SettingsBackupCoverage.externallySourced
         let allKeys = AppSettingsKey.allCases.map(\.rawValue)
         let mirroredKeys = mirrored.values.map(\.rawValue)
+        check(
+            "monitor step-size preference rides the backup without granting interception",
+            mirrored["externalMonitorFineAdjustments"] == .externalMonitorFineAdjustments)
 
         let uncovered = allKeys.filter { !mirroredKeys.contains($0) && excluded[$0] == nil }
         check(
@@ -68,7 +71,7 @@ struct SettingsBackupTest {
 
         // Named one by one: a backup now carries content, so it is far likelier to be sent on.
         for key: AppSettingsKey in [
-            .snippetsEnabled, .extensionsEnabled, .calendarEnabled, .autoJoinMeetings,
+            .snippetsEnabled, .externalMonitorControlsEnabled, .extensionsEnabled, .calendarEnabled, .autoJoinMeetings,
             .cameraPreview, .quickActionsEnabled
         ] {
             check(

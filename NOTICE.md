@@ -3,6 +3,46 @@
 Tinycast is licensed under the GNU Affero General Public License v3 — see [LICENSE](LICENSE). It
 also redistributes the third-party material recorded below, under the terms stated for each.
 
+## External monitor controls — MonitorControl and MediaKeyTap
+
+The DDC packet handling, Apple Silicon service discovery and matching in
+`Tinycast/Features/MonitorControl/` adapt MonitorControl by @JoniVR, @theOneyouseek,
+@waydabber and contributors, pinned to commit
+`5ce1a252ad1bde8248d8e4bb69645b28ca4da3e5`:
+<https://github.com/MonitorControl/MonitorControl/tree/5ce1a252ad1bde8248d8e4bb69645b28ca4da3e5>.
+
+Media-key decoding and interception reference MediaKeyTap by Nicholas Hurden and contributors,
+pinned to `22293b608bb9e7072960a2002d77ebbbdb3ba859`:
+<https://github.com/MonitorControl/MediaKeyTap/tree/22293b608bb9e7072960a2002d77ebbbdb3ba859>.
+
+Both projects use the following MIT terms. MonitorControl's copyright notice is
+`Copyright © 2017`; MediaKeyTap's is `Copyright (c) 2016 Nicholas Hurden`.
+
+```
+MIT License
+
+Copyright © 2017
+Copyright (c) 2016 Nicholas Hurden
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
 ## Brand marks — `Tinycast/Assets.xcassets/AIBrand*.imageset`
 
 Thirteen monochrome template SVGs, ~300 B–2 KB each, drawn beside a model's name in the model

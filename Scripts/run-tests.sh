@@ -295,6 +295,10 @@ run callout-test           Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
                            Tinycast/Features/HotKeys/UI/CalloutPlacement.swift
+run monitor-settings-test  Tinycast/Platform/Appearance.swift \
+                           Tinycast/DesignSystem/Theme.swift \
+                           Tinycast/DesignSystem/InterfaceMetrics.swift \
+                           Tinycast/Features/MonitorControl/Settings/MonitorControlToggleStyle.swift
 run icon-cache-test        Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift
 run entry-icon-test        Tinycast/Platform/Appearance.swift \
@@ -326,6 +330,12 @@ run ext-icon-test          Tinycast/Platform/Appearance.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift
 run system-action-test     Tinycast/Features/SystemActions/Model/SystemAction.swift
 run volume-test            Tinycast/Features/SystemActions/Model/VolumeLevel.swift
+run monitor-control-test   Tinycast/Features/MonitorControl/Model/*.swift
+run monitor-hud-test       Tinycast/Windows/HUD/HUDPresenter.swift
+run monitor-session-test   Tinycast/Features/MonitorControl/Model/*.swift \
+    Tinycast/Features/MonitorControl/Service/MonitorHardwareTransport.swift \
+    Tinycast/Features/MonitorControl/Service/MonitorDDCTransport.swift \
+    Tinycast/Features/MonitorControl/Service/MonitorHardwareSession.swift
 run window-command-test    Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
                            Tinycast/Features/WindowManagement/Model/WindowCycle.swift \
                            Tinycast/Features/WindowManagement/Model/WindowPlacementEngine.swift \

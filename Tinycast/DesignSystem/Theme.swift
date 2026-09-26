@@ -224,6 +224,8 @@ enum Theme {
         static let chatContextCard: CGFloat = 300
         /// A grouped `Form` row's control height.
         static let settingsControlHeight: CGFloat = 28
+        static let monitorControlSwitchWidth: CGFloat = 36
+        static let monitorControlSwitchHeight: CGFloat = 20
         static let emojiSkinToneGlyph: CGFloat = 13
         /// One density preview; five fit across the Emoji settings detail pane.
         static let emojiSettingsGridPreview: CGFloat = 72

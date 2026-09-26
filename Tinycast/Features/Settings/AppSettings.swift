@@ -343,6 +343,14 @@ final class AppSettings {
         }
     }
 
+    var externalMonitorControlsEnabled: Bool {
+        didSet { defaults.set(externalMonitorControlsEnabled, forKey: Key.externalMonitorControlsEnabled.rawValue) }
+    }
+
+    var externalMonitorFineAdjustments: Bool {
+        didSet { defaults.set(externalMonitorFineAdjustments, forKey: Key.externalMonitorFineAdjustments.rawValue) }
+    }
+
     /// Also keyword-expansion consent, so it confirms first and never rides a backup.
     var snippetsEnabled: Bool {
         didSet { defaults.set(snippetsEnabled, forKey: Key.snippetsEnabled.rawValue) }
@@ -681,6 +689,12 @@ final class AppSettings {
             defaults.object(forKey: Key.customCommandsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.customCommandsShowInLauncher.rawValue)
         snippetsEnabled = defaults.bool(forKey: Key.snippetsEnabled.rawValue)
+        externalMonitorControlsEnabled =
+            defaults.object(forKey: Key.externalMonitorControlsEnabled.rawValue) == nil
+            || defaults.bool(forKey: Key.externalMonitorControlsEnabled.rawValue)
+        externalMonitorFineAdjustments =
+            defaults.object(forKey: Key.externalMonitorFineAdjustments.rawValue) == nil
+            || defaults.bool(forKey: Key.externalMonitorFineAdjustments.rawValue)
         quickActionsEnabled = defaults.bool(forKey: Key.quickActionsEnabled.rawValue)
         snippetsShowInLauncher =
             defaults.object(forKey: Key.snippetsShowInLauncher.rawValue) == nil

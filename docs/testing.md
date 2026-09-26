@@ -107,6 +107,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
 | `system-action-test` | `SystemActions/Model/SystemAction.swift` |
 | `volume-test` | `SystemActions/Model/VolumeLevel.swift` |
+| `monitor-hud-test` | `HUDPresenter` pending feedback, repeat timer cancellation and settled dismissal, with an offscreen panel stub |
 | `window-command-test` | `WindowManagement/WindowCommand.swift`, `WindowPlacementEngine.swift`, `WindowActionMemory.swift` |
 | `window-layout-test` | `WindowManagement/Model/WindowLayout*.swift` and `CustomWindowSize*.swift` — the layout record, its geometry and its inverse, the plan and the store; custom sizes' units, frames and store |
 | `window-room-test` | `WindowManagement/Model/Room*.swift` — every room layout and its minimum sizes, the grid, arrangement reading, window matching, parking, the plan, Tab's choices and the three stores |
@@ -637,6 +638,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   while the menu-bar settings carry over
 
 ### System actions and window management
+
+- External monitor controls: run `monitor-control-test`, `monitor-session-test` and `monitor-settings-test`,
+  then follow the hardware checklist in
+  [monitor-control.md](features/monitor-control.md). Run only one monitor-key handler during testing.
 
 - A confirmation-gated action (Restart, Quit All) confirms, showing the subject's own glyph
 - Volume actions show the volume HUD; everything else shows the message pill

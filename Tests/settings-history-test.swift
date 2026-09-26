@@ -24,6 +24,7 @@ struct SettingsHistoryTests {
         aNewBranchDiscardsTheOldOne()
         clampsAtBothEnds()
         sidebarCoversEveryPane()
+        monitorControlHasItsOwnPane()
         sidebarIdentityNamespacesAreDisjoint()
         catalogCoversEveryPane()
         catalogIdentitiesAreUnique()
@@ -119,6 +120,24 @@ struct SettingsHistoryTests {
         expect(grouped.count == SettingsTab.allCases.count, "and none appears twice")
     }
 
+    static func monitorControlHasItsOwnPane() {
+        let features = SettingsSection.features.tabs
+        expect(
+            features.firstIndex(of: .monitorControl) == features.firstIndex(of: .windowManagement).map { $0 + 1 },
+            "Monitor Control sits next to Window Management under Features")
+        expect(!SettingsSection.launcher.tabs.contains(.monitorControl), "monitor controls are not launcher actions")
+        expect(SettingsAnchor.monitorControlExternalMonitors.tab == .monitorControl, "monitor rows reveal their own pane")
+        let navigation = SettingsNavigationState(tab: .systemActions)
+        let target = SettingsTarget.row(
+            .monitorControlExternalMonitors, "Enable external monitor control")
+        navigation.select(target.tab, revealing: target)
+        expect(navigation.tab == .monitorControl, "monitor search results navigate to Monitor Control")
+        expect(navigation.scrollRequest?.target == target, "monitor search results reveal the toggle")
+        expect(
+            SettingsSearchCatalog.results(for: "DDC").contains { $0.tab == .monitorControl },
+            "DDC keyword search includes Monitor Control")
+    }
+
     /// A selectable `List` flattens section and row IDs into one namespace.
     static func sidebarIdentityNamespacesAreDisjoint() {
         let sections = Set(SettingsSection.allCases.map { AnyHashable($0.id) })
@@ -152,6 +171,12 @@ struct SettingsHistoryTests {
             ("launch at login", .general),
             ("paste history", .clipboard),
             ("window manage", .windowManagement),
+            ("monitor control", .monitorControl),
+            ("I2C", .monitorControl),
+            ("brightness", .monitorControl),
+            ("fine-grained", .monitorControl),
+            ("small steps", .monitorControl),
+            ("external volume", .monitorControl),
             ("skin tone", .emoji),
             ("mcp", .ai)
         ]

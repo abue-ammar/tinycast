@@ -104,6 +104,8 @@ final class AppCore {
         core: self)
     @ObservationIgnored private(set) lazy var systemActionCoordinator = SystemActionCoordinator(
         paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var monitorControlCoordinator = MonitorControlCoordinator(
+        settings: settings, ticker: healthTicker)
     @ObservationIgnored private(set) lazy var uninstallCoordinator = UninstallCoordinator(
         session: uninstall, palette: palette, paletteCoordinator: paletteCoordinator,
         appIndex: appIndex, runningApps: runningApps, hotKeys: hotKeys, favorites: favorites,
@@ -329,6 +331,7 @@ final class AppCore {
             hyperKeyTap.healthTicker = healthTicker
             hotKeys.modifierTapMonitor.healthTicker = healthTicker
             snippetListener.healthTicker = healthTicker
+            monitorControlCoordinator.start()
 
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
             hotKeys.onRunCommand = { [weak self] id in self?.launcherCoordinator.runCommand(id) }
@@ -507,6 +510,7 @@ final class AppCore {
 
     func prepareForTermination() {
         settingsFile?.flush()
+        monitorControlCoordinator.stop()
         clipboardTextIndexer?.stop()
         // Caps Lock first: its remap is the one teardown that outlives the process.
         hyperKeyTap.prepareForTermination()
@@ -558,6 +562,9 @@ final class AppCore {
     // MARK: - Feature switches
 
     private func observeFeatureSwitches() {
+        track({ _ = $0.externalMonitorControlsEnabled }, reproject: { $0.monitorControlCoordinator.applyEnabled() })
+        track({ _ = $0.externalMonitorFineAdjustments },
+              reproject: { $0.monitorControlCoordinator.applyFineAdjustments() })
         track(
             {
                 _ = $0.windowManagementEnabled

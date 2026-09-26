@@ -110,7 +110,7 @@ enum SettingsSearchCatalog {
     static let entries: [SettingsSearchEntry] =
         general + applications + systemSettings + systemActions + commands + quicklinks
         + appleShortcuts + fallbacks + clipboard + snippets + fileSearch + windowManagement
-        + navigation + notes + calendar + emoji + ai + quickActions + extensions + permissions
+        + monitorControl + navigation + notes + calendar + emoji + ai + quickActions + extensions + permissions
         + backup + about
 
     private static let general: [SettingsSearchEntry] = [
@@ -396,6 +396,18 @@ enum SettingsSearchCatalog {
         .init(
             .navigationMenuSearch, "Disabled Applications",
             keywords: ["exclude", "password manager", "ignore", "privacy", "menu bar"])
+    ]
+
+    private static let monitorControl: [SettingsSearchEntry] = [
+        .init(
+            pane: .monitorControl,
+            keywords: ["external display", "DDC", "I2C", "brightness", "volume", "mute"]),
+        .init(
+            .monitorControlExternalMonitors, "Enable external monitor control",
+            keywords: ["disable", "DDC", "I2C", "display", "brightness", "volume", "mute", "keyboard", "pointer"]),
+        .init(
+            .monitorControlExternalMonitors, "Fine-grained adjustments",
+            keywords: ["brightness", "volume", "small steps", "precision", "option shift"])
     ]
 
     private static let windowManagement: [SettingsSearchEntry] = [

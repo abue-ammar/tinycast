@@ -77,6 +77,8 @@ extension SettingsAnchor {
     static let windowManagementOptions = Self(tab: .windowManagement, title: "Options")
     static let windowManagementCustomSizes = Self(tab: .windowManagement, title: "Custom Sizes")
 
+    static let monitorControlExternalMonitors = Self(tab: .monitorControl, title: "External Monitor Controls")
+
     static let clipboardClipboard = Self(tab: .clipboard, title: "Clipboard")
     static let clipboardCommands = Self(tab: .clipboard, title: "Commands")
     static let clipboardHistory = Self(tab: .clipboard, title: "History")

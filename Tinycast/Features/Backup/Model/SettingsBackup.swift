@@ -53,6 +53,7 @@ struct SettingsBackup: Codable {
         // `snippetsEnabled` is absent: an import must not enable keystroke listening.
         var customCommandsEnabled: Bool?
         var customCommandsShowInLauncher: Bool?
+        var externalMonitorFineAdjustments: Bool?
         var snippetsShowInLauncher: Bool?
         // Safe to carry: it grants no permission class paste doesn't already prompt for.
         var navigationEnabled: Bool?
@@ -161,6 +162,7 @@ extension SettingsBackup {
             notesShowsFormattingBar: s.notesShowsFormattingBar,
             customCommandsEnabled: s.customCommandsEnabled,
             customCommandsShowInLauncher: s.customCommandsShowInLauncher,
+            externalMonitorFineAdjustments: s.externalMonitorFineAdjustments,
             snippetsShowInLauncher: s.snippetsShowInLauncher,
             navigationEnabled: s.navigationEnabled,
             menuSearchDisabledApps: s.menuSearchDisabledApps,
@@ -420,6 +422,10 @@ extension SettingsBackup {
         }
         if let flag = s.customCommandsShowInLauncher {
             settings.customCommandsShowInLauncher = flag
+            count += 1
+        }
+        if let flag = s.externalMonitorFineAdjustments {
+            settings.externalMonitorFineAdjustments = flag
             count += 1
         }
         if let flag = s.snippetsShowInLauncher {

@@ -49,10 +49,10 @@ final class HUDPresenter {
     }
 
     /// Re-arms the dismissal, so a repeat extends the dwell rather than replaying it.
-    func extend() {
+    func extend(dwells: Bool = true) {
         guard let panel, panel.isVisible else { return }
         panel.cancelFade()
-        scheduleDismissal()
+        if dwells { scheduleDismissal() } else { dismissal?.cancel() }
     }
 
     var isShowing: Bool { panel?.isVisible ?? false }

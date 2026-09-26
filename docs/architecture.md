@@ -119,6 +119,10 @@ handed an input path and answers with bounded text down a pipe.
 
 ## Entry points and windows
 
+External monitor controls are owned by `AppCore.monitorControlCoordinator`, with an isolated
+hardware worker, media-key listener and explicit-display HUD. See
+[monitor-control.md](features/monitor-control.md) for routing, lifetime and private API boundaries.
+
 `TinycastApp` (`@main`) declares only two `MenuBarExtra` scenes — Tinycast's own item and the
 calendar's, each inserted by one preference and independent of the other; everything else visible is
 driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem`s owned entirely by

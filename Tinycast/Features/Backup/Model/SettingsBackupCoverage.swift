@@ -34,6 +34,7 @@ enum SettingsBackupCoverage {
         "notesShowsFormattingBar": .notesShowsFormattingBar,
         "customCommandsEnabled": .customCommandsEnabled,
         "customCommandsShowInLauncher": .customCommandsShowInLauncher,
+        "externalMonitorFineAdjustments": .externalMonitorFineAdjustments,
         "snippetsShowInLauncher": .snippetsShowInLauncher,
         "navigationEnabled": .navigationEnabled,
         "menuSearchDisabledApps": .menuSearchDisabledApps,
@@ -71,6 +72,8 @@ enum SettingsBackupCoverage {
 
     /// Keys kept out of a backup on purpose, each with the reason it has to stay out.
     static let deliberatelyExcluded: [String: String] = [
+        AppSettingsKey.externalMonitorControlsEnabled.rawValue:
+            "An import must not enable interception of monitor brightness and volume keys.",
         AppSettingsKey.clipboardTextSearchEnabled.rawValue:
             "Background OCR is an opt-in processing choice on this Mac; a backup must not enable it.",
         AppSettingsKey.snippetsEnabled.rawValue:
