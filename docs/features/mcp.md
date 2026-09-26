@@ -79,6 +79,19 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
 - **Servers start with chat and stop after ten idle minutes**, and at `prepareForTermination()`.
   A stdio server is a resident process of someone else's making, and the 100 MB budget is the reason
   this is not "start at launch".
+- **A stdio server execs a hard link, so Activity Monitor names it.** `ProcessBadge.badged`
+  returns a link called `Tinycast (node)` beside the interpreter's own inode under Application
+  Support, and the transport execs that instead of the resolved path. The kernel sets `p_comm`
+  from the basename of the file it execs, which is what Activity Monitor shows for a non-bundled
+  executable, so this is the only thing that changes it: a symlink resolves before the kernel
+  reads the name, and `process.title` rewrites argv, which only `ps -o args` reads. `PATH` still
+  carries the real directory, since `ExecutableLocator.environment(running:)` keeps taking the
+  resolved path. Four limits are deliberate: a shebang script is never badged because it re-execs
+  its interpreter and the name reverts to `node`, a binary whose libraries hang off
+  `@executable_path` is skipped because dyld would resolve them from the link's own directory, a
+  name past `p_comm`'s 16 bytes is skipped rather than truncated, and a link that cannot be made
+  (a version manager on another volume) falls back to the plain path rather than failing the
+  launch.
 - **Who runs the loop is the route's own answer, and it is the only thing that differs.**
   `AIModelCapabilities.tools` is true for `.api`, for Codex and for the Claude command, and false
   for Apple Intelligence, Grok, OpenCode and Cursor — the three CLIs whose configurations merge

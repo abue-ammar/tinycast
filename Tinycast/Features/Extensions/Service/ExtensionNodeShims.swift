@@ -407,7 +407,8 @@ final class ExtensionNodeShims: @unchecked Sendable {
             guard let resolved = ExtensionAsyncProcess.resolveExecutable(command) else {
                 throw ShimError.noEntry(command, "spawn")
             }
-            task.executableURL = resolved
+            // What an extension starts is still ours to account for; a system tool falls back.
+            task.executableURL = ProcessBadge.badged(resolved)
             task.arguments = (spec["args"] as? [String] ?? [])
         }
         if let cwd = spec["cwd"] as? String, !cwd.isEmpty {

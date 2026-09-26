@@ -537,6 +537,13 @@ Neither the registry list, the package manager, nor the custom search paths ride
 the first two name a tool or a source of code the machine an import lands on may not have or want, and
 the last is a set of paths specific to this Mac's toolchain layout.
 
+**A process an extension spawns carries Tinycast's name.** `child_process` resolves the command
+and `ProcessBadge.badged` execs a hard link called `Tinycast (node)` instead, so an extension's
+helper is attributable in Activity Monitor rather than being one more anonymous `node`. A `shell:
+true` spawn still runs `/bin/sh`, and a system tool falls back to its own path because the sealed
+system volume refuses a hard link, so in practice this names the interpreters a version manager
+installed. The mechanism and its limits are in [mcp.md](mcp.md).
+
 ## Shortcuts
 
 A global shortcut binds to a **command**, not to an extension — a shortcut has to land on one thing to

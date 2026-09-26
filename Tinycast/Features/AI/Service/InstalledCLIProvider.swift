@@ -162,11 +162,12 @@ private final class InstalledCLITurnRunner {
             configURL = url
         }
 
+        let badged = await Task.detached { ProcessBadge.badged(executable) }.value
         let process = Process()
         let stdin = Pipe()
         let stdout = Pipe()
         let stderr = Pipe()
-        process.executableURL = executable
+        process.executableURL = badged
         process.currentDirectoryURL = workspace
         process.environment = environment(for: executable)
         var grokPrompt: URL?

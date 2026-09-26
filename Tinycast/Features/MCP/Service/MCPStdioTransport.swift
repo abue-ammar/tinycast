@@ -40,11 +40,12 @@ final class MCPStdioTransport: MCPTransport {
         }
         // A second caller may have started it during the lookup.
         if isRunning { return }
+        let badged = await Task.detached { ProcessBadge.badged(executable) }.value
         let process = Process()
         let stdin = Pipe()
         let stdout = Pipe()
         let stderr = Pipe()
-        process.executableURL = executable
+        process.executableURL = badged
         process.arguments = arguments
         process.currentDirectoryURL = FileManager.default.homeDirectoryForCurrentUser
         process.environment = ExecutableLocator.environment(running: executable, adding: environment)

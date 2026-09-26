@@ -122,6 +122,13 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   `opencode` executable without asking for or storing another key. Codex inherits the user's normal
   home and credential-store setting; Claude, Grok, OpenCode and Cursor inherit their normal configuration. Tinycast
   never reads those credential files, browser cookies or undocumented web endpoints.
+- **Every long-lived process Tinycast execs carries its name.** The Codex app-server and an
+  installed CLI's turn both go through `ProcessBadge.badged`, which execs a hard link called
+  `Tinycast (codex)` or `Tinycast (grok)` beside the interpreter's own inode, so Activity Monitor
+  attributes them instead of listing an anonymous row. The badge is named for the command as
+  invoked, not what it resolves to, which is how `grok` avoids its 29-character release filename.
+  A CLI that is a shebang script is left alone: `claude` re-execs node and the name would revert.
+  See [mcp.md](mcp.md) for the mechanism and its limits.
 - **Codex runs Tinycast's MCP servers and nothing else.** The app-server still launches with every
   feature flag off and a read-only, network-disabled sandbox, and every server request but one is
   declined. What changed is the list: the servers the reader configured for their own Codex are

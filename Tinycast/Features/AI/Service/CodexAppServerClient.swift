@@ -163,11 +163,12 @@ final class CodexAppServerClient {
                 "Your Codex configuration has its own MCP server named \u{201C}\(taken)\u{201D}. "
                     + "Rename it to use this Tinycast server with Codex.")
         }
+        let badged = await Task.detached { ProcessBadge.badged(executable) }.value
         let process = Process()
         let stdin = Pipe()
         let stdout = Pipe()
         let stderr = Pipe()
-        process.executableURL = executable
+        process.executableURL = badged
         process.arguments =
             Self.configurationFlags
             + CodexMCPLaunch.arguments(servers: toolServers, disabling: foreign)
