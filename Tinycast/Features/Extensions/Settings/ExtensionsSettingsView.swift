@@ -3,6 +3,7 @@ import SwiftUI
 /// Settings › Extensions: the master switch, then a row per extension that expands in place.
 struct ExtensionsSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(SettingsNavigationState.self) private var navigation
     @State private var expanded: String?
     @State private var filter = ""
     @State private var importCandidates: ImportCandidates?
@@ -63,8 +64,10 @@ struct ExtensionsSettingsView: View {
         .settingsEditorPanel(isPresented: $editingRegistries) {
             ExtensionRegistriesPanel(onClose: { editingRegistries = false })
         }
-        .onReceive(NotificationCenter.default.publisher(for: .tinycastSelectExtension)) { note in
-            if let name = note.object as? String { expanded = name }
+        .onChange(of: navigation.scrollRequest, initial: true) {
+            if case .row(.extensionsInstalled, let name)? = navigation.scrollRequest?.target {
+                (expanded, filter) = (name, "")
+            }
         }
         .onChange(of: core.extensions.installed.count) { Task { await measureReclaimable() } }
         .task {
@@ -368,6 +371,7 @@ private struct ExtensionDisclosure: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(
             isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)")
+        .id(SettingsTarget.row(.extensionsInstalled, installed.manifest.name))
     }
 
     /// One `Grid` for every run: separate grids size columns apart, stranding controls.
