@@ -47,7 +47,7 @@ struct SettingsFileTest {
             SettingsFileKey.sections == [
                 "general", "appearance", "hyperKey", "calculator", "search", "applications",
                 "commands", "quicklinks", "appleShortcuts", "ai", "quickActions", "fileSearch",
-                "notes", "snippets", "navigation", "windowManagement", "clipboard", "emoji",
+                "notes", "snippets", "navigation", "windowManagement", "monitorControl", "clipboard", "emoji",
                 "calendar", "extensions"
             ])
 
@@ -55,11 +55,15 @@ struct SettingsFileTest {
         let grantPaths = [
             "snippets.enabled", "extensions.enabled", "calendar.enabled",
             "calendar.autoJoinMeetings", "calendar.cameraPreview", "quickActions.enabled",
-            "ai.mcpEnabled", "mcp.enabled", "clipboard.textSearchEnabled"
+            "ai.mcpEnabled", "mcp.enabled", "clipboard.textSearchEnabled", "monitorControl.enabled",
+            "monitorControl.externalMonitorControlsEnabled"
         ]
         check(
             "no capability grant has a settings.json key",
             grantPaths.allSatisfy { SettingsFileKey(rawValue: $0) == nil })
+        check(
+            "monitor step size is mirrored without granting interception",
+            SettingsFileKey(rawValue: "monitorControl.fineAdjustments") == .externalMonitorFineAdjustments)
     }
 
     // MARK: - Values

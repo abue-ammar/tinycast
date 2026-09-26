@@ -90,6 +90,7 @@ enum SettingsFileSchema {
         case .customWindowSizes: return windowManagement.customSizesBinding(for: key)
         case .windowLayouts: return windowManagement.layoutsBinding(for: key)
         case .windowRooms: return windowManagement.roomsBinding(for: key)
+        case .externalMonitorFineAdjustments: return bind(settings, \.externalMonitorFineAdjustments)
         case .clipboardEnabled: return bind(settings, \.clipboardEnabled)
         case .clipboardRetention: return bind(settings, \.clipboardRetention)
         case .clipboardDefaultAction: return bind(settings, \.clipboardDefaultAction)

@@ -52,6 +52,7 @@ dedicated to launcher commands.
 - The default-on `externalMonitorControlsEnabled` preference is excluded from backups:
   importing settings cannot enable interception. `externalMonitorFineAdjustments` is backed up:
   changing the step size grants no capability.
+- The optional settings file mirrors `monitorControl.fineAdjustments`, never the enable switch.
 
 ## Ownership and transport
 

@@ -60,6 +60,7 @@ enum SettingsFileKey: String, CaseIterable, Sendable {
     case customWindowSizes = "windowManagement.customSizes"
     case windowLayouts = "windowManagement.layouts"
     case windowRooms = "windowManagement.rooms"
+    case externalMonitorFineAdjustments = "monitorControl.fineAdjustments"
     case clipboardEnabled = "clipboard.enabled"
     case clipboardRetention = "clipboard.retentionDays"
     case clipboardDefaultAction = "clipboard.defaultAction"
