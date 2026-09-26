@@ -75,6 +75,11 @@ enum CalcTokenizer {
                     guard scaled.isFinite else { return nil }
                     tokens.append(.compactNumber(scaled))
                     i += 1
+                } else if let magnitude = magnitudeWord(chars, after: i) {
+                    let scaled = value * magnitude.scale
+                    guard scaled.isFinite else { return nil }
+                    tokens.append(.compactNumber(scaled))
+                    i = magnitude.end
                 } else if isShorthand {
                     tokens.append(.compactNumber(value))
                 } else {
@@ -258,6 +263,24 @@ enum CalcTokenizer {
         let name = CalcUnits.byName[spelling] != nil ? spelling : spelling.lowercased()
         guard CalcUnits.byName[name] != nil else { return nil }
         return (name, end)
+    }
+
+    /// Short scale only: the engine reads canonical English, where a billion is 10⁹.
+    private static let magnitudes: [String: Double] = ["thousand": 1e3, "million": 1e6, "billion": 1e9]
+
+    /// The scale of a whole magnitude word following a literal (`13 million`), and where it ends.
+    private static func magnitudeWord(
+        _ chars: [Unicode.Scalar], after index: Int
+    ) -> (scale: Double, end: Int)? {
+        var start = index
+        while start < chars.count, chars[start].isWhitespace { start += 1 }
+        var end = start
+        while end < chars.count, chars[end].isLetter { end += 1 }
+        guard end > start else { return nil }
+        if end < chars.count, chars[end].isNumber || chars[end].isCombiningMark { return nil }
+        guard let scale = magnitudes[String(String.UnicodeScalarView(chars[start..<end])).lowercased()]
+        else { return nil }
+        return (scale, end)
     }
 
     /// Whether the `k` at `index` is a thousands suffix rather than Kelvin or a unit's head.

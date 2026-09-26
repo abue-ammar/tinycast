@@ -264,6 +264,12 @@ An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace kee
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
 target makes the intent unambiguous (`273.15K to C`).
 
+A whole magnitude word after a literal scales it the same way, spaced or attached and in any case:
+`thousand`, `million` and `billion` (`13 million idr to usd`, `1.5 billion`). The set is closed and
+short-scale — a billion is 10⁹, since the engine reads canonical English. It scales only the literal it
+follows, so `2 * million` and `(2 + 3) million` stay silent, and plurals (`13 millions`) are not read.
+Abbreviations are deliberately absent: `m`, `b` and `k` already mean metre, byte and Kelvin.
+
 A **compound unit** (`km/h`, `m³/h`, `mbit/s`, `fl oz`) stays whole only when the table knows its
 spelling: the tokenizer looks ahead across `/` or whitespace between two alphanumeric runs,
 folds superscript powers, and keeps them together only if `CalcUnits.byName` resolves the result.
