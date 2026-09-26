@@ -67,7 +67,8 @@ final class MonitorDDCTransport: MonitorHardwareTransport {
                     values[control] = read(screen.id, control: control, valid: valid)
                 }
             }
-            displays.append(.init(id: screen.id, name: screen.name, bounds: screen.bounds, values: values))
+            displays.append(.init(id: screen.id, name: screen.name, bounds: screen.bounds,
+                                  values: values, hasHardwareService: matches[index] != nil))
         }
         return displays
     }

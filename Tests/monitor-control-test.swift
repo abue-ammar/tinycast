@@ -11,6 +11,7 @@ struct MonitorControlTests {
         fineAdjustments()
         feedback()
         audioIgnoresPointer()
+        audioVersions()
         queue()
         adjustments()
         print("Monitor control tests passed")
@@ -252,6 +253,46 @@ struct MonitorControlTests {
                             adjustment: .level(offset: 0, minimum: 10, maximum: 10)))
         queue.reset(generation: 3)
         assert(queue.next() == nil)
+        for (index, control): (Int, MonitorControlKind) in [.volume, .mute, .volume, .brightness].enumerated() {
+            queue.enqueue(.init(generation: 3, displayID: 1, control: control,
+                                value: .init(current: 50, maximum: 100), revision: UInt64(index),
+                                adjustment: .level(offset: 1, minimum: 1, maximum: 100)))
+        }
+        assert(queue.next()?.control == .volume)
+        assert(queue.next()?.control == .mute, "Coalescing must not move a later volume press ahead of mute")
+        queue.cancelAudio()
+        assert(queue.next()?.control == .brightness)
+        assert(queue.isEmpty)
+    }
+
+    static func audioVersions() {
+        var router = MonitorKeyRouting()
+        router.enabled = true
+        router.audioTarget = 1
+        router.displays = [.init(id: 1, name: "Monitor", bounds: CGRect(x: 0, y: 0, width: 100, height: 100),
+                                values: [.brightness: .init(current: 50, maximum: 100),
+                                         .volume: .init(current: 20, maximum: 100), .mute: .init(current: 2, maximum: 100)])]
+        let brightness = router.handle(key(.brightnessUp), point: CGPoint(x: 50, y: 50)).command!
+        let audio = router.handle(key(.volumeUp), point: .zero).command!
+        router.audioTarget = nil
+        router.audioTarget = 1
+        assert(!router.accepts(audio) && router.accepts(brightness))
+        assert(!router.complete(audio, value: nil), "Canceled audio results must not disable a healthy control")
+        assert(router.handle(key(.volumeUp, repeated: true), point: .zero).command == nil)
+        assert(router.handle(key(.brightnessUp, repeated: true), point: .zero).command != nil)
+        _ = router.handle(key(.volumeUp, pressed: false), point: .zero)
+        let fresh = router.handle(key(.volumeUp), point: .zero).command!
+        assert(router.complete(fresh, value: nil, control: .mute))
+        assert(router.displays[0].values[.volume] != nil && router.displays[0].values[.mute] == nil)
+        var feedback = MonitorFeedbackState()
+        feedback.begin(fresh)
+        assert(!feedback.finish(fresh, failed: true, control: .mute) && feedback.pending)
+        router.recover(generation: 99, displayID: 1, control: .mute, value: .init(current: 2, maximum: 100))
+        assert(router.displays[0].values[.mute] == nil)
+        router.recover(generation: router.generation, displayID: 1, control: .mute, value: .init(current: 2, maximum: 100))
+        assert(router.displays[0].values[.mute]?.current == 2)
+        assert(router.handle(key(.volumeUp, repeated: true), point: .zero).command != nil,
+               "Capability recovery must not invalidate held keys")
     }
 
     static func adjustments() {

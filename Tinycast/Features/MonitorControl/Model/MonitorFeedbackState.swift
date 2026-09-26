@@ -9,9 +9,9 @@ struct MonitorFeedbackState {
         pending = true
     }
 
-    mutating func finish(_ command: MonitorKeyRouting.Command, failed: Bool) -> Bool {
+    mutating func finish(_ command: MonitorKeyRouting.Command, failed: Bool, control: MonitorControlKind? = nil) -> Bool {
         guard let latest, latest.generation == command.generation,
-            latest.displayID == command.displayID, latest.control == command.control,
+            latest.displayID == command.displayID, latest.control == (control ?? command.control),
             failed || latest.revision == command.revision else { return false }
         pending = false
         return true

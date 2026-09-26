@@ -332,6 +332,10 @@ run system-action-test     Tinycast/Features/SystemActions/Model/SystemAction.sw
 run volume-test            Tinycast/Features/SystemActions/Model/VolumeLevel.swift
 run monitor-control-test   Tinycast/Features/MonitorControl/Model/*.swift
 run monitor-hud-test       Tinycast/Windows/HUD/HUDPresenter.swift
+run monitor-hud-layout-test Tinycast/Platform/Appearance.swift \
+    Tinycast/DesignSystem/Theme.swift Tinycast/DesignSystem/InterfaceMetrics.swift \
+    Tinycast/DesignSystem/SymbolImage.swift Tinycast/DesignSystem/GlassEffectView.swift \
+    Tinycast/Features/Settings/InterfaceSize.swift Tinycast/Features/MonitorControl/UI/MonitorHUDView.swift
 run monitor-session-test   Tinycast/Features/MonitorControl/Model/*.swift \
     Tinycast/Features/MonitorControl/Service/MonitorHardwareTransport.swift \
     Tinycast/Features/MonitorControl/Service/MonitorDDCTransport.swift \

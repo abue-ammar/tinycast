@@ -24,6 +24,12 @@ final class FakeMonitorTransport: MonitorHardwareTransport, Sendable {
         var failWrites = 0
         var blockedRead = false
         var enteredRead = false
+        var failingReads: Set<MonitorControlKind> = []
+        var failingWrites: Set<MonitorControlKind> = []
+        var discoveryMissing: Set<MonitorControlKind> = []
+        var unmatchedDisplays: Set<UInt32> = []
+        var readLog: [(UInt32, MonitorControlKind)] = []
+        var discoveries = 0
     }
 
     let state = Mutex(State())
@@ -31,8 +37,15 @@ final class FakeMonitorTransport: MonitorHardwareTransport, Sendable {
 
     func discover(_ screens: [MonitorDDCTransport.Screen], valid: () -> Bool) -> [MonitorKeyRouting.Display] {
         guard valid() else { return [] }
+        state.withLock { $0.discoveries += 1 }
         return screens.map { screen in
-            .init(id: screen.id, name: screen.name, bounds: screen.bounds, values: state.withLock { $0.values })
+            state.withLock {
+                let matched = !$0.unmatchedDisplays.contains(screen.id)
+                let missing = $0.discoveryMissing
+                return .init(id: screen.id, name: screen.name, bounds: screen.bounds,
+                             values: matched ? $0.values.filter { !missing.contains($0.key) } : [:],
+                             hasHardwareService: matched)
+            }
         }
     }
 
@@ -42,7 +55,8 @@ final class FakeMonitorTransport: MonitorHardwareTransport, Sendable {
         guard valid() else { return nil }
         return state.withLock {
             $0.reads += 1
-            guard !$0.fail else { return nil }
+            $0.readLog.append((display, control))
+            guard !$0.fail, !$0.failingReads.contains(control) else { return nil }
             if $0.failReads > 0 { $0.failReads -= 1; return nil }
             if let lastWrite = $0.lastWrite, lastWrite.duration(to: .now) < $0.readQuietTime { return nil }
             if $0.staleReads[control, default: 0] > 0 {
@@ -59,7 +73,7 @@ final class FakeMonitorTransport: MonitorHardwareTransport, Sendable {
         guard valid() else { return false }
         return state.withLock {
             $0.writes.append((control, value))
-            guard !$0.fail else { return false }
+            guard !$0.fail, !$0.failingWrites.contains(control) else { return false }
             if $0.failWrites > 0 { $0.failWrites -= 1; return false }
             $0.lastWrite = .now
             $0.previous[control] = $0.values[control]
@@ -92,6 +106,10 @@ struct MonitorSessionTests {
     }
 
     static func main() async {
+        await orderedAudio()
+        await independentMuteFailure()
+        await scopedRecovery()
+        await audioCancellation()
         await muteDuringVolume()
         await supersededReadback()
         await sustainedKeys()
@@ -120,7 +138,7 @@ struct MonitorSessionTests {
         await eventually {
             received.values.withLock { values in
                 values.contains {
-                    if case .applied(let command, nil) = $0 { return command.control == .volume }
+                    if case .applied(_, .volume, nil) = $0 { return true }
                     return false
                 }
             }
@@ -156,6 +174,112 @@ struct MonitorSessionTests {
         print("Monitor worker coalescing, failure, recovery and disconnect tests passed")
     }
 
+    static func orderedAudio() async {
+        let fake = FakeMonitorTransport()
+        let session = MonitorHardwareSession(makeTransport: { fake })
+        defer { session.stop() }
+        var results = session.results.makeAsyncIterator()
+        session.discover(generation: 1, screens: [.init(id: 1, name: "Fake", bounds: .zero)])
+        _ = await results.next()
+        fake.state.withLock { $0.blocked = true }
+        session.enqueue(command(10))
+        await eventually { fake.state.withLock { $0.enteredWrite } }
+        session.enqueue(command(25, control: .volume))
+        session.enqueue(.init(generation: 1, displayID: 1, control: .mute,
+                              value: .init(current: 1, maximum: 100), revision: 26, adjustment: .mute(toggle: true)))
+        session.enqueue(command(30, control: .volume))
+        fake.state.withLock { $0.blocked = false }
+        for _ in 0..<4 {
+            guard case .applied(_, _, let value) = await results.next() else { fatalError("Missing ordered result") }
+            assert(value != nil, "Interleaved volume/mute must not fail verification")
+        }
+        assert(fake.state.withLock { $0.values[.volume]?.current == 30 && $0.values[.mute]?.current == 2 })
+        let audio = fake.state.withLock { $0.writes.filter { $0.0 != .brightness }.map { "\($0.0):\($0.1)" } }
+        assert(audio == ["volume:25", "mute:2", "mute:1", "volume:30", "mute:2"])
+    }
+
+    static func independentMuteFailure() async {
+        for readFailure in [false, true] {
+            let fake = FakeMonitorTransport()
+            let session = MonitorHardwareSession(makeTransport: { fake })
+            defer { session.stop() }
+            var results = session.results.makeAsyncIterator()
+            session.discover(generation: 1, screens: [.init(id: 1, name: "Fake", bounds: .zero)])
+            _ = await results.next()
+            fake.state.withLock {
+                if readFailure { $0.failingReads = [.mute] } else { $0.failingWrites = [.mute] }
+            }
+            session.enqueue(command(25, control: .volume))
+            guard case .applied(_, .mute, nil) = await results.next() else { fatalError("Mute alone must fail") }
+            guard case .applied(_, .volume, let value) = await results.next() else { fatalError("Volume must succeed") }
+            assert(value?.current == 25)
+            let muteWrites = fake.state.withLock { $0.writes.filter { $0.0 == .mute }.count }
+            session.enqueue(command(30, control: .volume))
+            guard case .applied(_, .volume, let next) = await results.next() else { fatalError("Volume must remain usable") }
+            assert(next?.current == 30)
+            assert(fake.state.withLock { $0.writes.filter { $0.0 == .mute }.count == muteWrites })
+            fake.state.withLock { $0.failingReads = []; $0.failingWrites = [] }
+            session.retryMissingControls(generation: 1)
+            guard case .recovered(1, 1, .mute, _) = await results.next() else { fatalError("Mute must recover independently") }
+            assert(fake.state.withLock { $0.discoveries == 1 })
+        }
+    }
+
+    static func scopedRecovery() async {
+        let fake = FakeMonitorTransport()
+        fake.state.withLock { $0.discoveryMissing = [.volume]; $0.unmatchedDisplays = [2] }
+        let session = MonitorHardwareSession(makeTransport: { fake })
+        defer { session.stop() }
+        var results = session.results.makeAsyncIterator()
+        session.discover(generation: 1, screens: [
+            .init(id: 1, name: "Fake", bounds: .zero), .init(id: 2, name: "Virtual", bounds: .zero)
+        ])
+        _ = await results.next()
+        fake.state.withLock { $0.blockedRead = true }
+        session.retryMissingControls(generation: 1)
+        await eventually { fake.state.withLock { $0.enteredRead } }
+        session.enqueue(command(40))
+        fake.state.withLock { $0.blockedRead = false }
+        guard case .applied(_, .brightness, let value) = await results.next() else { fatalError("Input must preempt recovery") }
+        assert(value?.current == 40)
+        guard case .recovered(1, 1, .volume, let volume) = await results.next() else {
+            fatalError("Missing initial control must recover")
+        }
+        assert(volume.current == 20)
+        assert(fake.state.withLock { $0.discoveries == 1 && !$0.readLog.contains { $0.0 == 2 } })
+    }
+
+    static func audioCancellation() async {
+        for blockRead in [false, true] {
+            let fake = FakeMonitorTransport()
+            let session = MonitorHardwareSession(makeTransport: { fake })
+            defer { session.stop() }
+            var results = session.results.makeAsyncIterator()
+            session.discover(generation: 1, screens: [.init(id: 1, name: "Fake", bounds: .zero)])
+            _ = await results.next()
+            fake.state.withLock { $0.blocked = !blockRead; $0.blockedRead = blockRead }
+            session.enqueue(command(25, control: .volume))
+            await eventually { fake.state.withLock { blockRead ? $0.enteredRead : $0.enteredWrite } }
+            session.enqueue(command(30, control: .volume))
+            session.enqueue(command(40))
+            session.cancelAudio(generation: 1)
+            fake.state.withLock { $0.blocked = false; $0.blockedRead = false }
+            guard case .applied(_, .brightness, _) = await results.next() else {
+                fatalError("Audio switch must preserve brightness")
+            }
+            assert(fake.state.withLock { $0.writes.allSatisfy { $0.0 == .brightness } })
+            session.enqueue(command(35, control: .volume))
+            var fresh = command(45, control: .volume)
+            fresh.audioGeneration = 1
+            session.enqueue(fresh)
+            for _ in 0..<2 {
+                guard case .applied(let command, _, let value) = await results.next() else { fatalError("Fresh audio must work") }
+                assert(command.audioGeneration == 1 && value != nil)
+            }
+            assert(fake.state.withLock { $0.values[.volume]?.current == 45 })
+        }
+    }
+
     static func delayedReadback() async {
         let fake = FakeMonitorTransport()
         fake.state.withLock { $0.readbackLag = 2 }
@@ -165,12 +289,12 @@ struct MonitorSessionTests {
         session.discover(generation: 1, screens: [.init(id: 1, name: "Fake", bounds: CGRect())])
         _ = await results.next()
         session.enqueue(command(48))
-        guard case .applied(_, let value) = await results.next() else { fatalError("Missing result") }
+        guard case .applied(_, .brightness, let value) = await results.next() else { fatalError("Missing result") }
         assert(value?.current == 48, "Delayed readback must not disable a working monitor")
 
         fake.state.withLock { $0.missingReadback = true }
         session.enqueue(command(46))
-        guard case .applied(_, let recovered) = await results.next() else { fatalError("Missing result") }
+        guard case .applied(_, .brightness, let recovered) = await results.next() else { fatalError("Missing result") }
         assert(recovered?.current == 46, "Temporary missing replies must recover before disabling control")
 
         fake.state.withLock { $0.missingReadback = false; $0.blocked = true; $0.enteredWrite = false }
@@ -178,22 +302,22 @@ struct MonitorSessionTests {
         await eventually { fake.state.withLock { $0.enteredWrite } }
         for level in stride(from: 42, through: 0, by: -2) { session.enqueue(command(UInt16(level))) }
         fake.state.withLock { $0.blocked = false }
-        guard case .applied(_, let final) = await results.next() else { fatalError("Missing held-key result") }
+        guard case .applied(_, .brightness, let final) = await results.next() else { fatalError("Missing held-key result") }
         assert(final?.current == 0, "Held down must reach zero without losing control")
         let count = fake.state.withLock { $0.writes.count }
         for _ in 0..<5 {
             session.enqueue(command(0))
-            guard case .applied(_, let minimum) = await results.next() else { fatalError("Missing minimum result") }
+            guard case .applied(_, .brightness, let minimum) = await results.next() else { fatalError("Missing minimum result") }
             assert(minimum?.current == 0)
         }
         assert(fake.state.withLock { $0.writes.count == count }, "Repeats at minimum must not rewrite hardware")
 
         fake.state.withLock { $0.quantize = true; $0.readbackLag = 0 }
         session.enqueue(command(12))
-        guard case .applied(_, let rounded) = await results.next() else { fatalError("Missing rounded result") }
+        guard case .applied(_, .brightness, let rounded) = await results.next() else { fatalError("Missing rounded result") }
         assert(rounded?.current == 10, "Valid hardware rounding must reconcile, not disable the monitor")
         session.enqueue(command(20))
-        guard case .applied(_, let next) = await results.next() else { fatalError("Missing subsequent press") }
+        guard case .applied(_, .brightness, let next) = await results.next() else { fatalError("Missing subsequent press") }
         assert(next?.current == 20, "A subsequent press must still control the monitor")
 
         fake.state.withLock { $0.readbackLag = 2; $0.enteredWrite = false }
@@ -218,7 +342,7 @@ struct MonitorSessionTests {
         session.enqueue(.init(generation: 1, displayID: 1, control: .mute,
                               value: .init(current: 1, maximum: 100), revision: 26, adjustment: .mute(toggle: true)))
         for _ in 0..<2 {
-            guard case .applied(_, let value) = await results.next() else { fatalError("Unexpected mute result") }
+            guard case .applied(_, _, let value) = await results.next() else { fatalError("Unexpected mute result") }
             assert(value != nil, "A newer mute press must not fail earlier volume verification")
         }
         assert(fake.state.withLock { $0.values[.mute]?.current == 1 })
@@ -238,7 +362,9 @@ struct MonitorSessionTests {
         session.enqueue(command(35))
         await eventually { fake.state.withLock { $0.values[.brightness]?.current == 35 } }
         fake.state.withLock { $0.blockedRead = false }
-        guard case .applied(let command, let value) = await results.next() else { fatalError("Missing latest readback") }
+        guard case .applied(let command, .brightness, let value) = await results.next() else {
+            fatalError("Missing latest readback")
+        }
         assert(command.revision == 35 && value?.current == 35, "New input must supersede an in-flight read without failure")
     }
 
@@ -277,7 +403,7 @@ struct MonitorSessionTests {
             _ = router.handle(.init(action: action, pressed: false, repeated: false, flags: 0, token: action.rawValue),
                               point: CGPoint(x: 50, y: 50))
             await eventually { received.values.withLock { $0.count > resultsBefore } }
-            guard case .applied(let command, let value) = received.values.withLock({ $0.last }) else {
+            guard case .applied(let command, .brightness, let value) = received.values.withLock({ $0.last }) else {
                 fatalError("Missing final readback")
             }
             assert(value?.current == (action == .brightnessUp ? 100 : 0))

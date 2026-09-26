@@ -19,7 +19,7 @@ final class MonitorControlCoordinator: HealthCheckable {
     @ObservationIgnored private let hud: MonitorHUDController
     @ObservationIgnored private var generation: UInt64 = 0
     @ObservationIgnored private var sleeping = false
-    @ObservationIgnored private var nextProbe: Date?
+    @ObservationIgnored private var nextRetry: Date?
     @ObservationIgnored private var topology = ""
     @ObservationIgnored private var active = false
     @ObservationIgnored private var feedback = MonitorFeedbackState()
@@ -99,7 +99,7 @@ final class MonitorControlCoordinator: HealthCheckable {
     func reprobe() {
         guard active else { return }
         generation &+= 1
-        nextProbe = nil
+        nextRetry = nil
         displays = []
         feedback = MonitorFeedbackState()
         hud.dismiss()
@@ -122,7 +122,7 @@ final class MonitorControlCoordinator: HealthCheckable {
         guard active else { return }
         hasPermission = Permissions.isAccessibilityTrusted()
         let signature = screenSignature(currentScreens())
-        if signature != topology || (nextProbe.map { $0 <= Date() } ?? false) {
+        if signature != topology {
             reprobe()
             return
         }
@@ -131,6 +131,10 @@ final class MonitorControlCoordinator: HealthCheckable {
             let installed = listener.install()
             listener.routing.withLock { $0.enabled = installed }
             if !installed { status = "Keyboard access is unavailable. Check Accessibility permission." }
+            if nextRetry.map({ $0 <= Date() }) == true {
+                hardware?.retryMissingControls(generation: generation)
+                nextRetry = Date().addingTimeInterval(30)
+            }
         } else {
             listener.stop()
             feedback = MonitorFeedbackState()
@@ -141,7 +145,7 @@ final class MonitorControlCoordinator: HealthCheckable {
 
     private func adjust(_ command: MonitorKeyRouting.Command) {
         let display = listener.routing.withLock { state -> MonitorKeyRouting.Display? in
-            guard state.enabled, state.generation == command.generation else { return nil }
+            guard state.enabled, state.accepts(command) else { return nil }
             return state.displays.first { $0.id == command.displayID && $0.values[command.control] != nil }
         }
         guard var display else { return }
@@ -156,13 +160,13 @@ final class MonitorControlCoordinator: HealthCheckable {
 
     private func receive(_ result: MonitorHardwareSession.Result) {
         switch result {
-        case .muteState(let version, let id, let value):
+        case .recovered(let version, let id, let control, let value):
             guard version == generation else { return }
-            listener.routing.withLock { state in
-                if let index = state.displays.firstIndex(where: { $0.id == id }) {
-                    state.displays[index].values[.mute] = value
-                }
+            listener.routing.withLock {
+                $0.recover(generation: version, displayID: id, control: control, value: value)
             }
+            displays = listener.routing.withLock { $0.displays }
+            scheduleRecovery()
         case .discovered(let version, let found, let available):
             guard version == generation else { return }
             displays = found
@@ -170,27 +174,42 @@ final class MonitorControlCoordinator: HealthCheckable {
             if !settings.externalMonitorControlsEnabled || sleeping { return }
             status = available ? (found.isEmpty ? "No external displays connected." : "External monitors detected.")
                 : "Hardware monitor controls are unavailable on this Mac."
-            if found.contains(where: { $0.values.isEmpty }) { nextProbe = Date().addingTimeInterval(30) }
+            scheduleRecovery()
             updateAudioTarget()
-        case .applied(let command, let value):
-            let accepted = listener.routing.withLock { $0.complete(command, value: value) }
+        case .applied(let command, let control, let value):
+            let accepted = listener.routing.withLock { $0.complete(command, value: value, control: control) }
             guard accepted else { return }
             displays = listener.routing.withLock { $0.displays }
             guard let display = displays.first(where: { $0.id == command.displayID }) else { return }
-            let present = feedback.finish(command, failed: value == nil)
+            let present = feedback.finish(command, failed: value == nil, control: control)
             if let value {
-                if present { hud.show(display: display, control: command.control, value: value) }
+                if present { hud.show(display: display, control: control, value: value) }
             } else {
                 if present { hud.showFailure(display: display) }
                 status = "A monitor stopped responding. Retrying shortly; its unsupported keys use macOS."
-                nextProbe = Date().addingTimeInterval(30)
+                scheduleRecovery()
             }
         }
     }
 
     private func updateAudioTarget() {
         let target = MonitorAudioOutput.target(displays: displays)
-        listener.routing.withLock { $0.audioTarget = target }
+        let version = listener.routing.withLock { state -> UInt64? in
+            guard state.audioTarget != target else { return nil }
+            state.audioTarget = target
+            return state.audioGeneration
+        }
+        guard let version else { return }
+        hardware?.cancelAudio(generation: version)
+        if let latest = feedback.latest, latest.control != .brightness {
+            feedback = MonitorFeedbackState()
+            hud.dismiss()
+        }
+    }
+
+    private func scheduleRecovery() {
+        let missing = displays.contains { $0.hasHardwareService && $0.values.count < MonitorControlKind.allCases.count }
+        nextRetry = missing ? Date().addingTimeInterval(30) : nil
     }
 
     private func currentScreens() -> [MonitorDDCTransport.Screen] {

@@ -5,8 +5,8 @@ import Synchronization
 final class MonitorHardwareSession: Sendable {
     enum Result: Sendable {
         case discovered(UInt64, [MonitorKeyRouting.Display], available: Bool)
-        case applied(MonitorKeyRouting.Command, MonitorControlValue?)
-        case muteState(UInt64, UInt32, MonitorControlValue)
+        case applied(MonitorKeyRouting.Command, control: MonitorControlKind, value: MonitorControlValue?)
+        case recovered(UInt64, UInt32, MonitorControlKind, MonitorControlValue)
     }
 
     private struct Control: Hashable, Sendable {
@@ -33,6 +33,8 @@ final class MonitorHardwareSession: Sendable {
         var queue = MonitorCommandQueue()
         var discovery: (UInt64, [MonitorDDCTransport.Screen])?
         var activity: [Control: Activity] = [:]
+        var audioGeneration: UInt64 = 0
+        var retry = false
     }
 
     private final class Mailbox: Sendable {
@@ -43,7 +45,17 @@ final class MonitorHardwareSession: Sendable {
         }
 
         func current(_ command: MonitorKeyRouting.Command) -> Bool {
-            valid(command.generation) && state.withLock { $0.activity[Control(command)]?.revision == command.revision }
+            valid(command) && state.withLock { $0.activity[Control(command)]?.revision == command.revision }
+        }
+
+        func valid(_ command: MonitorKeyRouting.Command) -> Bool {
+            valid(command.generation) && state.withLock {
+                command.control == .brightness || command.audioGeneration == $0.audioGeneration
+            }
+        }
+
+        func idle(_ generation: UInt64) -> Bool {
+            valid(generation) && state.withLock { $0.queue.isEmpty && $0.discovery == nil }
         }
 
         func settled(_ command: MonitorKeyRouting.Command) -> Bool {
@@ -64,7 +76,9 @@ final class MonitorHardwareSession: Sendable {
         let output: AsyncStream<Result>.Continuation
         var values: [Control: MonitorControlValue] = [:]
         var pending: [Control: MonitorKeyRouting.Command] = [:]
-        var failed: Set<Control> = []
+        var retry: Set<Control> = []
+        var recovering: [Control] = []
+        var generation: UInt64 = 0
         private let logger = Logger(subsystem: "com.tinycast.monitor-control", category: "Hardware")
 
         init(transport: any MonitorHardwareTransport, mailbox: Mailbox, output: AsyncStream<Result>.Continuation) {
@@ -82,19 +96,36 @@ final class MonitorHardwareSession: Sendable {
                 }) {
                     values.removeAll()
                     pending.removeAll()
-                    failed.removeAll()
+                    retry.removeAll()
+                    recovering.removeAll()
+                    generation = discovery.0
                     let displays = transport.discover(discovery.1, valid: { self.mailbox.valid(discovery.0) })
                     guard mailbox.valid(discovery.0) else { continue }
                     for display in displays {
                         for (kind, value) in display.values { values[Control(display.id, kind)] = value }
+                        if display.hasHardwareService {
+                            for kind in MonitorControlKind.allCases where display.values[kind] == nil {
+                                retry.insert(Control(display.id, kind))
+                            }
+                        }
                     }
                     output.yield(.discovered(discovery.0, displays, available: transport.available))
                 }
+                if mailbox.state.withLock({ state in
+                    let requested = state.retry
+                    state.retry = false
+                    return requested
+                }) { recovering = Array(retry) }
+                pending = pending.filter { mailbox.valid($0.value) }
                 if let command = mailbox.state.withLock({ $0.queue.next() }) {
                     await apply(command)
                     continue
                 }
-                guard !pending.isEmpty else { return }
+                if pending.isEmpty {
+                    guard let key = recovering.popLast() else { return }
+                    recover(key)
+                    continue
+                }
                 for command in Array(pending.values) where mailbox.settled(command) {
                     await verify(command)
                 }
@@ -102,10 +133,24 @@ final class MonitorHardwareSession: Sendable {
             }
         }
 
+        func recover(_ key: Control) {
+            guard retry.contains(key) else { return }
+            let valid = { self.mailbox.idle(self.generation) }
+            let value = transport.read(key.display, control: key.kind, valid: valid)
+            guard valid() else {
+                if mailbox.valid(generation) { recovering.append(key) }
+                return
+            }
+            guard let value else { return }
+            values[key] = value
+            retry.remove(key)
+            output.yield(.recovered(generation, key.display, key.kind, value))
+        }
+
         func apply(_ command: MonitorKeyRouting.Command) async {
             let key = Control(command)
-            let valid = { self.mailbox.valid(command.generation) }
-            guard valid(), !failed.contains(key), var current = values[key] else { return }
+            let valid = { self.mailbox.valid(command) }
+            guard valid(), var current = values[key] else { return }
             let beginning = pending[key] == nil
             if beginning, let refreshed = transport.read(key.display, control: key.kind, valid: valid) {
                 current = refreshed
@@ -121,11 +166,11 @@ final class MonitorHardwareSession: Sendable {
             pending[key] = command
             let mute = Control(key.display, .mute)
             if key.kind == .volume, target.current > 0, let muteValue = values[mute], beginning || muteValue.current != 2 {
-                guard await write(mute, value: 2, valid: valid) else {
-                    if valid() { fail(command, stage: "unmute write") }
-                    return
+                if await write(mute, value: 2, valid: valid) {
+                    values[mute] = .init(current: 2, maximum: muteValue.maximum)
+                } else if valid() {
+                    fail(command, control: .mute, stage: "unmute write")
                 }
-                values[mute] = .init(current: 2, maximum: muteValue.maximum)
             }
             do { try await Task.sleep(for: .milliseconds(80)) } catch { return }
         }
@@ -152,14 +197,17 @@ final class MonitorHardwareSession: Sendable {
                 let muteValue = await readSettled(mute, target: 2, valid: muteValid)
                 guard valid() else { return }
                 if mailbox.volumeOwnsMute(command) {
-                    guard let muteValue, muteValue.current == 2 else { fail(command, stage: "unmute readback"); return }
-                    values[mute] = muteValue
-                    output.yield(.muteState(command.generation, key.display, muteValue))
+                    if let muteValue, muteValue.current == 2 {
+                        values[mute] = muteValue
+                        output.yield(.applied(command, control: .mute, value: muteValue))
+                    } else {
+                        fail(command, control: .mute, stage: "unmute readback")
+                    }
                 }
             }
             values[key] = value
             pending.removeValue(forKey: key)
-            output.yield(.applied(command, value))
+            output.yield(.applied(command, control: key.kind, value: value))
         }
 
         func readSettled(_ key: Control, target: UInt16, valid: () -> Bool) async -> MonitorControlValue? {
@@ -175,12 +223,13 @@ final class MonitorHardwareSession: Sendable {
             return latest
         }
 
-        func fail(_ command: MonitorKeyRouting.Command, stage: String) {
-            let key = Control(command)
+        func fail(_ command: MonitorKeyRouting.Command, control: MonitorControlKind? = nil, stage: String) {
+            let key = Control(command.displayID, control ?? command.control)
             logger.error("Monitor \(key.display) control \(key.kind.rawValue) failed at \(stage, privacy: .public)")
-            failed.insert(key)
+            values.removeValue(forKey: key)
+            retry.insert(key)
             pending.removeValue(forKey: key)
-            output.yield(.applied(command, nil))
+            output.yield(.applied(command, control: key.kind, value: nil))
         }
     }
 
@@ -209,6 +258,7 @@ final class MonitorHardwareSession: Sendable {
         mailbox.state.withLock {
             $0.queue.reset(generation: generation)
             $0.activity.removeAll()
+            $0.retry = false
             $0.discovery = (generation, screens)
         }
         wake.yield(())
@@ -216,9 +266,26 @@ final class MonitorHardwareSession: Sendable {
 
     func enqueue(_ command: MonitorKeyRouting.Command) {
         mailbox.state.withLock {
-            guard $0.queue.generation == command.generation else { return }
+            guard $0.queue.generation == command.generation,
+                command.control == .brightness || command.audioGeneration == $0.audioGeneration else { return }
             $0.queue.enqueue(command)
             $0.activity[Control(command)] = Activity(revision: command.revision, time: .now)
+        }
+        wake.yield(())
+    }
+
+    func cancelAudio(generation: UInt64) {
+        mailbox.state.withLock {
+            $0.audioGeneration = generation
+            $0.queue.cancelAudio()
+            $0.activity = $0.activity.filter { $0.key.kind == .brightness }
+        }
+        wake.yield(())
+    }
+
+    func retryMissingControls(generation: UInt64) {
+        mailbox.state.withLock {
+            if $0.queue.generation == generation { $0.retry = true }
         }
         wake.yield(())
     }
