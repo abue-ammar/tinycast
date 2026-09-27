@@ -24,12 +24,14 @@ enum ChatGPTSubscription {
             case "free": return "Free"
             case "go": return "Go"
             case "plus": return "Plus"
-            case "pro": return "Pro"
-            case "prolite": return "Pro Lite"
+            case "pro": return "Pro 20x"
+            case "prolite": return "Pro 5x"
             case "team": return "Team"
-            case "self_serve_business_usage_based", "business": return "Business"
-            case "enterprise_cbp_usage_based", "enterprise": return "Enterprise"
-            case "edu": return "Edu"
+            case "self_serve_business_prolite", "self_serve_business_usage_based", "business":
+                return "Business"
+            case "ent26", "enterprise_cbp_automation", "enterprise_cbp_usage_based", "enterprise":
+                return "Enterprise"
+            case "edu", "edu_plus", "edu_pro": return "Edu"
             case "apiKey", "api_key": return "API key"
             default: return "Account"
             }
