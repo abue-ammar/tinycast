@@ -248,6 +248,8 @@ enum Theme {
         /// AI Providers: Mail's Accounts shape, a provider list beside the selected one's detail.
         static let aiProvidersPanel = CGSize(width: 840, height: 520)
         static let aiProvidersList: CGFloat = 262
+        /// What the system leaves either side of a segment's label once the control has settled.
+        static let segmentLabelInset: CGFloat = 13
         static let aiVariableName: CGFloat = 170
         /// A Codex usage window's meter, beside its "72% left" readout.
         static let aiUsageBar: CGFloat = 110

@@ -105,11 +105,10 @@ struct MCPServerEditor: View {
                             .foregroundStyle(.secondary)
                     }
                     field("Connection") {
-                        Picker("Connection", selection: $kind) {
-                            ForEach(Kind.allCases) { Text($0.title).tag($0) }
-                        }
-                        .labelsHidden()
-                        .pickerStyle(.segmented)
+                        SteadySegmentedPicker(
+                            title: "Connection",
+                            options: Kind.allCases.map { .init(value: $0, title: $0.title) },
+                            selection: $kind)
                     }
                     if kind == .http {
                         field("URL") {
