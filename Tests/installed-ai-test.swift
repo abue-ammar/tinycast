@@ -280,6 +280,16 @@ struct InstalledAITests {
         expect(
             models.first?.efforts.map(\.id) == ["low", "high"],
             "a Claude model carries only the efforts the CLI says it supports")
+        let newer = """
+            {"type":"control_response","response":{"subtype":"success","request_id":"x","response":\
+            {"models":[{"value":"opus","displayName":"Opus 5.5","resolvedModel":"claude-opus-5-5",\
+            "description":"Best for everyday, complex tasks"},{"value":"claude-opus-4-8",\
+            "displayName":"Opus 4.8","resolvedModel":"claude-opus-4-8",\
+            "description":"Best for everyday, complex tasks"}]}}}
+            """
+        expect(
+            InstalledAIModel.claudeCatalog(newer).map(\.name) == ["Claude Opus 5.5", "Claude Opus 4.8"],
+            "a CLI that describes a model without its version is named by its display name")
         let frame = InstalledAIStreamDecoder.decode(
             Data(
                 #"{"type":"stream_event","event":{"delta":{"type":"thinking_delta","thinking":"Plan"}}}"#.utf8

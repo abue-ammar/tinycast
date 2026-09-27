@@ -179,14 +179,12 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
         return []
     }
 
-    /// "Opus 5.5 · Best for everyday…" names the version the alias points at today.
+    /// An older CLI leads `description` with the version, "Opus 5.5 · Best…"; a newer one names it.
     private static func claudeName(_ entry: [String: Any], fallback: String) -> String {
-        let described = (entry["description"] as? String)?
-            .components(separatedBy: " · ").first?
-            .trimmingCharacters(in: .whitespaces)
-        let name =
-            described.flatMap { $0.isEmpty ? nil : $0 }
-            ?? entry["displayName"] as? String ?? fallback
+        let parts = (entry["description"] as? String ?? "").components(separatedBy: " · ")
+        let versioned = parts.count > 1 ? parts[0].trimmingCharacters(in: .whitespaces) : ""
+        let displayed = entry["displayName"] as? String ?? ""
+        let name = [versioned, displayed].first { !$0.isEmpty } ?? fallback
         return name.hasPrefix("Claude") ? name : "Claude " + name
     }
 
