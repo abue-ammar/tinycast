@@ -41,6 +41,15 @@ feature is enabled in Settings.
   after the synchronous Spotlight call, so a late result cannot replace the newer query's rows. Editing
   the scopes or the patterns cancels the session for the same reason: a result found under the old
   rules must not land under the new ones.
+- **Share is the one system popover, and the palette stays up under it.** `AGENTS.md` keeps Tinycast's
+  own dialogs because a question or a report is Tinycast's to word. A share sheet is neither: it is
+  AirDrop, Mail and Messages, and re-drawing it would mean re-implementing the transports and losing
+  whatever the system adds. So this row hands off, and the two rules it does keep are that the palette
+  is never hidden and that the row stays visible beside the sheet — which is what anchoring to
+  `PaletteWindowController.anchorView` buys. The picker is retained on the coordinator, because it
+  dies with its last reference, and `NSItemProvider(contentsOf:)` failing (a file that vanished between
+  the query and the keystroke) leaves the palette exactly as it was, which is the only failure this row
+  can have.
 
 ## Query path
 
@@ -215,6 +224,7 @@ not outlive the window.
 | Open File / Open Folder | ↵ | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller |
 | Show in Finder | ⌘↵ | reveals and dismisses |
 | Quick Look | ⌘Y | the in-panel overlay above |
+| Share… | — | `NSSharingServicePicker`, anchored to the palette's trailing edge so the row it was opened from stays visible beside it. Escape or a click elsewhere dismisses it, and the palette is never hidden, so the flow returns to the same row. There is no chord: the destinations are the system's, and it is the only place a system popover is right |
 | Copy File | ⇧⌘C | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string` |
 | Copy Name | ⌥⌘C | through `Paster`, palette stays open |
 | Copy Path | ⌃⌘C | the standardized path, palette stays open |

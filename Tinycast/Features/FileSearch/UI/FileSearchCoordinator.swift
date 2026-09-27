@@ -8,6 +8,7 @@ final class FileSearchCoordinator {
     private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
     private let windowController: PaletteWindowController
+    private var sharePicker: NSSharingServicePicker?
     private unowned let core: AppCore
 
     init(
@@ -60,6 +61,19 @@ final class FileSearchCoordinator {
     func showInFinder(_ result: FileSearchResult) {
         paletteCoordinator.hidePalette(restoreFocus: false)
         AppLauncher.showInFinder(result.url)
+    }
+
+    /// macOS's own share sheet, anchored to the palette's trailing edge so the row stays beside it.
+    func share(_ result: FileSearchResult) {
+        guard let provider = NSItemProvider(contentsOf: result.url),
+            let anchor = paletteCoordinator.anchorView
+        else { return }
+        let picker = NSSharingServicePicker(items: [provider])
+        sharePicker = picker
+        picker.show(
+            relativeTo: CGRect(
+                x: anchor.bounds.maxX, y: anchor.bounds.midY, width: 0, height: 0),
+            of: anchor, preferredEdge: .maxX)
     }
 
     func copyPath(_ result: FileSearchResult) {

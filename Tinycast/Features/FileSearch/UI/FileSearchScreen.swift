@@ -159,6 +159,9 @@ enum FileSearchActionsMenu {
                 PopoverMenuItem(title: "Quick Look", systemImage: "eye", shortcut: "⌘Y") {
                     vm.fileSearchQuickLook = true
                 },
+                PopoverMenuItem(title: "Share…", systemImage: "square.and.arrow.up") {
+                    coordinator.share(result)
+                },
                 PopoverMenuItem(
                     title: "Copy File", systemImage: "doc.on.clipboard", startsSection: true,
                     shortcut: "⇧⌘C"
