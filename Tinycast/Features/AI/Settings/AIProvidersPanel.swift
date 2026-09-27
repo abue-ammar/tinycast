@@ -283,6 +283,7 @@ struct AIProvidersPanel: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            AIProviderAdvancedSection(kind: kind, detected: installedAI.status(for: kind).executable)
             modelsSection(route: .installed(kind), models: installedModels(kind))
         } else {
             turnedOffSection(footer: installedFooter(kind))

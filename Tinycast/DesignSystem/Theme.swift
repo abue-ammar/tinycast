@@ -248,6 +248,7 @@ enum Theme {
         /// AI Providers: Mail's Accounts shape, a provider list beside the selected one's detail.
         static let aiProvidersPanel = CGSize(width: 840, height: 520)
         static let aiProvidersList: CGFloat = 262
+        static let aiVariableName: CGFloat = 170
         /// A Codex usage window's meter, beside its "72% left" readout.
         static let aiUsageBar: CGFloat = 110
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
