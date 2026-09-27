@@ -16,7 +16,32 @@ enum AIProviderRoute: Hashable {
     }
 }
 
-/// Settings → AI → Providers: every route in a list, the selected one's status and models beside it.
+/// One page of a provider's detail; a route lists only the pages it has something to put on.
+enum AIProviderTab: String, CaseIterable, Identifiable {
+    case overview
+    case models
+    case advanced
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .overview: return "Overview"
+        case .models: return "Models"
+        case .advanced: return "Advanced"
+        }
+    }
+
+    static func tabs(for route: AIProviderRoute) -> [AIProviderTab] {
+        switch route {
+        case .appleIntelligence: return [.overview]
+        case .installed: return [.overview, .models, .advanced]
+        case .api: return [.overview, .models]
+        }
+    }
+}
+
+/// Settings → AI → Providers: every route in a list, the selected one's pages beside it.
 struct AIProvidersPanel: View {
     @Environment(AppCore.self) private var core
     @Environment(AISettingsStore.self) private var settings
@@ -31,6 +56,8 @@ struct AIProvidersPanel: View {
     @State private var editor: AIConnectionEditorTarget?
     @State private var pendingRemoval: AIConnection?
     @State private var modelQuery = ""
+    /// Kept across providers, as Mail keeps its tab across accounts; one without it shows Overview.
+    @State private var tab = AIProviderTab.overview
 
     private let keyStore = KeychainSecretStore.aiAPIKeys
 
@@ -180,12 +207,12 @@ struct AIProvidersPanel: View {
     private var detail: some View {
         switch selection {
         case .appleIntelligence?:
-            detailForm(.appleIntelligence) { appleIntelligenceSections }
+            detailForm(.appleIntelligence) { _ in appleIntelligenceSections }
         case .installed(let kind)?:
-            detailForm(.installed(kind)) { installedSections(kind) }
+            detailForm(.installed(kind)) { installedSections(kind, tab: $0) }
         case .api(let id)?:
             if let connection = settings.connection(id: id) {
-                detailForm(.api(id)) { connectionSections(connection) }
+                detailForm(.api(id)) { connectionSections(connection, tab: $0) }
             }
         case nil:
             ContentUnavailableView("Select a provider", systemImage: "sparkles")
@@ -193,13 +220,24 @@ struct AIProvidersPanel: View {
     }
 
     private func detailForm<Content: View>(
-        _ route: AIProviderRoute, @ViewBuilder content: () -> Content
+        _ route: AIProviderRoute, @ViewBuilder content: (AIProviderTab) -> Content
     ) -> some View {
-        VStack(spacing: 0) {
+        let tabs = AIProviderTab.tabs(for: route)
+        let shown = tabs.contains(tab) ? tab : .overview
+        return VStack(spacing: 0) {
             detailHeader(route)
                 .padding(.horizontal, Theme.Spacing.xxl)
                 .padding(.top, Theme.Spacing.xl)
-            Form { content() }
+            if tabs.count > 1 {
+                Picker("Page", selection: $tab) {
+                    ForEach(tabs) { Text($0.title).tag($0) }
+                }
+                .labelsHidden()
+                .pickerStyle(.segmented)
+                .fixedSize()
+                .padding(.top, Theme.Spacing.xl)
+            }
+            Form { content(shown) }
                 .formStyle(.grouped)
                 .scrollContentBackground(.hidden)
         }
@@ -269,26 +307,31 @@ struct AIProvidersPanel: View {
     // MARK: Installed commands
 
     @ViewBuilder
-    private func installedSections(_ kind: InstalledAIKind) -> some View {
-        if settings.enabledInstalledProviders.contains(kind) {
-            Section {
-                if kind == .codex {
-                    codexStatusRows
-                } else {
-                    installedStatusRows(kind)
+    private func installedSections(_ kind: InstalledAIKind, tab: AIProviderTab) -> some View {
+        let isOn = settings.enabledInstalledProviders.contains(kind)
+        switch tab {
+        case .advanced:
+            AIProviderAdvancedSection(kind: kind, detected: isOn ? executable(for: kind) : nil)
+        case .overview, .models:
+            if !isOn {
+                turnedOffSection(footer: installedFooter(kind))
+            } else if tab == .models {
+                modelsSection(route: .installed(kind), models: installedModels(kind))
+            } else {
+                Section {
+                    if kind == .codex {
+                        codexStatusRows
+                    } else {
+                        installedStatusRows(kind)
+                    }
+                } header: {
+                    Text("Status")
+                } footer: {
+                    Text(installedFooter(kind))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-            } header: {
-                Text("Status")
-            } footer: {
-                Text(installedFooter(kind))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-            AIProviderAdvancedSection(kind: kind, detected: executable(for: kind))
-            modelsSection(route: .installed(kind), models: installedModels(kind))
-        } else {
-            turnedOffSection(footer: installedFooter(kind))
-            AIProviderAdvancedSection(kind: kind, detected: nil)
         }
     }
 
@@ -490,8 +533,20 @@ struct AIProvidersPanel: View {
     // MARK: API connections
 
     @ViewBuilder
-    private func connectionSections(_ connection: AIConnection) -> some View {
+    private func connectionSections(
+        _ connection: AIConnection, tab: AIProviderTab
+    ) -> some View {
         if !settings.isRouteEnabled(.api(connection.id)) { turnedOffSection() }
+        if tab == .models {
+            modelsSection(
+                route: .api(connection.id),
+                models: connection.models.map { ProviderModel(id: $0, name: $0) })
+        } else {
+            connectionSection(connection)
+        }
+    }
+
+    private func connectionSection(_ connection: AIConnection) -> some View {
         Section {
             LabeledContent("Provider", value: connection.provider.title)
             LabeledContent("Base URL") {
@@ -518,16 +573,18 @@ struct AIProvidersPanel: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        modelsSection(
-            route: .api(connection.id),
-            models: connection.models.map { ProviderModel(id: $0, name: $0) })
     }
 
     // MARK: Models
 
     @ViewBuilder
     private func modelsSection(route: AIProviderRoute, models: [ProviderModel]) -> some View {
-        if !models.isEmpty {
+        if models.isEmpty {
+            Section {
+                Text("Models are listed here once \(title(for: route)) is ready.")
+                    .foregroundStyle(.secondary)
+            }
+        } else {
             let source = route.source
             let shownSet = settings.shownModels[source.storageKey].map(Set.init)
             let shownCount = shownSet.map { set in models.count { set.contains($0.id) } } ?? models.count
@@ -563,8 +620,6 @@ struct AIProvidersPanel: View {
                                 id, shown: isOn, in: source, available: models.map(\.id))
                         })
                 }
-            } header: {
-                Text("Models")
             } footer: {
                 Text(
                     "Ticked models appear in the model picker. The default model always does; "

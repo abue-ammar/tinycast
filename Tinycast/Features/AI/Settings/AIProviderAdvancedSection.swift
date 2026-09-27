@@ -46,6 +46,10 @@ struct AIProviderAdvancedSection: View {
             .onChange(of: focus) { old, new in
                 if old != nil, old != new { save() }
             }
+        } header: {
+            Text("Command")
+        }
+        Section {
             LabeledContent {
                 Button("Add Variable", action: addVariable)
                     .fixedSize()
@@ -57,7 +61,7 @@ struct AIProviderAdvancedSection: View {
                 variableRow($variable)
             }
         } header: {
-            Text("Advanced")
+            Text("Environment")
         } footer: {
             Text(footer)
                 .font(.caption)
