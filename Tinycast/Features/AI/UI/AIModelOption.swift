@@ -47,7 +47,7 @@ struct AIModelOption: Identifiable {
         brand.map { .asset($0.assetName) } ?? .symbol("sparkles")
     }
 
-    static let cursorIcon = PopoverMenuIcon.symbol("cursorarrow.rays")
+    static let cursorIcon = PopoverMenuIcon.asset(AIBrand.cursor.assetName)
 
     /// Every route the Mac can reach, on-device first: it is the one an unconfigured Mac has.
     private static func catalog(
@@ -81,7 +81,7 @@ struct AIModelOption: Identifiable {
         let grok = grok.map { model in
             AIModelOption(
                 selection: .grok(model: model.id, effort: nil), title: model.name,
-                sourceTitle: "Grok", menuIcon: .asset(AIBrand.x.assetName))
+                sourceTitle: "Grok", menuIcon: .asset(AIBrand.grok.assetName))
         }
         let openCode = openCode.map { model in
             AIModelOption(

@@ -598,7 +598,7 @@ final class AIChatCoordinator {
         case .appleIntelligence?: return AIModelOption.appleIntelligenceIcon
         case .codex?: return .asset(AIBrand.openAI.assetName)
         case .claude?: return .asset(AIBrand.claude.assetName)
-        case .grok?: return .asset(AIBrand.x.assetName)
+        case .grok?: return .asset(AIBrand.grok.assetName)
         case .cursor?: return AIModelOption.cursorIcon
         case .openCode(let model, _)?: return AIModelOption.icon(AIBrand.resolve(model: model))
         case .api(let connection, let model, _)?:
