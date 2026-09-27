@@ -24,6 +24,26 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   OpenCode and Cursor visible with an individual toggle for each, all off by default. Turning one off cancels
   its check, clears its catalog and releases its process; Apple Intelligence is the default route when
   available, and saved API connections stay available.
+- **A route that is off is off everywhere.** The on-device model and every API connection have the
+  same switch an installed tool has (`aiDisabledRoutes`, by `AIModelSource.storageKey`). Off leaves
+  the route configured — a connection keeps its key — but `AIModelOption.availableGroups` drops it
+  from every picker, `AIProviderFactory` refuses it with a message, and a default that pointed at it
+  moves to a route still on. `AISettingsStore.isRouteEnabled` is the one place that answers.
+- **A picker lists what the reader ticked, and an untouched route lists everything.**
+  `aiShownModels` holds, per route, the models its pickers show. No entry means all of them,
+  including one the route starts offering later; ticking every box again drops the entry rather than
+  storing the full list. The default model is always listed, since a picker must be able to show what
+  it holds, and a removed connection takes its entry with it.
+- **A set command path wins or fails.** `InstalledAILaunch.command` answers `.automatic`,
+  `.executable` or `.missing`, and `.missing` fails the check and the turn. The lookup is never a
+  fallback for a path that was set: falling back would run another copy and hide the mistake the path
+  was set to fix.
+- **A reader's variable never replaces one Tinycast sets.** `InstalledAIKind.managedEnvironment` is
+  what keeps a tool inside the chat — OpenCode's deny-all configuration, Claude's account MCP switch —
+  and `InstalledAILaunch.inherited(for:)` drops a reader's variable of the same name, along with
+  `NO_COLOR` and the `TC_MCP_` names that carry MCP secrets to Codex. Names are stored in
+  `aiInstalledOverrides` and values in the login Keychain (`KeychainSecretStore.installedAIEnvironment`),
+  read only for a tool that has variables.
 - **Every request carries Tinycast's own preamble, and the user's text goes after it.**
   `AIInstructions.compose` builds `AIRequest.instructions`: a fixed preamble that tells the model
   where it is running and what the app can do, then whatever Settings → AI holds. The preamble
@@ -290,7 +310,9 @@ and reasoning efforts from `model/list`; OpenCode gets identifiers and model-spe
 stream-json `-p` run that then gets no prompt, so no model is called — with its own `/model` list;
 `InstalledAIModel.claudeCatalog` keeps one row per resolved model (dropping `default`, which restates
 another), names each by the version its alias points at today ("Claude Opus 5.5"), and takes each
-one's `supportedEffortLevels`. A model the CLI starts offering appears without a Tinycast release. Cursor lists models
+one's `supportedEffortLevels`. The version is in `description` before a " · " on an older CLI and in
+`displayName` on a newer one, which describes a model without it; the name is read from whichever
+has it. The same answer carries the account, which `claudeAccount` reads for the Overview page. A model the CLI starts offering appears without a Tinycast release. Cursor lists models
 from `agent --list-models` after `agent status --format json` confirms a login.
 
 Turning thinking off is a reasoning effort, not a second control: `reasoningOptions(for:)` answers with
@@ -536,7 +558,8 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Collapse the sidebar with the toolbar button; ⌘N and ⌘Q (Close Window) still work, and ⌘Q with
   Settings in front closes Settings instead.
 - Harnesses: `ai-provider-test` (endpoints, request bodies, stream decoding, persistence repair,
-  Codex framing, on-device routing, the two MCP launch encodings and the two consent channels),
+  Codex framing, on-device routing, the two MCP launch encodings and the two consent channels, the
+  shown-model and switched-off-route rules, and a tool's override from settings to launch),
   `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore` with renames and pins,
   `AIToolLoopProvider`, regenerate, and `AIChatSurfacesState`'s one-live-place rule),
   `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
@@ -544,7 +567,8 @@ window, and every chat action either surface sends — is the nineteenth feature
   rows and the call cap),
   `installed-ai-test` (Claude/Grok/OpenCode/Cursor flags, prompt
   framing, streaming and cleanup, and Claude's private MCP configuration, control channel, round
-  cap and managed-policy branch) and `apple-intelligence-test` (status copy, snapshot deltas,
+  cap and managed-policy branch, a reader's variables against Tinycast's own, and a set command
+  path that runs or fails) and `apple-intelligence-test` (status copy, snapshot deltas,
   transcript assembly, error mapping, plus one real generation when this Mac can run one), all in
   `run-tests.sh`.
 
@@ -559,7 +583,16 @@ every nvm Node version, newest first — a fallback that can pick a different co
 found command runs under is `ExecutableLocator.environment`: its own folder, `/opt/homebrew/bin` and
 `/usr/local/bin` ahead of the inherited PATH, for every probe, turn, Codex `mcp list` read and local MCP
 server — a Finder-launched app's PATH is `/usr/bin:/bin:/usr/sbin:/sbin`, and an npm or Homebrew CLI is
-`#!/usr/bin/env node`, which would find no `node` on it. The
+`#!/usr/bin/env node`, which would find no `node` on it.
+
+A reader can replace the lookup and add to that environment, per tool, on the tool's Advanced page.
+The path is used as written, a leading `~` expanded, and never searched for. The variables lie over
+the app's own before `ExecutableLocator.environment` builds the PATH, so a reader's `PATH` is the one
+the tool's folder is put ahead of. Both reach every spawn: the probes, a CLI turn and the session it
+deletes afterwards, Claude's title request, and Codex's app-server and its `mcp list` read.
+`InstalledAIManager` and `CodexAppServerClient` ask for them at each launch through `launchSettings`,
+so an edit takes the next one, and `AISettingsStore.launchRevisions` lets `AppCore` check again only
+the tool that was edited — Codex by stopping its server, which restarts on demand. The
 commands are never installed by Tinycast; Settings links to their own install docs and offers a sign-in
 command to copy. `InstalledAIManager` probes Claude, Grok, OpenCode and Cursor off-main, in parallel.
 Claude's auth status gates an `initialize` control request, and `InstalledAIModel.claudeCatalog` builds
@@ -739,14 +772,35 @@ width and clipped the search field well short of the button.
 
 Settings → AI is a normal grouped `Form` inside Tinycast's existing Settings window. Its top AI
 section owns the feature switch and the **Providers → Manage…** action, and **Default model** below
-it picks the app-wide route and its reasoning effort. Provider management opens as a sheet, where
-**Installed AI** reports Codex, Claude, Grok, OpenCode and Cursor separately as checking, ready, sign-in required,
-missing or failed. It never contains a credential field: installation and sign-in happen in each
-command's own flow. **API Connections** remains the explicit Keychain-backed path in that sheet. A
+it picks the app-wide route and its reasoning effort. A
 pick in Quick AI's header or the AI Chat composer sets that chat's model and moves this default with
 it, while Quick Actions keeps its own model selection.
 
-The signed-in Codex address is the one thing on the pane that names a person, and a Settings pane
+Provider management opens as an editor panel laid out like Mail's Accounts: every route in a list on
+the left — **On This Mac**, **Installed**, **API Connections** — each with its mark and a one-line
+state, and the selected one's detail on the right. `+` under the list is a menu of the five
+connection presets and `−` removes the selected connection; an installed tool cannot be removed,
+only switched off, from the switch in its detail header. The detail has pages behind a segmented
+control (`AIProviderTab`), and the chosen page is kept from one provider to the next:
+
+- **Overview** reports an installed tool as checking, ready, sign-in required, missing or failed,
+  with the account, Codex's usage windows and the command that ran. It never contains a credential
+  field: installation and sign-in happen in each command's own flow. For a connection it shows the
+  provider, base URL and whether a key is stored; **Edit…** in the header opens the connection
+  editor, which remains the explicit Keychain-backed path.
+- **Models** is the checklist behind the second invariant above, with Show All, Hide All and a
+  filter once a route offers more than eight. The rows are an `NSTableView` in one `Form` row
+  (`AIModelChecklist`): a `Form` realizes every row it holds, and OpenCode offers over four hundred.
+- **Advanced**, on an installed tool only, holds the command path and the variables, saved as each
+  field is left. It stays while the tool is off, so a wrong path can be fixed before it is switched
+  on. A name Tinycast sets itself says its value is not used.
+
+An API connection has the first two pages, and the on-device model, with one, shows no control. The
+panel draws its Liquid Glass behind its content rather than around it
+(`settingsEditorPanelSurface(controlsOnGlass: false)`), because the page control sits directly on the
+surface and a segmented control drawn on glass loses its accent colour.
+
+The signed-in Codex or Claude address is the one thing on the pane that names a person, and a Settings pane
 is what gets screenshotted into a bug report or left on screen in a recording, so `RedactedText`
 shows it scrambled and blurred until it is clicked. `RedactedPlaceholder` derives the stand-in from
 the address itself — stable across redraws, same length, `@ . - _` left in place — because a blurred
@@ -778,3 +832,7 @@ answer and must not arrive on another Mac unread. `aiRetention`, `aiOpensTo` and
 join them: all three are decisions about conversations that never leave the Mac that had them, and
 an import must not arrive carrying an instruction to delete them. `aiToolRounds` stays behind too: it
 limits what a tool-driven reply may spend, and an import must not raise that unasked.
+`aiShownModels` and `aiDisabledRoutes` name this Mac's own tools, connections and their models, which
+another Mac may not have. `aiInstalledOverrides` names a command to run and the variables to run it
+with, and an import must never decide which program a Mac launches. None of the three has a
+`settings.json` key, for the same reasons: they are machine state, and the last grants a capability.
