@@ -476,7 +476,9 @@ fourth `OpenMenu` case, `.topTrailing` like the type filter, and it opens on the
 row leads with the vendor's mark — `AIBrand` resolves it from a native connection's provider, or for
 OpenRouter and OpenAI-compatible endpoints from the model id (`anthropic/claude-…`, `deepseek-chat`,
 `o4-mini`). The marks are ~300 B–2 KB monochrome template SVGs in `Assets.xcassets` (`AIBrand*`),
-twelve from Simple Icons and Z.ai from `@lobehub/icons`, so they tint with the row like a symbol; an
+thirteen from Simple Icons, Grok and Z.ai from `@lobehub/icons` and OpenCode drawn after its own, so
+they tint with the row like a symbol. OpenCode's inner block is the one second tone among them, and
+is drawn with `opacity`: the asset compiler drops `fill-opacity` without a warning. An
 unrecognised model keeps the generic sparkle. Provenance, the MIT notice and the trademark position
 are recorded in [`NOTICE.md`](../../NOTICE.md) — the CC0 on the Simple Icons project does not extend
 to the brands it depicts. The header's model switcher shows the selected model's mark the same way.
