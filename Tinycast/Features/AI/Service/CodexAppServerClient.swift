@@ -36,6 +36,8 @@ final class CodexAppServerClient {
 
     private let codexHome: URL?
     let workspace: URL
+    /// The command the last launch ran, kept after it stops so Settings can still name it.
+    private(set) var executable: URL?
     private var process: Process?
     private var processID: UUID?
     private var input: FileHandle?
@@ -129,6 +131,7 @@ final class CodexAppServerClient {
             }
             executable = found
         }
+        self.executable = executable
         let inherited = settings.inherited(for: .codex)
         try checkNotStopped(since: generation)
         // The list is only readable at launch, so the old process cannot be talked into it.

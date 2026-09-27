@@ -284,10 +284,11 @@ struct AIProvidersPanel: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            AIProviderAdvancedSection(kind: kind, detected: installedAI.status(for: kind).executable)
+            AIProviderAdvancedSection(kind: kind, detected: executable(for: kind))
             modelsSection(route: .installed(kind), models: installedModels(kind))
         } else {
             turnedOffSection(footer: installedFooter(kind))
+            AIProviderAdvancedSection(kind: kind, detected: nil)
         }
     }
 
@@ -342,6 +343,7 @@ struct AIProvidersPanel: View {
                     usageRow(secondary, fallbackTitle: "Secondary window")
                 }
             }
+            if let executable = subscription.executable { commandRow(executable) }
         case .unavailable(let message):
             LabeledContent {
                 HStack(spacing: Theme.Spacing.sm) {
@@ -371,6 +373,7 @@ struct AIProvidersPanel: View {
                 Text("Ready")
                 Text(modelCount(status.models.count) + " available")
             }
+            if let account = status.account { accountRow(account, kind: kind) }
         case .signInRequired:
             signInRow(kind, check: { installedAI.refresh(kind: kind) })
         case .notInstalled:
@@ -387,16 +390,38 @@ struct AIProvidersPanel: View {
         case .failed(let message):
             failedRow(message, retry: { installedAI.refresh(kind: kind) })
         }
-        if let executable = status.executable {
-            LabeledContent("Command") {
-                Text((executable.path as NSString).abbreviatingWithTildeInPath)
-                    .font(.callout.monospaced())
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .textSelection(.enabled)
+        if let executable = status.executable { commandRow(executable) }
+    }
+
+    private func commandRow(_ executable: URL) -> some View {
+        LabeledContent("Command") {
+            Text((executable.path as NSString).abbreviatingWithTildeInPath)
+                .font(.callout.monospaced())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+                .textSelection(.enabled)
+        }
+    }
+
+    private func accountRow(_ account: InstalledAIAccount, kind: InstalledAIKind) -> some View {
+        LabeledContent {
+            if let plan = account.planTitle {
+                Text("\(kind.title) \(plan)").foregroundStyle(.secondary)
+            }
+        } label: {
+            Text("Account")
+            if let email = account.email {
+                RedactedText(
+                    value: email,
+                    revealHelp: "Click to reveal the signed-in account",
+                    hideHelp: "Click to hide the signed-in account")
             }
         }
+    }
+
+    private func executable(for kind: InstalledAIKind) -> URL? {
+        kind == .codex ? subscription.executable : installedAI.status(for: kind).executable
     }
 
     private func checkingRow(_ title: String) -> some View {

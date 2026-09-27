@@ -287,6 +287,24 @@ struct InstalledAITests {
             "displayName":"Opus 4.8","resolvedModel":"claude-opus-4-8",\
             "description":"Best for everyday, complex tasks"}]}}}
             """
+        let signedIn = """
+            {"type":"control_response","response":{"subtype":"success","request_id":"x","response":\
+            {"models":[],"account":{"email":"reader@example.com","subscriptionType":"max",\
+            "apiProvider":"firstParty"}}}}
+            """
+        expect(
+            InstalledAIModel.claudeAccount(signedIn)
+                == InstalledAIAccount(email: "reader@example.com", plan: "max")
+                && InstalledAIModel.claudeAccount(signedIn)?.planTitle == "Max",
+            "the answer that lists Claude's models also names the account and its plan")
+        expect(
+            InstalledAIModel.claudeAccount(newer) == nil,
+            "and an answer that names no account shows none")
+        expect(
+            InstalledAIAccount(email: nil, plan: "Claude Max").planTitle == "Max"
+                && InstalledAIAccount(email: nil, plan: "team").planTitle == "Team"
+                && InstalledAIAccount(email: nil, plan: " ").planTitle == nil,
+            "a plan reads the same whether or not the CLI prefixed it with the tool's name")
         expect(
             InstalledAIModel.claudeCatalog(newer).map(\.name) == ["Claude Opus 5.5", "Claude Opus 4.8"],
             "a CLI that describes a model without its version is named by its display name")

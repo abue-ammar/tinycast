@@ -245,7 +245,8 @@ final class InstalledAIManager {
                     phase: models.isEmpty
                         ? .failed("Claude listed no models. Update Claude Code, then Check Again.")
                         : .ready,
-                    version: version, executable: executable, models: models)
+                    version: version, executable: executable, models: models,
+                    account: InstalledAIModel.claudeAccount(catalog.output))
             )
         case .openCode:
             let models = await InstalledAIProbe.run(

@@ -20,6 +20,8 @@ final class ChatGPTSubscriptionManager {
     private(set) var account: ChatGPTSubscription.Account?
     private(set) var models: [ChatGPTSubscription.Model] = []
     private(set) var rateLimits: ChatGPTSubscription.RateLimits?
+    /// Copied from the client at each check: the client is not observed, and Settings shows this.
+    private(set) var executable: URL?
 
     @ObservationIgnored private var operationTask: Task<Void, Never>?
     @ObservationIgnored private var idleTask: Task<Void, Never>?
@@ -109,6 +111,7 @@ final class ChatGPTSubscriptionManager {
         phase = .starting
         do {
             try await client.startForCheck()
+            executable = client.executable
             guard try await restoreAccount() else {
                 phase = .signedOut
                 client.stop()
