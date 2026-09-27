@@ -15,6 +15,9 @@ enum AIProviderFactory {
     ) throws -> any AIProvider {
         switch selection {
         case .appleIntelligence:
+            guard settings.isRouteEnabled(.appleIntelligence) else {
+                throw AIProviderError.unavailable("Apple Intelligence is disabled in AI Settings.")
+            }
             if let message = AppleIntelligenceProvider.status().message {
                 throw AIProviderError.unavailable(message)
             }
@@ -50,6 +53,9 @@ enum AIProviderFactory {
         case .api(let connectionID, let model, let effort):
             guard let connection = settings.connection(id: connectionID) else {
                 throw AIProviderError.unavailable("Choose an API connection in Settings.")
+            }
+            guard settings.isRouteEnabled(.api(connectionID)) else {
+                throw AIProviderError.unavailable("\(connection.title) is disabled in AI Settings.")
             }
             let baseURL: URL
             do {

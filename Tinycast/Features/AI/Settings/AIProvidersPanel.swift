@@ -228,7 +228,6 @@ struct AIProvidersPanel: View {
                         .foregroundStyle(.secondary)
                         .textSelection(.enabled)
                 }
-                enabledToggle(kind)
             case .api(let id):
                 if let connection = settings.connection(id: id) {
                     Button("Edit…") { edit(connection) }
@@ -236,6 +235,7 @@ struct AIProvidersPanel: View {
             case .appleIntelligence:
                 EmptyView()
             }
+            routeToggle(route)
         }
     }
 
@@ -244,6 +244,7 @@ struct AIProvidersPanel: View {
     @ViewBuilder
     private var appleIntelligenceSections: some View {
         let available = settings.isAppleIntelligenceAvailable()
+        if !settings.isRouteEnabled(.appleIntelligence) { turnedOffSection() }
         Section {
             LabeledContent {
                 Text(available ? "Ready" : "Unavailable")
@@ -284,15 +285,21 @@ struct AIProvidersPanel: View {
             }
             modelsSection(route: .installed(kind), models: installedModels(kind))
         } else {
-            Section {
-                LabeledContent {
-                    EmptyView()
-                } label: {
-                    Label("Turned off", systemImage: "pause.circle")
-                    Text("Tinycast leaves it alone, and its models stay out of every model picker.")
-                }
-            } footer: {
-                Text(installedFooter(kind))
+            turnedOffSection(footer: installedFooter(kind))
+        }
+    }
+
+    private func turnedOffSection(footer: String? = nil) -> some View {
+        Section {
+            LabeledContent {
+                EmptyView()
+            } label: {
+                Label("Turned off", systemImage: "pause.circle")
+                Text("Tinycast leaves it alone, and its models stay out of every model picker.")
+            }
+        } footer: {
+            if let footer {
+                Text(footer)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -457,6 +464,7 @@ struct AIProvidersPanel: View {
 
     @ViewBuilder
     private func connectionSections(_ connection: AIConnection) -> some View {
+        if !settings.isRouteEnabled(.api(connection.id)) { turnedOffSection() }
         Section {
             LabeledContent("Provider", value: connection.provider.title)
             LabeledContent("Base URL") {
@@ -581,12 +589,14 @@ struct AIProvidersPanel: View {
     private func caption(for route: AIProviderRoute) -> String {
         switch route {
         case .appleIntelligence:
+            guard settings.isRouteEnabled(.appleIntelligence) else { return "Off" }
             return settings.isAppleIntelligenceAvailable() ? "Ready · Runs on this Mac" : "Unavailable"
         case .installed(let kind):
             guard settings.enabledInstalledProviders.contains(kind) else { return "Off" }
             return kind == .codex ? codexCaption : installedCaption(kind)
         case .api(let id):
             guard let connection = settings.connection(id: id) else { return "" }
+            guard settings.isRouteEnabled(.api(id)) else { return "Off" }
             if keyIsMissing(connection) { return "Key missing" }
             let count = modelCount(connection.models.count)
             return connection.name.isEmpty ? count : "\(connection.provider.title) · \(count)"
@@ -657,12 +667,12 @@ struct AIProvidersPanel: View {
         return settings.connection(id: id)
     }
 
-    private func enabledToggle(_ kind: InstalledAIKind) -> some View {
+    private func routeToggle(_ route: AIProviderRoute) -> some View {
         Toggle(
-            "Enable \(kind.title)",
+            "Enable \(title(for: route))",
             isOn: Binding(
-                get: { settings.enabledInstalledProviders.contains(kind) },
-                set: { settings.setInstalledProviderEnabled($0, for: kind) })
+                get: { settings.isRouteEnabled(route.source) },
+                set: { settings.setRoute(route.source, enabled: $0) })
         )
         .labelsHidden()
         .toggleStyle(.switch)

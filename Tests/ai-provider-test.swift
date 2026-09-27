@@ -95,6 +95,7 @@ struct AIProviderTests {
         settingsPersistAndRepairSelections()
         installedModelLoadingPreferencePersists()
         shownModelsFilterThePicker()
+        switchedOffRoutesLeaveTheDefault()
         subscriptionSelectionsReconcile()
         onDeviceSelectionsRoundTripAndLead()
         conversationSettingsPersistAndDecide()
@@ -963,6 +964,39 @@ struct AIProviderTests {
         expect(
             !reopened.enabledInstalledProviders.contains(.openCode),
             "a provider toggle survives a restart")
+    }
+
+    static func switchedOffRoutesLeaveTheDefault() {
+        let suite = "AIProviderTests.disabledRoutes"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+        let store = AISettingsStore(defaults: defaults)
+        let first = AIConnection(provider: .openRouter, models: ["first-model"])
+        let second = AIConnection(provider: .gemini, models: ["second-model"])
+        store.save(first)
+        store.save(second)
+        expect(store.defaultModel?.source == .api(first.id), "the first connection is the default")
+        store.setRoute(.api(first.id), enabled: false)
+        expect(
+            store.defaultModel?.source == .api(second.id),
+            "switching the default's connection off moves the default to one still on")
+        let reopened = AISettingsStore(defaults: defaults)
+        expect(
+            !reopened.isRouteEnabled(.api(first.id)) && reopened.isRouteEnabled(.api(second.id)),
+            "a switched-off connection stays off after a restart")
+        reopened.setRoute(.appleIntelligence, enabled: false)
+        expect(
+            !reopened.isRouteEnabled(.appleIntelligence),
+            "the on-device model can be switched off like a connection")
+        reopened.setRoute(.api(first.id), enabled: true)
+        reopened.removeConnection(id: second.id)
+        expect(
+            reopened.defaultModel?.source == .api(first.id),
+            "with the other one gone, the connection switched back on becomes the default")
+        reopened.removeConnection(id: first.id)
+        expect(
+            !reopened.disabledRoutes.contains(AIModelSource.api(first.id).storageKey),
+            "removing a connection forgets that it was switched off")
     }
 
     static func shownModelsFilterThePicker() {

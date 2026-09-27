@@ -45,6 +45,12 @@ final class AISettingsStore {
     private(set) var shownModels: [String: [String]] {
         didSet { defaults.set(shownModels, forKey: AppSettingsKey.aiShownModels.rawValue) }
     }
+    /// The on-device model and API connections switched off without being removed.
+    private(set) var disabledRoutes: Set<String> {
+        didSet {
+            defaults.set(disabledRoutes.sorted(), forKey: AppSettingsKey.aiDisabledRoutes.rawValue)
+        }
+    }
     var enabledInstalledProviders: Set<InstalledAIKind> {
         didSet {
             guard
@@ -92,11 +98,16 @@ final class AISettingsStore {
         shownModels =
             defaults.dictionary(forKey: AppSettingsKey.aiShownModels.rawValue) as? [String: [String]]
             ?? [:]
+        disabledRoutes = Set(
+            defaults.stringArray(forKey: AppSettingsKey.aiDisabledRoutes.rawValue) ?? [])
         enabledInstalledProviders = Self.decodeEnabledInstalledProviders(
             defaults.data(forKey: AppSettingsKey.aiInstalledProviders.rawValue))
         if case .api(let connection, let model, _) = defaultModel,
             !connections.contains(where: { $0.id == connection && $0.models.contains(model) })
         {
+            defaultModel = firstAvailableSelection()
+        }
+        if let source = defaultModel?.source, !isRouteEnabled(source), source.installedKind == nil {
             defaultModel = firstAvailableSelection()
         }
         if defaultModel == nil {
@@ -145,6 +156,7 @@ final class AISettingsStore {
     func removeConnection(id: UUID) {
         connections.removeAll { $0.id == id }
         shownModels[AIModelSource.api(id).storageKey] = nil
+        disabledRoutes.remove(AIModelSource.api(id).storageKey)
         guard case .api(id, _, _) = defaultModel else { return }
         defaultModel = firstAvailableSelection()
     }
@@ -211,6 +223,26 @@ final class AISettingsStore {
         defaultModel = selection
     }
 
+    func isRouteEnabled(_ source: AIModelSource) -> Bool {
+        if let kind = source.installedKind { return enabledInstalledProviders.contains(kind) }
+        return !disabledRoutes.contains(source.storageKey)
+    }
+
+    /// An installed route keeps its own switch; the others move the default off when switched off.
+    func setRoute(_ source: AIModelSource, enabled: Bool) {
+        if let kind = source.installedKind {
+            setInstalledProviderEnabled(enabled, for: kind)
+            return
+        }
+        if enabled {
+            disabledRoutes.remove(source.storageKey)
+        } else {
+            disabledRoutes.insert(source.storageKey)
+            if defaultModel?.source == source { defaultModel = firstAvailableSelection() }
+        }
+        if defaultModel == nil { defaultModel = firstAvailableSelection() }
+    }
+
     func isModelShown(_ model: String, in source: AIModelSource) -> Bool {
         shownModels[source.storageKey]?.contains(model) ?? true
     }
@@ -263,8 +295,10 @@ final class AISettingsStore {
 
     /// The on-device model leads: free, private, always configured, so never a surprising landing.
     private func firstAvailableSelection() -> AIModelSelection? {
-        if isAppleIntelligenceAvailable() { return .appleIntelligence }
-        for connection in connections {
+        if isAppleIntelligenceAvailable(), isRouteEnabled(.appleIntelligence) {
+            return .appleIntelligence
+        }
+        for connection in connections where isRouteEnabled(.api(connection.id)) {
             if let model = connection.models.first {
                 return .api(
                     connection: connection.id, model: model,

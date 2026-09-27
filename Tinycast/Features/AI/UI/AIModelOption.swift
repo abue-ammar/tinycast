@@ -27,7 +27,8 @@ struct AIModelOption: Identifiable {
             models.filter { shown($0.id, source) }
         }
         return groupedCatalog(
-            appleIntelligence: settings.isAppleIntelligenceAvailable(),
+            appleIntelligence: settings.isAppleIntelligenceAvailable()
+                && settings.isRouteEnabled(.appleIntelligence),
             codex: enabled.contains(.codex) && subscription.isConnected
                 ? subscription.models.filter { shown($0.id, .codex) } : [],
             claude: enabled.contains(.claude) && claude.isReady ? shown(claude.models, .claude) : [],
@@ -35,7 +36,8 @@ struct AIModelOption: Identifiable {
             openCode: enabled.contains(.openCode) && openCode.isReady
                 ? shown(openCode.models, .openCode) : [],
             cursor: enabled.contains(.cursor) && cursor.isReady ? shown(cursor.models, .cursor) : [],
-            connections: settings.connections.map { connection in
+            connections: settings.connections.compactMap { connection in
+                guard settings.isRouteEnabled(.api(connection.id)) else { return nil }
                 var trimmed = connection
                 trimmed.models.removeAll { !shown($0, .api(connection.id)) }
                 return trimmed
