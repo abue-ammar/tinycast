@@ -5,7 +5,7 @@ struct AIProviderAdvancedSection: View {
     @Environment(AISettingsStore.self) private var settings
 
     let kind: InstalledAIKind
-    /// What the lookup found, shown as the empty field's prompt.
+    /// What the lookup found, where Choose… opens.
     let detected: URL?
 
     @State private var path = ""
@@ -29,7 +29,7 @@ struct AIProviderAdvancedSection: View {
         Section {
             LabeledContent {
                 HStack(spacing: Theme.Spacing.sm) {
-                    TextField("Command path", text: $path, prompt: Text(pathPrompt))
+                    TextField("Command path", text: $path, prompt: Text("Automatic"))
                         .labelsHidden()
                         .font(.callout.monospaced())
                         .autocorrectionDisabled()
@@ -104,10 +104,6 @@ struct AIProviderAdvancedSection: View {
                     .foregroundStyle(.secondary)
             }
         }
-    }
-
-    private var pathPrompt: String {
-        detected.map { ($0.path as NSString).abbreviatingWithTildeInPath } ?? "Found automatically"
     }
 
     private var footer: String {
