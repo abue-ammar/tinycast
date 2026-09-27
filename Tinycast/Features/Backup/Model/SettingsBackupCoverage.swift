@@ -133,6 +133,9 @@ enum SettingsBackupCoverage {
             + "may not have.",
         AppSettingsKey.aiDisabledRoutes.rawValue:
             "Names this Mac's own API connections and on-device model, which travel in no backup.",
+        AppSettingsKey.aiInstalledOverrides.rawValue:
+            "Names a command to run and the variables to run it with; an import must never decide "
+            + "which program this Mac launches.",
         AppSettingsKey.mcpEnabled.rawValue:
             "Doubles as consent to run third-party MCP servers, one of which is a local process; a "
             + "flag that grants a capability is never carried by a backup.",

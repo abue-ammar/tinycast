@@ -96,6 +96,8 @@ struct AIProviderTests {
         installedModelLoadingPreferencePersists()
         shownModelsFilterThePicker()
         switchedOffRoutesLeaveTheDefault()
+        installedOverridesPersistAndResolve()
+        aLaunchInheritsTheReadersVariablesNotTinycastsOwn()
         subscriptionSelectionsReconcile()
         onDeviceSelectionsRoundTripAndLead()
         conversationSettingsPersistAndDecide()
@@ -966,6 +968,94 @@ struct AIProviderTests {
             "a provider toggle survives a restart")
     }
 
+    static func installedOverridesPersistAndResolve() {
+        let suite = "AIProviderTests.installedOverrides"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+        let kept = KeptVariables()
+        let environmentStore = InstalledAIEnvironmentStore(
+            values: { kept.values[$0] ?? [:] }, save: { kept.values[$1] = $0 })
+        let store = AISettingsStore(defaults: defaults, environmentStore: environmentStore)
+        expect(store.launch(for: .codex) == InstalledAILaunch(), "a tool left alone has no override")
+        store.setCommandPath("  ~/bin/codex \n", for: .codex)
+        expect(store.override(for: .codex).commandPath == "~/bin/codex", "a path is kept trimmed")
+        expect(store.launchRevisions[.codex] == 1, "and setting it counts as a change to the launch")
+        store.setCommandPath("~/bin/codex", for: .codex)
+        expect(store.launchRevisions[.codex] == 1, "the same path again is no change")
+        try? store.setEnvironment(
+            [
+                InstalledAIVariable(name: "HTTPS_PROXY", value: "http://127.0.0.1:9"),
+                InstalledAIVariable(name: "HTTPS_PROXY", value: "a second one"),
+                InstalledAIVariable(name: "not a name", value: "x"),
+                InstalledAIVariable(name: "CODEX_HOME", value: "/tmp/home")
+            ], for: .codex)
+        expect(
+            store.override(for: .codex).environmentNames == ["HTTPS_PROXY", "CODEX_HOME"],
+            "variables keep their order, without a repeated or an unusable name")
+        expect(
+            defaults.data(forKey: AppSettingsKey.aiInstalledOverrides.rawValue)
+                .map { String(decoding: $0, as: UTF8.self) }?.contains("127.0.0.1") == false,
+            "and no value is written to settings")
+        let reopened = AISettingsStore(defaults: defaults, environmentStore: environmentStore)
+        expect(
+            reopened.launch(for: .codex)
+                == InstalledAILaunch(
+                    commandPath: "~/bin/codex",
+                    environment: ["HTTPS_PROXY": "http://127.0.0.1:9", "CODEX_HOME": "/tmp/home"]),
+            "a launch after a restart has the path and the values")
+        expect(
+            reopened.environment(for: .codex).map(\.name) == ["HTTPS_PROXY", "CODEX_HOME"],
+            "and the editor lists them in the order they were entered")
+        reopened.setCommandPath("", for: .codex)
+        try? reopened.setEnvironment([], for: .codex)
+        expect(
+            defaults.object(forKey: AppSettingsKey.aiInstalledOverrides.rawValue) == nil
+                && kept.values[.codex]?.isEmpty == true,
+            "clearing both leaves nothing stored")
+
+        let home = NSHomeDirectory()
+        let present: (String) -> Bool = { $0 == home + "/bin/codex" }
+        expect(InstalledAILaunch().command(isExecutable: present) == .automatic, "no path looks up")
+        expect(
+            InstalledAILaunch(commandPath: "~/bin/codex").command(isExecutable: present)
+                == .executable(URL(fileURLWithPath: home + "/bin/codex")),
+            "a path under the home folder may be written with a tilde")
+        expect(
+            InstalledAILaunch(commandPath: "/opt/none/codex").command(isExecutable: present)
+                == .missing(path: "/opt/none/codex"),
+            "a path with nothing to run is reported, never replaced by a lookup")
+        expect(
+            InstalledAILaunch(commandPath: "codex").command(isExecutable: { _ in true })
+                == .missing(path: "codex"),
+            "a bare name is not a path")
+    }
+
+    static func aLaunchInheritsTheReadersVariablesNotTinycastsOwn() {
+        let launch = InstalledAILaunch(
+            environment: [
+                "PATH": "/reader/bin", "HTTPS_PROXY": "proxy", "NO_COLOR": "0",
+                "OPENCODE_CONFIG_CONTENT": "{}", "TC_MCP_0_0": "stolen", "1BAD": "x"
+            ])
+        let inherited = launch.inherited(
+            for: .openCode, base: ["PATH": "/usr/bin", "HOME": "/Users/reader", "NO_COLOR": "1"])
+        expect(
+            inherited["PATH"] == "/reader/bin" && inherited["HTTPS_PROXY"] == "proxy"
+                && inherited["HOME"] == "/Users/reader",
+            "the reader's variables lie over the app's own")
+        expect(
+            inherited["OPENCODE_CONFIG_CONTENT"] == nil && inherited["TC_MCP_0_0"] == nil
+                && inherited["NO_COLOR"] == "1" && inherited["1BAD"] == nil,
+            "but never one Tinycast sets itself, nor one that is not a variable name")
+        expect(
+            launch.inherited(for: .claude, base: [:])["OPENCODE_CONFIG_CONTENT"] == "{}",
+            "a name only another tool reserves is an ordinary variable here")
+        expect(
+            InstalledAIKind.allCases.allSatisfy { kind in
+                kind.managedEnvironment.keys.allSatisfy(kind.isManagedVariable)
+            },
+            "every variable a tool is launched with is one the reader cannot replace")
+    }
+
     static func switchedOffRoutesLeaveTheDefault() {
         let suite = "AIProviderTests.disabledRoutes"
         let defaults = isolatedDefaults(suite)
@@ -1603,4 +1693,9 @@ private func isolatedDefaults(_ name: String) -> UserDefaults {
     let defaults = UserDefaults(suiteName: name)!
     defaults.removePersistentDomain(forName: name)
     return defaults
+}
+
+/// Stands in for the Keychain: what a harness saved, read back the way a launch would.
+private final class KeptVariables: @unchecked Sendable {
+    var values: [InstalledAIKind: [String: String]] = [:]
 }

@@ -9,6 +9,10 @@ final class InstalledAIManager {
 
     @ObservationIgnored private let workspace: URL
     @ObservationIgnored private var refreshTasks: [InstalledAIKind: Task<Void, Never>] = [:]
+    /// The reader's command path and variables, asked at each launch so an edit takes the next one.
+    @ObservationIgnored var launchSettings: (InstalledAIKind) -> InstalledAILaunch = { _ in
+        InstalledAILaunch()
+    }
 
     /// An admin's MCP policy makes Claude reject both MCP flags; a harness points this elsewhere.
     nonisolated static var hasManagedMCPPolicy: Bool {
@@ -92,9 +96,10 @@ final class InstalledAIManager {
         refreshTasks[kind]?.cancel()
         statuses[kind] = InstalledAIStatus(phase: .checking)
         let workspace = workspace
+        let launch = launchSettings(kind)
         let task = Task { [weak self] in
             guard let self else { return }
-            let result = await Self.probe(kind, workspace: workspace)
+            let result = await Self.probe(kind, launch: launch, workspace: workspace)
             guard !Task.isCancelled else { return }
             self.statuses[result.0] = result.1
         }
@@ -141,7 +146,10 @@ final class InstalledAIManager {
         else { return nil }
         let output = await InstalledAIProbe.request(
             executable: executable, arguments: Self.claudeControlArguments,
-            workspace: workspace, input: Data(request.utf8),
+            workspace: workspace,
+            environment: ExecutableLocator.environment(
+                running: executable, inherited: launchSettings(.claude).inherited(for: .claude)),
+            input: Data(request.utf8),
             until: { output in
                 // A whole line: the ID arrives before the title, so a chunk may split between them.
                 output.split(separator: "\n", omittingEmptySubsequences: false).dropLast()
@@ -166,20 +174,41 @@ final class InstalledAIManager {
         }
         return InstalledCLIProvider(
             kind: kind, executable: status.executable, model: model, effort: effort,
-            workspace: workspace, toolServers: toolServers)
+            workspace: workspace, launch: launchSettings(kind), toolServers: toolServers)
+    }
+
+    private enum Command {
+        case found(URL)
+        case unavailable(InstalledAIStatus.Phase)
+    }
+
+    nonisolated private static func command(
+        for kind: InstalledAIKind, launch: InstalledAILaunch
+    ) async -> Command {
+        switch launch.command() {
+        case .executable(let url): return .found(url)
+        case .missing(let path):
+            return .unavailable(.failed(InstalledAILaunch.missingCommandMessage(path)))
+        case .automatic:
+            let found = await ExecutableLocator.locate(
+                kind.command, extraHomePaths: kind.extraExecutablePaths)
+            return found.map(Command.found) ?? .unavailable(.notInstalled)
+        }
     }
 
     nonisolated private static func probe(
-        _ kind: InstalledAIKind, workspace: URL
+        _ kind: InstalledAIKind, launch: InstalledAILaunch, workspace: URL
     ) async -> (InstalledAIKind, InstalledAIStatus) {
-        guard
-            let executable = await ExecutableLocator.locate(
-                kind.command, extraHomePaths: kind.extraExecutablePaths)
-        else {
-            return (kind, InstalledAIStatus(phase: .notInstalled))
+        let executable: URL
+        switch await command(for: kind, launch: launch) {
+        case .found(let url): executable = url
+        case .unavailable(let phase): return (kind, InstalledAIStatus(phase: phase))
         }
+        let environment = ExecutableLocator.environment(
+            running: executable, inherited: launch.inherited(for: kind))
         let versionResult = await InstalledAIProbe.run(
-            executable: executable, arguments: ["--version"], workspace: workspace)
+            executable: executable, arguments: ["--version"], workspace: workspace,
+            environment: environment)
         guard versionResult.status == 0 else {
             return (
                 kind,
@@ -193,7 +222,7 @@ final class InstalledAIManager {
         case .claude:
             let auth = await InstalledAIProbe.run(
                 executable: executable, arguments: ["auth", "status", "--json"],
-                workspace: workspace)
+                workspace: workspace, environment: environment)
             let loggedIn = InstalledAIProbe.loggedIn(inStatusJSON: auth.output)
             guard auth.status == 0, loggedIn else {
                 return (
@@ -205,6 +234,7 @@ final class InstalledAIManager {
             // No prompt follows the request, so the CLI answers and exits without calling a model.
             let catalog = await InstalledAIProbe.run(
                 executable: executable, arguments: claudeControlArguments, workspace: workspace,
+                environment: environment,
                 input: Data(InstalledAIModel.claudeInitializeRequest.utf8),
                 // The reader's SessionStart hooks run before the CLI answers, however slow they are.
                 timeout: .seconds(30))
@@ -220,7 +250,7 @@ final class InstalledAIManager {
         case .openCode:
             let models = await InstalledAIProbe.run(
                 executable: executable, arguments: ["models", "--pure", "--verbose"],
-                workspace: workspace)
+                workspace: workspace, environment: environment)
             let catalog = InstalledAIModel.openCodeCatalog(models.output)
             return (
                 kind,
@@ -230,7 +260,7 @@ final class InstalledAIManager {
             )
         case .grok:
             let models = await InstalledAIProbe.run(
-                executable: executable, arguments: ["models"], workspace: workspace)
+                executable: executable, arguments: ["models"], workspace: workspace, environment: environment)
             let catalog = InstalledAIModel.grokCatalog(models.output)
             let signedIn = models.status == 0 && InstalledAIModel.grokSignedIn(models.output)
             return (
@@ -243,7 +273,7 @@ final class InstalledAIManager {
         case .cursor:
             let auth = await InstalledAIProbe.run(
                 executable: executable, arguments: ["status", "--format", "json"],
-                workspace: workspace)
+                workspace: workspace, environment: environment)
             let loggedIn = InstalledAIProbe.loggedIn(inStatusJSON: auth.output)
             guard auth.status == 0, loggedIn else {
                 return (
@@ -253,7 +283,8 @@ final class InstalledAIManager {
                 )
             }
             let models = await InstalledAIProbe.run(
-                executable: executable, arguments: ["--list-models"], workspace: workspace)
+                executable: executable, arguments: ["--list-models"], workspace: workspace,
+                environment: environment)
             let catalog = InstalledAIModel.cursorCatalog(models.output)
             return (
                 kind,

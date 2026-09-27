@@ -127,6 +127,9 @@ struct InstalledAITests {
         await concurrentCallsAreAskedOneAtATime(fixture)
         await aCrashedTurnsFilesAreRemovedAtLaunch(fixture)
         await aManagedMCPPolicyLeavesBothFlagsOff(fixture)
+        await aReadersVariablesReachTheToolButNeverItsIsolation(fixture)
+        await aSetCommandPathIsWhatRuns(fixture)
+        await aCommandPathWithNothingThereFailsTheTurn(fixture)
         await aChildThatNeverReadsCannotKillTheApp()
         await aFishLoginShellFindsWhatConfigFishAdds(fixture)
         await anRcFileThatPrintsStillAnswers(fixture)
@@ -649,6 +652,56 @@ struct InstalledAITests {
             "while one on Unlimited with no server to run is still a single request")
     }
 
+    private static func aReadersVariablesReachTheToolButNeverItsIsolation(
+        _ fixture: Fixture
+    ) async {
+        let launch = InstalledAILaunch(
+            environment: [
+                "TC_READER_PROBE": "from-the-reader", "OPENCODE_CONFIG_CONTENT": "{}",
+                "not a name": "dropped"
+            ])
+        let events = await fixture.events(
+            kind: .openCode, model: "provider/model", effort: nil, launch: launch)
+        expect(events.last == .finished, "a tool launched with the reader's variables still runs")
+        expect(
+            fixture.lastLine("opencode-reader-environment.log") == "from-the-reader",
+            "a variable the reader set reaches the tool")
+        expect(
+            fixture.lastLine("opencode-environment.log").contains("\"permission\":\"deny\""),
+            "one Tinycast sets to keep the tool inside the chat keeps Tinycast's value")
+    }
+
+    private static func aSetCommandPathIsWhatRuns(_ fixture: Fixture) async {
+        guard let stub = fixture.executables[.openCode] else { return }
+        let elsewhere = fixture.root.appending(path: "elsewhere", directoryHint: .isDirectory)
+        let copy = elsewhere.appending(path: "opencode")
+        do {
+            try FileManager.default.createDirectory(
+                at: elsewhere, withIntermediateDirectories: true)
+            try FileManager.default.copyItem(at: stub, to: copy)
+        } catch {
+            expect(false, "the second copy of the command is written")
+            return
+        }
+        let events = await fixture.events(
+            kind: .openCode, model: "provider/model", effort: nil,
+            launch: InstalledAILaunch(commandPath: copy.path))
+        expect(events.last == .finished, "a turn runs from a command path the reader set")
+        expect(
+            fixture.lastLine("opencode-path.log").hasSuffix("elsewhere/opencode"),
+            "and it is that command, not the one a lookup finds first")
+    }
+
+    private static func aCommandPathWithNothingThereFailsTheTurn(_ fixture: Fixture) async {
+        let missing = fixture.root.appending(path: "nowhere/claude").path
+        let error = await fixture.streamError(
+            kind: .claude, model: "sonnet", effort: nil,
+            launch: InstalledAILaunch(commandPath: missing))
+        expect(
+            error?.contains("Nothing can be run at") == true,
+            "a command path with nothing to run fails the turn instead of running another copy")
+    }
+
     /// An admin's policy makes the CLI reject both flags, so the route passes neither.
     private static func aManagedMCPPolicyLeavesBothFlagsOff(_ fixture: Fixture) async {
         let policy = fixture.root.appending(path: "managed-mcp.json")
@@ -749,12 +802,14 @@ private final class Fixture {
 
     func events(
         kind: InstalledAIKind, model: String, effort: String?,
+        launch: InstalledAILaunch = InstalledAILaunch(),
         toolServers: AIToolServerSession? = nil
     ) async -> [AIStreamEvent] {
         guard let executable = executables[kind] else { return [] }
         let provider = InstalledCLIProvider(
             kind: kind, executable: kind == .openCode ? nil : executable,
-            model: model, effort: effort, workspace: workspace, toolServers: toolServers)
+            model: model, effort: effort, workspace: workspace, launch: launch,
+            toolServers: toolServers)
         do {
             var events: [AIStreamEvent] = []
             for try await event in provider.stream(request) { events.append(event) }
@@ -767,12 +822,14 @@ private final class Fixture {
 
     func streamError(
         kind: InstalledAIKind, model: String, effort: String?,
+        launch: InstalledAILaunch = InstalledAILaunch(),
         toolServers: AIToolServerSession? = nil
     ) async -> String? {
         guard let executable = executables[kind] else { return nil }
         let provider = InstalledCLIProvider(
             kind: kind, executable: kind == .openCode ? nil : executable,
-            model: model, effort: effort, workspace: workspace, toolServers: toolServers)
+            model: model, effort: effort, workspace: workspace, launch: launch,
+            toolServers: toolServers)
         do {
             for try await _ in provider.stream(request) {}
             return nil
@@ -848,6 +905,10 @@ private final class Fixture {
             try? await Task.sleep(for: .milliseconds(10))
         }
         return isSatisfied()
+    }
+
+    func lastLine(_ name: String) -> String {
+        read(name).split(separator: "\n").last.map(String.init) ?? ""
     }
 
     func read(_ name: String) -> String {

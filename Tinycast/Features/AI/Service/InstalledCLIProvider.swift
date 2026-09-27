@@ -6,11 +6,11 @@ struct InstalledCLIProvider: AIProvider {
     @MainActor
     init(
         kind: InstalledAIKind, executable: URL?, model: String, effort: String?, workspace: URL,
-        toolServers: AIToolServerSession? = nil
+        launch: InstalledAILaunch = InstalledAILaunch(), toolServers: AIToolServerSession? = nil
     ) {
         runner = InstalledCLITurnRunner(
             kind: kind, executable: executable, model: model, effort: effort,
-            workspace: workspace, toolServers: toolServers)
+            workspace: workspace, launch: launch, toolServers: toolServers)
     }
 
     func stream(_ request: AIRequest) -> AIProviderStream {
@@ -31,10 +31,6 @@ private final class InstalledCLITurnRunner {
         supplied with this request. Do not read files, inspect the environment, access external \
         resources, or modify anything else.
         """
-    private static let openCodeConfiguration = """
-        {"permission":"deny","share":"disabled","agent":{"build":{"permission":"deny"},\
-        "plan":{"permission":"deny"}}}
-        """
 
     private static var maximumPartialLineBytes: Int {
         if let raw = ProcessInfo.processInfo.environment["TC_INSTALLED_MAX_LINE_BYTES"],
@@ -52,6 +48,7 @@ private final class InstalledCLITurnRunner {
     private let model: String
     private let effort: String?
     private let workspace: URL
+    private let launch: InstalledAILaunch
     private let toolServers: AIToolServerSession?
 
     private var token: TurnToken?
@@ -72,9 +69,10 @@ private final class InstalledCLITurnRunner {
 
     init(
         kind: InstalledAIKind, executable: URL?, model: String, effort: String?, workspace: URL,
-        toolServers: AIToolServerSession? = nil
+        launch: InstalledAILaunch, toolServers: AIToolServerSession? = nil
     ) {
         self.kind = kind
+        self.launch = launch
         configuredExecutable = executable
         self.model = model
         self.effort = effort
@@ -115,11 +113,21 @@ private final class InstalledCLITurnRunner {
             return
         }
         let resolvedExecutable: URL?
-        if let configuredExecutable {
-            resolvedExecutable = configuredExecutable
-        } else {
-            resolvedExecutable = await ExecutableLocator.locate(
-                kind.command, extraHomePaths: kind.extraExecutablePaths)
+        switch launch.command() {
+        case .executable(let url):
+            resolvedExecutable = url
+        case .missing(let path):
+            continuation.finish(
+                throwing: AIProviderError.unavailable(
+                    InstalledAILaunch.missingCommandMessage(path)))
+            return
+        case .automatic:
+            if let configuredExecutable {
+                resolvedExecutable = configuredExecutable
+            } else {
+                resolvedExecutable = await ExecutableLocator.locate(
+                    kind.command, extraHomePaths: kind.extraExecutablePaths)
+            }
         }
         guard let executable = resolvedExecutable else {
             continuation.finish(
@@ -366,22 +374,9 @@ private final class InstalledCLITurnRunner {
     }
 
     private func environment(for executable: URL) -> [String: String] {
-        var result = ExecutableLocator.environment(running: executable)
-        switch kind {
-        case .claude:
-            result["CLAUDE_CODE_SKIP_PROMPT_HISTORY"] = "1"
-            result["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
-        case .openCode:
-            result["OPENCODE_CONFIG_CONTENT"] = Self.openCodeConfiguration
-            result["OPENCODE_AUTO_SHARE"] = "false"
-            result["OPENCODE_DISABLE_AUTOUPDATE"] = "true"
-        case .grok:
-            result["GROK_DISABLE_AUTOUPDATER"] = "1"
-            result["GROK_AGENT_DASHBOARD"] = "0"
-        case .cursor, .codex:
-            break
-        }
-        return result
+        ExecutableLocator.environment(
+            running: executable, inherited: launch.inherited(for: kind)
+        ).merging(kind.managedEnvironment) { _, managed in managed }
     }
 
     private func prompt(for request: AIRequest) -> String {

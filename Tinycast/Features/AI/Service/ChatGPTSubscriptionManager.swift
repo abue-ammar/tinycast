@@ -10,6 +10,11 @@ final class ChatGPTSubscriptionManager {
 
     private let client: CodexAppServerClient
     let turns: CodexTurnRunner
+    /// Forwarded to the app-server's launch; a change takes effect at its next start.
+    @ObservationIgnored var launchSettings: () -> InstalledAILaunch {
+        get { client.launchSettings }
+        set { client.launchSettings = newValue }
+    }
 
     private(set) var phase = ChatGPTSubscription.Phase.idle
     private(set) var account: ChatGPTSubscription.Account?

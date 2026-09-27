@@ -63,6 +63,7 @@ final class AppCore {
     let chatHistory: ChatHistoryStore
     let aiChats: AIChatSurfacesState
     let aiSettings = AISettingsStore(
+        environmentStore: .keychain,
         isAppleIntelligenceAvailable: { AppleIntelligenceProvider.status().isAvailable })
     let mcpSettings = MCPSettingsStore()
     let mcpOAuth = MCPOAuthManager()
@@ -71,6 +72,7 @@ final class AppCore {
     let customQuickActions = CustomQuickActionStore()
     let chatGPTSubscription = ChatGPTSubscriptionManager()
     let installedAI = InstalledAIManager()
+    @ObservationIgnored private var appliedLaunchRevisions: [InstalledAIKind: Int] = [:]
 
     /// Set when a quicklink editor should open with Settings; the pane consumes it.
     var pendingQuicklinkEdit: QuicklinkEditRequest?
@@ -271,6 +273,8 @@ final class AppCore {
             menuSearchCoordinator.applyEnabled()
             fileSearchCoordinator.applyPolicy()
             notesCoordinator.applyEnabled()
+            installedAI.launchSettings = { [aiSettings] in aiSettings.launch(for: $0) }
+            chatGPTSubscription.launchSettings = { [aiSettings] in aiSettings.launch(for: .codex) }
             aiChatCoordinator.applyEnabled()
             mcpCoordinator.applyEnabled()
             customQuickActions.onChange = { [weak self] _ in
@@ -523,6 +527,24 @@ final class AppCore {
         installedAI.stop()
     }
 
+    /// Only the tool whose own path or variables changed is checked again; the rest keep running.
+    private func applyInstalledLaunches() {
+        let revisions = aiSettings.launchRevisions
+        let enabled =
+            settings.aiEnabled || settings.quickActionsEnabled
+            ? aiSettings.enabledInstalledProviders : []
+        for kind in InstalledAIKind.allCases where appliedLaunchRevisions[kind] != revisions[kind] {
+            guard enabled.contains(kind) else { continue }
+            if kind == .codex {
+                chatGPTSubscription.stop()
+                chatGPTSubscription.refresh()
+            } else {
+                installedAI.refresh(kind: kind)
+            }
+        }
+        appliedLaunchRevisions = revisions
+    }
+
     @discardableResult
     func applyInstalledAILifecycle() -> Task<Void, Never> {
         let enabledKinds =
@@ -647,6 +669,7 @@ final class AppCore {
             { _ = $0.clipboardRetention },
             reproject: { $0.clipboardCoordinator.applyRetention($0.settings.clipboardRetention) })
         track(aiSettings, { _ = $0.retention }, reproject: { $0.aiChatCoordinator.applyRetention() })
+        track(aiSettings, { _ = $0.launchRevisions }, reproject: { $0.applyInstalledLaunches() })
         track(
             { _ = $0.extensionsShowInLauncher },
             reproject: { $0.extensionCoordinator.applyExtensionsLauncherPresence() })

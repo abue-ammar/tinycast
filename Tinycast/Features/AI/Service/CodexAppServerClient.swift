@@ -31,6 +31,8 @@ final class CodexAppServerClient {
     var onElicitation: ((CodexElicitation) async -> Bool)?
     /// A launch is about to replace a running process, whose threads go with it.
     var onRelaunch: (() -> Void)?
+    /// The reader's command path and variables, asked at each launch so an edit takes the next one.
+    var launchSettings: () -> InstalledAILaunch = { InstalledAILaunch() }
 
     private let codexHome: URL?
     let workspace: URL
@@ -114,9 +116,20 @@ final class CodexAppServerClient {
 
     private func launch(_ toolServers: [AIToolServer]) async throws {
         let generation = self.generation
-        guard let executable = await ExecutableLocator.locate("codex") else {
-            throw ClientError.executableMissing
+        let settings = launchSettings()
+        let executable: URL
+        switch settings.command() {
+        case .executable(let url):
+            executable = url
+        case .missing(let path):
+            throw ClientError.launchFailed(InstalledAILaunch.missingCommandMessage(path))
+        case .automatic:
+            guard let found = await ExecutableLocator.locate("codex") else {
+                throw ClientError.executableMissing
+            }
+            executable = found
         }
+        let inherited = settings.inherited(for: .codex)
         try checkNotStopped(since: generation)
         // The list is only readable at launch, so the old process cannot be talked into it.
         if isRunning {
@@ -144,7 +157,8 @@ final class CodexAppServerClient {
         // Unread, the reader's servers would start inside the chat; so Codex does not start either.
         guard
             let foreign = await Self.foreignServerNames(
-                executable: executable, workspace: workspace, codexHome: codexHome)
+                executable: executable, workspace: workspace, codexHome: codexHome,
+                inherited: inherited)
         else {
             throw ClientError.launchFailed(
                 "Tinycast could not read which MCP servers your Codex configuration runs, so it "
@@ -173,7 +187,8 @@ final class CodexAppServerClient {
             + CodexMCPLaunch.arguments(servers: toolServers, disabling: foreign)
             + ["app-server"]
         process.currentDirectoryURL = workspace
-        var environment = ExecutableLocator.environment(running: executable, adding: secrets)
+        var environment = ExecutableLocator.environment(
+            running: executable, adding: secrets, inherited: inherited)
         // Tests can isolate app-server state; production deliberately inherits the user's Codex home.
         if let codexHome { environment["CODEX_HOME"] = codexHome.path }
         process.environment = environment

@@ -194,6 +194,8 @@ const prompt = promptFile >= 0 && args[promptFile + 1]
 record(command + "-prompt.log", prompt);
 record(command + "-environment.log", process.env.OPENCODE_CONFIG_CONTENT ?? "");
 record(command + "-grok-environment.log", process.env.GROK_DISABLE_AUTOUPDATER ?? "");
+record(command + "-reader-environment.log", process.env.TC_READER_PROBE ?? "");
+record(command + "-path.log", process.argv[1]);
 
 const modelIndex = args.indexOf("--model");
 const model = modelIndex >= 0 ? args[modelIndex + 1] : "";

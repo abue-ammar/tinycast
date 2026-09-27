@@ -90,7 +90,8 @@ enum InstalledAIProbe {
 
     /// Holds stdin open until a line answers, since the CLI exits once its input closes.
     nonisolated static func request(
-        executable: URL, arguments: [String], workspace: URL, input: Data,
+        executable: URL, arguments: [String], workspace: URL,
+        environment: [String: String]? = nil, input: Data,
         until answered: @escaping @Sendable (String) -> Bool, timeout: Duration = .seconds(30)
     ) async -> String {
         await Task.detached {
@@ -102,7 +103,8 @@ enum InstalledAIProbe {
             process.executableURL = executable
             process.arguments = arguments
             process.currentDirectoryURL = workspace
-            process.environment = ExecutableLocator.environment(running: executable)
+            process.environment =
+                environment ?? ExecutableLocator.environment(running: executable)
             process.standardInput = stdin
             process.standardOutput = output
             process.standardError = FileHandle.nullDevice
