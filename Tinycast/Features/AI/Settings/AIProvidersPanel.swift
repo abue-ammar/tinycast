@@ -494,7 +494,8 @@ struct AIProvidersPanel: View {
     private func modelsSection(route: AIProviderRoute, models: [ProviderModel]) -> some View {
         if !models.isEmpty {
             let source = route.source
-            let shownCount = models.filter { settings.isModelShown($0.id, in: source) }.count
+            let shownSet = settings.shownModels[source.storageKey].map(Set.init)
+            let shownCount = shownSet.map { set in models.count { set.contains($0.id) } } ?? models.count
             let matches = filtered(models)
             Section {
                 LabeledContent {
@@ -514,8 +515,18 @@ struct AIProvidersPanel: View {
                     Text("No model matches “\(modelQuery)”.")
                         .foregroundStyle(.secondary)
                 }
-                ForEach(matches) { model in
-                    modelRow(model, route: route, all: models)
+                if !matches.isEmpty {
+                    AIModelChecklist(
+                        items: matches.map { model in
+                            AIModelChecklist.Item(
+                                id: model.id, title: model.name,
+                                isOn: shownSet?.contains(model.id) ?? true,
+                                isLocked: isDefault(model.id, route: route))
+                        },
+                        onToggle: { id, isOn in
+                            settings.setModel(
+                                id, shown: isOn, in: source, available: models.map(\.id))
+                        })
                 }
             } header: {
                 Text("Models")
@@ -526,30 +537,6 @@ struct AIProvidersPanel: View {
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func modelRow(
-        _ model: ProviderModel, route: AIProviderRoute, all: [ProviderModel]
-    ) -> some View {
-        let isDefault = isDefault(model.id, route: route)
-        HStack {
-            Toggle(
-                model.name,
-                isOn: Binding(
-                    get: { isDefault || settings.isModelShown(model.id, in: route.source) },
-                    set: {
-                        settings.setModel(
-                            model.id, shown: $0, in: route.source, available: all.map(\.id))
-                    })
-            )
-            .toggleStyle(.checkbox)
-            .disabled(isDefault)
-            Spacer(minLength: Theme.Spacing.lg)
-            if isDefault {
-                Text("Default").foregroundStyle(.secondary)
             }
         }
     }

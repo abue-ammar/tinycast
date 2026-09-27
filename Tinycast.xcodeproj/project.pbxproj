@@ -449,6 +449,7 @@
 		9DB09F96E6F8C226BD9AB1C9 /* SymbolCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 387BE675F580496656E72559 /* SymbolCatalog.swift */; };
 		9DB4319C835DCF8C0723356D /* MenuBarItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2902B904C7BD2FC23856EDB9 /* MenuBarItem.swift */; };
 		9DB73F12214137B60AE00828 /* RaycastScriptImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CF6A57ECFDA17248393EA8 /* RaycastScriptImport.swift */; };
+		9DFBDD9863EB307D4F102524 /* AIModelChecklist.swift in Sources */ = {isa = PBXBuildFile; fileRef = A022043AE60501848E0C5026 /* AIModelChecklist.swift */; };
 		9DFE7A312D079C7125DB43DE /* AppleShortcutsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 072DA32B7365FAAB7C38F25C /* AppleShortcutsSettingsView.swift */; };
 		9E4497ECAD183E5C2B49475B /* MeetingDay.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0599199132DAFBE12C59FBD /* MeetingDay.swift */; };
 		9E514EA8EB0408653AC3D1D9 /* BundleSignature.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3E30EFA3197FC5EF1E85C21 /* BundleSignature.swift */; };
@@ -1238,6 +1239,7 @@
 		9EB4EA7F440DD25F425110E8 /* WindowLayoutDisplayTabs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowLayoutDisplayTabs.swift; sourceTree = "<group>"; };
 		9F1798C6CF803D5E1BB2FFE4 /* ChatTranscriptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTranscriptView.swift; sourceTree = "<group>"; };
 		9F9A0A3867D1B8E1D3284471 /* ExtensionNodeShims.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionNodeShims.swift; sourceTree = "<group>"; };
+		A022043AE60501848E0C5026 /* AIModelChecklist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIModelChecklist.swift; sourceTree = "<group>"; };
 		A061D1B64684905BA0E998C5 /* ChatHistoryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatHistoryScreen.swift; sourceTree = "<group>"; };
 		A0BAA0471DD8CE4352F45FED /* ExtensionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionCoordinator.swift; sourceTree = "<group>"; };
 		A1306524F57602D90FCF153C /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
@@ -3312,6 +3314,7 @@
 			isa = PBXGroup;
 			children = (
 				87C6479121B0371B3491FA8A /* AIConnectionEditorPanel.swift */,
+				A022043AE60501848E0C5026 /* AIModelChecklist.swift */,
 				94D1EA2460590C49B4A66C64 /* AIModelSelectionRows.swift */,
 				574A658F2503AA5BAED39903 /* AIProvidersPanel.swift */,
 				C975F928132D3DAB1BB569F0 /* AISettingsStore.swift */,
@@ -3500,6 +3503,7 @@
 				EEB7F6A6AC8B53FDD607ED03 /* AIConversationOpenPolicy.swift in Sources */,
 				4D78F1E14023B34AF8E9D140 /* AIEmptyState.swift in Sources */,
 				ADC43E68C1B617D098C71D6E /* AIInstructions.swift in Sources */,
+				9DFBDD9863EB307D4F102524 /* AIModelChecklist.swift in Sources */,
 				36A6FC9C41CDBD4ADA1F8E87 /* AIModelDiscovery.swift in Sources */,
 				F8E1B044D84E96FB455155CD /* AIModelDiscoveryService.swift in Sources */,
 				D929CEAC227F3C88BBC134BF /* AIModelMenu.swift in Sources */,
