@@ -1,16 +1,15 @@
 import Foundation
 
 extension InstalledAIEnvironmentStore {
-    /// One Keychain item per tool, its variables as JSON; an unreadable item reads as none set.
+    /// One Keychain item per tool, as JSON; a failed read throws, a garbled item reads as none.
     static let keychain = InstalledAIEnvironmentStore(
         values: { kind in
             guard
-                let stored = try? KeychainSecretStore.installedAIEnvironment.secret(
-                    for: kind.keychainAccount),
-                let values = try? JSONDecoder().decode(
-                    [String: String].self, from: Data(stored.utf8))
+                let stored = try KeychainSecretStore.installedAIEnvironment.secret(
+                    for: kind.keychainAccount)
             else { return [:] }
-            return values
+            let values = try? JSONDecoder().decode([String: String].self, from: Data(stored.utf8))
+            return values ?? [:]
         },
         save: { values, kind in
             guard !values.isEmpty else {

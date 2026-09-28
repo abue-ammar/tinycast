@@ -18,7 +18,8 @@ struct InstalledAIVariable: Equatable, Sendable {
 
 /// Where the variables' values are kept, behind closures so a harness needs no Keychain.
 struct InstalledAIEnvironmentStore: Sendable {
-    var values: @Sendable (InstalledAIKind) -> [String: String]
+    /// Throws when the values cannot be read, so an editor never takes that for none being set.
+    var values: @Sendable (InstalledAIKind) throws -> [String: String]
     var save: @Sendable ([String: String], InstalledAIKind) throws -> Void
 
     /// Holds nothing and keeps nothing, for a store built without one.

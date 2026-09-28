@@ -303,8 +303,8 @@ final class AISettingsStore {
         launchRevisions[kind, default: 0] += 1
     }
 
-    func environment(for kind: InstalledAIKind) -> [InstalledAIVariable] {
-        let values = environmentStore.values(kind)
+    func environment(for kind: InstalledAIKind) throws -> [InstalledAIVariable] {
+        let values = try environmentStore.values(kind)
         return override(for: kind).environmentNames.map {
             InstalledAIVariable(name: $0, value: values[$0] ?? "")
         }
@@ -316,7 +316,7 @@ final class AISettingsStore {
         let kept = variables.filter {
             InstalledAILaunch.isVariableName($0.name) && seen.insert($0.name).inserted
         }
-        guard kept != environment(for: kind) else { return }
+        guard try kept != environment(for: kind) else { return }
         try environmentStore.save(
             Dictionary(uniqueKeysWithValues: kept.map { ($0.name, $0.value) }), kind)
         var override = override(for: kind)
@@ -332,9 +332,10 @@ final class AISettingsStore {
             return InstalledAILaunch(commandPath: override.commandPath)
         }
         let names = Set(override.environmentNames)
+        let values = (try? environmentStore.values(kind)) ?? [:]
         return InstalledAILaunch(
             commandPath: override.commandPath,
-            environment: environmentStore.values(kind).filter { names.contains($0.key) })
+            environment: values.filter { names.contains($0.key) })
     }
 
     func disableInstalledModelSelection(for kind: InstalledAIKind) {

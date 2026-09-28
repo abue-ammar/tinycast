@@ -97,6 +97,7 @@ struct AIProviderTests {
         shownModelsFilterThePicker()
         switchedOffRoutesLeaveTheDefault()
         installedOverridesPersistAndResolve()
+        aFailedKeychainReadIsNeverSavedOver()
         aLaunchInheritsTheReadersVariablesNotTinycastsOwn()
         subscriptionSelectionsReconcile()
         onDeviceSelectionsRoundTripAndLead()
@@ -1004,7 +1005,7 @@ struct AIProviderTests {
                     environment: ["HTTPS_PROXY": "http://127.0.0.1:9", "CODEX_HOME": "/tmp/home"]),
             "a launch after a restart has the path and the values")
         expect(
-            reopened.environment(for: .codex).map(\.name) == ["HTTPS_PROXY", "CODEX_HOME"],
+            (try? reopened.environment(for: .codex))?.map(\.name) == ["HTTPS_PROXY", "CODEX_HOME"],
             "and the editor lists them in the order they were entered")
         reopened.setCommandPath("", for: .codex)
         try? reopened.setEnvironment([], for: .codex)
@@ -1028,6 +1029,34 @@ struct AIProviderTests {
             InstalledAILaunch(commandPath: "codex").command(isExecutable: { _ in true })
                 == .missing(path: "codex"),
             "a bare name is not a path")
+    }
+
+    static func aFailedKeychainReadIsNeverSavedOver() {
+        let suite = "AIProviderTests.failedKeychainRead"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+        let kept = KeptVariables()
+        kept.values[.claude] = ["HTTPS_PROXY": "http://127.0.0.1:9"]
+        let working = InstalledAIEnvironmentStore(
+            values: { kept.values[$0] ?? [:] }, save: { kept.values[$1] = $0 })
+        try? AISettingsStore(defaults: defaults, environmentStore: working).setEnvironment(
+            [InstalledAIVariable(name: "HTTPS_PROXY", value: "http://127.0.0.1:9")], for: .claude)
+        let locked = InstalledAIEnvironmentStore(
+            values: { _ in throw KeychainUnreadable() }, save: { kept.values[$1] = $0 })
+        let store = AISettingsStore(defaults: defaults, environmentStore: locked)
+        expect(
+            (try? store.environment(for: .claude)) == nil,
+            "a read that fails is an error, never a list of names without values")
+        expect(
+            (try? store.setEnvironment(
+                [InstalledAIVariable(name: "HTTPS_PROXY", value: "")], for: .claude)) == nil,
+            "and saving over values that could not be read fails")
+        expect(
+            kept.values[.claude] == ["HTTPS_PROXY": "http://127.0.0.1:9"],
+            "so the stored value survives")
+        expect(
+            store.launch(for: .claude).environment.isEmpty,
+            "a launch that cannot read the values starts without them")
     }
 
     static func aLaunchInheritsTheReadersVariablesNotTinycastsOwn() {
@@ -1699,3 +1728,5 @@ private func isolatedDefaults(_ name: String) -> UserDefaults {
 private final class KeptVariables: @unchecked Sendable {
     var values: [InstalledAIKind: [String: String]] = [:]
 }
+
+private struct KeychainUnreadable: Error {}

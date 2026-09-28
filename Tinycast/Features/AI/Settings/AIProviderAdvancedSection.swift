@@ -11,6 +11,7 @@ struct AIProviderAdvancedSection: View {
     @State private var path = ""
     @State private var variables: [Draft] = []
     @State private var saveFailed = false
+    @State private var readFailed = false
     @FocusState private var focus: Field?
 
     private struct Draft: Identifiable, Equatable {
@@ -53,6 +54,7 @@ struct AIProviderAdvancedSection: View {
             LabeledContent {
                 Button("Add Variable", action: addVariable)
                     .fixedSize()
+                    .disabled(readFailed)
             } label: {
                 Text("Variables")
                 Text("Set for \(kind.title) only, each time it starts.")
@@ -66,7 +68,8 @@ struct AIProviderAdvancedSection: View {
             Text(footer)
                 .font(.caption)
                 .foregroundStyle(
-                    saveFailed ? AnyShapeStyle(Theme.Colors.destructive) : AnyShapeStyle(.secondary))
+                    saveFailed || readFailed
+                        ? AnyShapeStyle(Theme.Colors.destructive) : AnyShapeStyle(.secondary))
         }
     }
 
@@ -107,7 +110,8 @@ struct AIProviderAdvancedSection: View {
     }
 
     private var footer: String {
-        saveFailed
+        if readFailed { return "The variables could not be read from your login Keychain." }
+        return saveFailed
             ? "The variables could not be saved to your login Keychain."
             : "Values stay in your login Keychain. A change applies the next time \(kind.title) starts."
     }
@@ -125,12 +129,22 @@ struct AIProviderAdvancedSection: View {
 
     private func load() {
         path = settings.override(for: kind).commandPath
-        variables = settings.environment(for: kind).map { Draft(name: $0.name, value: $0.value) }
+        do {
+            variables = try settings.environment(for: kind).map {
+                Draft(name: $0.name, value: $0.value)
+            }
+            readFailed = false
+        } catch {
+            variables = []
+            readFailed = true
+        }
         saveFailed = false
     }
 
     private func save() {
         settings.setCommandPath(path, for: kind)
+        // Drafts from a failed read have no values, and saving them would blank the stored ones.
+        guard !readFailed else { return }
         do {
             try settings.setEnvironment(
                 variables.map {
