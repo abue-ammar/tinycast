@@ -922,7 +922,24 @@ const zlibImpl = {
   constants: {},
 };
 for (const name of ["gzip", "gunzip", "deflate", "inflate", "deflateRaw", "inflateRaw"]) {
-  zlibImpl[name] = callbackify(zlibImpl[`${name}Sync`]);
+  const sync = zlibImpl[`${name}Sync`];
+  zlibImpl[name] = callbackify(sync);
+  zlibImpl[`create${name[0].toUpperCase()}${name.slice(1)}`] = () => {
+    const chunks = [];
+    return new Transform({
+      transform(chunk, _enc, cb) {
+        chunks.push(Buffer.from(chunk));
+        cb();
+      },
+      flush(cb) {
+        try {
+          cb(null, sync(concatBuffers(chunks)));
+        } catch (error) {
+          cb(error);
+        }
+      },
+    });
+  };
 }
 const zlib = unsupportedModule("zlib", zlibImpl);
 
