@@ -840,7 +840,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                 [toast.title, toast.message].compactMap { $0 }.joined(separator: " — "))
             return stamped.id
         }
-        toasts.append(stamped)
+        toasts = [stamped]
         // Non-animated toasts self-dismiss; an animated one stays until the command hides it.
         if stamped.style != .animated { scheduleToastDismissal(id: stamped.id) }
         return stamped.id
