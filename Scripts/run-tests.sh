@@ -224,6 +224,7 @@ run palette-input-test     Tinycast/Palette/PalettePanel.swift \
                            Tinycast/DesignSystem/Interaction/KeyboardFocus.swift \
                            Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardFileKind.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Tinycast/Features/Clipboard/Model/ColorValue.swift \
                            Tinycast/Features/Clipboard/Model/ColorFormat.swift \
