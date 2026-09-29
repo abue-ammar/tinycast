@@ -88,7 +88,9 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   `message_thinking` keeps them; `requestMessages` never sends them back. A route that only says
   it is thinking still just shows "Thinking…". How much there is to read is the route's call:
   Claude streams full summaries, while Grok's CLI sends a line or two in the clear and the rest of
-  its reasoning encrypted, so a Grok fold is short by design, not by truncation.
+  its reasoning encrypted, so a Grok fold is short by design, not by truncation. An OpenAI-shaped
+  route also counts a `<think>…</think>` block that opens its content, and only there, so a
+  literal `<think>` later in an answer stays text.
 - **A chat is named by its harness.** As soon as a chat's first question is sent — so the title
   lands while the answer streams — again after an answer if that failed, and never over a rename,
   `AIChatCoordinator.nameIfNeeded` asks for a title: Claude's CLI through its own
@@ -330,8 +332,10 @@ was, and the choice rides in `AIModelSelection.effort` like every other route's.
 
 `AIProvider.stream(_:)` accepts provider-neutral messages, optional instructions, a maximum output
 token count and the tools the turn may call. It returns an `AsyncThrowingStream` of text, thinking
-state, tool activity, usage and completion. OpenAI-
-compatible reasoning fields are surfaced as `.thinking`, never mixed into answer text. Anthropic
+state, tool activity, usage and completion. OpenAI-compatible reasoning fields and a response's
+leading `<think>…</think>` content block are surfaced as `.thinking` and `.reasoning`, never mixed
+into answer text. `AIThinkTagDecoder` holds back a tag split across deltas, drops the whitespace
+between the closing tag and the answer, and flushes an unclosed block as reasoning. Anthropic
 system messages are lifted into its top-level `system` field; the other HTTP routes keep system
 messages in the OpenAI message array.
 
@@ -557,7 +561,8 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Drop a PDF on the pane with a text-only model selected: the HUD refuses it, as a paste would.
 - Collapse the sidebar with the toolbar button; ⌘N and ⌘Q (Close Window) still work, and ⌘Q with
   Settings in front closes Settings instead.
-- Harnesses: `ai-provider-test` (endpoints, request bodies, stream decoding, persistence repair,
+- Harnesses: `ai-provider-test` (endpoints, request bodies, stream decoding including leading
+  think tags across content and SSE splits, persistence repair,
   Codex framing, on-device routing, the two MCP launch encodings and the two consent channels, the
   shown-model and switched-off-route rules, and a tool's override from settings to launch),
   `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore` with renames and pins,

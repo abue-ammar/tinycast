@@ -58,6 +58,7 @@ struct AIStreamDecoder: Sendable {
 
     private let shape: AIHTTPConfiguration.APIShape
     private var parser = SSEParser()
+    private var thinkTags = AIThinkTagDecoder()
     private var usage = AIUsage()
     private var partialToolCalls: [Int: PartialToolCall] = [:]
     private(set) var isTerminal = false
@@ -83,7 +84,9 @@ struct AIStreamDecoder: Sendable {
     }
 
     mutating func finish() throws -> [AIStreamEvent] {
-        try decode(parser.finish())
+        var events = try decode(parser.finish())
+        if shape == .openAICompatible, !isTerminal { events += thinkTags.finish() }
+        return events
     }
 
     private mutating func decode(_ payloads: [String]) throws -> [AIStreamEvent] {
@@ -91,6 +94,7 @@ struct AIStreamDecoder: Sendable {
         for payload in payloads where !isTerminal {
             if payload == "[DONE]" {
                 isTerminal = true
+                if shape == .openAICompatible { events += thinkTags.finish() }
                 events.append(contentsOf: flushToolCalls())
                 events.append(.finished)
                 continue
@@ -121,7 +125,7 @@ struct AIStreamDecoder: Sendable {
         var events: [AIStreamEvent] = []
         if let choice = chunk.choices?.first {
             if let content = choice.delta?.content, !content.isEmpty {
-                events.append(.text(content))
+                events += thinkTags.feed(content)
             } else if let reasoning = choice.delta?.reasoningText {
                 events += [.thinking, .reasoning(reasoning)]
             }

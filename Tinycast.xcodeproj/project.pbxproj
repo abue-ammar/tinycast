@@ -243,6 +243,7 @@
 		52D95C1FF343FCD57D5425A0 /* ChatSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E95EA1EBD6E4B5ECE149FA0 /* ChatSession.swift */; };
 		5332040ADB923832DCA06E5C /* CalculatorCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 518429EDBFBEA0B866CCAA81 /* CalculatorCoordinator.swift */; };
 		533C229E97F9047A2DEC1A2B /* ExtensionDateExpression.swift in Sources */ = {isa = PBXBuildFile; fileRef = D29DCDCD85CC097E5E68A319 /* ExtensionDateExpression.swift */; };
+		53DE13D2CDD0772A90069C86 /* AIThinkTagDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DD7A98B63B9043D67012E39 /* AIThinkTagDecoder.swift */; };
 		5400114EF68AE70236DF0B94 /* QuicklinkArgumentsAccessory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28B398912F4FB38912BD779C /* QuicklinkArgumentsAccessory.swift */; };
 		540F1433DC46BC97C9F80E06 /* AboutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 787059DAE8AB67FFE684C0D9 /* AboutView.swift */; };
 		544328603EE64420A24A128C /* InstalledAIProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8F318681FA5313677A14DA /* InstalledAIProbe.swift */; };
@@ -808,6 +809,7 @@
 		0CB8DC0BB8BFB2AC298B1DCF /* ExtensionRegistriesPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionRegistriesPanel.swift; sourceTree = "<group>"; };
 		0CFA4726A74C5CCA6E301665 /* DialogChip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DialogChip.swift; sourceTree = "<group>"; };
 		0D4F22647E4E1BA19F0FC520 /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
+		0DD7A98B63B9043D67012E39 /* AIThinkTagDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIThinkTagDecoder.swift; sourceTree = "<group>"; };
 		0DE505A8B3E665C2C1382B48 /* ExecutablePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecutablePicker.swift; sourceTree = "<group>"; };
 		0DFEBE220187043060F7F286 /* ToolRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolRunner.swift; sourceTree = "<group>"; };
 		0E099C50FF0B6A0069CAC5BF /* CommandOutputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandOutputView.swift; sourceTree = "<group>"; };
@@ -2202,6 +2204,7 @@
 				65F1010FAC9C0EC4DBDE58A8 /* AIRequestBody.swift */,
 				2A82786725DFEB5467778E68 /* AIRetention.swift */,
 				0337B056DA2D31772534F1EF /* AIStreamDecoder.swift */,
+				0DD7A98B63B9043D67012E39 /* AIThinkTagDecoder.swift */,
 				4FBE70702D22F894C6B1A790 /* AITool.swift */,
 				552EF9B38ABA9443D4FDE5E4 /* AIToolRounds.swift */,
 				737C126A1DB2FA800A32A8AE /* AIToolServer.swift */,
@@ -3539,6 +3542,7 @@
 				3D56F518ABEF5851534A710C /* AISettingsStore.swift in Sources */,
 				76056E33DD554E1153BB3DD0 /* AISettingsView.swift in Sources */,
 				4D8C05DD67FAB9F2DA1F31FB /* AIStreamDecoder.swift in Sources */,
+				53DE13D2CDD0772A90069C86 /* AIThinkTagDecoder.swift in Sources */,
 				19F36636F27933FA8278642A /* AITool.swift in Sources */,
 				184F26705A2A2DB127CD90D6 /* AIToolLoopProvider.swift in Sources */,
 				8BC02EA99DA8526DBA1204D0 /* AIToolRounds.swift in Sources */,

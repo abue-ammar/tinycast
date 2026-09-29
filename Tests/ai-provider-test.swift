@@ -87,6 +87,7 @@ struct AIProviderTests {
         sseFramesSurviveSplits()
         openAIAndAnthropicStreamsDecode()
         capturedStreamsDecodeHoweverTheyArrive()
+        thinkTagStreamsDecodeHoweverTheyArrive()
         brokenStreamsFailLoudly()
         brandsResolveFromModelIDs()
         requestBodiesCarryDocuments()
@@ -681,6 +682,147 @@ struct AIProviderTests {
                 },
                 "\(capture.file) reports final usage")
         }
+    }
+
+    static func thinkTagStreamsDecodeHoweverTheyArrive() {
+        guard let data = FileManager.default.contents(atPath: "Tests/ai-fixtures/openai-think-tags.txt")
+        else {
+            expect(false, "think tags: fixture is readable")
+            return
+        }
+        let whole = decodeAll(data, slice: data.count)
+        expect(whole == decodeAll(data, slice: 7), "think tags: fixture survives 7-byte slices")
+        expect(reasoningText(whole) == "Plan carefully.", "think tags: fixture reasoning is exact")
+        expect(answerText(whole) == "The answer.", "think tags: fixture answer is exact")
+        expect(whole.contains(.thinking), "think tags: fixture surfaces thinking")
+        expect(
+            whole.suffix(2) == [.usage(AIUsage(inputTokens: 5, outputTokens: 9)), .finished],
+            "think tags: fixture keeps usage before completion")
+
+        let content = Array("<think>reason</think>\n\nanswer")
+        for first in 0...content.count {
+            for second in first...content.count {
+                let fragments = [
+                    String(content[..<first]), String(content[first..<second]),
+                    String(content[second...])
+                ]
+                let events = decodeContent(fragments)
+                expect(
+                    reasoningText(events) == "reason" && answerText(events) == "answer",
+                    "think tags: content splits \(first),\(second) preserve reasoning and answer")
+            }
+        }
+        let characters = decodeContent(content.map(String.init))
+        expect(
+            reasoningText(characters) == "reason" && answerText(characters) == "answer",
+            "think tags: one character per delta preserves reasoning and answer")
+        let spaced = decodeContent([" \n", "<think> ", "\n", "reason \n</thi", "nk>\n", "\t", "answer", " \n"]
+        )
+        expect(
+            reasoningText(spaced) == " \nreason \n" && answerText(spaced) == "answer \n",
+            "think tags: only leading tag space and the answer separator are removed")
+        expect(
+            decodeContent(["<think>r</think>answer"])
+                == [.thinking, .reasoning("r"), .text("answer"), .finished],
+            "think tags: a single delta emits reasoning before answer text")
+        for literal in [
+            "<div>x</div>", "<thinking>…", "\n\nHello", "Hello <think>x</think> world",
+            "Hello<think>x</think> world", "</think>answer"
+        ] {
+            let events = decodeContent(literal.map(String.init))
+            expect(
+                answerText(events) == literal && !events.contains(.thinking),
+                "think tags: literal content stays verbatim: \(literal.debugDescription)")
+        }
+        for content in ["<think></think>", "<think> \n\t</think>"] {
+            expect(
+                decodeContent(content.map(String.init)) == [.finished],
+                "think tags: empty or whitespace-only reasoning emits nothing")
+        }
+        let secondBlock = decodeContent(["<think>r</think>", "answer <think>literal</think> world"])
+        expect(
+            answerText(secondBlock) == "answer <think>literal</think> world",
+            "think tags: recognition never resumes after the first block")
+        for done in [true, false] {
+            let unclosed = decodeContent(["<think>reason</thi"], done: done)
+            expect(
+                reasoningText(unclosed) == "reason</thi" && answerText(unclosed).isEmpty,
+                "think tags: unclosed reasoning flushes at \(done ? "DONE" : "EOF")")
+            expect(
+                answerText(decodeContent(["<thi"], done: done)) == "<thi",
+                "think tags: undecided content flushes at \(done ? "DONE" : "EOF")")
+        }
+        var decoder = AIStreamDecoder(shape: .openAICompatible)
+        _ = try? decoder.feed(contentFrame("<thi"))
+        expect((try? decoder.finish()) == [.text("<thi")], "think tags: EOF flushes the held prefix")
+        expect((try? decoder.finish()) == [], "think tags: EOF never flushes twice")
+        var terminated = AIStreamDecoder(shape: .openAICompatible)
+        _ = try? terminated.feed(contentFrame("<think>r</thi"))
+        expect(
+            (try? terminated.feed(Data("data: [DONE]\n\n".utf8)))
+                == [.thinking, .reasoning("</thi"), .finished],
+            "think tags: DONE flushes reasoning before completion")
+        expect((try? terminated.finish()) == [], "think tags: EOF after DONE never flushes twice")
+        let tools = Data(
+            """
+            data: {"choices":[{"delta":{"tool_calls":[{"index":0,"id":"c1","function":{"name":"read","arguments":"{}"}}]}}]}
+
+            data: {"choices":[{"delta":{},"finish_reason":"tool_calls"}]}
+
+            data: {"choices":[],"usage":{"prompt_tokens":2,"completion_tokens":3}}
+
+            data: [DONE]
+
+            """.utf8)
+        let toolEvents = decodeAll(contentFrame("<think>r</think>") + tools, slice: 7)
+        expect(
+            toolEvents == [
+                .thinking, .reasoning("r"),
+                .toolCallRequested(AIToolCall(id: "c1", name: "read", arguments: "{}")),
+                .usage(AIUsage(inputTokens: 2, outputTokens: 3)), .finished
+            ],
+            "think tags: reasoning precedes tools without changing tool, usage or completion order")
+        let native = Data(
+            """
+            data: {"choices":[{"delta":{"reasoning_content":"native"}}]}
+
+            data: {"choices":[{"delta":{"content":"answer"}}]}
+
+            data: [DONE]
+
+            """.utf8)
+        expect(
+            decodeAll(native, slice: 7) == [.thinking, .reasoning("native"), .text("answer"), .finished],
+            "think tags: reasoning_content retains its original event sequence")
+    }
+
+    private static func contentFrame(_ content: String) -> Data {
+        guard let encoded = try? JSONEncoder().encode(content),
+            let quoted = String(bytes: encoded, encoding: .utf8)
+        else {
+            preconditionFailure("A content string must encode as JSON")
+        }
+        return Data("data: {\"choices\":[{\"delta\":{\"content\":\(quoted)}}]}\n\n".utf8)
+    }
+
+    private static func decodeContent(_ fragments: [String], done: Bool = true) -> [AIStreamEvent] {
+        var data = fragments.reduce(into: Data()) { $0 += contentFrame($1) }
+        if done { data += Data("data: [DONE]\n\n".utf8) }
+        return decodeAll(data, slice: max(1, data.count))
+    }
+
+    private static func reasoningText(_ events: [AIStreamEvent]) -> String {
+        events.compactMap { event -> String? in
+            if case .reasoning(let text) = event { return text }
+            return nil
+        }.joined()
+    }
+
+    private static func answerText(_ events: [AIStreamEvent]) -> String {
+        events.compactMap { event -> String? in
+            if case .text(let text) = event { return text }
+            return nil
+        }.joined()
     }
 
     private static func decodeAll(_ data: Data, slice: Int) -> [AIStreamEvent] {

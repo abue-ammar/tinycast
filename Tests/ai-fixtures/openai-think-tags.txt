@@ -1,0 +1,17 @@
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[{"index":0,"delta":{"content":"<thi"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[{"index":0,"delta":{"content":"nk>Plan "},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[{"index":0,"delta":{"content":"carefully.</th"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[{"index":0,"delta":{"content":"ink>\n"},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[{"index":0,"delta":{"content":"\nThe answer."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-think-tags","object":"chat.completion.chunk","created":0,"model":"fixture","choices":[],"usage":{"prompt_tokens":5,"completion_tokens":9}}
+
+data: [DONE]
