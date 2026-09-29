@@ -102,7 +102,8 @@ instead.**
 ### Installed AI: Codex, Claude, Grok, OpenCode and Cursor
 
 If you already use the `codex`, `claude`, `grok`, `opencode` or `agent` (Cursor) command-line tools,
-Tinycast can use them with the account you are signed in to. **Tinycast never asks for or stores their keys.**
+Tinycast can use their existing configuration. Codex also works with a configured API provider that
+does not require OpenAI sign-in. **Tinycast never asks for or stores their keys.**
 
 Each one has its own switch, and all five ship off. The pane shows whether each is ready, missing,
 or needs you to sign in. It links to the install page and can copy the sign-in command for you.

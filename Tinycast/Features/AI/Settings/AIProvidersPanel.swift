@@ -693,7 +693,7 @@ struct AIProvidersPanel: View {
         case .failed: return "Check failed"
         case .connected:
             let count = modelCount(subscription.models.count)
-            guard let account = subscription.account else { return count }
+            guard let account = subscription.account else { return "Ready · " + count }
             let plan = account.planTitle == "API key" ? "API key" : "ChatGPT \(account.planTitle)"
             return "\(plan) · \(count)"
         }

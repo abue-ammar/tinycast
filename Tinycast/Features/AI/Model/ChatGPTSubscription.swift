@@ -38,6 +38,13 @@ enum ChatGPTSubscription {
         }
     }
 
+    /// What `account/read` confirmed a turn can run on.
+    enum Access: Equatable, Sendable {
+        case account(Account)
+        /// A custom provider brings its own key, so Codex reports no account and needs none.
+        case provider
+    }
+
     struct Effort: Equatable, Identifiable, Sendable {
         let id: String
         let detail: String?

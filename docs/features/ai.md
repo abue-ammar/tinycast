@@ -141,7 +141,8 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
 - **Installed commands reuse their own login.** Tinycast launches the user's `codex`, `claude`, `grok` or
   `opencode` executable without asking for or storing another key. Codex inherits the user's normal
   home and credential-store setting; Claude, Grok, OpenCode and Cursor inherit their normal configuration. Tinycast
-  never reads those credential files, browser cookies or undocumented web endpoints.
+  never reads those credential files, browser cookies or undocumented web endpoints. A Codex route
+  with no account is ready only when `account/read` explicitly says `requiresOpenaiAuth: false`.
 - **Codex runs Tinycast's MCP servers and nothing else.** The app-server still launches with every
   feature flag off and a read-only, network-disabled sandbox, and every server request but one is
   declined. What changed is the list: the servers the reader configured for their own Codex are
@@ -564,7 +565,7 @@ window, and every chat action either surface sends — is the nineteenth feature
   `AIToolLoopProvider`, regenerate, and `AIChatSurfacesState`'s one-live-place rule),
   `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
   turn ID, plus the MCP launch boundary, one launch for concurrent starts, the elicitation, the
-  rows and the call cap),
+  rows, the call cap and a custom provider's access without an account),
   `installed-ai-test` (Claude/Grok/OpenCode/Cursor flags, prompt
   framing, streaming and cleanup, and Claude's private MCP configuration, control channel, round
   cap and managed-policy branch, a reader's variables against Tinycast's own, and a set command
@@ -606,7 +607,12 @@ app-server lifecycle and discovered account metadata. Production never sets `COD
 server uses the same login and credential store as the user's normal Codex command. Tinycast supplies
 only a private working directory. The server stops after ten idle minutes, when AI is switched off or
 when the app terminates, and restarts on demand. Account state, model availability and rate-limit
-windows come from the supported app-server protocol.
+windows come from the supported app-server protocol. A custom Codex provider can report no account
+and `requiresOpenaiAuth: false`; Tinycast then loads its models and runs turns without inventing an
+account or asking for `codex login`. A missing or true flag still requires sign-in. A running server
+rereads `config.toml` at every `account/read`, but Tinycast keeps what a check found, account or
+provider, beside the models and rate limits it read with it, until the next check; a turn that finds
+nothing to run on leaves Codex signed out and stops the server, as a check does.
 
 MCP is the one thing about that server that is fixed at `exec`: its overrides and its environment
 both are, so `CodexAppServerClient` remembers the list it was launched with and relaunches when the

@@ -8,6 +8,9 @@
 // `parallel` serves one thread per request and holds both replies until the harness releases them,
 // so two turns are live at once.
 //
+// `api-auth`, `auth-required` and `auth-undetermined` answer `account/read` the way a custom
+// provider, a signed-out OpenAI route and a server without the `requiresOpenaiAuth` flag do.
+//
 // `TC_STUB_ROOT` is the scratch directory the harness and this process signal through;
 // `TC_STUB_MODE` picks which half of the turn ID to withhold, or `parallel`.
 
@@ -216,6 +219,14 @@ for (;;) {
         threads += 1;
         const thread = MODE === "parallel" ? `thread-${threads}` : THREAD;
         emit({ id: requestID, result: { thread: { id: thread } } });
+    } else if (method === "turn/start" && MODE === "api-auth") {
+        emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });
+        emit({ id: requestID, result: { turn: { id: TURN } } });
+        emit({ method: "item/agentMessage/delta", params: { threadId: THREAD, delta: "ready" } });
+        emit({
+            method: "turn/completed",
+            params: { threadId: THREAD, turn: { id: TURN, status: "completed" } },
+        });
     } else if (method === "turn/start" && MODE === "parallel") {
         parallelTurn(message);
     } else if (method === "turn/start") {
@@ -246,7 +257,14 @@ for (;;) {
         // alone. `hold-both` answers it too, so a turn named twice is still interrupted once.
         if (MODE === "hold-both") emit({ id: requestID, result: { turn: { id: TURN } } });
     } else if (method === "account/read") {
-        emit({ id: requestID, result: { account: { type: "chatgpt", planType: "plus" } } });
+        const result = MODE === "api-auth"
+            ? { account: null, requiresOpenaiAuth: false }
+            : MODE === "auth-required" ? { account: null, requiresOpenaiAuth: true }
+            : MODE === "auth-undetermined" ? { account: null }
+            : { account: { type: "chatgpt", planType: "plus" }, requiresOpenaiAuth: true };
+        emit({ id: requestID, result });
+    } else if (method === "model/list" && MODE === "api-auth") {
+        emit({ id: requestID, result: { data: [{ model: "custom-model", displayName: "Custom model" }] } });
     } else if (method === "turn/interrupt") {
         const params = message.params ?? {};
         record(`interrupt:${params.threadId}:${params.turnId}`);

@@ -17,6 +17,9 @@ struct CodexTurnTests {
     }
 
     static func main() async {
+        await aCustomProviderIsReadyWithoutAnAccount()
+        await aColdTurnChecksAccessItself()
+        await aSignedOutRouteIsNeverReady()
         await stopBeforeTurnStartedStillInterrupts()
         await aTurnNamedTwiceIsInterruptedOnce()
         await tinycastsServersAreLaunchedAndTheUsersOwnAreNot()
@@ -39,6 +42,101 @@ struct CodexTurnTests {
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
+    }
+
+    /// A custom provider's `account/read` is no account and `requiresOpenaiAuth: false`.
+    static func aCustomProviderIsReadyWithoutAnAccount() async {
+        guard let server = StubServer(mode: "api-auth") else {
+            expect(false, "the custom provider stub installs")
+            return
+        }
+        let manager = ChatGPTSubscriptionManager(supportDirectory: server.root)
+        defer {
+            manager.stop()
+            server.tearDown()
+        }
+
+        await manager.refresh().value
+        expect(
+            manager.isConnected && manager.access == .provider && manager.account == nil,
+            "a custom provider is ready without an OpenAI account")
+        expect(
+            manager.models.map(\.id) == ["custom-model"],
+            "the custom provider's models are listed")
+
+        let first = await reply(from: manager)
+        let second = await reply(from: manager)
+        expect(
+            first.text == "ready" && second.text == "ready",
+            "turns run on the custom provider: \(first.error ?? second.error ?? "")")
+        expect(
+            server.received.split(separator: "\n").count { $0 == "account/read" } == 1,
+            "access is read once by the check, not again before every turn")
+    }
+
+    /// The turn guard, not only the status check, has to accept a custom provider.
+    static func aColdTurnChecksAccessItself() async {
+        guard let server = StubServer(mode: "api-auth") else {
+            expect(false, "the custom provider stub installs")
+            return
+        }
+        let manager = ChatGPTSubscriptionManager(supportDirectory: server.root)
+        defer {
+            manager.stop()
+            server.tearDown()
+        }
+
+        let cold = await reply(from: manager)
+        expect(
+            cold.text == "ready" && manager.isConnected && manager.access == .provider,
+            "a turn with no check before it runs on a custom provider: \(cold.error ?? "")")
+    }
+
+    /// No account means sign-in, unless Codex says outright that none is needed.
+    static func aSignedOutRouteIsNeverReady() async {
+        for mode in ["auth-required", "auth-undetermined"] {
+            guard let server = StubServer(mode: mode) else {
+                expect(false, "the \(mode) stub installs")
+                continue
+            }
+            let checked = ChatGPTSubscriptionManager(supportDirectory: server.root)
+            await checked.refresh().value
+            expect(
+                checked.phase == .signedOut && !checked.isConnected && checked.models.isEmpty,
+                "\(mode): a check without an account is signed out")
+            checked.stop()
+
+            let stops = { server.received.split(separator: "\n").count { $0 == "stdin-closed" } }
+            let checkStopped = await server.awaitCondition { stops() == 1 }
+            let cold = ChatGPTSubscriptionManager(supportDirectory: server.root)
+            let attempt = await reply(from: cold)
+            expect(
+                attempt.error?.contains("codex login") == true && cold.phase == .signedOut,
+                "\(mode): a turn without an account asks for sign-in and shows signed out")
+            let turnStopped = await server.awaitCondition { stops() == 2 }
+            expect(
+                checkStopped && turnStopped,
+                "\(mode): the signed-out server is stopped, as after a check")
+            cold.stop()
+            server.tearDown()
+        }
+    }
+
+    private static func reply(
+        from manager: ChatGPTSubscriptionManager
+    ) async -> (text: String, error: String?) {
+        let stream = manager.turns.stream(
+            AIRequest(messages: [AIMessage(role: .user, text: "Hello")]),
+            model: "custom-model", effort: nil)
+        var text = ""
+        do {
+            for try await event in stream {
+                if case .text(let delta) = event { text += delta }
+            }
+        } catch {
+            return (text, error.localizedDescription)
+        }
+        return (text, nil)
     }
 
     /// The launch is the boundary: ours named, the reader's disabled, their config never written.

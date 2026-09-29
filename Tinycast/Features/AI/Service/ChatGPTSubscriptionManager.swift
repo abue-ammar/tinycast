@@ -17,7 +17,7 @@ final class ChatGPTSubscriptionManager {
     }
 
     private(set) var phase = ChatGPTSubscription.Phase.idle
-    private(set) var account: ChatGPTSubscription.Account?
+    private(set) var access: ChatGPTSubscription.Access?
     private(set) var models: [ChatGPTSubscription.Model] = []
     private(set) var rateLimits: ChatGPTSubscription.RateLimits?
     /// Copied from the client at each check: the client is not observed, and Settings shows this.
@@ -46,7 +46,11 @@ final class ChatGPTSubscriptionManager {
         }
     }
 
-    var isConnected: Bool { account != nil && phase == .connected }
+    var account: ChatGPTSubscription.Account? {
+        if case .account(let account) = access { account } else { nil }
+    }
+
+    var isConnected: Bool { access != nil && phase == .connected }
 
     @discardableResult
     func refresh() -> Task<Void, Never> {
@@ -76,16 +80,13 @@ final class ChatGPTSubscriptionManager {
         client.stop()
     }
 
-    /// What a turn needs before it starts: a running server and a signed-in account.
+    /// What a turn needs before it starts: a running server and confirmed access.
     private func ensureConnected(toolServers: [AIToolServer]) async throws {
         idleTask?.cancel()
-        // A changed list relaunches, since it is fixed at exec; the account outlives the process.
+        // A changed list relaunches, since it is fixed at exec; access outlives the process.
         try await client.start(toolServers: toolServers)
-        if account == nil, try await restoreAccount() {
-            phase = .connected
-            await loadModelsAndLimits()
-        }
-        guard account != nil else {
+        guard access == nil else { return }
+        guard try await verifyAccess() else {
             throw AIProviderError.unavailable("Sign in with `codex login`, then check Codex again.")
         }
     }
@@ -112,17 +113,23 @@ final class ChatGPTSubscriptionManager {
         do {
             try await client.startForCheck()
             executable = client.executable
-            guard try await restoreAccount() else {
-                phase = .signedOut
-                client.stop()
-                return
-            }
-            phase = .connected
-            await loadModelsAndLimits()
+            guard try await verifyAccess() else { return }
             scheduleIdleShutdown()
         } catch {
             apply(error)
         }
+    }
+
+    /// A check and a turn reach the same verdict, so neither leaves a signed-out server running.
+    private func verifyAccess() async throws -> Bool {
+        guard try await restoreAccess() else {
+            phase = .signedOut
+            client.stop()
+            return false
+        }
+        phase = .connected
+        await loadModelsAndLimits()
+        return true
     }
 
     /// The server stays resident only while it is being used; a stopped one restarts on demand.
@@ -192,17 +199,21 @@ final class ChatGPTSubscriptionManager {
             })
     }
 
-    private func restoreAccount() async throws -> Bool {
+    private func restoreAccess() async throws -> Bool {
         let response = try await client.request(
             method: "account/read", params: ["refreshToken": false])
-        guard let rawAccount = response["account"]?.objectValue else {
+        if let rawAccount = response["account"]?.objectValue {
+            let type = rawAccount["type"]?.stringValue ?? "unknown"
+            access = .account(
+                ChatGPTSubscription.Account(
+                    email: rawAccount["email"]?.stringValue,
+                    plan: rawAccount["planType"]?.stringValue ?? type))
+        } else if response["requiresOpenaiAuth"]?.boolValue == false {
+            access = .provider
+        } else {
             forget()
             return false
         }
-        let type = rawAccount["type"]?.stringValue ?? "unknown"
-        account = ChatGPTSubscription.Account(
-            email: rawAccount["email"]?.stringValue,
-            plan: rawAccount["planType"]?.stringValue ?? type)
         return true
     }
 
@@ -216,7 +227,7 @@ final class ChatGPTSubscriptionManager {
     }
 
     private func forget() {
-        account = nil
+        access = nil
         models = []
         rateLimits = nil
         turns.reset()
