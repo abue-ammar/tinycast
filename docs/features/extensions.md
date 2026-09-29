@@ -404,7 +404,10 @@ screens hold (see [palette.md](palette.md)).
   the flattened `ExtensionAction` list rather than the drawn rows, so ↵ and the panel fire the same
   one without resolving an icon per arrow key. Header accessory symbols use the same 14pt Medium
   monochrome treatment; their menus use the same extension-owned transition, anchored to the control.
-- **Feedback** — `showToast` replaces the current toast above the footer, `showHUD` is a centred pill, and `confirmAlert`
+- **Feedback** — `showToast` replaces the current toast, a glass pill that takes the footer menu button's place and is
+  lit by its style's colour. Hovering turns its mark into an ×, and clicking anywhere but its button dismisses it and
+  gives the menu button back. A failure toast's button is always **Copy** (title and message); any other style shows
+  the command's primary action; `showHUD` is a centred pill, and `confirmAlert`
   goes through `DialogController` like every other question the app asks. Its dialog sits at
   `.dialog`, above the palette's `.palette`, so a view command keeps its screen behind it — and
   the palette does not dismiss while it is up (`AppCore.isShowingDialog`), because dismissing pops to

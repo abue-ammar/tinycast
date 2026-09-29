@@ -96,63 +96,132 @@ struct ExtensionFailureView: View {
     }
 }
 
-/// `showHUD` is a separate window: a no-view command closes the palette first.
-struct ExtensionFeedbackOverlay: View {
-    @Environment(\.metrics) private var metrics
-    let toasts: [ExtensionToast]
-    let onToastAction: (String) -> Void
+struct ExtensionToastPill: View {
+    private static let glowOpacity = 0.14
+    private static let glowRadius: CGFloat = 150
+    private static let rimOpacity = 0.25
 
-    var body: some View {
-        VStack(spacing: metrics.spacing.xs) {
-            ForEach(toasts) { toast in
-                ToastRow(toast: toast, onAction: onToastAction)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
+    @Environment(\.metrics) private var metrics
+    let toast: ExtensionToast
+    let onAction: (String) -> Void
+    let onDismiss: () -> Void
+    @State private var hovered = false
+    /// A fresh stamp re-arms the reset, so a second copy holds "Copied".
+    @State private var copiedAt: Date?
+
+    private var tint: Color {
+        switch toast.style {
+        case .success: Theme.Colors.success
+        case .failure: Theme.Colors.destructive
+        case .animated: Theme.Colors.progress
         }
-        .padding(.bottom, metrics.size.bottomBarHeight)
-        .padding(.horizontal, metrics.spacing.md)
-        .animation(.easeOut(duration: 0.16), value: toasts.map(\.id))
     }
 
-    private struct ToastRow: View {
-
-        @Environment(\.metrics) private var metrics
-        let toast: ExtensionToast
-        let onAction: (String) -> Void
-
-        private var icon: (name: String, tint: Color) {
-            switch toast.style {
-            case .success: return ("checkmark.circle.fill", .green)
-            case .failure: return ("xmark.circle.fill", .red)
-            case .animated: return ("arrow.trianglehead.2.clockwise", Theme.Colors.textSecondary)
-            }
-        }
-
-        var body: some View {
-            HStack(spacing: metrics.spacing.sm) {
-                Image(systemName: icon.name)
-                    .foregroundStyle(icon.tint)
-                    .symbolEffect(.rotate, isActive: toast.style == .animated)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(toast.title).font(metrics.typography.bar).lineLimit(1)
-                    if let message = toast.message, !message.isEmpty {
-                        Text(message)
-                            .font(metrics.typography.rowTrailing)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
+    var body: some View {
+        HStack(spacing: 0) {
+            mark.frame(width: metrics.size.menuButton, height: metrics.size.menuButton)
+            HStack(spacing: metrics.spacing.md) {
+                Text(toast.title).foregroundStyle(Theme.Colors.textPrimary)
+                if let message = toast.message, !message.isEmpty {
+                    Text(message).foregroundStyle(Theme.Colors.textSecondary)
+                }
+                if toast.style == .failure {
+                    divider
+                    button {
+                        Paster.copyPlainText(
+                            [toast.title, toast.message].compactMap(\.self).joined(separator: "\n"))
+                        copiedAt = Date()
+                    } label: {
+                        // The wider word holds the width, so the pill never twitches on copy.
+                        ZStack {
+                            Text("Copied").hidden()
+                            Text(copiedAt == nil ? "Copy" : "Copied")
+                        }
+                    }
+                } else if let action = toast.primaryAction {
+                    divider
+                    button {
+                        onAction(action.token)
+                    } label: {
+                        Text(action.title)
                     }
                 }
-                Spacer(minLength: metrics.spacing.sm)
-                if let action = toast.primaryAction {
-                    Button(action.title) { onAction(action.token) }
-                        .buttonStyle(.plain)
-                        .font(metrics.typography.bar)
-                        .foregroundStyle(.tint)
-                }
             }
-            .padding(.horizontal, metrics.spacing.md)
-            .padding(.vertical, metrics.spacing.sm)
-            .frosted(in: RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous))
+            .font(metrics.typography.bar)
+            .lineLimit(1)
+            .padding(.trailing, metrics.spacing.xl)
+        }
+        .frame(height: metrics.size.menuButton)
+        .fixedSize()
+        .background { glow }
+        .overlay {
+            Capsule().strokeBorder(
+                LinearGradient(
+                    colors: [tint.opacity(Self.rimOpacity), tint.opacity(0.06), .clear],
+                    startPoint: .leading, endPoint: .trailing),
+                lineWidth: Theme.Size.hairline)
+        }
+        .frosted(in: Capsule())
+        .contentShape(Capsule())
+        .onTapGesture(perform: onDismiss)
+        .onHover { isHovered in
+            withAnimation(.easeOut(duration: Theme.Duration.hover)) { hovered = isHovered }
+        }
+        .accessibilityAction(named: "Dismiss", onDismiss)
+        .task(id: copiedAt) {
+            guard copiedAt != nil else { return }
+            try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))
+            copiedAt = nil
+        }
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Theme.Colors.border)
+            .frame(width: Theme.Size.hairline, height: metrics.size.menuIcon * 0.7)
+    }
+
+    private func button(
+        action: @escaping () -> Void, @ViewBuilder label: () -> some View
+    ) -> some View {
+        Button(action: action, label: label)
+            .buttonStyle(.plain)
+            .fontWeight(.semibold)
+            .foregroundStyle(Theme.Colors.textPrimary)
+    }
+
+    private var glow: some View {
+        GeometryReader { proxy in
+            Capsule().fill(
+                RadialGradient(
+                    colors: [tint.opacity(Self.glowOpacity), tint.opacity(0.03), .clear],
+                    center: UnitPoint(x: metrics.size.menuButton / 2 / proxy.size.width, y: 0.5),
+                    startRadius: 0, endRadius: Self.glowRadius))
+        }
+    }
+
+    private var mark: some View {
+        Group {
+            if hovered {
+                Image(systemName: "xmark")
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            } else {
+                symbol.foregroundStyle(tint)
+            }
+        }
+        .font(metrics.typography.menuIcon)
+        .transition(.opacity)
+    }
+
+    @ViewBuilder
+    private var symbol: some View {
+        switch toast.style {
+        case .success: Image(systemName: "checkmark")
+        case .failure: Image(systemName: "exclamationmark")
+        case .animated:
+            Image(systemName: "progress.indicator")
+                .symbolEffect(.variableColor.iterative.dimInactiveLayers.nonReversing)
         }
     }
 }

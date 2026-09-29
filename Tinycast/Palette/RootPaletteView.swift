@@ -298,9 +298,6 @@ struct RootPaletteView: View {
                 }
                 // The panel has no title bar, so this thin top margin is the only place left to grab it.
                 .overlay(alignment: .top) { topDragStrip }
-                .modifier(
-                    ExtensionToastOverlay(extensions: extensions, showing: vm.mode == .extensionCommand)
-                )
                 // Never conditionally mounted: unmounting strands SwiftUI's hover target and eats clicks.
                 .overlay {
                     Color.black.opacity(0.001)
@@ -878,6 +875,7 @@ struct RootPaletteView: View {
         // Floating controls, no bar; the edge dissolve ghosts the rows passing beneath.
         HStack(spacing: 0) {
             appMenuButton
+                .modifier(ExtensionToastSlot(extensions: extensions, showing: vm.mode == .extensionCommand))
             Spacer()
             if showActionGroup {
                 actionGroup(

@@ -49,7 +49,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **Resolve every glyph through `SymbolImage`, not `Image(systemName:)`.** Some catalog symbols are bundled assets in `Assets.xcassets` (`toggleBluetooth`), and `Image(systemName:)` silently renders nothing for those.
 - **↵ runs the primary action, Escape cancels, and Cancel always renders leading** (the left button), matching macOS convention. A button never prints its key cap; a deliberate hover reveals its outlined `KeyCapChip` in a `Tooltip`.
 - **In the palette, a hover label is Tinycast's `tooltip`, never `.help()`**: an AppKit tooltip never appears while the app sits inactive behind the non-activating panel. A Settings window activates the app, so `.help()` shows there and stays the label to use. The tooltip hangs above its control by default; a control in the palette header passes `edge: .bottom`, since above it is off the window, and a label may run to several lines — the chat's attachment pill lists every staged name.
-- **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose trailing glyph *is* its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it — and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
+- **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose leading glyph *is* its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it — and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
 - **Glass is for floating controls, with dialogs as the deliberate modal exception.** The action capsule, menu circle and `PopoverMenu` use it inside the palette; dialogs apply one system `.glassEffect(.regular)` to their root surface. Dialog buttons stay matte so their roles remain legible. Both HUDs keep the lighter `panelScrim` → `GlassEffectView()` → `clipShape` recipe.
 
 ---
@@ -538,19 +538,21 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
 - **`MessageHUDController`'s pill** is every _other_ transient
   confirmation: Custom Commands and Snippets confirming a run, and every system action whose effect
   is invisible (`Trash Emptied`, `Hidden Files Shown`, `Bluetooth Off`). One capsule shape, sized to
-  its message (`hudMaxWidth 420` ceiling), clipped to a `Capsule()`, with the message first and a
-  filled glyph trailing it: `checkmark.circle.fill` green for `.success`, `exclamationmark.circle.fill`
-  red for `.danger`, `info.circle.fill` secondary for `.neutral`. **Here the glyph is the tone** — the
+  its message (`hudMaxWidth 420` ceiling), clipped to a `Capsule()`, with a plain glyph leading the
+  message: `checkmark` green for `.success`, `exclamationmark` red for `.danger`,
+  `info` secondary for `.neutral`. The glyph's tone also lights the glass — a faint radial glow from
+  behind it and a hairline rim that fades across the message, the same treatment an extension toast
+  restates in its own feature. **Here the glyph is the tone** — the
   one place that's true, because a pill has no subject to name the way a dialog does; the message
   already says what happened ("Trash Emptied"), so the icon only has to say how it went. The mapping is
   `fileprivate` in `MessageHUDView.swift` precisely so nobody can reach for it when building a
-  `DialogRequest`, where the icon rule is the opposite. It trails rather than leads because a pill is
-  read left to right and the outcome is the last thing you want to land on. Auto-dismisses after
+  `DialogRequest`, where the icon rule is the opposite. It leads, as an extension toast's does, so the
+  outcome lands at a glance before the sentence is read. Auto-dismisses after
   `Duration.messageHUD` (2.4s) — longer than the volume box, since a sentence needs reading time and a
   level only needs a glance — and a repeat call replaces rather than stacks.
 - **The same pill reports work still running**, through `showProgress(message:onCancel:)`: a Quick Action set to
   replace has no panel to watch the answer arrive in, so the pill says `Fixing Grammar…` in its place
-  and the result message replaces it when the model is done. Its trailing mark is a spinner rather
+  and the result message replaces it when the model is done. Its leading mark is a spinner rather
   than a tone, which is why `MessageHUDView.Accessory` exists — a tone says how something *went*, and
   nothing has gone anywhere yet. When `onCancel` is provided, hovering over the pill lights it up,
   turns the spinner into an `xmark`, and clicking anywhere on the pill cancels the in-flight task.
