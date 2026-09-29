@@ -12,6 +12,7 @@ struct MessageHUDView: View {
     let accessory: Accessory
     var onCancel: (() -> Void)? = nil
     @State private var hovered = false
+    @Environment(\.metrics) private var metrics
 
     var body: some View {
         Group {
@@ -35,16 +36,16 @@ struct MessageHUDView: View {
     }
 
     private var content: some View {
-        HStack(spacing: Theme.Spacing.md) {
+        HStack(spacing: metrics.spacing.md) {
             Text(message)
-                .font(Theme.Typography.bar)
+                .font(metrics.typography.bar)
                 .foregroundStyle(Color.primary)
                 .lineLimit(1)
             mark
         }
-        .padding(.horizontal, Theme.Spacing.xl)
-        .padding(.vertical, Theme.Spacing.lg)
-        .frame(maxWidth: Theme.Size.hudMaxWidth, alignment: .leading)
+        .padding(.horizontal, metrics.spacing.xl)
+        .padding(.vertical, metrics.spacing.lg)
+        .frame(maxWidth: metrics.size.hudMaxWidth, alignment: .leading)
         .fixedSize()
         // Not glass: with nothing to lens it falls back to an opaque backing and shows.
         .background(hovered ? Theme.Colors.controlHover : Theme.Colors.panelScrim)
@@ -61,14 +62,14 @@ struct MessageHUDView: View {
         Group {
             if hovered, onCancel != nil {
                 Image(systemName: "xmark")
-                    .font(Theme.Typography.menuIcon.weight(.semibold))
+                    .font(metrics.typography.menuIcon.weight(.semibold))
                     .foregroundStyle(Theme.Colors.textSecondary)
-                    .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                    .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     .transition(.opacity)
             } else {
                 symbol
-                    .font(Theme.Typography.menuIcon)
-                    .frame(width: Theme.Size.menuIcon, height: Theme.Size.menuIcon)
+                    .font(metrics.typography.menuIcon)
+                    .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     .transition(.opacity)
             }
         }
