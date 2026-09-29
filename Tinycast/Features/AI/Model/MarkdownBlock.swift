@@ -124,8 +124,13 @@ private struct MarkdownReader {
     let endsMidStream: Bool
     var index = 0
 
-    /// Past the last line of a reply still streaming, where an open equation may yet close.
-    private var isAtStreamEnd: Bool { endsMidStream && peek() == nil }
+    /// Past the last text of a reply still streaming, where an open equation may yet close.
+    private var isAtStreamEnd: Bool { endsMidStream && onlyBlankLines(from: index) }
+
+    /// A stream that has just sent a newline ends on an empty line, which proves nothing yet.
+    private func onlyBlankLines(from position: Int) -> Bool {
+        lines[min(position, lines.count)...].allSatisfy(\.isBlankLine)
+    }
 
     private func heldBack(_ text: String) -> String {
         isAtStreamEnd ? MarkdownMath.holdingBackUnclosed(text) : text
@@ -190,12 +195,12 @@ private struct MarkdownReader {
             }
             body.append(rest)
             offset += 1
-            guard let line = peek(offset) else {
-                guard endsMidStream else { return nil }
+            if endsMidStream, onlyBlankLines(from: index + offset) {
                 index = lines.count
                 return .pendingMath
             }
-            guard !line.isBlankLine else { return nil }
+            // Text after a blank line proves the opener stray: display math never spans one.
+            guard let line = peek(offset), !line.isBlankLine else { return nil }
             rest = line
         }
         let source = lines[index...index + offset].joined(separator: "\n")

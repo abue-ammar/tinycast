@@ -1072,6 +1072,18 @@ struct AIChatTests {
             MarkdownBlock.parse("$$\nx\n\nafter", midStream: true) == [.paragraph("$$\nx"), .paragraph("after")],
             "a blank line inside $$ proves it stray, even mid-stream")
         expect(
+            MarkdownBlock.parse("Text\n$$\nx = \\frac{a}{b}.\n", midStream: true) == [
+                .paragraph("Text"), .pendingMath
+            ]
+                && MarkdownBlock.parse("$$\nx\n\n", midStream: true) == [.pendingMath],
+            "a stream that has just sent a newline, or two, is still inside its equation")
+        expect(
+            MarkdownBlock.parse("Roots \\(x +\n", midStream: true) == [.paragraph("Roots ")],
+            "an inline equation is still held back when a newline is the last thing to arrive")
+        expect(
+            MarkdownBlock.parse("Text\n$$\nx = \\frac{a}{b}.\n") == [.paragraph("Text"), .paragraph("$$\nx = \\frac{a}{b}.")],
+            "a finished reply ending in a newline still shows an unclosed equation as source")
+        expect(
             MarkdownBlock.parse("- item\n  $$\n  x", midStream: true) == [
                 .bulletList([.init(blocks: [.paragraph("item"), .pendingMath], checked: nil)])
             ],
