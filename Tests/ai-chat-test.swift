@@ -33,6 +33,7 @@ struct AIChatTests {
         markdownFindsMathButNotPrices()
         markdownDisplayMathIsItsOwnBlock()
         mathParsesTheSupportedSubsetOnly()
+        mathStillArrivingIsHeldBackOnlyAtTheEnd()
         segmentsClampSearchOffsets()
         leavingAConversationDropsItsStagedImages()
         retentionPrunesByAgeAndCascades()
@@ -1042,6 +1043,74 @@ struct AIChatTests {
             MathNode.parse(#"\alpha x \mathbb{R}"#)
                 == .row([.symbol("𝛼", .ord), .symbol("𝑥", .ord), .row([.symbol("ℝ", .ord)])]),
             "letters take the math italic, and \\mathbb its double-struck form")
+    }
+
+    static func mathStillArrivingIsHeldBackOnlyAtTheEnd() {
+        let display = "The formula:\n$$\n\\frac{a}{b"
+        expect(
+            MarkdownBlock.parse(display, midStream: true) == [.paragraph("The formula:"), .pendingMath],
+            "a display equation still arriving is a placeholder, not its half-written source")
+        expect(
+            MarkdownBlock.parse(display) == [.paragraph("The formula:"), .paragraph("$$\n\\frac{a}{b")],
+            "once the reply has finished, an unclosed display equation shows as source")
+        expect(
+            MarkdownBlock.parse("Roots \\(x + \\frac{1}{", midStream: true) == [.paragraph("Roots ")]
+                && MarkdownBlock.parse("\\(x", midStream: true).isEmpty,
+            "an inline equation still arriving is held back from the text")
+        expect(
+            MarkdownBlock.parse("Roots \\(x + \\frac{1}{") == [.paragraph("Roots \\(x + \\frac{1}{")],
+            "a finished reply keeps an unclosed inline opener as source")
+        expect(
+            MarkdownBlock.parse("It costs $5 and $x", midStream: true) == [.paragraph("It costs $5 and $x")],
+            "a lone dollar may be a price, so nothing after it is ever held back")
+        expect(
+            MarkdownBlock.parse("A stray \\( here\n\nMore \\(y", midStream: true) == [
+                .paragraph("A stray \\( here"), .paragraph("More ")
+            ],
+            "an opener the stream has moved past is a stray and stays visible")
+        expect(
+            MarkdownBlock.parse("$$\nx\n\nafter", midStream: true) == [.paragraph("$$\nx"), .paragraph("after")],
+            "a blank line inside $$ proves it stray, even mid-stream")
+        expect(
+            MarkdownBlock.parse("- item\n  $$\n  x", midStream: true) == [
+                .bulletList([.init(blocks: [.paragraph("item"), .pendingMath], checked: nil)])
+            ],
+            "a list item still being written holds its equation back too")
+        expect(
+            MarkdownBlock.parse("- a\n  $$\n  x\n- b", midStream: true) == [
+                .bulletList([
+                    .init(blocks: [.paragraph("a"), .paragraph("$$\nx")], checked: nil),
+                    .init(blocks: [.paragraph("b")], checked: nil)
+                ])
+            ],
+            "an item the stream has left behind shows its unclosed equation")
+        expect(
+            MarkdownBlock.parse("## Area \\(\\pi r", midStream: true) == [.heading(level: 2, text: "Area ")],
+            "a heading still arriving holds back its equation")
+        expect(
+            MarkdownBlock.parse("| A | B |\n| - | - |\n| 1 | \\(x", midStream: true) == [
+                .table(.init(header: ["A", "B"], alignments: [.leading, .leading], rows: [["1", ""]]))
+            ],
+            "only the table cell being written holds back its equation")
+        guard case .math? = MarkdownBlock.parse("$$x$$", midStream: true).first,
+            MarkdownBlock.inline("Roots \\(x\\)").runs.contains(where: { $0[MathFormula.Attribute.self] != nil })
+        else {
+            expect(false, "an equation that has closed renders mid-stream")
+            return
+        }
+        var message = ChatMessage(role: .assistant, text: "apple\n$$\napple", state: .streaming)
+        expect(
+            ChatFindIndex.occurrences(of: "apple", in: [message]).count == 1,
+            "find skips an equation still arriving, as the transcript does")
+        message.state = .complete
+        expect(
+            ChatFindIndex.occurrences(of: "apple", in: [message]).count == 2,
+            "and searches its source once the reply has finished")
+        expect(
+            message.isArriving(segmentAt: 0, of: 1) == false
+                && ChatMessage(role: .assistant, text: "", state: .streaming).isArriving(segmentAt: 1, of: 2)
+                && !ChatMessage(role: .assistant, text: "", state: .streaming).isArriving(segmentAt: 0, of: 2),
+            "only the last segment of a streaming reply is still arriving")
     }
 
     static func segmentsClampSearchOffsets() {

@@ -50,6 +50,8 @@ private struct MarkdownBlockView: View {
             MarkdownTableView(table: table)
         case .math(let formula):
             Text(formula.source)
+        case .pendingMath:
+            EmptyView()
         case .rule:
             Rectangle()
                 .fill(Theme.Colors.separator)

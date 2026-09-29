@@ -39,10 +39,14 @@ enum ChatFindIndex {
     /// Each text a message draws, in order, by the same path the transcript's views build.
     static func leaves(of message: ChatMessage) -> [Leaf] {
         guard message.role == .assistant else { return [([0], message.text)] }
-        return message.segments.enumerated().flatMap { offset, segment -> [Leaf] in
+        let segments = message.segments
+        return segments.enumerated().flatMap { offset, segment -> [Leaf] in
             switch segment {
             case .text(let text):
-                return leaves(of: MarkdownBlock.parse(ChatChoices.split(text).text), at: [offset])
+                let blocks = MarkdownBlock.parse(
+                    ChatChoices.split(text).text,
+                    midStream: message.isArriving(segmentAt: offset, of: segments.count))
+                return leaves(of: blocks, at: [offset])
             case .reasoning(let block): return [([offset], block.text)]
             case .search, .tools: return []
             }
@@ -62,7 +66,7 @@ enum ChatFindIndex {
                 return ([table.header] + table.rows).enumerated().flatMap { row, cells in
                     cells.enumerated().map { (path + [row, $0], inline($1)) }
                 }
-            case .math, .rule: return []
+            case .math, .pendingMath, .rule: return []
             }
         }
     }

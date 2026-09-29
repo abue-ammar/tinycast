@@ -52,6 +52,11 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
         self.toolScope = toolScope
     }
 
+    /// Text still arrives only into the last of a streaming reply's `count` segments.
+    func isArriving(segmentAt offset: Int, of count: Int) -> Bool {
+        state == .streaming && offset == count - 1
+    }
+
     /// The next search or call's place among the reply's: with no text between, offsets tie.
     var nextSequence: Int { searches.count + toolUses.count }
 

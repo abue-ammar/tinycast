@@ -75,6 +75,12 @@ enum MarkdownMath {
         return pieces
     }
 
+    /// Drops an equation still arriving at the text's end; a lone `$` may be a price, so it stays.
+    static func holdingBackUnclosed(_ text: String) -> String {
+        guard case .unclosed(let tail)? = pieces(of: text).last, text.hasSuffix(tail) else { return text }
+        return String(text.dropLast(tail.count))
+    }
+
     /// Pandoc's rule, which keeps "$5 and $10" prose: `$x$` hugs its content, no digit after.
     private static func isInlineDollar(
         _ tex: String, followedBy end: Int, in characters: [Character]

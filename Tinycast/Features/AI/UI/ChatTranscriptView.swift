@@ -282,13 +282,16 @@ private struct ChatMessageView: View, @MainActor Equatable {
     @ViewBuilder private var rendered: some View {
         if message.role == .assistant {
             let references = references
+            let segments = message.segments
             VStack(alignment: .leading, spacing: metrics.spacing.lg) {
-                ForEach(Array(message.segments.enumerated()), id: \.offset) { offset, segment in
+                ForEach(Array(segments.enumerated()), id: \.offset) { offset, segment in
                     Group {
                         switch segment {
                         case .text(let text):
                             ChatMarkdownText(
-                                blocks: MarkdownBlock.parse(ChatChoices.split(text).text),
+                                blocks: MarkdownBlock.parse(
+                                    ChatChoices.split(text).text,
+                                    midStream: message.isArriving(segmentAt: offset, of: segments.count)),
                                 failed: message.state == .failed)
                         case .search(let search):
                             ChatSearchRow(search: search)

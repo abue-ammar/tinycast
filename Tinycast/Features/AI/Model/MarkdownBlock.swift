@@ -10,6 +10,8 @@ enum MarkdownBlock: Equatable, Sendable {
     case quote([MarkdownBlock])
     case table(Table)
     case math(MathFormula)
+    /// A display equation still streaming in, held back until its closing delimiter arrives.
+    case pendingMath
     case rule
 
     struct Item: Equatable, Sendable {
@@ -108,17 +110,26 @@ enum MarkdownBlock: Equatable, Sendable {
         return result
     }
 
-    /// Tolerates the half-written document a stream produces: an open fence closes at the end.
-    static func parse(_ markdown: String) -> [MarkdownBlock] {
+    /// Tolerates a stream's half-written text; `midStream` holds back an equation still arriving.
+    static func parse(_ markdown: String, midStream: Bool = false) -> [MarkdownBlock] {
         let text = markdown.replacingOccurrences(of: "\r\n", with: "\n")
-        var reader = MarkdownReader(lines: text.components(separatedBy: "\n"))
+        var reader = MarkdownReader(lines: text.components(separatedBy: "\n"), endsMidStream: midStream)
         return reader.blocks()
     }
 }
 
 private struct MarkdownReader {
     let lines: [String]
+    /// These lines run to where a reply still streaming currently ends.
+    let endsMidStream: Bool
     var index = 0
+
+    /// Past the last line of a reply still streaming, where an open equation may yet close.
+    private var isAtStreamEnd: Bool { endsMidStream && peek() == nil }
+
+    private func heldBack(_ text: String) -> String {
+        isAtStreamEnd ? MarkdownMath.holdingBackUnclosed(text) : text
+    }
 
     mutating func blocks() -> [MarkdownBlock] {
         var blocks: [MarkdownBlock] = []
@@ -132,17 +143,17 @@ private struct MarkdownReader {
             } else if MarkdownLine.isRule(line) {
                 index += 1
                 blocks.append(.rule)
-            } else if let heading = MarkdownLine.heading(line) {
+            } else if case .heading(let level, let text)? = MarkdownLine.heading(line) {
                 index += 1
-                blocks.append(heading)
+                blocks.append(.heading(level: level, text: heldBack(text)))
             } else if MarkdownLine.isQuote(line) {
                 blocks.append(quote())
             } else if let table = table() {
                 blocks.append(table)
             } else if let marker = MarkdownLine.listMarker(line) {
                 blocks.append(list(from: marker))
-            } else {
-                blocks.append(paragraph())
+            } else if let paragraph = paragraph() {
+                blocks.append(paragraph)
             }
         }
         return blocks
@@ -165,7 +176,7 @@ private struct MarkdownReader {
         return .code(language: fence.language, text: body.joined(separator: "\n"))
     }
 
-    /// `$$` or `\[` opening a line; unclosed, it stays a paragraph showing its source mid-stream.
+    /// `$$` or `\[` opening a line; unclosed, a stray one stays a paragraph showing its source.
     private mutating func math() -> MarkdownBlock? {
         guard let first = peek(), let fence = MarkdownLine.mathFence(first) else { return nil }
         var rest = fence.rest
@@ -179,7 +190,12 @@ private struct MarkdownReader {
             }
             body.append(rest)
             offset += 1
-            guard let line = peek(offset), !line.isBlankLine else { return nil }
+            guard let line = peek(offset) else {
+                guard endsMidStream else { return nil }
+                index = lines.count
+                return .pendingMath
+            }
+            guard !line.isBlankLine else { return nil }
             rest = line
         }
         let source = lines[index...index + offset].joined(separator: "\n")
@@ -203,7 +219,7 @@ private struct MarkdownReader {
             }
             index += 1
         }
-        var reader = MarkdownReader(lines: inner)
+        var reader = MarkdownReader(lines: inner, endsMidStream: isAtStreamEnd)
         return .quote(reader.blocks())
     }
 
@@ -216,8 +232,11 @@ private struct MarkdownReader {
         index += 2
         var rows: [[String]] = []
         while let line = peek(), !line.isBlankLine, line.contains("|") {
-            rows.append(MarkdownLine.tableCells(line).resized(to: titles.count))
+            var cells = MarkdownLine.tableCells(line)
             index += 1
+            // Only the cell the stream is writing into can end mid-equation.
+            if let last = cells.indices.last { cells[last] = heldBack(cells[last]) }
+            rows.append(cells.resized(to: titles.count))
         }
         return .table(.init(header: titles, alignments: alignments, rows: rows))
     }
@@ -252,7 +271,7 @@ private struct MarkdownReader {
             body.append(MarkdownLine.dedent(line, by: marker.contentIndent))
             index += 1
         }
-        var reader = MarkdownReader(lines: body)
+        var reader = MarkdownReader(lines: body, endsMidStream: isAtStreamEnd)
         var blocks = reader.blocks()
         guard case .paragraph(let text) = blocks.first, let task = MarkdownLine.taskBox(text) else {
             return .init(blocks: blocks, checked: nil)
@@ -261,7 +280,8 @@ private struct MarkdownReader {
         return .init(blocks: blocks, checked: task.checked)
     }
 
-    private mutating func paragraph() -> MarkdownBlock {
+    /// Nil when all it holds so far is an equation still arriving.
+    private mutating func paragraph() -> MarkdownBlock? {
         var body: [String] = []
         while let line = peek(), !line.isBlankLine {
             if !body.isEmpty, MarkdownLine.startsBlock(line, interrupting: true) || startsTable() {
@@ -270,7 +290,8 @@ private struct MarkdownReader {
             body.append(line.trimmingCharacters(in: .whitespaces))
             index += 1
         }
-        return .paragraph(body.joined(separator: "\n"))
+        let text = heldBack(body.joined(separator: "\n"))
+        return text.allSatisfy(\.isWhitespace) ? nil : .paragraph(text)
     }
 
     private func startsTable() -> Bool {

@@ -52,6 +52,7 @@ struct ChatMarkdownTests {
         findSkipsFormulasButLandsAroundThem()
         formulasTypesetByTheirStructure()
         wideFormulasShrinkToTheLine()
+        equationsStillArrivingHoldTheirPlace()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -62,7 +63,7 @@ struct ChatMarkdownTests {
         guard case .text(let text)? = message.segments.first else { fatalError("a text segment") }
         return ChatMarkdownRenderer(
             ChatMarkdownSource(
-                blocks: MarkdownBlock.parse(text),
+                blocks: MarkdownBlock.parse(text, midStream: message.isArriving(segmentAt: 0, of: 1)),
                 highlight: ChatTextHighlight(query: "apple", current: current),
                 citations: citations, prefix: [0], failed: false, metrics: .standard)
         ).render()
@@ -122,8 +123,8 @@ struct ChatMarkdownTests {
     static func attachments(in string: NSAttributedString) -> [(range: NSRange, cell: NSTextAttachmentCell?)]
     {
         var found: [(NSRange, NSTextAttachmentCell?)] = []
-        string.enumerateAttribute(.attachment, in: NSRange(location: 0, length: string.length)) {
-            value, range, _ in
+        let whole = NSRange(location: 0, length: string.length)
+        string.enumerateAttribute(.attachment, in: whole) { value, range, _ in
             guard let attachment = value as? NSTextAttachment else { return }
             found.append((range, attachment.attachmentCell as? NSTextAttachmentCell))
         }
@@ -220,6 +221,34 @@ struct ChatMarkdownTests {
             box.width > 200 && abs(frame.width - 200) < 0.5, "the formula fits the line, got \(frame.width)")
         expect(
             abs(frame.height / frame.width - box.height / box.width) < 0.001, "it shrinks without distorting")
+    }
+
+    /// Mid-stream, an open display equation is a centred placeholder and an inline one is withheld.
+    static func equationsStillArrivingHoldTheirPlace() {
+        let text = "An apple \\(y\\) then apple.\n\n$$\n\\frac{apple}{b"
+        let streaming = ChatMessage(role: .assistant, text: text, state: .streaming)
+        let rendered = render(streaming, current: nil).string
+        expect(
+            rendered.string.hasSuffix("then apple.\n…") && !rendered.string.contains("frac"),
+            "the unfinished equation draws as a placeholder, got \(rendered.string.debugDescription)")
+        let dots = (rendered.string as NSString).range(of: "…")
+        let style = rendered.attribute(.paragraphStyle, at: dots.location, effectiveRange: nil) as? NSParagraphStyle
+        expect(style?.alignment == .center, "the placeholder sits where the equation will, centred")
+        let found = ChatFindIndex.occurrences(of: "apple", in: [streaming])
+        expect(found.count == 2, "find sees what is drawn mid-stream, got \(found.count)")
+        for occurrence in found {
+            let drawn = render(streaming, current: occurrence)
+            guard let range = drawn.current else {
+                expect(false, "match \(occurrence.index) is drawn mid-stream")
+                continue
+            }
+            expect(
+                (drawn.string.string as NSString).substring(with: range).lowercased() == "apple",
+                "match \(occurrence.index) lands on its word mid-stream")
+        }
+        let inline = render(
+            ChatMessage(role: .assistant, text: "Roots are \\(x = \\frac{1}{", state: .streaming), current: nil)
+        expect(inline.string.string == "Roots are ", "an inline equation still arriving is withheld")
     }
 
     /// A reply is untrusted: one click on a `file:` or app-scheme link must launch nothing.

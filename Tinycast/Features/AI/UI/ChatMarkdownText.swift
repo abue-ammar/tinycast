@@ -149,13 +149,13 @@ final class ChatSelectableTextView: NSTextView {
 
     private static func writingMathSource(_ text: NSAttributedString) -> NSAttributedString {
         let result = NSMutableAttributedString(attributedString: text)
+        let key = ChatMarkdownRenderer.mathSource
         let whole = NSRange(location: 0, length: result.length)
-        result.enumerateAttribute(ChatMarkdownRenderer.mathSource, in: whole, options: .reverse) {
-            value, range, _ in
+        result.enumerateAttribute(key, in: whole, options: .reverse) { value, range, _ in
             guard let source = value as? String else { return }
             var attributes = result.attributes(at: range.location, effectiveRange: nil)
             attributes[.attachment] = nil
-            attributes[ChatMarkdownRenderer.mathSource] = nil
+            attributes[key] = nil
             let replacement = String(repeating: source, count: range.length)
             result.replaceCharacters(
                 in: range, with: NSAttributedString(string: replacement, attributes: attributes))

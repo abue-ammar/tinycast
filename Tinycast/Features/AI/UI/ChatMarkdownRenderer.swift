@@ -132,13 +132,13 @@ struct ChatMarkdownRenderer {
                 let line = NSMutableAttributedString(
                     attributedString: self.formula(
                         formula, font: bodyFont, attributes: [.foregroundColor: textColor(context)]))
-                line.append(NSAttributedString(string: "\n", attributes: [.font: bodyFont]))
-                let style = paragraphStyle(in: context)
-                style.alignment = .center
-                style.paragraphSpacing = after
-                line.addAttribute(
-                    .paragraphStyle, value: style, range: NSRange(location: 0, length: line.length))
-                output.string.append(line)
+                centred(line, in: context, into: output, after: after)
+            case .pendingMath:
+                // Held where the equation will land, so finishing it swaps in place, not across.
+                let dots = NSMutableAttributedString(
+                    string: "…",
+                    attributes: [.font: bodyFont, .foregroundColor: NSColor(Theme.Colors.textTertiary)])
+                centred(dots, in: context, into: output, after: after)
             case .rule:
                 let line = Self.fullWidthBlock()
                 line.setWidth(Theme.Size.hairline, type: .absoluteValueType, for: .border, edge: .maxY)
@@ -154,6 +154,17 @@ struct ChatMarkdownRenderer {
                         ]))
             }
         }
+    }
+
+    private func centred(
+        _ line: NSMutableAttributedString, in context: Context, into output: Output, after: CGFloat
+    ) {
+        line.append(NSAttributedString(string: "\n", attributes: [.font: bodyFont]))
+        let style = paragraphStyle(in: context)
+        style.alignment = .center
+        style.paragraphSpacing = after
+        line.addAttribute(.paragraphStyle, value: style, range: NSRange(location: 0, length: line.length))
+        output.string.append(line)
     }
 
     /// A block with no width lays out without its box: no fill, no border, no bounds.
