@@ -402,7 +402,8 @@ menu's own chords, and dies with the window.
   paragraph, list item, code block and table cell, in order — and lists every occurrence as
   (message, drawn text, index within it). A reply's hidden choices fence never matches. A drawn
   text is named by its position path (segment, block, item or cell), not its content, so two
-  identical table cells are two matches. `ChatTextHighlight` rides the environment into every text
+  identical table cells are two matches. An equation draws as one character, so find never matches
+  inside its source. `ChatTextHighlight` rides the environment into every text
   a message draws, which marks all its matches in the Mac's find yellow and the current one solid;
   a clear marker over the current match takes the scroll anchor, so the transcript centres on the
   word itself.
@@ -416,6 +417,22 @@ menu's own chords, and dies with the window.
   and tool rows stay separate views, so a drag spans one segment's text. A fold holding a match
   opens. A glass counter at the transcript's top edge says "3 of 17" with the same steps as
   Return / ⇧↩ in the field and ⌘G / ⇧⌘G anywhere. The sidebar's own filter is still there, by click.
+- **Math is typeset natively, in that same text.** `\(…\)` and `$…$` are inline math, `\[…\]` and
+  `$$…$$` display math. `MarkdownMath` finds them before Foundation's Markdown parse, which would
+  eat their backslashes. A `$` pairs only by Pandoc's rule — hugging its content, no digit after the
+  closer — so "$5 and $10" stays prose, and code spans and `\$` are never math. `MathNode` parses a
+  bounded LaTeX subset: at a command it does not know, past 40 levels of nesting or past 4,000
+  characters, a formula shows as its source (a display one as a `latex` code block) rather than as a
+  guess. `MathLayoutEngine` sets it by TeX's rules in STIX Two Math, which macOS ships, reading sizes,
+  gaps and stretchy glyphs from the font's OpenType MATH table, so no dependency is involved. Each
+  formula is one `MathAttachmentCell` character carrying its source: selection, citations and find
+  keep their offsets, copying or dragging gives back the LaTeX as written
+  (`ChatSelectableTextView.writeSelection`), and a formula wider than its line scales down to fit.
+  While a reply streams, `MarkdownBlock.parse(_:midStream:)` holds back an equation still open at
+  the very end — a display one as a centred, muted `…`, an inline one withheld — so it neither
+  flashes as source nor jumps from the left to the centre. Only the last segment of a streaming reply
+  is mid-stream, an opener the stream has passed stays visible, and a lone `$` is never held back,
+  since it may be a price.
 - **Actions** (⌘K): Quick AI's ⌘K menu for a window, on the same chords — Stop Response (`⌘.`), New
   Chat (`⌘N`), Regenerate (`⌘R`), Copy Last Response (`⇧⌘C`), Remove Attachments, Find in Chat
   (`⌘F`) and AI Settings (`⌥⌘,`) — plus what only a saved chat has: Copy Chat, Pin and Delete.
@@ -460,7 +477,7 @@ menu's own chords, and dies with the window.
 `AIChatState` turns provider-neutral stream events into one live assistant message. Thinking state is
 shown without entering the transcript, partial text is preserved on failure, cancellation invalidates
 the active generation, and only completed assistant messages become context for the next request.
-Assistant replies render Markdown; user messages remain literal. A reply keeps streaming while the
+Assistant replies render Markdown and LaTeX math; user messages remain literal. A reply keeps streaming while the
 palette is hidden, the window is closed or showing another chat — the state is `AppCore`'s, not the
 view's — and is saved when it finishes.
 
@@ -554,6 +571,10 @@ window, and every chat action either surface sends — is the nineteenth feature
   the unsent line in its composer, and Quick AI is empty on the next summon.
 - In the window, send, then press ⌘N before the reply ends: the old chat keeps its sidebar spinner,
   finishes, and reopens complete. Rename one, send another turn in it, and the name holds.
+- Ask for the quadratic formula in LaTeX: while the reply streams, its display equation is a centred
+  `…` that turns into the equation in place; selecting across it and copying pastes its `$$…$$`
+  source. A reply that mentions "$5 and $10" keeps both prices as prose, and in a narrow Quick AI a
+  long equation shrinks to fit rather than running off the edge.
 - Return sends, ⇧↩ breaks the line, and a Japanese IME's Return confirms its text without sending.
 - Drop a PDF on the pane with a text-only model selected: the HUD refuses it, as a paste would.
 - Collapse the sidebar with the toolbar button; ⌘N and ⌘Q (Close Window) still work, and ⌘Q with
@@ -561,7 +582,8 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Harnesses: `ai-provider-test` (endpoints, request bodies, stream decoding, persistence repair,
   Codex framing, on-device routing, the two MCP launch encodings and the two consent channels, the
   shown-model and switched-off-route rules, and a tool's override from settings to launch),
-  `ai-chat-test` (`ChatSession`, `MarkdownBlock`, `ChatHistoryStore` with renames and pins,
+  `ai-chat-test` (`ChatSession`, `MarkdownBlock` with its math delimiters, LaTeX subset and
+  mid-stream hold-back, `ChatHistoryStore` with renames and pins,
   `AIToolLoopProvider`, regenerate, and `AIChatSurfacesState`'s one-live-place rule),
   `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
   turn ID, plus the MCP launch boundary, one launch for concurrent starts, the elicitation, the
