@@ -62,7 +62,7 @@ enum ChatFindIndex {
                 return ([table.header] + table.rows).enumerated().flatMap { row, cells in
                     cells.enumerated().map { (path + [row, $0], inline($1)) }
                 }
-            case .rule: return []
+            case .math, .rule: return []
             }
         }
     }

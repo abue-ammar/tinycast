@@ -578,6 +578,10 @@ run ai-chat-test           Tinycast/Features/AI/Model/AIRequest.swift \
                            Tinycast/Features/AI/Model/ChatCitations.swift \
                            Tinycast/Features/AI/Model/ChatToolScope.swift \
                            Tinycast/Features/AI/Model/MarkdownBlock.swift \
+                           Tinycast/Features/AI/Model/MarkdownMath.swift \
+                           Tinycast/Features/AI/Model/MathFormula.swift \
+                           Tinycast/Features/AI/Model/MathNode.swift \
+                           Tinycast/Features/AI/Model/MathSymbolCatalog.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \
                            Tinycast/Features/AI/Service/ChatHistoryStore.swift \
                            Tinycast/Features/AI/Service/AIToolLoopProvider.swift \
@@ -597,8 +601,16 @@ run chat-markdown-test     Tinycast/Platform/Appearance.swift \
                            Tinycast/Features/AI/Model/ChatCitations.swift \
                            Tinycast/Features/AI/Model/ChatFind.swift \
                            Tinycast/Features/AI/Model/MarkdownBlock.swift \
+                           Tinycast/Features/AI/Model/MarkdownMath.swift \
+                           Tinycast/Features/AI/Model/MathFormula.swift \
+                           Tinycast/Features/AI/Model/MathNode.swift \
+                           Tinycast/Features/AI/Model/MathSymbolCatalog.swift \
                            Tinycast/Features/AI/UI/ChatTextHighlight.swift \
-                           Tinycast/Features/AI/UI/ChatMarkdownRenderer.swift
+                           Tinycast/Features/AI/UI/ChatMarkdownRenderer.swift \
+                           Tinycast/Features/AI/UI/MathAttachmentCell.swift \
+                           Tinycast/Features/AI/UI/MathBox.swift \
+                           Tinycast/Features/AI/UI/MathFont.swift \
+                           Tinycast/Features/AI/UI/MathLayoutEngine.swift
 run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \

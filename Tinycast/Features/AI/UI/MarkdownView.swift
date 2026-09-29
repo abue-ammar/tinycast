@@ -48,6 +48,8 @@ private struct MarkdownBlockView: View {
             MarkdownQuoteView(blocks: blocks)
         case .table(let table):
             MarkdownTableView(table: table)
+        case .math(let formula):
+            Text(formula.source)
         case .rule:
             Rectangle()
                 .fill(Theme.Colors.separator)

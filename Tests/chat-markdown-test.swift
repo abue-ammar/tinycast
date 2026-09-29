@@ -48,6 +48,10 @@ struct ChatMarkdownTests {
         everyMatchLandsOnItsWord()
         textReadsAsTheReplyDoes()
         onlyWebAndMailLinksOpen()
+        formulasAreOneCharacterEach()
+        findSkipsFormulasButLandsAroundThem()
+        formulasTypesetByTheirStructure()
+        wideFormulasShrinkToTheLine()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -113,6 +117,109 @@ struct ChatMarkdownTests {
             rendered.codeBlocks.map(\.code) == ["let apple = 1"]
                 && rendered.codeBlocks.first?.language == "swift",
             "each code block is known, for its Copy button")
+    }
+
+    static func attachments(in string: NSAttributedString) -> [(range: NSRange, cell: NSTextAttachmentCell?)]
+    {
+        var found: [(NSRange, NSTextAttachmentCell?)] = []
+        string.enumerateAttribute(.attachment, in: NSRange(location: 0, length: string.length)) {
+            value, range, _ in
+            guard let attachment = value as? NSTextAttachment else { return }
+            found.append((range, attachment.attachmentCell as? NSTextAttachmentCell))
+        }
+        return found
+    }
+
+    /// Each formula is one attachment character carrying the source a copy puts back.
+    static func formulasAreOneCharacterEach() {
+        let text = "Roots \\(x^2\\) and $y$.\n\n$$\\frac{a}{b}$$\n\nAt $5 or $10, $\\foo$."
+        let rendered = render(ChatMessage(role: .assistant, text: text), current: nil).string
+        let found = attachments(in: rendered)
+        expect(found.count == 3, "two inline formulas and one display formula, got \(found.count)")
+        expect(
+            found.allSatisfy { $0.range.length == 1 && $0.cell is MathAttachmentCell }, "each draws one cell")
+        let sources = found.map {
+            rendered.attribute(ChatMarkdownRenderer.mathSource, at: $0.range.location, effectiveRange: nil)
+                as? String
+        }
+        expect(
+            sources == ["\\(x^2\\)", "$y$", "$$\\frac{a}{b}$$"],
+            "each formula carries its source as written, got \(sources)")
+        let plain = rendered.string
+        expect(
+            plain.contains("At $5 or $10, $\\foo$."),
+            "prices and a formula outside the subset read as the reply wrote them")
+        let display = found[2].range.location
+        let style = rendered.attribute(.paragraphStyle, at: display, effectiveRange: nil) as? NSParagraphStyle
+        expect(style?.alignment == .center, "a display formula is centred on its own line")
+    }
+
+    static func findSkipsFormulasButLandsAroundThem() {
+        let message = ChatMessage(
+            role: .assistant, text: "An apple $\\alpha_{apple}$ then apple \\(x\\) apple.")
+        let found = ChatFindIndex.occurrences(of: "apple", in: [message])
+        expect(found.count == 3, "the formula's source is not searched, got \(found.count)")
+        for occurrence in found {
+            guard let range = render(message, current: occurrence).current else {
+                expect(false, "match \(occurrence.index) is drawn")
+                continue
+            }
+            let rendered = render(message, current: occurrence).string.string as NSString
+            expect(
+                rendered.substring(with: range).lowercased() == "apple",
+                "match \(occurrence.index) lands on its word past the formulas")
+        }
+    }
+
+    static func formulasTypesetByTheirStructure() {
+        guard let engine = MathLayoutEngine(size: 20),
+            let fraction = MathFormula(tex: #"\frac{a}{b}"#, source: "", display: true),
+            let letter = MathFormula(tex: "a", source: "", display: true),
+            let squared = MathFormula(tex: "a^2", source: "", display: false),
+            let fenced = MathFormula(
+                tex: #"\left( \frac{\frac{a}{b}}{c} \right)"#, source: "", display: true),
+            let spaced = MathFormula(tex: "a+b", source: "", display: false),
+            let unary = MathFormula(tex: "-b", source: "", display: false)
+        else {
+            expect(false, "STIX Two Math and the formulas load")
+            return
+        }
+        let a = engine.layout(letter)
+        let over = engine.layout(fraction)
+        expect(
+            over.ascent > a.ascent && over.descent > a.descent, "a fraction stands above and below the line")
+        let power = engine.layout(squared)
+        expect(power.ascent > a.ascent && power.width > a.width, "a superscript rides up and to the right")
+        let parens = engine.layout(fenced)
+        expect(parens.height > engine.layout(fraction).height, "\\left( grows to hold what it fences")
+        expect(
+            engine.layout(spaced).width > engine.layout(unary).width,
+            "a binary plus takes medium spaces, a leading minus none")
+        expect(
+            MathFormula(tex: #"\left( a \\ b \right)"#, source: "", display: true) == nil,
+            "a row break inside \\left is refused rather than half-drawn")
+    }
+
+    /// Quick AI's narrow column shrinks a long equation rather than letting it run off the edge.
+    static func wideFormulasShrinkToTheLine() {
+        guard let engine = MathLayoutEngine(size: 20),
+            let formula = MathFormula(
+                tex: String(repeating: "a + ", count: 40) + "a", source: "", display: true)
+        else {
+            expect(false, "a long formula typesets")
+            return
+        }
+        let box = engine.layout(formula)
+        let cell = MathAttachmentCell(box: box, color: .labelColor, label: "")
+        let container = NSTextContainer(size: CGSize(width: 200, height: 1000))
+        container.lineFragmentPadding = 0
+        let frame = cell.cellFrame(
+            for: container, proposedLineFragment: CGRect(x: 0, y: 0, width: 200, height: 20),
+            glyphPosition: .zero, characterIndex: 0)
+        expect(
+            box.width > 200 && abs(frame.width - 200) < 0.5, "the formula fits the line, got \(frame.width)")
+        expect(
+            abs(frame.height / frame.width - box.height / box.width) < 0.001, "it shrinks without distorting")
     }
 
     /// A reply is untrusted: one click on a `file:` or app-scheme link must launch nothing.

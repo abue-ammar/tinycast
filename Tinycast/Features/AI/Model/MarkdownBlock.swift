@@ -9,6 +9,7 @@ enum MarkdownBlock: Equatable, Sendable {
     case code(language: String?, text: String)
     case quote([MarkdownBlock])
     case table(Table)
+    case math(MathFormula)
     case rule
 
     struct Item: Equatable, Sendable {
@@ -31,11 +32,80 @@ enum MarkdownBlock: Equatable, Sendable {
 
     /// One span's inline Markdown, parsed once here so what is drawn and what find counts agree.
     static func inline(_ source: String) -> AttributedString {
+        let pieces = MarkdownMath.pieces(of: source)
+        guard pieces.contains(where: { $0 != .text(source) }) else { return markdown(source) }
+        var masked = ""
+        var standIns: [Character: StandIn] = [:]
+        for piece in pieces {
+            let standIn: StandIn
+            switch piece {
+            case .text(let text):
+                masked += text
+                continue
+            case .math(let tex, let display, let source):
+                standIn =
+                    MathFormula(tex: tex, source: source, display: display).map(StandIn.formula)
+                    ?? .literal(source)
+            case .unclosed(let source): standIn = .literal(source)
+            }
+            guard let key = standInKey(standIns.count) else {
+                masked += standIn.source
+                continue
+            }
+            standIns[key] = standIn
+            masked.append(key)
+        }
+        return restoring(standIns, in: markdown(masked))
+    }
+
+    private static func markdown(_ source: String) -> AttributedString {
         var options = AttributedString.MarkdownParsingOptions()
         options.interpretedSyntax = .inlineOnlyPreservingWhitespace
         options.failurePolicy = .returnPartiallyParsedIfPossible
         return (try? AttributedString(markdown: source, options: options))
             ?? AttributedString(source)
+    }
+
+    /// Math waits out Foundation's parse as a private-use character no Markdown rule touches.
+    private enum StandIn {
+        case formula(MathFormula)
+        case literal(String)
+
+        var source: String {
+            switch self {
+            case .formula(let formula): formula.source
+            case .literal(let source): source
+            }
+        }
+    }
+
+    private static func standInKey(_ number: Int) -> Character? {
+        Unicode.Scalar(0xE000 + number).flatMap { $0.value <= 0xF8FF ? Character($0) : nil }
+    }
+
+    /// Each stand-in back as a formula's one character, or as its source when it would not typeset.
+    private static func restoring(
+        _ standIns: [Character: StandIn], in parsed: AttributedString
+    )
+        -> AttributedString
+    {
+        var result = parsed
+        let found = result.characters.indices.filter { standIns[result.characters[$0]] != nil }
+        for position in found.reversed() {
+            guard let standIn = standIns[result.characters[position]] else { continue }
+            let range = position..<result.characters.index(after: position)
+            let attributes = result[range].runs.first?.attributes ?? AttributeContainer()
+            var replacement: AttributedString
+            switch standIn {
+            case .formula(let formula):
+                replacement = AttributedString(String(MathFormula.placeholder), attributes: attributes)
+                replacement[MathFormula.Attribute.self] = formula
+            case .literal(let source):
+                replacement = AttributedString(source, attributes: attributes)
+            }
+            result.replaceSubrange(range, with: replacement)
+        }
+        return result
     }
 
     /// Tolerates the half-written document a stream produces: an open fence closes at the end.
@@ -57,6 +127,8 @@ private struct MarkdownReader {
                 index += 1
             } else if let fence = MarkdownLine.fence(line) {
                 blocks.append(code(fence))
+            } else if let math = math() {
+                blocks.append(math)
             } else if MarkdownLine.isRule(line) {
                 index += 1
                 blocks.append(.rule)
@@ -91,6 +163,32 @@ private struct MarkdownReader {
         if peek() != nil { index += 1 }
         while body.last?.isBlankLine == true { body.removeLast() }
         return .code(language: fence.language, text: body.joined(separator: "\n"))
+    }
+
+    /// `$$` or `\[` opening a line; unclosed, it stays a paragraph showing its source mid-stream.
+    private mutating func math() -> MarkdownBlock? {
+        guard let first = peek(), let fence = MarkdownLine.mathFence(first) else { return nil }
+        var rest = fence.rest
+        var body: [String] = []
+        var offset = 0
+        while true {
+            if let close = rest.range(of: fence.closer) {
+                guard rest[close.upperBound...].allSatisfy(\.isWhitespace) else { return nil }
+                body.append(String(rest[..<close.lowerBound]))
+                break
+            }
+            body.append(rest)
+            offset += 1
+            guard let line = peek(offset), !line.isBlankLine else { return nil }
+            rest = line
+        }
+        let source = lines[index...index + offset].joined(separator: "\n")
+            .trimmingCharacters(in: .whitespaces)
+        index += offset + 1
+        let tex = body.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tex.isEmpty else { return .paragraph(source) }
+        return MathFormula(tex: tex, source: source, display: true).map(MarkdownBlock.math)
+            ?? .code(language: "latex", text: tex)
     }
 
     private mutating func quote() -> MarkdownBlock {
@@ -232,6 +330,21 @@ private enum MarkdownLine {
 
     static func isQuote(_ line: String) -> Bool { line.dropFirst(line.indent).first == ">" }
 
+    /// The delimiter a display equation opens its line with, and what follows it on that line.
+    static func mathFence(_ line: String) -> (closer: String, rest: String)? {
+        let body = line.trimmingCharacters(in: .whitespaces)
+        if body.hasPrefix("$$") { return ("$$", String(body.dropFirst(2))) }
+        if body.hasPrefix("\\[") { return ("\\]", String(body.dropFirst(2))) }
+        return nil
+    }
+
+    /// A line that closes its own equation and then carries on is prose, not a display block.
+    static func opensMath(_ line: String) -> Bool {
+        guard let fence = mathFence(line) else { return false }
+        guard let close = fence.rest.range(of: fence.closer) else { return true }
+        return fence.rest[close.upperBound...].allSatisfy(\.isWhitespace)
+    }
+
     static func strippingQuoteMarker(_ line: String) -> String {
         var body = line.dropFirst(line.indent).dropFirst()
         if body.first == " " { body = body.dropFirst() }
@@ -264,7 +377,9 @@ private enum MarkdownLine {
 
     /// `interrupting` is the CommonMark rule that only a `1.` may cut a paragraph short.
     static func startsBlock(_ line: String, interrupting: Bool) -> Bool {
-        if fence(line) != nil || isRule(line) || heading(line) != nil || isQuote(line) { return true }
+        if fence(line) != nil || isRule(line) || heading(line) != nil || isQuote(line) || opensMath(line) {
+            return true
+        }
         guard let marker = listMarker(line) else { return false }
         return !interrupting || (!marker.isOrdered || marker.number == 1)
     }

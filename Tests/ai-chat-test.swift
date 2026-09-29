@@ -30,6 +30,9 @@ struct AIChatTests {
         markdownParsesStreamingFriendlyBlocks()
         markdownParsesTablesQuotesAndLists()
         markdownKeepsCommonMarkEdges()
+        markdownFindsMathButNotPrices()
+        markdownDisplayMathIsItsOwnBlock()
+        mathParsesTheSupportedSubsetOnly()
         segmentsClampSearchOffsets()
         leavingAConversationDropsItsStagedImages()
         retentionPrunesByAgeAndCascades()
@@ -955,6 +958,90 @@ struct AIChatTests {
                 .paragraph("one\ntwo"), .paragraph("three")
             ],
             "soft breaks stay inside a paragraph and a blank line ends it")
+    }
+
+    static func markdownFindsMathButNotPrices() {
+        let pieces = MarkdownMath.pieces(of: #"Roots \(x^2\) and $y$, at $5 or $10, \$3, `$z$`."#)
+        expect(
+            pieces == [
+                .text("Roots "), .math(tex: "x^2", display: false, source: #"\(x^2\)"#), .text(" and "),
+                .math(tex: "y", display: false, source: "$y$"),
+                .text(#", at $5 or $10, \$3, `$z$`."#)
+            ],
+            "inline math is found, while prices, an escaped dollar and code stay text: \(pieces)")
+        expect(
+            MarkdownMath.pieces(of: "US$5 and US$6") == [.text("US$5 and US$6")]
+                && MarkdownMath.pieces(of: "$x$5") == [.text("$x$5")],
+            "a dollar pair around prose or before a digit is currency")
+        expect(
+            MarkdownMath.pieces(of: #"so \(x + \frac{1}{"#) == [.text("so "), .unclosed(#"\(x + \frac{1}{"#)],
+            "an equation still streaming in shows as its source")
+        let inline = MarkdownBlock.inline(#"**Bold \(x\)** and $\foo$ and [$y$](https://example.com)"#)
+        let formulas = inline.runs.compactMap { $0[MathFormula.Attribute.self]?.source }
+        expect(
+            String(inline.characters) == "Bold \u{FFFC} and $\\foo$ and \u{FFFC}"
+                && formulas == [#"\(x\)"#, "$y$"],
+            "a formula is one character in emphasis or a link, and one that won't typeset is its source")
+        expect(
+            inline.runs.contains { $0[MathFormula.Attribute.self] != nil && $0.link != nil },
+            "a formula inside a link keeps the link")
+    }
+
+    static func markdownDisplayMathIsItsOwnBlock() {
+        let blocks = MarkdownBlock.parse("The formula:\n$$\nx = \\frac{a}{b}\n$$\nwhere $b \\ne 0$.")
+        guard blocks.count == 3, case .math(let formula) = blocks[1] else {
+            expect(false, "a $$ block splits its paragraph, got \(blocks)")
+            return
+        }
+        expect(
+            formula.display && formula.source == "$$\nx = \\frac{a}{b}\n$$"
+                && blocks[0] == .paragraph("The formula:") && blocks[2] == .paragraph("where $b \\ne 0$."),
+            "display math takes its lines with their delimiters, and the prose around it stays prose")
+        expect(
+            MarkdownBlock.parse(#"\[ \unknown{x} \]"#) == [.code(language: "latex", text: #"\unknown{x}"#)],
+            "a display equation outside the subset shows as LaTeX source")
+        expect(
+            MarkdownBlock.parse("$$\n\\frac{a}{b") == [.paragraph("$$\n\\frac{a}{b")],
+            "an unclosed display equation waits as a paragraph")
+        expect(
+            MarkdownBlock.parse("$$x$$ is small") == [.paragraph("$$x$$ is small")],
+            "an equation followed by prose on its line is inline")
+        expect(
+            MarkdownBlock.parse("```\n$$x$$\n```") == [.code(language: nil, text: "$$x$$")],
+            "math inside a fence stays code")
+        let message = ChatMessage(role: .assistant, text: "apple $a$\n\n$$apple$$\n\napple")
+        expect(
+            ChatFindIndex.occurrences(of: "apple", in: [message]).count == 2,
+            "find searches the prose, never an equation's source")
+    }
+
+    static func mathParsesTheSupportedSubsetOnly() {
+        let supported = [
+            #"\frac{-b \pm \sqrt{b^2 - 4ac}}{2a}"#, #"\sum_{i=1}^{n} i"#, #"\int_0^\infty e^{-x^2}\,dx"#,
+            #"\lim_{x \to 0} \frac{\sin x}{x}"#, #"\left( \frac{a}{b} \right)^2"#, #"\binom{n}{k}"#,
+            #"\begin{pmatrix} a & b \\ c & d \end{pmatrix}"#, #"\sqrt[3]{8}"#, #"f''(x)"#,
+            #"\begin{cases} x & \text{if } x > 0 \\ -x & \text{else} \end{cases}"#,
+            #"\begin{aligned} a &= b \\ &= c \end{aligned}"#, #"\mathbb{R}^n \vec{v} \hat{x}"#,
+            #"\boxed{x = 5} \overline{AB} \not= \operatorname{rank}(A)"#
+        ]
+        for tex in supported {
+            expect(MathNode.parse(tex) != nil, "\(tex) typesets")
+        }
+        let refused = [
+            #"\foo{x}"#, "x^2^3", #"\frac{1}{"#, #"\left( x"#, #"\begin{tikzcd}\end{tikzcd}"#,
+            String(repeating: "{", count: 60) + String(repeating: "}", count: 60),
+            String(repeating: "x", count: MathNode.maximumLength + 1)
+        ]
+        for tex in refused {
+            expect(MathNode.parse(tex) == nil, "\(tex.prefix(40)) is refused and shows as source")
+        }
+        expect(
+            MathNode.parse("a & b") != nil && MathNode.parse(#"a \\ b"#) != nil,
+            "a top-level & or \\\\ lays out as aligned or gathered rows")
+        expect(
+            MathNode.parse(#"\alpha x \mathbb{R}"#)
+                == .row([.symbol("𝛼", .ord), .symbol("𝑥", .ord), .row([.symbol("ℝ", .ord)])]),
+            "letters take the math italic, and \\mathbb its double-struck form")
     }
 
     static func segmentsClampSearchOffsets() {

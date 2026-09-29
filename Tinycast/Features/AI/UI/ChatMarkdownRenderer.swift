@@ -34,6 +34,8 @@ struct ChatMarkdownRenderer {
     private static let currentMatch = NSAttributedString.Key("TinycastChatFindCurrent")
     /// A reply is untrusted text, so a `file:` or app-scheme link must never open on a click.
     private static let openableSchemes: Set<String> = ["http", "https", "mailto"]
+    /// The source a formula's attachment character stands for, which is what copying it gives.
+    static let mathSource = NSAttributedString.Key("TinycastMathSource")
 
     private let source: ChatMarkdownSource
     private var typography: InterfaceMetrics.Typography { source.metrics.typography }
@@ -47,6 +49,13 @@ struct ChatMarkdownRenderer {
         let string = NSMutableAttributedString()
         var codeBlocks: [ChatRenderedText.CodeBlock] = []
     }
+
+    /// One engine per text size a render meets, since each loads its three fonts.
+    private final class MathEngines {
+        var bySize: [CGFloat: MathLayoutEngine] = [:]
+    }
+
+    private let mathEngines = MathEngines()
 
     /// Where a block sits: the text blocks around it (quote, code, cell) and a list's indent.
     private struct Context {
@@ -119,6 +128,17 @@ struct ChatMarkdownRenderer {
                 render(inner, at: leaf, in: inside, into: output, spacingAfter: spacing.sm)
             case .table(let table):
                 self.table(table, at: leaf, in: context, into: output, after: after)
+            case .math(let formula):
+                let line = NSMutableAttributedString(
+                    attributedString: self.formula(
+                        formula, font: bodyFont, attributes: [.foregroundColor: textColor(context)]))
+                line.append(NSAttributedString(string: "\n", attributes: [.font: bodyFont]))
+                let style = paragraphStyle(in: context)
+                style.alignment = .center
+                style.paragraphSpacing = after
+                line.addAttribute(
+                    .paragraphStyle, value: style, range: NSRange(location: 0, length: line.length))
+                output.string.append(line)
             case .rule:
                 let line = Self.fullWidthBlock()
                 line.setWidth(Theme.Size.hairline, type: .absoluteValueType, for: .border, edge: .maxY)
@@ -215,10 +235,40 @@ struct ChatMarkdownRenderer {
                 attributes[.link] = link
             }
             attributes[.font] = runFont
-            result.append(
-                NSAttributedString(string: String(parsed[run.range].characters), attributes: attributes))
+            let text = String(parsed[run.range].characters)
+            guard let formula = run[MathFormula.Attribute.self] else {
+                result.append(NSAttributedString(string: text, attributes: attributes))
+                continue
+            }
+            // Two identical formulas side by side share one run, so each character is one formula.
+            for _ in text {
+                result.append(self.formula(formula, font: runFont, attributes: attributes))
+            }
         }
         return result
+    }
+
+    private func mathEngine(for font: NSFont) -> MathLayoutEngine? {
+        if let engine = mathEngines.bySize[font.pointSize] { return engine }
+        let engine = MathLayoutEngine(size: MathFont.size(matchingXHeightOf: font))
+        mathEngines.bySize[font.pointSize] = engine
+        return engine
+    }
+
+    /// One attachment character, sized so math's x-height matches the text around it.
+    private func formula(
+        _ formula: MathFormula, font: NSFont, attributes: [NSAttributedString.Key: Any]
+    ) -> NSAttributedString {
+        let color = attributes[.foregroundColor] as? NSColor ?? textColor(Context())
+        let box = mathEngine(for: font)?.layout(formula) ?? MathBox(text: formula.source, font: font as CTFont)
+        let attachment = NSTextAttachment()
+        attachment.attachmentCell = MathAttachmentCell(box: box, color: color, label: formula.source)
+        let string = NSMutableAttributedString(attachment: attachment)
+        var styled = attributes
+        styled[.font] = font
+        styled[Self.mathSource] = formula.source
+        string.addAttributes(styled, range: NSRange(location: 0, length: string.length))
+        return string
     }
 
     /// Every match takes the find tint; the current one the solid mark, and the tag found later.

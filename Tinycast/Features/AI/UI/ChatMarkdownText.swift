@@ -125,6 +125,44 @@ final class ChatSelectableTextView: NSTextView {
         return size
     }
 
+    /// An equation copies, drags and serves as the LaTeX the reply wrote rather than as a picture.
+    override func writeSelection(to pboard: NSPasteboard, types: [NSPasteboard.PasteboardType]) -> Bool {
+        guard let storage = textStorage else { return super.writeSelection(to: pboard, types: types) }
+        let ranges = selectedRanges.map(\.rangeValue).filter { $0.length > 0 }
+        let holdsMath = ranges.contains { range in
+            var found = false
+            storage.enumerateAttribute(ChatMarkdownRenderer.mathSource, in: range) { value, _, stop in
+                found = value != nil
+                stop.pointee = ObjCBool(found)
+            }
+            return found
+        }
+        guard holdsMath else { return super.writeSelection(to: pboard, types: types) }
+        let copied = NSMutableAttributedString()
+        for (index, range) in ranges.enumerated() {
+            if index > 0 { copied.append(NSAttributedString(string: "\n")) }
+            copied.append(Self.writingMathSource(storage.attributedSubstring(from: range)))
+        }
+        pboard.clearContents()
+        return pboard.writeObjects([copied])
+    }
+
+    private static func writingMathSource(_ text: NSAttributedString) -> NSAttributedString {
+        let result = NSMutableAttributedString(attributedString: text)
+        let whole = NSRange(location: 0, length: result.length)
+        result.enumerateAttribute(ChatMarkdownRenderer.mathSource, in: whole, options: .reverse) {
+            value, range, _ in
+            guard let source = value as? String else { return }
+            var attributes = result.attributes(at: range.location, effectiveRange: nil)
+            attributes[.attachment] = nil
+            attributes[ChatMarkdownRenderer.mathSource] = nil
+            let replacement = String(repeating: source, count: range.length)
+            result.replaceCharacters(
+                in: range, with: NSAttributedString(string: replacement, attributes: attributes))
+        }
+        return result
+    }
+
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         layoutOverlays()
