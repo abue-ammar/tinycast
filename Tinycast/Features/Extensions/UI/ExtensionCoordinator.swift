@@ -265,6 +265,17 @@ final class ExtensionCoordinator {
         palette.query = ""
     }
 
+    /// The palette's search while a command owns it; nil once the palette has moved on.
+    var extensionSearch: ExtensionManager.Search? {
+        guard palette.mode == .extensionCommand else { return nil }
+        return ExtensionManager.Search(query: palette.query, selection: palette.selection)
+    }
+
+    func showExtensionSearch(_ search: ExtensionManager.Search) {
+        palette.query = search.query
+        palette.selection = search.selection
+    }
+
     /// Its own window: a no-view command closes the palette before the pill is done.
     func showHUD(_ message: String) {
         core.showMessage(message)

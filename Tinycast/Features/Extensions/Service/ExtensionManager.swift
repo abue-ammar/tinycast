@@ -27,6 +27,12 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// Each search-bar dropdown's choice, keyed by node so a pushed screen keeps its own.
     private(set) var accessoryValues: [Int: String] = [:]
 
+    /// One screen's search field: the palette owns a single query, so each depth keeps its own here.
+    struct Search {
+        var query: String
+        var selection: Int
+    }
+
     /// Off means nothing scanned, published or held: the feature costs an unused stored property.
     private(set) var isEnabled = false
     /// Whether the commands reach the launcher at all; independent of `isEnabled`.
@@ -56,6 +62,10 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     @ObservationIgnored private var backgroundTask: Task<Void, Never>?
     @ObservationIgnored private var nextToastID = 1
     @ObservationIgnored private var lastOAuthExtensionName: String?
+    /// The search under each pushed screen, root first.
+    @ObservationIgnored private var parentSearches: [Search] = []
+    /// What the last pop handed back, so the palette's reset on a new query lands on its row.
+    @ObservationIgnored private var restoredSearch: Search?
 
     init(clipboardStore: ClipboardStore) {
         storage = ExtensionStorage(directory: ExtensionCatalog.storageDirectory())
@@ -349,6 +359,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
         running = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
         navigationDepth = 1
+        parentSearches = []
+        restoredSearch = nil
         state = .launching
 
         // The runtime holds one context: a background tick in flight yields to the manual run.
@@ -436,6 +448,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         toasts = []
         navigationDepth = 1
         accessoryValues = [:]
+        parentSearches = []
+        restoredSearch = nil
     }
 
     // MARK: - Background refresh
@@ -701,6 +715,36 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         Task { await runtime.dispatch(session: sessionID, handler: handler, payload: payload) }
     }
 
+    // MARK: - Per-screen search
+
+    /// The row a pop restored for `query`; nil leaves the palette's own landing.
+    func landingSelection(for query: String) -> Int? {
+        guard let restoredSearch, restoredSearch.query == query else { return nil }
+        return restoredSearch.selection
+    }
+
+    /// As in Raycast, a push opens on an empty search field and a pop hands the parent its own back.
+    private func setNavigationDepth(_ depth: Int) {
+        let old = navigationDepth
+        navigationDepth = depth
+        guard depth != old, let current = coordinator?.extensionSearch else { return }
+        restoredSearch = nil
+        if depth > old {
+            parentSearches.removeLast(max(0, parentSearches.count - (old - 1)))
+            parentSearches.append(current)
+            while parentSearches.count < depth - 1 {
+                parentSearches.append(Search(query: "", selection: 0))
+            }
+            coordinator?.showExtensionSearch(Search(query: "", selection: 0))
+            return
+        }
+        guard depth >= 1, parentSearches.count >= depth else { return }
+        let parent = parentSearches[depth - 1]
+        parentSearches.removeLast(parentSearches.count - (depth - 1))
+        restoredSearch = parent
+        coordinator?.showExtensionSearch(parent)
+    }
+
     // MARK: - Search-bar dropdowns
 
     /// What the dropdown shows: the extension's own `value` when it controls one, else the pick.
@@ -752,7 +796,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     func runtime(_ runtime: ExtensionRuntime, session: String, didRender tree: RenderTree) {
         guard session == sessionID else { return }
         state = .rendered(tree)
-        navigationDepth = tree.depth
+        setNavigationDepth(tree.depth)
         seedSearchBarAccessory(in: tree)
     }
 
@@ -768,7 +812,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     func runtime(_ runtime: ExtensionRuntime, session: String, navigationDepth depth: Int) {
         guard session == sessionID else { return }
-        navigationDepth = depth
+        setNavigationDepth(depth)
     }
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didFinish: Void) {

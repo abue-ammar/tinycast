@@ -39,6 +39,9 @@ struct ExtensionCommandScreen: PaletteScreen {
     /// A form owns the whole keyboard: its fields are the text, so the search field steps aside.
     var hidesSearchField: Bool { isForm }
 
+    /// A pop's new query would otherwise reset the parent to row 0.
+    var landingSelection: Int { extensions.landingSelection(for: vm.query) ?? 0 }
+
     /// A form or rowless Detail's primary action stands even with no row to land on.
     var actsWithoutRows: Bool { isForm || screen.kind == .detail }
 
