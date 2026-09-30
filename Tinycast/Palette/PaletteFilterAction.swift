@@ -1,7 +1,6 @@
 import Foundation
 
-/// Which header menu ⌘P opens. The header shows at most one, so this says which — and a running
-/// command's own dropdown answers first, so Tinycast's own menus can never open over it.
+/// Which header menu ⌘P opens; a running command's own dropdown always answers first.
 enum PaletteFilterAction: Equatable {
     /// A running command's `searchBarAccessory` dropdown.
     case extensionAccessory
