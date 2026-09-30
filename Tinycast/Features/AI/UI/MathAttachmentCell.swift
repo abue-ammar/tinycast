@@ -16,6 +16,8 @@ final class MathAttachmentCell: NSTextAttachmentCell {
         ascent = box.ascent
         descent = box.descent
         super.init()
+        // Without a role the attachment reaches VoiceOver as an unknown element.
+        setAccessibilityRole(.image)
         setAccessibilityLabel(label)
     }
 

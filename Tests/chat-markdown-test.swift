@@ -139,6 +139,10 @@ struct ChatMarkdownTests {
         expect(found.count == 3, "two inline formulas and one display formula, got \(found.count)")
         expect(
             found.allSatisfy { $0.range.length == 1 && $0.cell is MathAttachmentCell }, "each draws one cell")
+        expect(
+            found.map { $0.cell?.accessibilityRole() } == Array(repeating: .image, count: found.count)
+                && found.first?.cell?.accessibilityLabel() == "\\(x^2\\)",
+            "VoiceOver meets each formula as an image named by its source")
         let sources = found.map {
             rendered.attribute(ChatMarkdownRenderer.mathSource, at: $0.range.location, effectiveRange: nil)
                 as? String
