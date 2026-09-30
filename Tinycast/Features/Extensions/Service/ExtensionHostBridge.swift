@@ -465,6 +465,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             appIdentifier.hasPrefix("/")
             ? URL(fileURLWithPath: appIdentifier)
             : NSWorkspace.shared.urlForApplication(withBundleIdentifier: appIdentifier)
+                ?? ExtensionApplicationLookup.url(
+                    named: appIdentifier, in: context?.applicationURLs ?? [],
+                    displayName: { Bundle(url: $0)?.installedAppName })
         guard let appURL else {
             NSWorkspace.shared.open(url)
             return
