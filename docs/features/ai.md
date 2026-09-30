@@ -368,10 +368,10 @@ search, beside `AI Chat`'s; either shortcut keeps working while its command is h
 nothing at all while the feature is off. The palette search field becomes the single-line composer.
 The footer pill and Return are one action, `activate`: Send, or Stop while a response streams — an
 empty composer sends nothing, so the pill never needs a disabled state. The header's trailing model
-switcher uses the same in-window menu control as Clipboard's type filter and changes the chat route
-for the next message. For installed routes and OpenRouter models whose catalog reports the
-capability, it also shows the supported reasoning efforts and changes the chat effort for the next
-message. Other API routes keep their provider default because their model catalogs expose no
+switcher opens by click or ⌘P, uses the same in-window menu control as Clipboard's type filter and
+changes the chat route for the next message. For installed routes and OpenRouter models whose catalog
+reports the capability, it also shows the supported reasoning efforts and changes the chat effort for
+the next message. Other API routes keep their provider default because their model catalogs expose no
 portable effort contract. Neither change interrupts a response already streaming; stopping one is
 the pill's job, so the header never has to fit a third control beside the switcher.
 
@@ -525,8 +525,9 @@ window, and every chat action either surface sends — is the nineteenth feature
 - An `@server` chip — the tools glyph alone, since the handle is still in the text — or a staged
   pill follows the typed text with a clear gap, and a long draft stops it right before the model
   name, the same gap with a reasoning menu and without.
-- Clicking it opens the same anchored menu shape as Clipboard's type filter; arrows, Return and Escape
-  operate the menu without changing the draft.
+- Clicking it or pressing ⌘P opens the same anchored menu shape as Clipboard's type filter;
+  arrows, Return and Escape operate the menu without changing the draft.
+- Pressing ⌘P again closes the model menu and returns focus to the composer.
 - Repeatedly clicking either the model switcher or the type filter opens and closes every time, even
   when the next click lands immediately after dismissal or a few points off the first one.
 - Selecting a model updates the button immediately and the next message reaches that route.
