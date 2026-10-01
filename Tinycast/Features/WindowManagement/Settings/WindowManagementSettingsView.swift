@@ -6,6 +6,7 @@ struct WindowManagementSettingsView: View {
     @State private var editor: WindowLayoutEditRequest?
     @State private var pendingDeletion: WindowLayout?
     @State private var customSizeEdit: CustomWindowSizeEditRequest?
+    @State private var chosenPreset: WindowShortcutPreset?
 
     var body: some View {
         @Bindable var settings = settings
@@ -84,6 +85,30 @@ struct WindowManagementSettingsView: View {
             } label: {
                 SettingsRowTitle(.windowManagementOptions, "Gap between windows")
                 Text("Between tiled windows and screen edges.")
+            }
+
+            LabeledContent {
+                HStack(spacing: Theme.Spacing.sm) {
+                    Picker("Shortcut preset", selection: $chosenPreset) {
+                        Text("Choose…").tag(WindowShortcutPreset?.none)
+                        ForEach(WindowShortcutPreset.allCases) { preset in
+                            Text(preset.title).tag(Optional(preset))
+                        }
+                    }
+                    .labelsHidden()
+                    .fixedSize()
+                    Button("Apply") {
+                        guard let chosenPreset else { return }
+                        Task { await core.windowShortcutPresetCoordinator.apply(chosenPreset) }
+                    }
+                    // Live bindings decide, so one edit to an applied preset re-enables it.
+                    .disabled(
+                        chosenPreset == nil
+                            || chosenPreset == core.windowShortcutPresetCoordinator.matchingPreset)
+                }
+            } label: {
+                SettingsRowTitle(.windowManagementOptions, "Shortcut preset")
+                Text("Fills in another app's shortcuts. Others stay as they are.")
             }
         } header: {
             SettingsSectionHeader(.windowManagementOptions)

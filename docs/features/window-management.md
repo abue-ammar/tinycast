@@ -49,6 +49,8 @@ entries and a still-registered shortcut moves nothing.
 | `Model/CustomWindowSizeStore.swift`  | Foundation                   | The custom-size library, as JSON in `UserDefaults`                  |
 | `UI/WindowCommandCoordinator.swift`  | AppKit                       | The one funnel from a palette row or a global hotkey                |
 | `UI/CustomWindowSizeCoordinator.swift` | Foundation                 | Custom sizes' launcher presence, edits and a deletion's cleanup     |
+| `Model/WindowShortcutPreset.swift`   | Foundation + Carbon          | **Pure.** Rectangle / Magnet and Spectacle tables, and the apply plan |
+| `UI/WindowShortcutPresetCoordinator.swift` | Foundation             | Applies a preset, confirming first when it replaces a user's key   |
 
 The feature also owns **[Window Layouts](window-layouts.md)** — saved multi-display arrangements
 applied in one pass — and **[Rooms](window-rooms.md)**, named sets of windows that tile on the
@@ -324,6 +326,30 @@ than posting a corrupt event. The payload itself is packed little-endian with 16
 scalars, which is why `SpaceGesture.fixed1616` floors to ±1 — the tiny progress value would otherwise
 quantize to zero and the gesture would do nothing.
 
+## Shortcut presets
+
+Settings › Window Management › Options › **Shortcut preset**, a pop-up and an Apply button, fills
+in the stock window shortcuts of Rectangle / Magnet (one option: Rectangle adopted Magnet's scheme
+and only added to it) or Spectacle.
+It is a one-shot action rather than a mode, so nothing is persisted, there is no `SettingsFileKey`,
+and every shortcut stays editable afterwards.
+
+- **Fill in, never replace wholesale.** A command the preset doesn't name keeps its binding, unless it
+  holds a key the preset gives to another command — then it is *displaced* and cleared.
+- **Confirm only over the user's own keys.** `WindowShortcutPresetPlan` lists every command whose
+  existing binding would change or be displaced; when that list is empty the preset applies at once,
+  otherwise `WindowShortcutPresetCoordinator` asks through `AppCore.confirm` first.
+- **Never take a key from outside the feature.** A preset key already held by any other action (the
+  palette toggle, an app hotkey, …) is skipped, the command keeps its previous binding when that is
+  still free, and the closing HUD counts the skips.
+- **Key codes, not letters.** Each table stores Carbon key codes, as the original apps register them,
+  so ⌃⌥U lands on the same physical key under Dvorak or AZERTY. Actions with no Tinycast equivalent
+  (Spectacle's next/previous third and redo) are left out.
+- **Choose, then Apply.** The pop-up holds a choice that is never stored, and Apply stays disabled
+  until one is made — and while `WindowShortcutPreset.matching` reports the chosen preset as fully
+  set (other commands don't count), so one edited or cleared key re-enables it.
+- **No Raycast preset.** Raycast ships its window commands unbound, so there is nothing to fill in.
+
 ## Wiring
 
 - **`AppEntry.Kind.windowCommand`** — entries are `window-command:<id>`, published by
@@ -361,6 +387,10 @@ moves and wrapping, both cycling modes including the strip walk, its wrap and a 
 across displays, restore recovery, every `WindowActionMemory` rule, and a fuzz sweep over every
 command × gap × screen × cycle × step × degenerate window frame checking for non-finite output,
 negative dimensions, off-screen results, non-determinism and, at step 0, drift on repeat.
+
+`Tests/window-preset-test.swift` covers the preset tables (no key used twice, a commanding modifier
+on each) and `WindowShortcutPresetPlan`: a fresh apply, a repeat apply, a replaced user key, a
+displaced command and an unrelated one left alone, plus when `matching` names a preset.
 
 `Tests/space-gesture-test.swift` (121 assertions) covers the other pure half: the fixed-point encoding
 and its ±1 floor, both field tables and the sign convention shared between them, the ended-only fling

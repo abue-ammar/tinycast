@@ -413,6 +413,9 @@ enum SettingsSearchCatalog {
             .windowManagementOptions, "Gap between windows",
             keywords: ["padding", "spacing", "margin", "points"]),
         .init(
+            .windowManagementOptions, "Shortcut preset",
+            keywords: ["rectangle", "magnet", "spectacle", "defaults", "import", "shortcuts"]),
+        .init(
             group: .windowManagementOptions, "Window commands",
             keywords: ["shortcut", "left half", "maximize", "center"]),
         .init(

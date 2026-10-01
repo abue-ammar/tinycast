@@ -121,6 +121,8 @@ final class AppCore {
             store: customWindowSizes, settings: settings, appIndex: appIndex, hotKeys: hotKeys,
             favorites: favorites, visibility: visibility, ranking: launcherRanking,
             aliases: aliases, core: self)
+    @ObservationIgnored private(set) lazy var windowShortcutPresetCoordinator =
+        WindowShortcutPresetCoordinator(hotKeys: hotKeys, core: self)
     @ObservationIgnored private(set) lazy var windowLayoutCoordinator = WindowLayoutCoordinator(
         store: windowLayouts, settings: settings, appIndex: appIndex, hotKeys: hotKeys,
         favorites: favorites, visibility: visibility, ranking: launcherRanking, aliases: aliases,

@@ -333,6 +333,13 @@ run window-command-test    Tinycast/Features/WindowManagement/Model/WindowComman
                            Tinycast/Features/WindowManagement/Model/WindowCycle.swift \
                            Tinycast/Features/WindowManagement/Model/WindowPlacementEngine.swift \
                            Tinycast/Features/WindowManagement/Model/WindowActionMemory.swift
+run window-preset-test     Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Tinycast/Features/WindowManagement/Model/WindowShortcutPreset.swift \
+                           Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
+                           Tinycast/Features/HotKeys/Model/HotKeyBinding.swift \
+                           Tinycast/Features/HotKeys/Model/HyperKey.swift \
+                           Tinycast/Platform/ASCIIKeyboardLayout.swift \
+                           Tinycast/Features/HotKeys/Service/KeyShortcut.swift
 run space-gesture-test     Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
                            Tinycast/Features/WindowManagement/Model/SpaceGesture.swift
 run window-layout-test     Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
