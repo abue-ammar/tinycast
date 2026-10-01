@@ -200,7 +200,8 @@ settled content while loading. Button changes wait until the menu closes so its 
 under the pointer.
 The session stays alive while the menu is open. After a settled render or menu
 closure, a 100 ms coalescing delay lets React commit effects and host calls drain before releasing the
-context. The runtime queue drains temporary Objective-C objects after each work item, including
+context; a further 50 ms after the drain lets their results render. The runtime queue drains
+temporary Objective-C objects after each work item, including
 context teardown. Loading and closed-menu actions have a 60-second deadline; an open, settled menu is exempt.
 This bounds asynchronous work, but cannot interrupt an extension stuck in synchronous JavaScript or a
 blocking Node shim on the runtime queue.
@@ -213,8 +214,9 @@ all tear down the corresponding native items and work. Removing a menu item leav
 other commands installed. Only explicitly activated commands have saved records.
 
 `launchCommand` preserves `type`, arguments and JSON context. Background menu refreshes and explicit
-background `no-view` launches use the transient lane at utility priority and leave the palette alone;
-a user-initiated view launch from a menu opens the palette. Menu toasts are suppressed; errors appear
+background `no-view` launches use the transient lane at utility priority and leave the palette alone.
+A background launch never activates a menu command; it only refreshes one already shown. A
+user-initiated view launch from a menu opens the palette. Menu toasts are suppressed; errors appear
 in the menu and user-initiated failures also use the HUD. `updateCommandMetadata` publishes subtitles
 for the executing command, including menu commands, without changing another runtime's command.
 
