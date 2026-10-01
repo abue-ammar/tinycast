@@ -18,13 +18,14 @@ final class WindowShortcutPresetCoordinator {
     }
 
     func apply(_ preset: WindowShortcutPreset) async {
-        let current = currentBindings()
-        let plan = WindowShortcutPresetPlan(preset: preset, current: current)
+        var current = currentBindings()
+        var plan = WindowShortcutPresetPlan(preset: preset, current: current)
         guard !plan.assignments.isEmpty else {
             core.showMessage("\(preset.title) shortcuts already set")
             return
         }
         if !plan.overwritten.isEmpty {
+            let confirmed = Set(plan.overwritten)
             guard
                 await core.confirm(
                     title: plan.overwritten.count == 1
@@ -32,6 +33,10 @@ final class WindowShortcutPresetCoordinator {
                     message: replacementMessage(plan.overwritten, preset: preset),
                     symbol: "keyboard", confirmTitle: "Replace")
             else { return }
+            // A settings.json reload can rebind while the dialog waits; never replace an unseen key.
+            current = currentBindings()
+            plan = WindowShortcutPresetPlan(preset: preset, current: current)
+            guard Set(plan.overwritten).isSubset(of: confirmed) else { return await apply(preset) }
         }
         // Cleared before any is set, so a key moving between two commands never blocks itself.
         for id in plan.displaced + plan.assignments.keys where current[id] != nil {
