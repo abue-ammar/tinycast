@@ -85,17 +85,18 @@ enum PalettePlacement {
     }
 }
 
-/// The three screen-space anchors a menu window can follow.
 enum MenuPanelCorner {
     case bottomLeading
     case bottomTrailing
     case belowHeaderTrailing
+    case belowHeaderLeading
 
     var layerAnchor: CGPoint {
         switch self {
         case .bottomLeading: CGPoint(x: 0, y: 0)
         case .bottomTrailing: CGPoint(x: 1, y: 0)
         case .belowHeaderTrailing: CGPoint(x: 1, y: 1)
+        case .belowHeaderLeading: CGPoint(x: 0, y: 1)
         }
     }
 
@@ -117,6 +118,10 @@ enum MenuPanelCorner {
             case .belowHeaderTrailing:
                 CGPoint(
                     x: parentFrame.maxX - inset * 2 - contentSize.width,
+                    y: parentFrame.maxY - headerExtent - contentSize.height)
+            case .belowHeaderLeading:
+                CGPoint(
+                    x: parentFrame.minX + inset * 2,
                     y: parentFrame.maxY - headerExtent - contentSize.height)
             }
         return CGRect(origin: origin, size: contentSize)

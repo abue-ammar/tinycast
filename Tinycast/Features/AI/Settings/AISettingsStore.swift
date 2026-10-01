@@ -68,6 +68,7 @@ final class AISettingsStore {
     }
     /// Bumped by every edit to a tool's launch, a changed value included, which no name shows.
     private(set) var launchRevisions: [InstalledAIKind: Int] = [:]
+    private(set) var apiKeyRevisions: [UUID: Int] = [:]
 
     /// Asked each time: the model lands mid-session, and a flag read at launch would never notice.
     @ObservationIgnored let isAppleIntelligenceAvailable: @Sendable () -> Bool
@@ -124,6 +125,10 @@ final class AISettingsStore {
         if defaultModel == nil {
             defaultModel = firstAvailableSelection()
         }
+    }
+
+    func noteAPIKeyChanged(for connection: UUID) {
+        apiKeyRevisions[connection, default: 0] += 1
     }
 
     func connection(id: UUID) -> AIConnection? {

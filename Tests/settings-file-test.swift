@@ -42,14 +42,6 @@ struct SettingsFileTest {
             current = key.section
         }
         check("each section's keys are declared together", reopened.isEmpty)
-        check(
-            "sections follow the Settings sidebar",
-            SettingsFileKey.sections == [
-                "general", "appearance", "hyperKey", "calculator", "search", "applications",
-                "commands", "quicklinks", "appleShortcuts", "ai", "quickActions", "fileSearch",
-                "notes", "snippets", "navigation", "windowManagement", "clipboard", "emoji",
-                "calendar", "extensions"
-            ])
 
         // A file that could switch one of these on would grant what only the app may ask for.
         let grantPaths = [

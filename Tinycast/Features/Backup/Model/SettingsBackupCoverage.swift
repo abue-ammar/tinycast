@@ -158,6 +158,17 @@ enum SettingsBackupCoverage {
             "Custom model instructions change transformed results and must not move unseen.",
         AppSettingsKey.quickActionLanguage.rawValue:
             "Follows the language the person at this Mac reads, not the one who wrote the backup.",
+        AppSettingsKey.translationProvider.rawValue:
+            "Translation service and spending destinations are chosen on this Mac, never by a backup.",
+        AppSettingsKey.translationModel.rawValue:
+            "Translation's API model is a machine-local spending destination, not a chat default.",
+        AppSettingsKey.translationSourceLanguage.rawValue:
+            "Translation languages belong to the person using this Mac, not the backup's author.",
+        AppSettingsKey.translationTargetLanguage.rawValue:
+            "Translation languages belong to the person using this Mac, not the backup's author.",
+        AppSettingsKey.translationDeepLPlan.rawValue:
+            "DeepL account type selects this Mac's credential and spending destination."
+            + " Credentials never travel in a backup.",
         AppSettingsKey.snippetsFolder.rawValue:
             "Names a folder on this Mac; the one a backup lands on may not have it.",
         AppSettingsKey.notesFolder.rawValue:

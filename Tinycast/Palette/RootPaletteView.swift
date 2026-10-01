@@ -24,6 +24,7 @@ struct RootPaletteView: View {
     @Environment(SnippetsStore.self) private var snippets
     @Environment(ExtensionManager.self) private var extensions
     @Environment(AppSettings.self) private var settings
+    @Environment(TranslationCoordinator.self) private var translation
     @Environment(\.metrics) private var metrics
     @Environment(\.openURL) private var openURL
     @FocusState private var searchFocused: Bool
@@ -71,6 +72,8 @@ struct RootPaletteView: View {
                 index: emojiIndex, frequent: frequentEmoji, pinned: core.pinnedEmoji, core: core, vm: vm,
                 tone: settings.emojiSkinTone, defaultColumns: settings.emojiGridColumns,
                 openActions: openActions)
+        case .translation:
+            return TranslationScreen(coordinator: translation, vm: vm, toggleActions: toggleActions)
         case .fileSearch:
             return FileSearchScreen(
                 session: fileSearch, core: core, vm: vm, openActions: openActions)
@@ -239,6 +242,12 @@ struct RootPaletteView: View {
             return headerMenu(fileSearchFilterContent, width: metrics.size.fileSearchFilterMenuWidth)
         case .emojiCategory:
             return headerMenu(emojiCategoryContent, width: metrics.size.emojiCategoryMenuWidth)
+        case .translationSource:
+            return headerMenu(translation.sourceMenu, width: metrics.size.menuWidth)
+        case .translationTarget:
+            return headerMenu(translation.targetMenu, width: metrics.size.menuWidth)
+        case .translationService:
+            return headerMenu(translation.serviceMenu, width: metrics.size.menuWidth)
         case .aiModel:
             return headerMenu(
                 AIModelMenu.models(coordinator: core.aiChatCoordinator, chat: quickAI),
@@ -290,10 +299,17 @@ struct RootPaletteView: View {
                 .safeAreaInset(edge: .top, spacing: 0) { header }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
                     if !isCollapsed {
-                        bottomBar(
-                            pillLabel: screen.primaryActionTitle, showActionGroup: showActionGroup,
-                            formPrimaryShortcut: isExtensionForm,
-                            showActions: screen.hasActions(at: sel))
+                        if vm.mode == .translation {
+                            TranslationFooter(
+                                menuButton: appMenuButton,
+                                toggleService: { toggleTranslationMenu(.translationService) },
+                                toggleActions: toggleActions)
+                        } else {
+                            bottomBar(
+                                pillLabel: screen.primaryActionTitle, showActionGroup: showActionGroup,
+                                formPrimaryShortcut: isExtensionForm,
+                                showActions: screen.hasActions(at: sel))
+                        }
                     }
                 }
                 // The panel has no title bar, so this thin top margin is the only place left to grab it.
@@ -360,10 +376,25 @@ struct RootPaletteView: View {
         refreshActionsMenu()
     }
 
+    private func translationObservers(_ content: some View) -> some View {
+        content
+            .onChange(of: translation.session.state) { refreshTranslationMenu() }
+            .onChange(of: translation.menuRevision) { refreshTranslationMenu() }
+    }
+
+    private func refreshTranslationMenu() {
+        guard vm.mode == .translation else { return }
+        switch openMenu {
+        case .actions, .translationSource, .translationTarget, .translationService:
+            menuQueryChanged()
+        default: break
+        }
+    }
+
     /// Split from `body` for the same reason `keyHandlers` is: one chain cannot carry them all.
     @ViewBuilder
     private func stateObservers(_ content: some View) -> some View {
-        emojiObservers(content)
+        translationObservers(emojiObservers(content))
             // Every show bumps focusToken so the search field refocuses.
             .onChange(of: vm.focusToken) {
                 searchFocused = !screen.hidesSearchField
@@ -395,7 +426,8 @@ struct RootPaletteView: View {
                 land()
                 fileSearch.search(vm.query, filter: vm.fileSearchFilter)
             }
-            .onChange(of: vm.mode) {
+            .onChange(of: vm.mode) { previous, _ in
+                if previous == .translation { translation.reset() }
                 vm.clipboardFilter = .all
                 vm.fileSearchFilter = .all
                 vm.emojiCategoryFilter = .all
@@ -504,6 +536,7 @@ struct RootPaletteView: View {
             }
             // Plain ↵ runs an open menu's row or non-form selection; ⌘↵ submits forms.
             .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")], phases: .down) { press in
+                if vm.mode == .translation, vm.isComposing { return .ignored }
                 let command = press.modifiers.contains(.command)
                 let option = press.modifiers.contains(.option)
                 if menuOpen, !command, !option {
@@ -513,6 +546,7 @@ struct RootPaletteView: View {
                 if isExtensionForm { return handleFormReturn(press) }
                 let screen = screen
                 guard command || option else {
+                    if vm.mode == .translation { return .ignored }
                     guard !vm.isComposing else { return .ignored }
                     // The fallback for a hidden-field screen with no control focused to answer.
                     let answersWithoutFocus = screen.hidesSearchField && screen.rows.isEmpty
@@ -533,6 +567,7 @@ struct RootPaletteView: View {
                 return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
             }
             .onKeyPress(.escape) {
+                if vm.mode == .translation, vm.isComposing { return .ignored }
                 if menuPanel.isClosing { return .handled }
                 // An open control list owns Escape before the palette beneath it.
                 if vm.isControlListOpen { return .ignored }
@@ -576,6 +611,7 @@ struct RootPaletteView: View {
                 guard press.modifiers.contains(.command),
                     ASCIIKeyboardLayout.matches(press.key, character: "k")
                 else { return .ignored }
+                if vm.mode == .translation, vm.isComposing { return .ignored }
                 // A control's open list owns the screen, so a second panel may never open over it.
                 guard !vm.isControlListOpen else { return .handled }
                 // The Actions menu has no anchor in the compact bar, so swallow ⌘K there.
@@ -583,7 +619,8 @@ struct RootPaletteView: View {
                 let screen = screen
                 guard !screen.rows.isEmpty || screen.actsWithoutRows else { return .handled }
                 // An error calc card is the selection but has no actions — don't open an empty panel.
-                guard screen.hasPrimaryAction(at: selection(in: screen)) else { return .handled }
+                guard vm.mode == .translation || screen.hasPrimaryAction(at: selection(in: screen))
+                else { return .handled }
                 // Same for a menu the footer doesn't offer: ⌘K opens exactly what the bar advertises.
                 guard screen.hasActions(at: selection(in: screen)) else { return .handled }
                 toggleActions()
@@ -659,6 +696,13 @@ struct RootPaletteView: View {
             headerGutter(width: metrics.spacing.xl)
             // One structural position: a field inside a branch loses first responder when it flips.
             headerField
+                .overlay {
+                    if vm.mode == .translation {
+                        TranslationHeader(
+                            openSource: { toggleTranslationMenu(.translationSource) },
+                            openTarget: { toggleTranslationMenu(.translationTarget) })
+                    }
+                }
             if let accessory = headerAccessory {
                 accessory.view
                 // Given room last: at the default priority it would split it with the field.
@@ -952,6 +996,28 @@ struct RootPaletteView: View {
         }
     }
 
+    private func toggleTranslationMenu(_ menu: OpenMenu) {
+        if openMenu == menu {
+            closeMenus()
+            return
+        }
+        let selected: Int
+        switch menu {
+        case .translationSource:
+            selected = translation.sourceLanguages.firstIndex {
+                TranslationLanguages.matches($0.id, translation.settings.sourceLanguage)
+            }.map { $0 + 1 } ?? 0
+        case .translationTarget:
+            selected = translation.targetLanguages.firstIndex {
+                TranslationLanguages.matches($0.id, translation.settings.targetLanguage)
+            } ?? 0
+        case .translationService:
+            selected = translation.settings.provider == .ai ? 0 : 1
+        default: return
+        }
+        open(menu, highlighting: selected)
+    }
+
     /// Opens on the active filter, so the current value is the highlighted row like a pop-up's.
     private func toggleClipboardFilter() {
         if openMenu == .clipboardFilter {
@@ -1074,6 +1140,9 @@ struct RootPaletteView: View {
         vm.menuQuery = ""
         // Stated here rather than mirrored later: the window delegate reads it during this turn.
         vm.menuOpen = false
+        if vm.mode == .translation, vm.isVisible {
+            TranslationTextView.focusSource(in: hostWindow)
+        }
     }
 
     private func menuQueryChanged() {
@@ -1207,6 +1276,9 @@ struct RootPaletteView: View {
         switch openMenu {
         case .app: .bottomLeading
         case .actions: .bottomTrailing
+        case .translationSource: .belowHeaderLeading
+        case .translationTarget: .belowHeaderTrailing
+        case .translationService: .bottomLeading
         case .argumentOptions: .belowHeaderTrailing
         case .clipboardFilter, .fileSearchFilter, .emojiCategory, .aiModel, .aiReasoning,
             .aiAttachments, .extensionAccessory:
@@ -1294,7 +1366,7 @@ struct RootPaletteView: View {
         // Before the action: one opening a window must find the palette key again, or nothing hides it.
         closeMenus()
         // A mouse click on a row takes the caret with it; menus close back into the field.
-        if argumentFocused == nil { searchFocused = true }
+        if argumentFocused == nil, !screen.hidesSearchField { searchFocused = true }
         content.activate(index)
     }
 
@@ -1341,7 +1413,7 @@ struct RootPaletteView: View {
     private func installHeaderArrowHandler(in window: NSWindow?) {
         guard let panel = window as? PalettePanel else { return }
         panel.onHeaderFieldBoundaryArrow = { boundary in
-            guard !menuOpen, !vm.isControlListOpen, !isCollapsed,
+            guard vm.mode != .translation, !menuOpen, !vm.isControlListOpen, !isCollapsed,
                 let accessory = headerAccessory, !accessory.fieldNames.isEmpty
             else { return false }
             switch boundary {
@@ -1428,6 +1500,9 @@ private enum OpenMenu {
     case aiModel
     case aiReasoning
     case aiAttachments
+    case translationSource
+    case translationTarget
+    case translationService
 }
 
 /// Reads visibility in its own body, so a summon never re-renders the palette's.

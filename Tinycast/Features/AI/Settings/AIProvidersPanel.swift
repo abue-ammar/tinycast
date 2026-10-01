@@ -790,8 +790,12 @@ struct AIProvidersPanel: View {
             hasStoredKey: keyStatuses[connection.id] == true)
         do {
             switch outcome {
-            case .store(let key): try keyStore.setSecret(key, for: connection.id)
-            case .removeStored: try keyStore.removeSecret(for: connection.id)
+            case .store(let key):
+                try keyStore.setSecret(key, for: connection.id)
+                settings.noteAPIKeyChanged(for: connection.id)
+            case .removeStored:
+                try keyStore.removeSecret(for: connection.id)
+                settings.noteAPIKeyChanged(for: connection.id)
             case .keep: break
             case .reject(let message): return message
             }

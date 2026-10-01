@@ -3,8 +3,8 @@
 Tinycast has one app-wide provider layer for features that need text generation. Chat chooses its
 model from Quick AI's header or the AI Chat composer, and `AIChatCoordinator.provider(for:)`
 builds that chat's route through `AIProviderFactory` to stream an `AIRequest`.
-Chat is the first consumer and [Quick Actions](quick-actions.md) the second; the provider layer
-depends on neither, and Quick Actions carries its own route rather than borrowing this one.
+Chat, [Quick Actions](quick-actions.md), and [Translator](#translator) use that layer independently.
+Each owns its route and instructions; Translator also offers DeepL without passing through chat.
 
 Chat has two surfaces over one history, as Raycast's does. **Quick AI** is the palette screen: Tab
 from the launcher asks what you typed, and the answer appears in place. **AI Chat** is a window —
@@ -16,7 +16,8 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
 - **AI is off out of the box, and off means fully off.** `AppSettings.aiEnabled` is the flag:
   no `Quick AI` or `AI Chat` command in the launcher, no history database opened or created, no Codex
   helper for chat, no stop for it on Tab's ring, the palette leaves `.ai` and the window closes.
-  Installed providers may still remain available for Quick Actions, which has its own switch and route. Turning AI off cancels
+  Installed providers may still remain available for Quick Actions, which has its own switch and route.
+  Translator's API connections remain available independently of both feature switches. Turning AI off cancels
   every streaming reply and drops both transcripts, but touches neither the saved conversations in
   `ai-chats.sqlite3` nor a Keychain key. `aiEnabled` is excluded from settings backups like every
   other AI key, so an import can never arm a feature it cannot configure.
@@ -44,7 +45,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   `NO_COLOR` and the `TC_MCP_` names that carry MCP secrets to Codex. Names are stored in
   `aiInstalledOverrides` and values in the login Keychain (`KeychainSecretStore.installedAIEnvironment`),
   read only for a tool that has variables.
-- **Every request carries Tinycast's own preamble, and the user's text goes after it.**
+- **Chat requests carry Tinycast's own preamble, and the user's text goes after it.**
   `AIInstructions.compose` builds `AIRequest.instructions`: a fixed preamble that tells the model
   where it is running and what the app can do, then whatever Settings → AI holds. The preamble
   keeps the model a general-purpose assistant — the app facts are reference for when the user asks,
@@ -272,6 +273,51 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   on-device model. Every transport funnels through `requestMessages(textBudget:)`, so no route can
   resend every image each turn or let history grow the payload as a chat goes on. The composer refuses a picture
   past the budget and says so, rather than letting send time drop it silently.
+
+## Translator
+
+The **Translate** command (`command:translator`) opens a two-column native palette editor. The existing
+selected-text command keeps `command:translate`, its shortcut and Apple Translation behavior, and is
+listed as **Translate Selected Text**. Translator requires no Accessibility or microphone permission.
+
+`AppCore` owns `TranslationSettingsStore`, `TranslationSession`, `TranslationCoordinator`, and a lazy
+`DeepLTranslationService`. Startup only installs configuration observation; no key is read and no
+directory or translation is fetched until the feature is used. Settings → Translation holds the
+independent service, source, target, model and Free/Pro choices. No model is selected automatically.
+The empty source caret uses the same search-field font as its placeholder; entered text keeps the
+regular body font, including while an input method is composing.
+
+### Translator invariants
+
+- Only a configured, supported, nonblank draft on the visible screen can run. Input and language,
+  service, model or effort changes clear the result and debounce for 600 ms. Marked text immediately
+  cancels work; input-method commitment starts a fresh debounce. Original spaces and paragraphs survive.
+- Each scheduled task has a generation. Late success, failure and cleanup cannot overwrite newer work.
+  Results publish only when complete; Copy and Swap never use an incomplete or mismatched result.
+- Hiding cancels unfinished work but retains the process-local draft and completed result. Reopening
+  resumes interrupted work, not completed or failed requests. Leaving the mode resets all transient
+  state. No translation text or history is persisted; explicitly copied text follows clipboard settings.
+- AI (BYOK) lists only enabled API connections and visible models. The saved connection and model must
+  still exist at execution; a missing or disabled route fails rather than borrowing a chat default.
+  API metadata and successful key writes invalidate work through observation. The factory reads the
+  key afresh and retains its endpoint and Keychain checks.
+- An AI translation is one user message, its own translation-only instructions, no search, no tools,
+  no chat history and no extra language-detection request. Only answer text is published; local
+  NaturalLanguage detection supplies the auto-source label and swap direction when available.
+- DeepL Free and Pro have fixed hosts and distinct Keychain accounts in `translation-deepl-keys`.
+  Keys never enter defaults, settings.json or backups. Saving requires an explicit button action;
+  removing confirms the current account and does not remove the other account's key.
+- DeepL's `/v3/languages?resource=translate_text` is authoritative. The in-memory directory must contain
+  usable source and target entries before sending; failed loading has an explicit Retry. No v2 or
+  static-directory fallback exists. The private ephemeral session has no cache, cookies or credentials,
+  rejects redirects, times out after 30 seconds, propagates cancellation and never retries or switches services.
+- `/v2/translate` receives the complete text in a JSON array, formatting preservation, and no
+  `source_lang` for auto. The entire encoded body is capped at 131072 bytes; it is never truncated.
+  Errors classify status or transport failures without exposing response bodies, keys or text.
+- Language comparison ignores only case and `_` versus `-`: script and region remain meaningful.
+  An explicit identical pair returns the original without a network request. Unsupported saved codes
+  remain selected and block sending. Swap requires both directions to resolve in the current catalog;
+  auto requires a matching successful detection, never a guessed source.
 
 ## Connections and routing
 

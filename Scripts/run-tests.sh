@@ -562,6 +562,16 @@ run support-test           Tinycast/Features/Support/Model/*.swift
 run ai-provider-test       Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Settings/AISettingsStore.swift
+run translation-test       Tinycast/Features/Translation/Model/*.swift \
+                           Tinycast/Features/Translation/Settings/TranslationSettingsStore.swift \
+                           Tinycast/Features/Translation/Settings/TranslationSettingsFile.swift \
+                           Tinycast/Features/Translation/Service/*.swift \
+                           Tinycast/Features/QuickActions/Service/TextTranslator.swift \
+                           Tinycast/Features/AI/Service/AIProvider.swift \
+                           Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Features/Settings/Model/*.swift \
+                           Tinycast/Features/AI/Model/*.swift \
+                           Tinycast/Features/AI/Settings/AISettingsStore.swift
 run ai-chat-test           Tinycast/Features/AI/Model/AIRequest.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \

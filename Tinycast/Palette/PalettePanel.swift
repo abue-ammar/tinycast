@@ -135,6 +135,10 @@ final class PalettePanel: NSPanel {
     /// Clip view and field editor both claim a cursor, so the panel settles it after `super`.
     private func applyCursorPolicy(for event: NSEvent) {
         guard Self.cursorEvents.contains(event.type) else { return }
+        if paletteState?.mode == .translation, let contentView {
+            let hit = contentView.hitTest(contentView.convert(event.locationInWindow, from: nil))
+            if hit is NSTextView || hit?.enclosingScrollView?.documentView is NSTextView { return }
+        }
         // Outset: the field editor AppKit installs is a point taller than the field it serves.
         let text = searchFieldRect.insetBy(dx: -Self.fieldEditorSlack, dy: -Self.fieldEditorSlack)
         let cursor: NSCursor =

@@ -27,6 +27,8 @@ in `Features/WindowManagement/`.
   servers and AI connections stay where they are — the file can say which folder notes and snippets
   live in, never what is in them — as do the palette's position, the extension toolchain,
   every shortcut outside window management, and what a room learns by being entered.
+  Translator's explicitly selected model is an exception for routing metadata: it names a connection
+  UUID and model, never a connection definition or key. Translation drafts and results remain transient.
 
 ## Layout
 
@@ -110,12 +112,22 @@ Where a number has a special case, the case is a word:
 | `ai.newChatAfterMinutes` | 2, 5, 10, 30, `"never"` |
 | `ai.toolRounds` | 10, 25, 50, 100, `"unlimited"` |
 | `ai.opensTo` | `"recent"`, `"newConversation"` |
+| `translation.provider` | `"ai"` or `"deepl"` |
+| `translation.sourceLanguage` | a nonblank code, or `"auto"` |
+| `translation.targetLanguage` | a nonblank code; `"auto"` is rejected |
+| `translation.deepLPlan` | `"free"` or `"pro"` |
+| `translation.model` | `null`, or `{ "connection": "<UUID>", "model": "<ID>", "effort": null }`; effort may be a string |
 | `calendar.launcherLimit` | 1, 3, 5, `"all"` |
 | `calendar.menuBar` | `"disabled"`, `"meetingIcon"`, `"meetingTitle"` |
 | `calendar.menuBarUpcomingEvents` | `"today"`, or 2, 5, 10, 30 minutes before |
 | `calendar.hideCurrentEventAfterMinutes` | `"never"`, 0 (as it starts), 5, 10, 30 |
 | `windowManagement.gap` | 0 to 64 |
 | `snippets.folder`, `notes.folder` | an absolute or `~/` path, or `null` for Application Support |
+
+Malformed translation model objects preserve the old selection. An imported connection need not exist
+yet; execution validates it without rerouting. Unknown language codes likewise remain selected until
+the current provider's catalog can validate them. These five local choices are excluded from backups,
+and DeepL keys never enter this file or UserDefaults.
 
 ## Shortcut chords
 

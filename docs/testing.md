@@ -128,6 +128,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `icon-cache-test` | `Platform/Images/IconCache.swift` — row sizing at 1×/2×, warm reuse, stamp and style invalidation, bitmap release, fitted geometry across all 256 alpha values, and that a row icon draws identically to the 96px one |
 | `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |
 | `text-diff-test` | `QuickActions/Model/TextDiffEngine.swift` — exact chunks, Unicode, ties, token-cap boundaries and fast paths |
+| `translation-test` | Translation models, independent settings, AI output isolation, generation/debounce cancellation, DeepL byte limits and directional catalogs, isolated URLSession cancellation and refused redirects |
 | `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
 | `settings-file-test` | `Settings/Model/` and `Settings/Service/` — key paths, value tokens, the printer and parser, and the repository's import, replace, save, reload and symlink handling on a scratch folder |
 | `window-file-test` | `WindowManagement/Model/WindowManagementFileFormat.swift` — command shortcuts, custom sizes, layouts and rooms as settings.json spells them, hand edits and bad records |
@@ -583,6 +584,23 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Declining leaves the feature off and prompts for nothing
 - After enabling, a keyword expands in a text field; an argument-bearing snippet prompts then delivers
 - Editing a snippet file externally reloads it
+
+### Translator
+
+- `Translate` opens the native editor with AI Chat and Quick Actions off; the old selected-text action
+  remains `Translate Selected Text`. An unconfigured editor stays editable and sends nothing.
+- Use synthetic text and a Dev-only loopback SSE provider when no authorized credentials exist. Verify
+  paragraphs, language changes, swap, a delayed superseded response, failure/Retry and clear. This
+  proves UI → Factory → HTTP → result, not remote translation quality; disclose an untested real DeepL call.
+- Return/Shift-Return insert lines; Backspace and arrows edit; Tab/Shift-Tab stay in the two text areas.
+  Uncommitted IME text never sends. ⌘C copies the native selection; ⌘Return and Copy Translation copy the
+  completed result without closing the palette. Use only synthetic clipboard content in this smoke.
+- Open Actions before completion and confirm Copy becomes enabled when the result arrives. Search both
+  language menus, switch services, and verify unsupported saved language choices are not silently replaced.
+- Hide during a request and restore within the configured Pop to Root delay; only interrupted work
+  resumes. Back/Pop to Root clears the draft. Opening Translation Settings preserves the current draft.
+- Check Default/Large/Larger in Light and Dark, including long text, a long model name, inline errors,
+  unconfigured state and menus. Keep a bright background behind at least one Dark capture.
 
 ### Calculator and currency
 

@@ -174,6 +174,8 @@ final class LauncherCoordinator {
             core.quickActionCoordinator.run(.rewrite)
         case .translate:
             core.quickActionCoordinator.run(.translate)
+        case .translator:
+            core.translationCoordinator.show()
         case .summarize:
             core.quickActionCoordinator.run(.summarize)
         case .calculatorHistory:

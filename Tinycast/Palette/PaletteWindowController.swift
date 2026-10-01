@@ -10,6 +10,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private(set) weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
+    private var preservesTranslationForSettings = false
     // Reopen beat the timeout, so select the preserved query.
     private var queryWasPreserved = false
     /// Set by a pop to root while hidden and spent by the next show: that screen is already fresh.
@@ -176,10 +177,18 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    func preserveTranslationForSettings() {
+        guard isVisible, core.palette.mode == .translation else { return }
+        popToRootTimer?.invalidate()
+        popToRootTimer = nil
+        preservesTranslationForSettings = true
+    }
+
     /// Pop to Root Search: reset now, or after the delay unless a reopen consumes it.
     private func schedulePopToRoot() {
         // Don't pop to root if an extension is waiting for OAuth authorization in the browser.
         guard !core.extensions.isAuthorizing else { return }
+        guard !preservesTranslationForSettings else { return }
         popToRootTimer?.invalidate()
         let timeout = core.settings.popToRootTimeout
         guard timeout != .immediately else {
@@ -198,6 +207,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
     private func popToRoot() {
+        preservesTranslationForSettings = false
         core.palette.prepare(mode: .launcher)
         isPoppedToRoot = true
     }
@@ -212,10 +222,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
 
     /// True while a hidden palette still holds pre-close state; consuming cancels the reset.
     func consumePreservedState() -> Bool {
-        guard let timer = popToRootTimer else { return false }
-        timer.invalidate()
+        guard popToRootTimer != nil || preservesTranslationForSettings else { return false }
+        popToRootTimer?.invalidate()
         popToRootTimer = nil
-        queryWasPreserved = true
+        preservesTranslationForSettings = false
+        queryWasPreserved = core.palette.mode != .translation
         return true
     }
 
@@ -384,6 +395,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             guard let core = self?.core, core.palette.query.isEmpty else { return false }
             // A form field owns the key: the text it deletes is the field's, not a query's.
             if core.palette.isEditingField { return false }
+            if core.palette.mode == .translation { return false }
             if core.palette.mode == .extensionCommand {
                 core.extensionCoordinator.exitExtensionScreen()
                 return true

@@ -5,21 +5,22 @@ import Foundation
 enum SettingsFileSchema {
     static func bindings(
         settings: AppSettings, ai: AISettingsStore, quickActions: QuickActionSettingsStore,
-        windowManagement: WindowManagementSettingsFile
+        translation: TranslationSettingsStore, windowManagement: WindowManagementSettingsFile
     ) -> [SettingsFileBinding] {
         var bindings: [SettingsFileBinding] = []
         for key in SettingsFileKey.allCases {
             bindings.append(
                 binding(
                     for: key, settings: settings, ai: ai, quickActions: quickActions,
-                    windowManagement: windowManagement))
+                    translation: translation, windowManagement: windowManagement))
         }
         return bindings
     }
 
     private static func binding(
         for key: SettingsFileKey, settings: AppSettings, ai: AISettingsStore,
-        quickActions: QuickActionSettingsStore, windowManagement: WindowManagementSettingsFile
+        quickActions: QuickActionSettingsStore, translation: TranslationSettingsStore,
+        windowManagement: WindowManagementSettingsFile
     ) -> SettingsFileBinding {
         func bind<Root: AnyObject, Value: SettingsFileValue>(
             _ root: Root, _ path: ReferenceWritableKeyPath<Root, Value>,
@@ -64,6 +65,13 @@ enum SettingsFileSchema {
         case .aiNewChatAfter: return bind(ai, \.newChatAfter)
         case .aiToolRounds: return bind(ai, \.toolRounds)
         case .quickActionLanguage: return bind(quickActions, \.settings.targetLanguage)
+        case .translationProvider: return bind(translation, \.provider)
+        case .translationModel: return TranslationSettingsFile.modelBinding(store: translation)
+        case .translationSourceLanguage:
+            return bind(translation, \.sourceLanguage, accept: TranslationSettingsStore.sourceCode)
+        case .translationTargetLanguage:
+            return bind(translation, \.targetLanguage, accept: TranslationSettingsStore.targetCode)
+        case .translationDeepLPlan: return bind(translation, \.deepLPlan)
         case .fileSearchEnabled: return bind(settings, \.fileSearchEnabled)
         case .fileSearchScopes: return bind(settings, \.fileSearchScopes)
         case .fileSearchIgnorePatterns: return bind(settings, \.fileSearchIgnorePatterns)
@@ -132,6 +140,8 @@ extension ClipboardDefaultAction: SettingsFileRawValue {}
 extension EmojiSkinTone: SettingsFileRawValue {}
 extension EmojiGridColumns: SettingsFileRawValue {}
 extension JoinWindow: SettingsFileRawValue {}
+extension TranslationProvider: SettingsFileRawValue {}
+extension DeepLPlan: SettingsFileRawValue {}
 
 extension ClipboardRetention: SettingsFileToken {
     var settingsToken: SettingsFileJSON {

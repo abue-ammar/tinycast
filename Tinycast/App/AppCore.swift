@@ -69,6 +69,8 @@ final class AppCore {
     let mcpOAuth = MCPOAuthManager()
     @ObservationIgnored private(set) lazy var mcp = MCPServerManager(oauth: mcpOAuth)
     let quickActionSettings = QuickActionSettingsStore()
+    let translationSettings = TranslationSettingsStore()
+    let translationSession = TranslationSession()
     let customQuickActions = CustomQuickActionStore()
     let chatGPTSubscription = ChatGPTSubscriptionManager()
     let installedAI = InstalledAIManager()
@@ -213,6 +215,23 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var quickAICoordinator = QuickAICoordinator(
         chats: aiChats, settings: settings, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var deepLTranslationService = DeepLTranslationService()
+    @ObservationIgnored private(set) lazy var translationCoordinator = TranslationCoordinator(
+        settings: translationSettings, session: translationSession, ai: aiSettings,
+        subscription: chatGPTSubscription, installedAI: installedAI,
+        deepLService: { [unowned self] in self.deepLTranslationService },
+        showPalette: { [unowned self] in self.paletteCoordinator.togglePalette(mode: .translation) },
+        openSettings: { [unowned self] in
+            self.windowController.preserveTranslationForSettings()
+            self.settingsCoordinator.showSettings(tab: .translation)
+        },
+        showMessage: { [unowned self] in self.showMessage($0, tone: $1) },
+        confirmRemoval: { [unowned self] plan in
+            await self.confirm(
+                title: "Remove DeepL \(plan.title) API Key?",
+                message: "Only the saved key for this DeepL \(plan.title) account will be removed.",
+                symbol: "key", confirmTitle: "Remove Key")
+        })
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
@@ -283,6 +302,7 @@ final class AppCore {
             // Before `hotKeys.start` even when off: the prune reads it.
             customQuickActions.load()
             quickActionCoordinator.applyEnabled()
+            translationCoordinator.start()
             customCommands.onChange = { [weak self] _ in
                 self?.customCommandCoordinator.applyCustomCommandsPresence()
             }
@@ -773,6 +793,7 @@ final class AppCore {
             fileURL: AppPaths.settingsFile(),
             bindings: SettingsFileSchema.bindings(
                 settings: settings, ai: aiSettings, quickActions: quickActionSettings,
+                translation: translationSettings,
                 windowManagement: WindowManagementSettingsFile(
                     sizes: customWindowSizes, layouts: windowLayouts, rooms: rooms, hotKeys: hotKeys)))
         file.onIssues = { [weak self] issues in

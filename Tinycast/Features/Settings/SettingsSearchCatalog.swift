@@ -110,8 +110,8 @@ enum SettingsSearchCatalog {
     static let entries: [SettingsSearchEntry] =
         general + applications + systemSettings + systemActions + commands + quicklinks
         + appleShortcuts + fallbacks + clipboard + snippets + fileSearch + windowManagement
-        + navigation + notes + calendar + emoji + ai + quickActions + extensions + permissions
-        + backup + about
+        + navigation + notes + calendar + emoji + translation + ai + quickActions + extensions
+        + permissions + backup + about
 
     private static let general: [SettingsSearchEntry] = [
         .init(pane: .general, keywords: ["preferences", "settings"]),
@@ -495,6 +495,39 @@ enum SettingsSearchCatalog {
         .init(
             .emojiAppearance, "Column Count",
             keywords: ["columns", "density", "zoom", "six", "eight", "ten"])
+    ]
+
+    private static let translation: [SettingsSearchEntry] = [
+        .init(
+            pane: .translation,
+            keywords: ["translate", "translator", "翻译", "byok", "deepl", "api key", "language"]),
+        .init(
+            .translationTranslation, "Service",
+            keywords: ["provider", "ai", "byok", "deepl", "translate", "翻译"]),
+        .init(
+            .translationTranslation, "Source Language",
+            keywords: ["detect", "auto", "from", "translate", "翻译"]),
+        .init(
+            .translationTranslation, "Target Language",
+            keywords: ["to", "translate", "翻译"]),
+        .init(
+            group: .translationProviders, "DeepL",
+            keywords: ["api key", "free", "pro", "account", "translator"]),
+        .init(
+            .translationProviders, "AI Model",
+            keywords: ["byok", "llm", "api", "connection", "provider", "translator"]),
+        .init(
+            .translationProviders, "Reasoning Effort",
+            keywords: ["thinking", "effort"]),
+        .init(
+            .translationProviders, "Account Type",
+            keywords: ["deepl", "free", "pro", "plan"]),
+        .init(
+            .translationProviders, "API Key",
+            keywords: ["deepl", "secret", "keychain", "save", "remove"]),
+        .init(
+            group: .translationCommands, "Translation commands",
+            keywords: ["shortcut", "hotkey", "launcher", "translate", "translator"])
     ]
 
     private static let calendar: [SettingsSearchEntry] = [

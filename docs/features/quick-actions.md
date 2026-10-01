@@ -6,6 +6,10 @@ both listed in **Settings → Quick Actions**. Three go through the AI provider 
 Apple's own translator. The result either replaces the selection or arrives in a floating panel, per
 action.
 
+Its launcher label is **Translate Selected Text**; the action's own title and `command:translate`
+identity are unchanged. The separate **Translate** command opens the [Translator](ai.md#translator)
+editor and never reads another application's selection.
+
 A **custom Quick Action** is a name, a glyph and a prompt, run through the same provider. It takes a
 shortcut and a launcher row like any other.
 

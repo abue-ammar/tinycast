@@ -19,8 +19,8 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   AppKit field editor; the palette field stays mounted and inert beneath it.
 - **The search field is never mounted conditionally.** A screen that owns the keyboard itself hides it
   through `PaletteScreen.hidesSearchField` — opacity and hit testing, never an `if` — because
-  flipping a branch around it tears its field editor down. The header is simply left empty, and an
-  extension's `Form` is the one screen that does this today.
+  flipping a branch around it tears its field editor down. Extension forms leave the header empty;
+  Translator overlays language controls while its independent native text editors own input.
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`).
 - **Input-source switching is a palette session.** The source active at summon time is captured before
@@ -88,6 +88,7 @@ every screen but the clipboard, which lands past its pins
 | `.clipboard` | `ClipboardScreen` | `ClipboardList` + preview |
 | `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList` |
 | `.emoji` | `EmojiScreen` | `EmojiGridView` |
+| `.translation` | `TranslationScreen` | Two native text editors (see [Translator](ai.md#translator)) |
 | `.fileSearch` | `FileSearchScreen` | `FileSearchList` (see [file-search.md](file-search.md)) |
 | `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
 | `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
@@ -102,6 +103,13 @@ own fields), or the selected row declares arguments, in which case it walks thos
 below); every other mode stays off the ring, and is reached by a command or a global hotkey, with
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
 `aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced.
+
+Translator owns both vertical keys and Tab: Tab/Shift-Tab cycle its source and read-only result,
+Return inserts a newline, and Backspace edits rather than navigating. ⌘Return copies the completed
+translation; ⌘C remains native selection copy. Actions stays available before a result exists.
+Its source/target/service menus share `OpenMenu` and refresh as configuration or results change.
+Opening Translation Settings reserves that mode through the focus-loss hide, even with immediate
+Pop to Root. The next summon consumes the reservation; an explicit Pop to Root still resets it.
 
 ### Navigation
 
@@ -365,6 +373,9 @@ responder, so neither of the other two paths would fire.
 field's frame, the arrow everywhere else. Without it the palette's pointer sticks as an I-beam over the
 whole window and flickers along the field's edge — the two AppKit mechanisms that claim a cursor here
 disagree, and neither yields.
+
+Translator's two native text views and their scroll views are exempt from that override; AppKit owns
+their I-beam. The exception is mode-scoped and does not change another palette screen's cursor policy.
 
 - SwiftUI's `HostingClipView` claims the **arrow** across the entire window as a *cursor rect*.
 - The field editor claims the **I-beam** from its own *tracking area*.

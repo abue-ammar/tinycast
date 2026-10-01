@@ -48,6 +48,16 @@ struct PaletteNavigationTests {
             vm.mode == .launcher && vm.query == "clipboard",
             "a refused back step leaves the screen untouched")
 
+        let translation = searchingLauncher()
+        translation.query = "translate"
+        translation.selection = 2
+        translation.push(mode: .translation)
+        expect(translation.mode == .translation && translation.query.isEmpty,
+               "translation opens without putting its draft in launcher search")
+        expect(translation.pop() && translation.mode == .launcher
+               && translation.query == "translate" && translation.selection == 2,
+               "translation back restores the launcher query and selected command")
+
         let freshEmoji = searchingLauncher()
         freshEmoji.emojiCategoryFilter = .category(.flags)
         freshEmoji.emojiGridColumnsOverride = .ten

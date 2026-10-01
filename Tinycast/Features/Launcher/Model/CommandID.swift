@@ -8,6 +8,7 @@ enum CommandID: String, CaseIterable, Sendable {
     case fixGrammar = "command:fix-grammar"
     case rewrite = "command:rewrite"
     case translate = "command:translate"
+    case translator = "command:translator"
     case summarize = "command:summarize"
     case calculatorHistory = "command:calculator-history"
     case clipboardHistory = "command:clipboard-history"
@@ -53,7 +54,8 @@ enum CommandID: String, CaseIterable, Sendable {
         case .aiChat: return "AI Chat"
         case .fixGrammar: return BuiltInQuickAction.fixGrammar.title
         case .rewrite: return BuiltInQuickAction.rewrite.title
-        case .translate: return BuiltInQuickAction.translate.title
+        case .translate: return "Translate Selected Text"
+        case .translator: return "Translate"
         case .summarize: return BuiltInQuickAction.summarize.title
         case .calculatorHistory: return "Calculator History"
         case .clipboardHistory: return "Clipboard History"
@@ -102,6 +104,7 @@ enum CommandID: String, CaseIterable, Sendable {
         case .fixGrammar: return BuiltInQuickAction.fixGrammar.symbol
         case .rewrite: return BuiltInQuickAction.rewrite.symbol
         case .translate: return BuiltInQuickAction.translate.symbol
+        case .translator: return "translate"
         case .summarize: return BuiltInQuickAction.summarize.symbol
         case .calculatorHistory: return "plus.forwardslash.minus"
         case .clipboardHistory: return "doc.on.clipboard"
@@ -168,6 +171,7 @@ enum CommandID: String, CaseIterable, Sendable {
         switch self {
         case .quickAI: ["ai"]
         case .aiChat: ["chat"]
+        case .translator: ["translate"]
         default: []
         }
     }

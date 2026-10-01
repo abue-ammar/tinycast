@@ -49,7 +49,7 @@ enum TextTranslator {
             throw Failure.unsupported
         }
         do {
-            let session = TranslationSession(installedSource: source, target: target)
+            let session = Translation.TranslationSession(installedSource: source, target: target)
             return try await session.translate(text).targetText
         } catch {
             throw Failure.failed

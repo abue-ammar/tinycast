@@ -274,6 +274,20 @@ struct PalettePlacementTests {
         expect(trailingCanvas.minY, trailing.minY, "right expansion keeps its bottom edge fixed")
         expect(headerCanvas.maxX, header.maxX, "header expansion keeps its trailing edge fixed")
         expect(headerCanvas.maxY, header.maxY, "header expansion keeps its top edge fixed")
+        for size in InterfaceSize.allCases {
+            let metrics = size.metrics
+            let frame = MenuPanelCorner.belowHeaderLeading.frame(
+                contentSize: CGSize(width: metrics.size.menuWidth, height: metrics.scaled(240)),
+                parentFrame: parent, inset: metrics.spacing.md,
+                headerExtent: metrics.size.headerPadding + metrics.size.headerHeight)
+            expect(frame.minX, parent.minX + metrics.spacing.md * 2,
+                   "source menu stays on its leading gutter at \(size)")
+            expect(frame.maxY, parent.maxY - metrics.size.headerPadding - metrics.size.headerHeight,
+                   "source menu stays below its header at \(size)")
+            let expanded = MenuPanelCorner.belowHeaderLeading.scaledFrame(frame, by: scale)
+            expect(expanded.minX, frame.minX, "source menu expansion preserves its left anchor")
+            expect(expanded.maxY, frame.maxY, "source menu expansion preserves its top anchor")
+        }
     }
 
     // MARK: - The tokens these rules depend on
