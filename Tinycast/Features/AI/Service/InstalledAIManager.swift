@@ -249,6 +249,15 @@ final class InstalledAIManager {
                     account: InstalledAIModel.claudeAccount(catalog.output))
             )
         case .openCode:
+            if let version, let major = Int(version.split(separator: ".").first ?? ""), major >= 2 {
+                return (
+                    kind,
+                    InstalledAIStatus(
+                        phase: .failed(
+                            "OpenCode 2 is not supported yet. Choose an OpenCode 1.x command in Advanced."),
+                        version: version, executable: executable)
+                )
+            }
             let models = await InstalledAIProbe.run(
                 executable: executable, arguments: ["models", "--pure", "--verbose"],
                 workspace: workspace, environment: environment)

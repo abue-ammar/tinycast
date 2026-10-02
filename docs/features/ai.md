@@ -625,7 +625,10 @@ the tool that was edited — Codex by stopping its server, which restarts on dem
 commands are never installed by Tinycast; Settings links to their own install docs and offers a sign-in
 command to copy. `InstalledAIManager` probes Claude, Grok, OpenCode and Cursor off-main, in parallel.
 Claude's auth status gates an `initialize` control request, and `InstalledAIModel.claudeCatalog` builds
-its model list from the answer. OpenCode's successful model list is both its auth check and catalog.
+its model list from the answer. OpenCode 1.x's successful model list is both its auth check and catalog.
+OpenCode 2 is not supported: its CLI removed the discovery and chat flags this adapter uses.
+The version probe reports that incompatibility before discovery, with guidance to choose a 1.x
+command in Advanced, rather than asking an already signed-in reader to log in again.
 Grok's `models` output is the catalog, but a signed-out CLI still exits 0 and prints that catalog under
 "You are not authenticated." — that banner is the auth check, not the exit status. Cursor's
 `status --format json` gates `--list-models`.
