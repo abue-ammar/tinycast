@@ -17,6 +17,7 @@ struct ExtensionShortcutKeys: ViewModifier {
 }
 
 struct ExtensionToastSlot: ViewModifier {
+    @Environment(\.metrics) private var metrics
     let extensions: ExtensionManager
     let showing: Bool
 
@@ -31,10 +32,12 @@ struct ExtensionToastSlot: ViewModifier {
                     toast: toast, onAction: { extensions.runToastAction(token: $0) },
                     onDismiss: { extensions.hide(toast: toast.id) }
                 )
+                .padding(.trailing, metrics.spacing.md)
                 .id(toast.id)
                 .transition(.scale(scale: 0.5, anchor: .leading).combined(with: .opacity))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .animation(.spring(duration: 0.3, bounce: 0.2), value: toast?.id)
     }
 }
