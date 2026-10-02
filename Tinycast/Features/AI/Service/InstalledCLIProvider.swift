@@ -57,6 +57,10 @@ private final class InstalledCLITurnRunner {
     private var outputBuffer = Data()
     private var errorBuffer = Data()
     private var turnSessionID: String?
+    private var openCodeOutputTask: Task<Void, Never>?
+    private var openCodeExitStatus: Int32?
+    private var openCodeOutputClosed = false
+    private var openCodeAnswered = false
     private var promptFileURL: URL?
     private var activeExecutable: URL?
     /// What this turn armed, empty on every route and every turn that offers no server.
@@ -151,6 +155,22 @@ private final class InstalledCLITurnRunner {
             return
         }
 
+        if kind == .openCode {
+            do {
+                let configuration = workspace.appending(path: "opencode.json")
+                try await Task.detached {
+                    try InstalledAIKind.openCodeConfiguration.write(
+                        to: configuration, atomically: true, encoding: .utf8)
+                    try FileManager.default.setAttributes(
+                        [.posixPermissions: 0o600], ofItemAtPath: configuration.path)
+                }.value
+            } catch {
+                continuation.finish(
+                    throwing: AIProviderError.unavailable("Tinycast could not write its OpenCode configuration."))
+                return
+            }
+        }
+
         activeServers = await resolvedToolServers()
         let prompt = prompt(for: request)
         var configURL: URL?
@@ -197,10 +217,12 @@ private final class InstalledCLITurnRunner {
         process.arguments = arguments(promptFile: grokPrompt, mcpConfig: configURL)
         process.standardOutput = stdout
         process.standardError = stderr
-        stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
-            let data = handle.availableData
-            guard !data.isEmpty else { return }
-            Task { @MainActor in self?.consume(data, token: token) }
+        if kind != .openCode {
+            stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
+                let data = handle.availableData
+                guard !data.isEmpty else { return }
+                Task { @MainActor in self?.consume(data, token: token) }
+            }
         }
         stderr.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
@@ -240,6 +262,17 @@ private final class InstalledCLITurnRunner {
         activeExecutable = executable
         self.token = token
         self.continuation = continuation
+        if kind == .openCode {
+            let handle = stdout.fileHandleForReading
+            openCodeOutputTask = Task.detached { [weak self] in
+                while !Task.isCancelled {
+                    let data = handle.availableData
+                    guard !data.isEmpty else { break }
+                    await self?.consume(data, token: token)
+                }
+                await self?.openCodeOutputEnded(token: token)
+            }
+        }
         guard kind != .grok else { return }
         input = stdin.fileHandleForWriting
         // A child that exits before reading must fail the write, not SIGPIPE Tinycast.
@@ -330,12 +363,11 @@ private final class InstalledCLITurnRunner {
             if let effort { result += ["--effort", effort] }
             return result
         case .openCode:
-            var result = [
-                "run", "--pure", "--format", "json", "--model", model,
-                "--dir", workspace.path, "--title", "Tinycast"
+            return [
+                "run", "--standalone", "--format", "json", "--model",
+                effort.map { model + "#" + $0 } ?? model,
+                "--agent", "tinycast", "--title", "Tinycast"
             ]
-            if let effort { result += ["--variant", effort] }
-            return result
         case .grok:
             var result = [
                 "--prompt-file", promptFile?.path ?? "",
@@ -374,9 +406,11 @@ private final class InstalledCLITurnRunner {
     }
 
     private func environment(for executable: URL) -> [String: String] {
-        ExecutableLocator.environment(
+        var environment = ExecutableLocator.environment(
             running: executable, inherited: launch.inherited(for: kind)
         ).merging(kind.managedEnvironment) { _, managed in managed }
+        if kind == .openCode { environment["PWD"] = workspace.path }
+        return environment
     }
 
     private func prompt(for request: AIRequest) -> String {
@@ -436,7 +470,12 @@ private final class InstalledCLITurnRunner {
             }
             return
         }
-        for event in frame.events { continuation?.yield(event) }
+        for event in frame.events {
+            if kind == .openCode, case .text(let text) = event, !text.isEmpty {
+                openCodeAnswered = true
+            }
+            continuation?.yield(event)
+        }
         if frame.stoppedAtRoundCap {
             fail(
                 roundCap.map { "Stopped after \($0) rounds of tool calls." }
@@ -481,6 +520,15 @@ private final class InstalledCLITurnRunner {
 
     private func didExit(status: Int32, token: TurnToken) {
         guard self.token === token else { return }
+        if kind == .openCode {
+            openCodeExitStatus = status
+            guard openCodeOutputClosed else { return }
+            if status == 0, openCodeAnswered, continuation != nil {
+                continuation?.yield(.finished)
+                continuation?.finish()
+                continuation = nil
+            }
+        }
         if continuation != nil {
             let detail = (String(bytes: errorBuffer, encoding: .utf8) ?? "")
                 .replacingOccurrences(
@@ -492,6 +540,13 @@ private final class InstalledCLITurnRunner {
         }
         deleteTurnSession()
         cleanup()
+    }
+
+    private func openCodeOutputEnded(token: TurnToken) {
+        guard self.token === token else { return }
+        openCodeOutputClosed = true
+        if !outputBuffer.isEmpty { consume(Data([0x0A]), token: token) }
+        if let status = openCodeExitStatus { didExit(status: status, token: token) }
     }
 
     private func fail(_ message: String) {
@@ -535,7 +590,7 @@ private final class InstalledCLITurnRunner {
             guard let executable = activeExecutable else { return }
             let arguments =
                 kind == .grok
-                ? ["sessions", "delete", sessionID] : ["session", "delete", sessionID, "--pure"]
+                ? ["sessions", "delete", sessionID] : ["session", "delete", sessionID, "--standalone"]
             let workspace = workspace
             let environment = environment(for: executable)
             Task.detached {
@@ -597,6 +652,11 @@ private final class InstalledCLITurnRunner {
         outputBuffer.removeAll(keepingCapacity: false)
         errorBuffer.removeAll(keepingCapacity: false)
         turnSessionID = nil
+        openCodeOutputTask?.cancel()
+        openCodeOutputTask = nil
+        openCodeExitStatus = nil
+        openCodeOutputClosed = false
+        openCodeAnswered = false
         removePrivateFiles()
         activeExecutable = nil
         activeServers = []

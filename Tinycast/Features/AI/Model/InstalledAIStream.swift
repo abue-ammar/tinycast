@@ -46,7 +46,6 @@ enum InstalledAIStreamDecoder {
                             inputTokens: integer(tokens["input"]),
                             outputTokens: integer(tokens["output"]))))
             }
-            frame.completed = true
         case "error":
             frame.error = message(in: object) ?? "OpenCode could not finish the response."
         default:

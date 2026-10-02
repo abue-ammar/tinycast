@@ -249,18 +249,18 @@ final class InstalledAIManager {
                     account: InstalledAIModel.claudeAccount(catalog.output))
             )
         case .openCode:
-            if let version, let major = Int(version.split(separator: ".").first ?? ""), major >= 2 {
+            if let version, let major = Int(version.split(separator: ".").first ?? ""), major < 2 {
                 return (
                     kind,
                     InstalledAIStatus(
                         phase: .failed(
-                            "OpenCode 2 is not supported yet. Choose an OpenCode 1.x command in Advanced."),
+                            "OpenCode 2 is required. Choose an OpenCode 2 command in Advanced."),
                         version: version, executable: executable)
                 )
             }
             let models = await InstalledAIProbe.run(
-                executable: executable, arguments: ["models", "--pure", "--verbose"],
-                workspace: workspace, environment: environment)
+                executable: executable, arguments: ["api", "model.list"],
+                workspace: workspace, environment: environment, captureToFile: true)
             let catalog = InstalledAIModel.openCodeCatalog(models.output)
             return (
                 kind,

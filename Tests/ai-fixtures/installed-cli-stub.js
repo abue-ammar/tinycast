@@ -140,6 +140,21 @@ function* lines() {
   }
 }
 
+if (command === "opencode" && args.includes("--version")) {
+  console.log("opencode v2.0.22");
+  process.exit(0);
+}
+if (command === "opencode" && args.slice(0, 2).join(" ") === "api model.list") {
+  const disabled = Array.from({ length: 4000 }, (_, i) => ({
+    providerID: "provider", modelID: "disabled-" + i, enabled: false, variants: []
+  }));
+  console.log(JSON.stringify({ data: [{
+    providerID: "provider", modelID: "model", name: "Model", enabled: true,
+    variants: [{ id: "high" }]
+  }, ...disabled, { providerID: "provider", modelID: "last", enabled: true, variants: [] }] }));
+  process.exit(0);
+}
+
 if (command === "opencode" && args.slice(0, 2).join(" ") === "session delete") {
   record("deleted.log", args[2]);
   process.exit(0);
@@ -208,13 +223,11 @@ if (model === "oversized-frame") {
 }
 
 if (command === "opencode") {
+  if (!process.env.PWD || fs.realpathSync(process.env.PWD) !== process.cwd()) process.exit(1);
+  record("opencode-configuration.log", fs.readFileSync(path.join(process.cwd(), "opencode.json"), "utf8"));
   console.log(JSON.stringify({ type: "step_start", sessionID: "ses_stub", part: {} }));
   console.log(JSON.stringify({
     type: "text", sessionID: "ses_stub", part: { text: "OpenCode reply" }
-  }));
-  console.log(JSON.stringify({
-    type: "step_finish", sessionID: "ses_stub",
-    part: { tokens: { input: 9, output: 2 } }
   }));
 } else if (command === "agent") {
   const chatsRoot = process.env.TC_CURSOR_CHATS_ROOT;

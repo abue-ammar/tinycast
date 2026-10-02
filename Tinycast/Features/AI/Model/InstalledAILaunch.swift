@@ -88,8 +88,6 @@ extension InstalledAIKind {
             return ["CLAUDE_CODE_SKIP_PROMPT_HISTORY": "1", "ENABLE_CLAUDEAI_MCP_SERVERS": "false"]
         case .openCode:
             return [
-                "OPENCODE_CONFIG_CONTENT": Self.openCodeConfiguration,
-                "OPENCODE_AUTO_SHARE": "false",
                 "OPENCODE_DISABLE_AUTOUPDATE": "true"
             ]
         case .grok:
@@ -102,10 +100,12 @@ extension InstalledAIKind {
     /// `NO_COLOR` keeps output parseable; `TC_MCP_` names carry Tinycast's MCP secrets to Codex.
     func isManagedVariable(_ name: String) -> Bool {
         name == "NO_COLOR" || name.hasPrefix("TC_MCP_") || managedEnvironment[name] != nil
+            || (self == .openCode && name == "PWD")
     }
 
-    private static let openCodeConfiguration = """
-        {"permission":"deny","share":"disabled","agent":{"build":{"permission":"deny"},\
-        "plan":{"permission":"deny"}}}
+    static let openCodeConfiguration = """
+        {"share":"disabled","permissions":[{"action":"*","resource":"*","effect":"deny"}],\
+        "agents":{"tinycast":{"mode":"primary",\
+        "permissions":[{"action":"*","resource":"*","effect":"deny"}]}}}
         """
 }

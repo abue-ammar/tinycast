@@ -238,34 +238,22 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
     }
 
     static func openCodeCatalog(_ output: String) -> [InstalledAIModel] {
-        let clean = output.replacingOccurrences(
-            of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression)
-        var entries: [(String, [String])] = []
-        var id: String?
-        var objectLines: [String] = []
-
-        func appendEntry() {
-            guard let id else { return }
-            let data = Data(objectLines.joined(separator: "\n").utf8)
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            let variants = object?["variants"] as? [String: Any] ?? [:]
-            entries.append((id, variants.keys.sorted(by: effortOrder)))
-        }
-
-        for raw in clean.components(separatedBy: .newlines) {
-            let line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            if raw == line, line.contains("/"), !line.hasPrefix("{") {
-                appendEntry()
-                id = line
-                objectLines = []
-            } else if id != nil {
-                objectLines.append(raw)
-            }
-        }
-        appendEntry()
-        return entries.map { id, efforts in
-            InstalledAIModel(
-                id: id, name: id,
+        guard let object = try? JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any],
+            let entries = object["data"] as? [[String: Any]]
+        else { return [] }
+        var seen = Set<String>()
+        return entries.compactMap { entry in
+            guard entry["enabled"] as? Bool == true,
+                let provider = entry["providerID"] as? String,
+                let model = entry["modelID"] as? String,
+                !provider.isEmpty, !model.isEmpty
+            else { return nil }
+            let id = provider + "/" + model
+            guard seen.insert(id).inserted else { return nil }
+            let variants = entry["variants"] as? [[String: Any]] ?? []
+            let efforts = variants.compactMap { $0["id"] as? String }.sorted(by: effortOrder)
+            return InstalledAIModel(
+                id: id, name: entry["name"] as? String ?? id,
                 efforts: efforts.map { ChatGPTSubscription.Effort(id: $0, detail: nil) })
         }
     }

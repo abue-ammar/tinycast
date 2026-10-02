@@ -110,6 +110,7 @@ struct InstalledAITests {
         cursorCatalogParsesListModels()
         statusJSONRecognizesLogin()
         versionKeepsPrereleaseAndBuild()
+        await openCodeDiscoveryReadsV2Models(fixture)
         await openCodeRunsWithoutToolsAndDeletesItsSession(fixture)
         claudeDiscoveryReadsTheCLIsOwnModelList()
         await claudeRunsWithoutToolsOrHistory(fixture)
@@ -140,19 +141,12 @@ struct InstalledAITests {
 
     private static func openCodeCatalogCarriesModelVariants() {
         let output = """
-            provider/model
-            {
-              "name": "Model",
-              "variants": {
-                "low": {"reasoningEffort": "low"},
-                "high": {"reasoningEffort": "high"}
-              }
-            }
-            provider/plain
-            {
-              "name": "Plain",
-              "variants": {}
-            }
+            {"data":[
+              {"providerID":"provider","modelID":"model","name":"Model","enabled":true,
+               "variants":[{"id":"high"},{"id":"low"}]},
+              {"providerID":"provider","modelID":"plain","enabled":true,"variants":[]},
+              {"providerID":"provider","modelID":"disabled","enabled":false,"variants":[]}
+            ]}
             """
         let models = InstalledAIModel.openCodeCatalog(output)
         expect(
@@ -207,6 +201,21 @@ struct InstalledAITests {
         }
     }
 
+    private static func openCodeDiscoveryReadsV2Models(_ fixture: Fixture) async {
+        let manager = InstalledAIManager(supportDirectory: fixture.root)
+        await manager.refresh(kind: .openCode).value
+        let status = manager.status(for: .openCode)
+        expect(status.isReady && status.version == "2.0.22", "OpenCode 2 discovery is ready")
+        expect(status.models.first?.id == "provider/model", "v2 models include their provider")
+        expect(status.models.first?.efforts.map(\.id) == ["high"], "v2 discovery keeps variants")
+        expect(status.models.map(\.id) == ["provider/model", "provider/last"],
+            "a catalog larger than the CLI pipe buffer arrives intact and excludes disabled models")
+        let workspace = fixture.root.appending(path: "InstalledAI/Workspace")
+        let files = (try? FileManager.default.contentsOfDirectory(atPath: workspace.path)) ?? []
+        expect(!files.contains { $0.hasPrefix("tinycast-models-") }, "model probe files are removed")
+        manager.stop()
+    }
+
     private static func openCodeRunsWithoutToolsAndDeletesItsSession(_ fixture: Fixture) async {
         let events = await fixture.events(
             kind: .openCode, model: "provider/model", effort: "high")
@@ -214,13 +223,13 @@ struct InstalledAITests {
         expect(events.last == .finished, "OpenCode finishes the provider stream")
         let arguments = fixture.read("opencode-args.log")
         expect(
-            arguments.contains("--pure") && arguments.contains("--format")
-                && arguments.contains("provider/model") && arguments.contains("--variant")
-                && arguments.contains("high"),
-            "OpenCode runs pure with JSON output, the chosen model and its variant")
-        let configuration = fixture.read("opencode-environment.log")
+            arguments.contains("--standalone") && arguments.contains("--format")
+                && arguments.contains("provider/model#high") && arguments.contains("tinycast")
+                && !arguments.contains("--pure") && !arguments.contains("--variant"),
+            "OpenCode runs privately with JSON output and the selected model variant")
+        let configuration = fixture.read("opencode-configuration.log")
         expect(
-            configuration.contains("\"permission\":\"deny\"")
+            configuration.contains("\"effect\":\"deny\"")
                 && configuration.contains("\"share\":\"disabled\""),
             "OpenCode receives deny-all permissions and disabled sharing")
         let deleted = await fixture.awaitFile("deleted.log", containing: "ses_stub")
@@ -685,7 +694,7 @@ struct InstalledAITests {
     ) async {
         let launch = InstalledAILaunch(
             environment: [
-                "TC_READER_PROBE": "from-the-reader", "OPENCODE_CONFIG_CONTENT": "{}",
+                "TC_READER_PROBE": "from-the-reader", "OPENCODE_DISABLE_AUTOUPDATE": "false",
                 "not a name": "dropped"
             ])
         let events = await fixture.events(
@@ -695,8 +704,8 @@ struct InstalledAITests {
             fixture.lastLine("opencode-reader-environment.log") == "from-the-reader",
             "a variable the reader set reaches the tool")
         expect(
-            fixture.lastLine("opencode-environment.log").contains("\"permission\":\"deny\""),
-            "one Tinycast sets to keep the tool inside the chat keeps Tinycast's value")
+            fixture.lastLine("opencode-configuration.log").contains("\"effect\":\"deny\""),
+            "a reader variable cannot replace Tinycast's deny-all workspace configuration")
     }
 
     private static func aSetCommandPathIsWhatRuns(_ fixture: Fixture) async {

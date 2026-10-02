@@ -36,7 +36,7 @@ enum InstalledAIProbe {
     nonisolated static func run(
         executable: URL, arguments: [String], workspace: URL,
         environment: [String: String]? = nil, input: Data? = nil,
-        timeout: Duration = .seconds(10)
+        timeout: Duration = .seconds(10), captureToFile: Bool = false
     ) async -> Result {
         let handle = ProcessHandle()
         return await withTaskCancellationHandler(
@@ -47,6 +47,21 @@ enum InstalledAIProbe {
                         at: workspace, withIntermediateDirectories: true)
                     let process = Process()
                     let output = Pipe()
+                    let outputURL = workspace.appending(path: "tinycast-models-\(UUID().uuidString).json")
+                    var outputFile: FileHandle?
+                    defer {
+                        if captureToFile {
+                            try? outputFile?.close()
+                            try? FileManager.default.removeItem(at: outputURL)
+                        }
+                    }
+                    if captureToFile {
+                        guard FileManager.default.createFile(
+                            atPath: outputURL.path, contents: nil, attributes: [.posixPermissions: 0o600]),
+                            let file = try? FileHandle(forUpdating: outputURL)
+                        else { return Result(status: -1, output: "") }
+                        outputFile = file
+                    }
                     process.executableURL = executable
                     process.arguments = arguments
                     process.currentDirectoryURL = workspace
@@ -54,7 +69,11 @@ enum InstalledAIProbe {
                         environment ?? ExecutableLocator.environment(running: executable)
                     let stdin = input.map { _ in Pipe() }
                     process.standardInput = stdin ?? FileHandle.nullDevice
-                    process.standardOutput = output
+                    if let outputFile {
+                        process.standardOutput = outputFile
+                    } else {
+                        process.standardOutput = output
+                    }
                     process.standardError = FileHandle.nullDevice
                     guard let exit = try? process.runObservingExit() else {
                         return Result(status: -1, output: "")
@@ -64,6 +83,17 @@ enum InstalledAIProbe {
                     let watchdog = Task {
                         try? await Task.sleep(for: timeout)
                         if process.isRunning { process.terminate() }
+                    }
+                    if let outputFile {
+                        exit.wait()
+                        watchdog.cancel()
+                        guard (try? outputFile.seek(toOffset: 0)) != nil,
+                            let data = try? outputFile.read(upToCount: Self.maximumOutputBytes + 1),
+                            data.count <= Self.maximumOutputBytes
+                        else { return Result(status: -1, output: "") }
+                        return Result(
+                            status: process.terminationStatus,
+                            output: String(bytes: data, encoding: .utf8) ?? "")
                     }
                     var data = Data()
                     while data.count < Self.maximumOutputBytes {

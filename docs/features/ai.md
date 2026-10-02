@@ -39,7 +39,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   fallback for a path that was set: falling back would run another copy and hide the mistake the path
   was set to fix.
 - **A reader's variable never replaces one Tinycast sets.** `InstalledAIKind.managedEnvironment` is
-  what keeps a tool inside the chat — OpenCode's deny-all configuration, Claude's account MCP switch —
+  what keeps a tool inside the chat — OpenCode's private deny-all agent, Claude's account MCP switch —
   and `InstalledAILaunch.inherited(for:)` drops a reader's variable of the same name, along with
   `NO_COLOR` and the `TC_MCP_` names that carry MCP secrets to Codex. Names are stored in
   `aiInstalledOverrides` and values in the login Keychain (`KeychainSecretStore.installedAIEnvironment`),
@@ -183,7 +183,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   default mode from answering before Tinycast does.
   Grok runs with `--deny *`,
   `dontAsk` permissions and a workspace sandbox, and never `--always-approve`, so a user's always-approve
-  config cannot arm tools for this route. OpenCode runs `--pure` with deny-all permissions, disabled
+  config cannot arm tools for this route. OpenCode 2 runs `--standalone` with deny-all permissions, disabled
   sharing and a private working directory. Cursor runs `agent -p --mode ask` with `--trust` against
   Tinycast's private workspace and never `--force` / `--yolo` / `--approve-mcps`; ask mode blocks edits.
   Each deletes the session or chat it created once the child exits, and Tinycast never reaches into the
@@ -193,7 +193,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   on that route the organization's decision; the Providers row says so.
   Grok, OpenCode and Cursor load the global config either way,
   because their configs merge with no opt-out; what refuses the call is `--deny *` for Grok,
-  `permission: deny` for OpenCode and withheld MCP approval for Cursor. Cursor's is the only one resting
+  deny rules on the `tinycast` agent for OpenCode and withheld MCP approval for Cursor. Cursor's is the only one resting
   on an approval prompt rather than an explicit deny, which is why its Providers row says so and the
   others do not. That is also why none of the three may be handed a server: there is no way to offer
   one without offering the reader's own. None of these routes offer web search, and only Claude
@@ -309,7 +309,7 @@ cacheless and never persists the typed key. A
 custom gateway may not implement a model-list endpoint, so exact identifiers can always be entered
 manually. Tinycast does not ship or guess an API catalog that can become stale. Codex gets its models
 and reasoning efforts from `model/list`; OpenCode gets identifiers and model-specific variants from
-`opencode models --pure --verbose`. Claude answers an `initialize` control request — written to a
+`opencode api model.list`. Claude answers an `initialize` control request — written to a
 stream-json `-p` run that then gets no prompt, so no model is called — with its own `/model` list;
 `InstalledAIModel.claudeCatalog` keeps one row per resolved model (dropping `default`, which restates
 another), names each by the version its alias points at today ("Claude Opus 5.5"), and takes each
@@ -625,10 +625,13 @@ the tool that was edited — Codex by stopping its server, which restarts on dem
 commands are never installed by Tinycast; Settings links to their own install docs and offers a sign-in
 command to copy. `InstalledAIManager` probes Claude, Grok, OpenCode and Cursor off-main, in parallel.
 Claude's auth status gates an `initialize` control request, and `InstalledAIModel.claudeCatalog` builds
-its model list from the answer. OpenCode 1.x's successful model list is both its auth check and catalog.
-OpenCode 2 is not supported: its CLI removed the discovery and chat flags this adapter uses.
-The version probe reports that incompatibility before discovery, with guidance to choose a 1.x
-command in Advanced, rather than asking an already signed-in reader to log in again.
+its model list from the answer. OpenCode 2 uses `api model.list` for its catalog, preserving
+provider identifiers and supported variants and filtering disabled models. This discovery uses the
+user's service, which has initialized its provider plugins; a one-shot standalone model probe can
+return before that initialization. The JSON probe writes to a private temporary file because v2 can
+truncate large output when stdout is a pipe; the probe bounds its read and removes the file afterward.
+An empty catalog still offers sign-in. OpenCode 1.x is no longer
+supported; the version probe explains which command to select in Advanced.
 Grok's `models` output is the catalog, but a signed-out CLI still exits 0 and prints that catalog under
 "You are not authenticated." — that banner is the auth check, not the exit status. Cursor's
 `status --format json` gates `--list-models`.
@@ -676,12 +679,15 @@ Grok uses `streaming-messages-json` and `--effort`, with `--deny *` so tools can
 user's Grok config is always-approve; it captures the session id, then calls `grok sessions delete`.
 An error result omits `result` and carries the cause in `errors`; that text is the failure, not
 Claude's missing-`result` fallback.
-OpenCode runs pure with an inline deny-all configuration and passes the selected
-model variant through `--variant`; it captures the returned session identifier, then calls
-`opencode session delete` after the process exits. Cursor runs ask mode with `--trust`,
+OpenCode 2 runs `--standalone --agent tinycast`, loading a private `opencode.json` in the turn
+workspace. Global and agent permissions deny every action and resource, and sharing is disabled.
+`PWD` is set to that same workspace: v2's run command uses it when choosing its server location.
+The selected variant is appended to the model as `provider/model#variant`. The adapter waits for
+both stdout EOF and successful process exit to finish, since v2 can omit `step_finish`; an error
+or empty response still fails. It then calls `opencode session delete --standalone` for its session. Cursor runs ask mode with `--trust`,
 `stream-json` and `--stream-partial-output`, never `--force` / `--yolo` / `--approve-mcps`, then removes
 the local chat under `~/.cursor/chats/<workspace>/<session_id>` because the CLI has no delete-chat.
-A turn finishes on its own completion frame; both cleanups run detached after the child exits, so
+Other routes finish on their completion frame; cleanups run detached after the child exits, so
 housekeeping never holds the composer shut.
 Cancellation terminates the child process; only one installed-CLI turn can own a runner at a time.
 

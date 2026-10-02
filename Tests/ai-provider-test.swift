@@ -1205,7 +1205,7 @@ struct AIProviderTests {
         let launch = InstalledAILaunch(
             environment: [
                 "PATH": "/reader/bin", "HTTPS_PROXY": "proxy", "NO_COLOR": "0",
-                "OPENCODE_CONFIG_CONTENT": "{}", "TC_MCP_0_0": "stolen", "1BAD": "x"
+                "OPENCODE_DISABLE_AUTOUPDATE": "false", "TC_MCP_0_0": "stolen", "1BAD": "x"
             ])
         let inherited = launch.inherited(
             for: .openCode, base: ["PATH": "/usr/bin", "HOME": "/Users/reader", "NO_COLOR": "1"])
@@ -1214,11 +1214,11 @@ struct AIProviderTests {
                 && inherited["HOME"] == "/Users/reader",
             "the reader's variables lie over the app's own")
         expect(
-            inherited["OPENCODE_CONFIG_CONTENT"] == nil && inherited["TC_MCP_0_0"] == nil
+            inherited["OPENCODE_DISABLE_AUTOUPDATE"] == nil && inherited["TC_MCP_0_0"] == nil
                 && inherited["NO_COLOR"] == "1" && inherited["1BAD"] == nil,
             "but never one Tinycast sets itself, nor one that is not a variable name")
         expect(
-            launch.inherited(for: .claude, base: [:])["OPENCODE_CONFIG_CONTENT"] == "{}",
+            launch.inherited(for: .claude, base: [:])["OPENCODE_DISABLE_AUTOUPDATE"] == "false",
             "a name only another tool reserves is an ordinary variable here")
         expect(
             InstalledAIKind.allCases.allSatisfy { kind in
@@ -1340,8 +1340,8 @@ struct AIProviderTests {
         let openCodeFrame = InstalledAIStreamDecoder.decode(openCodeFinish, kind: .openCode)
         expect(
             openCodeFrame.events == [.usage(AIUsage(inputTokens: 12, outputTokens: 4))]
-                && openCodeFrame.completed,
-            "OpenCode completion reports usage and finishes")
+                && !openCodeFrame.completed,
+            "an OpenCode step reports usage without finishing before process exit")
 
         let claudeText = Data(
             #"{"type":"stream_event","event":{"delta":{"type":"text_delta","text":"Hi"}}}"#.utf8)
