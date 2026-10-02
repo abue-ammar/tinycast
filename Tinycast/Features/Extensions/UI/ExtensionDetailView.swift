@@ -437,11 +437,18 @@ struct ExtensionMarkdownView: View {
     }
 
     private static func standaloneImageURL(_ line: String) -> URL? {
-        guard line.hasPrefix("!["), let open = line.lastIndex(of: "("), line.hasSuffix(")") else {
-            return nil
+        let target: String
+        if line.hasPrefix("<img"),
+            let tag = line.wholeMatch(of: #/<img\s[^>]*?src=["']([^"']+)["'][^>]*>/#)
+        {
+            target = String(tag.1)
+        } else {
+            guard line.hasPrefix("!["), let open = line.lastIndex(of: "("), line.hasSuffix(")") else {
+                return nil
+            }
+            let inner = line[line.index(after: open)..<line.index(before: line.endIndex)]
+            target = inner.split(separator: " ").first.map(String.init) ?? String(inner)
         }
-        let inner = line[line.index(after: open)..<line.index(before: line.endIndex)]
-        let target = inner.split(separator: " ").first.map(String.init) ?? String(inner)
         guard let url = URL(string: target), let scheme = url.scheme,
             scheme.hasPrefix("http") || scheme == "data"
         else { return nil }
