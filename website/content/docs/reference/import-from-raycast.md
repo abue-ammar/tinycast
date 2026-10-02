@@ -63,6 +63,10 @@ than imported as something slightly different.
 
 ## Clipboard history
 
+Pinned text and image entries stay pinned, so they survive the configured history retention even
+when their original copy dates are old. Imported pins are ordered by their original copy dates,
+oldest first; unpinned entries remain subject to your retention setting.
+
 Images are only imported if their files still exist on this Mac. The summary tells you how many were
 missing.
 

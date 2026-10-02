@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-// The RAYCFG3 container: recognition, framing and the AES-256-GCM decrypt.
+// The RAYCFG3 container and clipboard mapping, including import-time retention.
 @main
 @MainActor
 enum RaycastTests {
@@ -42,6 +42,9 @@ enum RaycastTests {
         decryption()
         gunzipSlices()
         gunzipCap()
+        clipboardMapping()
+        clipboardPinMetadata()
+        clipboardRetention()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -172,6 +175,144 @@ enum RaycastTests {
             }
         }
         expect(lengthsRead.isEmpty, "an out-of-range header length is rejected: \(lengthsRead)")
+    }
+
+    // MARK: - Clipboard
+
+    static func clipboardEntry(
+        _ text: String, createdAt: String = "2001-01-01T00:00:00.123Z", pinned: Any? = nil
+    ) -> [String: Any] {
+        var entry: [String: Any] = [
+            "createdAt": createdAt,
+            "items": [["representations": [["mimeType": "text/plain", "content": text]]]]
+        ]
+        entry["pinned"] = pinned
+        return entry
+    }
+
+    static func clipboardImport(
+        _ entries: [[String: Any]], existingImages: Set<String> = []
+    ) -> (items: [ClipboardItem], missing: Int) {
+        let json: [String: Any] = ["clipboardEntries": entries]
+        guard let data = try? JSONSerialization.data(withJSONObject: json),
+            let decoded = try? JSONSerialization.jsonObject(with: data)
+        else {
+            expect(false, "the synthetic clipboard fixture serializes")
+            return ([], 0)
+        }
+        return RaycastClipboardImport.parse(
+            decoded, now: { Date(timeIntervalSince1970: 1_700_000_000) },
+            fileExists: { existingImages.contains($0) })
+    }
+
+    static func clipboardMapping() {
+        var text = clipboardEntry("unused", pinned: true)
+        text["items"] = [[
+            "representations": [
+                ["mimeType": "text/html", "content": "<b>rich text</b>"],
+                ["mimeType": "text/plain;charset=utf-8", "content": "plain text"],
+                ["mimeType": "image/png", "contentType": "url", "content": "/synthetic/text.png"]
+            ]
+        ]]
+        let image: [String: Any] = [
+            "createdAt": "2001-01-02T00:00:00Z", "pinned": true,
+            "items": [["representations": [
+                ["mimeType": "image/png", "contentType": "url", "content": "/synthetic/pin.png"]
+            ]]]
+        ]
+        var missingImage = image
+        missingImage["items"] = [["representations": [
+            ["mimeType": "image/png", "contentType": "url", "content": "/synthetic/missing.png"]
+        ]]]
+        var unpinnedMissingImage = missingImage
+        unpinnedMissingImage["pinned"] = false
+        let result = clipboardImport(
+            [text, clipboardEntry("ordinary", pinned: false), image, missingImage, unpinnedMissingImage],
+            existingImages: ["/synthetic/pin.png"])
+        expect(result.items.count == 3, "text and existing images import; missing images do not")
+        expect(result.missing == 2, "missing images count equally with and without a pin")
+        guard result.items.count == 3 else { return }
+        let clip = result.items[0]
+        expect(clip.kind == .text && clip.text == "plain text", "text/plain still wins over rich text and images")
+        expect(clip.imagePath == nil && clip.sourceBundleID == nil, "text paths and source stay unchanged")
+        expect(
+            abs(clip.createdAt.timeIntervalSince1970 - 978_307_200.123) < 0.000_001,
+            "fractional createdAt is preserved")
+        expect(clip.isPinned && clip.pinnedAt == clip.createdAt, "a Boolean pin uses the original creation date")
+        expect(!result.items[1].isPinned, "an explicit false stays unpinned")
+        let imageClip = result.items[2]
+        expect(imageClip.kind == .image && imageClip.text == nil, "image kind and text stay unchanged")
+        expect(imageClip.imagePath == "/synthetic/pin.png", "the original image path is preserved")
+        expect(imageClip.sourceBundleID == nil, "an imported image still has no source bundle ID")
+        expect(imageClip.createdAt == Date(timeIntervalSince1970: 978_393_600), "whole-second dates still parse")
+        expect(imageClip.isPinned && imageClip.pinnedAt == imageClip.createdAt, "image pins are preserved")
+
+        var emptyTextImage = image
+        emptyTextImage["items"] = [["representations": [
+            ["mimeType": "text/plain", "content": ""],
+            ["mimeType": "image/png", "contentType": "url", "content": "/synthetic/pin.png"]
+        ]]]
+        expect(
+            clipboardImport([emptyTextImage], existingImages: ["/synthetic/pin.png"]).items.first?.kind == .image,
+            "empty text still falls through to an image")
+    }
+
+    static func clipboardPinMetadata() {
+        let malformed: [Any?] = [nil, NSNull(), "true", "false", 0, 1, 42, 1.0, [], ["pinned": true]]
+        for (index, value) in malformed.enumerated() {
+            let result = clipboardImport([clipboardEntry("malformed \(index)", pinned: value)])
+            expect(result.items.count == 1, "malformed or missing pin \(index) does not discard the text")
+            expect(result.items.first?.isPinned == false, "malformed or missing pin \(index) stays unpinned")
+        }
+        for date in ["invalid", ""] {
+            let clip = clipboardImport([clipboardEntry("fallback", createdAt: date, pinned: true)]).items.first
+            expect(clip?.createdAt == Date(timeIntervalSince1970: 1_700_000_000), "bad dates still use the clock")
+            expect(clip?.isPinned == true && clip?.pinnedAt == clip?.createdAt, "a pin uses the fallback date too")
+        }
+        var absentDate = clipboardEntry("absent date", pinned: true)
+        absentDate.removeValue(forKey: "createdAt")
+        let clip = clipboardImport([absentDate]).items.first
+        expect(clip?.isPinned == true && clip?.pinnedAt == clip?.createdAt, "missing createdAt still preserves a pin")
+        let empty = RaycastClipboardImport.parse(nil, now: Date.init, fileExists: { _ in false })
+        expect(empty.items.isEmpty && empty.missing == 0, "missing clipboard history stays empty")
+    }
+
+    static func clipboardRetention() {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("raycast-clipboard-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let imported = clipboardImport([
+            clipboardEntry("later pin", createdAt: "2001-01-02T00:00:00Z", pinned: true),
+            clipboardEntry("earlier pin", pinned: true),
+            clipboardEntry("expired ordinary", pinned: false),
+            clipboardEntry("recent ordinary", createdAt: Date().ISO8601Format(), pinned: false),
+            [
+                "createdAt": "2001-01-03T00:00:00Z", "pinned": true,
+                "items": [["representations": [
+                    ["mimeType": "image/png", "contentType": "url", "content": "/synthetic/retained.png"]
+                ]]]
+            ]
+        ], existingImages: ["/synthetic/retained.png"])
+        let store = ClipboardStore(directory: root)
+        expect(store.maxAge == ClipboardRetention.threeMonths.maxAge, "the default retention remains three months")
+        expect(store.importEntries(imported.items) == 5, "all mapped candidates reach the real store")
+        expect(
+            store.search("", filter: .all).compactMap(\.text) == ["earlier pin", "later pin", "recent ordinary"],
+            "old pins survive immediate pruning in deterministic date order; old unpinned text does not")
+        store.enforceLimits()
+        expect(store.items.filter(\.isPinned).count == 3, "subsequent retention also keeps text and image pins")
+        store.close()
+        let reopened = ClipboardStore(directory: root)
+        reopened.load()
+        expect(
+            reopened.search("", filter: .all).compactMap(\.text) == ["earlier pin", "later pin", "recent ordinary"],
+            "pins and pruning persist in SQLite across a reload")
+        expect(
+            reopened.items.filter(\.isPinned).allSatisfy { $0.pinnedAt == $0.createdAt },
+            "the original pin metadata is persisted, not just held in the import array")
+        expect(
+            reopened.items.contains { $0.isPinned && $0.imagePath == "/synthetic/retained.png" },
+            "an old pinned image survives import-time retention and reload too")
     }
 
     // MARK: - Zlib

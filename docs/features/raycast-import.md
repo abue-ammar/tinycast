@@ -52,6 +52,12 @@ hotkeys do. Raycast's ULID is discarded — each imported row gets a fresh UUID,
 import already does. Importing at least one quicklink turns `quicklinksEnabled` on: opening a link
 grants no permission class.
 
+Clipboard entries with the Boolean `pinned: true` remain pinned, for both text and existing images,
+so they are exempt from Tinycast's retention pruning even when their original `createdAt` is old.
+The pin flag has no timestamp or order in the observed v2.x clipboard payload; `pinnedAt` uses
+`createdAt` as a deterministic fallback, so imported pins sort by creation date, oldest first.
+Missing, false or malformed pin flags leave an entry unpinned and subject to the configured retention.
+
 Script commands are not in a `.rayconfig` — they are files in a folder Raycast points at — so they
 have their own importer, described in
 [custom-commands.md](custom-commands.md#importing-raycast-scripts).
@@ -61,7 +67,9 @@ have their own importer, described in
 `RaycastDecoder` unwraps the container and returns Raycast's own values; `RaycastImportReader` turns
 those into Tinycast's domain types. That is the same pure-layer / platform-layer split
 `Features/WindowManagement/` uses — the reader needs AppKit, so it lives in `Service/` and is covered by
-the app build rather than the harness.
+the app build. `RaycastClipboardImport` holds the clipboard mapping with an injected clock and file
+existence check; `raycast-test` compiles it alongside the real `ClipboardStore` to cover pin metadata
+and import-time retention.
 
 `RaycastImport` is only the data: `Result`, `selecting(_:)` and `RaycastImportOptions`.
 `BackupActions.importRaycast` runs the reader off the main actor.

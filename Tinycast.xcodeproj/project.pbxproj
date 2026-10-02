@@ -35,6 +35,7 @@
 		0820C7539E3328338C3C8FBD /* BarButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4395BACF833C810961A248F0 /* BarButton.swift */; };
 		08402EEA92AECAF10CBAF2EA /* AIProviderAdvancedSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4DB2A5435AD37E95789304B /* AIProviderAdvancedSection.swift */; };
 		0976BBB954D48DE55C6B4263 /* MenuSearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD8A186797267935E09816C9 /* MenuSearchScreen.swift */; };
+		09C2F66D963E4E07A5A4F346 /* RaycastClipboardImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B154C9F1BC46B39E2283527 /* RaycastClipboardImport.swift */; };
 		0A086C5452FD9FCE68AF4E46 /* InputSourceSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FCD070CDE64691E5F6ED28D /* InputSourceSwitcher.swift */; };
 		0A238E823704B904EFFB4F22 /* BundleLocalization.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3085C57A94FFF35FF74EC86 /* BundleLocalization.swift */; };
 		0A6FDD413D8FEDDA413B69A6 /* ClipboardTextHelper in Embed Dependencies */ = {isa = PBXBuildFile; fileRef = CEE5FA2E56073002C2DA6D6A /* ClipboardTextHelper */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -921,6 +922,7 @@
 		2AEDBB526AB2C0406D8226D5 /* SystemActionRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemActionRunner.swift; sourceTree = "<group>"; };
 		2B0D967615846F9C4EC3E44F /* ExtensionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionDetailView.swift; sourceTree = "<group>"; };
 		2B0F5891A80B604FBE21897B /* CalcCurrency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcCurrency.swift; sourceTree = "<group>"; };
+		2B154C9F1BC46B39E2283527 /* RaycastClipboardImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastClipboardImport.swift; sourceTree = "<group>"; };
 		2B2CB71671625A1F446316A1 /* MessageHUDController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageHUDController.swift; sourceTree = "<group>"; };
 		2B629EC3B716FEE881BB0075 /* TinycastApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TinycastApp.swift; sourceTree = "<group>"; };
 		2BAC1D756594DA0FC63F9033 /* MCPSettingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPSettingsStore.swift; sourceTree = "<group>"; };
@@ -3452,6 +3454,7 @@
 				8756FBB625DFAE931D8D5D9D /* ColorSpaces.swift */,
 				CA9287418DC6C04437FB4BAF /* ColorValue.swift */,
 				1460DE41607E1352EB9F7427 /* PasteSequence.swift */,
+				2B154C9F1BC46B39E2283527 /* RaycastClipboardImport.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -4114,6 +4117,7 @@
 				E58AB83C608F8BBF99EAEB7E /* QuicklinkListView.swift in Sources */,
 				74BE9E8319C8302EF525E6B2 /* QuicklinkStore.swift in Sources */,
 				39F5A11DD9D7C31AC720D4C0 /* QuicklinksSettingsView.swift in Sources */,
+				09C2F66D963E4E07A5A4F346 /* RaycastClipboardImport.swift in Sources */,
 				EBFD65E82A7633ECB132A4D4 /* RaycastDecoder.swift in Sources */,
 				A5354210CDCB796D2D988B82 /* RaycastImport.swift in Sources */,
 				A79B7385C6B6E6C67FDFB152 /* RaycastImportError.swift in Sources */,

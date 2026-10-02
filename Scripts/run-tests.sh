@@ -468,7 +468,14 @@ run -O index notes-editor-performance \
 run slow -O raycast-test   Tinycast/Features/Backup/Model/RaycastImportError.swift \
                            Tinycast/Features/Backup/Service/RaycastDecoder.swift \
                            Tinycast/Features/Backup/Service/Scrypt.swift \
-                           Tinycast/Platform/Compression/Zlib.swift
+                           Tinycast/Platform/Compression/Zlib.swift \
+                           Tinycast/Features/Clipboard/Model/RaycastClipboardImport.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardFileKind.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorFormat.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift
 run settings-backup-test   Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/Backup/Model/SettingsBackupCoverage.swift
 run settings-file-test     Tinycast/Features/Settings/Model/*.swift \
