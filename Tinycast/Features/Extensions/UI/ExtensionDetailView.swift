@@ -439,7 +439,7 @@ struct ExtensionMarkdownView: View {
     private static func standaloneImageURL(_ line: String) -> URL? {
         let target: String
         if line.hasPrefix("<img"),
-            let tag = line.wholeMatch(of: #/<img\s[^>]*?src=["']([^"']+)["'][^>]*>/#)
+            let tag = line.wholeMatch(of: #/<img(?:\s[^>]*?)?\ssrc=["']([^"']+)["'][^>]*>/#)
         {
             target = String(tag.1)
         } else {
