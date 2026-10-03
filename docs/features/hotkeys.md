@@ -8,7 +8,7 @@
 - `HotKeyCenter` — the Carbon `RegisterEventHotKey` layer, pausable.
 - Dictation alone also observes Carbon's key-release event for hold-to-talk.
 - `DoubleTapModifier` / `DoubleTapDetector` — the double-tap recognizer.
-- `ModifierKey` / `ModifierKeyDetector` — physical sides, lone presses, taps and holds.
+- `ModifierKey` / `ModifierKeyDetector` — reported sides, lone presses, taps and holds.
 - `ModifierTapMonitor` — the shared modifier-only tap, including Dictation's hold/release callbacks.
 
 `HotKeyManager` owns them all: persistence, conflict lookup, and dispatch. Every action reads and
@@ -112,9 +112,10 @@ palette.
 ## Modifier-only shortcuts
 
 Every recorder accepts a single or double press of a lone modifier, including Globe/fn. Command,
-Control, Option and Shift remember the physical Left or Right key, displayed as a small L/R inside
-the recorder's glyph cap; ordinary key
-combinations remain side-agnostic. `ModifierKeyDetector` uses injected timestamps and physical device
+Control, Option and Shift remember the Left or Right identity reported by macOS after remapping.
+Single bindings display a small L/R inside the recorder's glyph cap; double bindings display only
+the two modifier glyphs while retaining their side for matching and conflicts. Ordinary key
+combinations remain side-agnostic. `ModifierKeyDetector` uses injected timestamps and device
 flags, so holding both sides or unwinding a chord cannot create a new lone press. Holding a modifier
 while recording saves its single binding when released. Existing generic double-tap bindings keep
 their meaning; conflicts with overlapping sided double taps are refused rather than overwritten.
@@ -262,7 +263,7 @@ stops until this session is active again. The HID remap outlives the process, so
 The settings recorder (`Features/HotKeys/UI/ShortcutRecorder.swift`) is deliberately **not** a focusable
 control: the active recorder is `HotKeyManager.recordingAction` state, and keys are captured by local
 NSEvent monitors while both engines are paused. It records combos and single or double modifier taps,
-including their physical side, by feeding its `.flagsChanged` / `.keyDown` monitors into the same pure detectors
+including their reported side, by feeding its `.flagsChanged` / `.keyDown` monitors into the same pure detectors
 as the global monitor, so recording needs no event tap and no permission.
 
 Setting `recordingAction` is what starts and stops the capture, so there is exactly **one**

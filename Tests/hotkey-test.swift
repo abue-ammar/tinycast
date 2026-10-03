@@ -473,7 +473,8 @@ struct DoubleTapDetectorTests {
         ] {
             expect(key.singleBinding.recorderPrefix == prefix, "\(key) uses a compact side label")
             expect(key.singleBinding.recorderKeycaps == [glyph], "\(key) needs only one cap")
-            expect(key.doubleBinding.recorderPrefix == prefix, "double \(key) retains its side")
+            expect(key.doubleBinding.recorderPrefix == nil, "double \(key) has no side label")
+            expect(key.doubleBinding.keycaps == [glyph, glyph], "double \(key) displays only glyphs")
             expect(key.doubleBinding.recorderKeycaps == [glyph, glyph], "double \(key) has two caps")
         }
         for binding in [

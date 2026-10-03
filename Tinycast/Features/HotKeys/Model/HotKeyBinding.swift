@@ -15,7 +15,7 @@ enum HotKeyBinding: Hashable, Sendable, Codable {
         case .combo(let shortcut): shortcut.keycaps
         case .doubleTap(let modifier): modifier.keycaps
         case .modifier(let key): key.keycaps
-        case .doubleModifier(let key): key.keycaps + [key.modifier?.glyph ?? "🌐︎"]
+        case .doubleModifier(let key): key.modifier?.keycaps ?? ["🌐︎", "🌐︎"]
         case .globe: ["🌐︎"]
         case .doubleGlobe: ["🌐︎", "🌐︎"]
         }
@@ -23,7 +23,7 @@ enum HotKeyBinding: Hashable, Sendable, Codable {
 
     var recorderPrefix: String? {
         switch self {
-        case .modifier(let key), .doubleModifier(let key): key.side.map { String($0.prefix(1)) }
+        case .modifier(let key): key.side.map { String($0.prefix(1)) }
         default: nil
         }
     }
