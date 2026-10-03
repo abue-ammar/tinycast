@@ -625,9 +625,14 @@ struct InstalledAITests {
         }
         let events = await fixture.events(
             kind: .claude, model: "pair", effort: nil, toolServers: session)
+        // Order is not asserted: the two control_requests arrive as separate pipe
+        // writes, so each becomes its own Task, and Task start order across separate
+        // scheduling turns is not guaranteed. The CLI matches on request_id, so the
+        // order is incidental; one-at-a-time is the invariant.
         expect(
-            reader.calls.map(\.tool) == ["first_tool", "second_tool"] && reader.mostAtOnce == 1,
-            "two calls held open together are asked about one after the other, in order")
+            Set(reader.calls.map(\.tool)) == ["first_tool", "second_tool"]
+                && reader.calls.count == 2 && reader.mostAtOnce == 1,
+            "two calls held open together are asked one at a time, never overlapping")
         expect(
             reader.dialogs == 1,
             "and the second is decided after the first dialog closes, so its grant is seen")
