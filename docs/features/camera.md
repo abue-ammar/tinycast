@@ -20,8 +20,10 @@ controller and footer are all that stay in [calendar.md](calendar.md).
   preview's — restarts to a black stage.
 - **Escape, click-away and the shot all end the same way.** Every route goes through
   `CameraCoordinator.close()`, which drops the panel and stops the session; `windowDidResignKey` is
-  what covers clicking away. Taking a photo closes too — the command is done, so the camera goes out
-  with it rather than idling for a second shot.
+  what covers clicking away. A click into a menu bar is not one of those routes: Control Center's
+  video effects live there, and `CameraPanel.pointerInMenuBar` keeps the panel — and the camera it
+  is framing — up while it takes key. Taking a photo closes too — the command is done, so the camera
+  goes out with it rather than idling for a second shot.
 - **The preview and the photo are mirrored together.** Mirroring is `isVideoMirrored` on a connection
   — the preview layer's, and the photo output's at capture time — never a `scaleEffect` on the view,
   which would hand back a photo that is not what the user framed.

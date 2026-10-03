@@ -59,9 +59,10 @@ final class CameraPreviewController: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Click-away drops the join rather than leaving a camera running behind another window.
+    /// Click-away drops the join; a menu-bar click does not, since Control Center frames it there.
     func windowDidResignKey(_ notification: Notification) {
         guard let panel, notification.object as? NSWindow === panel else { return }
+        guard !CameraPanel.pointerInMenuBar() else { return }
         finish(false)
     }
 }

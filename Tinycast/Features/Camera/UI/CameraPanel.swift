@@ -49,6 +49,17 @@ final class CameraPanel: NSPanel {
         }
     }
 
+    /// Control Center's video effects live in the menu bar, so a click there is not a click-away.
+    static func pointerInMenuBar(at point: NSPoint = NSEvent.mouseLocation) -> Bool {
+        NSScreen.screens.contains { screen in
+            let bar = max(screen.frame.maxY - screen.visibleFrame.maxY, Self.autoHideStrip)
+            return point.y >= screen.frame.maxY - bar
+        }
+    }
+
+    /// What a menu bar falls back to once it auto-hides: `visibleFrame` stops reserving its strip.
+    private static let autoHideStrip = NSStatusBar.system.thickness
+
     /// Optically centred on the screen under the cursor, the same lift a dialog takes.
     func centerOnCursorScreen() {
         guard let visible = NSScreen.underCursor?.visibleFrame else { return }

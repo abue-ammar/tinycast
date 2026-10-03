@@ -84,9 +84,10 @@ final class CameraCoordinator: NSObject, NSWindowDelegate {
 
     // MARK: - NSWindowDelegate
 
-    /// Click-away closes rather than leaving a camera running behind another window.
+    /// Click-away closes; a menu-bar click does not, since Control Center frames the camera there.
     func windowDidResignKey(_ notification: Notification) {
         guard let panel, notification.object as? NSWindow === panel else { return }
+        guard !CameraPanel.pointerInMenuBar() else { return }
         close()
     }
 }
