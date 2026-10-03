@@ -731,7 +731,6 @@ final class AppIndex {
         }
     }
 
-    /// Each kind's run sorted by usage; the runs keep publication order, which is section order.
     private func byUsage(_ entries: [AppEntry], usage: LauncherRankingStore.Snapshot) -> [AppEntry] {
         var ordered: [AppEntry] = []
         ordered.reserveCapacity(entries.count)
@@ -739,8 +738,12 @@ final class AppIndex {
         while start < entries.endIndex {
             let kind = entries[start].kind
             let end = entries[start...].firstIndex { $0.kind != kind } ?? entries.endIndex
-            ordered += LauncherOrder.byUsage(
-                Array(entries[start..<end]), signals: { self.signals(for: $0, usage: usage) })
+            if kind == .meeting {
+                ordered.append(contentsOf: entries[start..<end])
+            } else {
+                ordered += LauncherOrder.byUsage(
+                    Array(entries[start..<end]), signals: { self.signals(for: $0, usage: usage) })
+            }
             start = end
         }
         return ordered
