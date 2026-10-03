@@ -49,6 +49,10 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalGeneral, "Show in menu bar")
                     Text("Shortcuts still work when hidden.")
                 }
+                Toggle(isOn: $settings.automaticallyCheckForUpdates) {
+                    SettingsRowTitle(.generalGeneral, "Automatically check for updates")
+                    Text("Check for Updates remains available when off.")
+                }
                 Picker(selection: $settings.popToRootTimeout) {
                     ForEach(PopToRootTimeout.allCases) { timeout in
                         Text(timeout.title).tag(timeout)

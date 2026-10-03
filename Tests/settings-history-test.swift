@@ -150,6 +150,8 @@ struct SettingsHistoryTests {
             ("hyper", .general),
             ("caps lock", .general),
             ("launch at login", .general),
+            ("automatically check for updates", .general),
+            ("popup", .general),
             ("paste history", .clipboard),
             ("window manage", .windowManagement),
             ("skin tone", .emoji),

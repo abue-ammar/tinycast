@@ -30,6 +30,7 @@ enum SettingsFileSchema {
 
         switch key {
         case .showInMenuBar: return bind(settings, \.showInMenuBar)
+        case .automaticallyCheckForUpdates: return bind(settings, \.automaticallyCheckForUpdates)
         case .popToRootTimeout: return bind(settings, \.popToRootTimeout)
         case .escapeKeyBehavior: return bind(settings, \.escapeKeyBehavior)
         case .autoSwitchInputSource: return bind(settings, \.autoSwitchInputSourceID)
