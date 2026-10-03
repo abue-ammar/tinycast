@@ -29,7 +29,7 @@ final class AIChatCoordinator {
         window = AppWindowController(
             title: "AI Chat", contentSize: Theme.Size.aiChatWindow,
             minimumSize: Theme.Size.aiChatWindowMinimum, resizable: true,
-            autosaveName: "AIChatWindow", activation: core.activationPolicy)
+            autosaveName: "AIChatWindow", activation: core.activationPolicy, closesOnEscape: true)
         chats.onReplyFinished = { [weak self] chat in self?.nameIfNeeded(chat) }
     }
 
