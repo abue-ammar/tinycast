@@ -44,7 +44,13 @@ struct AIChatSidebarView: View {
         }
         // The field sits under the toolbar's material, so it needs its own clearance from the top.
         .padding(.top, Theme.Spacing.md)
-        .onExitCommand { query = "" }
+        .onExitCommand {
+            if query.isEmpty {
+                _ = coordinator.closeWindowIfKey()
+            } else {
+                query = ""
+            }
+        }
     }
 
     @ViewBuilder private var list: some View {
