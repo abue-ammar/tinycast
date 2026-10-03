@@ -113,6 +113,7 @@ enum CalcUnits {
         // Time
         "ms": ("s", false), "s": ("ms", false), "min": ("s", false), "hr": ("min", false),
         "day": ("hr", false), "week": ("day", false),
+        "mo": ("day", false), "yr": ("day", false),
         "workdays": ("hr", false),
         // Area
         "mm²": ("in2", false), "cm²": ("in2", false), "m²": ("ft2", false), "km²": ("mi2", false),

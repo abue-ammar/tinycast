@@ -197,6 +197,19 @@ struct CalcTests {
         expectDisplay("2hr to min", "120 min")
         expectDisplay("1day to sec", "86,400 s")
         expectDisplay("1 week to hr", "168 hr")
+        expectDisplay("3 months to days", "91.310625 day")
+        expectDisplay("3.5 years to days", "1,278.34875 day")
+        expectCopy("3.5 years to days", "1278.34875 day")
+        expectDisplay("1month in days", "30.436875 day")
+        expectDisplay("1mo -> s", "2,629,746 s")
+        expectDisplay("1YEAR to s", "31,556,952 s")
+        expectDisplay("1yr to months", "12 mo")
+        expectDisplay("12 months to years", "1 yr")
+        expectDisplay("365.2425 days to year", "1 yr")
+        expectDisplay("-0.5 years to months", "-6 mo")
+        expectDisplay("0 months to days", "0 day")
+        expectDisplay("(1 year + 6 months) to days", "547.86375 day")
+        expectBadges("3.5 years to days", source: "Years", target: "Days")
         expectDisplay("2 acre to m2", "8,093.712845 m²")
         expectDisplay("1 m² to ft²", "10.76391042 ft²")
         expectDisplay("2L -> mL", "2,000 mL")
@@ -228,6 +241,7 @@ struct CalcTests {
         expectError("10kg to sec", "Cannot convert Weight to Time.")
         expectError("100 mL to km", "Cannot convert Volume to Length.")
         expectError("1 GB to hr", "Cannot convert Digital Storage to Time.")
+        expectError("1 year to kg", "Cannot convert Time to Weight.")
 
         // Non-calculator input → no card
         expectNil("safari")
@@ -300,6 +314,12 @@ struct CalcTests {
         expectBadges("1m", source: "Meters", target: "Feet")
         expectDisplay("1hr", "60 min")
         expectBadges("1hr", source: "Hours", target: "Minutes")
+        expectDisplay("3 weeks", "21 day")
+        expectDisplay("3 days", "72 hr")
+        expectDisplay("3 months", "91.310625 day")
+        expectDisplay("3.5 years", "1,278.34875 day")
+        expectBadges("3 months", source: "Months", target: "Days")
+        expectBadges("3.5 years", source: "Years", target: "Days")
         expectDisplay("5ft", "1.524 m")
         expectDisplay("100g", "3.527396195 oz")
         expectDisplay("2*3 kg", "6 kg")  // an operator keeps the answer in the units written
@@ -973,6 +993,7 @@ struct CalcTests {
 
         // Timespans break a duration into the units that fit it
         expectDisplay("145 mins to timespan", "2 hr 25 min")
+        expectDisplay("1 month to timespan", "4 wk 2 day 10 hr 29 min 6 s")
         expectDisplay("8700 s to timespan", "2 hr 25 min")
         expectDisplay("90000 s to timespan", "1 day 1 hr")
         expectDisplay("55 h to timespan", "2 day 7 hr")
