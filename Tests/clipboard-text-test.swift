@@ -100,9 +100,13 @@ struct ClipboardTextTests {
             expect(false, "cancelled extraction throws")
         } catch is CancellationError { expect(true, "cancelled extraction throws") }
 
-        try await searchAndLifetime(in: directory)
-        try await scheduling(in: directory)
-        try await retryFailures(in: directory)
+        do {
+            try await searchAndLifetime(in: directory)
+            try await scheduling(in: directory)
+            try await retryFailures(in: directory)
+        } catch let timeout as HarnessTimeout {
+            expect(false, timeout.description)
+        }
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
     }
@@ -302,12 +306,23 @@ struct ClipboardTextTests {
         store.close()
     }
 
-    static func waitUntil(_ condition: () -> Bool) async throws {
-        for _ in 0..<200 {
+    /// Waits for `condition` against a wall-clock budget, not an iteration count. A fixed
+    /// `200 x 10ms` loop spends about 2.4s on its own scheduling against the 2s it
+    /// intends, and ClipboardTextIndexer waits a 2s idle window between attempts, so the
+    /// budget could expire before the scheduler had finished a poll.
+    ///
+    /// It throws rather than counting a failure: one slow poll used to be reported as
+    /// three failures, and the ones after it described state the timeout had not reached.
+    static func waitUntil(
+        _ condition: () -> Bool, timeout: Duration = .seconds(20),
+        _ message: String = "scheduler completed before timeout"
+    ) async throws {
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while ContinuousClock.now < deadline {
             if condition() { return }
             try await Task.sleep(for: .milliseconds(10))
         }
-        expect(false, "scheduler completed before timeout")
+        throw HarnessTimeout(description: message)
     }
 
     static func makeImage() -> CGImage {
@@ -370,5 +385,11 @@ struct ClipboardTextTests {
             failures += 1
             print("FAIL: \(message)")
         }
+    }
+
+    /// Thrown when a `waitUntil` budget expires, so the harness stops at the assertion
+    /// that is wrong instead of letting every later one cascade from it.
+    struct HarnessTimeout: Error, CustomStringConvertible {
+        let description: String
     }
 }
