@@ -101,9 +101,24 @@ final class NoteTextView: NSTextView, InjectableTextView {
         super.insertBacktab(sender)
     }
 
-    /// A formatting chord is always ours while rendering, even when it has nothing to do.
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        guard rendersMarkdown, window?.firstResponder === self, let action = Self.chord(for: event) else {
+        guard window?.firstResponder === self else {
+            return super.performKeyEquivalent(with: event)
+        }
+        let modifiers = event.modifierFlags.intersection([.command, .shift, .option, .control])
+        if event.charactersIgnoringModifiers?.lowercased() == "z",
+            modifiers == .command || modifiers == [.command, .shift]
+        {
+            guard !event.isARepeat else { return true }
+            breakUndoCoalescing()
+            if modifiers == .command {
+                editorUndoManager?.undo()
+            } else {
+                editorUndoManager?.redo()
+            }
+            return true
+        }
+        guard rendersMarkdown, let action = Self.chord(for: event) else {
             return super.performKeyEquivalent(with: event)
         }
         if !event.isARepeat { perform(action) }
