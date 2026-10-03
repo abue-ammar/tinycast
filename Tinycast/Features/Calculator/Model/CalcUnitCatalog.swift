@@ -109,6 +109,8 @@ enum CalcUnitCatalog {
         hr|Hours|3600.0|h,hr,hrs,hour,hours
         day|Days|86400.0|d,day,days
         week|Weeks|604800.0|wk,week,weeks
+        mo|Months|2629746.0|mo,month,months
+        yr|Years|31556952.0|yr,year,years
         workdays|Workdays|28800.0|workday,workdays,businessday,businessdays
         area
         mm²|Square Millimeters|1e-06|mm2,sqmm
