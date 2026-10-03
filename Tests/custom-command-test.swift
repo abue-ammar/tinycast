@@ -239,12 +239,15 @@ struct CustomCommandTests {
             .write(to: linkTarget)
         let link = scriptDirectory.appendingPathComponent("c-linked.sh")
         try? FileManager.default.createSymbolicLink(at: link, withDestinationURL: linkTarget)
-        try? FileManager.default.createSymbolicLink(
-            at: scriptDirectory.appendingPathComponent("d-dangling.sh"),
-            withDestinationURL: scriptDirectory.appendingPathComponent("missing.sh"))
-        try? FileManager.default.createSymbolicLink(
-            at: scriptDirectory.appendingPathComponent("e-folder"),
-            withDestinationURL: scriptDirectory.appendingPathComponent("nested"))
+        // Checked, or a link that was never made would pass "doesn't import" for free.
+        let skippedLinksMade =
+            (try? FileManager.default.createSymbolicLink(
+                at: scriptDirectory.appendingPathComponent("d-dangling.sh"),
+                withDestinationURL: scriptDirectory.appendingPathComponent("missing.sh"))) != nil
+            && (try? FileManager.default.createSymbolicLink(
+                at: scriptDirectory.appendingPathComponent("e-folder"),
+                withDestinationURL: scriptDirectory.appendingPathComponent("nested"))) != nil
+        check("the dangling and folder links exist", skippedLinksMade)
         let withLinks = RaycastScriptImport.scan(directory: scriptDirectory)
         check(
             "a linked script imports; a dangling or folder link doesn't",
