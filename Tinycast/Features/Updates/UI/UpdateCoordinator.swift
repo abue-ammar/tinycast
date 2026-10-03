@@ -41,6 +41,14 @@ final class UpdateCoordinator {
         core.appIndex.setCommandsVisible([.checkForUpdates], store.channel.updatesItself)
     }
 
+    func applyAutomaticChecking() {
+        if core.settings.automaticallyCheckForUpdates {
+            store.start()
+        } else {
+            store.stop()
+        }
+    }
+
     func focusExisting() -> Bool {
         window.focus()
     }
@@ -81,6 +89,7 @@ final class UpdateCoordinator {
 
     /// The automatic path: `false` answers that it withheld the prompt, so the store re-offers it.
     func presentIfAvailable(_ release: AvailableRelease) -> Bool {
+        guard core.settings.automaticallyCheckForUpdates else { return false }
         switch stage {
         // Already in hand: re-offering would throw away a download or the relaunch it earned.
         case .installing, .readyToRelaunch:

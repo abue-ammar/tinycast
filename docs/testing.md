@@ -138,6 +138,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `window-file-test` | `WindowManagement/Model/WindowManagementFileFormat.swift` — command shortcuts, custom sizes, layouts and rooms as settings.json spells them, hand edits and bad records |
 | `backup-archive-test` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
 | `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
+| `update-check-test` | `UpdateCheckStore` — stopping, in-flight cancellation, cached prompt suppression, restart and independent manual checking |
 | `support-test` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
 | `mcp-test` | `MCP/Model/` and `MCPSettingsStore` — JSON-RPC framing, handles, tool names, output flattening, trust, `@server` addressing, the shape a vendor CLI is handed, and which servers Tinycast leaves to that CLI |
 | `mcp-stdio-test` | `MCP/Service/` against a stub server — handshake, listing, calling, and every way one can go away |
@@ -683,6 +684,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### Settings and backup
 
+- General → Automatically check for updates defaults on; turn it off and relaunch: it stays off,
+  no background check or update prompt occurs, and Check for Updates still works. Re-enable it:
+  checks resume. Settings search for "updates" reveals the toggle; settings.json edits and a backup
+  round trip preserve the choice.
 - Every pane renders and the sidebar switches without flicker
 - A feature switch takes effect in the launcher immediately; every setting survives relaunch
 - Export produces a `.tinycast`; import applies it and reports a per-category summary

@@ -4,6 +4,7 @@ import Foundation
 enum SettingsFileKey: String, CaseIterable, Sendable {
     // Spelled out, so renaming a case can never rename a key in someone's file.
     case showInMenuBar = "general.showInMenuBar"
+    case automaticallyCheckForUpdates = "general.automaticallyCheckForUpdates"
     case popToRootTimeout = "general.popToRootSeconds"
     case escapeKeyBehavior = "general.escapeKeyBehavior"
     case autoSwitchInputSource = "general.autoSwitchInputSource"
