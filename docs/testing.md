@@ -621,6 +621,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   still finds the command, and it still lists the meetings
 - Adding or deleting an event in Calendar.app updates an open palette without a reopen
 - A meeting with no link is listed and searchable, and answers Open in Calendar rather than Join
+- Two upcoming meetings with titles in reverse alphabetical order appear earliest first in the
+  launcher's Meetings section and the `Meetings` category listing, even after opening the later one
 - Import a backup taken with Calendar on: it comes back **off**, and no calendar toggle travels
 - Calendar in Menu Bar on Disabled: the calendar item is gone and Tinycast's own item is unaffected;
   turning `Show in menu bar` off leaves an enabled calendar item in place, and both off leaves neither

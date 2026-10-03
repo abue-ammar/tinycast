@@ -422,9 +422,10 @@ per-item reset in its Actions menu, and users can clear all learned ranking in G
 ## The empty list
 
 Favorites, then Meetings, then Suggestions, then one section per kind. Meetings sit above
-Suggestions because a meeting is worth opening only until it ends. Each kind section is sorted by
-the tiebreak, so what the user opens comes first and never-used entries still read alphabetically
-below it. The sort runs within each contiguous kind run of the publication order,
+Suggestions because a meeting is worth opening only until it ends. They keep the agenda's start
+order, including in the `Meetings` category listing, regardless of title or past usage. Each remaining
+kind section is sorted by the tiebreak, so what the user opens comes first and never-used entries still
+read alphabetically below it. The sort runs within each contiguous kind run of the publication order,
 so the sectioned view stays 1:1 with the flat selection.
 
 ### Suggestions
