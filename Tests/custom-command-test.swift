@@ -233,6 +233,25 @@ struct CustomCommandTests {
             "a folder yields its script commands in name order and nothing else",
             RaycastScriptImport.scan(directory: scriptDirectory).map(\.name) == ["First", "Second"])
 
+        // Linked scripts import, keeping the link's path so the command follows its target.
+        let linkTarget = scriptDirectory.appendingPathComponent("nested/linked.sh")
+        try? Data("#!/bin/bash\n# @raycast.title Linked\n".utf8).write(to: linkTarget)
+        let link = scriptDirectory.appendingPathComponent("c-linked.sh")
+        try? FileManager.default.createSymbolicLink(at: link, withDestinationURL: linkTarget)
+        try? FileManager.default.createSymbolicLink(
+            at: scriptDirectory.appendingPathComponent("d-dangling.sh"),
+            withDestinationURL: scriptDirectory.appendingPathComponent("missing.sh"))
+        try? FileManager.default.createSymbolicLink(
+            at: scriptDirectory.appendingPathComponent("e-folder"),
+            withDestinationURL: scriptDirectory.appendingPathComponent("nested"))
+        let withLinks = RaycastScriptImport.scan(directory: scriptDirectory)
+        check(
+            "a linked script imports; a dangling or folder link doesn't",
+            withLinks.map(\.name) == ["First", "Second", "Linked"])
+        check(
+            "a linked script runs through its link",
+            withLinks.first { $0.name == "Linked" }?.command.contains(link.path) == true)
+
         // The whole run, through `"$@"`: an imported script reads its value as data, never as syntax.
         try? Data("#!/bin/bash\n# @raycast.title Echo\nprintf '%s' \"$1\"\n".utf8).write(
             to: scriptDirectory.appendingPathComponent("echo.sh"))
