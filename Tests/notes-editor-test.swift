@@ -12,7 +12,10 @@ struct NotesEditorTests {
         _ = NSApplication.shared
         testLiteralEditingAndNativeCommands(rendersMarkdown: false)
         testLiteralEditingAndNativeCommands(rendersMarkdown: true)
-        testUndoIsolation()
+        testUndoAndRedoShortcuts(rendersMarkdown: false)
+        testUndoAndRedoShortcuts(rendersMarkdown: true)
+        testUndoIsolation(afterUndo: false)
+        testUndoIsolation(afterUndo: true)
         testQuickActionReplacement()
         testCharacterCountReports()
         testRenderingKeepsSourceAndUndo()
@@ -115,7 +118,61 @@ struct NotesEditorTests {
             !editor.textView.replaceUnchangedSelection(with: "wrong", source: source, range: range))
     }
 
-    private static func testUndoIsolation() {
+    private static func testUndoAndRedoShortcuts(rendersMarkdown: Bool) {
+        let source = "# Heading\n🧑🏽‍💻e\u{301}"
+        let input = NoteEditorInput(id: NoteID(rawValue: "Undo.md"), source: source, epoch: 1)
+        var changes: [String] = []
+        var counts: [Int] = []
+        let editor = makeEditor(
+            input: input, rendersMarkdown: rendersMarkdown,
+            onSourceChange: { changes.append($0) }, onCountChange: { _, count in counts.append(count) })
+        let undo = keyDown("z", keyCode: kVK_ANSI_Z, in: editor.window)
+        let redo = keyDown("Z", keyCode: kVK_ANSI_Z, modifiers: [.command, .shift], in: editor.window)
+        editor.textView.setSelectedRange(NSRange(location: (source as NSString).length, length: 0))
+        editor.textView.insertText(" edit", replacementRange: editor.textView.selectedRange())
+        check("⌘Z reaches the editor through its window", editor.window.performKeyEquivalent(with: undo))
+        check("⌘Z restores exact source", editor.textView.string == source)
+        check("Undo publishes the restored source for autosave", changes == [source + " edit", source])
+        check("Undo updates the character count", counts.last == (source as NSString).length)
+        check("⌘⇧Z reaches the editor through its window", editor.window.performKeyEquivalent(with: redo))
+        check("⌘⇧Z restores the edit", editor.textView.string == source + " edit")
+        check("Redo publishes the restored edit for autosave", changes.last == source + " edit")
+        check("Redo updates the character count", counts.last == ((source + " edit") as NSString).length)
+
+        editor.coordinator.editorUndoManager.undo()
+        check("native Undo also publishes the source", changes.last == source)
+        editor.coordinator.editorUndoManager.redo()
+        check("native Redo also publishes the source", changes.last == source + " edit")
+        _ = editor.window.performKeyEquivalent(with: undo)
+        editor.textView.insertText(" new", replacementRange: editor.textView.selectedRange())
+        check("an edit after Undo discards Redo", !editor.coordinator.editorUndoManager.canRedo)
+        let updated = editor.textView.string
+        let changeCount = changes.count
+        let repeatedUndo = keyDown("z", keyCode: kVK_ANSI_Z, isARepeat: true, in: editor.window)
+        check("a held Undo shortcut is consumed", editor.window.performKeyEquivalent(with: repeatedUndo))
+        check("a held Undo shortcut does not repeat", editor.textView.string == updated)
+        for modifiers: NSEvent.ModifierFlags in [[.command, .option], [.command, .control]] {
+            let event = keyDown("z", keyCode: kVK_ANSI_Z, modifiers: modifiers, in: editor.window)
+            check("other Z chords leave history alone", !editor.textView.performKeyEquivalent(with: event))
+        }
+        editor.window.makeFirstResponder(nil)
+        check("an unfocused editor does not claim Undo", !editor.textView.performKeyEquivalent(with: undo))
+        check("unrelated shortcuts change nothing", editor.textView.string == updated && changes.count == changeCount)
+        editor.window.makeFirstResponder(editor.textView)
+        check("empty Redo is handled locally", editor.window.performKeyEquivalent(with: redo))
+        check("empty Redo changes nothing", editor.textView.string == updated && changes.count == changeCount)
+
+        editor.coordinator.update(NoteEditorInput(id: input.id, source: updated, epoch: input.epoch))
+        check("a source echo preserves Undo", editor.coordinator.editorUndoManager.canUndo)
+        _ = editor.window.performKeyEquivalent(with: undo)
+        check("Undo after a source echo still restores the note", editor.textView.string == source)
+        check("Undo after a source echo still publishes the note", changes.last == source)
+        let restoredChangeCount = changes.count
+        check("empty Undo is handled locally", editor.window.performKeyEquivalent(with: undo))
+        check("empty Undo publishes nothing", changes.count == restoredChangeCount)
+    }
+
+    private static func testUndoIsolation(afterUndo: Bool) {
         let first = NoteEditorInput(
             id: NoteID(rawValue: "First.md"),
             source: "First",
@@ -125,6 +182,10 @@ struct NotesEditorTests {
         editor.textView.setSelectedRange(NSRange(location: 5, length: 0))
         editor.textView.insertText(" edit", replacementRange: editor.textView.selectedRange())
         check("native editing registers Undo", editor.coordinator.editorUndoManager.canUndo)
+        if afterUndo {
+            editor.coordinator.editorUndoManager.undo()
+            check("native Undo registers Redo", editor.coordinator.editorUndoManager.canRedo)
+        }
 
         let second = NoteEditorInput(
             id: NoteID(rawValue: "Second.md"),
@@ -134,7 +195,9 @@ struct NotesEditorTests {
         editor.coordinator.update(second)
         check("switching notes installs the replacement source", editor.textView.string == "Second")
         check("switching notes clears stale Undo", !editor.coordinator.editorUndoManager.canUndo)
+        check("switching notes clears stale Redo", !editor.coordinator.editorUndoManager.canRedo)
         editor.coordinator.editorUndoManager.undo()
+        editor.coordinator.editorUndoManager.redo()
         check("Undo after a switch leaves the new note intact", editor.textView.string == "Second")
 
         editor.textView.setSelectedRange(NSRange(location: 6, length: 0))
@@ -144,6 +207,7 @@ struct NotesEditorTests {
         editor.coordinator.update(external)
         check("a clean external reload replaces the displayed source", editor.textView.string == "External")
         check("a clean external reload clears stale Undo", !editor.coordinator.editorUndoManager.canUndo)
+        check("a clean external reload clears stale Redo", !editor.coordinator.editorUndoManager.canRedo)
     }
 
     private static func testCharacterCountReports() {
@@ -765,12 +829,13 @@ struct NotesEditorTests {
     }
 
     private static func keyDown(
-        _ characters: String, keyCode: Int, modifiers: NSEvent.ModifierFlags = [.command], in window: NSWindow
+        _ characters: String, keyCode: Int, modifiers: NSEvent.ModifierFlags = [.command],
+        isARepeat: Bool = false, in window: NSWindow
     ) -> NSEvent {
         NSEvent.keyEvent(
             with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0,
             windowNumber: window.windowNumber, context: nil, characters: characters,
-            charactersIgnoringModifiers: characters, isARepeat: false, keyCode: UInt16(keyCode)) ?? NSEvent()
+            charactersIgnoringModifiers: characters, isARepeat: isARepeat, keyCode: UInt16(keyCode)) ?? NSEvent()
     }
 
     private static func checkboxCenter(in textView: NSTextView, lineStart: Int) -> CGPoint? {

@@ -226,6 +226,7 @@ reaches autosave.
 
 | Shortcut | Does |
 | --- | --- |
+| ⌘Z, ⇧⌘Z | undo, redo |
 | ⌘B, ⌘I, ⌘E | bold, italic, inline code |
 | ⇧⌘X | strikethrough |
 | ⌥⌘C | code block |
@@ -239,7 +240,11 @@ Digits match by key code. The text view sees these chords before `NotesPanel` cl
 collide. In a note, ⌘E replaces AppKit's Use Selection for Find.
 
 AppKit still owns typing, selection, Cut, Copy, Paste, Select All, Find, marked text, emoji, combining
-characters and undo grouping. Copy yields raw Markdown and VoiceOver reads the source. Changing the note
+characters and undo grouping. The editor handles ⌘Z and ⇧⌘Z while focused, including in the
+non-activating panel and with rendering off. Its native undo manager holds one linear history in
+memory; editing after undo discards redo. The coordinator observes undo and redo completion with
+main-actor notifications, so both reach autosave, rendering, formatting and the character count.
+Copy yields raw Markdown and VoiceOver reads the source. Changing the note
 identity or editor epoch reinstalls and restyles the string and clears the previous document's undo
 history. Snippets expand through `insertText` and are styled like typed text. The empty-note placeholder
 is drawn in the text view, so opening the find bar moves it with the editor content.
@@ -310,7 +315,8 @@ autosave, empty collections, switcher interaction, and cancellation, plus the Ma
 edit plan, the formatting each selection reports and the reveal policy.
 
 `Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects. It runs the native
-Cut/Copy/Paste, the native find bar, Unicode and marked-text cases with rendering off and on, and covers undo isolation, an
+Cut/Copy/Paste, the native find bar, Unicode and marked-text cases with rendering off and on, and covers
+undo isolation, undo and redo shortcut routing, source publication and character count, linear history,
 exact source after styling, hidden and revealed markers, restyling after edits and after undo, block
 decorations and layout fragments, list keys, chords, the task rule, checkbox toggles, link schemes,
 pasting a URL, and the formatting reports and `format(_:)` the formatting bar uses.
