@@ -91,12 +91,13 @@ When **Default action** is set to Copy to Clipboard, <kbd>return</kbd> and
 
 ## Calculator History
 
-| Key                                  | Does               |
-| ------------------------------------ | ------------------ |
-| <kbd>return</kbd>                    | Copy Answer        |
-| <kbd>⌘</kbd><kbd>return</kbd>        | Copy Expression    |
-| <kbd>⌃</kbd><kbd>X</kbd>             | Delete Entry       |
-| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> | Delete All Entries |
+| Key                                  | Does                                           |
+| ------------------------------------ | ---------------------------------------------- |
+| <kbd>return</kbd>                    | Copy Answer                                    |
+| <kbd>⌘</kbd><kbd>return</kbd>        | Copy Expression, on a past entry               |
+| <kbd>⌘</kbd><kbd>return</kbd>        | Put Answer in Search Bar, on a new calculation |
+| <kbd>⌃</kbd><kbd>X</kbd>             | Delete Entry                                   |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> | Delete All Entries                             |
 
 ## File search
 

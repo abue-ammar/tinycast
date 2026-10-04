@@ -6,6 +6,8 @@ struct CalcHistoryEntry: Identifiable, Codable, Hashable, Sendable {
     let expression: String
     let result: String
     let createdAt: Date
+
+    var copyText: String { result.replacingOccurrences(of: ",", with: "") }
 }
 
 /// A capped JSON file beside `ClipboardStore` so `brew uninstall --zap` gets it too.
@@ -76,6 +78,7 @@ final class CalculatorHistoryStore {
             entries.filter {
                 $0.expression.localizedCaseInsensitiveContains(q)
                     || $0.result.localizedCaseInsensitiveContains(q)
+                    || $0.copyText.localizedCaseInsensitiveContains(q)
             }
         }
     }

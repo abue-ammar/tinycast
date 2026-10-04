@@ -33,7 +33,8 @@ enum CalcQuantity {
             let text = value.amount == 0 ? "false" : "true"
             return CalcResult(
                 expression: expressionText(split.expressionTokens), sourceBadge: "Expression",
-                targetBadge: "Boolean", payload: .value(display: text, copyText: text))
+                targetBadge: "Boolean", payload: .value(display: text, copyText: text),
+                canChain: false)
         }
 
         if parser.usedCurrency && !parser.usedCurrencyRate {

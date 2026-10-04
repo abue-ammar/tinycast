@@ -29,12 +29,18 @@ struct CalcResult: Equatable, Sendable {
     let sourceBadge: String?
     let targetBadge: String?
     let payload: Payload
+    /// False when the copy text, typed back as a query, is not this answer: dates, times, booleans.
+    let canChain: Bool
 
-    init(expression: String, sourceBadge: String? = nil, targetBadge: String? = nil, payload: Payload) {
+    init(
+        expression: String, sourceBadge: String? = nil, targetBadge: String? = nil, payload: Payload,
+        canChain: Bool = true
+    ) {
         self.expression = expression
         self.sourceBadge = sourceBadge
         self.targetBadge = targetBadge
         self.payload = payload
+        self.canChain = canChain
     }
 
     /// True only for a copyable value; an error card has no primary action and no actions menu.
@@ -59,10 +65,14 @@ enum CalcEngine {
             return nil
         }
 
-        if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) { return dateTime }
+        if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) {
+            return unchained(dateTime)
+        }
 
         // Before tokenizing: `5pm ldn in sf` is words, which the tokenizer would reject.
-        if let zone = CalcTimeZone.evaluate(query, now: now, calendar: calendar) { return zone }
+        if let zone = CalcTimeZone.evaluate(query, now: now, calendar: calendar) {
+            return unchained(zone)
+        }
 
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
 
@@ -242,7 +252,17 @@ enum CalcEngine {
             expression: expression,
             sourceBadge: result.sourceBadge,
             targetBadge: result.targetBadge,
-            payload: result.payload)
+            payload: result.payload,
+            canChain: result.canChain)
+    }
+
+    private static func unchained(_ result: CalcResult) -> CalcResult {
+        CalcResult(
+            expression: result.expression,
+            sourceBadge: result.sourceBadge,
+            targetBadge: result.targetBadge,
+            payload: result.payload,
+            canChain: false)
     }
 
     // MARK: - Number bases

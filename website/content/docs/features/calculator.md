@@ -12,7 +12,8 @@ separate calculator mode; Tinycast works out the answer as you type.
 | Put Answer in Search Bar | <kbd>⌘</kbd><kbd>return</kbd>             |
 | Copy Calculation         | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd> |
 
-Copying the answer or putting it in the search bar also saves it to **Calculator History**.
+Copying the answer or putting it in the search bar also saves it to **Calculator History**. Only
+numbers, units and money go in the search bar; a date, a time or a true/false answer does not.
 
 A single word never shows a card. On their own, `tomorrow`, `july` and `pi` are treated as searches.
 
@@ -302,12 +303,13 @@ For anything else, it shows nothing rather than flashing an error while you're s
 isn't part of the <kbd>tab</kbd> cycle. To leave it, press <kbd>esc</kbd>, or <kbd>delete</kbd> in
 an empty search.
 
-| Action             | Shortcut                             |
-| ------------------ | ------------------------------------ |
-| Copy Answer        | <kbd>return</kbd>                    |
-| Copy Expression    | <kbd>⌘</kbd><kbd>return</kbd>        |
-| Delete Entry       | <kbd>⌃</kbd><kbd>X</kbd>             |
-| Delete All Entries | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> |
+| Action                                         | Shortcut                             |
+| ---------------------------------------------- | ------------------------------------ |
+| Copy Answer                                    | <kbd>return</kbd>                    |
+| Copy Expression, on a past entry               | <kbd>⌘</kbd><kbd>return</kbd>        |
+| Put Answer in Search Bar, on a new calculation | <kbd>⌘</kbd><kbd>return</kbd>        |
+| Delete Entry                                   | <kbd>⌃</kbd><kbd>X</kbd>             |
+| Delete All Entries                             | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> |
 
 ## Colors
 

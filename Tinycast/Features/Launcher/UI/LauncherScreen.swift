@@ -280,9 +280,8 @@ struct LauncherScreen: PaletteScreen {
         if let meeting = meeting(at: selection) {
             return MeetingActionsMenu.secondary(meeting: meeting, core: core)
         }
-        if case .calc(let result) = row(at: selection), result.isActionable {
-            core.calculatorCoordinator.putAnswerInSearchBar(result)
-            return true
+        if case .calc(let result) = row(at: selection) {
+            return core.calculatorCoordinator.putAnswerInSearchBar(result)
         }
         guard let app = entry(at: selection), app.canRevealInFinder else { return false }
         core.launcherCoordinator.showInFinder(app)

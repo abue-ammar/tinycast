@@ -77,9 +77,8 @@ struct CalculatorHistoryScreen: PaletteScreen {
 
     /// ⌘↵: the inline card's answer becomes the query; a stored entry copies its expression.
     func secondary(at selection: Int) -> Bool {
-        if case .calc(let result) = row(at: selection), result.isActionable {
-            core.calculatorCoordinator.putAnswerInSearchBar(result)
-            return true
+        if case .calc(let result) = row(at: selection) {
+            return core.calculatorCoordinator.putAnswerInSearchBar(result)
         }
         guard let entry = entry(at: selection) else { return false }
         core.calculatorCoordinator.copyHistoryExpression(entry)
