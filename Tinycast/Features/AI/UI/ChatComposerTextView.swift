@@ -6,9 +6,28 @@ struct ChatComposerTextView: NSViewRepresentable {
     @Binding var text: String
     /// A new value pulls focus into the field: a switched chat is one you are about to type into.
     let focusKey: UUID
+    let maximumTextHeight: CGFloat
     let onSubmit: () -> Void
 
     private static var font: NSFont { .preferredFont(forTextStyle: .body) }
+
+    static var lineHeight: CGFloat {
+        (font.ascender - font.descender + font.leading).rounded(.up)
+    }
+
+    static func maximumHeight(in availableHeight: CGFloat) -> CGFloat {
+        let lines = (availableHeight * Theme.Size.aiChatComposerHeightFraction / lineHeight).rounded(.down)
+        return max(1, min(Theme.Size.aiChatComposerMaxLines, lines)) * lineHeight
+    }
+
+    static func textHeight(_ text: String, width: CGFloat, maximumHeight: CGFloat) -> CGFloat {
+        let measured = (text.hasSuffix("\n") ? text + " " : text) as NSString
+        let height = measured.boundingRect(
+            with: CGSize(width: width, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font]
+        ).height.rounded(.up)
+        return min(max(lineHeight, height), maximumHeight)
+    }
 
     func makeCoordinator() -> Coordinator { Coordinator(text: $text, onSubmit: onSubmit) }
 
@@ -55,17 +74,9 @@ struct ChatComposerTextView: NSViewRepresentable {
         _ proposal: ProposedViewSize, nsView: NSScrollView, context: Context
     ) -> CGSize? {
         guard let width = proposal.width, width > 0 else { return nil }
-        let font = Self.font
-        let lineHeight = (font.ascender - font.descender + font.leading).rounded(.up)
-        // A trailing newline starts a line `boundingRect` would not count until it held a glyph.
-        let measured = (text.hasSuffix("\n") ? text + " " : text) as NSString
-        let height = measured.boundingRect(
-            with: CGSize(width: width, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading], attributes: [.font: font]
-        ).height.rounded(.up)
         return CGSize(
             width: width,
-            height: min(max(lineHeight, height), Theme.Size.aiChatComposerMaxHeight))
+            height: Self.textHeight(text, width: width, maximumHeight: maximumTextHeight))
     }
 
     @MainActor
