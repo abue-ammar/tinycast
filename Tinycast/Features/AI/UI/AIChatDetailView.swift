@@ -60,7 +60,8 @@ struct AIChatDetailView: View {
                 }
                 AIChatComposer(
                     chat: chat, coordinator: coordinator, settings: coordinator.aiSettings,
-                    maximumTextHeight: composerHeight, showsContext: $showsContext)
+                    maximumTextHeight: composerHeight, showsContext: $showsContext,
+                    isDropTargeted: $isDropTargeted)
             }
             .frame(maxWidth: Theme.Size.aiChatReadingWidth)
             .padding(.horizontal, Theme.Spacing.xxl)
@@ -125,6 +126,7 @@ private struct AIChatComposer: View {
     let settings: AISettingsStore
     let maximumTextHeight: CGFloat
     @Binding var showsContext: Bool
+    @Binding var isDropTargeted: Bool
     @State private var editor = ComposerTextViewHandle()
 
     private var canSend: Bool {
@@ -150,7 +152,9 @@ private struct AIChatComposer: View {
                 }
                 ChatComposerTextView(
                     text: $chat.draft, focusKey: chat.session.id,
-                    maximumTextHeight: maximumTextHeight, handle: editor, onSubmit: submit)
+                    maximumTextHeight: maximumTextHeight, handle: editor,
+                    isFileDragTargeted: $isDropTargeted,
+                    onDropFiles: { coordinator.attach(files: $0, to: chat) }, onSubmit: submit)
             }
             // The text's edge is the + glyph's, which sits centred in its own hover square.
             .padding(.horizontal, Theme.Spacing.sm)

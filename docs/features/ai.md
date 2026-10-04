@@ -481,7 +481,8 @@ menu's own chords, and dies with the window.
   lays it out: tokens in context of the window, input with its cached share, output with its
   thinking share and cost; then what the next message sends — model, history of budget, messages
   sent of total, staged files, and whether the system prompt, web search and tools ride along. The model and reasoning menus are this chat's, as Quick AI's header is Quick AI's. Files arrive by ⌘V, a drop anywhere on the pane, or Attach Files…, and all three take
-  the refusals a paste does. The unsent text lives on `AIChatState.draft`, so it survives closing
+  the refusals a paste does. The text field takes a file drop itself and hands it to the same
+  attach, since an `NSTextView` would otherwise type the file's path. The unsent text lives on `AIChatState.draft`, so it survives closing
   the window.
 - **The composer's mic is Dictation's, and only shown while Dictation is on.** A click runs
   `DictationCoordinator.toggle(into:)` for this field whatever the shortcut's hold-or-toggle mode or

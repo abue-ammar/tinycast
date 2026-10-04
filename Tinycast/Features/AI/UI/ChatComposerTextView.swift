@@ -8,6 +8,8 @@ struct ChatComposerTextView: NSViewRepresentable {
     let focusKey: UUID
     let maximumTextHeight: CGFloat
     let handle: ComposerTextViewHandle
+    @Binding var isFileDragTargeted: Bool
+    let onDropFiles: ([URL]) -> Void
     let onSubmit: () -> Void
 
     private static var font: NSFont { .preferredFont(forTextStyle: .body) }
@@ -59,7 +61,9 @@ struct ChatComposerTextView: NSViewRepresentable {
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         context.coordinator.text = $text
         context.coordinator.onSubmit = onSubmit
-        guard let textView = scroll.documentView as? NSTextView else { return }
+        guard let textView = scroll.documentView as? ComposerTextView else { return }
+        textView.onDropFiles = onDropFiles
+        textView.onFileDragTargeted = { [$isFileDragTargeted] in $isFileDragTargeted.wrappedValue = $0 }
         // Only an outside write lands here; echoing the view's own text back would reset the caret.
         if textView.string != text { textView.string = text }
         guard context.coordinator.focusedKey != focusKey else { return }
@@ -111,7 +115,40 @@ struct ChatComposerTextView: NSViewRepresentable {
 }
 
 /// Tinycast's own editor, so dictation, snippets and Quick Actions write into it in process.
-final class ComposerTextView: NSTextView, InjectableTextView {}
+final class ComposerTextView: NSTextView, InjectableTextView {
+    var onDropFiles: (([URL]) -> Void)?
+    var onFileDragTargeted: ((Bool) -> Void)?
+
+    /// A dropped file attaches, as on the rest of the pane, instead of the text view typing its path.
+    override func draggingEntered(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        guard carriesFiles(sender) else { return super.draggingEntered(sender) }
+        onFileDragTargeted?(true)
+        return .copy
+    }
+
+    override func draggingUpdated(_ sender: any NSDraggingInfo) -> NSDragOperation {
+        carriesFiles(sender) ? .copy : super.draggingUpdated(sender)
+    }
+
+    override func draggingExited(_ sender: (any NSDraggingInfo)?) {
+        onFileDragTargeted?(false)
+        super.draggingExited(sender)
+    }
+
+    override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let files = PasteboardFiles.urls(on: sender.draggingPasteboard)
+        guard !files.isEmpty, let onDropFiles else { return super.performDragOperation(sender) }
+        onFileDragTargeted?(false)
+        onDropFiles(files)
+        return true
+    }
+
+    private func carriesFiles(_ sender: any NSDraggingInfo) -> Bool {
+        onDropFiles != nil
+            && sender.draggingPasteboard.canReadObject(
+                forClasses: [NSURL.self], options: [.urlReadingFileURLsOnly: true])
+    }
+}
 
 /// How a control beside the field reaches the text view the representable made.
 @MainActor
