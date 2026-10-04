@@ -125,6 +125,7 @@ private struct AIChatComposer: View {
     let settings: AISettingsStore
     let maximumTextHeight: CGFloat
     @Binding var showsContext: Bool
+    @State private var editor = ComposerTextViewHandle()
 
     private var canSend: Bool {
         !chat.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -149,7 +150,7 @@ private struct AIChatComposer: View {
                 }
                 ChatComposerTextView(
                     text: $chat.draft, focusKey: chat.session.id,
-                    maximumTextHeight: maximumTextHeight, onSubmit: submit)
+                    maximumTextHeight: maximumTextHeight, handle: editor, onSubmit: submit)
             }
             // The text's edge is the + glyph's, which sits centred in its own hover square.
             .padding(.horizontal, Theme.Spacing.sm)
@@ -205,6 +206,11 @@ private struct AIChatComposer: View {
             AIReasoningPicker(chat: chat, coordinator: coordinator)
             ContextGauge(
                 report: coordinator.contextReport(for: chat, detailed: false), hovered: $showsContext)
+            if coordinator.dictation.isEnabled {
+                DictationButton(
+                    dictation: coordinator.dictation, editor: editor,
+                    onNeedsModel: coordinator.showDictationSettings)
+            }
             sendButton.padding(.leading, Theme.Spacing.sm)
         }
     }
@@ -349,6 +355,48 @@ private struct AIAddMenu: View {
         case (false, true): return "Attach PDFs or text files"
         case (false, false): return "Attach text files"
         }
+    }
+}
+
+/// Only while Dictation is on: a click starts it into this field, another click inserts the text.
+private struct DictationButton: View {
+    let dictation: DictationCoordinator
+    let editor: ComposerTextViewHandle
+    let onNeedsModel: () -> Void
+
+    var body: some View {
+        let field = dictation.field
+        let session = field?.editor == editor.textView.map(ObjectIdentifier.init) ? field : nil
+        Button {
+            guard dictation.hasModel else { return onNeedsModel() }
+            if let textView = editor.textView { dictation.toggle(into: textView) }
+        } label: {
+            Group {
+                if session?.isTranscribing == true {
+                    ProgressView().controlSize(.small)
+                } else if session != nil {
+                    ComposerSymbol(name: "waveform")
+                        .symbolEffect(.variableColor.iterative)
+                        .foregroundStyle(Color.accentColor)
+                } else {
+                    ComposerSymbol(name: "mic")
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
+            }
+            .frame(width: Theme.Size.aiChatComposerControl, height: Theme.Size.aiChatComposerControl)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .composerControl()
+        .disabled(session?.isTranscribing == true)
+        .help(help(session))
+        .accessibilityLabel(session == nil ? "Dictate" : "Stop Dictating")
+    }
+
+    private func help(_ session: DictationField?) -> String {
+        guard dictation.hasModel else { return "Download a dictation model in Settings" }
+        guard let session else { return "Dictate" }
+        return session.isTranscribing ? "Transcribing…" : "Stop and insert the text  ↵"
     }
 }
 

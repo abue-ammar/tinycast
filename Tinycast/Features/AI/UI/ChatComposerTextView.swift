@@ -7,6 +7,7 @@ struct ChatComposerTextView: NSViewRepresentable {
     /// A new value pulls focus into the field: a switched chat is one you are about to type into.
     let focusKey: UUID
     let maximumTextHeight: CGFloat
+    let handle: ComposerTextViewHandle
     let onSubmit: () -> Void
 
     private static var font: NSFont { .preferredFont(forTextStyle: .body) }
@@ -32,12 +33,13 @@ struct ChatComposerTextView: NSViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator(text: $text, onSubmit: onSubmit) }
 
     func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSTextView.scrollableTextView()
+        let scroll = ComposerTextView.scrollableTextView()
         scroll.drawsBackground = false
         scroll.borderType = .noBorder
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
-        guard let textView = scroll.documentView as? NSTextView else { return scroll }
+        guard let textView = scroll.documentView as? ComposerTextView else { return scroll }
+        handle.textView = textView
         textView.delegate = context.coordinator
         textView.drawsBackground = false
         textView.isRichText = false
@@ -106,4 +108,13 @@ struct ChatComposerTextView: NSViewRepresentable {
             return true
         }
     }
+}
+
+/// Tinycast's own editor, so dictation, snippets and Quick Actions write into it in process.
+final class ComposerTextView: NSTextView, InjectableTextView {}
+
+/// How a control beside the field reaches the text view the representable made.
+@MainActor
+final class ComposerTextViewHandle {
+    weak var textView: ComposerTextView?
 }

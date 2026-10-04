@@ -23,6 +23,8 @@ final class DictationCoordinator {
     @ObservationIgnored private var stopTask: Task<Void, Never>?
     @ObservationIgnored private var finishWhenStarted = false
     @ObservationIgnored private var target: InjectionTarget?
+    /// The field a mic button is dictating into; nil for a shortcut's session.
+    private(set) var field: DictationField?
 
     init(
         settings: AppSettings, hotKeys: HotKeyManager, models: DictationModelStore,
@@ -100,16 +102,37 @@ final class DictationCoordinator {
             return
         }
         if phase != .idle {
-            if settings.dictationMode == .toggle {
-                if phase == .starting {
-                    finishWhenStarted = true
-                } else {
-                    accept()
-                }
-            }
+            if settings.dictationMode == .toggle { finish() }
             return
         }
+        begin(target: InjectionTarget.current())
+    }
+
+    var isEnabled: Bool { settings.dictationEnabled }
+    var hasModel: Bool { models.isInstalled(settings.dictationModel) }
+
+    /// A field's own mic: click to start and click to finish, whatever the shortcut's mode or focus.
+    func toggle(into editor: any InjectableTextView) {
+        guard settings.dictationEnabled, phase != .stopping else { return }
+        guard phase == .idle else {
+            if field?.editor == ObjectIdentifier(editor) { finish() }
+            return
+        }
+        field = DictationField(editor: ObjectIdentifier(editor))
+        begin(target: .ownEditor(editor))
+    }
+
+    private func finish() {
+        if phase == .starting {
+            finishWhenStarted = true
+        } else {
+            accept()
+        }
+    }
+
+    private func begin(target: InjectionTarget?) {
         guard models.isInstalled(settings.dictationModel) else {
+            field = nil
             showMessage("Download the dictation model in Settings first", .danger)
             return
         }
@@ -117,7 +140,7 @@ final class DictationCoordinator {
         let current = token
         phase = .starting
         finishWhenStarted = false
-        target = InjectionTarget.current()
+        self.target = target
         audioDucker.begin()
         startTask = Task { [weak self] in
             guard let self else { return }
@@ -148,6 +171,7 @@ final class DictationCoordinator {
         guard phase == .listening else { return }
         phase = .transcribing
         panel.state.phase = .transcribing
+        field?.isTranscribing = true
         audioDucker.end()
         let current = token
         let model = settings.dictationModel
@@ -166,7 +190,8 @@ final class DictationCoordinator {
                     samples, model: model,
                     language: language)
                 guard token == current else { return }
-                let destination = settings.dictationDestination
+                // A mic belongs to its field: the text goes in there, never to the clipboard.
+                let destination = field == nil ? settings.dictationDestination : .paste
                 let context = destination.pastes ? DictationInsertionContext.read(in: target) : nil
                 let text = DictationTextFormatter.format(
                     transcript, context: context,
@@ -227,7 +252,14 @@ final class DictationCoordinator {
         transcriptionTask = nil
         phase = .idle
         target = nil
+        field = nil
         panel.close()
         audioDucker.end()
     }
+}
+
+/// Which editor a mic session belongs to, so only that field's button shows it running.
+struct DictationField: Equatable {
+    let editor: ObjectIdentifier
+    var isTranscribing = false
 }
