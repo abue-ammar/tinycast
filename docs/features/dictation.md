@@ -31,6 +31,9 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
   Escape cancels. Opening a shortcut recorder cancels a held recording before pausing its shortcuts.
   A session token
   prevents a cancelled or superseded transcription from inserting text later.
+- AI Chat's composer mic is always click-to-toggle into that field: `toggle(into:)` targets its
+  `ComposerTextView` in process whatever has focus, `field` tells only that button it is running, and
+  its transcript is inserted whatever the destination setting, never copied.
 - The nonactivating panel preserves the target app. Text insertion reuses `TextInjector`, including
   its temporary clipboard ownership, focus, secure-input and protected-target checks. Copy-only
   writes the plain transcript without reading the caret; paste-and-copy writes the persistent copy

@@ -274,8 +274,9 @@ not report completion and therefore cannot show it.
 
 There are two delivery tiers, and the target picks which one runs.
 
-`InjectionTarget.ownEditor` is one of our own views — today only `NoteTextView`, which opts in by
-adopting `InjectableTextView`. It is written in process with `insertText(_:replacementRange:)`:
+`InjectionTarget.ownEditor` is one of our own views — `NoteTextView` and AI Chat's
+`ComposerTextView`, which opt in by adopting `InjectableTextView`. It is written in process with
+`insertText(_:replacementRange:)`:
 undoable in the editor's own `UndoManager`, and needing no Accessibility grant, no pasteboard lease,
 no app activation and no event posting. Rules 1, 3 and 4 below do not apply — our own storage is
 authoritative, so there is nothing to sniff for and nothing to read back.
