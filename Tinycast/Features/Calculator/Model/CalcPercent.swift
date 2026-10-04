@@ -34,13 +34,15 @@ enum CalcPercent {
     }
 
     private static func card(
-        _ query: String, _ payload: CalcResult.Payload, target: String = "Result"
+        _ query: String, _ payload: CalcResult.Payload, target: String = "Result",
+        canChain: Bool = true
     ) -> CalcResult {
         CalcResult(
             expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
             sourceBadge: "Expression",
             targetBadge: target,
-            payload: payload)
+            payload: payload,
+            canChain: canChain)
     }
 
     /// The tip alone, not the total: it is the number the phrase asks for.
@@ -93,7 +95,7 @@ enum CalcPercent {
         let divisor = greatestCommonDivisor(abs(a), abs(b))
         guard divisor > 0 else { return nil }
         let text = "\(CalcFormatter.display(a / divisor)) : \(CalcFormatter.display(b / divisor))"
-        return card(query, .value(display: text, copyText: text), target: "Ratio")
+        return card(query, .value(display: text, copyText: text), target: "Ratio", canChain: false)
     }
 
     private static func greatestCommonDivisor(_ a: Double, _ b: Double) -> Double {

@@ -1734,7 +1734,10 @@ struct CalcTests {
         ] {
             check(query + " [chains]", expected: "true", got: chains(evaluate(query)))
         }
-        for query in ["now + 90 min", "now + 90 min +", "time in Tokyo", "3pm London in Tokyo", "5 > 3"] {
+        for query in [
+            "now + 90 min", "now + 90 min +", "time in Tokyo", "3pm London in Tokyo", "5 > 3",
+            "ratio of 1920 to 1080"
+        ] {
             check(query + " [chains]", expected: "false", got: chains(evaluate(query)))
         }
         check(
