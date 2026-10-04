@@ -30,7 +30,7 @@ Shortcuts follow key positions, so they work the same on any keyboard layout or 
 | Key                                                 | Does                                    |
 | --------------------------------------------------- | --------------------------------------- |
 | <kbd>return</kbd>                                   | Open                                    |
-| <kbd>⌘</kbd><kbd>return</kbd>                       | Show in Finder                          |
+| <kbd>⌘</kbd><kbd>return</kbd>                       | Show in Finder (app, setting, snippet)  |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd>                | Add to / Remove from Favorites          |
 | <kbd>⌥</kbd><kbd>⌘</kbd><kbd>↑</kbd> / <kbd>↓</kbd> | Move a favorite up or down              |
 | <kbd>⌘</kbd><kbd>1</kbd> … <kbd>⌘</kbd><kbd>0</kbd> | Open favorite 1 to 10                   |
