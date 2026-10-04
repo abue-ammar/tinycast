@@ -6,12 +6,13 @@ description: Math, units, live currency and crypto rates, dates and time zones, 
 Type a calculation into the launcher and the answer appears on a card above the results. There's no
 separate calculator mode; Tinycast works out the answer as you type.
 
-| Action           | Shortcut                                  |
-| ---------------- | ----------------------------------------- |
-| Copy Answer      | <kbd>return</kbd>                         |
-| Copy Calculation | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd> |
+| Action                   | Shortcut                                  |
+| ------------------------ | ----------------------------------------- |
+| Copy Answer              | <kbd>return</kbd>                         |
+| Put Answer in Search Bar | <kbd>⌘</kbd><kbd>return</kbd>             |
+| Copy Calculation         | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd> |
 
-Copying the answer also saves it to **Calculator History**.
+Copying the answer or putting it in the search bar also saves it to **Calculator History**.
 
 A single word never shows a card. On their own, `tomorrow`, `july` and `pi` are treated as searches.
 

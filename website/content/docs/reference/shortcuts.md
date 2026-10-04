@@ -37,6 +37,7 @@ Shortcuts follow key positions, so they work the same on any keyboard layout or 
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>H</kbd>                | Hide from Search                        |
 | <kbd>⌘</kbd><kbd>R</kbd>                            | Restart Application (running apps only) |
 | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd>                | Quit Application (running apps only)    |
+| <kbd>⌘</kbd><kbd>return</kbd>                       | Put Answer in Search Bar (calculator)   |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd>           | Copy Calculation, on a calculator card  |
 
 ## AI Chat

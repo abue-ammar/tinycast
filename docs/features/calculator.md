@@ -605,7 +605,8 @@ Date answers that display and copy identically also reuse their formatted text.
 
 When the launcher or Calculator History query evaluates to a result the card is pinned at the top of
 the list (flat selection index 0, shifting rows by one) and Enter copies the answer + records it to
-`CalculatorHistoryStore`.
+`CalculatorHistoryStore`. ⌘↵ records it too, then `PaletteState.rewriteQuery` makes the answer the
+query with the caret after it, so the next step chains on.
 
 ## Number format
 

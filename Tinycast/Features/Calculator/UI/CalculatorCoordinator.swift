@@ -38,6 +38,13 @@ final class CalculatorCoordinator {
         Paster.copyPlainText(format.localized(copyText))
     }
 
+    /// `⌘↵` on the card: the answer becomes the query, so the next step chains onto it.
+    func putAnswerInSearchBar(_ result: CalcResult) {
+        guard case .value(let display, let copyText) = result.payload else { return }
+        calcHistory.record(expression: result.expression, result: display)
+        core.palette.rewriteQuery(format.localized(copyText))
+    }
+
     /// `⇧⌘↵` on the card: the whole calculation, for pasting into a note or a message.
     func copyCalculationWithExpression(_ result: CalcResult) {
         guard case .value(let display, let copyText) = result.payload else { return }

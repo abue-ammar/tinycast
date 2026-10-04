@@ -36,6 +36,10 @@ final class PalettePanel: NSPanel {
         fieldEditor?.selectAll(nil)
     }
 
+    func moveFieldEditorCaretToEnd() {
+        fieldEditor?.moveToEndOfDocument(nil)
+    }
+
     /// Nil while a selection can still collapse normally, or when the caret is not at an edge.
     private func headerFieldBoundary(for event: NSEvent) -> HeaderFieldBoundary? {
         guard event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),

@@ -275,10 +275,14 @@ struct LauncherScreen: PaletteScreen {
         }
     }
 
-    /// ⌘↵ — a meeting copies its link; otherwise only an entry on disk has somewhere to be revealed.
+    /// ⌘↵ — a meeting copies its link, an answer becomes the query, an entry on disk is revealed.
     func secondary(at selection: Int) -> Bool {
         if let meeting = meeting(at: selection) {
             return MeetingActionsMenu.secondary(meeting: meeting, core: core)
+        }
+        if case .calc(let result) = row(at: selection), result.isActionable {
+            core.calculatorCoordinator.putAnswerInSearchBar(result)
+            return true
         }
         guard let app = entry(at: selection), app.canRevealInFinder else { return false }
         core.launcherCoordinator.showInFinder(app)
