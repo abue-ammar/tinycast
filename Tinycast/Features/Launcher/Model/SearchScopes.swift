@@ -62,7 +62,7 @@ enum SearchScopes {
         else { return [] }
 
         var result: [URL] = []
-        for item in items {
+        for item in newestFirst(items) {
             if item.pathExtension == "app" {
                 result.append(contentsOf: withEmbedded(item))
             } else if subfolderDepth > 0,
@@ -72,6 +72,31 @@ enum SearchScopes {
             }
         }
         return result
+    }
+
+    /// The scan keeps a bundle ID's first copy, so a folder lists its newest version first.
+    private static func newestFirst(_ items: [URL]) -> [URL] {
+        items
+            .map { (url: $0, version: shortVersion(of: $0)) }
+            .sorted { lhs, rhs in
+                let byVersion = lhs.version.compare(rhs.version, options: .numeric)
+                if byVersion != .orderedSame { return byVersion == .orderedDescending }
+                // A tie falls back to Finder's order, so the filesystem never picks the winner.
+                return displayName(of: lhs.url).localizedStandardCompare(displayName(of: rhs.url))
+                    == .orderedAscending
+            }
+            .map(\.url)
+    }
+
+    /// Empty when unreadable, which `.numeric` ranks below every real version.
+    private static func shortVersion(of url: URL) -> String {
+        guard url.pathExtension == "app" else { return "" }
+        return Bundle(url: url)?.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+    }
+
+    /// Without `.app`, so `Xcode` sorts before `Xcode-beta` rather than after it.
+    private static func displayName(of url: URL) -> String {
+        url.deletingPathExtension().lastPathComponent
     }
 
     private static func withEmbedded(_ app: URL) -> [URL] {

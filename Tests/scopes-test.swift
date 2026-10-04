@@ -22,6 +22,15 @@ struct ScopesTest {
             try? fm.createDirectory(at: url, withIntermediateDirectories: true)
         }
 
+        func makeApp(_ url: URL, version: String) {
+            let contents = url.appendingPathComponent("Contents")
+            makeDir(contents)
+            let plist = ["CFBundleIdentifier": "com.example.app", "CFBundleShortVersionString": version]
+            let data = try? PropertyListSerialization.data(
+                fromPropertyList: plist, format: .xml, options: 0)
+            try? data?.write(to: contents.appendingPathComponent("Info.plist"))
+        }
+
         // Two direct apps, a non-app file, a hidden app, one nested app, one two-deep nested app.
         let apps = root.appendingPathComponent("Apps")
         makeDir(apps.appendingPathComponent("Alpha.app"))
@@ -70,6 +79,44 @@ struct ScopesTest {
         check(
             "an .app scope also yields its embedded apps",
             Set(SearchScopes.appBundles(in: [xcode.path]).map(\.lastPathComponent)) == embedded)
+
+        func listing(_ folder: String, versions: [String: String]) -> [String] {
+            let url = root.appendingPathComponent(folder)
+            for (name, version) in versions {
+                makeApp(url.appendingPathComponent(name), version: version)
+            }
+            return SearchScopes.appBundles(in: [url.path]).map(\.lastPathComponent)
+        }
+
+        // Mirrored names, so no fixed filesystem order can pass both checks by luck.
+        check(
+            "a folder lists its newest version first, compared as numbers",
+            listing("Rising", versions: ["A.app": "9.4", "B.app": "26.6", "C.app": "27.0"])
+                == ["C.app", "B.app", "A.app"])
+        check(
+            "the newest version leads whatever its name",
+            listing("Falling", versions: ["A.app": "27.0", "B.app": "26.6", "C.app": "9.4"])
+                == ["A.app", "B.app", "C.app"])
+
+        check(
+            "equal versions fall back to Finder's name order",
+            listing("Ties", versions: ["Xcode-beta.app": "26.0", "Xcode.app": "26.0"])
+                == ["Xcode.app", "Xcode-beta.app"])
+
+        let unreadable = root.appendingPathComponent("Unreadable")
+        makeDir(unreadable.appendingPathComponent("Aardvark.app"))
+        makeApp(unreadable.appendingPathComponent("Zebra.app"), version: "1.0")
+        check(
+            "a bundle with no version sorts after one that has a version",
+            SearchScopes.appBundles(in: [unreadable.path]).map(\.lastPathComponent)
+                == ["Zebra.app", "Aardvark.app"])
+
+        check(
+            "an earlier scope still wins over a newer version in a later one",
+            SearchScopes.appBundles(in: [
+                root.appendingPathComponent("Rising/A.app").path,
+                root.appendingPathComponent("Rising").path
+            ]).map(\.lastPathComponent).first == "A.app")
 
         check(
             "scopes are scanned in order",
