@@ -146,6 +146,8 @@ enum CalcUnits {
         // Data transfer rate
         "Mbps": ("kbps", false), "Gbps": ("mbps", false), "Kbps": ("bps", false),
         "bps": ("kbps", false), "Tbps": ("gbps", false),
+        "Bps": ("bps", false), "kBps": ("kbps", false), "MBps": ("mbps", false),
+        "GBps": ("gbps", false), "TBps": ("tbps", false),
         "Wh": ("kwh", false), "mWh": ("wh", false), "kWh": ("wh", false), "MWh": ("kwh", false),
         "W": ("kw", false), "mW": ("w", false), "kW": ("w", false), "MW": ("kw", false),
         "A": ("ma", false), "mA": ("a", false), "µA": ("ma", false), "MA": ("a", false),

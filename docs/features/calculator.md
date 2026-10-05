@@ -77,8 +77,8 @@ When a trailing operator keeps a conversion visible, its input is reconstructed 
 display rounding never feeds back into evaluation.
 
 `UnitDef` is an immutable, Sendable reference shared by its aliases and parsed values. The catalog
-stores 152 base definitions as compact text records rather than repeated construction code, then adds
-SI and transfer-rate prefixes once on first use, for 685 aliases. `CalcUnitCatalog` owns this data;
+stores base definitions as compact text records rather than repeated construction code, then adds
+SI and transfer-rate prefixes once on first use. `CalcUnitCatalog` owns this data;
 `CalcUnits` owns conversion policy.
 
 Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a duration,
@@ -650,7 +650,9 @@ English path is byte-for-byte what it was.
 
 ## Additional units and transfer rates
 
-`MB/s` means megabytes per second; `Mbps` means megabits per second.
+`MB/s` and `MBps` mean megabytes per second; `Mbps` means megabits per second.
+The uppercase `B` distinguishes byte rates (`Bps`, `kBps` / `KBps`, `MBps`, `GBps`, `TBps`) from bits.
+`500 Mbps in MBps` gives `62.5 MBps`; bare byte rates auto-convert to the matching bit rate.
 `100Mbps to MB/s` gives `12.5 MB/s`, and `1GB / 10MB/s to s` gives `100 s`.
 Binary rates such as `MiB/s` and bit amounts such as `kbit` also work.
 SI prefixes expand for meters, grams, seconds, hertz, newtons, joules, watts and pascals,
