@@ -98,9 +98,11 @@ final class CameraPanel: NSPanel {
         let pointer = NSEvent.mouseLocation
         let number = NSWindow.windowNumber(at: pointer, belowWindowWithWindowNumber: 0)
         guard number > 0,
-            let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, CGWindowID(number))
+            let info = CGWindowListCopyWindowInfo(
+                [.optionOnScreenAboveWindow, .optionIncludingWindow], CGWindowID(number))
                 as? [[String: Any]],
-            let layer = info.first?[kCGWindowLayer as String] as? Int
+            let window = info.first(where: { ($0[kCGWindowNumber as String] as? Int) == number }),
+            let layer = window[kCGWindowLayer as String] as? Int
         else { return false }
         return layer >= Int(CGWindowLevelForKey(.dockWindow))
     }
