@@ -9,6 +9,14 @@ enum ClipDragPayload: Equatable, Sendable {
 }
 
 extension ClipboardItem {
+    /// The resolved HTTP/HTTPS URL when the entry is a link.
+    var webURL: URL? {
+        guard textForm == .link, let text else { return nil }
+        guard case .web(let url) = QuicklinkDestination.detect(text) else { return nil }
+        guard url.scheme == "http" || url.scheme == "https" else { return nil }
+        return url
+    }
+
     /// `textForm` stays the one answer to a link, so the drag and the type filter cannot disagree.
     var dragPayload: ClipDragPayload {
         if let path = imagePath ?? filePath { return .file(URL(fileURLWithPath: path)) }

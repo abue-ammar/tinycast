@@ -165,6 +165,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         // Drop the multi-MB preview bitmaps, so idle RAM returns near baseline.
         ImageThumbnail.purgePreviews()
         FilePreviewThumbnail.purgePreviews()
+        LinkOGImageStore.purgePreviews()
         IconCache.purgeFitted()
         schedulePopToRoot()
         guard restoreFocus else { return }

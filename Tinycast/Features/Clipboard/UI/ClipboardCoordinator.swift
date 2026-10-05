@@ -210,6 +210,48 @@ final class ClipboardCoordinator {
         core.showMessage("Copied path")
     }
 
+    /// Copies the extracted Open Graph or page title for a link clip.
+    func copyLinkTitle(for item: ClipboardItem) {
+        guard let url = item.webURL else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        if let title = LinkOGImageStore.cachedMetadata(url)?.title, !title.isEmpty {
+            Paster.copyPlainText(title)
+            core.showMessage("Copied title")
+            return
+        }
+        core.showProgress("Reading title…")
+        Task {
+            let metadata = await LinkOGImageStore.loadMetadataAsync(url)
+            guard let title = metadata?.title, !title.isEmpty else {
+                core.showMessage("No title found", tone: .neutral)
+                return
+            }
+            Paster.copyPlainText(title)
+            core.showMessage("Copied title")
+        }
+    }
+
+    /// Copies the extracted Open Graph or page description for a link clip.
+    func copyLinkDescription(for item: ClipboardItem) {
+        guard let url = item.webURL else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        if let desc = LinkOGImageStore.cachedMetadata(url)?.description, !desc.isEmpty {
+            Paster.copyPlainText(desc)
+            core.showMessage("Copied description")
+            return
+        }
+        core.showProgress("Reading description…")
+        Task {
+            let metadata = await LinkOGImageStore.loadMetadataAsync(url)
+            guard let desc = metadata?.description, !desc.isEmpty else {
+                core.showMessage("No description found", tone: .neutral)
+                return
+            }
+            Paster.copyPlainText(desc)
+            core.showMessage("Copied description")
+        }
+    }
+
     /// ⇧⌘T / “Copy Text” — OCRs the image in the bundled helper and copies what it reads.
     func copyImageText(_ item: ClipboardItem) {
         guard let path = item.imagePath ?? item.filePath else { return }

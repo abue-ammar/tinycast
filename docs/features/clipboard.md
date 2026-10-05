@@ -33,6 +33,9 @@
   *classifier* stays a code change rather than a database migration plus a backfill, while a new
   kind needs a new pasteboard type to justify it. `textForm` is nil for anything but `.text`, which
   is what keeps a path shaped like `apple.com/report.pdf` out of the links.
+- **Link Open Graph images are fetched on demand and never stored in the database.** `LinkOGImageStore`
+  fetches on demand over a private `.ephemeral` session and caches to `~/Library/Caches/<bundle-id>/LinkOGImages/`
+  plus an in-memory `ThumbnailCache`. Palette dismissal purges decoded preview bitmaps.
 - **A `.file` entry references the file where it lies and never copies it.** Its absolute path is
   the `text` column, so the trigram index finds it by name or by folder for free, and `imagePath`
   stays nil — which is what keeps `prune`, `deleteBlob` and `owns` from ever reaching a file
@@ -322,6 +325,35 @@ costs nothing — no colour notation is also an expression.
 `ColorCard` is built from the calculator card's own parts — `LeadCardColumn` and
 `.leadCard(selected:)` — so a lead card can't change height or hover with its kind. Its swatch is
 **stretched to the value column rather than sized**, since no notation has a fixed height.
+
+## Link previews and Open Graph images
+
+Selecting or hovering a link entry fetches its Open Graph image and page metadata on demand. They are
+never fetched at capture time, never preloaded for the whole list, and never persisted in `clipboard.sqlite3`.
+
+`LinkMetadataParser` (`Model/`, Foundation-only) extracts preview image URL, page title, and description
+from HTML without AppKit or WebKit. It prioritizes Open Graph tags (`og:image`, `og:title`, `og:description`),
+falls back to Twitter Cards (`twitter:image`, `twitter:title`, `twitter:description`) and standard HTML head tags
+(`<title>`, `<meta name="title">`, `<meta name="description">`), and resolves root-relative, path-relative,
+and protocol-relative URLs against the document's base URL. Entity encoding in query strings and text bodies
+is normalized, and direct image links (`.png`, `.jpg`, `.webp`, `.gif`) bypass HTML parsing entirely.
+
+`LinkOGImageStore` fetches on an ephemeral `URLSession` with no `URLCache` and caches downloads and metadata
+to `~/Library/Caches/<bundle-id>/LinkOGImages/`, keyed by the SHA-256 hash of the link URL (`.img` for raw image
+data, `.json` for decoded `LinkMetadata`). Decoded bitmaps are stored in a shared `ThumbnailCache`, and
+`LinkOGImageStore.purgePreviews()` drops large preview bitmaps when the palette closes beside `ImageThumbnail`
+and `FilePreviewThumbnail`.
+
+In the preview pane, `LinkPreviewStage` renders the OG preview image in full container width with
+`.aspectRatio(contentMode: .fill)`, capped at `clipboardMediaHeight` and clipped with rounded corners so it
+never forces the palette taller. The extracted URL, page title, and description render in the Information
+section below the stage.
+
+Link entries provide **Copy Title** and **Copy Description** in the ⌘K Actions menu.
+`ClipboardCoordinator.copyLinkTitle(for:)` and `copyLinkDescription(for:)` copy instantly from memory cache if
+already resolved, or load asynchronously with a progress HUD if invoked while cold. While a cold image fetches,
+a full-width placeholder card indicates progress without blocking URL selection; missing metadata cleanly omits
+the empty fields.
 
 ## Pinned entries
 

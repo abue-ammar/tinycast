@@ -153,6 +153,7 @@ run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swif
 Q=Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift
 run clipboard-search-test  Tinycast/Features/Clipboard/Model/*.swift $Q
 run paste-sequence-test    Tinycast/Features/Clipboard/Model/*.swift $Q
+run link-metadata-test     Tinycast/Features/Clipboard/Model/*.swift $Q
 run clipboard-text-test    Tinycast/Features/Clipboard/Model/*.swift $Q \
                            Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift \

@@ -230,6 +230,21 @@ enum ClipboardActionsMenu {
                     core.clipboardCoordinator.copyClipPath(item)
                 })
         }
+        if item.textForm == .link {
+            items.append(
+                PopoverMenuItem(
+                    title: "Copy Title", systemImage: "doc.on.clipboard",
+                    startsSection: true
+                ) {
+                    core.clipboardCoordinator.copyLinkTitle(for: item)
+                })
+            items.append(
+                PopoverMenuItem(
+                    title: "Copy Description", systemImage: "doc.on.clipboard"
+                ) {
+                    core.clipboardCoordinator.copyLinkDescription(for: item)
+                })
+        }
         items.append(
             PopoverMenuItem(
                 title: "Delete Entry", systemImage: "trash", startsSection: true, shortcut: "⌃X",

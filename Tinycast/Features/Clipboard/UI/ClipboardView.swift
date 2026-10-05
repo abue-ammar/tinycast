@@ -62,7 +62,8 @@ struct ClipboardList: View {
                         case .item(let item, let slot):
                             ClipboardRow(
                                 item: item, selected: item.id == selectedID,
-                                imageURL: store.imageURL(for: item), slot: slot
+                                imageURL: store.imageURL(for: item), slot: slot,
+                                onHoverSelect: { onSelect(item) }
                             )
                             .selectionFrame(item.id == selectedID)
                             .contentShape(Rectangle())
@@ -132,6 +133,7 @@ private struct ClipboardRow: View {
     let imageURL: URL?
     /// This row's ⌘-digit, or nil when it is not among the first ten visible pins.
     let slot: Character?
+    let onHoverSelect: () -> Void
     @Environment(PaletteState.self) private var palette
     @State private var hovered = false
 
@@ -166,6 +168,11 @@ private struct ClipboardRow: View {
                 .fill(fill)
         )
         .armedHover($hovered)
+        .onHover { isHovered in
+            if isHovered, palette.hoverHighlightArmed, !selected {
+                onHoverSelect()
+            }
+        }
     }
 
     private var previewText: String {
@@ -190,6 +197,19 @@ private struct ClipboardRow: View {
             if let color {
                 ColorSwatch(color: color)
                     .frame(width: artworkSize, height: artworkSize)
+            } else if item.textForm == .link {
+                if let url = item.webURL, let image = LinkOGImageStore.cached(url, maxPixel: 64) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: artworkSize, height: artworkSize)
+                        .clipShape(
+                            RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous))
+                } else {
+                    Image(nsImage: IconCache.symbolIcon(named: "link")).resizable()
+                }
+            } else if item.textForm == .email {
+                Image(nsImage: IconCache.symbolIcon(named: "at")).resizable()
             } else {
                 Image(nsImage: IconCache.symbolIcon(named: "doc.text")).resizable()
             }
@@ -292,12 +312,25 @@ struct ClipboardPreview: View {
 
     var body: some View {
         if let item {
-            VStack(alignment: .leading, spacing: 0) {
-                content(for: item)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                ClipboardInfoSection(item: item, imageURL: store.imageURL(for: item))
+            if item.textForm == .link {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        content(for: item)
+                            .frame(maxWidth: .infinity, alignment: .top)
+                        ClipboardInfoSection(item: item, imageURL: store.imageURL(for: item))
+                    }
+                    .padding(.bottom, metrics.spacing.md)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .padding(.horizontal, 12)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    content(for: item)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    ClipboardInfoSection(item: item, imageURL: store.imageURL(for: item))
+                }
+                .padding(.horizontal, 12)
             }
-            .padding(.horizontal, 12)
         } else {
             Color.clear
         }
@@ -309,6 +342,8 @@ struct ClipboardPreview: View {
         case .text:
             if let color = item.colorValue {
                 ColorPreview(color: color, text: item.text ?? "")
+            } else if item.textForm == .link, let text = item.text {
+                LinkPreviewStage(text: text)
             } else {
                 ScrollView {
                     Text(item.text ?? "")
@@ -346,7 +381,18 @@ private struct ClipboardInfoSection: View {
     let item: ClipboardItem
     let imageURL: URL?
 
-    @State private var details = Details()
+    @State private var details: Details
+
+    init(item: ClipboardItem, imageURL: URL?) {
+        self.item = item
+        self.imageURL = imageURL
+        var initial = Details()
+        if let webURL = item.webURL, let cached = LinkOGImageStore.cachedMetadata(webURL) {
+            initial.linkTitle = cached.title
+            initial.linkDescription = cached.description
+        }
+        _details = State(initialValue: initial)
+    }
 
     private struct Details: Equatable, Sendable {
         var characters: Int?
@@ -354,12 +400,16 @@ private struct ClipboardInfoSection: View {
         var pixelSize: CGSize?
         var fileBytes: Int?
         var typeName: String?
+        var linkTitle: String?
+        var linkDescription: String?
     }
 
     private struct InfoRow: Identifiable {
         let label: String
         let value: String
         var icon: NSImage?
+        var lineLimit: Int = 1
+        var truncationMode: Text.TruncationMode = .middle
         var id: String { label }
     }
 
@@ -381,7 +431,7 @@ private struct ClipboardInfoSection: View {
                 let rows = self.rows
                 ForEach(rows) { row in
                     if row.id != rows.first?.id { Divider() }
-                    HStack(spacing: metrics.spacing.sm) {
+                    HStack(alignment: .top, spacing: metrics.spacing.sm) {
                         Text(row.label).foregroundStyle(.secondary)
                         Spacer(minLength: metrics.spacing.lg)
                         if let icon = row.icon {
@@ -389,7 +439,10 @@ private struct ClipboardInfoSection: View {
                                 .resizable()
                                 .frame(width: 20, height: 20)
                         }
-                        Text(row.value).lineLimit(1).truncationMode(.middle)
+                        Text(row.value)
+                            .lineLimit(row.lineLimit)
+                            .truncationMode(row.truncationMode)
+                            .multilineTextAlignment(.trailing)
                     }
                     .font(.callout)
                     .padding(.vertical, metrics.spacing.sm)
@@ -408,10 +461,26 @@ private struct ClipboardInfoSection: View {
         switch item.kind {
         case .text:
             // What the entry *is*, which is what the type filter files it under.
-            let isColor = item.colorValue != nil
-            rows.append(InfoRow(label: "Type", value: isColor ? "Color" : "Text"))
-            // A colour's own notations are the pane above; its length is not what you came for.
-            if !isColor {
+            let typeTitle: String = {
+                switch item.textForm {
+                case .color: return "Color"
+                case .link: return "Link"
+                case .email: return "Email"
+                case .plain, nil: return "Text"
+                }
+            }()
+            rows.append(InfoRow(label: "Type", value: typeTitle))
+            if item.textForm == .link {
+                if let urlText = item.text {
+                    rows.append(InfoRow(label: "URL", value: urlText, lineLimit: 1, truncationMode: .middle))
+                }
+                if let title = details.linkTitle, !title.isEmpty {
+                    rows.append(InfoRow(label: "Title", value: title, lineLimit: 2, truncationMode: .tail))
+                }
+                if let desc = details.linkDescription, !desc.isEmpty {
+                    rows.append(InfoRow(label: "Description", value: desc, lineLimit: 3, truncationMode: .tail))
+                }
+            } else if item.textForm != .color {
                 if let characters = details.characters {
                     rows.append(InfoRow(label: "Characters", value: characters.formatted()))
                 }
@@ -462,7 +531,12 @@ private struct ClipboardInfoSection: View {
         let text = item.kind == .text ? item.text : nil
         let url = imageURL
         let filePath = item.filePath
-        details = await Task.detached(priority: .userInitiated) {
+        let webURL = item.webURL
+        if let webURL, let cached = LinkOGImageStore.cachedMetadata(webURL) {
+            details.linkTitle = cached.title
+            details.linkDescription = cached.description
+        }
+        var loaded = await Task.detached(priority: .userInitiated) {
             var details = Details()
             if let text {
                 details.characters = text.count
@@ -480,6 +554,17 @@ private struct ClipboardInfoSection: View {
             }
             return details
         }.value
+        if let webURL {
+            if let cached = LinkOGImageStore.cachedMetadata(webURL) {
+                loaded.linkTitle = cached.title
+                loaded.linkDescription = cached.description
+            } else {
+                let meta = await LinkOGImageStore.loadMetadataAsync(webURL)
+                loaded.linkTitle = meta?.title
+                loaded.linkDescription = meta?.description
+            }
+        }
+        details = loaded
     }
 
     /// Single pass: `split(whereSeparator:)` allocates per word, which a multi-MB copy feels.
