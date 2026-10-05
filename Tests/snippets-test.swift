@@ -1366,15 +1366,20 @@ struct SnippetsTests {
                 in: "{argument name=\"Repo\"}/{argument name=\"Branch\"}?q={argument name=\"Repo\"}"
             ).map(\.name) == ["Repo", "Branch"])
         check(
-            "an argument that answers itself is never asked for",
+            "an argument with a default is still offered, but optional",
             SnippetTemplateEngine.declaredArguments(
-                in: "{argument name=\"Tone\" default=\"happy\"}"
-            ).isEmpty)
+                in: "{argument name=\"Tone\" default=\"happy\"}")
+                == [.init(name: "Tone", options: [], isOptional: true)])
+        check(
+            "an occurrence without a default leaves the argument owed",
+            SnippetTemplateEngine.declaredArguments(
+                in: "{argument name=\"Tone\" default=\"happy\"}/{argument name=\"Tone\"}")
+                == [.init(name: "Tone", options: [], isOptional: false)])
         check(
             "options travel with a declared argument as they do with a missing one",
             SnippetTemplateEngine.declaredArguments(
                 in: "{argument name=\"Tone\" options=\"happy, sad\"}")
-                == [.init(name: "Tone", options: ["happy", "sad"])])
+                == [.init(name: "Tone", options: ["happy", "sad"], isOptional: false)])
         check(
             "a template that reads only the clipboard declares no arguments",
             SnippetTemplateEngine.declaredArguments(in: "https://x.dev/?q={clipboard}").isEmpty)

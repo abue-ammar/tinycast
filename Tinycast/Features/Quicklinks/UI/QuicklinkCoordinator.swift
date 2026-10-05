@@ -111,25 +111,22 @@ final class QuicklinkCoordinator {
         performQuicklinkOpen(quicklink, link: expansion.text, forcingDefaultApp: forcesDefault)
     }
 
-    /// The fallback row's query, which fills the first `{argument}` the link declares.
+    /// The fallback row's query, which fills the first `{argument}` the link still owes.
     func openQuicklink(id: UUID, filling seed: String) {
-        guard let quicklink = store.quicklink(id: id),
-            let first = SnippetTemplateEngine.declaredArguments(in: quicklink.link).first
-        else { return openQuicklink(id: id) }
-        openQuicklink(id: id, values: [first.name: seed])
+        guard let quicklink = store.quicklink(id: id) else { return }
+        let arguments = SnippetTemplateEngine.declaredArguments(in: quicklink.link)
+        guard let target = arguments.first(where: { !$0.isOptional }) ?? arguments.first else {
+            return openQuicklink(id: id)
+        }
+        openQuicklink(id: id, values: [target.name: seed])
     }
 
-    /// `{selection}` promoted to a field when unreadable and the setting says ask.
-    static let selectionArgument = SnippetTemplateEngine.MissingArgument(
-        name: "Selected Text", options: [])
-
-    /// Left empty, "Selected Text" still resolves at open, so it never holds ↵ or earns a red edge.
-    static func requiresValue(_ argument: SnippetTemplateEngine.MissingArgument) -> Bool {
-        argument.name != selectionArgument.name
-    }
+    /// `{selection}` promoted to a field when unreadable; left empty, it still resolves at open.
+    static let selectionArgument = SnippetTemplateEngine.DeclaredArgument(
+        name: "Selected Text", options: [], isOptional: true)
 
     /// The header fields a row shows: the link's own arguments, plus the one the setting asks for.
-    func promptedArguments(for quicklink: Quicklink) -> [SnippetTemplateEngine.MissingArgument] {
+    func promptedArguments(for quicklink: Quicklink) -> [SnippetTemplateEngine.DeclaredArgument] {
         var arguments = SnippetTemplateEngine.declaredArguments(in: quicklink.link)
         // Asked for up front rather than after a failed read: a chip cannot capture a selection.
         if settings.quicklinkSelectionFallback == .ask,

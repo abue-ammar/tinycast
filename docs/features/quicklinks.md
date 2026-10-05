@@ -100,7 +100,9 @@ answer means.
 `promptedArguments(for:)` is the one place that decides: the `{argument}`s the link declares, read
 straight off the template by `SnippetTemplateEngine.declaredArguments(in:)` — a pure parse, so nothing
 is expanded and no clipboard is read to draw a chip — plus the synthetic **"Selected Text"** field when
-the setting says ask. An argument with a `default=` answers itself and is never asked for.
+the setting says ask. An argument with a `default=` is still offered, as an optional chip: left
+empty, the default fills it, so a default is a starting value rather than a fixed one. It stays owed
+if any occurrence of that name lacks a `default=`, because expansion falls back per occurrence.
 `QuicklinkArgumentsAccessory` turns that list into the strip; a field declaring `options=` is chosen
 from the palette's own menu rather than typed. **A chip marks nothing up front.** It draws like every
 other field until the caret has been in it and left it empty, and only then takes a red edge — a row
@@ -112,8 +114,9 @@ where the field stays a filter with its prompt intact and the row below already 
 **"Selected Text" is asked for up front, not after a failed read.** A chip cannot capture a selection,
 so the field appears whenever the link reads `{selection}` and the setting is `.ask`. Left empty it
 changes nothing — a selection the frontmost app *does* expose is still used — and only a typed value
-replaces it. So it is never owed: `QuicklinkCoordinator.requiresValue` keeps it out of the first
-incomplete field, and ↵ opens a selected-text link at once instead of focusing the empty chip first. That is the one behavioural difference from the two-screen form it replaced, and it is
+replaces it. So it is never owed: `QuicklinkCoordinator.selectionArgument` is optional, which keeps it
+out of the first incomplete field, and ↵ opens a selected-text link at once instead of focusing the
+empty chip first. That is the one behavioural difference from the two-screen form it replaced, and it is
 what lets the strip be drawn without capturing anything.
 
 `openQuicklink(id:forcingDefaultApp:values:)` is the single funnel, and it captures the expansion
@@ -132,9 +135,10 @@ app" override survives that trip on `pendingDefaultAppOverride`, keyed by the qu
 
 **A launcher fallback fills the first argument.** Declaring a placeholder is exactly what puts a
 quicklink in the `Use “…” with…` section (see [launcher.md](launcher.md#fallbacks));
-`openQuicklink(id:filling:)` assigns the query to the first declared argument and opens at once when
-that was the only one owed. It is never the "Selected Text" field: that one is not an `{argument}` and
-is resolved by replacing the context, so seeding it there would expand to nothing.
+`openQuicklink(id:filling:)` assigns the query to the first argument still owed — the first declared
+one when every argument has a default — and opens at once when that was the only one owed. It is
+never the "Selected Text" field: that one is not an `{argument}` and is resolved by replacing the
+context, so seeding it there would expand to nothing.
 
 When a template reads the selection and the app in front exposes nothing readable, **Settings →
 Quicklinks** decides what happens: substitute the clipboard, or ask for it through the chip above.

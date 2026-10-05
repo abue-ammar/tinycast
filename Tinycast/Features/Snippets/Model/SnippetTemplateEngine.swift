@@ -68,6 +68,13 @@ enum SnippetTemplateEngine {
         let options: [String]
     }
 
+    /// An `{argument}` a form asks for; an optional one still resolves when left empty.
+    struct DeclaredArgument: Sendable, Equatable {
+        let name: String
+        let options: [String]
+        let isOptional: Bool
+    }
+
     struct ExpansionResult: Sendable, Equatable {
         let text: String
         let cursorOffsetFromEnd: Int?
@@ -121,17 +128,17 @@ enum SnippetTemplateEngine {
     }
 
     /// The `{argument}`s a template declares, in written order — what a form has to ask for.
-    /// One with a `default=` answers itself, so it is not among them, exactly as expansion decides.
-    static func declaredArguments(in text: String) -> [MissingArgument] {
-        var declared: [MissingArgument] = []
-        var seen = Set<String>()
-        for segment in parseSegments(text) {
-            guard case .argument(let token, _, _) = segment, token.defaultValue == nil,
-                seen.insert(token.name).inserted
-            else { continue }
-            declared.append(MissingArgument(name: token.name, options: token.options))
+    static func declaredArguments(in text: String) -> [DeclaredArgument] {
+        let tokens = parseSegments(text).compactMap { segment -> ArgumentToken? in
+            guard case .argument(let token, _, _) = segment else { return nil }
+            return token
         }
-        return declared
+        // Expansion falls back per occurrence, so one without a `default=` leaves the field owed.
+        let owed = Set(tokens.filter { $0.defaultValue == nil }.map(\.name))
+        var seen = Set<String>()
+        return tokens.filter { seen.insert($0.name).inserted }.map {
+            DeclaredArgument(name: $0.name, options: $0.options, isOptional: !owed.contains($0.name))
+        }
     }
 
     /// Whether the template reads the selection. Parsed, so a literal brace run doesn't count.

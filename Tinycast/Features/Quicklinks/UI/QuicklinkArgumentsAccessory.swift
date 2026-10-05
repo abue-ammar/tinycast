@@ -17,8 +17,7 @@ enum QuicklinkArgumentsAccessory {
         let metrics = core.settings.interfaceSize.metrics
         let arguments = core.quicklinkCoordinator.promptedArguments(for: quicklink).map {
             InlineArgument(
-                id: $0.name, title: $0.name, options: $0.options,
-                isOptional: !QuicklinkCoordinator.requiresValue($0))
+                id: $0.name, title: $0.name, options: $0.options, isOptional: $0.isOptional)
         }
         guard !arguments.isEmpty else { return nil }
 
