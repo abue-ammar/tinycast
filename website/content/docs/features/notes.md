@@ -129,8 +129,10 @@ edit the note that's _open in Tinycast_ in another app, that edit is lost at the
 <kbd>⌘</kbd><kbd>O</kbd> makes this easy to do by accident. It's the tradeoff for storing notes as
 plain files instead of in a database.
 
-All _other_ changes made outside Tinycast are picked up, because Tinycast reads the folder again each
-time it shows the window. Notes you add or edit elsewhere appear as expected.
+When you reopen the window, Tinycast reads the folder again and reloads the active note if it has no
+unsaved changes. Notes you add or edit elsewhere appear as expected. An unsaved draft is kept,
+including after a failed save. Reloading changed contents clears that note's undo history; reopening
+unchanged contents keeps it.
 
 When you quit, Tinycast waits for the last save to finish, but it never stops the app from quitting.
 

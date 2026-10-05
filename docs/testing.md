@@ -588,6 +588,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Command-Q does nothing anywhere; with Settings in front, Command-W closes Settings
 - Hiding restores the previous external app or Tinycast window
 - Open Notes Folder opens Finder with the active Markdown file selected, or the folder with no note
+- Hide a saved checklist, reset its boxes in another editor, and reopen: the boxes match the file
+- Reopen an unchanged note: Undo still works; an external content change starts fresh history
+- Remove the active file while hidden: reopening selects a remaining note or shows the empty state
 - Deleting every note closes the browse list and leaves one clean empty state with no character count;
   Command-N from there creates and selects one note
 - The browse list fades only at its bottom edge and rests opaque once it reaches the end

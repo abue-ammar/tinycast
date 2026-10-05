@@ -17,6 +17,9 @@ struct NotesTests {
         testSwitcherInteraction()
         testWindowPlacement()
         try await testStoreCollectionAndAutosave()
+        try await testStoreRefreshesExternalEdits()
+        try await testStoreRefreshPreservesDrafts()
+        try await testStoreRefreshRecoversFromFailures()
         try await testCollectionMutationsFlushTheDraft()
         try await testStoreRecoversFromFailures()
         try await testStoreRelocates()
@@ -357,6 +360,161 @@ struct NotesTests {
         let recreated = await store.create()
         check("creating restores an active note", recreated && store.activeID != nil)
         store.stop()
+    }
+
+    private static func testStoreRefreshesExternalEdits() async throws {
+        let root = temporaryRoot("external-edits")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = try repository(in: root)
+        let selection = SelectionBox()
+        let store = NotesStore(
+            repository: repository, saveSelection: { selection.id = $0 })
+        defer { store.stop() }
+
+        _ = await store.create()
+        let activeID = try require(store.activeID)
+        let activeURL = repository.fileURL(for: activeID)
+        let unchecked = "- [ ] First task\n- [ ] Second task\n"
+        store.updateSource("- [x] First task\n- [x] Second task\n")
+        _ = await store.flush()
+        let epoch = store.editorEpoch
+        let modifiedAt = try activeURL.resourceValues(forKeys: [.contentModificationDateKey])
+            .contentModificationDate
+        try unchecked.write(to: activeURL, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes(
+            [.modificationDate: try require(modifiedAt)], ofItemAtPath: activeURL.path)
+
+        let refreshed = await store.start()
+        check(
+            "reopening reloads externally reset checkboxes even with an unchanged modification date",
+            refreshed && store.activeID == activeID && store.source == unchecked && !store.isDirty)
+        check("an external edit resets the editor history", store.editorEpoch == epoch + 1)
+
+        let refreshedEpoch = store.editorEpoch
+        let unchanged = await store.start()
+        check(
+            "reopening unchanged contents preserves editor history",
+            unchanged && store.source == unchecked && store.editorEpoch == refreshedEpoch)
+
+        let other = try repository.create(title: "Other")
+        try repository.save(id: other.id, source: "Another note")
+        _ = await store.start()
+        check(
+            "externally added notes appear without replacing the active note or its history",
+            store.summaries.contains { $0.id == other.id }
+                && store.activeID == activeID && store.editorEpoch == refreshedEpoch)
+
+        let externalText = "# Updated elsewhere\n🧑🏽‍💻 Plain text\n"
+        try externalText.write(to: activeURL, atomically: true, encoding: .utf8)
+        _ = await store.start()
+        check(
+            "external text edits refresh both the source and the derived title",
+            store.source == externalText && store.activeTitle == "Updated elsewhere")
+
+        try FileManager.default.removeItem(at: activeURL)
+        _ = await store.start()
+        check(
+            "an externally deleted active note selects a remaining note",
+            store.activeID == other.id && store.source == "Another note" && selection.id == other.id)
+
+        try FileManager.default.removeItem(at: repository.fileURL(for: other.id))
+        _ = await store.start()
+        check(
+            "deleting the last note externally clears the editor and persisted selection",
+            store.summaries.isEmpty && store.activeID == nil && store.source.isEmpty && selection.id == nil)
+        let emptyEpoch = store.editorEpoch
+        _ = await store.start()
+        check("reopening an empty collection leaves the editor alone", store.editorEpoch == emptyEpoch)
+    }
+
+    private static func testStoreRefreshPreservesDrafts() async throws {
+        let root = temporaryRoot("refresh-draft")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = try repository(in: root)
+        let store = NotesStore(repository: repository)
+        defer { store.stop() }
+        _ = await store.create()
+        let activeID = try require(store.activeID)
+        let epoch = store.editorEpoch
+
+        store.updateSource("Unsaved draft")
+        store.stop()
+        let reopened = await store.start()
+        check(
+            "refreshing the collection preserves an unsaved draft and its history",
+            reopened && store.source == "Unsaved draft" && store.isDirty && store.editorEpoch == epoch)
+        let flushed = await store.flush()
+        let savedSource = try repository.load(activeID).source
+        check(
+            "the preserved draft still saves to its original note",
+            flushed && savedSource == "Unsaved draft")
+
+        store.updateSource("Draft being saved")
+        async let save = store.flush()
+        async let refresh = store.start()
+        let completed = await [save, refresh]
+        check(
+            "reopening during a save preserves the saved draft and editor history",
+            completed.allSatisfy { $0 } && !store.isDirty
+                && store.source == "Draft being saved" && store.editorEpoch == epoch)
+        check(
+            "reopening during a save leaves the file consistent with the editor",
+            try repository.load(activeID).source == store.source)
+    }
+
+    private static func testStoreRefreshRecoversFromFailures() async throws {
+        let root = temporaryRoot("refresh-recovery")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = try repository(in: root)
+        let store = NotesStore(repository: repository)
+        defer { store.stop() }
+        _ = await store.create()
+        let activeID = try require(store.activeID)
+        let activeURL = repository.fileURL(for: activeID)
+        store.updateSource("Saved draft")
+        _ = await store.flush()
+        let epoch = store.editorEpoch
+        var loadFailures = 0
+        store.onIssue = { issue in
+            if case .load = issue { loadFailures += 1 }
+        }
+
+        try Data([0xFF]).write(to: activeURL, options: .atomic)
+        let unreadable = await store.start()
+        check(
+            "an unreadable external edit reports a load failure and retains the previous contents",
+            !unreadable && loadFailures == 1 && store.source == "Saved draft" && store.editorEpoch == epoch)
+        try "Repaired externally".write(to: activeURL, atomically: true, encoding: .utf8)
+        let repaired = await store.start()
+        check("reopening retries a failed external reload", repaired && store.source == "Repaired externally")
+
+        try "Cancelled external edit".write(to: activeURL, atomically: true, encoding: .utf8)
+        let repairedEpoch = store.editorEpoch
+        let cancelledRefresh = Task { await store.start() }
+        cancelledRefresh.cancel()
+        let cancelled = await cancelledRefresh.value
+        check(
+            "a cancelled refresh leaves the current note and its history intact",
+            !cancelled && store.source == "Repaired externally" && store.editorEpoch == repairedEpoch)
+
+        store.updateSource("Draft after a failed save")
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: repository.notesDirectory.path)
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: repository.notesDirectory.path)
+        }
+        let failedSave = await store.flush()
+        let failedEpoch = store.editorEpoch
+        let reopened = await store.start()
+        check(
+            "reopening preserves a draft whose save failed",
+            !failedSave && reopened && store.isDirty
+                && store.source == "Draft after a failed save" && store.editorEpoch == failedEpoch)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: repository.notesDirectory.path)
+        let retried = await store.retrySave()
+        let retriedSource = try repository.load(activeID).source
+        check(
+            "the retained draft can still be saved after reopening",
+            retried && retriedSource == "Draft after a failed save")
     }
 
     private static func testCollectionMutationsFlushTheDraft() async throws {

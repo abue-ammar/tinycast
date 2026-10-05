@@ -42,6 +42,7 @@ final class NotesStore {
     /// A folder change that waits on a draft the old folder could not take yet.
     @ObservationIgnored private var pendingRelocation: NotesRepository?
     private var searchGeneration = 0
+    @ObservationIgnored private var sourceRevision = 0
 
     init(
         repository: NotesRepository,
@@ -60,14 +61,9 @@ final class NotesStore {
         searchWorker?.cancel()
     }
 
-    /// Re-lists on every show — ⌘O makes the folder the user's — but never re-reads the live draft.
     func start() async -> Bool {
-        guard isLoaded else { return await reload(preferredID: loadSelection()) }
-        let repository = repository
-        let result = await detached({ try repository.list() }, recover: { repository.notesDirectory })
-        guard repository.notesDirectory == notesDirectory else { return true }
-        if case .success(let summaries) = result { self.summaries = summaries }
-        return true
+        if let saveTask { await saveTask.value }
+        return await reload()
     }
 
     /// Moves to another folder once the open draft is saved where it was, then the new one lists.
@@ -94,6 +90,7 @@ final class NotesStore {
     func updateSource(_ updated: String) {
         guard activeID != nil, updated != source else { return }
         source = updated
+        sourceRevision &+= 1
         isDirty = true
         saveFailed = false
         scheduleSave()
@@ -308,16 +305,29 @@ final class NotesStore {
 
     private func reload(preferredID: NoteID?) async -> Bool {
         let repository = repository
+        let selectedID = activeID
+        let epoch = editorEpoch
+        let revision = sourceRevision
+        let reloadSource = !isDirty
         let result = await detached {
-            try repository.load(preferredID: preferredID)
+            if reloadSource { return try repository.load(preferredID: preferredID) }
+            return (try repository.list(), nil)
         } recover: {
             repository.notesDirectory
         }
-        // A relocation while this ran owns the editor now, and loads it itself.
-        guard repository.notesDirectory == notesDirectory else { return true }
+        guard !Task.isCancelled else { return false }
+        guard repository.notesDirectory == notesDirectory, selectedID == activeID,
+            epoch == editorEpoch, revision == sourceRevision
+        else { return true }
         switch result {
-        case .success(let payload):
-            apply(payload.1, summaries: payload.0)
+        case .success(let (summaries, document)):
+            if reloadSource, !isDirty, saveTask == nil,
+                !isLoaded || document?.id != activeID || (document?.source ?? "") != source
+            {
+                apply(document, summaries: summaries)
+            } else {
+                self.summaries = summaries
+            }
             return true
         case .failure(let failure):
             publish(.load(failure))
