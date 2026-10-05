@@ -8,6 +8,8 @@ final class SettingsFileRepository {
 
     private let fileURL: URL
     private let bindings: [SettingsFileBinding]
+    /// Runs once every binding has written, for a change that spans keys.
+    private let commit: () -> [SettingsFileIssue]
     private let monitor: SettingsFileMonitor
     /// The bytes last read or written, so the monitor's echo of a save is not taken for an edit.
     private var lastSeen: Data?
@@ -17,9 +19,13 @@ final class SettingsFileRepository {
 
     private static let saveDelay = Duration.milliseconds(300)
 
-    init(fileURL: URL, bindings: [SettingsFileBinding]) {
+    init(
+        fileURL: URL, bindings: [SettingsFileBinding],
+        commit: @escaping () -> [SettingsFileIssue] = { [] }
+    ) {
         self.fileURL = fileURL
         self.bindings = bindings
+        self.commit = commit
         monitor = SettingsFileMonitor(fileURL: fileURL)
     }
 
@@ -73,7 +79,7 @@ final class SettingsFileRepository {
     private func apply(_ values: [SettingsFileKey: SettingsFileJSON]) -> [SettingsFileIssue] {
         bindings.flatMap { binding in
             values[binding.key].map(binding.write) ?? []
-        }
+        } + commit()
     }
 
     // MARK: - Writing

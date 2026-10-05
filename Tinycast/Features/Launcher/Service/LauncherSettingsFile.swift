@@ -27,7 +27,7 @@ final class LauncherSettingsFile {
     private let aliases: AliasStore
     private let visibility: VisibilityStore
     private let shortcuts: HotKeySettingsFile
-    /// Records for a bundle this Mac lacks: written back as read, so a shared file keeps them.
+    /// Records for a bundle Settings doesn't list: written back as read, so a shared file keeps them.
     private var waiting: [SettingsFileKey: (bundle: Bundle, records: [String: Record])] = [:]
 
     init(
@@ -78,18 +78,19 @@ final class LauncherSettingsFile {
             })
     }
 
-    /// Applies each waiting record whose bundle has since been installed.
+    /// Applies each waiting record whose bundle a scan has since found.
     func applyInstalled() -> [SettingsFileIssue] {
         var issues: [SettingsFileIssue] = []
         for (key, held) in waiting {
-            let ready = held.records.filter { isInstalled($0.key, held.bundle) }
+            let known = knownBundleIDs(held.bundle)
+            let ready = held.records.filter { known.contains($0.key) }
             guard !ready.isEmpty else { continue }
             let rest = held.records.filter { ready[$0.key] == nil }
             waiting[key] = rest.isEmpty ? nil : (held.bundle, rest)
             let items = ready.keys.sorted().map { item($0, held.bundle) }
             issues += apply(ready, to: items, noun: held.bundle.noun, key: key)
         }
-        return issues
+        return issues + shortcuts.commit()
     }
 
     // MARK: - Bindings
@@ -101,11 +102,13 @@ final class LauncherSettingsFile {
             key,
             read: { [self] in LauncherFileFormat.json(customized(items)) },
             write: { [self] json in
-                guard let decoded = LauncherFileFormat.records(from: json) else {
-                    return [.invalidValue(key)]
+                let byName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0) })
+                let spelling = shortcuts.spelling
+                let read = LauncherFileFormat.records(from: json) { name in
+                    byName[name].map { record(of: $0, spelling) } ?? Record()
                 }
-                let known = Set(items.map(\.name))
-                let unknown = decoded.records.keys.filter { !known.contains($0) }.sorted().map {
+                guard let decoded = read else { return [.invalidValue(key)] }
+                let unknown = decoded.records.keys.filter { byName[$0] == nil }.sorted().map {
                     SettingsFileIssue.invalidEntry(key, "no \(noun) in this section is called “\($0)”")
                 }
                 return decoded.problems.map { .invalidEntry(key, $0) } + unknown
@@ -117,22 +120,26 @@ final class LauncherSettingsFile {
         SettingsFileBinding(
             key,
             read: { [self] in
-                let live = customized(liveItems(bundle))
+                let live = customized(knownBundleIDs(bundle).map { item($0, bundle) })
                 let liveNames = Set(live.map(\.name))
                 let held = (waiting[key]?.records ?? [:]).filter { !liveNames.contains($0.key) }
                 let records = live + held.map { (name: $0.key, record: $0.value) }
                 return LauncherFileFormat.json(records.sorted { $0.name < $1.name })
             },
             write: { [self] json in
-                guard let decoded = LauncherFileFormat.records(from: json) else {
-                    return [.invalidValue(key)]
+                let spelling = shortcuts.spelling
+                let read = LauncherFileFormat.records(from: json) { name in
+                    record(of: item(name, bundle), spelling)
                 }
-                let present = decoded.records.filter { isInstalled($0.key, bundle) }
+                guard let decoded = read else { return [.invalidValue(key)] }
+                let known = knownBundleIDs(bundle)
+                let present = decoded.records.filter { known.contains($0.key) }
                 let absent = decoded.records.filter { present[$0.key] == nil }
                 waiting[key] = absent.isEmpty ? nil : (bundle, absent)
-                let names = Set(customized(liveItems(bundle)).map(\.name)).union(present.keys)
+                let live = customized(known.map { item($0, bundle) }).map(\.name)
+                let items = Set(live).union(present.keys).sorted().map { item($0, bundle) }
                 return decoded.problems.map { .invalidEntry(key, $0) }
-                    + apply(present, to: names.sorted().map { item($0, bundle) }, noun: bundle.noun, key: key)
+                    + apply(present, to: items, noun: bundle.noun, key: key)
             })
     }
 
@@ -142,31 +149,28 @@ final class LauncherSettingsFile {
         Item(name: bundleID, preferenceKey: bundleID, action: bundle.action(bundleID))
     }
 
-    /// Bound ones too, since an app outside the search scopes keeps its shortcut.
-    private func liveItems(_ bundle: Bundle) -> [Item] {
+    /// What Settings lists, plus a bound app outside the search scopes, which keeps its shortcut.
+    private func knownBundleIDs(_ bundle: Bundle) -> Set<String> {
         let hotKeys = shortcuts.hotKeys
         var bundleIDs = Set(bundle == .app ? hotKeys.boundBundleIDs : hotKeys.boundPaneBundleIDs)
         for entry in appIndex.apps where entry.kind == bundle.kind {
             if let bundleID = entry.bundleID { bundleIDs.insert(bundleID) }
         }
-        return bundleIDs.map { item($0, bundle) }
+        return bundleIDs
     }
 
-    private func isInstalled(_ bundleID: String, _ bundle: Bundle) -> Bool {
-        switch bundle {
-        case .app: !appIndex.isUninstalled(bundleID: bundleID)
-        case .pane: appIndex.apps.contains { $0.kind == .systemSettings && $0.bundleID == bundleID }
-        }
+    private func record(of item: Item, _ spelling: HotKeySpelling) -> Record {
+        Record(
+            shortcut: item.action.flatMap { shortcuts.text(for: $0, spelling) },
+            alias: aliases.alias(for: item.preferenceKey),
+            showInLauncher: visibility.isItemVisible(key: item.preferenceKey))
     }
 
     /// Only an item with something set, so the file lists what was customized.
     private func customized(_ items: [Item]) -> [(name: String, record: Record)] {
         let spelling = shortcuts.spelling
         return items.compactMap { item in
-            let record = Record(
-                shortcut: item.action.flatMap { shortcuts.text(for: $0, spelling) },
-                alias: aliases.alias(for: item.preferenceKey),
-                showInLauncher: visibility.isItemVisible(key: item.preferenceKey))
+            let record = self.record(of: item, spelling)
             return record.isEmpty ? nil : (item.name, record)
         }
     }

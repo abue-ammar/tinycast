@@ -20,7 +20,8 @@ in `Features/Settings/` (`Model/`, `Service/`, `SettingsFileSchema.swift`), the 
   is bound to a property.
 - **A bad edit never costs a setting.** A key the file leaves out keeps its value; a value Tinycast
   can't use keeps the current one and is reported; an unknown key is reported and ignored; invalid JSON
-  applies nothing. An invalid record in a list is skipped and reported, and the rest still apply.
+  applies nothing. An invalid record in a list is skipped and reported, and the rest still apply. A
+  record's field left out or of the wrong type keeps its value, and `null` clears it.
 - **Applying the file never writes it.** Only a change made in the app rewrites the file, so hand
   formatting stays until then.
 - **Content and machine state never enter it.** Notes, snippets, custom commands, quicklinks, MCP
@@ -135,6 +136,10 @@ plus key. Keyless bindings are `left|right ctrl|option|shift|cmd`, their `double
 `double-tap ctrl|option|shift|cmd`, `globe` and `double-tap globe`. The
 recorder's rule holds: a chord needs ⌘, ⌥, ⌃ or fn unless its key is an F-key.
 
+Every key clears the bindings it changes before any is set, and `HotKeySettingsFile.commit` sets them
+once all keys have applied, so a chord the file moves — even between sections — never collides with
+where it was. A chord another action still holds is reported, and the old binding stays.
+
 ## Launcher items
 
 Each pane that lists items writes the ones with something set, as records keyed by ID:
@@ -147,9 +152,10 @@ in `commands.builtIn` — by their ID after `command:`. App Launcher and Dictati
 "clipboard-history": { "shortcut": "cmd+shift+v", "alias": "ch", "showInLauncher": true }
 ```
 
-- **A record left out has no shortcut, no alias, and is shown**; a field left out reads the same way.
-- **An app or pane this Mac lacks waits.** Its record is not applied, is written back as read so a
-  dotfile shared between Macs keeps it, and applies after the scan that finds it installed.
+- **A record left out has no shortcut, no alias, and is shown.**
+- **An app or pane Settings doesn't list waits** — not installed here, or outside the search scopes.
+  Its record is not applied, is written back as read so a dotfile shared between Macs keeps it, and
+  applies after the scan that finds it.
 - `applications.enabled`, `systemSettings.enabled`, `systemActions.enabled` and
   `commands.builtInEnabled` are each pane's category switch; `commands.enabled` stays custom commands'.
 
@@ -164,7 +170,6 @@ in `commands.builtIn` — by their ID after `command:`. App Launcher and Dictati
   app's `width` and `height` are fractions of its display, in full precision.
 - A room's window numbers and when it was last entered stay out of the file, and survive an edit to
   the room: `Room.keepingRuntime(of:)` returns a number only to a window of the same app.
-- A shortcut the file sets that another action already holds is reported, and the old one stays.
 
 ## Adding a setting
 

@@ -834,7 +834,8 @@ final class AppCore {
                 shortcuts: shortcuts, launcher: launcher,
                 windowManagement: WindowManagementSettingsFile(
                     sizes: customWindowSizes, layouts: windowLayouts, rooms: rooms, aliases: aliases,
-                    shortcuts: shortcuts)))
+                    shortcuts: shortcuts)),
+            commit: shortcuts.commit)
         file.onIssues = { [weak self] issues in self?.reportSettingsFileIssues(issues) }
         settingsFile = file
         launcherSettingsFile = launcher

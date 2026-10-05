@@ -26,10 +26,11 @@ struct WindowManagementSettingsFile {
                 guard let decoded = WindowManagementFileFormat.commandShortcuts(from: json) else {
                     return [.invalidValue(key)]
                 }
-                let wanted = WindowCommand.ID.allCases.map { id in
-                    HotKeySettingsFile.Wanted(
-                        action: .windowCommand(id: id), text: decoded.texts[id],
-                        label: "“\(id.rawValue)”")
+                let wanted = WindowCommand.ID.allCases.compactMap { id in
+                    decoded.texts[id].map { text in
+                        HotKeySettingsFile.Wanted(
+                            action: .windowCommand(id: id), text: text, label: "“\(id.rawValue)”")
+                    }
                 }
                 return decoded.problems.map { .invalidEntry(key, $0) }
                     + shortcuts.apply(wanted, key: key)
@@ -51,7 +52,8 @@ struct WindowManagementSettingsFile {
                     return [.invalidValue(key)]
                 }
                 for command in WindowCommandCatalog.all {
-                    aliases.setAlias(decoded.texts[command.id] ?? "", for: command.entryID)
+                    guard let alias = decoded.texts[command.id] else { continue }
+                    aliases.setAlias(alias ?? "", for: command.entryID)
                 }
                 return decoded.problems.map { .invalidEntry(key, $0) }
             })
@@ -169,7 +171,7 @@ struct WindowManagementSettingsFile {
         return issues
     }
 
-    /// A record the file dropped takes its shortcut and alias with it; the rest follow their record.
+    /// A record the file dropped takes its shortcut and alias with it; the rest take what it set.
     private func follow<Value>(
         _ decoded: WindowManagementFileFormat.Decoded<Value>, records: [Record],
         previous: Set<String>, bound: [UUID], kind: String, action: (UUID) -> HotKeyAction,
@@ -181,12 +183,14 @@ struct WindowManagementSettingsFile {
         }
         aliases.removeKeys(previous.subtracting(records.map(\.entryID)))
         for record in records {
-            aliases.setAlias(decoded.aliases[record.id] ?? "", for: record.entryID)
+            guard let alias = decoded.aliases[record.id] else { continue }
+            aliases.setAlias(alias ?? "", for: record.entryID)
         }
-        let wanted = records.map { record in
-            HotKeySettingsFile.Wanted(
-                action: action(record.id), text: decoded.shortcuts[record.id],
-                label: "\(kind) “\(record.name)”")
+        let wanted = records.compactMap { record in
+            decoded.shortcuts[record.id].map { text in
+                HotKeySettingsFile.Wanted(
+                    action: action(record.id), text: text, label: "\(kind) “\(record.name)”")
+            }
         }
         return shortcuts.apply(wanted, key: key)
     }

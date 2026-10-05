@@ -14,6 +14,7 @@ struct SettingsFileTest {
         testFormat()
         testParseIssues()
         try await testRepository()
+        try testCommit()
         try testReplace()
         try testUnreadable()
         try testSymlink()
@@ -259,6 +260,26 @@ struct SettingsFileTest {
         try await Task.sleep(for: .milliseconds(50))
         synced.flush()
         check("flush writes a pending change at once", contents(of: url).contains(#""ABC""#))
+    }
+
+    private static func testCommit() throws {
+        let folder = scratchFolder()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let url = folder.appending(path: "settings.json")
+        try write(#"{"general": {"showInMenuBar": false}}"#, to: url)
+
+        let fixture = Fixture()
+        var shownAtCommit: Bool?
+        let moved = SettingsFileIssue.invalidEntry(.showInMenuBar, "moved")
+        let repository = SettingsFileRepository(fileURL: url, bindings: bindings(fixture)) {
+            shownAtCommit = fixture.shows
+            return [moved]
+        }
+        var reported: [[SettingsFileIssue]] = []
+        repository.onIssues = { reported.append($0) }
+        repository.start(importing: true)
+        check("commit runs once every key has applied", shownAtCommit == false)
+        check("and what it reports joins the file's issues", reported == [[moved]])
     }
 
     private static func testReplace() throws {

@@ -29,7 +29,7 @@ struct LauncherFileTest {
             json["com.example.hidden"]?.members?.map(\.key) == ["shortcut", "alias", "showInLauncher"]
                 && json["com.example.hidden"]?["shortcut"] == .null)
 
-        let decoded = LauncherFileFormat.records(from: json)
+        let decoded = LauncherFileFormat.records(from: json) { _ in Record() }
         check(
             "the records read back",
             decoded?.records == ["com.apple.Safari": safari, "com.example.hidden": hidden])
@@ -40,19 +40,24 @@ struct LauncherFileTest {
     }
 
     private static func testHandEdits() {
+        let current = Record(shortcut: "hyper+l", alias: "old", showInLauncher: false)
         let decoded = LauncherFileFormat.records(
             from: .object([
                 "lock-screen": .object(["alias": "lock"]),
-                "sleep": .object(["shortcut": 5, "showInLauncher": "no"]),
+                "sleep": .object(["shortcut": 5, "alias": true, "showInLauncher": "no"]),
+                "log-out": .object(["shortcut": .null, "alias": .null, "showInLauncher": true]),
                 "restart": "cmd+r"
-            ]))
+            ])) { _ in current }
         check(
-            "a field left out reads as none, or as shown",
-            decoded?.records["lock-screen"] == Record(shortcut: nil, alias: "lock", showInLauncher: true))
-        check("a wrong type keeps the default", decoded?.records["sleep"] == Record())
+            "a field left out keeps its value",
+            decoded?.records["lock-screen"]
+                == Record(shortcut: "hyper+l", alias: "lock", showInLauncher: false))
+        check("a field of the wrong type keeps its value", decoded?.records["sleep"] == current)
+        check("null clears", decoded?.records["log-out"] == Record())
         check("a record that isn't an object is skipped", decoded?.records["restart"] == nil)
-        check("each mistake is reported", decoded?.problems.count == 3)
-        check("a list is not an object", LauncherFileFormat.records(from: .array([])) == nil)
+        check("each mistake is reported", decoded?.problems.count == 4)
+        let list = LauncherFileFormat.records(from: .array([])) { _ in Record() }
+        check("a list is not an object", list == nil)
     }
 
     private static func check(_ description: String, _ condition: @autoclosure () -> Bool) {

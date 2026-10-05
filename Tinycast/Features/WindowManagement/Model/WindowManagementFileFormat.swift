@@ -3,15 +3,15 @@ import Foundation
 
 /// Window management's lists as settings.json spells them, each record with its shortcut and alias.
 enum WindowManagementFileFormat {
-    /// Text by command — a chord or an alias — and what the object had to skip.
-    typealias CommandTexts = (texts: [WindowCommand.ID: String], problems: [String])
+    /// Every command's chord or alias, nil for none; one of the wrong type has no entry and keeps its own.
+    typealias CommandTexts = (texts: [WindowCommand.ID: String?], problems: [String])
 
     /// A list read back from the file: the records it could use, and what it had to skip.
     struct Decoded<Record> {
         var records: [Record] = []
-        /// Chord text by record, left for the caller to parse against this Mac's keyboard.
-        var shortcuts: [UUID: String] = [:]
-        var aliases: [UUID: String] = [:]
+        /// By record, nil for `null`; a field left out or of the wrong type has none, and keeps its value.
+        var shortcuts: [UUID: String?] = [:]
+        var aliases: [UUID: String?] = [:]
         var problems: [String] = []
     }
 
@@ -46,7 +46,7 @@ enum WindowManagementFileFormat {
 
     private static func commandTexts(from json: SettingsFileJSON, noun: String) -> CommandTexts? {
         guard let members = json.members else { return nil }
-        var texts: [WindowCommand.ID: String] = [:]
+        var texts = Dictionary(uniqueKeysWithValues: WindowCommand.ID.allCases.map { ($0, String?.none) })
         var problems: [String] = []
         for member in members {
             guard let id = WindowCommand.ID(rawValue: member.key) else {
@@ -56,7 +56,9 @@ enum WindowManagementFileFormat {
             switch member.value {
             case .null: continue
             case .string(let text): texts[id] = text
-            default: problems.append("“\(member.key)” needs \(noun) in quotes, or null")
+            default:
+                texts.removeValue(forKey: id)
+                problems.append("“\(member.key)” needs \(noun) in quotes, or null")
             }
         }
         return (texts, problems)
@@ -333,12 +335,13 @@ enum WindowManagementFileFormat {
     private static func texts<Record>(
         of item: SettingsFileJSON, id: UUID, label: String, into decoded: inout Decoded<Record>
     ) {
-        let fields: KeyValuePairs<String, WritableKeyPath<Decoded<Record>, [UUID: String]>> = [
+        let fields: KeyValuePairs<String, WritableKeyPath<Decoded<Record>, [UUID: String?]>> = [
             "shortcut": \.shortcuts, "alias": \.aliases
         ]
         for (field, texts) in fields {
             switch item[field] {
-            case nil, .null?: continue
+            case nil: continue
+            case .null?: decoded[keyPath: texts].updateValue(nil, forKey: id)
             case .string(let text)?: decoded[keyPath: texts][id] = text
             default: decoded.problems.append("\(label): “\(field)” needs quotes, or null")
             }

@@ -2,7 +2,7 @@ import Foundation
 
 /// Shortcuts as settings.json spells them, applied through `HotKeyManager` and its conflict rules.
 @MainActor
-struct HotKeySettingsFile {
+final class HotKeySettingsFile {
     struct Wanted {
         let action: HotKeyAction
         let text: String?
@@ -15,9 +15,16 @@ struct HotKeySettingsFile {
         let previous: HotKeyBinding?
         let label: String
         let text: String
+        let key: SettingsFileKey
     }
 
     let hotKeys: HotKeyManager
+    /// Bindings `apply` cleared the way for, set by `commit` once every key has had its say.
+    private var pending: [Change] = []
+
+    init(hotKeys: HotKeyManager) {
+        self.hotKeys = hotKeys
+    }
 
     /// Built per read, because the keyboard layout and the Hyper chord both change at run time.
     var spelling: HotKeySpelling {
@@ -34,18 +41,17 @@ struct HotKeySettingsFile {
     func binding(for key: SettingsFileKey, action: HotKeyAction, name: String) -> SettingsFileBinding {
         SettingsFileBinding(
             key,
-            read: { text(for: action, spelling).settingsJSON },
-            write: { json in
+            read: { [self] in text(for: action, spelling).settingsJSON },
+            write: { [self] json in
                 guard let text = String?(settingsJSON: json) else { return [.invalidValue(key)] }
                 return apply([Wanted(action: action, text: text, label: name)], key: key)
             })
     }
 
-    /// Clears every changed binding first, so two shortcuts the file swaps never block each other.
+    /// Clears changed bindings now and leaves setting them to `commit`, so a moved chord never collides.
     func apply(_ wanted: [Wanted], key: SettingsFileKey) -> [SettingsFileIssue] {
         let spelling = self.spelling
         var issues: [SettingsFileIssue] = []
-        var changes: [Change] = []
         for item in wanted {
             let current = hotKeys.binding(for: item.action)
             guard let text = item.text else {
@@ -59,18 +65,26 @@ struct HotKeySettingsFile {
             }
             guard binding != current else { continue }
             if current != nil { hotKeys.setBinding(nil, for: item.action) }
-            changes.append(
+            pending.append(
                 Change(
                     action: item.action, binding: binding, previous: current, label: item.label,
-                    text: text))
+                    text: text, key: key))
         }
+        return issues
+    }
+
+    /// Sets what `apply` queued; a chord another action holds is reported, and the old one returns.
+    func commit() -> [SettingsFileIssue] {
+        let changes = pending
+        pending.removeAll()
+        var issues: [SettingsFileIssue] = []
         for change in changes {
             guard let owner = hotKeys.conflictOwner(of: change.binding, excluding: change.action) else {
                 hotKeys.setBinding(change.binding, for: change.action)
                 continue
             }
-            issues.append(.invalidEntry(key, "\(change.label): “\(change.text)” already runs \(owner)"))
-            // The old binding returns when it is still free, so a clash never costs a working one.
+            issues.append(
+                .invalidEntry(change.key, "\(change.label): “\(change.text)” already runs \(owner)"))
             if let previous = change.previous,
                 hotKeys.conflictOwner(of: previous, excluding: change.action) == nil
             {

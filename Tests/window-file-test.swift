@@ -28,12 +28,17 @@ struct WindowFileTest {
         check("an unbound one is null", json["right-half"] == .null)
 
         let decoded = WindowManagementFileFormat.commandShortcuts(from: json)
-        check("the list reads back", decoded?.texts == [.leftHalf: "ctrl+option+left"])
+        check(
+            "the list reads back",
+            decoded?.texts[.leftHalf] == "ctrl+option+left" && decoded?.texts[.rightHalf] == .some(nil))
         check("with nothing to report", decoded?.problems == [])
 
         let edited = WindowManagementFileFormat.commandShortcuts(
             from: .object(["left-half": 1, "no-such-command": "cmd+k"]))
-        check("a number is not a chord", edited?.texts.isEmpty == true)
+        check(
+            "a number is not a chord, so that command keeps its own",
+            edited?.texts.keys.contains(.leftHalf) == false)
+        check("one left out is unbound", edited?.texts[.rightHalf] == .some(nil))
         check("both mistakes are reported", edited?.problems.count == 2)
         check("a list is not an object", WindowManagementFileFormat.commandShortcuts(from: .array([])) == nil)
     }
@@ -43,12 +48,12 @@ struct WindowFileTest {
         check("only a command with an alias is listed", json.members?.map(\.key) == ["left-half"])
 
         let decoded = WindowManagementFileFormat.commandAliases(from: json)
-        check("the aliases read back", decoded?.texts == [.leftHalf: "lh"])
+        check("the aliases read back", decoded?.texts[.leftHalf] == "lh")
 
         let edited = WindowManagementFileFormat.commandAliases(from: .object(["left-half": true]))
         check(
-            "a flag is not an alias, and is reported",
-            edited?.texts.isEmpty == true && edited?.problems.count == 1)
+            "a flag is not an alias, so the command keeps its own, and is reported",
+            edited?.texts.keys.contains(.leftHalf) == false && edited?.problems.count == 1)
     }
 
     private static func testCustomSizes() {
@@ -79,6 +84,9 @@ struct WindowFileTest {
             first?.records.first?.width == .init(50, .percent)
                 && first?.records.first?.height == .init(800, .points))
         check("a size without a readable width is skipped", first?.records.map(\.name) == ["Tall", "Odd"])
+        check(
+            "a shortcut or alias left out keeps its value",
+            first?.shortcuts.isEmpty == true && first?.aliases.isEmpty == true)
         check(
             "an unknown position falls back to the centre and is reported",
             first?.records.last?.anchor == .center && first?.problems.count == 2)
@@ -118,8 +126,8 @@ struct WindowFileTest {
             "reading the same text twice yields the same layout",
             WindowManagementFileFormat.layouts(from: .array([json]))?.records == decoded?.records)
         check(
-            "no shortcut or alias is none",
-            decoded?.shortcuts.isEmpty == true && decoded?.aliases.isEmpty == true)
+            "null clears the shortcut and the alias",
+            decoded?.shortcuts == [layout.id: nil] && decoded?.aliases == [layout.id: nil])
 
         let broken = WindowManagementFileFormat.layouts(
             from: .array([.object(["name": "Half", "apps": .array([.object(["app": "com.example.a"])])])]))

@@ -27,8 +27,8 @@ enum LauncherFileFormat {
             })
     }
 
-    /// A field the record leaves out reads as none, or as shown; a wrong type is reported.
-    static func records(from json: SettingsFileJSON) -> Decoded? {
+    /// Each record over the item's `current` one, so a field left out or of the wrong type keeps it.
+    static func records(from json: SettingsFileJSON, current: (String) -> Record) -> Decoded? {
         guard let members = json.members else { return nil }
         var decoded: Decoded = ([:], [])
         for member in members {
@@ -37,9 +37,9 @@ enum LauncherFileFormat {
                 decoded.problems.append("“\(member.key)” needs an object")
                 continue
             }
-            var record = Record()
-            record.shortcut = text(fields["shortcut"], field: "shortcut", of: member.key, into: &decoded)
-            record.alias = text(fields["alias"], field: "alias", of: member.key, into: &decoded)
+            var record = current(member.key)
+            text(fields["shortcut"], field: "shortcut", of: member.key, into: &record.shortcut, &decoded)
+            text(fields["alias"], field: "alias", of: member.key, into: &record.alias, &decoded)
             switch fields["showInLauncher"] {
             case nil: break
             case .bool(let shown)?: record.showInLauncher = shown
@@ -55,14 +55,14 @@ enum LauncherFileFormat {
     }
 
     private static func text(
-        _ json: SettingsFileJSON?, field: String, of name: String, into decoded: inout Decoded
-    ) -> String? {
+        _ json: SettingsFileJSON?, field: String, of name: String, into value: inout String?,
+        _ decoded: inout Decoded
+    ) {
         switch json {
-        case nil, .null?: return nil
-        case .string(let text)?: return text
-        default:
-            decoded.problems.append("“\(name)”: “\(field)” needs quotes, or null")
-            return nil
+        case nil: return
+        case .null?: value = nil
+        case .string(let text)?: value = text
+        default: decoded.problems.append("“\(name)”: “\(field)” needs quotes, or null")
         }
     }
 }
