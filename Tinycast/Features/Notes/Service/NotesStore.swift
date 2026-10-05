@@ -331,7 +331,8 @@ final class NotesStore {
             return true
         case .failure(let failure):
             publish(.load(failure))
-            return false
+            // Only a first load may keep the window shut; a loaded store can still show its draft.
+            return isLoaded
         }
     }
 

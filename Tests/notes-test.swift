@@ -483,7 +483,7 @@ struct NotesTests {
         let unreadable = await store.start()
         check(
             "an unreadable external edit reports a load failure and retains the previous contents",
-            !unreadable && loadFailures == 1 && store.source == "Saved draft" && store.editorEpoch == epoch)
+            unreadable && loadFailures == 1 && store.source == "Saved draft" && store.editorEpoch == epoch)
         try "Repaired externally".write(to: activeURL, atomically: true, encoding: .utf8)
         let repaired = await store.start()
         check("reopening retries a failed external reload", repaired && store.source == "Repaired externally")
@@ -509,6 +509,11 @@ struct NotesTests {
             "reopening preserves a draft whose save failed",
             !failedSave && reopened && store.isDirty
                 && store.source == "Draft after a failed save" && store.editorEpoch == failedEpoch)
+        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: repository.notesDirectory.path)
+        let unlisted = await store.start()
+        check(
+            "an unreadable folder still reopens on the retained draft",
+            unlisted && store.isDirty && store.source == "Draft after a failed save")
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: repository.notesDirectory.path)
         let retried = await store.retrySave()
         let retriedSource = try repository.load(activeID).source
