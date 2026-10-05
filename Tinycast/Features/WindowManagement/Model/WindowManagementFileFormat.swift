@@ -32,7 +32,6 @@ enum WindowManagementFileFormat {
 
     // MARK: - Command aliases
 
-    /// Only the commands that have one.
     static func json(commandAliases: [WindowCommand.ID: String]) -> SettingsFileJSON {
         .object(
             WindowCommand.ID.allCases.compactMap { id in

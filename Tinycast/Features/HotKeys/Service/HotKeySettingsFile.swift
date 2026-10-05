@@ -19,7 +19,6 @@ final class HotKeySettingsFile {
     }
 
     let hotKeys: HotKeyManager
-    /// Bindings `apply` cleared the way for, set by `commit` once every key has had its say.
     private var pending: [Change] = []
 
     init(hotKeys: HotKeyManager) {
@@ -37,7 +36,6 @@ final class HotKeySettingsFile {
         hotKeys.binding(for: action).map(spelling.text(for:))
     }
 
-    /// One action's chord, or `null` while it is unbound; `name` labels what the file reports.
     func binding(for key: SettingsFileKey, action: HotKeyAction, name: String) -> SettingsFileBinding {
         SettingsFileBinding(
             key,

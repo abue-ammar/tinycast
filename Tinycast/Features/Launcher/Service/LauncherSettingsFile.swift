@@ -5,7 +5,6 @@ import Foundation
 final class LauncherSettingsFile {
     private typealias Record = LauncherFileFormat.Record
 
-    /// Per-Mac bundles, keyed in the file by bundle ID.
     private enum Bundle {
         case app, pane
 
@@ -78,7 +77,6 @@ final class LauncherSettingsFile {
             })
     }
 
-    /// Applies each waiting record whose bundle a scan has since found.
     func applyInstalled() -> [SettingsFileIssue] {
         var issues: [SettingsFileIssue] = []
         for (key, held) in waiting {
@@ -166,7 +164,6 @@ final class LauncherSettingsFile {
             showInLauncher: visibility.isItemVisible(key: item.preferenceKey))
     }
 
-    /// Only an item with something set, so the file lists what was customized.
     private func customized(_ items: [Item]) -> [(name: String, record: Record)] {
         let spelling = shortcuts.spelling
         return items.compactMap { item in

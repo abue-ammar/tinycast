@@ -3,12 +3,10 @@ import Foundation
 /// A launcher item's row as settings.json spells it: shortcut, alias and launcher visibility.
 enum LauncherFileFormat {
     struct Record: Equatable, Sendable {
-        /// Chord text, left for the caller to parse against this Mac's keyboard.
         var shortcut: String?
         var alias: String?
         var showInLauncher = true
 
-        /// What an item the file leaves out has, so only a customized one is written.
         var isEmpty: Bool { shortcut == nil && alias == nil && showInLauncher }
     }
 
