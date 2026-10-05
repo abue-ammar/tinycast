@@ -10,6 +10,7 @@ struct WindowFileTest {
 
     static func main() {
         testCommandShortcuts()
+        testCommandAliases()
         testCustomSizes()
         testLayouts()
         testRooms()
@@ -27,27 +28,41 @@ struct WindowFileTest {
         check("an unbound one is null", json["right-half"] == .null)
 
         let decoded = WindowManagementFileFormat.commandShortcuts(from: json)
-        check("the list reads back", decoded?.shortcuts == [.leftHalf: "ctrl+option+left"])
+        check("the list reads back", decoded?.texts == [.leftHalf: "ctrl+option+left"])
         check("with nothing to report", decoded?.problems == [])
 
         let edited = WindowManagementFileFormat.commandShortcuts(
             from: .object(["left-half": 1, "no-such-command": "cmd+k"]))
-        check("a number is not a chord", edited?.shortcuts.isEmpty == true)
+        check("a number is not a chord", edited?.texts.isEmpty == true)
         check("both mistakes are reported", edited?.problems.count == 2)
         check("a list is not an object", WindowManagementFileFormat.commandShortcuts(from: .array([])) == nil)
+    }
+
+    private static func testCommandAliases() {
+        let json = WindowManagementFileFormat.json(commandAliases: [.leftHalf: "lh"])
+        check("only a command with an alias is listed", json.members?.map(\.key) == ["left-half"])
+
+        let decoded = WindowManagementFileFormat.commandAliases(from: json)
+        check("the aliases read back", decoded?.texts == [.leftHalf: "lh"])
+
+        let edited = WindowManagementFileFormat.commandAliases(from: .object(["left-half": true]))
+        check(
+            "a flag is not an alias, and is reported",
+            edited?.texts.isEmpty == true && edited?.problems.count == 1)
     }
 
     private static func testCustomSizes() {
         let size = CustomWindowSize(
             name: "Reading", width: .init(60, .percent), height: .init(900, .points),
             anchor: .bottomLeft, offset: .init(x: 10, y: -20))
-        let json = WindowManagementFileFormat.json(size, shortcut: "hyper+r")
+        let json = WindowManagementFileFormat.json(size, shortcut: "hyper+r", alias: "rd")
         check("units are spelled with the number", json["width"] == "60%" && json["height"] == "900pt")
         check("the id is lower case", json["id"] == .string(size.id.uuidString.lowercased()))
 
         let decoded = WindowManagementFileFormat.customSizes(from: .array([json]))
         check("a custom size round-trips", decoded?.records == [size])
         check("with its shortcut", decoded?.shortcuts == [size.id: "hyper+r"])
+        check("and its alias", decoded?.aliases == [size.id: "rd"])
 
         let handWritten: SettingsFileJSON = .array([
             .object(["name": "Tall", "width": "50 %", "height": 800]),
@@ -80,7 +95,7 @@ struct WindowFileTest {
         let layout = WindowLayout(
             name: "Coding", iconSymbol: "star", usesPreferredGap: false, entries: [editor, browser],
             frontmostEntryID: browser.id)
-        let json = WindowManagementFileFormat.json(layout, shortcut: nil)
+        let json = WindowManagementFileFormat.json(layout, shortcut: nil, alias: nil)
         check(
             "an app's display carries its id",
             json["apps"]?.items?.first?["display"]?["id"] == "37D8832A-0000")
@@ -102,7 +117,9 @@ struct WindowFileTest {
         check(
             "reading the same text twice yields the same layout",
             WindowManagementFileFormat.layouts(from: .array([json]))?.records == decoded?.records)
-        check("no shortcut is none", decoded?.shortcuts.isEmpty == true)
+        check(
+            "no shortcut or alias is none",
+            decoded?.shortcuts.isEmpty == true && decoded?.aliases.isEmpty == true)
 
         let broken = WindowManagementFileFormat.layouts(
             from: .array([.object(["name": "Half", "apps": .array([.object(["app": "com.example.a"])])])]))
@@ -118,7 +135,7 @@ struct WindowFileTest {
         let room = Room(
             name: "Writing", windows: [window], layout: .focus, layoutsByDisplay: ["abc": .columns],
             lastEnteredAt: Date(timeIntervalSince1970: 100))
-        let json = WindowManagementFileFormat.json(room, shortcut: "ctrl+option+w")
+        let json = WindowManagementFileFormat.json(room, shortcut: "ctrl+option+w", alias: "wr")
         let windowKeys = json["windows"]?.items?.first?.members?.map(\.key) ?? []
         check("a window's number never reaches the file", !windowKeys.contains("windowID"))
         check("nor does when the room was last entered", json["lastEnteredAt"] == nil)
@@ -128,7 +145,9 @@ struct WindowFileTest {
         expected.lastEnteredAt = nil
         expected.windows[0].windowID = nil
         check("a room round-trips its configuration", decoded?.records == [expected])
-        check("with its shortcut", decoded?.shortcuts == [room.id: "ctrl+option+w"])
+        check(
+            "with its shortcut and alias",
+            decoded?.shortcuts == [room.id: "ctrl+option+w"] && decoded?.aliases == [room.id: "wr"])
 
         let edited = WindowManagementFileFormat.rooms(
             from: .array([
@@ -138,6 +157,11 @@ struct WindowFileTest {
         check("an unknown layout resets to Auto", edited?.records.first?.layout == .auto)
         check("a room with no name is skipped", edited?.records.count == 1)
         check("both are reported", edited?.problems.count == 2)
+
+        let typed = WindowManagementFileFormat.rooms(from: .array([.object(["name": "Typed", "alias": 3])]))
+        check(
+            "an alias that isn't text is reported",
+            typed?.aliases.isEmpty == true && typed?.problems.count == 1)
     }
 
     private static func check(_ description: String, _ condition: @autoclosure () -> Bool) {

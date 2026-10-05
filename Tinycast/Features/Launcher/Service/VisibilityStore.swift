@@ -39,13 +39,17 @@ final class VisibilityStore {
         entry.settingsOwner != nil || isKindEnabled(entry.kind)
     }
 
-    func isItemVisible(_ entry: AppEntry) -> Bool {
-        !hiddenItemKeys.contains(key(for: entry))
-    }
+    func isItemVisible(_ entry: AppEntry) -> Bool { isItemVisible(key: key(for: entry)) }
+
+    func isItemVisible(key: String) -> Bool { !hiddenItemKeys.contains(key) }
 
     func setItemVisible(_ visible: Bool, for entry: AppEntry) {
-        let k = key(for: entry)
-        if visible { hiddenItemKeys.remove(k) } else { hiddenItemKeys.insert(k) }
+        setItemVisible(visible, forKey: key(for: entry))
+    }
+
+    func setItemVisible(_ visible: Bool, forKey key: String) {
+        guard isItemVisible(key: key) != visible else { return }
+        if visible { hiddenItemKeys.remove(key) } else { hiddenItemKeys.insert(key) }
         revision &+= 1
         defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
     }
@@ -64,6 +68,7 @@ final class VisibilityStore {
     }
 
     func setKindEnabled(_ enabled: Bool, for kind: AppEntry.Kind) {
+        guard isKindEnabled(kind) != enabled else { return }
         if enabled { disabledKinds.remove(kind.rawValue) } else { disabledKinds.insert(kind.rawValue) }
         revision &+= 1
         defaults.set(Array(disabledKinds), forKey: kindsKey)

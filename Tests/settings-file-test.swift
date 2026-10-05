@@ -46,9 +46,9 @@ struct SettingsFileTest {
             "sections follow the Settings sidebar",
             SettingsFileKey.sections == [
                 "general", "appearance", "hyperKey", "calculator", "search", "applications",
-                "commands", "quicklinks", "appleShortcuts", "ai", "quickActions", "dictation", "fileSearch",
-                "notes", "snippets", "navigation", "windowManagement", "clipboard", "emoji",
-                "calendar", "extensions"
+                "systemSettings", "systemActions", "commands", "quicklinks", "appleShortcuts", "ai",
+                "quickActions", "dictation", "fileSearch", "notes", "snippets", "navigation",
+                "windowManagement", "clipboard", "emoji", "calendar", "extensions"
             ])
 
         // A file that could switch one of these on would grant what only the app may ask for.

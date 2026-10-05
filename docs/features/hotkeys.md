@@ -54,9 +54,10 @@ LaunchServices: its Settings row went with it, so nothing else could clear the c
 keeps a dropped search scope from deleting a working shortcut, and running on unchanged scans too
 covers LaunchServices still resolving an app for a few seconds after it is trashed.
 
-Window management's shortcuts are also spelled as typeable chords (`ctrl+option+left`) in the opt-in
-[settings file](settings-file.md). `HotKeySpelling` is that grammar; the file applies through
-`setBinding`, so `UserDefaults` stays the one store either way.
+Shortcuts are also spelled as typeable chords (`ctrl+option+left`) in the opt-in
+[settings file](settings-file.md) — all but those of content, extensions and Apple Shortcuts.
+`HotKeySpelling` is that grammar; `HotKeySettingsFile` applies through `setBinding`, so `UserDefaults`
+stays the one store either way.
 
 System Settings panes use `boundPaneBundleIDs`; custom commands, quicklinks, window layouts, rooms
 and custom window sizes use their stable UUIDs in `boundCustomCommandIDs`, `boundQuicklinkIDs`,

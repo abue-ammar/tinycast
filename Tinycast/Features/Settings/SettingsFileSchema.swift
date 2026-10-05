@@ -5,21 +5,20 @@ import Foundation
 enum SettingsFileSchema {
     static func bindings(
         settings: AppSettings, ai: AISettingsStore, quickActions: QuickActionSettingsStore,
+        shortcuts: HotKeySettingsFile, launcher: LauncherSettingsFile,
         windowManagement: WindowManagementSettingsFile
     ) -> [SettingsFileBinding] {
-        var bindings: [SettingsFileBinding] = []
-        for key in SettingsFileKey.allCases {
-            bindings.append(
-                binding(
-                    for: key, settings: settings, ai: ai, quickActions: quickActions,
-                    windowManagement: windowManagement))
+        SettingsFileKey.allCases.map { key in
+            binding(
+                for: key, settings: settings, ai: ai, quickActions: quickActions,
+                shortcuts: shortcuts, launcher: launcher, windowManagement: windowManagement)
         }
-        return bindings
     }
 
     private static func binding(
         for key: SettingsFileKey, settings: AppSettings, ai: AISettingsStore,
-        quickActions: QuickActionSettingsStore, windowManagement: WindowManagementSettingsFile
+        quickActions: QuickActionSettingsStore, shortcuts: HotKeySettingsFile,
+        launcher: LauncherSettingsFile, windowManagement: WindowManagementSettingsFile
     ) -> SettingsFileBinding {
         func bind<Root: AnyObject, Value: SettingsFileValue>(
             _ root: Root, _ path: ReferenceWritableKeyPath<Root, Value>,
@@ -29,6 +28,8 @@ enum SettingsFileSchema {
         }
 
         switch key {
+        case .launcherShortcut:
+            return shortcuts.binding(for: key, action: .togglePalette, name: "App Launcher")
         case .showInMenuBar: return bind(settings, \.showInMenuBar)
         case .automaticallyCheckForUpdates: return bind(settings, \.automaticallyCheckForUpdates)
         case .popToRootTimeout: return bind(settings, \.popToRootTimeout)
@@ -47,7 +48,15 @@ enum SettingsFileSchema {
         case .calcNumberStyle: return bind(settings, \.calcNumberStyle)
         case .launcherShowsSuggestions: return bind(settings, \.launcherShowsSuggestions)
         case .rootSearchSensitivity: return bind(settings, \.rootSearchSensitivity)
+        case .applicationsEnabled: return launcher.kindBinding(for: key, kind: .application)
         case .searchScopes: return bind(settings, \.searchScopes) { SearchScopes.normalize($0) }
+        case .applications: return launcher.appsBinding(for: key)
+        case .systemSettingsEnabled: return launcher.kindBinding(for: key, kind: .systemSettings)
+        case .systemSettings: return launcher.panesBinding(for: key)
+        case .systemActionsEnabled: return launcher.kindBinding(for: key, kind: .systemAction)
+        case .systemActions: return launcher.systemActionsBinding(for: key)
+        case .builtInCommandsEnabled: return launcher.kindBinding(for: key, kind: .command)
+        case .builtInCommands: return launcher.commandsBinding(for: key, owner: nil)
         case .customCommandsEnabled: return bind(settings, \.customCommandsEnabled)
         case .customCommandsShowInLauncher: return bind(settings, \.customCommandsShowInLauncher)
         case .quicklinksEnabled: return bind(settings, \.quicklinksEnabled)
@@ -55,6 +64,7 @@ enum SettingsFileSchema {
         case .quicklinkOpensNewWindow: return bind(settings, \.quicklinkOpensNewWindow)
         case .quicklinkSelectionFallback: return bind(settings, \.quicklinkSelectionFallback)
         case .quicklinkConfirmsBeforeDelete: return bind(settings, \.quicklinkConfirmsBeforeDelete)
+        case .quicklinkCommands: return launcher.commandsBinding(for: key, owner: .quicklinks)
         case .appleShortcutsEnabled: return bind(settings, \.appleShortcutsEnabled)
         case .aiEnabled: return bind(settings, \.aiEnabled)
         case .aiWebSearch: return bind(ai, \.webSearchEnabled)
@@ -64,15 +74,21 @@ enum SettingsFileSchema {
         case .aiOpensTo: return bind(ai, \.opensTo)
         case .aiNewChatAfter: return bind(ai, \.newChatAfter)
         case .aiToolRounds: return bind(ai, \.toolRounds)
+        case .aiCommands: return launcher.commandsBinding(for: key, owner: .ai)
         case .quickActionLanguage: return bind(quickActions, \.settings.targetLanguage)
+        case .quickActionCommands: return launcher.commandsBinding(for: key, owner: .quickActions)
         case .fileSearchEnabled: return bind(settings, \.fileSearchEnabled)
         case .fileSearchScopes: return bind(settings, \.fileSearchScopes)
         case .fileSearchIgnorePatterns: return bind(settings, \.fileSearchIgnorePatterns)
+        case .fileSearchCommands: return launcher.commandsBinding(for: key, owner: .fileSearch)
         case .notesEnabled: return bind(settings, \.notesEnabled)
         case .notesRendersMarkdown: return bind(settings, \.notesRendersMarkdown)
         case .notesShowsFormattingBar: return bind(settings, \.notesShowsFormattingBar)
         case .notesFolder: return bind(settings, \.notesFolder, accept: folder)
+        case .notesCommands: return launcher.commandsBinding(for: key, owner: .notes)
         case .dictationMode: return bind(settings, \.dictationMode)
+        case .dictationShortcut:
+            return shortcuts.binding(for: key, action: .dictation, name: "Dictation")
         case .dictationModel: return bind(settings, \.dictationModel)
         case .dictationMicrophone: return bind(settings, \.dictationMicrophone)
         case .dictationDestination: return bind(settings, \.dictationDestination)
@@ -85,9 +101,11 @@ enum SettingsFileSchema {
             }
         case .snippetsShowInLauncher: return bind(settings, \.snippetsShowInLauncher)
         case .snippetsFolder: return bind(settings, \.snippetsFolder, accept: folder)
+        case .snippetsCommands: return launcher.commandsBinding(for: key, owner: .snippets)
         case .navigationEnabled: return bind(settings, \.navigationEnabled)
         case .menuSearchShowsAppleMenu: return bind(settings, \.menuSearchShowsAppleMenu)
         case .menuSearchDisabledApps: return bind(settings, \.menuSearchDisabledApps)
+        case .navigationCommands: return launcher.commandsBinding(for: key, owner: .navigation)
         case .windowManagementEnabled: return bind(settings, \.windowManagementEnabled)
         case .windowManagementShowInLauncher:
             return bind(settings, \.windowManagementShowInLauncher)
@@ -99,15 +117,20 @@ enum SettingsFileSchema {
         case .windowLayoutsShowInLauncher: return bind(settings, \.windowLayoutsShowInLauncher)
         case .windowRoomsShowInLauncher: return bind(settings, \.windowRoomsShowInLauncher)
         case .windowShortcuts: return windowManagement.commandShortcutsBinding(for: key)
+        case .windowAliases: return windowManagement.commandAliasesBinding(for: key)
         case .customWindowSizes: return windowManagement.customSizesBinding(for: key)
         case .windowLayouts: return windowManagement.layoutsBinding(for: key)
         case .windowRooms: return windowManagement.roomsBinding(for: key)
+        case .windowManagementCommands:
+            return launcher.commandsBinding(for: key, owner: .windowManagement)
         case .clipboardEnabled: return bind(settings, \.clipboardEnabled)
         case .clipboardRetention: return bind(settings, \.clipboardRetention)
         case .clipboardDefaultAction: return bind(settings, \.clipboardDefaultAction)
         case .clipboardDisabledApps: return bind(settings, \.clipboardDisabledApps)
+        case .clipboardCommands: return launcher.commandsBinding(for: key, owner: .clipboard)
         case .emojiSkinTone: return bind(settings, \.emojiSkinTone)
         case .emojiGridColumns: return bind(settings, \.emojiGridColumns)
+        case .emojiCommands: return launcher.commandsBinding(for: key, owner: .emoji)
         case .calendarShowInLauncher: return bind(settings, \.calendarShowInLauncher)
         case .calendarLauncherLimit: return bind(settings, \.calendarLauncherLimit)
         case .calendarSpan: return bind(settings, \.calendarSpan)
@@ -119,6 +142,7 @@ enum SettingsFileSchema {
         case .menuBarLinkedEventsOnly: return bind(settings, \.menuBarLinkedEventsOnly)
         case .calendarMenuBarHidesWhenEmpty: return bind(settings, \.calendarMenuBarHidesWhenEmpty)
         case .hideCurrentEvent: return bind(settings, \.hideCurrentEvent)
+        case .calendarCommands: return launcher.commandsBinding(for: key, owner: .calendar)
         case .extensionsShowInLauncher: return bind(settings, \.extensionsShowInLauncher)
         }
     }

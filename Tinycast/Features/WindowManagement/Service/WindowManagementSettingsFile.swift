@@ -1,28 +1,24 @@
 import Foundation
 
-/// Window management's shortcuts and lists in settings.json, each shortcut kept with its record.
+/// Window management's shortcuts, aliases and lists in settings.json, each kept with its record.
 @MainActor
 struct WindowManagementSettingsFile {
     let sizes: CustomWindowSizeStore
     let layouts: WindowLayoutStore
     let rooms: RoomStore
-    let hotKeys: HotKeyManager
+    let aliases: AliasStore
+    let shortcuts: HotKeySettingsFile
 
-    /// Built per read, because the keyboard layout and the Hyper chord both change at run time.
-    private var spelling: HotKeySpelling {
-        HotKeySpelling(
-            characters: ASCIIKeyboardLayout.baseCharacters(for: 0..<128),
-            hyperModifiers: KeyShortcut.displayedHyperChord().map(KeyShortcut.carbonModifiers(from:)))
-    }
+    private var hotKeys: HotKeyManager { shortcuts.hotKeys }
 
     func commandShortcutsBinding(for key: SettingsFileKey) -> SettingsFileBinding {
         SettingsFileBinding(
             key,
             read: {
-                let spelling = self.spelling
+                let spelling = shortcuts.spelling
                 var texts: [WindowCommand.ID: String] = [:]
                 for id in WindowCommand.ID.allCases {
-                    texts[id] = hotKeys.binding(for: .windowCommand(id: id)).map(spelling.text(for:))
+                    texts[id] = shortcuts.text(for: .windowCommand(id: id), spelling)
                 }
                 return WindowManagementFileFormat.json(commandShortcuts: texts)
             },
@@ -31,11 +27,33 @@ struct WindowManagementSettingsFile {
                     return [.invalidValue(key)]
                 }
                 let wanted = WindowCommand.ID.allCases.map { id in
-                    Wanted(
-                        action: .windowCommand(id: id), text: decoded.shortcuts[id],
+                    HotKeySettingsFile.Wanted(
+                        action: .windowCommand(id: id), text: decoded.texts[id],
                         label: "“\(id.rawValue)”")
                 }
-                return decoded.problems.map { .invalidEntry(key, $0) } + apply(wanted, key: key)
+                return decoded.problems.map { .invalidEntry(key, $0) }
+                    + shortcuts.apply(wanted, key: key)
+            })
+    }
+
+    func commandAliasesBinding(for key: SettingsFileKey) -> SettingsFileBinding {
+        SettingsFileBinding(
+            key,
+            read: {
+                var texts: [WindowCommand.ID: String] = [:]
+                for command in WindowCommandCatalog.all {
+                    texts[command.id] = aliases.alias(for: command.entryID)
+                }
+                return WindowManagementFileFormat.json(commandAliases: texts)
+            },
+            write: { json in
+                guard let decoded = WindowManagementFileFormat.commandAliases(from: json) else {
+                    return [.invalidValue(key)]
+                }
+                for command in WindowCommandCatalog.all {
+                    aliases.setAlias(decoded.texts[command.id] ?? "", for: command.entryID)
+                }
+                return decoded.problems.map { .invalidEntry(key, $0) }
             })
     }
 
@@ -43,24 +61,28 @@ struct WindowManagementSettingsFile {
         SettingsFileBinding(
             key,
             read: {
-                let spelling = self.spelling
+                let spelling = shortcuts.spelling
                 return .array(
                     sizes.sizes.map { size in
                         WindowManagementFileFormat.json(
-                            size, shortcut: shortcut(for: .customWindowSize(id: size.id), spelling))
+                            size,
+                            shortcut: shortcuts.text(for: .customWindowSize(id: size.id), spelling),
+                            alias: aliases.alias(for: size.entryID))
                     })
             },
             write: { json in
                 guard let decoded = WindowManagementFileFormat.customSizes(from: json) else {
                     return [.invalidValue(key)]
                 }
+                let previous = Set(sizes.sizes.map(\.entryID))
                 let kept = sizes.replace(with: decoded.records)
                 let rule = "a name is empty or used twice"
                 return report(decoded, kept: kept, kind: "custom size", rule: rule, key: key)
-                    + applyShortcuts(
-                        decoded.shortcuts, records: sizes.sizes.map { ($0.id, $0.name) },
-                        bound: hotKeys.boundCustomWindowSizeIDs, kind: "custom size",
-                        action: HotKeyAction.customWindowSize, key: key)
+                    + follow(
+                        decoded,
+                        records: sizes.sizes.map { Record(id: $0.id, name: $0.name, entryID: $0.entryID) },
+                        previous: previous, bound: hotKeys.boundCustomWindowSizeIDs,
+                        kind: "custom size", action: HotKeyAction.customWindowSize, key: key)
             })
     }
 
@@ -68,23 +90,29 @@ struct WindowManagementSettingsFile {
         SettingsFileBinding(
             key,
             read: {
-                let spelling = self.spelling
+                let spelling = shortcuts.spelling
                 return .array(
                     layouts.layouts.map { layout in
                         WindowManagementFileFormat.json(
-                            layout, shortcut: shortcut(for: .windowLayout(id: layout.id), spelling))
+                            layout,
+                            shortcut: shortcuts.text(for: .windowLayout(id: layout.id), spelling),
+                            alias: aliases.alias(for: layout.entryID))
                     })
             },
             write: { json in
                 guard let decoded = WindowManagementFileFormat.layouts(from: json) else {
                     return [.invalidValue(key)]
                 }
+                let previous = Set(layouts.layouts.map(\.entryID))
                 let kept = layouts.replace(with: decoded.records)
                 let rule = "a name is empty or used twice, or it has no apps"
                 return report(decoded, kept: kept, kind: "layout", rule: rule, key: key)
-                    + applyShortcuts(
-                        decoded.shortcuts, records: layouts.layouts.map { ($0.id, $0.name) },
-                        bound: hotKeys.boundWindowLayoutIDs, kind: "layout",
+                    + follow(
+                        decoded,
+                        records: layouts.layouts.map {
+                            Record(id: $0.id, name: $0.name, entryID: $0.entryID)
+                        },
+                        previous: previous, bound: hotKeys.boundWindowLayoutIDs, kind: "layout",
                         action: HotKeyAction.windowLayout, key: key)
             })
     }
@@ -93,11 +121,12 @@ struct WindowManagementSettingsFile {
         SettingsFileBinding(
             key,
             read: {
-                let spelling = self.spelling
+                let spelling = shortcuts.spelling
                 return .array(
                     rooms.rooms.map { room in
                         WindowManagementFileFormat.json(
-                            room, shortcut: shortcut(for: .windowRoom(id: room.id), spelling))
+                            room, shortcut: shortcuts.text(for: .windowRoom(id: room.id), spelling),
+                            alias: aliases.alias(for: room.entryID))
                     })
             },
             write: { json in
@@ -106,39 +135,29 @@ struct WindowManagementSettingsFile {
                 }
                 let learned = Dictionary(
                     rooms.rooms.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                let previous = Set(rooms.rooms.map(\.entryID))
                 let kept = rooms.replace(
                     with: decoded.records.map { room in learned[room.id].map(room.keepingRuntime) ?? room })
                 let rule = "a name is empty or used twice, or it has no windows"
                 return report(decoded, kept: kept, kind: "room", rule: rule, key: key)
-                    + applyShortcuts(
-                        decoded.shortcuts, records: rooms.rooms.map { ($0.id, $0.name) },
-                        bound: hotKeys.boundWindowRoomIDs, kind: "room",
+                    + follow(
+                        decoded,
+                        records: rooms.rooms.map { Record(id: $0.id, name: $0.name, entryID: $0.entryID) },
+                        previous: previous, bound: hotKeys.boundWindowRoomIDs, kind: "room",
                         action: HotKeyAction.windowRoom, key: key)
             })
     }
 
-    // MARK: - Shortcuts
+    // MARK: - Records
 
-    private struct Wanted {
-        let action: HotKeyAction
-        let text: String?
-        let label: String
+    private struct Record {
+        let id: UUID
+        let name: String
+        let entryID: String
     }
 
-    private struct Change {
-        let action: HotKeyAction
-        let binding: HotKeyBinding
-        let previous: HotKeyBinding?
-        let label: String
-        let text: String
-    }
-
-    private func shortcut(for action: HotKeyAction, _ spelling: HotKeySpelling) -> String? {
-        hotKeys.binding(for: action).map(spelling.text(for:))
-    }
-
-    private func report<Record>(
-        _ decoded: WindowManagementFileFormat.Decoded<Record>, kept: Int, kind: String,
+    private func report<Value>(
+        _ decoded: WindowManagementFileFormat.Decoded<Value>, kept: Int, kind: String,
         rule: String, key: SettingsFileKey
     ) -> [SettingsFileIssue] {
         var issues = decoded.problems.map { SettingsFileIssue.invalidEntry(key, $0) }
@@ -150,57 +169,25 @@ struct WindowManagementSettingsFile {
         return issues
     }
 
-    /// A record the file dropped takes its shortcut with it; the rest follow their record.
-    private func applyShortcuts(
-        _ shortcuts: [UUID: String], records: [(id: UUID, name: String)], bound: [UUID],
-        kind: String, action: (UUID) -> HotKeyAction, key: SettingsFileKey
+    /// A record the file dropped takes its shortcut and alias with it; the rest follow their record.
+    private func follow<Value>(
+        _ decoded: WindowManagementFileFormat.Decoded<Value>, records: [Record],
+        previous: Set<String>, bound: [UUID], kind: String, action: (UUID) -> HotKeyAction,
+        key: SettingsFileKey
     ) -> [SettingsFileIssue] {
         let live = Set(records.map(\.id))
         for id in bound where !live.contains(id) {
             hotKeys.setBinding(nil, for: action(id))
         }
+        aliases.removeKeys(previous.subtracting(records.map(\.entryID)))
+        for record in records {
+            aliases.setAlias(decoded.aliases[record.id] ?? "", for: record.entryID)
+        }
         let wanted = records.map { record in
-            Wanted(action: action(record.id), text: shortcuts[record.id], label: "\(kind) “\(record.name)”")
+            HotKeySettingsFile.Wanted(
+                action: action(record.id), text: decoded.shortcuts[record.id],
+                label: "\(kind) “\(record.name)”")
         }
-        return apply(wanted, key: key)
-    }
-
-    /// Clears every changed binding first, so two shortcuts the file swaps never block each other.
-    private func apply(_ wanted: [Wanted], key: SettingsFileKey) -> [SettingsFileIssue] {
-        let spelling = self.spelling
-        var issues: [SettingsFileIssue] = []
-        var changes: [Change] = []
-        for item in wanted {
-            let current = hotKeys.binding(for: item.action)
-            guard let text = item.text else {
-                if current != nil { hotKeys.setBinding(nil, for: item.action) }
-                continue
-            }
-            guard let binding = spelling.binding(from: text) else {
-                issues.append(
-                    .invalidEntry(key, "\(item.label): “\(text)” isn't a shortcut Tinycast can bind"))
-                continue
-            }
-            guard binding != current else { continue }
-            if current != nil { hotKeys.setBinding(nil, for: item.action) }
-            changes.append(
-                Change(
-                    action: item.action, binding: binding, previous: current, label: item.label,
-                    text: text))
-        }
-        for change in changes {
-            guard let owner = hotKeys.conflictOwner(of: change.binding, excluding: change.action) else {
-                hotKeys.setBinding(change.binding, for: change.action)
-                continue
-            }
-            issues.append(.invalidEntry(key, "\(change.label): “\(change.text)” already runs \(owner)"))
-            // The old binding returns when it is still free, so a clash never costs a working one.
-            if let previous = change.previous,
-                hotKeys.conflictOwner(of: previous, excluding: change.action) == nil
-            {
-                hotKeys.setBinding(previous, for: change.action)
-            }
-        }
-        return issues
+        return shortcuts.apply(wanted, key: key)
     }
 }
