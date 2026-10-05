@@ -4,6 +4,7 @@ import AppKit
 @MainActor
 final class SystemActionCoordinator {
     private let paletteCoordinator: PaletteCoordinator
+    private var isTogglingMicrophone = false
     @ObservationIgnored private lazy var volumeHUD = VolumeHUDController(settings: core.settings)
     /// Dialog and message-HUD presentation only — never for state this type owns.
     private unowned let core: AppCore
@@ -21,6 +22,13 @@ final class SystemActionCoordinator {
     }
 
     private func perform(_ action: SystemAction, previousApp: NSRunningApplication?) async {
+        if action.id == .toggleMicrophoneMute {
+            guard !isTogglingMicrophone else { return }
+            isTogglingMicrophone = true
+        }
+        defer {
+            if action.id == .toggleMicrophoneMute { isTogglingMicrophone = false }
+        }
         switch action.confirmation {
         case .computed:
             await quitAllApps()

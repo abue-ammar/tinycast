@@ -488,7 +488,7 @@ the box is changed. Every dialog is Tinycast's own: confirmations, failure repor
 Volume slider all render through `DialogController` rather than an `NSAlert`
 (see [ui.md](../ui.md#dialogs--hud)). Each confirmation carries the action's own icon — Restart shows
 `arrow.clockwise`, Empty Trash `trash.slash` — so the dialog is recognizably about the row that
-opened it. Volume and mute actions also show Tinycast's transient volume HUD, since macOS only draws
+opened it. Output volume and mute actions also show Tinycast's transient volume HUD, since macOS only draws
 its own for real media keys. Volume Up/Down walk a 5% grid (`VolumeLevel.stepped`, covered by
 `Tests/volume-test.swift`): an off-grid level snaps to the next line rather than past it, so from 37%
 up lands on 40% and down on 35%, and repeated presses stay on round numbers.
@@ -501,8 +501,16 @@ Custom Commands and Snippets confirm through) rather than finishing silently:
 something actually changed, `.neutral` when there was nothing to do, shown as the glyph trailing the
 message rather than a per-action icon, since the message already names the state. Actions that are
 their own confirmation, such as Show Desktop, Hide Others,
-Quit All and the power actions, return nothing. Volume and mute are the one case that stays on the
+Quit All and the power actions, return nothing. Output volume and mute stay on the
 palette's own box HUD, since that one has an actual level and number to show, not just a message.
+
+**Toggle Microphone Mute** reads the current default macOS input device on each activation and
+toggles its native CoreAudio input mute control without changing input gain or output audio.
+It is available in Settings › System Actions with the same global hotkey recorder as output mute.
+CoreAudio work runs off-main, and the message pill reports `Microphone Muted` or
+`Microphone Unmuted` only once the device confirms the requested state. Repeated activations are
+ignored while a change is pending. An absent input device, unavailable or externally controlled mute,
+or an unconfirmed write reports a failure rather than claiming the microphone was muted.
 
 **Nothing-to-do is an outcome, not a failure.** Empty Trash asks Finder for `count items of trash`
 first and reports `Trash Is Already Empty`, because Finder raises an error when told to empty an empty

@@ -3,24 +3,6 @@ import Carbon
 import CoreAudio
 import Darwin
 
-struct SystemActionFailure: LocalizedError, Sendable {
-    enum Settings: Sendable {
-        case accessibility
-        case automation
-        case bluetooth
-    }
-
-    let message: String
-    let settings: Settings?
-
-    init(_ message: String, settings: Settings? = nil) {
-        self.message = message
-        self.settings = settings
-    }
-
-    var errorDescription: String? { message }
-}
-
 struct SystemActionFeedback: Sendable {
     let title: String
     /// Set when there was nothing to do, so it reads as information, not a change.
@@ -84,6 +66,11 @@ enum SystemActionRunner {
             try postMediaKey(18)
         case .toggleMute:
             try toggleMute()
+        case .toggleMicrophoneMute:
+            let muted = try await Task.detached {
+                try await toggleMicrophoneMute()
+            }.value
+            return SystemActionFeedback(muted ? "Microphone Muted" : "Microphone Unmuted")
         case .volumeUp:
             try stepVolume(up: true)
         case .volumeDown:
