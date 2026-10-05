@@ -10,6 +10,7 @@ struct ChatComposerTextView: NSViewRepresentable {
     let handle: ComposerTextViewHandle
     @Binding var isFileDragTargeted: Bool
     let onDropFiles: ([URL]) -> Void
+    let onInvalidate: (ComposerTextView) -> Void
     let onSubmit: () -> Void
 
     private static var font: NSFont { .preferredFont(forTextStyle: .body) }
@@ -32,7 +33,9 @@ struct ChatComposerTextView: NSViewRepresentable {
         return min(max(lineHeight, height), maximumHeight)
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(text: $text, onSubmit: onSubmit) }
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onInvalidate: onInvalidate, onSubmit: onSubmit)
+    }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = ComposerTextView.scrollableTextView()
@@ -59,9 +62,11 @@ struct ChatComposerTextView: NSViewRepresentable {
     }
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
-        context.coordinator.text = $text
-        context.coordinator.onSubmit = onSubmit
         guard let textView = scroll.documentView as? ComposerTextView else { return }
+        if context.coordinator.focusedKey != focusKey { onInvalidate(textView) }
+        context.coordinator.text = $text
+        context.coordinator.onInvalidate = onInvalidate
+        context.coordinator.onSubmit = onSubmit
         textView.onDropFiles = onDropFiles
         textView.onFileDragTargeted = { [$isFileDragTargeted] in $isFileDragTargeted.wrappedValue = $0 }
         // Only an outside write lands here; echoing the view's own text back would reset the caret.
@@ -73,6 +78,15 @@ struct ChatComposerTextView: NSViewRepresentable {
             guard let textView else { return }
             textView.window?.makeFirstResponder(textView)
         }
+    }
+
+    static func dismantleNSView(_ scroll: NSScrollView, coordinator: Coordinator) {
+        guard let textView = scroll.documentView as? ComposerTextView else { return }
+        coordinator.onInvalidate(textView)
+        textView.isEditable = false
+        textView.delegate = nil
+        textView.onDropFiles = nil
+        textView.onFileDragTargeted = nil
     }
 
     /// Measured from the text rather than the text view, whose width lags the proposal by a pass.
@@ -88,11 +102,16 @@ struct ChatComposerTextView: NSViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, NSTextViewDelegate {
         var text: Binding<String>
+        var onInvalidate: (ComposerTextView) -> Void
         var onSubmit: () -> Void
         var focusedKey: UUID?
 
-        init(text: Binding<String>, onSubmit: @escaping () -> Void) {
+        init(
+            text: Binding<String>, onInvalidate: @escaping (ComposerTextView) -> Void,
+            onSubmit: @escaping () -> Void
+        ) {
             self.text = text
+            self.onInvalidate = onInvalidate
             self.onSubmit = onSubmit
         }
 

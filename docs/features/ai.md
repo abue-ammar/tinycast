@@ -490,6 +490,8 @@ menu's own chords, and dies with the window.
   at the caret, never to the clipboard. With no model installed the click opens Settings → Dictation.
   The field is a `ComposerTextView`, an `InjectableTextView`, so the Dictation shortcut, snippets and
   Quick Actions write into it in process, as they do into a note.
+  Switching chats or closing the window cancels dictation targeting its composer before the editor
+  is rebound or torn down; a queued transcript cannot land in another chat or a closed editor.
 
 `AIChatState` turns provider-neutral stream events into one live assistant message. Thinking state is
 shown without entering the transcript, partial text is preserved on failure, cancellation invalidates

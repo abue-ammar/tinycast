@@ -102,13 +102,17 @@ final class TextInjector {
 
     private let clipboardManager: ClipboardManager
     private let settings: AppSettings
-    private let deliveryQueue = DeliveryQueue()
+    private let deliveryQueue: DeliveryQueue
     private var automaticGeneration: AutomaticGeneration = 0
     private var activePasteboardLease: TemporaryPasteboardLease?
 
-    init(clipboardManager: ClipboardManager, settings: AppSettings) {
+    init(
+        clipboardManager: ClipboardManager, settings: AppSettings,
+        deliveryQueue: DeliveryQueue = DeliveryQueue()
+    ) {
         self.clipboardManager = clipboardManager
         self.settings = settings
+        self.deliveryQueue = deliveryQueue
     }
 
     /// A paste is still in flight, or we still hold the pasteboard it borrowed.
@@ -265,6 +269,7 @@ final class TextInjector {
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: AutomaticGeneration?,
+        isValid: @escaping @MainActor () -> Bool = { true },
         onDelivered: @escaping @MainActor () -> Void = {},
         onFailed: @escaping @MainActor () -> Void = {}
     ) {
@@ -282,6 +287,7 @@ final class TextInjector {
         deliveryQueue.enqueue(isAutomatic: automaticGeneration != nil) { [weak self] in
             guard let self else { return }
             let completion = DeliveryCompletion(onDelivered: onDelivered, onFailed: onFailed)
+            guard isValid() else { completion.settle(); return }
             if let editor = target?.ownEditor {
                 await self.deliverInProcess(
                     injected,
@@ -289,6 +295,7 @@ final class TextInjector {
                     expectedKeyword: expectedKeyword,
                     keywordLength: keywordLength,
                     automaticGeneration: automaticGeneration,
+                    isValid: isValid,
                     completion: completion)
                 return
             }
@@ -309,6 +316,7 @@ final class TextInjector {
         expectedKeyword: String?,
         keywordLength: Int,
         automaticGeneration: AutomaticGeneration?,
+        isValid: @MainActor () -> Bool,
         completion: DeliveryCompletion
     ) async {
         defer { completion.settle() }
@@ -317,7 +325,8 @@ final class TextInjector {
             if keywordLength > 0 {
                 guard await wait(for: Self.convergenceInterval) else { return }
             }
-            guard inProcessDeliveryIsAllowed(automaticGeneration: automaticGeneration, editor: editor)
+            guard isValid(),
+                inProcessDeliveryIsAllowed(automaticGeneration: automaticGeneration, editor: editor)
             else { return }
             switch editor.keywordReplacementState(
                 expectedKeyword: expectedKeyword, keywordLength: keywordLength)

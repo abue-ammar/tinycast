@@ -34,6 +34,8 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
 - AI Chat's composer mic is always click-to-toggle into that field: `toggle(into:)` targets its
   `ComposerTextView` in process whatever has focus, `field` tells only that button it is running, and
   its transcript is inserted whatever the destination setting, never copied.
+  Switching chats or closing the composer cancels only the session targeting that editor, including
+  one started by a shortcut. The session token is checked again when queued insertion runs.
 - The nonactivating panel preserves the target app. Text insertion reuses `TextInjector`, including
   its temporary clipboard ownership, focus, secure-input and protected-target checks. Copy-only
   writes the plain transcript without reading the caret; paste-and-copy writes the persistent copy
@@ -85,6 +87,8 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
 
 ## Validation
 
+`dictation-field-test` checks composer switching and teardown, scoped cancellation and delayed insertion
+with synthetic capture and real AppKit editors, without recording audio or touching the shared clipboard.
 `dictation-test` checks formatting and model options; `dictation-inference-test` checks score selection,
 byte BPE, Fourier/mel features, listening bands and audio partitioning without downloading a model. `dictation-worker-test`
 exercises framed IPC, worker reuse/switching, removal, cancellation and broken pipes with a fixture.

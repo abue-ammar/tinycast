@@ -197,21 +197,27 @@ final class DictationCoordinator {
                     transcript, context: context,
                     adaptCapitalization: settings.dictationAdaptsCapitalization)
                 let target = self.target
-                reset(cancelTranscription: false)
-                guard !text.isEmpty else { return }
+                guard !text.isEmpty else { reset(cancelTranscription: false); return }
+                panel.close()
                 if destination.pastes {
                     injector.deliver(
                         InjectedText(text), target: target, expectedKeyword: nil,
                         keywordLength: 0, automaticGeneration: nil,
-                        onDelivered: {
+                        isValid: { [weak self] in self?.token == current },
+                        onDelivered: { [weak self] in
+                            guard let self, token == current else { return }
                             if destination.copies { Paster.copyPlainText(text) }
+                            reset(cancelTranscription: false)
                         },
-                        onFailed: { [showMessage] in
+                        onFailed: { [weak self] in
+                            guard let self, token == current else { return }
+                            reset(cancelTranscription: false)
                             if destination.copies { Paster.copyPlainText(text) }
                             showMessage("Couldn't paste dictation into this app", .danger)
                         })
                 } else {
                     Paster.copyPlainText(text)
+                    reset(cancelTranscription: false)
                 }
             } catch {
                 guard token == current else { return }
@@ -219,6 +225,11 @@ final class DictationCoordinator {
                 showMessage(error.localizedDescription, .danger)
             }
         }
+    }
+
+    func cancel(in editor: any InjectableTextView) {
+        guard let target = target?.ownEditor, target === editor else { return }
+        cancel()
     }
 
     func cancel() {

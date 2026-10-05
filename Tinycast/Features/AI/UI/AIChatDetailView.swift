@@ -154,7 +154,8 @@ private struct AIChatComposer: View {
                     text: $chat.draft, focusKey: chat.session.id,
                     maximumTextHeight: maximumTextHeight, handle: editor,
                     isFileDragTargeted: $isDropTargeted,
-                    onDropFiles: { coordinator.attach(files: $0, to: chat) }, onSubmit: submit)
+                    onDropFiles: { coordinator.attach(files: $0, to: chat) },
+                    onInvalidate: { coordinator.dictation.cancel(in: $0) }, onSubmit: submit)
             }
             // The text's edge is the + glyph's, which sits centred in its own hover square.
             .padding(.horizontal, Theme.Spacing.sm)
