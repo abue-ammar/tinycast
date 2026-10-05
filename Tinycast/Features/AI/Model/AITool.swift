@@ -26,6 +26,15 @@ struct AIToolCall: Equatable, Hashable, Sendable {
     let id: String
     let name: String
     let arguments: String
+    /// Gemini 3 rejects the next request unless the call echoes its opaque signature back.
+    let thoughtSignature: String?
+
+    init(id: String, name: String, arguments: String, thoughtSignature: String? = nil) {
+        self.id = id
+        self.name = name
+        self.arguments = arguments
+        self.thoughtSignature = thoughtSignature
+    }
 }
 
 /// A failure is content the model can read and recover from, never a thrown error.

@@ -54,6 +54,7 @@ struct AIStreamDecoder: Sendable {
         var id = ""
         var name = ""
         var arguments = ""
+        var thoughtSignature: String?
     }
 
     private let shape: AIHTTPConfiguration.APIShape
@@ -75,7 +76,9 @@ struct AIStreamDecoder: Sendable {
         return calls.compactMap { call in
             guard !call.name.isEmpty else { return nil }
             return .toolCallRequested(
-                AIToolCall(id: call.id, name: call.name, arguments: call.arguments))
+                AIToolCall(
+                    id: call.id, name: call.name, arguments: call.arguments,
+                    thoughtSignature: call.thoughtSignature))
         }
     }
 
@@ -149,6 +152,9 @@ struct AIStreamDecoder: Sendable {
         if let id = fragment.id, !id.isEmpty { partial.id = id }
         if let name = fragment.function?.name, !name.isEmpty { partial.name = name }
         partial.arguments += fragment.function?.arguments ?? ""
+        if let signature = fragment.extraContent?.google?.thoughtSignature {
+            partial.thoughtSignature = signature
+        }
         partialToolCalls[fragment.index ?? 0] = partial
     }
 
@@ -221,9 +227,27 @@ private struct OpenAIChunk: Decodable {
                     let arguments: String?
                 }
 
+                struct ExtraContent: Decodable {
+                    struct Google: Decodable {
+                        let thoughtSignature: String?
+
+                        enum CodingKeys: String, CodingKey {
+                            case thoughtSignature = "thought_signature"
+                        }
+                    }
+
+                    let google: Google?
+                }
+
                 let index: Int?
                 let id: String?
                 let function: Function?
+                let extraContent: ExtraContent?
+
+                enum CodingKeys: String, CodingKey {
+                    case index, id, function
+                    case extraContent = "extra_content"
+                }
             }
 
             let content: String?

@@ -84,12 +84,7 @@ enum AIRequestBody {
             return [
                 "role": message.role.rawValue,
                 "content": text ?? "",
-                "tool_calls": message.toolCalls.map {
-                    [
-                        "id": $0.id, "type": "function",
-                        "function": ["name": $0.name, "arguments": $0.arguments]
-                    ]
-                }
+                "tool_calls": message.toolCalls.map(openAIToolCall)
             ]
         }
         let hasAttachments = !message.images.isEmpty || !message.documents.isEmpty
@@ -104,6 +99,17 @@ enum AIRequestBody {
             ["type": "file", "file": ["filename": $0.name, "file_data": $0.dataURL]]
         }
         return ["role": message.role.rawValue, "content": parts]
+    }
+
+    private static func openAIToolCall(_ call: AIToolCall) -> [String: Any] {
+        var encoded: [String: Any] = [
+            "id": call.id, "type": "function",
+            "function": ["name": call.name, "arguments": call.arguments]
+        ]
+        if let signature = call.thoughtSignature {
+            encoded["extra_content"] = ["google": ["thought_signature": signature]]
+        }
+        return encoded
     }
 
     /// Anthropic takes tool results as user content, and a run of them has to arrive as one turn.

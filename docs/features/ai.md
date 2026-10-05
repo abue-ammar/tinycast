@@ -722,7 +722,7 @@ transport code at all.
 | Cursor command | never | never | never | the global config still loads — ask mode and withheld approval refuse the call |
 | OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | never yet — its catalog publishes a `file` modality Tinycast does not read | `tools` + `role: "tool"` turns |
 | OpenAI | not offered | `image_url` part, assumed supported | `file` part with `filename` and a `file_data` data URL | `tools` + `role: "tool"` turns |
-| Gemini / compatible | not offered | `image_url` part, assumed supported | never — a gateway that has not implemented the part bills the upload before rejecting it | `tools` + `role: "tool"` turns |
+| Gemini / compatible | not offered | `image_url` part, assumed supported | never — a gateway that has not implemented the part bills the upload before rejecting it | `tools` + `role: "tool"` turns; a call's `extra_content.google.thought_signature` goes back unchanged, or Gemini 3 rejects the next turn |
 | Anthropic | not offered | base64 `image` block | base64 `document` block, ahead of the text block | `tools` + `tool_use` / `tool_result` blocks |
 
 A search is part of the reply, not a status: `item/started` for a `webSearch` item appends a
