@@ -112,8 +112,20 @@ struct AppNameTest {
             "English stays last so a Chinese reader still types \"Calendar\"",
             codes(["zh-Hans-CN"]).last == "en")
         check(
-            "a tag carrying no script is left exactly as it was",
+            "Portuguese keeps its exact, underscore and bare-language forms",
             codes(["pt-BR"]) == ["pt-BR", "pt_BR", "pt", "en"])
+        check(
+            "Bokmål reads Apple's no key after an explicit nb localization",
+            codes(["nb-NO"]) == ["nb-NO", "nb_NO", "nb", "no", "en"])
+        check(
+            "a bare Bokmål preference also reaches no",
+            codes(["nb"]) == ["nb", "no", "en"])
+        check(
+            "repeated Norwegian preferences never repeat a resource lookup",
+            codes(["nb-NO", "nb", "no"]) == ["nb-NO", "nb_NO", "nb", "no", "en"])
+        check(
+            "Nynorsk does not acquire the Bokmål resource alias",
+            codes(["nn-NO"]) == ["nn-NO", "nn_NO", "nn", "en"])
 
         /// The whole path: a bundle translated only in its loctable, read as the scan reads it.
         func makeLocalizedApp(_ fileName: String, table: [String: Any]) -> URL {
@@ -132,6 +144,70 @@ struct AppNameTest {
                 for: url, base: url.deletingPathExtension().lastPathComponent,
                 developmentRegion: region, languages: codes(preferred))
         }
+
+        let calculator = makeLocalizedApp(
+            "Calculator.app",
+            table: [
+                "no": ["CFBundleDisplayName": "Kalkulator"],
+                "de": ["CFBundleDisplayName": "Rechner"]
+            ])
+        check(
+            "a Bokmål Mac displays the no translation and keeps English searchable",
+            names(calculator, ["nb-NO"]) == ["Kalkulator", "Calculator"])
+        check(
+            "a more preferred language still outranks Norwegian",
+            names(calculator, ["de-DE", "nb-NO"]) == ["Rechner", "Kalkulator", "Calculator"])
+        check(
+            "an English Mac does not index Norwegian translations",
+            names(calculator, ["en-US"]) == ["Calculator"])
+        check(
+            "a no translation replaces the base name of a Norwegian-developed bundle",
+            names(calculator, ["nb-NO"], region: "no") == ["Kalkulator"]
+                && names(calculator, ["nb-NO"], region: "nb") == ["Kalkulator"])
+        check(
+            "a no preference also recognizes its canonical development language",
+            names(calculator, ["no"], region: "no") == ["Kalkulator"])
+
+        let norwegianBase = makeLocalizedApp(
+            "Notater.app", table: ["de": ["CFBundleName": "Notizen"]])
+        check(
+            "an untranslated Norwegian base name stays ahead of less preferred languages",
+            names(norwegianBase, ["nb-NO", "de-DE"], region: "no") == ["Notater", "Notizen"])
+        check(
+            "a translated earlier language still outranks the Norwegian base name",
+            names(norwegianBase, ["de-DE", "nb-NO"], region: "nb") == ["Notizen", "Notater"])
+
+        let norwegianStrings = root.appendingPathComponent("NorwegianStrings.app")
+        let no = norwegianStrings.appendingPathComponent("Contents/Resources/no.lproj")
+        try? fm.createDirectory(at: no, withIntermediateDirectories: true)
+        try? Data("\"CFBundleDisplayName\" = \"Norsk navn\";\n".utf8)
+            .write(to: no.appendingPathComponent("InfoPlist.strings"))
+        check(
+            "the Norwegian alias also reads no.lproj strings",
+            names(norwegianStrings, ["nb-NO"]) == ["Norsk navn", "NorwegianStrings"])
+
+        let nb = calculator.appendingPathComponent("Contents/Resources/nb.lproj")
+        try? fm.createDirectory(at: nb, withIntermediateDirectories: true)
+        try? Data("\"CFBundleDisplayName\" = \"Bokmål-kalkulator\";\n".utf8)
+            .write(to: nb.appendingPathComponent("InfoPlist.strings"))
+        check(
+            "an explicit nb folder wins over Apple's no table",
+            names(calculator, ["nb-NO"]) == ["Bokmål-kalkulator", "Kalkulator", "Calculator"])
+        check(
+            "an explicit nb translation suppresses the development base across the alias",
+            names(calculator, ["nb-NO"], region: "no") == ["Bokmål-kalkulator", "Kalkulator"])
+        check(
+            "development fallback waits for nb even when no was preferred first",
+            names(calculator, ["no", "nb"], region: "nb") == ["Kalkulator", "Bokmål-kalkulator"])
+
+        let bokmalOnly = makeLocalizedApp(
+            "BokmalOnly.app", table: ["nb": ["CFBundleName": "Bokmålsnavn"]])
+        check(
+            "a missing no alias never reinstates a base name replaced under nb",
+            names(bokmalOnly, ["nb-NO"], region: "no") == ["Bokmålsnavn"])
+        check(
+            "an empty no lookup waits for a later nb translation before inserting the base",
+            names(bokmalOnly, ["no", "nb"], region: "nb") == ["Bokmålsnavn"])
 
         let monitor = makeLocalizedApp(
             "Activity Monitor.app",

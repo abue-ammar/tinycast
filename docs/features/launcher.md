@@ -183,7 +183,9 @@ all 65 of them read English on every Mac, whatever language it is set to.
 A tag carrying a script is read under two more codes, because no one folder name covers it: a
 `zh-Hans-CN` Mac also reads `zh-Hans`, the folder most third-party apps ship, then `zh_CN`, the key
 Apple's own loctables use. A script-only `zh-Hans` maximizes to reach the same region. A tag without a
-script, every English one included, produces exactly the codes it always did.
+script otherwise keeps its exact, underscore and bare-language forms. Bokmål (`nb`) additionally
+reads `no` after `nb`, because Apple's Norwegian loctables use that key; an explicit `nb.lproj` still
+wins. Other languages, including Nynorsk (`nn`), gain no alias.
 
 The user's own language wins the **display name**, so a row reads the way Finder reads it. The rest,
 English included, ride along as alternate titles, matched as typed and never transliterated.
@@ -200,8 +202,10 @@ every file name as an alternate title. Reading the `en_GB` those bundles *do* ca
 repair: it relabels `Print Center` as `Print Centre`. Below the development region the walk carries on,
 so every language under it stays indexed as an alternate title. The region is canonicalized before it is
 matched, because `CFBundleDevelopmentRegion` still ships its pre-BCP-47 spelling — Safari's and
-Terminal's read `English`. `AppDisplayName.inInfo` reads the `-macos` variant of each key before the
-bare one, the way `CFBundle` does: Image Playground's loctable spells the bare `CFBundleDisplayName`
+Terminal's read `English`. Norwegian development regions resolve as Bokmål, and both `nb` and `no`
+translations are checked before falling back to the untranslated name. `AppDisplayName.inInfo` reads
+the `-macos` variant of each key before the bare one, the way `CFBundle` does: Image Playground's
+loctable spells the bare `CFBundleDisplayName`
 `Playground` and only the suffixed key `Image Playground`. A non-English user finds their app by the
 name they see *and* by the English name the vendor advertises.
 

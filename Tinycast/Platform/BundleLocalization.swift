@@ -8,7 +8,8 @@ enum BundleLocalization {
         var seen = Set<String>()
         for tag in preferred + ["en"] {
             let bare = tag.split(separator: "-").first.map(String.init) ?? tag
-            for form in [tag] + scriptForms(tag) + [bare] {
+            let aliases = resourceAlias(for: bare).map { [$0] } ?? []
+            for form in [tag] + scriptForms(tag) + [bare] + aliases {
                 // loctable keys and .lproj folders use underscores where a language tag uses "-".
                 let underscored = form.replacingOccurrences(of: "-", with: "_")
                 for code in [form, underscored]
@@ -18,6 +19,10 @@ enum BundleLocalization {
             }
         }
         return codes
+    }
+
+    private static func resourceAlias(for language: String) -> String? {
+        language == "nb" ? "no" : nil
     }
 
     /// Most apps ship a script-bearing tag as `zh-Hans`; Apple keys it by region alone, as `zh_CN`.
@@ -41,6 +46,12 @@ enum BundleLocalization {
         let resources = bundleURL.appendingPathComponent("Contents/Resources", isDirectory: true)
         let table = plist(at: resources.appendingPathComponent("InfoPlist.loctable"))
         let development = developmentRegion.flatMap { languageCode(of: $0) }
+        let developmentAlias = development.flatMap { resourceAlias(for: $0) }
+        let developmentFallback = languages.last { code in
+            guard let development else { return false }
+            return code.caseInsensitiveCompare(development) == .orderedSame
+                || code == developmentAlias
+        }
         var result: [String] = []
         var seen = Set<String>()
         var isBaseRenamed = false
@@ -56,8 +67,11 @@ enum BundleLocalization {
             let translated = [table?[code] as? [String: Any], strings]
                 .compactMap { $0.flatMap(AppDisplayName.inInfo) }
             translated.forEach(append)
-            if let development, code.caseInsensitiveCompare(development) == .orderedSame {
-                if translated.isEmpty { append(base) } else { isBaseRenamed = true }
+            if let development,
+                code.caseInsensitiveCompare(development) == .orderedSame || code == developmentAlias
+            {
+                if !translated.isEmpty { isBaseRenamed = true }
+                if code == developmentFallback && !isBaseRenamed { append(base) }
             }
         }
         // A development region this Mac doesn't read still leaves the name searchable.
