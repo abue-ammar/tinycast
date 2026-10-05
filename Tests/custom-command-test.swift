@@ -435,6 +435,36 @@ struct CustomCommandTests {
             injected.log.contains("; touch /tmp/tinycast-should-not-exist")
                 && !FileManager.default.fileExists(atPath: "/tmp/tinycast-should-not-exist"))
 
+        // MARK: Another interpreter
+
+        // The same text means `x` to zsh; only bash itself answers `y`.
+        let bashArray = await ShellCommandRunner.run("#!/bin/bash\na=(x y)\nprintf '%s' \"${a[1]}\"")
+        check("a #! line picks the interpreter that runs the text", bashArray.standardOutput == "y")
+
+        let scripted = await ShellCommandRunner.run(
+            "#!/bin/sh\nprintf '%s\\n' \"$0\" \"$1\"",
+            arguments: ["; touch /tmp/tinycast-script-should-not-exist"])
+        let scriptedLines = scripted.standardOutput?.split(separator: "\n").map(String.init) ?? []
+        check(
+            "a #! script reads its value as data, never as syntax",
+            scriptedLines.last == "; touch /tmp/tinycast-script-should-not-exist"
+                && !FileManager.default.fileExists(atPath: "/tmp/tinycast-script-should-not-exist"))
+        check(
+            "a #! script's file is gone once it exits",
+            scriptedLines.count == 2 && !FileManager.default.fileExists(atPath: scriptedLines[0]))
+
+        let streamedScript = await collect(
+            ShellCommandRunner.stream("#!/bin/bash\nprintf '%s\\n' \"$BASH\""))
+        check(
+            "a #! script streams under the pty too",
+            streamedScript.log.contains("/bin/bash") && streamedScript.result?.succeeded == true)
+
+        let missingInterpreter = await ShellCommandRunner.run("#!/nope/bash\ntrue")
+        check(
+            "a missing interpreter is named in the failure",
+            missingInterpreter.termination == .exited(status: 127)
+                && missingInterpreter.standardError?.contains("/nope/bash") == true)
+
         // MARK: Inline argument values
 
         let search = CustomCommand(

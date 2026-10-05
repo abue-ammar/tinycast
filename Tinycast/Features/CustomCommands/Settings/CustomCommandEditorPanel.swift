@@ -76,7 +76,7 @@ struct CustomCommandEditorPanel: View {
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
                 optionToggle(
                     "Load shell environment", isOn: $loadsShellEnvironment,
-                    detail: "Resolves aliases, functions and PATH. Slower to start.")
+                    detail: "Sources ~/.zshrc for aliases, functions and PATH. Slower to start.")
                 optionToggle(
                     "Needs confirmation", isOn: $requiresConfirmation,
                     detail: "Ask before running this command.")

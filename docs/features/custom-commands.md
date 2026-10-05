@@ -55,7 +55,8 @@ The command text is deliberately not searchable. Only the user-facing name enter
 `ShellCommandRunner` executes asynchronously with:
 
 - `/bin/zsh -lc <command>`, or `/bin/zsh -ilc <command>` when the command's **Load shell
-  environment** flag is on
+  environment** flag is on — unless the text starts with `#!`, which picks
+  [another interpreter](#another-interpreter)
 - `tinycast` as `$0`, then the collected argument values as `$1`, `$2`, …
 - the command's own **Run In** folder, or the home directory when it names none
 - standard input reading EOF immediately
@@ -94,6 +95,32 @@ quitting.
 
 Because standard error surfaces only on a non-zero exit and only its last 8 KiB, rc-file startup noise
 is dropped while the actual error survives.
+
+### Another interpreter
+
+A command whose text starts with `#!` is not zsh text. The runner writes it to a `0700` file in the
+per-user temporary folder and runs
+
+```
+/bin/zsh -lc 'exec "$0" "$@"' <file> <value1> <value2> …
+```
+
+so the kernel reads the `#!` line and starts what it names: `#!/opt/homebrew/bin/bash -l`,
+`#!/usr/bin/env python3`, `#!/usr/bin/osascript`. This, not reading the login shell, is how someone
+on another shell gets it. The same text means different things to different shells —
+`a=(x y); echo "${a[1]}"` prints `x` in zsh and `y` in bash — so the text has to say which one it is
+written for, and a backup carries that with the command. Text without `#!` runs exactly as before.
+
+The zsh hop keeps one path for both run modes and for Stop's whole-session signal, and hands the
+interpreter the login `PATH`, so `#!/usr/bin/env node` finds a Homebrew `node`. **Load shell
+environment** still sources `~/.zshrc` before the `exec`: its exported variables reach the script,
+its aliases and functions do not. Another shell's startup files are its `#!` line's business —
+`bash -l` reads `.bash_profile`.
+
+Values arrive as the script's own arguments — `$1` in bash, `$argv[1]` in fish, `sys.argv[1]` in
+Python — so the [never-spliced invariant](#invariants) holds. A missing interpreter fails with 127
+and `bad interpreter: <path>`. The file is removed when the command exits; one still running when
+Tinycast quits leaves its file behind in the temporary folder.
 
 ### Arguments
 

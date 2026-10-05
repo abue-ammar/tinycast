@@ -88,15 +88,20 @@ enum ShellCommandRunner {
         _ command: String, arguments: [String], loadingShellEnvironment: Bool,
         workingDirectory: String?
     ) -> ShellCommandResult {
-        guard let directory = resolvedWorkingDirectory(workingDirectory) else {
-            return ShellCommandResult(termination: .launchFailed(missingDirectory(workingDirectory)))
+        let launch: Launch
+        do {
+            launch = try prepare(
+                command, arguments: arguments, loadingShellEnvironment: loadingShellEnvironment,
+                workingDirectory: workingDirectory)
+        } catch {
+            return ShellCommandResult(termination: .launchFailed(error.reason))
         }
+        defer { launch.removeScript() }
+
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shell)
-        process.arguments = shellArguments(
-            command: command, arguments: arguments,
-            loadingShellEnvironment: loadingShellEnvironment)
-        process.currentDirectoryURL = URL(fileURLWithPath: directory)
+        process.arguments = launch.arguments
+        process.currentDirectoryURL = URL(fileURLWithPath: launch.directory)
         // Lets a shell config skip slow sections when Tinycast is the caller.
         process.environment = ProcessInfo.processInfo.environment.merging(["TINYCAST": "1"]) { _, new in
             new
@@ -132,38 +137,34 @@ enum ShellCommandRunner {
         _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false,
         workingDirectory: String? = nil
     ) -> ShellCommandSession {
+        let launch: Launch
+        do {
+            launch = try prepare(
+                command, arguments: arguments, loadingShellEnvironment: loadingShellEnvironment,
+                workingDirectory: workingDirectory)
+        } catch {
+            return failedSession(error.reason)
+        }
+
         var environment = ProcessInfo.processInfo.environment
         environment["TINYCAST"] = "1"
         // A terminal makes tools colour output, so ask for colour the window can draw.
         environment["TERM"] = "xterm-256color"
 
-        let directory = resolvedWorkingDirectory(workingDirectory)
-        let terminal = directory.flatMap {
-            PseudoTerminal.spawn(
-                executable: shell,
-                arguments: shellArguments(
-                    command: command, arguments: arguments,
-                    loadingShellEnvironment: loadingShellEnvironment),
-                environment: environment, workingDirectory: $0)
-        }
-
-        guard let terminal else {
-            let reason =
-                directory == nil
-                ? missingDirectory(workingDirectory) : "The shell could not be started."
-            return ShellCommandSession(
-                events: AsyncStream { continuation in
-                    continuation.yield(
-                        .finished(ShellCommandResult(termination: .launchFailed(reason))))
-                    continuation.finish()
-                },
-                stop: {})
+        guard
+            let terminal = PseudoTerminal.spawn(
+                executable: shell, arguments: launch.arguments, environment: environment,
+                workingDirectory: launch.directory)
+        else {
+            launch.removeScript()
+            return failedSession("The shell could not be started.")
         }
 
         let stopped = StopFlag()
         let events = AsyncStream<ShellCommandEvent> { continuation in
             queue.async {
                 drain(terminal, stopped: stopped, into: continuation)
+                launch.removeScript()
             }
         }
         return ShellCommandSession(
@@ -176,6 +177,15 @@ enum ShellCommandRunner {
                     terminal.signalSession(SIGKILL)
                 }
             })
+    }
+
+    nonisolated private static func failedSession(_ reason: String) -> ShellCommandSession {
+        ShellCommandSession(
+            events: AsyncStream { continuation in
+                continuation.yield(.finished(ShellCommandResult(termination: .launchFailed(reason))))
+                continuation.finish()
+            },
+            stop: {})
     }
 
     /// One queue, one reader: the decode buffer is touched from here alone, so it needs no lock.
@@ -279,16 +289,48 @@ enum ShellCommandRunner {
         return expanded
     }
 
-    nonisolated private static func missingDirectory(_ path: String?) -> String {
-        "The folder “\(path ?? "")” no longer exists."
+    /// What a run spawns; a `#!` command also owns the script file zsh execs.
+    private struct Launch: Sendable {
+        let arguments: [String]
+        let directory: String
+        let script: URL?
+
+        func removeScript() {
+            guard let script else { return }
+            try? FileManager.default.removeItem(at: script)
+        }
+    }
+
+    private struct LaunchFailure: Error {
+        let reason: String
     }
 
     /// Values follow as `$1`, `$2`, never spliced where zsh would re-parse them as syntax.
-    nonisolated private static func shellArguments(
-        command: String, arguments: [String], loadingShellEnvironment: Bool
-    ) -> [String] {
+    nonisolated private static func prepare(
+        _ command: String, arguments: [String], loadingShellEnvironment: Bool,
+        workingDirectory: String?
+    ) throws(LaunchFailure) -> Launch {
+        guard let directory = resolvedWorkingDirectory(workingDirectory) else {
+            throw LaunchFailure(reason: "The folder “\(workingDirectory ?? "")” no longer exists.")
+        }
         // zsh reads `.zshrc` only for interactive shells, so `-l` alone sees no aliases.
-        [loadingShellEnvironment ? "-ilc" : "-lc", command, "tinycast"] + arguments
+        let flag = loadingShellEnvironment ? "-ilc" : "-lc"
+        guard command.hasPrefix("#!") else {
+            return Launch(
+                arguments: [flag, command, "tinycast"] + arguments, directory: directory,
+                script: nil)
+        }
+        // The kernel reads the `#!` line, so the text reaches its interpreter unparsed by zsh.
+        let script = FileManager.default.temporaryDirectory
+            .appending(path: "tinycast-command-script-\(UUID().uuidString)")
+        guard
+            FileManager.default.createFile(
+                atPath: script.path, contents: Data(command.utf8),
+                attributes: [.posixPermissions: 0o700])
+        else { throw LaunchFailure(reason: "The script could not be written.") }
+        return Launch(
+            arguments: [flag, #"exec "$0" "$@""#, script.path] + arguments, directory: directory,
+            script: script)
     }
 
     /// A temp file, not a `Pipe`: nothing drains a pipe until the command exits.
