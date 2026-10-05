@@ -4,7 +4,7 @@ import SwiftUI
 /// Owns the standalone camera surface: one panel at a time, and the camera stops with it.
 @MainActor
 @Observable
-final class CameraCoordinator: NSObject, NSWindowDelegate {
+final class CameraCoordinator {
     private(set) var feed: CameraSession.Feed = .noCamera
     private(set) var canSwitchCamera = false
     /// Remembered for the launch, so reopening the command keeps the framing you were happy with.
@@ -22,7 +22,12 @@ final class CameraCoordinator: NSObject, NSWindowDelegate {
 
     /// The camera settles first: a panel over a starting session shows a black stage.
     func show() async {
-        guard !opening, panel == nil else { return }
+        // A panel system UI left without key takes it back, so ↵ and Esc reach it again.
+        if let panel {
+            panel.makeKey()
+            return
+        }
+        guard !opening else { return }
         opening = true
         defer { opening = false }
         feed = await session.start()
@@ -33,8 +38,7 @@ final class CameraCoordinator: NSObject, NSWindowDelegate {
     func close() {
         guard let closing = panel else { return }
         panel = nil
-        closing.delegate = nil
-        closing.onKey = nil
+        closing.onAction = nil
         // The camera goes with the panel, not before it: tearing it down mid-fade blanks the feed.
         closing.fadeOut(duration: Theme.Duration.exit) { [weak self] in
             // Unless a panel raised inside the fade already owns the camera.
@@ -68,10 +72,9 @@ final class CameraCoordinator: NSObject, NSWindowDelegate {
         let hosting = NSHostingView(rootView: CameraView(coordinator: self))
         hosting.setFrameSize(hosting.fittingSize)
         let panel = CameraPanel(content: hosting)
-        panel.delegate = self
-        panel.onKey = { [weak self] key in
+        panel.onAction = { [weak self] action in
             guard let self else { return }
-            if key == .primary { takePhoto() } else { close() }
+            if action == .primary { takePhoto() } else { close() }
         }
         self.panel = panel
         panel.centerOnCursorScreen()
@@ -80,13 +83,5 @@ final class CameraCoordinator: NSObject, NSWindowDelegate {
             panel.makeKeyAndOrderFront(nil)
             panel.orderFrontRegardless()
         }
-    }
-
-    // MARK: - NSWindowDelegate
-
-    /// Click-away closes rather than leaving a camera running behind another window.
-    func windowDidResignKey(_ notification: Notification) {
-        guard let panel, notification.object as? NSWindow === panel else { return }
-        close()
     }
 }

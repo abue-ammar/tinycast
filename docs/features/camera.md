@@ -19,9 +19,13 @@ controller and footer are all that stay in [calendar.md](calendar.md).
   `AVCaptureSession`, so every open builds its own: a reused session with no output of its own — the
   preview's — restarts to a black stage.
 - **Escape, click-away and the shot all end the same way.** Every route goes through
-  `CameraCoordinator.close()`, which drops the panel and stops the session; `windowDidResignKey` is
-  what covers clicking away. Taking a photo closes too — the command is done, so the camera goes out
-  with it rather than idling for a second shot.
+  `CameraCoordinator.close()`, which drops the panel and stops the session. Taking a photo closes
+  too — the command is done, so the camera goes out with it rather than idling for a second shot.
+- **System UI is not a click away.** `CameraPanel` owns click-away for both surfaces and reports it
+  as the same `.cancel` as Esc. Losing key counts, unless the window under the pointer sits at the
+  Dock's level or above — the menu bar, what it drops down, the Dock — so reframing from Control
+  Center keeps the feed live. No further `resignKey` follows that, so a mouse-down monitor waits for
+  the next click outside the panel and system UI, and stops once the panel is key again.
 - **The preview and the photo are mirrored together.** Mirroring is `isVideoMirrored` on a connection
   — the preview layer's, and the photo output's at capture time — never a `scaleEffect` on the view,
   which would hand back a photo that is not what the user framed.
@@ -40,7 +44,7 @@ controller and footer are all that stay in [calendar.md](calendar.md).
 | `UI/CameraCoordinator.swift` | the standalone panel's lifecycle, mirror state, the clipboard write |
 | `UI/CameraView.swift` | the standalone surface: stage over a footer of controls |
 | `UI/CameraStage.swift` | the shared stage — the hosted preview layer, or why there is no video |
-| `UI/CameraPanel.swift` | the shared borderless panel: ↵ and Esc, and cursor-screen centring |
+| `UI/CameraPanel.swift` | the shared borderless panel: ↵, Esc, click-away, cursor-screen centring |
 | `UI/CameraButton.swift` | both footers' button: `ModalActionButtonStyle` plus a key-cap tooltip |
 
 `Purpose` is the session's one knob. `.preview` is the cheap one Calendar takes — a `.medium` preset

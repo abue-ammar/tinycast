@@ -18,7 +18,8 @@ it a global shortcut and an alias.
 | Switch Camera | Switches to your next camera; only shown if you have more than one |
 | Close         | Closes the preview. <kbd>esc</kbd> does the same                   |
 
-Clicking anywhere outside the preview also closes it.
+Clicking anywhere outside the preview also closes it. Clicks in the menu bar and the Dock don't
+count, so you can change video effects in Control Center while you watch the preview.
 
 Mirroring flips the photo as well as the preview, so the photo always matches what you saw. Tinycast
 remembers your Mirror setting until you quit.
