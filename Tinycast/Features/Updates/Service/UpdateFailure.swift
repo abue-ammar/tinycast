@@ -38,8 +38,8 @@ enum UpdateFailure: LocalizedError, Equatable {
             return "Nothing was installed. Download the release from GitHub instead, so you can "
                 + "check it yourself."
         case .replaceFailed:
-            return "Nothing was installed. This usually means /Applications is not writable by "
-                + "your account."
+            return "Nothing was installed. This usually means neither /Applications nor "
+                + "Tinycast.app is writable by your account."
         case .quarantined:
             return "Nothing was installed."
         default:

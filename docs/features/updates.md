@@ -117,8 +117,10 @@ One route, whatever the install came from:
 4. Verify the bundle id, the version, and that the code signature is valid and proves the bundle is
    ours — by the pinned Developer ID requirement, or by the running app's own leaf certificate.
 5. `FileManager.replaceItemAt`. The staging folder is on the same volume as `/Applications`, which is
-   what lets this be atomic. A non-writable `/Applications` is reported, not worked around; there is
-   no privileged helper.
+   what lets this be atomic. A standard account often owns the bundle but cannot write
+   `/Applications`; then `BundleReplacement` swaps the two bundles' `Contents` with
+   `renamex_np(RENAME_SWAP)`, which is just as atomic and leaves the old one in the staging folder.
+   When the bundle is not writable either, the failure is reported; there is no privileged helper.
 6. Offer Relaunch, which spawns a detached waiter that reopens the app once this process exits —
    `open` on a bundle id that is still running would only re-activate the instance on its way out.
 

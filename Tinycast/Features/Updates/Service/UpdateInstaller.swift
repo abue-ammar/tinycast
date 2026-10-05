@@ -57,8 +57,7 @@ struct UpdateInstaller: Sendable {
 
         onProgress(.replacing)
         do {
-            _ = try FileManager.default.replaceItemAt(
-                bundleURL, withItemAt: staged, options: .usingNewMetadataOnly)
+            try BundleReplacement.replace(bundleURL, with: staged)
         } catch {
             throw UpdateFailure.replaceFailed(error.localizedDescription)
         }

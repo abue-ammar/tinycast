@@ -30,6 +30,7 @@ struct UpdatesTests {
         laysOutTheChangelog()
         linksMentionsAndPullRequests()
         blocksWhileBusy()
+        replacesWhereverItCanWrite()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -454,5 +455,57 @@ struct UpdatesTests {
         expect(
             UpdateReadiness.Blocker.expandingSnippet.message.hasSuffix("."),
             "every blocker reads as a sentence the window can show")
+    }
+
+    // MARK: - BundleReplacement
+
+    static func replacesWhereverItCanWrite() {
+        let files = FileManager.default
+        let root = files.temporaryDirectory.appending(component: "updates-test-\(UUID().uuidString)")
+        defer { try? files.removeItem(at: root) }
+
+        func app(_ path: String, marker: String?) -> URL {
+            let bundle = root.appending(path: path)
+            let contents = bundle.appending(component: "Contents")
+            try? files.createDirectory(at: contents, withIntermediateDirectories: true)
+            if let marker { try? Data(marker.utf8).write(to: contents.appending(component: "marker")) }
+            return bundle
+        }
+        func marker(in bundle: URL) -> String? {
+            let url = bundle.appending(components: "Contents", "marker")
+            return (try? Data(contentsOf: url)).flatMap { String(bytes: $0, encoding: .utf8) }
+        }
+        func locked(_ folder: URL, _ body: () -> Void) {
+            try? files.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+            body()
+            try? files.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path)
+        }
+
+        let open = app("open/Tinycast.app", marker: "old")
+        let ownStaged = app("staged-open/Tinycast.app", marker: "new")
+        let replacedOpen = (try? BundleReplacement.replace(open, with: ownStaged)) != nil
+        expect(replacedOpen && marker(in: open) == "new", "a writable folder takes the whole bundle")
+
+        let bundle = app("locked/Tinycast.app", marker: "old")
+        let staged = app("staged/Tinycast Beta.app", marker: "new")
+        locked(bundle.deletingLastPathComponent()) {
+            expect(
+                !files.isWritableFile(atPath: bundle.deletingLastPathComponent().path),
+                "the harness really locked the folder")
+            let replaced = (try? BundleReplacement.replace(bundle, with: staged)) != nil
+            expect(replaced, "a locked folder still updates a bundle the account owns")
+            expect(marker(in: bundle) == "new", "the new Contents lands in the old bundle")
+            expect(files.fileExists(atPath: bundle.path), "the bundle keeps its own name")
+            expect(marker(in: staged) == "old", "the old Contents is left in staging to clean up")
+        }
+
+        let kept = app("kept/Tinycast.app", marker: "old")
+        let empty = app("empty/Tinycast.app", marker: nil)
+        try? files.removeItem(at: empty.appending(component: "Contents"))
+        locked(kept.deletingLastPathComponent()) {
+            let replaced = (try? BundleReplacement.replace(kept, with: empty)) != nil
+            expect(!replaced, "a staged app with nothing to swap in fails")
+            expect(marker(in: kept) == "old", "a failed swap leaves the installed Contents alone")
+        }
     }
 }

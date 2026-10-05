@@ -594,7 +594,8 @@ run settings-history-test  Tinycast/Features/Settings/SettingsTab.swift \
                            Tinycast/Features/Settings/SettingsSearchCatalog.swift \
                            $L/SearchRelevance.swift
 run updates-test           Tinycast/Features/Updates/Model/*.swift \
-                           Tinycast/Features/Updates/Service/BundleSignature.swift
+                           Tinycast/Features/Updates/Service/BundleSignature.swift \
+                           Tinycast/Features/Updates/Service/BundleReplacement.swift
 run update-check-test      Tinycast/Features/Updates/Model/*.swift \
                            Tinycast/Features/Updates/Service/UpdateCheckStore.swift \
                            Tinycast/Platform/AppPaths.swift
