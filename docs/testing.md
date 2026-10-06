@@ -120,6 +120,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `custom-command-test` | `CustomCommands/Model/CustomCommand.swift`, `Service/ShellCommandRunner.swift` |
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
 | `quicklink-test` | all of `Quicklinks/Model/` |
+| `quicklink-coordinator-test` | Quicklink opening and inline argument focus — missing selection, manual input, clipboard fallback and default-app overrides; no platform effects |
 | `apple-shortcut-test` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |
 | `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
 | `notes-test` | all of `Notes/Model/` and `Notes/Service/`, including the Markdown parser, edit plans and reveal policy, plus the real fuzzy matcher and signposts |

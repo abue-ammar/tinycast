@@ -112,12 +112,11 @@ glyph, then the chips, right after the typed text — and `.besideSearchField` o
 where the field stays a filter with its prompt intact and the row below already carries the glyph.
 
 **"Selected Text" is asked for up front, not after a failed read.** A chip cannot capture a selection,
-so the field appears whenever the link reads `{selection}` and the setting is `.ask`. Left empty it
-changes nothing — a selection the frontmost app *does* expose is still used — and only a typed value
-replaces it. So it is never owed: `QuicklinkCoordinator.selectionArgument` is optional, which keeps it
-out of the first incomplete field, and ↵ opens a selected-text link at once instead of focusing the
-empty chip first. That is the one behavioural difference from the two-screen form it replaced, and it is
-what lets the strip be drawn without capturing anything.
+so the field appears whenever the link reads `{selection}` and the setting is `.ask`.
+`QuicklinkCoordinator.selectionArgument` stays optional during ordinary navigation so ↵ can read
+the frontmost app's selection without requiring typed input first. If that read returns nothing and
+the field is empty, opening shows Search Quicklinks with the field focused and waits for input.
+A typed value supplies the missing selection. Drawing the strip never captures anything.
 
 `openQuicklink(id:forcingDefaultApp:values:)` is the single funnel, and it captures the expansion
 context on **every** call rather than holding one across a session, so `{clipboard}`, `{selection}` and
