@@ -136,6 +136,7 @@ enum SettingsFileSchema {
         case .calendarSpan: return bind(settings, \.calendarSpan)
         case .joinWindowMinutes: return bind(settings, \.joinWindowMinutes)
         case .autoJoinConfirms: return bind(settings, \.autoJoinConfirms)
+        case .autoJoinNamedProvidersOnly: return bind(settings, \.autoJoinNamedProvidersOnly)
         case .meetingBrowser: return bind(settings, \.meetingBrowserBundleID)
         case .calendarMenuBarDisplay: return bind(settings, \.calendarMenuBarDisplay)
         case .menuBarEvents: return bind(settings, \.menuBarEvents)

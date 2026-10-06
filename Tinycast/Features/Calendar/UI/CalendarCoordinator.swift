@@ -197,7 +197,8 @@ final class CalendarCoordinator {
         guard settings.calendarEnabled, settings.autoJoinMeetings, !core.isShowingDialog else {
             return
         }
-        let policy = AutoJoinPolicy(armedAt: armedAt)
+        let policy = AutoJoinPolicy(
+            armedAt: armedAt, namedProvidersOnly: settings.autoJoinNamedProvidersOnly)
         guard
             let meeting = policy.meeting(
                 from: store.events, now: clock.now, window: window, joined: autoJoined)

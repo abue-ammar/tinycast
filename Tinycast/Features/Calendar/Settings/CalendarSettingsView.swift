@@ -65,6 +65,11 @@ struct CalendarSettingsView: View {
                     SettingsRowTitle(.calendarJoining, "Auto Join Meetings")
                     Text("As they start.")
                 }
+                Toggle(isOn: $settings.autoJoinNamedProvidersOnly) {
+                    SettingsRowTitle(.calendarJoining, "Only join known meeting services")
+                }
+                .toggleStyle(.checkbox)
+                .settingsEnabled(settings.autoJoinMeetings)
                 Toggle(isOn: $settings.autoJoinConfirms) {
                     SettingsRowTitle(.calendarJoining, "Confirm before joining")
                 }

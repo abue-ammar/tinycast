@@ -100,6 +100,7 @@ enum SettingsFileKey: String, CaseIterable, Sendable {
     case calendarSpan = "calendar.span"
     case joinWindowMinutes = "calendar.joinWindowMinutes"
     case autoJoinConfirms = "calendar.autoJoinConfirms"
+    case autoJoinNamedProvidersOnly = "calendar.autoJoinNamedProvidersOnly"
     case meetingBrowser = "calendar.meetingBrowser"
     case calendarMenuBarDisplay = "calendar.menuBar"
     case menuBarEvents = "calendar.menuBarUpcomingEvents"

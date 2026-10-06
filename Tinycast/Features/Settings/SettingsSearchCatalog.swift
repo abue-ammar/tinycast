@@ -534,6 +534,9 @@ enum SettingsSearchCatalog {
             .calendarJoining, "Auto Join Meetings",
             keywords: ["automatic", "start"]),
         .init(
+            .calendarJoining, "Only join known meeting services",
+            keywords: ["zoom", "meet", "teams", "links", "placeholder", "skip"]),
+        .init(
             .calendarJoining, "Confirm before joining",
             keywords: ["ask", "prompt"]),
         .init(
