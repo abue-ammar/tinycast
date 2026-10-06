@@ -393,9 +393,9 @@ already holds it, and Continue in AI Chat (`⌘J`) takes it to the window either
 ### AI Chat
 
 The `AI Chat` command (`command:ai-chat-window`, `HotKeyAction.command(.aiChat)`) opens a titled
-`AppWindowController` window owned by `AIChatCoordinator`, autosaved as `AIChatWindow`. It is built the
-way Settings is — an `AIChatSplitViewController` with a native sidebar item, here collapsible, and a
-unified toolbar whose title is the open chat's — so it takes the system's own sidebar, toolbar and
+`AppWindowController` window owned by `AIChatCoordinator`, autosaved as `AIChatWindow`, and closes it
+again when it is already key, the way Escape does. It is built the way Settings is — an
+`AIChatSplitViewController` with a native sidebar item, here collapsible, and a unified toolbar whose title is the open chat's — so it takes the system's own sidebar, toolbar and
 menus rather than the palette's scrim. `AIChatWindowChrome` owns the toolbar — the sidebar toggle
 and New Chat as two round buttons at the sidebar's trailing edge, then Find in Chat and Actions
 alone at the window's — the title, and one key monitor for ⌘V, ⌘F, ⌘G / ⇧⌘G, ⌘K and the Actions

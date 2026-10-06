@@ -78,6 +78,11 @@ final class AIChatCoordinator {
         }
     }
 
+    func toggleWindow() {
+        guard !closeWindowIfKey() else { return }
+        showWindow()
+    }
+
     /// The window's views read these through the coordinator, never through `AppCore`.
     var history: ChatHistoryStore { core.chatHistory }
     var aiSettings: AISettingsStore { core.aiSettings }
