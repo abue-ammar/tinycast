@@ -646,6 +646,10 @@ inline enumerated arguments remain `DialogChip`s. Two things follow from the enu
 - **An accessory can refuse its own primary action.** An invalid draft leaves the dialog up on ↵ and
   on a click alike, which is what a greyed-out button would say if `DialogAction` could carry one.
 
+A text field takes focus in `.task` after a `Task.yield()`, never in `onAppear`. The dialog is
+measured before its panel exists, and when the panel turns key AppKit picks its own first responder,
+which with Keyboard navigation on is the Cancel button. Focus set any earlier loses to that pick.
+
 ## Settings
 
 Source: `DesignSystem/SettingsComponents.swift`.

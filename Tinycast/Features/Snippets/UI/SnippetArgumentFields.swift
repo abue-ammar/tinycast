@@ -46,7 +46,11 @@ struct SnippetArgumentFields: View {
                 .accessibilityLabel("Snippet argument \(argument.name)")
             }
         }
-        .onAppear { focusedArgument = state.arguments.first { $0.options.isEmpty }?.name }
+        .task {
+            // Yields past the panel turning key, or AppKit's own first-responder pick wins.
+            await Task.yield()
+            focusedArgument = state.arguments.first { $0.options.isEmpty }?.name
+        }
     }
 
     private func value(for name: String) -> Binding<String> {

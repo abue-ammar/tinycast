@@ -24,7 +24,11 @@ struct EventDraftFields: View {
                 label: "For", values: EventDraft.durations, title: EventDraft.label(duration:),
                 selection: $state.draft.durationMinutes)
         }
-        .onAppear { focused = true }
+        .task {
+            // Yields past the panel turning key, or AppKit's own first-responder pick wins.
+            await Task.yield()
+            focused = true
+        }
     }
 }
 
