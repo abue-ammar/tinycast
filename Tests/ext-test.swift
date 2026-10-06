@@ -199,6 +199,7 @@ struct ExtensionTests {
         await runtimeChecks()
         await searchAccessoryRuntimeChecks()
         await nodeContractChecks()
+        await bufferEventChecks()
         await webAssemblyChecks()
         await asyncComponentChecks()
         await menuBarRuntimeChecks()
@@ -1517,6 +1518,65 @@ struct ExtensionTests {
             recorder.failures.joined(separator: "|"))
         await runtime.stop(session: "archive")
         runtime.shutdown()
+    }
+
+    @MainActor
+    static func bufferEventChecks() async {
+        for (name, body) in [
+            ("slow-buffer", """
+              const { Buffer } = require("buffer");
+              const SafeBuffer = Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow
+                ? Buffer : function (size) { return Buffer(size); };
+              assert.equal(new SafeBuffer(4).length, 4);
+              assert(Object.keys(Buffer).includes("allocUnsafeSlow"));
+              const first = SafeBuffer.allocUnsafeSlow(4), second = SafeBuffer.allocUnsafeSlow(4);
+              first[0] = 91;
+              assert.equal(Array.from(second).join(), "0,0,0,0");
+              assert(first.buffer !== second.buffer);
+              assert(Buffer.isBuffer(Buffer.allocUnsafeSlow(0)));
+              assert.equal(Buffer.allocUnsafeSlow(0).length, 0);
+            """),
+            ("once-receiver", """
+              const { EventEmitter } = require("events");
+              const emitter = new EventEmitter(), calls = [];
+              assert(emitter.once("ready", function (...args) {
+                calls.push([this === emitter, ...args, emitter.listenerCount("ready")]);
+                emitter.emit("ready", "recursive");
+              }) === emitter);
+              assert(emitter.emit("ready", "value", 7));
+              assert.equal(JSON.stringify(calls), '[[true,"value",7,0]]');
+              assert(!emitter.emit("ready", "again"));
+              let removedCalls = 0;
+              function removed() { removedCalls++; }
+              emitter.once("removed", removed).removeListener("removed", removed);
+              emitter.emit("removed");
+              assert.equal(removedCalls, 0);
+              const ordinary = [];
+              emitter.on("ordinary", function (value) { ordinary.push([this === emitter, value]); });
+              emitter.emit("ordinary", 1);
+              emitter.emit("ordinary", 2);
+              assert.equal(JSON.stringify(ordinary), "[[true,1],[true,2]]");
+            """)
+        ] {
+            let (runtime, host, recorder) = makeRuntime()
+            try? await runtime.boot(
+                config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+            let command = """
+                module.exports.default = async () => {
+                  const assert = require("assert");
+                  \(body)
+                  await require("@raycast/api").showHUD("\(name) passed");
+                };
+                """
+            await runtime.start(
+                session: name, code: command,
+                file: FileManager.default.temporaryDirectory.appendingPathComponent("\(name).js"),
+                mode: .noView, context: launchContext(mode: .noView))
+            await settle()
+            check(name, host.huds == ["\(name) passed"], recorder.failures.joined(separator: "|"))
+            await runtime.stop(session: name)
+            runtime.shutdown()
+        }
     }
 
     /// sql.js loads through `WebAssembly.instantiate`, whose promise never settled on the JS queue.

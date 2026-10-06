@@ -194,6 +194,10 @@ export class Buffer extends Uint8Array {
     return Buffer.alloc(size);
   }
 
+  static allocUnsafeSlow(size) {
+    return Buffer.alloc(size);
+  }
+
   static concat(list, totalLength) {
     const parts = list.map((part) => (part instanceof Uint8Array ? part : Buffer.from(part)));
     const total = totalLength === undefined ? parts.reduce((sum, part) => sum + part.length, 0) : totalLength;

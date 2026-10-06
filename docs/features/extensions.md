@@ -693,6 +693,11 @@ a member it cannot see arrives as `undefined`, which `class … extends` reports
 out a real `AsyncLocalStorage` and `AsyncResource` rather than a stub for the same reason: undici
 extends the latter at module scope, and running the callback in place is the whole of it here.
 
+`Buffer.allocUnsafeSlow` uses the same zero-filled, independent allocation as `allocUnsafe`.
+Its presence lets bundled `safe-buffer` select the modern Buffer API rather than calling the class
+as a legacy function. `EventEmitter.once` passes the emitter as the listener's receiver, like `on`,
+and removes the listener before invoking it; bundled duplex streams rely on that receiver at `end`.
+
 **WebAssembly** — `compile`, `instantiate` and their streaming forms run through the synchronous
 `Module` and `Instance` constructors. JavaScriptCore settles the promise forms from a run-loop timer on
 the thread that owns the VM, and the runtime's queue never spins one, so they stayed pending forever.

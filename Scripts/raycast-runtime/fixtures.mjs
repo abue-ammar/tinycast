@@ -251,6 +251,50 @@ export default function Command() {
 }
 `;
 
+const slowBufferSource = `
+const { Buffer } = require("buffer");
+
+module.exports.default = () => {
+  const SafeBuffer = Buffer.from && Buffer.alloc && Buffer.allocUnsafe && Buffer.allocUnsafeSlow
+    ? Buffer : function (size) { return Buffer(size); };
+  const selected = new SafeBuffer(4);
+  const first = SafeBuffer.allocUnsafeSlow(4);
+  const second = SafeBuffer.allocUnsafeSlow(4);
+  first[0] = 91;
+  globalThis.__slowBuffer = {
+    selected: Buffer.isBuffer(selected) && selected.length === 4,
+    enumerable: Object.keys(Buffer).includes("allocUnsafeSlow"),
+    bytes: Array.from(second),
+    independent: first.buffer !== second.buffer,
+    empty: Buffer.isBuffer(Buffer.allocUnsafeSlow(0)) && Buffer.allocUnsafeSlow(0).length === 0,
+  };
+};
+`;
+
+const onceSource = `
+const { EventEmitter } = require("events");
+
+module.exports.default = () => {
+  const emitter = new EventEmitter();
+  const calls = [];
+  const chained = emitter.once("ready", function (...args) {
+    calls.push([this === emitter, ...args, emitter.listenerCount("ready")]);
+    emitter.emit("ready", "recursive");
+  }) === emitter;
+  const emitted = emitter.emit("ready", "value", 7);
+  const repeated = emitter.emit("ready", "again");
+  let removedCalls = 0;
+  function removed() { removedCalls++; }
+  emitter.once("removed", removed).removeListener("removed", removed);
+  emitter.emit("removed");
+  const ordinary = [];
+  emitter.on("ordinary", function (value) { ordinary.push([this === emitter, value]); });
+  emitter.emit("ordinary", 1);
+  emitter.emit("ordinary", 2);
+  globalThis.__once = { calls, chained, emitted, repeated, removedCalls, ordinary };
+};
+`;
+
 // Bundled HTTP clients (axios) construct and probe a Response at module scope, before any component
 // mounts — a host-shaped constructor took the whole command down with them.
 const responseSource = `
@@ -880,6 +924,24 @@ export async function runFixtures() {
     await wait();
     screens = harness.state.trees.at(-1).children.filter((child) => child.type === "__screen");
     check("one screen after pop", screens.length === 1, String(screens.length));
+  });
+
+  await run("safe-buffer selects the modern Buffer API", slowBufferSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__slowBuffer");
+    check("safe-buffer's modern capability guard avoids the callable fallback", result?.selected === true, harness.state.failures.join(" | "));
+    check("slow allocation is copied by statics-enumerating consumers", result?.enumerable === true);
+    check("slow allocations are zero-filled", JSON.stringify(result?.bytes) === "[0,0,0,0]");
+    check("slow allocations do not share backing memory", result?.independent === true);
+    check("zero-sized slow allocations remain Buffers", result?.empty === true);
+  });
+
+  await run("EventEmitter.once preserves the emitter receiver", onceSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__once");
+    check("once forwards its receiver and arguments", JSON.stringify(result?.calls) === '[[true,"value",7,0]]', JSON.stringify(result?.calls));
+    check("once remains chainable", result?.chained === true);
+    check("once removes itself before recursive emission", result?.emitted === true && result?.repeated === false);
+    check("once can still be removed using the original listener", result?.removedCalls === 0);
+    check("ordinary listeners retain their receiver and repeated delivery", JSON.stringify(result?.ordinary) === "[[true,1],[true,2]]");
   });
 
   await run("Node shims and web globals", nodeSource, "view", async (harness) => {
