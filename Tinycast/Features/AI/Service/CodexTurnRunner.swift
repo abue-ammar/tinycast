@@ -1,27 +1,31 @@
 import Foundation
 
-/// Generations over the app-server, one ephemeral thread each, so chats can run side by side.
 @MainActor
 final class CodexTurnRunner {
     private static let safetyInstructions = """
-        You are providing text generation inside Tinycast. Never invoke tools, execute commands, read \
-        files, inspect the environment, or modify files. Use only the request content supplied by \
-        Tinycast.
-        """
-    /// The same boundary for the one turn shape that is handed tools; everything else stays off.
-    private static let toolSafetyInstructions = """
-        You are providing text generation inside Tinycast. The only tools you may use are the MCP \
-        tools supplied with this request. Never execute commands, read files, inspect the \
-        environment, or modify files.
+        You are providing text generation inside Tinycast. Never execute commands, read local files, \
+        inspect the environment, or modify files.
         """
     private static let webSearchInstructions = """
-        You may search the web when the answer depends on current or external information. Cite a \
-        source as a markdown link whose text is the publication's name, never "Read more" or a URL.
+        You may use web search when the answer depends on current or external information. For a \
+        follow-up, use the sources already in this conversation and search again when more detail \
+        or verification is needed. Find the source yourself rather than asking the user for a link \
+        you can search for. Cite a source as a markdown link whose text is the publication's name, \
+        never "Read more" or a URL.
         """
-    private static let noWebSearchInstructions = "Never access external resources."
+    private static let noWebSearchInstructions = "Do not use web search."
 
     var connect: (@MainActor ([AIToolServer]) async throws -> [ChatGPTSubscription.Model])?
     var onTurnEnded: (@MainActor () -> Void)?
+
+    private struct Conversation {
+        let id: UUID
+        let threadID: String
+        let model: String
+        let instructions: String
+        let webSearch: Bool
+        var messages: [AIMessage]
+    }
 
     /// One stream's live state; its reference identity keeps a stale cleanup off its successor.
     private final class Turn {
@@ -31,6 +35,9 @@ final class CodexTurnRunner {
         let session: AIToolServerSession?
         var threadID: String?
         var turnID: String?
+        let conversationID: UUID?
+        var conversation: Conversation?
+        var reply = ""
         /// The summary part the last delta belonged to, so the next part starts a paragraph.
         var summaryPart: String?
         /// The tool an elicitation is about: the item that names it always starts before the ask.
@@ -39,11 +46,12 @@ final class CodexTurnRunner {
 
         init(
             continuation: AIProviderStream.Continuation, servers: [AIToolServer],
-            session: AIToolServerSession?
+            session: AIToolServerSession?, conversationID: UUID?
         ) {
             self.continuation = continuation
             self.servers = servers
             self.session = session
+            self.conversationID = conversationID
         }
 
         var roundCap: Int? { session == nil ? 1 : session?.rounds }
@@ -54,6 +62,7 @@ final class CodexTurnRunner {
 
     private let client: CodexAppServerClient
     private var turns: [ObjectIdentifier: Turn] = [:]
+    private var conversations: [UUID: Conversation] = [:]
     /// Threads whose Stop beat the turn's ID; the first ID to name one spends its Stop.
     private var pendingInterruptThreadIDs: Set<String> = []
 
@@ -91,7 +100,13 @@ final class CodexTurnRunner {
     }
 
     func reset() {
+        conversations.removeAll()
         for (key, turn) in turns { interrupt(turn, key: key) }
+    }
+
+    func discardConversation(id: UUID) {
+        conversations[id] = nil
+        for turn in turns.values where turn.conversationID == id { turn.conversation = nil }
     }
 
     func handle(method: String, params: [String: JSONValue]) {
@@ -107,6 +122,7 @@ final class CodexTurnRunner {
         switch method {
         case "item/agentMessage/delta":
             guard let delta = params["delta"]?.stringValue, !delta.isEmpty else { return }
+            if turn.conversation != nil { turn.reply += delta }
             continuation.yield(.text(delta))
         // The summary, not raw reasoning: the raw stream is off by default and would repeat it.
         case "item/reasoning/summaryTextDelta":
@@ -140,6 +156,10 @@ final class CodexTurnRunner {
             guard let completed = params["turn"]?.objectValue else { return }
             switch completed["status"]?.stringValue {
             case "completed":
+                if var conversation = turn.conversation {
+                    conversation.messages.append(AIMessage(role: .assistant, text: turn.reply))
+                    conversations[conversation.id] = conversation
+                }
                 continuation.yield(.finished)
                 continuation.finish()
             case "failed":
@@ -196,6 +216,7 @@ final class CodexTurnRunner {
 
     /// The server list is fixed at launch, so a turn armed with another one ends the live threads.
     private func endStrandedTurns() {
+        conversations.removeAll()
         pendingInterruptThreadIDs.removeAll()
         for (key, turn) in turns where turn.threadID != nil {
             turn.continuation.finish(
@@ -251,7 +272,14 @@ final class CodexTurnRunner {
                 throw AIProviderError.unavailable(
                     "No Codex model is available for this account.")
             }
-            let turn = Turn(continuation: continuation, servers: servers, session: toolServers)
+            if let id = request.conversationID,
+                turns.values.contains(where: { $0.conversationID == id })
+            {
+                throw AIProviderError.unavailable("A reply is already running for this chat.")
+            }
+            let turn = Turn(
+                continuation: continuation, servers: servers, session: toolServers,
+                conversationID: request.conversationID)
             turns[key] = turn
             tookOwnership = true
 
@@ -260,36 +288,9 @@ final class CodexTurnRunner {
                     "\(model) is no longer available. Choose another model in Settings.")
             }
 
-            let threadResponse = try await client.request(
-                method: "thread/start",
-                params: [
-                    "model": model,
-                    "cwd": client.workspace.path,
-                    // `untrusted` is what turns an MCP tool call into an elicitation to answer.
-                    "approvalPolicy": servers.isEmpty ? "never" : "untrusted",
-                    "sandbox": "read-only",
-                    "ephemeral": true,
-                    // Thread-scoped so this request never writes the user's saved web-search choice.
-                    "config": ["web_search": request.webSearch ? "live" : "disabled"],
-                    "developerInstructions": developerInstructions(
-                        for: request, hasTools: !servers.isEmpty)
-                ])
-            guard let thread = threadResponse["thread"]?.objectValue,
-                let threadID = thread["id"]?.stringValue
-            else {
-                throw CodexAppServerClient.ClientError.requestFailed(
-                    "Codex returned no generation thread.")
-            }
-            // A thread claimed after Stop would route events to a stream nobody reads.
-            guard turns[key] === turn, !Task.isCancelled else { return }
-            turn.threadID = threadID
-
-            let history = historyItems(from: request.messages[..<promptIndex])
-            if !history.isEmpty {
-                _ = try await client.request(
-                    method: "thread/inject_items",
-                    params: ["threadId": threadID, "items": history])
-            }
+            try await prepareThread(
+                for: request, promptIndex: promptIndex, model: model, turn: turn, key: key)
+            guard turns[key] === turn, !Task.isCancelled, let threadID = turn.threadID else { return }
             // An unstructured child survives Stop, so the turn ID it returns can be interrupted.
             var turnParameters: [String: Any] = [
                 "threadId": threadID,
@@ -327,6 +328,58 @@ final class CodexTurnRunner {
         }
     }
 
+    private func prepareThread(
+        for request: AIRequest, promptIndex: Int, model: String, turn: Turn, key: ObjectIdentifier
+    ) async throws {
+        let instructions = developerInstructions(for: request, hasTools: !turn.servers.isEmpty)
+        let history = request.messages[..<promptIndex].filter { $0.role != .system }.map {
+            AIMessage(role: $0.role, text: $0.text)
+        }
+        let previous = request.conversationID.flatMap { conversations.removeValue(forKey: $0) }
+        if let previous, previous.model == model, previous.instructions == instructions,
+            previous.webSearch == request.webSearch, previous.messages == history
+        {
+            turn.threadID = previous.threadID
+            turn.conversation = previous
+        } else {
+            let threadResponse = try await client.request(
+                method: "thread/start",
+                params: [
+                    "model": model,
+                    "cwd": client.workspace.path,
+                    "approvalPolicy": turn.servers.isEmpty ? "never" : "untrusted",
+                    "sandbox": "read-only",
+                    "ephemeral": true,
+                    "config": ["web_search": request.webSearch ? "live" : "disabled"],
+                    "developerInstructions": instructions
+                ])
+            guard let threadID = threadResponse["thread"]?.objectValue?["id"]?.stringValue else {
+                throw CodexAppServerClient.ClientError.requestFailed(
+                    "Codex returned no generation thread.")
+            }
+            guard turns[key] === turn, !Task.isCancelled else { return }
+            turn.threadID = threadID
+
+            let items = historyItems(from: request.messages[..<promptIndex])
+            if !items.isEmpty {
+                _ = try await client.request(
+                    method: "thread/inject_items",
+                    params: ["threadId": threadID, "items": items])
+            }
+            if let id = request.conversationID {
+                turn.conversation = Conversation(
+                    id: id, threadID: threadID, model: model, instructions: instructions,
+                    webSearch: request.webSearch, messages: history)
+            }
+        }
+        guard turns[key] === turn, !Task.isCancelled else { return }
+        if request.messages.contains(where: { !$0.images.isEmpty || !$0.documents.isEmpty }) {
+            turn.conversation = nil
+        }
+        turn.conversation?.messages.append(
+            AIMessage(role: .user, text: request.messages[promptIndex].text))
+    }
+
     private func developerInstructions(for request: AIRequest, hasTools: Bool) -> String {
         let requestInstructions =
             ([request.instructions]
@@ -337,9 +390,15 @@ final class CodexTurnRunner {
                 let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
                 return trimmed.isEmpty ? nil : trimmed
             }
-        let safety = hasTools ? Self.toolSafetyInstructions : Self.safetyInstructions
+        var allowedTools: [String] = []
+        if hasTools { allowedTools.append("the MCP tools supplied with this request") }
+        if request.webSearch { allowedTools.append("web search") }
+        let tools =
+            allowedTools.isEmpty
+            ? "Never invoke tools or access external resources. Use only the request content supplied by Tinycast."
+            : "The only tools you may use are \(allowedTools.joined(separator: " and "))."
         let search = request.webSearch ? Self.webSearchInstructions : Self.noWebSearchInstructions
-        return ([safety, search] + requestInstructions).joined(separator: "\n\n")
+        return ([Self.safetyInstructions, tools, search] + requestInstructions).joined(separator: "\n\n")
     }
 
     private func turnInput(for message: AIMessage) -> [[String: Any]] {

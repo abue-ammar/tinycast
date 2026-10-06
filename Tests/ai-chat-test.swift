@@ -54,6 +54,7 @@ struct AIChatTests {
         renamesAndPinsSurviveSavesAndSpareRetention()
         transcriptsExportAndDropOnlyATrailingReply()
         await regenerateAsksTheSameQuestionAgain()
+        await requestsIdentifyTheirConversation()
         await aConversationIsLiveOnOneSurfaceAtATime()
         await everyStateReportsAFinishedReply()
         await reasoningFoldsIntoTheReplyAndIsNeverResent()
@@ -1344,6 +1345,26 @@ extension AIChatTests {
         expect(
             store.session(id: chat.session.id)?.messages.map(\.text) == ["Why?", "Second"],
             "the stored transcript holds only the new reply")
+    }
+
+    static func requestsIdentifyTheirConversation() async {
+        let (store, directory) = temporaryStore("conversation-id")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chat = AIChatState(history: store)
+        let provider = ScriptedProvider(rounds: [[.text("First"), .finished], [.text("Second"), .finished]])
+        let firstID = chat.session.id
+        chat.send("Research", using: provider)
+        await settle(chat)
+        chat.send("Elaborate", using: provider)
+        await settle(chat)
+        expect(provider.requests.map(\.conversationID) == [firstID, firstID], "follow-ups identify the same conversation")
+        let continued = provider.requests[0].continuing(with: provider.requests[0].messages, tools: [])
+        expect(continued.conversationID == firstID, "tool rounds keep the conversation identity")
+        chat.startNewChat()
+        chat.send("Start again", using: provider)
+        await settle(chat)
+        expect(provider.requests.last?.conversationID != firstID, "a new chat cannot inherit another chat's context")
+        expect(AIRequest(messages: []).conversationID == nil, "standalone generations have no chat context")
     }
 
     /// Naming hangs off this hook, so a state made after it is set must be told too.

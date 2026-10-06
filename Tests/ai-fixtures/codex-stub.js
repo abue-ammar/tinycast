@@ -171,6 +171,7 @@ function toolPair(read) {
 let initialized = false;
 let threads = 0;
 let turns = 0;
+const research = new Map();
 
 /** Answers at once, then holds the second turn until `release` and finishes both. */
 function parallelTurn(message) {
@@ -217,8 +218,35 @@ for (;;) {
     } else if (method === "thread/start") {
         record(`thread-params:${JSON.stringify(message.params ?? {})}`);
         threads += 1;
-        const thread = MODE === "parallel" ? `thread-${threads}` : THREAD;
+        const thread = MODE === "parallel" || MODE === "research" ? `thread-${threads}` : THREAD;
         emit({ id: requestID, result: { thread: { id: thread } } });
+    } else if (method === "thread/inject_items") {
+        record(`history-params:${JSON.stringify(message.params ?? {})}`);
+        emit({ id: requestID, result: {} });
+    } else if (method === "turn/start" && MODE === "research") {
+        turns += 1;
+        const thread = message.params.threadId;
+        const turn = `turn-${turns}`;
+        const prompt = message.params.input.find((item) => item.type === "text")?.text;
+        record(`turn-params:${JSON.stringify(message.params)}`);
+        emit({ id: requestID, result: { turn: { id: turn } } });
+        emit({ method: "turn/started", params: { threadId: thread, turn: { id: turn } } });
+        let text;
+        if (prompt === "Find recent benchmarks") {
+            research.set(thread, `https://example.com/${thread}/benchmark`);
+            const item = { type: "webSearch", id: `search-${turns}`, query: "recent benchmarks" };
+            emit({ method: "item/started", params: { threadId: thread, item } });
+            emit({ method: "item/completed", params: { threadId: thread, item } });
+            text = "A model benchmark.";
+        } else {
+            text = research.get(thread) ?? "Please provide the source.";
+        }
+        emit({ method: "item/agentMessage/delta", params: { threadId: thread, delta: text } });
+        if (prompt === "Hold") continue;
+        emit({
+            method: "turn/completed",
+            params: { threadId: thread, turn: { id: turn, status: prompt === "Fail" ? "failed" : "completed" } },
+        });
     } else if (method === "turn/start" && MODE === "api-auth") {
         emit({ method: "turn/started", params: { threadId: THREAD, turn: { id: TURN } } });
         emit({ id: requestID, result: { turn: { id: TURN } } });

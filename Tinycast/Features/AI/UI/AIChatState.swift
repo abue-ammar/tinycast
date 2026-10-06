@@ -84,7 +84,8 @@ final class AIChatState {
     ) {
         let request = AIRequest(
             instructions: instructions,
-            messages: session.requestMessages(textBudget: contextBudget), webSearch: webSearch)
+            messages: session.requestMessages(textBudget: contextBudget), webSearch: webSearch,
+            conversationID: session.id)
         session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
         isStreaming = true
         isThinking = false
