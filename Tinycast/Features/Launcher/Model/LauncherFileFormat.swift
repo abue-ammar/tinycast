@@ -25,13 +25,13 @@ enum LauncherFileFormat {
             })
     }
 
-    /// Each record over the item's `current` one, so a field left out or of the wrong type keeps it.
     static func records(from json: SettingsFileJSON, current: (String) -> Record) -> Decoded? {
         guard let members = json.members else { return nil }
         var decoded: Decoded = ([:], [])
         for member in members {
             let fields = member.value
             guard fields.members != nil else {
+                decoded.records[member.key] = current(member.key)
                 decoded.problems.append("“\(member.key)” needs an object")
                 continue
             }

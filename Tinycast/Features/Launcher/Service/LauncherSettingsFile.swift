@@ -22,12 +22,17 @@ final class LauncherSettingsFile {
         let action: HotKeyAction?
     }
 
+    private struct BundleRecords {
+        let bundle: Bundle
+        var applied: Set<String> = []
+        var waiting: [String: Record] = [:]
+    }
+
     private let appIndex: AppIndex
     private let aliases: AliasStore
     private let visibility: VisibilityStore
     private let shortcuts: HotKeySettingsFile
-    /// Records for a bundle Settings doesn't list: written back as read, so a shared file keeps them.
-    private var waiting: [SettingsFileKey: (bundle: Bundle, records: [String: Record])] = [:]
+    private var bundleRecords: [SettingsFileKey: BundleRecords] = [:]
 
     init(
         appIndex: AppIndex, aliases: AliasStore, visibility: VisibilityStore,
@@ -79,12 +84,14 @@ final class LauncherSettingsFile {
 
     func applyInstalled() -> [SettingsFileIssue] {
         var issues: [SettingsFileIssue] = []
-        for (key, held) in waiting {
+        for (key, var held) in bundleRecords {
+            guard !held.waiting.isEmpty else { continue }
             let known = knownBundleIDs(held.bundle)
-            let ready = held.records.filter { known.contains($0.key) }
+            let ready = held.waiting.filter { known.contains($0.key) }
             guard !ready.isEmpty else { continue }
-            let rest = held.records.filter { ready[$0.key] == nil }
-            waiting[key] = rest.isEmpty ? nil : (held.bundle, rest)
+            held.applied.formUnion(ready.keys)
+            for name in ready.keys { held.waiting[name] = nil }
+            bundleRecords[key] = held
             let items = ready.keys.sorted().map { item($0, held.bundle) }
             issues += apply(ready, to: items, noun: held.bundle.noun, key: key)
         }
@@ -96,11 +103,11 @@ final class LauncherSettingsFile {
     private func catalogBinding(
         for key: SettingsFileKey, items: [Item], noun: String
     ) -> SettingsFileBinding {
-        SettingsFileBinding(
+        let byName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0) })
+        return SettingsFileBinding(
             key,
             read: { [self] in LauncherFileFormat.json(customized(items)) },
             write: { [self] json in
-                let byName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0) })
                 let spelling = shortcuts.spelling
                 let read = LauncherFileFormat.records(from: json) { name in
                     byName[name].map { record(of: $0, spelling) } ?? Record()
@@ -118,22 +125,26 @@ final class LauncherSettingsFile {
         SettingsFileBinding(
             key,
             read: { [self] in
-                let live = customized(knownBundleIDs(bundle).map { item($0, bundle) })
+                let state = bundleRecords[key]
+                let known = knownBundleIDs(bundle).union(state?.applied ?? [])
+                let live = customized(known.map { item($0, bundle) })
                 let liveNames = Set(live.map(\.name))
-                let held = (waiting[key]?.records ?? [:]).filter { !liveNames.contains($0.key) }
+                let held = (state?.waiting ?? [:]).filter { !liveNames.contains($0.key) }
                 let records = live + held.map { (name: $0.key, record: $0.value) }
                 return LauncherFileFormat.json(records.sorted { $0.name < $1.name })
             },
             write: { [self] json in
+                let previous = bundleRecords[key]
                 let spelling = shortcuts.spelling
                 let read = LauncherFileFormat.records(from: json) { name in
-                    record(of: item(name, bundle), spelling)
+                    previous?.waiting[name] ?? record(of: item(name, bundle), spelling)
                 }
                 guard let decoded = read else { return [.invalidValue(key)] }
-                let known = knownBundleIDs(bundle)
+                let known = knownBundleIDs(bundle).union(previous?.applied ?? [])
                 let present = decoded.records.filter { known.contains($0.key) }
-                let absent = decoded.records.filter { present[$0.key] == nil }
-                waiting[key] = absent.isEmpty ? nil : (bundle, absent)
+                bundleRecords[key] = BundleRecords(
+                    bundle: bundle, applied: Set(present.keys),
+                    waiting: decoded.records.filter { !known.contains($0.key) })
                 let live = customized(known.map { item($0, bundle) }).map(\.name)
                 let items = Set(live).union(present.keys).sorted().map { item($0, bundle) }
                 return decoded.problems.map { .invalidEntry(key, $0) }

@@ -54,7 +54,7 @@ struct LauncherFileTest {
                 == Record(shortcut: "hyper+l", alias: "lock", showInLauncher: false))
         check("a field of the wrong type keeps its value", decoded?.records["sleep"] == current)
         check("null clears", decoded?.records["log-out"] == Record())
-        check("a record that isn't an object is skipped", decoded?.records["restart"] == nil)
+        check("a record that isn't an object keeps its value", decoded?.records["restart"] == current)
         check("each mistake is reported", decoded?.problems.count == 4)
         let list = LauncherFileFormat.records(from: .array([])) { _ in Record() }
         check("a list is not an object", list == nil)

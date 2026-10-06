@@ -4,7 +4,7 @@ import Foundation
 @MainActor
 @Observable
 final class VisibilityStore {
-    private let defaults = UserDefaults.standard
+    private let defaults: UserDefaults
     private let itemsKey = "hiddenLauncherItems"
     private let kindsKey = "hiddenLauncherKinds"
 
@@ -13,7 +13,8 @@ final class VisibilityStore {
     /// AppIndex includes this in its result key, invalidating a list when the visible set moves.
     private(set) var revision = 0
 
-    init() {
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
         hiddenItemKeys = Set(defaults.stringArray(forKey: itemsKey) ?? [])
         disabledKinds = Set(defaults.stringArray(forKey: kindsKey) ?? [])
     }

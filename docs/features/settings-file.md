@@ -153,9 +153,12 @@ in `commands.builtIn` — by their ID after `command:`. App Launcher and Dictati
 ```
 
 - **A record left out has no shortcut, no alias, and is shown.**
+- **An invalid launcher record keeps its current values** and is reported; it is never a deletion.
 - **An app or pane Settings doesn't list waits** — not installed here, or outside the search scopes.
   Its record is not applied, is written back as read so a dotfile shared between Macs keeps it, and
   applies after the scan that finds it.
+- Partial edits to a waiting record keep its other fields. An applied record stays in the mirror
+  after its last shortcut is cleared, even outside the search scopes.
 - `applications.enabled`, `systemSettings.enabled`, `systemActions.enabled` and
   `commands.builtInEnabled` are each pane's category switch; `commands.enabled` stays custom commands'.
 

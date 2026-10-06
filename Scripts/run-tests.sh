@@ -141,6 +141,28 @@ run app-name-test          Tinycast/Platform/AppDisplayName.swift \
 run favorites-test         $L/FavoriteSlots.swift
 run launcher-file-test     $L/LauncherFileFormat.swift \
                            Tinycast/Features/Settings/Model/SettingsFileJSON.swift
+run launcher-settings-file-test \
+                           $L/LauncherFileFormat.swift $L/CommandID.swift $L/CommandCatalog.swift \
+                           Tinycast/Features/Launcher/Service/LauncherSettingsFile.swift \
+                           Tinycast/Features/Launcher/Service/AliasStore.swift \
+                           Tinycast/Features/Launcher/Service/VisibilityStore.swift \
+                           Tinycast/Features/Settings/SettingsTab.swift \
+                           Tinycast/Features/Settings/Model/*.swift \
+                           Tinycast/Features/HotKeys/Service/HotKeySettingsFile.swift \
+                           Tinycast/Features/HotKeys/Service/KeyShortcut.swift \
+                           Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/HotKeys/Model/HotKeyBinding.swift \
+                           Tinycast/Features/HotKeys/Model/HotKeySpelling.swift \
+                           Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
+                           Tinycast/Features/HotKeys/Model/ModifierKey.swift \
+                           Tinycast/Features/HotKeys/Model/HyperKey.swift \
+                           Tinycast/Platform/ASCIIKeyboardLayout.swift \
+                           Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Tinycast/Features/SystemActions/Model/SystemAction.swift \
+                           Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Tinycast/Features/Snippets/Model/Snippet.swift
 run apple-shortcut-test    Tinycast/Features/AppleShortcuts/Model/*.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift
 run index calc-performance Tinycast/Features/Calculator/Model/*.swift
