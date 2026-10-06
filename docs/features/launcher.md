@@ -478,9 +478,11 @@ action is bindable to a global shortcut from Settings › System Actions
 (see [hotkeys.md](hotkeys.md)).
 
 Public AppKit, CoreAudio and workspace APIs are preferred. Actions without a stable public macOS API
-use fixed system tools, Apple Events, Accessibility, or a dynamically resolved Bluetooth power API.
-Those routes run only on explicit activation. Automation, Accessibility or Bluetooth permission is
-requested at first use, and denial produces an alert linking to the relevant System Settings pane.
+use fixed system tools, Apple Events, Accessibility, or dynamically resolved Bluetooth power and
+screen-lock APIs. Those routes run only on explicit activation. **Lock Screen never synthesizes
+⌃⌘Q**: a global hotkey fires on key-down, so its still-held modifiers would merge into the chord.
+Automation, Accessibility or Bluetooth permission is requested at first use, and denial produces an
+alert linking to the relevant System Settings pane.
 Toggle System Appearance changes macOS; Tinycast follows it only while its own Appearance is System.
 
 Restart, Shut Down, Log Out, Empty Trash and Quit All Applications confirm before execution: ↵ runs
