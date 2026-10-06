@@ -149,7 +149,8 @@ struct DictationFieldTest {
         var messages: [String] = []
         lazy var coordinator = DictationCoordinator(
             settings: settings, hotKeys: HotKeyManager(), models: models,
-            injector: TextInjector(clipboardManager: ClipboardManager(), settings: settings, deliveryQueue: queue),
+            injector: TextInjector(
+                clipboardManager: ClipboardManager(), settings: settings, deliveryQueue: queue),
             audioDucker: DictationAudioDucker(), confirmEnable: { false },
             showMessage: { [weak self] message, _ in self?.messages.append(message) })
 

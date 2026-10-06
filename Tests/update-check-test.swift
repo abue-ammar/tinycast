@@ -84,8 +84,9 @@ struct UpdateCheckTests {
     }
 
     static func seedCache(at file: URL) throws {
-        guard let release = ReleaseFeed.newest(
-            from: feed(version: "1.1.0"), channel: .stable, architecture: .current)
+        guard
+            let release = ReleaseFeed.newest(
+                from: feed(version: "1.1.0"), channel: .stable, architecture: .current)
         else { fatalError("the fixture release must be installable") }
         let cache: [String: Any] = [
             "lastCheckedAt": Date.distantPast.timeIntervalSinceReferenceDate,
@@ -106,7 +107,8 @@ struct UpdateCheckTests {
     }
 
     static func feed(version: String) -> Data {
-        Data("""
+        Data(
+            """
             [{"tag_name":"v\(version)","prerelease":false,"draft":false,"assets":[
                 {"name":"Tinycast-Universal-\(version).zip","size":100,
                  "browser_download_url":"https://example.com/update.zip"}

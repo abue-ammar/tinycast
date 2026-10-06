@@ -47,7 +47,8 @@ struct LauncherFileTest {
                 "sleep": .object(["shortcut": 5, "alias": true, "showInLauncher": "no"]),
                 "log-out": .object(["shortcut": .null, "alias": .null, "showInLauncher": true]),
                 "restart": "cmd+r"
-            ])) { _ in current }
+            ])
+        ) { _ in current }
         check(
             "a field left out keeps its value",
             decoded?.records["lock-screen"]

@@ -498,9 +498,11 @@ struct NotesTests {
             !cancelled && store.source == "Repaired externally" && store.editorEpoch == repairedEpoch)
 
         store.updateSource("Draft after a failed save")
-        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: repository.notesDirectory.path)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o555], ofItemAtPath: repository.notesDirectory.path)
         defer {
-            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: repository.notesDirectory.path)
+            try? FileManager.default.setAttributes(
+                [.posixPermissions: 0o755], ofItemAtPath: repository.notesDirectory.path)
         }
         let failedSave = await store.flush()
         let failedEpoch = store.editorEpoch
@@ -509,12 +511,14 @@ struct NotesTests {
             "reopening preserves a draft whose save failed",
             !failedSave && reopened && store.isDirty
                 && store.source == "Draft after a failed save" && store.editorEpoch == failedEpoch)
-        try FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: repository.notesDirectory.path)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o000], ofItemAtPath: repository.notesDirectory.path)
         let unlisted = await store.start()
         check(
             "an unreadable folder still reopens on the retained draft",
             unlisted && store.isDirty && store.source == "Draft after a failed save")
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: repository.notesDirectory.path)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o755], ofItemAtPath: repository.notesDirectory.path)
         let retried = await store.retrySave()
         let retriedSource = try repository.load(activeID).source
         check(

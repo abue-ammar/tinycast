@@ -62,8 +62,10 @@ struct CodexTurnTests {
         let summary = await server.reply(to: first)
         expect(summary.text == "A model benchmark." && summary.error == nil, "research completes")
         let next = AIRequest(
-            messages: [question, AIMessage(role: .assistant, text: summary.text),
-                AIMessage(role: .user, text: "Elaborate")],
+            messages: [
+                question, AIMessage(role: .assistant, text: summary.text),
+                AIMessage(role: .user, text: "Elaborate")
+            ],
             webSearch: true, conversationID: id)
         let detail = await server.reply(to: next)
         expect(
@@ -73,10 +75,13 @@ struct CodexTurnTests {
             server.received.split(separator: "\n").count { $0 == "thread/start" } == 1,
             "a completed conversation keeps its ephemeral thread")
         expect(!server.received.contains("thread/inject_items"), "continuing never duplicates history")
-        let withEffort = await server.reply(to: AIRequest(
-            messages: next.messages + [AIMessage(role: .assistant, text: detail.text),
-                AIMessage(role: .user, text: "Verify")],
-            webSearch: true, conversationID: id), effort: "high")
+        let withEffort = await server.reply(
+            to: AIRequest(
+                messages: next.messages + [
+                    AIMessage(role: .assistant, text: detail.text),
+                    AIMessage(role: .user, text: "Verify")
+                ],
+                webSearch: true, conversationID: id), effort: "high")
         expect(withEffort.text == detail.text, "changing effort preserves research")
         expect(server.parameters("turn").last?["effort"]?.stringValue == "high", "the new effort is sent")
     }
@@ -90,16 +95,27 @@ struct CodexTurnTests {
         let question = AIMessage(role: .user, text: "Find recent benchmarks")
         let firstID = UUID()
         let secondID = UUID()
-        let first = await server.reply(to: AIRequest(messages: [question], webSearch: true, conversationID: firstID))
-        let second = await server.reply(to: AIRequest(messages: [question], webSearch: true, conversationID: secondID))
+        let first = await server.reply(
+            to: AIRequest(messages: [question], webSearch: true, conversationID: firstID))
+        let second = await server.reply(
+            to: AIRequest(messages: [question], webSearch: true, conversationID: secondID))
         _ = await server.reply(to: AIRequest(messages: [AIMessage(role: .user, text: "Name this chat")]))
-        for (id, summary, thread) in [(firstID, first.text, "thread-1"), (secondID, second.text, "thread-2")] {
-            let detail = await server.reply(to: AIRequest(
-                messages: [question, AIMessage(role: .assistant, text: summary), AIMessage(role: .user, text: "Elaborate")],
-                webSearch: true, conversationID: id))
-            expect(detail.text == "https://example.com/\(thread)/benchmark", "identical transcripts keep their own sources")
+        for (id, summary, thread) in [(firstID, first.text, "thread-1"), (secondID, second.text, "thread-2")]
+        {
+            let detail = await server.reply(
+                to: AIRequest(
+                    messages: [
+                        question, AIMessage(role: .assistant, text: summary),
+                        AIMessage(role: .user, text: "Elaborate")
+                    ],
+                    webSearch: true, conversationID: id))
+            expect(
+                detail.text == "https://example.com/\(thread)/benchmark",
+                "identical transcripts keep their own sources")
         }
-        expect(server.parameters("thread").count == 3, "a title gets its own thread without disturbing either chat")
+        expect(
+            server.parameters("thread").count == 3,
+            "a title gets its own thread without disturbing either chat")
     }
 
     static func changedTurnsStartWithTheSuppliedHistory() async {
@@ -114,7 +130,9 @@ struct CodexTurnTests {
             }
             let id = UUID()
             let initial = AIRequest(
-                messages: [AIMessage(role: .user, text: question.text, images: change == "attachment" ? [image] : [])],
+                messages: [
+                    AIMessage(role: .user, text: question.text, images: change == "attachment" ? [image] : [])
+                ],
                 webSearch: true, conversationID: id)
             _ = await server.reply(to: initial)
             var messages = complete
@@ -124,14 +142,18 @@ struct CodexTurnTests {
             let next = AIRequest(
                 instructions: change == "instructions" ? "Be concise." : nil,
                 messages: messages, webSearch: change != "search", conversationID: id)
-            let reply = await server.reply(to: next, model: change == "model" ? "another-model" : "gpt-5-codex")
+            let reply = await server.reply(
+                to: next, model: change == "model" ? "another-model" : "gpt-5-codex")
             expect(reply.error == nil, "\(change): the replacement turn completes")
             expect(server.parameters("thread").count == 2, "\(change): a fresh thread avoids stale context")
             let suppliedHistory = server.parameters("history").last?["items"]?.arrayValue ?? []
-            expect(suppliedHistory.count == messages.count - 1, "\(change): only the supplied history is injected")
+            expect(
+                suppliedHistory.count == messages.count - 1,
+                "\(change): only the supplied history is injected")
             if change == "search" {
                 expect(
-                    server.parameters("thread").last?["config"]?.objectValue?["web_search"]?.stringValue == "disabled",
+                    server.parameters("thread").last?["config"]?.objectValue?["web_search"]?.stringValue
+                        == "disabled",
                     "switching search off takes effect on the new thread")
             }
             server.tearDown()
@@ -149,7 +171,8 @@ struct CodexTurnTests {
             _ = await server.reply(to: AIRequest(messages: [question], webSearch: true, conversationID: id))
             let history = [question, AIMessage(role: .assistant, text: "A model benchmark.")]
             let pending = AIRequest(
-                messages: history + [AIMessage(role: .user, text: prompt)], webSearch: true, conversationID: id)
+                messages: history + [AIMessage(role: .user, text: prompt)], webSearch: true,
+                conversationID: id)
             if prompt == "Hold" {
                 let task = Task { await server.reply(to: pending) }
                 expect(await server.awaitTurns(2), "the turn to stop starts")
@@ -160,10 +183,13 @@ struct CodexTurnTests {
                 let failed = await server.reply(to: pending)
                 expect(failed.error != nil, "a failed turn is reported")
             }
-            let next = await server.reply(to: AIRequest(
-                messages: pending.messages + [AIMessage(role: .user, text: "Elaborate")],
-                webSearch: true, conversationID: id))
-            expect(next.text == "Please provide the source.", "\(prompt): the incomplete turn's context is discarded")
+            let next = await server.reply(
+                to: AIRequest(
+                    messages: pending.messages + [AIMessage(role: .user, text: "Elaborate")],
+                    webSearch: true, conversationID: id))
+            expect(
+                next.text == "Please provide the source.",
+                "\(prompt): the incomplete turn's context is discarded")
             expect(server.parameters("thread").count == 2, "\(prompt): the next send rebuilds its thread")
             server.tearDown()
         }
@@ -187,13 +213,18 @@ struct CodexTurnTests {
                     expect(false, "the helper relaunches: \(error)")
                 }
             }
-            let next = await server.reply(to: AIRequest(
-                messages: [question, AIMessage(role: .assistant, text: "A model benchmark."),
-                    AIMessage(role: .user, text: "Elaborate")],
-                webSearch: true, conversationID: id))
+            let next = await server.reply(
+                to: AIRequest(
+                    messages: [
+                        question, AIMessage(role: .assistant, text: "A model benchmark."),
+                        AIMessage(role: .user, text: "Elaborate")
+                    ],
+                    webSearch: true, conversationID: id))
             expect(next.error == nil, "\(change): a later turn still completes")
             expect(server.parameters("thread").count == 2, "\(change): the old thread cannot be reused")
-            expect(server.parameters("history").count == 1, "\(change): a new thread receives the visible history")
+            expect(
+                server.parameters("history").count == 1,
+                "\(change): a new thread receives the visible history")
             server.tearDown()
         }
     }
@@ -217,12 +248,18 @@ struct CodexTurnTests {
                 let parameters = server.parameters("thread").last ?? [:]
                 let instructions = parameters["developerInstructions"]?.stringValue ?? ""
                 expect(parameters["ephemeral"]?.boolValue == true, "threads keep research in memory")
-                expect(instructions.contains("Never execute commands, read local files"), "local access stays forbidden")
+                expect(
+                    instructions.contains("Never execute commands, read local files"),
+                    "local access stays forbidden")
                 expect(
                     instructions.contains("Never invoke tools") == (!search && !hasTools),
                     "only a turn with no tools forbids every tool")
-                expect(instructions.contains("the MCP tools supplied") == hasTools, "MCP permission matches the supplied tools")
-                expect(instructions.contains("Do not use web search.") == !search, "search permission matches the configuration")
+                expect(
+                    instructions.contains("the MCP tools supplied") == hasTools,
+                    "MCP permission matches the supplied tools")
+                expect(
+                    instructions.contains("Do not use web search.") == !search,
+                    "search permission matches the configuration")
                 server.tearDown()
             }
         }
@@ -971,7 +1008,9 @@ final class StubServer {
         return events
     }
 
-    func reply(to request: AIRequest, model: String = "gpt-5-codex", effort: String? = nil)
+    func reply(
+        to request: AIRequest, model: String = "gpt-5-codex", effort: String? = nil
+    )
         async -> (text: String, error: String?)
     {
         var text = ""
@@ -1053,7 +1092,9 @@ final class StubServer {
     func parameters(_ kind: String) -> [[String: JSONValue]] {
         let prefix = "\(kind)-params:"
         return received.split(separator: "\n").compactMap { line in
-            guard line.hasPrefix(prefix), let data = line.dropFirst(prefix.count).data(using: .utf8) else { return nil }
+            guard line.hasPrefix(prefix), let data = line.dropFirst(prefix.count).data(using: .utf8) else {
+                return nil
+            }
             return JSONValue(data: data)?.objectValue
         }
     }

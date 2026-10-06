@@ -230,7 +230,8 @@ private struct AIChatComposer: View {
                 .foregroundStyle(enabled ? Theme.Colors.composerSendInk : Theme.Colors.textTertiary)
                 .frame(width: Theme.Size.aiChatComposerControl, height: Theme.Size.aiChatComposerControl)
                 .background(
-                    Circle().fill(enabled ? Theme.Colors.composerSend : Theme.Colors.controlSurface))
+                    Circle().fill(enabled ? Theme.Colors.composerSend : Theme.Colors.controlSurface)
+                )
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)

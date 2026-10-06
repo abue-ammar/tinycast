@@ -157,7 +157,9 @@ struct NotesEditorTests {
         }
         editor.window.makeFirstResponder(nil)
         check("an unfocused editor does not claim Undo", !editor.textView.performKeyEquivalent(with: undo))
-        check("unrelated shortcuts change nothing", editor.textView.string == updated && changes.count == changeCount)
+        check(
+            "unrelated shortcuts change nothing",
+            editor.textView.string == updated && changes.count == changeCount)
         editor.window.makeFirstResponder(editor.textView)
         check("empty Redo is handled locally", editor.window.performKeyEquivalent(with: redo))
         check("empty Redo changes nothing", editor.textView.string == updated && changes.count == changeCount)
@@ -835,7 +837,8 @@ struct NotesEditorTests {
         NSEvent.keyEvent(
             with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0,
             windowNumber: window.windowNumber, context: nil, characters: characters,
-            charactersIgnoringModifiers: characters, isARepeat: isARepeat, keyCode: UInt16(keyCode)) ?? NSEvent()
+            charactersIgnoringModifiers: characters, isARepeat: isARepeat, keyCode: UInt16(keyCode))
+            ?? NSEvent()
     }
 
     private static func checkboxCenter(in textView: NSTextView, lineStart: Int) -> CGPoint? {

@@ -43,17 +43,22 @@ struct LauncherSettingsFileTest {
             "preserving a record does not publish unchanged values",
             fixture.aliases.revision == aliasRevision && fixture.visibility.revision == visibilityRevision)
 
-        let fields = binding.write(.object([
-            "clipboard-history": .object(["shortcut": 5, "alias": true, "showInLauncher": "no"])
-        ]))
+        let fields = binding.write(
+            .object([
+                "clipboard-history": .object(["shortcut": 5, "alias": true, "showInLauncher": "no"])
+            ]))
         check("invalid fields are reported", fields.count == 3)
         check("invalid fields preserve the shortcut", fixture.hotKeys.binding(for: action) == chord)
         check("invalid fields preserve the alias", fixture.aliases.alias(for: key) == "ch")
         check("invalid fields preserve visibility", !fixture.visibility.isItemVisible(key: key))
 
-        check("a partial edit applies", binding.write(.object([
-            "clipboard-history": .object(["alias": "history"])
-        ])).isEmpty)
+        check(
+            "a partial edit applies",
+            binding.write(
+                .object([
+                    "clipboard-history": .object(["alias": "history"])
+                ])
+            ).isEmpty)
         check("the shortcut stays put", fixture.hotKeys.binding(for: action) == chord)
         check("the alias changes", fixture.aliases.alias(for: key) == "history")
 
@@ -71,9 +76,13 @@ struct LauncherSettingsFileTest {
         fixture.visibility.setItemVisible(false, forKey: bundleID)
         let binding = fixture.file.appsBinding(for: .applications)
 
-        check("clearing the last shortcut applies", binding.write(.object([
-            bundleID: .object(["shortcut": .null])
-        ])).isEmpty)
+        check(
+            "clearing the last shortcut applies",
+            binding.write(
+                .object([
+                    bundleID: .object(["shortcut": .null])
+                ])
+            ).isEmpty)
         check("there is no shortcut to commit", fixture.shortcuts.commit().isEmpty)
         check("the app is unbound", fixture.hotKeys.binding(for: action) == nil)
         let saved = binding.read()[bundleID]
@@ -81,9 +90,13 @@ struct LauncherSettingsFileTest {
         check("its alias still renders", saved?["alias"] == "outside")
         check("its hidden state still renders", saved?["showInLauncher"] == false)
 
-        check("a partial edit still finds the app", binding.write(.object([
-            bundleID: .object(["alias": "renamed"])
-        ])).isEmpty)
+        check(
+            "a partial edit still finds the app",
+            binding.write(
+                .object([
+                    bundleID: .object(["alias": "renamed"])
+                ])
+            ).isEmpty)
         check("the new alias applies", fixture.aliases.alias(for: bundleID) == "renamed")
         check("a scan keeps that record", fixture.file.applyInstalled().isEmpty)
         check("a scan does not restore the cleared shortcut", fixture.hotKeys.binding(for: action) == nil)
@@ -104,9 +117,13 @@ struct LauncherSettingsFileTest {
         check("waiting records bind nothing", fixture.shortcuts.commit().isEmpty)
         check("waiting records apply no alias", fixture.aliases.alias(for: bundleID) == nil)
 
-        check("a waiting record accepts a partial edit", binding.write(.object([
-            bundleID: .object(["showInLauncher": false])
-        ])).isEmpty)
+        check(
+            "a waiting record accepts a partial edit",
+            binding.write(
+                .object([
+                    bundleID: .object(["showInLauncher": false])
+                ])
+            ).isEmpty)
         let saved = binding.read()[bundleID]
         check("the waiting shortcut is preserved", saved?["shortcut"] == chordText.settingsJSON)
         check("the waiting alias is preserved", saved?["alias"] == "later")
@@ -121,35 +138,46 @@ struct LauncherSettingsFileTest {
         check("the app is hidden", !fixture.visibility.isItemVisible(key: bundleID))
         fixture.aliases.setAlias("edited in app", for: bundleID)
         check("a second scan has nothing to apply", fixture.file.applyInstalled().isEmpty)
-        check("a second scan does not replay the file", fixture.aliases.alias(for: bundleID) == "edited in app")
+        check(
+            "a second scan does not replay the file", fixture.aliases.alias(for: bundleID) == "edited in app")
 
         fixture.index.apps = []
         fixture.hotKeys.setBinding(nil, for: .app(bundleID: bundleID))
-        check("a previously applied record stays in the mirror", binding.read()[bundleID]?["alias"] == "edited in app")
+        check(
+            "a previously applied record stays in the mirror",
+            binding.read()[bundleID]?["alias"] == "edited in app")
     }
 
     private static func testDeletedWaitingRecord() {
         let fixture = Fixture()
         let binding = fixture.file.panesBinding(for: .systemSettings)
-        check("a waiting pane's record is accepted", binding.write(.object([
-            bundleID: .object(["shortcut": chordText.settingsJSON, "alias": "pane"])
-        ])).isEmpty)
+        check(
+            "a waiting pane's record is accepted",
+            binding.write(
+                .object([
+                    bundleID: .object(["shortcut": chordText.settingsJSON, "alias": "pane"])
+                ])
+            ).isEmpty)
         check("deleting a waiting record applies", binding.write(.object([])).isEmpty)
         fixture.index.apps = [entry(bundleID, kind: .systemSettings)]
         check("a deleted waiting record is not applied", fixture.file.applyInstalled().isEmpty)
-        check("the pane stays unbound", fixture.hotKeys.binding(for: .settingsPane(bundleID: bundleID)) == nil)
+        check(
+            "the pane stays unbound", fixture.hotKeys.binding(for: .settingsPane(bundleID: bundleID)) == nil)
         check("the pane has no stale alias", fixture.aliases.alias(for: bundleID) == nil)
     }
 
     private static func testMovedShortcut() {
         let fixture = Fixture()
         fixture.hotKeys.setBinding(chord, for: .command(.clipboardHistory))
-        let launcher = fixture.shortcuts.binding(for: .launcherShortcut, action: .togglePalette, name: "App Launcher")
+        let launcher = fixture.shortcuts.binding(
+            for: .launcherShortcut, action: .togglePalette, name: "App Launcher")
         let clipboard = fixture.file.commandsBinding(for: .clipboardCommands, owner: .clipboard)
-        let issues = launcher.write(chordText.settingsJSON) + clipboard.write(.object([])) + fixture.shortcuts.commit()
+        let issues =
+            launcher.write(chordText.settingsJSON) + clipboard.write(.object([])) + fixture.shortcuts.commit()
         check("a shortcut moves across sections without a conflict", issues.isEmpty)
         check("the launcher receives the chord", fixture.hotKeys.binding(for: .togglePalette) == chord)
-        check("Clipboard History releases it", fixture.hotKeys.binding(for: .command(.clipboardHistory)) == nil)
+        check(
+            "Clipboard History releases it", fixture.hotKeys.binding(for: .command(.clipboardHistory)) == nil)
     }
 
     private static func entry(_ bundleID: String, kind: AppEntry.Kind) -> AppEntry {

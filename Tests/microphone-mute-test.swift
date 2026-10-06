@@ -167,7 +167,9 @@ struct MicrophoneMuteTests {
         }
         reset(AudioFixture(device: 99, muted: 1))
         await expectToggle(false)
-        expect(audio.withLock { $0.controlDevices.allSatisfy { $0 == 99 } }, "the next toggle follows the new input")
+        expect(
+            audio.withLock { $0.controlDevices.allSatisfy { $0 == 99 } },
+            "the next toggle follows the new input")
 
         reset(AudioFixture(device: kAudioObjectUnknown))
         await expectFailure("No audio input device")

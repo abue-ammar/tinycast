@@ -1357,13 +1357,17 @@ extension AIChatTests {
         await settle(chat)
         chat.send("Elaborate", using: provider)
         await settle(chat)
-        expect(provider.requests.map(\.conversationID) == [firstID, firstID], "follow-ups identify the same conversation")
+        expect(
+            provider.requests.map(\.conversationID) == [firstID, firstID],
+            "follow-ups identify the same conversation")
         let continued = provider.requests[0].continuing(with: provider.requests[0].messages, tools: [])
         expect(continued.conversationID == firstID, "tool rounds keep the conversation identity")
         chat.startNewChat()
         chat.send("Start again", using: provider)
         await settle(chat)
-        expect(provider.requests.last?.conversationID != firstID, "a new chat cannot inherit another chat's context")
+        expect(
+            provider.requests.last?.conversationID != firstID,
+            "a new chat cannot inherit another chat's context")
         expect(AIRequest(messages: []).conversationID == nil, "standalone generations have no chat context")
     }
 
