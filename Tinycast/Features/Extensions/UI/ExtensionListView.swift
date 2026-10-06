@@ -192,7 +192,7 @@ private struct ExtensionItemRow: View {
             Text(node.string("title") ?? "")
                 .font(metrics.typography.rowTitle)
                 .lineLimit(1)
-                // A detail list is 290pt wide, and an accessory would otherwise win the squeeze.
+                // Outranks the Spacer, which would otherwise take half the title's room.
                 .layoutPriority(1)
             if !compact, let subtitle = node.string("subtitle"), !subtitle.isEmpty {
                 Text(subtitle)
@@ -203,7 +203,9 @@ private struct ExtensionItemRow: View {
             Spacer(minLength: metrics.spacing.sm)
             // Raycast draws the accessories it is given, and a quota row's signal is all in them.
             ExtensionAccessoriesView(
-                accessories: node.array("accessories"), assetsPath: assetsPath)
+                accessories: node.array("accessories"), assetsPath: assetsPath
+            )
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, metrics.spacing.md)
         .padding(.vertical, metrics.spacing.sm)
