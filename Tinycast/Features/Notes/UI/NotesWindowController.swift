@@ -8,6 +8,8 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     private unowned let coordinator: NotesCoordinator
     private var panel: NotesPanel?
     private weak var editor: NoteTextView?
+    private var editorObservers: [NotificationToken] = []
+    private var fitTask: Task<Void, Never>?
     private var previousApp: NSRunningApplication?
     private weak var previousOwnWindow: NSWindow?
 
@@ -23,6 +25,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         panel.contentView?.layoutSubtreeIfNeeded()
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
+        scheduleFit()
         seatTrafficLights(in: panel)
         // The corner is clipped in SwiftUI, so the shadow has to be recut from what was drawn.
         panel.invalidateShadow()
@@ -43,6 +46,8 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
 
     func editorReady(_ textView: NoteTextView) {
         editor = textView
+        observeLayout(of: textView)
+        scheduleFit()
         guard let panel, panel.isVisible else { return }
         focusEditor(in: panel)
     }
@@ -110,6 +115,56 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     }
 
     // MARK: - Private
+
+    /// Typing fits before the frame draws, or the caret scrolls first and the text bounces back.
+    private func observeLayout(of textView: NoteTextView) {
+        guard let storage = textView.textStorage, let clipView = textView.enclosingScrollView?.contentView
+        else { return }
+        editorObservers = [
+            observe(NSText.didChangeNotification, from: textView) { $0.fitToEditor() },
+            observe(NSTextStorage.didProcessEditingNotification, from: storage) { $0.scheduleFit() },
+            observe(NSView.frameDidChangeNotification, from: clipView) { $0.scheduleFit() }
+        ]
+    }
+
+    private func observe(
+        _ name: Notification.Name, from object: AnyObject,
+        perform: @escaping @MainActor (NotesWindowController) -> Void
+    ) -> NotificationToken {
+        let center = NotificationCenter.default
+        return NotificationToken(
+            center.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    perform(self)
+                }
+            },
+            center: center)
+    }
+
+    /// Undo, note switches and the bars change layout mid-edit, so they fit once the edit is done.
+    private func scheduleFit() {
+        guard fitTask == nil else { return }
+        fitTask = Task { [weak self] in
+            guard let self else { return }
+            fitTask = nil
+            fitToEditor()
+        }
+    }
+
+    private func fitToEditor() {
+        guard let panel, panel.isVisible, !panel.inLiveResize,
+            let editor, let clipView = editor.enclosingScrollView?.contentView,
+            let visibleFrame = (panel.screen ?? NSScreen.main)?.visibleFrame
+        else { return }
+        let frame = NoteWindowPlacement.fitting(
+            panel.frame,
+            toHeight: panel.frame.height - clipView.bounds.height + editor.textHeight(),
+            within: Theme.Size.noteWindow.height...Theme.Size.noteWindowMaxHeight,
+            in: visibleFrame)
+        guard frame != panel.frame else { return }
+        panel.setFrame(frame, display: true)
+    }
 
     private func ensurePanel() -> NotesPanel {
         if let panel { return panel }

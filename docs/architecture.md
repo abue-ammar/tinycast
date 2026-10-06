@@ -142,9 +142,9 @@ driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem
   unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
   palette's in both directions.
 - **Notes** — a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
-  The user owns its size and AppKit autosaves the frame; its TextKit 2 editor renders Markdown over the
-  literal source, switches among local Markdown files and stays visible on focus loss. The displayed
-  string is the canonical file source; there is no source/display mapping.
+  Its height fits the note up to 860pt and AppKit autosaves the frame; its TextKit 2 editor renders
+  Markdown over the literal source, switches among local Markdown files and stays visible on focus
+  loss. The displayed string is the canonical file source; there is no source/display mapping.
   See [features/notes.md](features/notes.md).
 - **AI Chat** — a titled `AppWindowController` window owned by `AIChatCoordinator`: an
   `NSSplitViewController` with a collapsible sidebar of saved chats beside the open conversation, as

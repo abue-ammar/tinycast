@@ -547,6 +547,12 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   rendered note and is styled at once
 - The derived title of an Untitled note shows no Markdown markers
 - A narrow window wraps list items under their text, not under the marker
+- Typing new lines, wrapping text, and pasting grow the note vertically without changing its width,
+  and deleting shrinks it back to the 180pt floor; the top edge stays put until growth reaches the
+  screen's bottom, then the window moves up. It stops at 860pt or the screen's usable height and
+  scrolls. A dragged height holds until the next keystroke, which fits the window again. Switching
+  to a shorter note shrinks it. Repeat with rendering on and off, Find and the formatting bar open,
+  and on a secondary display
 - With Render Markdown **off**, the note is fully literal (markers visible, links inert, task syntax
   plain) and Return, Tab, Delete, and formatting-looking shortcuts keep native plain-text behavior;
   flipping it back re-renders without dirtying the note or touching undo

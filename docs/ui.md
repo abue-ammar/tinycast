@@ -161,7 +161,7 @@ panel, the shortcut-recorder callout and the Notes switcher, and `menuRow` is de
 
 The opt-in Dictation capsule adds `dictationPanel 144×44`, with 2pt waveform bars separated by 3pt.
 
-Notes adds `noteWindow 520×420` (opening size on a first run only), `noteWindowMinimum 320×220`,
+Notes adds `noteWindow 440×180` (opening size on a first run, and the floor), `noteWindowMaxHeight 860`,
 `noteTitlebar 44`, `noteTitleInset 120`, `noteEditorInset 16`, `noteSearchHeight 34`,
 `noteFooterHeight 28`, `noteGlyph 16`, `noteEmptyGlyph 28`, and `noteHeadingMenu 220×159`.
 
@@ -267,8 +267,8 @@ the window. The three actions cannot do that, so they live in an `NSTitlebarAcce
 at `.trailing` — `NoteTitlebarActions`, the launcher's footer capsule (`BarButton` in a
 `frosted(in: Capsule())`) with glyphs in place of pills. Its 44-point height is what sizes the band.
 
-`NotesWindowController` preserves the user-owned size and AppKit autosaves the frame under
-`"Notes Window"`; only a title-bar double-click computes a top-right target. The window shows exactly
+`NotesWindowController` fits the height to the editor on every edit and AppKit autosaves the frame
+under `"Notes Window"`; only a title-bar double-click computes a top-right target. The window shows exactly
 one surface at a time — editor, switcher, or the "No Notes" empty state — and the character count is
 part of the editor surface, so it never appears without a note.
 

@@ -69,6 +69,8 @@ enum Theme {
         static let panelHeight: CGFloat = 475
         /// Opening size on a first run and the floor: below it the title bar's own parts collide.
         static let noteWindow = CGSize(width: 440, height: 180)
+        /// The tallest a note window grows to fit its text; past it the editor scrolls.
+        static let noteWindowMaxHeight: CGFloat = 860
         static let noteEditorInset: CGFloat = 16
         /// Shorter than the horizontal inset, so the first line sits close under the title bar.
         static let noteEditorTopInset: CGFloat = 6

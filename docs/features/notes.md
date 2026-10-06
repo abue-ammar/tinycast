@@ -33,8 +33,11 @@ commands and global shortcuts can show, search, or extend the collection.
   commands are absent, and enabling alone does not enumerate or create the Notes directory.
 - **The collection may be empty.** Deleting the last note is allowed and creates no replacement; the
   window shows its empty state and Create Note still works from there.
-- **The user owns the window size.** AppKit resizes and autosaves the frame; the controller only
-  clamps it to the floor below which the title bar's own parts collide.
+- **The window's height always fits the note.** Every edit, note switch and bar toggle grows or
+  shrinks it between the 180pt floor and 860pt, or the screen's visible height; past that the editor
+  scrolls. The top edge holds until the bottom would leave the visible frame, then the window moves
+  up. A manually dragged height lasts until the next edit. The height comes from TextKit's last layout
+  fragment, because the text view's frame never gets shorter than its clip view.
 - **The editor is a surface snippets expand into.** `NoteTextView` adopts `InjectableTextView`,
   so a typed keyword — and the Snippets browser's ↵ — is written straight into the text storage
   rather than posted as events at whichever app happens to be frontmost. Quick Actions also read and
