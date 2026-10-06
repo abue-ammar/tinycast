@@ -343,7 +343,7 @@ enum BackupActions {
     }
 
     static func revealSettingsFile() {
-        NSWorkspace.shared.activateFileViewerSelecting([AppPaths.settingsFile()])
+        AppLauncher.showInFinder(AppPaths.settingsFile())
     }
 
     private static func confirmExecutableImport(

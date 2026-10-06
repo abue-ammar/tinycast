@@ -16,6 +16,22 @@ enum AppLauncher {
     @MainActor
     static func showInFinder(_ url: URL) {
         NSWorkspace.shared.activateFileViewerSelecting([url])
+        bringFileViewerForwardIfRefused()
+    }
+
+    /// While `.regular` and inactive, cooperative activation refuses the viewer's own activation.
+    @MainActor
+    private static func bringFileViewerForwardIfRefused() {
+        guard NSApp.activationPolicy() == .regular, !NSApp.isActive,
+            let viewer = NSWorkspace.shared.urlForApplication(
+                withBundleIdentifier: fileViewerBundleID)
+        else { return }
+        NSWorkspace.shared.openApplication(at: viewer, configuration: NSWorkspace.OpenConfiguration())
+    }
+
+    /// The global `NSFileViewer` default is how a replacement file viewer takes over reveals.
+    private static var fileViewerBundleID: String {
+        UserDefaults.standard.string(forKey: "NSFileViewer") ?? "com.apple.finder"
     }
 
     /// No AppKit route for Get Info, so this drives Finder over Apple events — seconds when cold.
