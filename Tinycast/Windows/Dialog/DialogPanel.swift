@@ -64,4 +64,16 @@ final class DialogPanel: NSPanel {
 
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
+
+    func focusFirstTextField() {
+        // SwiftUI builds its text fields on first layout, which may not have run by turning key.
+        contentView?.layoutSubtreeIfNeeded()
+        guard let field = contentView.flatMap(Self.firstTextField(in:)) else { return }
+        makeFirstResponder(field)
+    }
+
+    private static func firstTextField(in view: NSView) -> NSTextField? {
+        if let field = view as? NSTextField, field.isEditable { return field }
+        return view.subviews.lazy.compactMap(firstTextField(in:)).first
+    }
 }

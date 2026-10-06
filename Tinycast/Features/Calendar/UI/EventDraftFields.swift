@@ -10,12 +10,10 @@ final class EventDraftState {
 struct EventDraftFields: View {
     @Environment(\.metrics) private var metrics
     @Bindable var state: EventDraftState
-    @FocusState private var focused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: metrics.spacing.xl) {
             TextField("", text: $state.draft.title, prompt: Text("Event title"))
-                .focused($focused)
                 .dialogTextField()
             ChoiceRow(
                 label: "Starts", values: EventDraft.startOffsets,
@@ -23,11 +21,6 @@ struct EventDraftFields: View {
             ChoiceRow(
                 label: "For", values: EventDraft.durations, title: EventDraft.label(duration:),
                 selection: $state.draft.durationMinutes)
-        }
-        .task {
-            // Yields past the panel turning key, or AppKit's own first-responder pick wins.
-            await Task.yield()
-            focused = true
         }
     }
 }
