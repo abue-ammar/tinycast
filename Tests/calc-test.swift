@@ -685,10 +685,20 @@ struct CalcTests {
         // A slash date still reads as a date when the other side names a keyword
         expectDisplayAt("9/4 - today", "42 days")
         expectDisplayAt("today - 9/4", "-42 days")
-        // Bare date/unit words alone are app searches, not cards
-        expectNilAt("today")
+        // A lone word naming one moment answers; one that recurs is still an app search
+        expectDisplayAt("today", "24 July")
+        expectDisplayAt("tomorrow", "25 July")
+        expectDisplayAt("yesterday", "23 July")
+        expectDisplayAt("now", "24 July at 12:18 AM")
+        expectBadgesAt("tomorrow", source: "Friday, 24 July", target: "Saturday")
+        expectExpression("Today", "Today")
+        expectDisplayAt("time", "12:18 AM")
+        expectBadgesAt("time", source: "Friday, 24 July", target: "UTC")
         expectNilAt("july")
-        expectNilAt("tomorrow")
+        expectNilAt("monday")
+        expectNilAt("noon")
+        expectNilAt("todays")
+        expectNilAt("times")
 
         // Angle units (deg is a real unit now, not just a trig postfix)
         expectDisplay("1 deg", "0.01745329252 rad")
@@ -1181,7 +1191,6 @@ struct CalcTests {
         expectDisplay("1 cup to ml", "236.5882365 mL")
         expectNil("time in xyzzy")
         expectNil("in tokyo")
-        expectNil("time")
 
         // IATA airport codes, which Foundation has no notion of
         expectDisplayAt("time in vie", "2:18 AM")
@@ -1314,11 +1323,9 @@ struct CalcTests {
         expectBadgesAt("25. aug", source: "Friday, 24 July", target: "Tuesday")
         // A bare date takes the year it is nearest, so it agrees with the same date plus a shift
         expectDisplayAt("25. aug + 3", "28 August")
-        // A month or a relative word alone is still an app search
+        // A month alone is still an app search
         expectNilAt("july")
         expectNilAt("aug")
-        expectNilAt("today")
-        expectNilAt("tomorrow")
 
         // Date arithmetic chains left to right, however many terms it carries
         expectDisplayAt("17.2.26 + 100 week days - 4 + 2", "5 July")
@@ -1534,9 +1541,6 @@ struct CalcTests {
         expectDisplayAt("1:00 - 3:00", "-2 hr", calendar: vienna)
         let springNow = clock.calendar.date(from: DateComponents(year: 2026, month: 3, day: 29))!
         expectNilAt("2:30am vienna in london", now: springNow, calendar: vienna)
-        // A lone date word is still an app search
-        expectNilAt("tomorrow")
-        expectNilAt("today")
 
         // Spoken function and operator names
         expectDisplay("square root of 625", "25")
@@ -1762,7 +1766,8 @@ struct CalcTests {
             check(query + " [chains]", expected: "true", got: chains(evaluate(query)))
         }
         for query in [
-            "now + 90 min", "now + 90 min +", "time in Tokyo", "3pm London in Tokyo", "5 > 3",
+            "now + 90 min", "now + 90 min +", "today", "time", "time in Tokyo", "3pm London in Tokyo",
+            "5 > 3",
             "ratio of 1920 to 1080"
         ] {
             check(query + " [chains]", expected: "false", got: chains(evaluate(query)))

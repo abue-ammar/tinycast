@@ -58,6 +58,25 @@ enum CalcDateTime {
         return nil
     }
 
+    /// The only lone words that answer: each names one moment, where `monday` or `july` recurs.
+    static func namedMoment(_ word: String, now: Date, calendar: Calendar) -> CalcResult? {
+        let lowered = word.lowercased()
+        switch lowered {
+        case "now", "today", "tomorrow", "yesterday":
+            return bareMoment(lowered, echo: word, now: now, calendar: calendar)
+        case "time":
+            let clock = CalcDateFormatters.string(
+                from: now, calendar: calendar, zone: calendar.timeZone, template: "jmm")
+            return CalcResult(
+                expression: word,
+                sourceBadge: dateString(now, now: now, calendar: calendar),
+                targetBadge: CalcTimeZone.label(for: calendar.timeZone),
+                payload: .value(display: clock, copyText: clock))
+        default:
+            return nil
+        }
+    }
+
     private struct Signals: OptionSet {
         let rawValue: Int
         static let digit = Signals(rawValue: 1 << 0)

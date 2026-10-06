@@ -442,7 +442,7 @@ enum CalcTimeZone {
     }()
 
     /// Not `localizedName`, which needs a `Locale` — banned in `Model/`.
-    private static func label(for zone: TimeZone) -> String {
+    static func label(for zone: TimeZone) -> String {
         if zone.identifier == "GMT" || zone.identifier == "UTC" { return "UTC" }
         guard let city = zone.identifier.split(separator: "/").last else { return zone.identifier }
         return city.replacingOccurrences(of: "_", with: " ")

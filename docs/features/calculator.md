@@ -46,6 +46,7 @@ in (see Currency below).
 `CalcEngine.evaluate` runs:
 
 Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
+The one exception is the five words that name the current moment or its neighbours — see grammar G.
 
 1. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
@@ -98,7 +99,7 @@ parser, while the separator still chooses ISO, month-first or day-first interpre
 - **D** — difference between two moments: `jul 4 - today`
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
-- **G** — a named moment, once qualified: `tomorrow at 9am`, `next monday`, `last friday`
+- **G** — a named moment: `today`, `now`, `time`, `tomorrow at 9am`, `next monday`, `last friday`
 
 **An answered moment badges its weekday.** Grammars C and E resolve to a date, and the day of the
 week is the thing a date does not say out loud — so `5 weekdays from now` reads `4 September` under
@@ -125,11 +126,15 @@ which is the more common thing to type.
 The same convention writes an **ordinal dot** after the day, so `28. aug + 3` reads as 28 August.
 Only a trailing dot is dropped, which is why `28.5 aug` stays silent rather than becoming a date.
 
-Grammar G needs the qualifier. A lone `tomorrow` is an app search, so `at <time>` or a leading
-`next` / `last` earns a card — the same rule that keeps `today` and `july` silent. **A written day
-is qualifier enough**: `25. aug`, `aug 25` and `25.8.27` all answer, badged with their weekday,
-because nobody types a day-and-month pair looking for an app. A month alone still names no day, so
-`july` stays a search.
+Grammar G needs a qualifier for anything that recurs. `monday`, `july` and `noon` alone are app
+searches, so `at <time>` or a leading `next` / `last` earns a card. **`now`, `today`, `tomorrow`,
+`yesterday` and `time` are qualifier enough** — each names exactly one moment, so alone they answer.
+`time` is the Mac's own clock, badged with today's date and the calendar's zone the way `time in
+<place>` badges its city. The card takes row 0, so `time` + Enter copies the clock; Time Machine is
+one row down.
+**A written day is qualifier enough** too: `25. aug`, `aug 25` and `25.8.27` all answer, badged with
+their weekday, because nobody types a day-and-month pair looking for an app. A month alone still
+names no day, so `july` stays a search.
 
 A bare date takes the year it is **nearest**, not the next one — three days behind is likelier the
 date meant than the same day twelve months out. Grammar C shifts a moment, so it reads the year the

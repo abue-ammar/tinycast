@@ -61,8 +61,8 @@ enum CalcEngine {
         guard !trimmed.isEmpty, trimmed.count <= 256, let query = format.canonical(trimmed) else {
             return nil
         }
-        guard !query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) else {
-            return nil
+        if query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) {
+            return CalcDateTime.namedMoment(query, now: now, calendar: calendar).map(unchained)
         }
 
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) {
