@@ -119,6 +119,16 @@ final class QuicklinkCoordinator {
         openQuicklink(id: id, values: [first.name: seed])
     }
 
+    /// Alfred-style `keyword query`: the remainder fills the first argument the link declares.
+    func keywordFill(id: UUID, query: String) -> [String: String] {
+        guard let quicklink = store.quicklink(id: id),
+            let keyword = quicklink.keyword,
+            let remainder = KeywordInvocation.remainder(query: query, keyword: keyword),
+            let first = SnippetTemplateEngine.declaredArguments(in: quicklink.link).first
+        else { return [:] }
+        return [first.name: remainder]
+    }
+
     /// `{selection}` promoted to a field when unreadable and the setting says ask.
     static let selectionArgument = SnippetTemplateEngine.MissingArgument(
         name: "Selected Text", options: [])
@@ -307,19 +317,29 @@ final class QuicklinkCoordinator {
     }
 
     /// Merges into the library the way Settings → Import does, so Raycast and JSON share one rule.
+    /// A re-import also fills missing keywords on matching destinations; returns those too.
     @discardableResult
-    func addImportedQuicklinks(_ incoming: [Quicklink]) -> [Quicklink] {
+    func addImportedQuicklinks(_ incoming: [Quicklink]) -> (added: [Quicklink], keywordsUpdated: Int)
+    {
         let merge = QuicklinkArchive.merge(incoming, into: store.quicklinks)
-        return store.append(merge.additions)
+        var keywordsUpdated = 0
+        for (id, keyword) in merge.keywordUpdates {
+            guard var current = store.quicklink(id: id), (current.keyword ?? "").isEmpty else {
+                continue
+            }
+            current.keyword = keyword
+            if (try? store.update(current)) != nil { keywordsUpdated += 1 }
+        }
+        return (store.append(merge.additions), keywordsUpdated)
     }
 
     func importQuicklinks() async {
         guard let url = BackupActions.chooseJSONFile() else { return }
         do {
             let incoming = try QuicklinkArchive.decode(Data(contentsOf: url))
-            let added = addImportedQuicklinks(incoming)
+            let (added, keywordsUpdated) = addImportedQuicklinks(incoming)
             // Everything offered was already here, so say so rather than "0 imported".
-            guard !added.isEmpty else {
+            guard !added.isEmpty || keywordsUpdated > 0 else {
                 await core.showNotice(
                     title: "Nothing to Import",
                     message: "Every quicklink in this file is already in your library.",
@@ -327,10 +347,16 @@ final class QuicklinkCoordinator {
                 return
             }
             let skipped = incoming.count - added.count
-            let summary =
-                skipped == 0
-                ? "Imported \(added.count) quicklinks."
-                : "Imported \(added.count) quicklinks. Skipped \(skipped) already in your library."
+            var parts: [String] = []
+            if !added.isEmpty { parts.append("Imported \(added.count) quicklinks.") }
+            if keywordsUpdated > 0 {
+                parts.append("Updated the keyword on \(keywordsUpdated) existing.")
+            }
+            if skipped > keywordsUpdated {
+                parts.append(
+                    "Skipped \(skipped - keywordsUpdated) already in your library.")
+            }
+            let summary = parts.joined(separator: " ")
             await core.showNotice(
                 title: "Quicklinks Imported", message: summary, symbol: Quicklink.sfSymbol,
                 tone: .success)

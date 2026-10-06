@@ -177,10 +177,18 @@ struct LauncherScreen: PaletteScreen {
     }
 
     /// The typed values for one row, stripped of blanks — what gets handed to the command.
-    private func argumentValues(for entry: AppEntry) -> [String: String] {
+    private func argumentValues(for entry: AppEntry, query: String? = nil) -> [String: String] {
         if entry.kind == .quicklink {
             guard let quicklink = quicklink(for: entry) else { return [:] }
-            return QuicklinkArgumentsAccessory.values(for: quicklink, core: core, vm: vm)
+            var values = QuicklinkArgumentsAccessory.values(for: quicklink, core: core, vm: vm)
+            // `keyword query`: the remainder fills the first argument the typed fields left empty.
+            if let query, let id = Quicklink.id(fromEntryID: entry.id) {
+                for (name, value) in core.quicklinkCoordinator.keywordFill(id: id, query: query)
+                where values[name] == nil {
+                    values[name] = value
+                }
+            }
+            return values
         }
         if entry.kind == .customCommand {
             guard let command = core.customCommands.command(entryID: entry.id) else { return [:] }
@@ -258,7 +266,7 @@ struct LauncherScreen: PaletteScreen {
         case .meeting(let meeting): core.calendarCoordinator.activateMeeting(id: meeting.id)
         case .entry(let app):
             core.launcherCoordinator.launch(
-                app, searchQuery: vm.query, arguments: argumentValues(for: app))
+                app, searchQuery: vm.query, arguments: argumentValues(for: app, query: vm.query))
         case .fallback(let fallback, _):
             core.fallbackCoordinator.run(fallback, query: vm.query)
         case nil: break
@@ -455,7 +463,7 @@ struct LauncherScreen: PaletteScreen {
             },
             onActivate: {
                 core.launcherCoordinator.launch(
-                    $0, searchQuery: vm.query, arguments: argumentValues(for: $0))
+                    $0, searchQuery: vm.query, arguments: argumentValues(for: $0, query: vm.query))
             },
             onActions: { app in
                 if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }

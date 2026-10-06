@@ -18,12 +18,15 @@ struct QuicklinkTests {
         displayOrder()
         storeCRUD()
         storeValidation()
+        storeKeywords()
+        keywordInvocation()
         pinning()
         persistence()
         readsADatabaseWrittenElsewhere()
         corruptDatabaseIsPreserved()
         archiveRoundTrip()
         archiveMerge()
+        archiveMergeKeywords()
         archiveAcceptsAHandWrittenFile()
         raycastImport()
 
@@ -212,6 +215,58 @@ struct QuicklinkTests {
         }
     }
 
+    static func storeKeywords() {
+        withStore { store in
+            var search = link("Search", "https://x.com/?q={argument}")
+            search.keyword = "  gh "
+            guard let stored = try? store.add(search) else {
+                return fail("adding a quicklink with a keyword succeeds")
+            }
+            expect(stored.keyword == "gh", "keywords are trimmed on save")
+
+            var clash = link("Other", "https://other.com/?q={argument}")
+            clash.keyword = "GH"
+            expect(
+                throwsError(store, clash) == .duplicateKeyword,
+                "a duplicate keyword is rejected case-insensitively")
+
+            var renamed = stored
+            renamed.name = "Search Engine"
+            expect(
+                (try? store.update(renamed)) != nil,
+                "a quicklink does not collide with its own keyword when edited")
+
+            guard let copy = try? store.duplicate(id: stored.id) else {
+                return fail("duplicating a keyword quicklink succeeds")
+            }
+            expect(copy.keyword == nil, "a duplicate starts without a keyword")
+        }
+    }
+
+    static func keywordInvocation() {
+        expect(
+            KeywordInvocation.remainder(query: "gh foo bar", keyword: "gh") == "foo bar",
+            "the text after the keyword is the query")
+        expect(
+            KeywordInvocation.remainder(query: "gh  foo ", keyword: "gh") == "foo",
+            "surrounding whitespace is trimmed")
+        expect(
+            KeywordInvocation.remainder(query: "GH foo", keyword: "gh") == "foo",
+            "the keyword matches case-insensitively")
+        expect(
+            KeywordInvocation.remainder(query: "gh", keyword: "gh") == nil,
+            "a bare keyword is no invocation")
+        expect(
+            KeywordInvocation.remainder(query: "ghee foo", keyword: "gh") == nil,
+            "a longer word is no invocation")
+        expect(
+            KeywordInvocation.remainder(query: "ag foo", keyword: "g") == nil,
+            "the keyword must open the query")
+        expect(
+            KeywordInvocation.remainder(query: "foo", keyword: "gh") == nil,
+            "an unrelated query is no invocation")
+    }
+
     static func pinning() {
         withStore { store in
             _ = try? store.add(link("Alpha"))
@@ -252,6 +307,7 @@ struct QuicklinkTests {
             let store = QuicklinkStore(directory: dir)
             var draft = link("Downloads", "~/Downloads")
             draft.iconSymbol = "folder"
+            draft.keyword = "dl"
             draft.openWithBundleID = "com.apple.finder"
             stored = try? store.add(draft).id
             try? store.togglePinned(id: stored!)
@@ -267,6 +323,7 @@ struct QuicklinkTests {
         expect(restored.id == stored, "identity survives")
         expect(restored.name == "Downloads" && restored.link == "~/Downloads", "fields survive")
         expect(restored.iconSymbol == "folder", "the icon survives")
+        expect(restored.keyword == "dl", "the keyword survives")
         expect(restored.openWithBundleID == "com.apple.finder", "the open-with app survives")
         expect(restored.isPinned, "the pin stamp survives")
         expect(!restored.isEnabled, "the enabled flag survives")
@@ -366,6 +423,49 @@ struct QuicklinkTests {
         expect(
             reimported.imported == 0 && reimported.skipped == 2,
             "importing the same file twice adds nothing")
+    }
+
+    static func archiveMergeKeywords() {
+        var github = link("GitHub", "https://github.com/search?q={argument}")
+        github.keyword = nil
+        let existing = [github]
+
+        var search = link("GitHub", "https://github.com/search?q={argument}")
+        search.keyword = "gh"
+        let reimported = QuicklinkArchive.merge([search], into: existing)
+        expect(
+            reimported.additions.isEmpty
+                && reimported.keywordUpdates == [github.id: "gh"],
+            "a re-import fills a missing keyword on the same destination")
+
+        var keyed = github
+        keyed.keyword = "gh"
+        let alreadyKeyed = QuicklinkArchive.merge([search], into: [keyed])
+        expect(
+            alreadyKeyed.keywordUpdates.isEmpty,
+            "an existing keyword is never overwritten")
+
+        var renamed = link("GitHub Search", "https://github.com/search?q={argument}")
+        renamed.keyword = "gh"
+        let renamedResult = QuicklinkArchive.merge([renamed], into: existing)
+        expect(
+            renamedResult.additions.isEmpty
+                && renamedResult.keywordUpdates == [github.id: "gh"],
+            "the keyword follows the destination, not the name")
+
+        var other = link("GitHub", "https://elsewhere.com")
+        other.keyword = "gh"
+        let nameClash = QuicklinkArchive.merge([other], into: existing)
+        expect(
+            nameClash.keywordUpdates.isEmpty,
+            "a name match on another destination fills nothing")
+
+        var fresh = link("Jira", "https://jira.example.com")
+        fresh.keyword = "jira"
+        let added = QuicklinkArchive.merge([fresh], into: existing)
+        expect(
+            added.additions.first?.keyword == "jira",
+            "a new import keeps its keyword")
     }
 
     static func archiveAcceptsAHandWrittenFile() {

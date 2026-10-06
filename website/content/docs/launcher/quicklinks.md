@@ -26,6 +26,7 @@ Click **Add Quicklink** in Settings, or run the **Create Quicklink** command, to
 | Field               | What it does                                            |
 | ------------------- | ------------------------------------------------------- |
 | Name                | What you search for                                     |
+| Keyword             | A word that runs it directly, like `gh`                 |
 | Link                | Where it goes, with any placeholders                    |
 | Open With           | A specific app, or the default app                      |
 | Icon                | A symbol, or **Automatic** to match the kind of link    |
@@ -107,6 +108,13 @@ If a link uses `{selection}`, the **When there's no selected text** setting deci
 
 **A quicklink with an `{argument}` also appears under "Use … with"** at the bottom of every search.
 What you typed fills in its first argument. See [Fallbacks](/docs/launcher/fallbacks).
+
+## Keywords
+
+Give a quicklink a **keyword** to invoke it Alfred-style: typing `gh space elevators` opens that
+search at once, with the words after the keyword filling in the query. A bare `gh` lists the
+quicklink so you can fill in its values by hand. Keywords are single words, unique across your
+library, and work even when the quicklink is unlisted from root search.
 
 ## Opening
 

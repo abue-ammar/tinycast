@@ -107,17 +107,17 @@ struct AlfredImportTests {
             "an empty bookmark label falls back to the host",
             result.quicklinks[0].name == "example.com")
         check(
-            "a custom search keeps its title and gains its keyword",
-            result.quicklinks[1].name == "GitHub (gh)")
+            "a custom search keeps its title and gains a keyword",
+            result.quicklinks[1].name == "GitHub" && result.quicklinks[1].keyword == "gh")
         check(
             "the query token is rewritten to ours",
             result.quicklinks[1].link == "https://github.com/search?q={argument}")
         check(
-            "a default search lands, and a keyword already in the title is not repeated",
-            result.quicklinks[2].name == "Google")
+            "a default search lands with its own name and keyword",
+            result.quicklinks[2].name == "Google" && result.quicklinks[2].keyword == "g")
         check(
-            "a keyword the title does not contain is what keeps it typeable",
-            result.quicklinks[3].name == "Google Images (gi)")
+            "a keyword the title does not contain lives in the keyword field",
+            result.quicklinks[3].name == "Google Images" && result.quicklinks[3].keyword == "gi")
         check(
             "a disabled custom search is not carried over",
             !result.quicklinks.contains { $0.link.contains("example.com/never") })

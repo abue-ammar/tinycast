@@ -18,6 +18,7 @@ final class QuicklinkStore {
         CREATE TABLE IF NOT EXISTS quicklinks(
           id TEXT PRIMARY KEY NOT NULL,
           name TEXT NOT NULL,
+          keyword TEXT,
           link TEXT NOT NULL,
           open_with TEXT,
           icon TEXT,
@@ -126,6 +127,8 @@ final class QuicklinkStore {
         return try add(
             Quicklink(
                 name: Self.uniqueName(basedOn: source.name, taken: quicklinks.map(\.name)),
+                // A copied keyword would collide on save, so a duplicate starts without one.
+                keyword: nil,
                 link: source.link, openWithBundleID: source.openWithBundleID,
                 iconSymbol: source.iconSymbol, isEnabled: source.isEnabled,
                 showsInRootSearch: source.showsInRootSearch))
@@ -154,17 +157,18 @@ final class QuicklinkStore {
         guard let stmt = upsertStmt else { throw .storageUnavailable }
         sqlite3_bind_text(stmt, 1, value.id.uuidString, -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 2, value.name, -1, SQLITE_TRANSIENT)
-        sqlite3_bind_text(stmt, 3, value.link, -1, SQLITE_TRANSIENT)
-        bind(stmt, 4, value.openWithBundleID)
-        bind(stmt, 5, value.iconSymbol)
-        sqlite3_bind_int(stmt, 6, value.isEnabled ? 1 : 0)
-        sqlite3_bind_int(stmt, 7, value.showsInRootSearch ? 1 : 0)
+        bind(stmt, 3, value.keyword)
+        sqlite3_bind_text(stmt, 4, value.link, -1, SQLITE_TRANSIENT)
+        bind(stmt, 5, value.openWithBundleID)
+        bind(stmt, 6, value.iconSymbol)
+        sqlite3_bind_int(stmt, 7, value.isEnabled ? 1 : 0)
+        sqlite3_bind_int(stmt, 8, value.showsInRootSearch ? 1 : 0)
         if let pinnedAt = value.pinnedAt {
-            sqlite3_bind_double(stmt, 8, pinnedAt.timeIntervalSince1970)
+            sqlite3_bind_double(stmt, 9, pinnedAt.timeIntervalSince1970)
         } else {
-            sqlite3_bind_null(stmt, 8)
+            sqlite3_bind_null(stmt, 9)
         }
-        sqlite3_bind_double(stmt, 9, value.createdAt.timeIntervalSince1970)
+        sqlite3_bind_double(stmt, 10, value.createdAt.timeIntervalSince1970)
         let status = sqlite3_step(stmt)
         sqlite3_reset(stmt)
         sqlite3_clear_bindings(stmt)
@@ -197,6 +201,8 @@ final class QuicklinkStore {
         value.iconSymbol =
             draft.iconSymbol?.trimmingCharacters(in: .whitespacesAndNewlines)
             .nilIfEmpty
+        value.keyword =
+            draft.keyword?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
         value.openWithBundleID =
             draft.openWithBundleID?
             .trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
@@ -216,6 +222,15 @@ final class QuicklinkStore {
                     && $0.name.compare(value.name, options: .caseInsensitive) == .orderedSame
             })
         else { throw .duplicateName }
+        // Keywords invoke from the launcher, so two rows answering to one word would strand one.
+        if let keyword = value.keyword, !keyword.isEmpty {
+            guard
+                !quicklinks.contains(where: {
+                    $0.id != value.id
+                        && $0.keyword?.compare(keyword, options: .caseInsensitive) == .orderedSame
+                })
+            else { throw .duplicateKeyword }
+        }
         return value
     }
 
@@ -250,6 +265,8 @@ final class QuicklinkStore {
         sqlite3_exec(
             db, "ALTER TABLE quicklinks ADD COLUMN is_enabled INTEGER NOT NULL DEFAULT 1", nil, nil,
             nil)
+        sqlite3_exec(
+            db, "ALTER TABLE quicklinks ADD COLUMN keyword TEXT", nil, nil, nil)
         // After the schema, so a column added later can be indexed the same way.
         sqlite3_exec(
             db,
@@ -257,18 +274,19 @@ final class QuicklinkStore {
             nil, nil, nil)
         upsertStmt = prepare(
             """
-            INSERT INTO quicklinks(id, name, link, open_with, icon, is_enabled, in_root_search, pinned_at, created_at)
-            VALUES(?,?,?,?,?,?,?,?,?)
+            INSERT INTO quicklinks(id, name, keyword, link, open_with, icon, is_enabled, in_root_search, pinned_at, created_at)
+            VALUES(?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(id) DO UPDATE SET
-              name = excluded.name, link = excluded.link, open_with = excluded.open_with,
+              name = excluded.name, keyword = excluded.keyword, link = excluded.link,
+              open_with = excluded.open_with,
               icon = excluded.icon, is_enabled = excluded.is_enabled,
               in_root_search = excluded.in_root_search, pinned_at = excluded.pinned_at
             """
         )
-        // Both statements name columns in the struct's order, which `is_enabled` was appended after.
+        // Both statements name columns in the struct's order.
         loadStmt = prepare(
             """
-            SELECT id, name, link, open_with, icon, is_enabled, in_root_search, pinned_at, created_at
+            SELECT id, name, keyword, link, open_with, icon, is_enabled, in_root_search, pinned_at, created_at
             FROM quicklinks
             """
         )
@@ -293,15 +311,16 @@ final class QuicklinkStore {
 
     private static func row(_ stmt: OpaquePointer?) -> Quicklink? {
         guard let idString = columnString(stmt, 0), let id = UUID(uuidString: idString),
-            let name = columnString(stmt, 1), let link = columnString(stmt, 2)
+            let name = columnString(stmt, 1), let link = columnString(stmt, 3)
         else { return nil }
         return Quicklink(
-            id: id, name: name, link: link, openWithBundleID: columnString(stmt, 3),
-            iconSymbol: columnString(stmt, 4),
-            isEnabled: sqlite3_column_int(stmt, 5) != 0,
-            showsInRootSearch: sqlite3_column_int(stmt, 6) != 0,
-            pinnedAt: columnDate(stmt, 7),
-            createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 8)))
+            id: id, name: name, keyword: columnString(stmt, 2), link: link,
+            openWithBundleID: columnString(stmt, 4),
+            iconSymbol: columnString(stmt, 5),
+            isEnabled: sqlite3_column_int(stmt, 6) != 0,
+            showsInRootSearch: sqlite3_column_int(stmt, 7) != 0,
+            pinnedAt: columnDate(stmt, 8),
+            createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 9)))
     }
 
     private static func columnDate(_ stmt: OpaquePointer?, _ index: Int32) -> Date? {

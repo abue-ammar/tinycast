@@ -13,6 +13,8 @@ enum QuicklinkArchive {
     struct MergeResult: Equatable, Sendable {
         var additions: [Quicklink]
         var skipped: Int
+        /// A re-import's keywords for destinations already here, by existing row.
+        var keywordUpdates: [UUID: String]
         var imported: Int { additions.count }
     }
 
@@ -51,7 +53,10 @@ enum QuicklinkArchive {
     static func merge(_ incoming: [Quicklink], into existing: [Quicklink]) -> MergeResult {
         var names = Set(existing.map(normalizedName))
         var links = Set(existing.map(normalizedLink))
+        let byLink = Dictionary(
+            existing.map { (normalizedLink($0), $0) }, uniquingKeysWith: { first, _ in first })
         var additions: [Quicklink] = []
+        var keywordUpdates: [UUID: String] = [:]
         var skipped = 0
         for candidate in incoming {
             let name = normalizedName(candidate)
@@ -61,6 +66,13 @@ enum QuicklinkArchive {
                 continue
             }
             guard names.insert(name).inserted, links.insert(link).inserted else {
+                // A re-import fills a missing keyword on the same destination, not a second row.
+                if let current = byLink[link], (current.keyword ?? "").isEmpty,
+                    let keyword = candidate.keyword?.trimmingCharacters(
+                        in: .whitespacesAndNewlines), !keyword.isEmpty
+                {
+                    keywordUpdates[current.id] = keywordUpdates[current.id] ?? keyword
+                }
                 skipped += 1
                 continue
             }
@@ -68,6 +80,7 @@ enum QuicklinkArchive {
             additions.append(
                 Quicklink(
                     name: candidate.name.trimmingCharacters(in: .whitespacesAndNewlines),
+                    keyword: candidate.keyword,
                     link: candidate.link.trimmingCharacters(in: .whitespacesAndNewlines),
                     openWithBundleID: candidate.openWithBundleID,
                     iconSymbol: candidate.iconSymbol,
@@ -76,7 +89,7 @@ enum QuicklinkArchive {
                     pinnedAt: candidate.pinnedAt,
                     createdAt: candidate.createdAt))
         }
-        return MergeResult(additions: additions, skipped: skipped)
+        return MergeResult(additions: additions, skipped: skipped, keywordUpdates: keywordUpdates)
     }
 
     private static func normalizedName(_ quicklink: Quicklink) -> String {

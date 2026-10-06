@@ -164,7 +164,7 @@ enum BackupActions {
         if !result.quicklinks.isEmpty {
             if core.quicklinks.isAvailable {
                 quicklinksImported =
-                    core.quicklinkCoordinator.addImportedQuicklinks(result.quicklinks).count
+                    core.quicklinkCoordinator.addImportedQuicklinks(result.quicklinks).added.count
                 // Opening a link grants no permission class, so landing a library turns the switch on.
                 if quicklinksImported > 0 { core.settings.quicklinksEnabled = true }
             } else {
@@ -196,6 +196,7 @@ enum BackupActions {
         /// Set when the snippet files couldn't be written; the rest of the import still applied.
         var snippetsError: String?
         var quicklinksImported: Int
+        var quicklinksKeywordsUpdated: Int
         /// Set when the library wouldn't open; the rest of the import still applied.
         var quicklinksError: String?
         var commandsImported: Int
@@ -234,11 +235,13 @@ enum BackupActions {
             }
         }
         var quicklinksImported = 0
+        var quicklinksKeywordsUpdated = 0
         var quicklinksError: String?
         if !result.quicklinks.isEmpty {
             if core.quicklinks.isAvailable {
-                quicklinksImported =
-                    core.quicklinkCoordinator.addImportedQuicklinks(result.quicklinks).count
+                let outcome = core.quicklinkCoordinator.addImportedQuicklinks(result.quicklinks)
+                quicklinksImported = outcome.added.count
+                quicklinksKeywordsUpdated = outcome.keywordsUpdated
                 // Same reason as a Raycast import: a link grants no permission class.
                 if quicklinksImported > 0 { core.settings.quicklinksEnabled = true }
             } else {
@@ -263,6 +266,7 @@ enum BackupActions {
             snippetsNeedEnabling: snippetsImported > 0 && !core.settings.snippetsEnabled,
             snippetsError: snippetsError,
             quicklinksImported: quicklinksImported,
+            quicklinksKeywordsUpdated: quicklinksKeywordsUpdated,
             quicklinksError: quicklinksError,
             commandsImported: added.count,
             skippedWorkflows: result.skippedWorkflows,
@@ -457,6 +461,9 @@ enum BackupActions {
         if outcome.quicklinksImported > 0 {
             let noun = outcome.quicklinksImported == 1 ? "quicklink" : "quicklinks"
             parts.append("Imported \(outcome.quicklinksImported) \(noun).")
+        }
+        if outcome.quicklinksKeywordsUpdated > 0 {
+            parts.append("Updated the keyword on \(outcome.quicklinksKeywordsUpdated) existing.")
         }
         if let quicklinksError = outcome.quicklinksError {
             parts.append("Couldn’t import quicklinks: \(quicklinksError)")

@@ -139,6 +139,21 @@ is resolved by replacing the context, so seeding it there would expand to nothin
 When a template reads the selection and the app in front exposes nothing readable, **Settings →
 Quicklinks** decides what happens: substitute the clipboard, or ask for it through the chip above.
 
+## Keywords
+
+A quicklink can carry a **keyword**: a single word that invokes it straight from the launcher,
+Alfred-style. Typing `gh space elevators` narrows root search to that row with `space elevators`
+filling the link's first `{argument}`, so ↵ opens the search at once; values typed into the chips
+still win over the remainder. A bare `gh` lists the row for its chips like any other match.
+
+The keyword ranks like an alternate title but invokes exactly: only a first query word equal to the
+keyword, case-insensitively, pins the row to the top. Keywords are unique across the library — the
+store rejects a second one case-insensitively with `duplicateKeyword` — trimmed on save, and empty
+means no keyword. The editor's Keyword field is where one is set, and the Alfred import stores each
+search's keyword there instead of baking it into the name. A keyword still invokes when the row is
+unlisted from root search — that flag only lists — but never a disabled quicklink, and never one
+hidden through visibility.
+
 ## Opening
 
 `QuicklinkLauncher` owns every platform effect. A path destination is checked with `fileExists`
@@ -230,7 +245,9 @@ away.
 with ISO 8601 dates so it can be hand-edited; a bare array decodes too, and only `name` and `link` are
 required. Duplicate detection is by **name or destination** — either match means the user already has
 it — compared against the existing library _and_ against the rest of the incoming file, so one file
-can't import its own duplicates. Skipped entries are counted and reported in the summary. An import
+can't import its own duplicates. Skipped entries are counted and reported in the summary. A
+re-import still fills a **missing keyword** on the same destination rather than doubling the row,
+and the summary names that too. An import
 takes a fresh identity for every entry, so it can never collide with a shortcut an existing quicklink
 owns.
 

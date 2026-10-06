@@ -8,6 +8,8 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
 
     let id: UUID
     var name: String
+    /// The launcher keyword that invokes this directly (`gh query`); nil is found by name only.
+    var keyword: String?
     /// The raw destination template; may still contain `{argument}`-style placeholders.
     var link: String
     /// Bundle id of the app to open with, or nil for the system default handler.
@@ -22,12 +24,14 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
     var createdAt: Date
 
     init(
-        id: UUID = UUID(), name: String, link: String, openWithBundleID: String? = nil,
+        id: UUID = UUID(), name: String, keyword: String? = nil, link: String,
+        openWithBundleID: String? = nil,
         iconSymbol: String? = nil, isEnabled: Bool = true, showsInRootSearch: Bool = true,
         pinnedAt: Date? = nil, createdAt: Date = Date()
     ) {
         self.id = id
         self.name = name
+        self.keyword = keyword
         self.link = link
         self.openWithBundleID = openWithBundleID
         self.iconSymbol = iconSymbol
@@ -93,7 +97,8 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
 
     // Hand-written, so an added field keeps old exports importable and imports stay minimal.
     private enum CodingKeys: String, CodingKey {
-        case id, name, link, openWithBundleID, iconSymbol, isEnabled, showsInRootSearch, pinnedAt
+        case id, name, keyword, link, openWithBundleID, iconSymbol, isEnabled, showsInRootSearch,
+            pinnedAt
         case createdAt
     }
 
@@ -101,6 +106,7 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
         name = try container.decode(String.self, forKey: .name)
+        keyword = try container.decodeIfPresent(String.self, forKey: .keyword)
         link = try container.decode(String.self, forKey: .link)
         openWithBundleID = try container.decodeIfPresent(String.self, forKey: .openWithBundleID)
         iconSymbol = try container.decodeIfPresent(String.self, forKey: .iconSymbol)
@@ -131,6 +137,7 @@ enum QuicklinkError: LocalizedError, Equatable {
     case emptyName
     case emptyLink
     case duplicateName
+    case duplicateKeyword
     case unresolvableLink
     case invalidCharacter
     case storageUnavailable
@@ -140,6 +147,7 @@ enum QuicklinkError: LocalizedError, Equatable {
         case .emptyName: return "Enter a name for the quicklink."
         case .emptyLink: return "Enter a link to open."
         case .duplicateName: return "A quicklink with this name already exists."
+        case .duplicateKeyword: return "Another quicklink already uses this keyword."
         case .unresolvableLink:
             return "This doesn't look like a URL, file path, or deeplink."
         case .invalidCharacter: return "Names and links cannot contain null characters."

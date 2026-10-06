@@ -296,6 +296,8 @@ extension AppEntry {
             bundleID: nil, kind: .quicklink,
             symbolName: quicklink.iconSymbol
                 ?? QuicklinkDestination.detect(quicklink.link)?.defaultSymbol)
+        // Ranked like the title, the way a snippet's keyword is.
+        alternateTitles = [quicklink.keyword].compactMap { $0 }
     }
 
     /// No bundle id: that would key every shortcut's alias and ranking to the Shortcuts app.
@@ -383,6 +385,8 @@ final class AppIndex {
     private var windowLayoutEntries: [AppEntry] = []
     private var windowRoomEntries: [AppEntry] = []
     private var quicklinkEntries: [AppEntry] = []
+    /// Lowercased keywords of enabled quicklinks, whether or not they list in root search.
+    private var quicklinkKeywords: [String: AppEntry] = [:]
     private var appleShortcutEntries: [AppEntry] = []
     private var customQuickActionEntries: [AppEntry] = []
     private var extensionEntries: [AppEntry] = []
@@ -468,8 +472,17 @@ final class AppIndex {
             .filter { $0.isEnabled && $0.showsInRootSearch }
             .sorted(by: Quicklink.precedes)
             .map(AppEntry.init)
-        guard entries != quicklinkEntries else { return }
+        // A keyword is an explicit address like a shortcut, so hiding the row hides no call.
+        var keywords: [String: AppEntry] = [:]
+        for quicklink in quicklinks where quicklink.isEnabled {
+            guard let keyword = quicklink.keyword, !keyword.isEmpty else { continue }
+            // The store refuses duplicates; first sorted row winning is only belt and braces.
+            let key = keyword.lowercased()
+            if keywords[key] == nil { keywords[key] = AppEntry(quicklink) }
+        }
+        guard entries != quicklinkEntries, keywords != quicklinkKeywords else { return }
         quicklinkEntries = entries
+        quicklinkKeywords = keywords
         publishEntries()
     }
 
@@ -672,9 +685,20 @@ final class AppIndex {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return apps }
         return matchMemo.value(for: matchKey(q)) {
+            // A keyword call names its row outright, so it leads whatever else matches.
+            if let invoked = self.keywordEntry(for: q) {
+                return [invoked] + rank(q, limit: limit).filter { $0.id != invoked.id }
+            }
             guard let kind = AppEntry.Kind.named(by: q) else { return rank(q, limit: limit) }
             return categoryListing(kind, query: q)
         }
+    }
+
+    /// The quicklink `query` invokes as `keyword remainder`, or nil for an ordinary search.
+    private func keywordEntry(for query: String) -> AppEntry? {
+        let head = query.prefix(while: { !$0.isWhitespace })
+        guard !head.isEmpty else { return nil }
+        return quicklinkKeywords[String(head).lowercased()]
     }
 
     /// Slice order is section order, so filtering keeps sections and selection aligned.

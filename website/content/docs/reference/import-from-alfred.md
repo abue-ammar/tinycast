@@ -65,8 +65,9 @@ Your **custom searches** come across as they are. Alfred's **built-in searches**
 so Tinycast supplies the search URL for each one it knows. If you use one Tinycast has no URL for, its
 name is listed in the summary after the import rather than being dropped quietly.
 
-Every imported search keeps its keyword: Tinycast finds quicklinks by name, so the keyword ends up in
-the name — `Google Images (gi)`. Type either the full name or the keyword.
+Every imported search keeps its keyword: it lands in the quicklink's keyword field, so `gi query`
+searches Google Images straight from the launcher. Type the name to find it, or the keyword to
+invoke it.
 
 Importing at least one quicklink turns on the Quicklinks feature.
 

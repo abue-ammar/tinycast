@@ -13,14 +13,14 @@ enum AlfredQuicklinkImport {
                     let url = trimmed(config["url"])
                 else { return nil }
                 return quicklink(
-                    name: trimmed(item["buttonlabel"]) ?? host(of: url), link: url)
+                    name: trimmed(item["buttonlabel"]) ?? host(of: url), keyword: nil, link: url)
             }
         }
     }
 
     /// One `customSites` row. A disabled search is not carried over, matching Alfred itself.
     static func search(title: String, keyword: String?, url: String) -> Quicklink? {
-        quicklink(name: AlfredImport.named(title, keyword: keyword), link: url)
+        quicklink(name: title, keyword: keyword, link: url)
     }
 
     /// One of Alfred's own searches: the package stores its keyword but not its URL.
@@ -69,11 +69,11 @@ enum AlfredQuicklinkImport {
         "yubnub": ("Yubnub", "https://yubnub.com/search?q={query}")
     ]
 
-    private static func quicklink(name: String?, link: String) -> Quicklink? {
+    private static func quicklink(name: String?, keyword: String?, link: String) -> Quicklink? {
         guard let name, !name.isEmpty else { return nil }
         let rewritten = Quicklink.replacingArgumentTokens(link)
         guard !rewritten.isEmpty else { return nil }
-        return Quicklink(name: name, link: rewritten)
+        return Quicklink(name: name, keyword: keyword, link: rewritten)
     }
 
     /// Alfred leaves a bookmark's label empty for a plain URL, so the host names the row.

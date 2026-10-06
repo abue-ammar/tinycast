@@ -56,7 +56,7 @@ enum AlfredImport {
         }
     }
 
-    /// Alfred invokes an item by keyword and we store no keyword, so it has to stay typeable.
+    /// Custom commands have no keyword field, so an invoked-by-keyword workflow stays typeable.
     static func named(_ title: String, keyword: String?) -> String {
         guard let keyword, !keyword.isEmpty,
             title.range(of: keyword, options: .caseInsensitive) == nil

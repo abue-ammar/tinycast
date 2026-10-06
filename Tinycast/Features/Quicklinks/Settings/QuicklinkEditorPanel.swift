@@ -15,6 +15,7 @@ struct QuicklinkEditorPanel: View {
     @Environment(AppIndex.self) private var appIndex
     @Environment(AppCore.self) private var core
     @State private var name: String
+    @State private var keyword: String
     @State private var link: String
     @State private var iconSymbol: String?
     @State private var openWithBundleID: String?
@@ -27,6 +28,7 @@ struct QuicklinkEditorPanel: View {
     init(quicklink: Quicklink?) {
         self.quicklink = quicklink
         _name = State(initialValue: quicklink?.name ?? "")
+        _keyword = State(initialValue: quicklink?.keyword ?? "")
         _link = State(initialValue: quicklink?.link ?? "")
         _iconSymbol = State(initialValue: quicklink?.iconSymbol)
         _openWithBundleID = State(initialValue: quicklink?.openWithBundleID)
@@ -43,6 +45,16 @@ struct QuicklinkEditorPanel: View {
                     .font(.callout.weight(.medium))
                 TextField("Search GitHub", text: $name)
                     .settingsEditorTextField()
+            }
+
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                Text("Keyword")
+                    .font(.callout.weight(.medium))
+                TextField("gh", text: $keyword)
+                    .settingsEditorTextField()
+                Text("Type this plus your query in the launcher to search directly.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
@@ -232,7 +244,7 @@ struct QuicklinkEditorPanel: View {
         // Editing keeps the UUID, and with it the quicklink's shortcut, favorite and visibility.
         let existing = quicklink
         let draft = Quicklink(
-            id: existing?.id ?? UUID(), name: name, link: link,
+            id: existing?.id ?? UUID(), name: name, keyword: keyword, link: link,
             openWithBundleID: openWithBundleID, iconSymbol: iconSymbol,
             // The pane's row owns the checkbox; an edit carries the flag rather than resetting it.
             isEnabled: existing?.isEnabled ?? true,

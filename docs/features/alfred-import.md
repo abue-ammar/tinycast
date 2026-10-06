@@ -54,9 +54,9 @@ category does not exist here. Neither does Alfred have window management, a favo
 Carbon ones; `key: -1` is Alfred's "unset". A bare key needs a commanding modifier here exactly as it
 does everywhere else, bar the function keys. `string` is a layout-dependent glyph and is never read.
 
-**A keyword becomes part of the name.** Tinycast has no keyword field on a quicklink or a custom
-command — the launcher finds them by name — so `AlfredImport.named(_:keyword:)` appends the keyword
-in parentheses unless the title already contains it. That is what keeps `gi` finding "Google Images".
+**A search keyword becomes the quicklink's keyword.** The launcher invokes `keyword query`
+directly, so `AlfredImport.named(_:keyword:)` is no longer needed for searches — only custom
+commands still carry the keyword in parentheses, having no keyword field of their own.
 
 **Snippets** are one file per snippet, and a collection's `info.plist` carries the keyword prefix and
 suffix wrapped around every keyword typed into it — both are read from there, since
