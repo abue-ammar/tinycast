@@ -41,7 +41,7 @@ struct CalloutPlacementTests {
     }
 
     static func main() {
-        centredOnARealRow()
+        placedOnARealRow()
         flipping()
         horizontalClamping()
         caretTracking()
@@ -54,8 +54,7 @@ struct CalloutPlacementTests {
 
     // MARK: - The case that actually ships
 
-    /// Only holds while the callout stays narrow enough to fit beside the field.
-    static func centredOnARealRow() {
+    static func placedOnARealRow() {
         for paneWidth in [Theme.Size.settingsSidebar + 320, 720, 1100] as [CGFloat] {
             let field = CGRect(
                 x: paneWidth - fieldInsetFromPaneEdge - Theme.Size.shortcutRecorder / 2,
@@ -63,16 +62,16 @@ struct CalloutPlacementTests {
             let placement = resolve(field: field, container: CGSize(width: paneWidth, height: 800))
 
             expect(
-                placement.center.x, field.midX,
-                "pane \(Int(paneWidth)): the callout centres on the recorder")
+                placement.center.x + size.width / 2, paneWidth - inset,
+                "pane \(Int(paneWidth)): the callout keeps the trailing inset")
             expect(
-                placement.caretX, size.width / 2,
-                "pane \(Int(paneWidth)): the caret sits dead centre")
+                placement.center.x - size.width / 2 + placement.caretX, field.midX,
+                "pane \(Int(paneWidth)): the caret follows the recorder")
         }
 
         expect(
-            size.width / 2 + inset <= fieldInsetFromPaneEdge,
-            "the callout is narrow enough to centre on a trailing-edge recorder — widen it and the caret skews"
+            size.width / 2 + inset > fieldInsetFromPaneEdge,
+            "the fixed-width callout clamps beside a trailing-edge recorder"
         )
     }
 

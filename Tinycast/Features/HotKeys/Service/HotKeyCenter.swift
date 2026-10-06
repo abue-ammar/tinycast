@@ -23,6 +23,7 @@ private func hotKeyCarbonEventHandler(
 
 /// The Carbon layer only; which shortcuts exist is `HotKeyManager`'s business.
 @MainActor
+@Observable
 final class HotKeyCenter {
     private struct Entry {
         let shortcut: KeyShortcut
@@ -39,10 +40,18 @@ final class HotKeyCenter {
     private var eventHandler: EventHandlerRef?
     private let signature: OSType = 0x5459_4354  // FourCC "TYCT"
 
+    private let eventTap = ShortcutEventTap()
+
+    var needsAccessibility: Bool { eventTap.needsAccessibility }
+    weak var healthTicker: HealthTicker? {
+        didSet { eventTap.healthTicker = healthTicker }
+    }
+
     /// While true every hotkey is soft-unregistered, so a recorder can capture combos.
     var isPaused = false {
         didSet {
             guard isPaused != oldValue else { return }
+            eventTap.isPaused = isPaused
             for key in entries.keys {
                 if isPaused { deactivate(key) } else { activate(key) }
             }
@@ -61,16 +70,18 @@ final class HotKeyCenter {
             carbonID: nextCarbonID, ref: nil)
         idToKey[nextCarbonID] = id
         if !isPaused { activate(id) }
+        syncEventTap()
     }
 
     func unregister(id: String) {
         guard let entry = entries.removeValue(forKey: id) else { return }
         if let ref = entry.ref { UnregisterEventHotKey(ref) }
         idToKey.removeValue(forKey: entry.carbonID)
+        syncEventTap()
     }
 
     private func activate(_ id: String) {
-        guard var entry = entries[id], entry.ref == nil else { return }
+        guard var entry = entries[id], entry.ref == nil, !entry.shortcut.requiresEventTap else { return }
         installEventHandlerIfNeeded()
         var ref: EventHotKeyRef?
         let error = RegisterEventHotKey(
@@ -88,6 +99,14 @@ final class HotKeyCenter {
         }
         entry.ref = ref
         entries[id] = entry
+    }
+
+    private func syncEventTap() {
+        eventTap.update(entries: entries.values.compactMap { entry in
+            guard entry.shortcut.requiresEventTap else { return nil }
+            return ShortcutEventTap.Entry(
+                shortcut: entry.shortcut, onKeyDown: entry.onKeyDown, onKeyUp: entry.onKeyUp)
+        })
     }
 
     private func deactivate(_ id: String) {

@@ -31,6 +31,23 @@ already in use, it shows a warning that names what uses it.
 
 Recording a shortcut **doesn't need any permissions**. Only _using_ some kinds of shortcuts does.
 
+## Editing individual keys
+
+A recorded key combination stays open for editing. Click a modifier cap to cycle **Any Side → Left →
+Right → Any Side**. Its glyph shows no prefix, `L`, or `R`; holding both sides does not count as one side.
+
+Click a printable key to switch **Pos / Char**. **Pos** uses the same physical position when you change
+keyboard layouts. **Char** follows the saved shortcut character in your ASCII-capable layout, including
+its Command layout when <kbd>⌘</kbd> is held. This does not match IME text. Space, Return, arrows and
+function keys stay physical-only. The bubble stays the same size; hover over a key or the info icon
+for an explanation. Press Escape or click outside to finish.
+
+Choosing a modifier side or **Char** needs [Accessibility](/docs/permissions) to run. The shortcut is
+saved without prompting, and the recorder's warning opens System Settings if access is missing.
+Ordinary any-side **Pos** shortcuts need no permission. In `settings.json`, Char is written with
+its original physical key code, such as `cmd+key-40:character:k`, so switching back to Pos keeps the
+same key after a layout change.
+
 ## Double-tap modifiers
 
 Instead of a key combination, a shortcut can be a double tap of a single <kbd>⌃</kbd>,
@@ -70,7 +87,7 @@ Shortcuts you already use with those modifiers work with the Hyper key right awa
 
 ### The ✦ symbol
 
-**Any shortcut that includes all the Hyper modifiers is shown as a single ✦.** For example,
+**Any shortcut that includes all the Hyper modifiers, without side restrictions, is shown as a single ✦.** For example,
 <kbd>⌃</kbd><kbd>⌥</kbd><kbd>⌘</kbd><kbd>G</kbd> is shown as `✦G`, or `✦⇧G` if it uses an extra
 modifier.
 

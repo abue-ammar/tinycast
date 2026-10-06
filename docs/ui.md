@@ -839,8 +839,8 @@ See [features/window-layouts.md](features/window-layouts.md#the-editor).
 
 `ShortcutRecorder` is a **120pt** field showing only the binding. A single modifier binding puts a small
 L/R beside its glyph inside the same cap; double presses show only the two glyphs. The side follows
-the modifier identity macOS reports after remapping. Ordinary combos have no side label. Recording is
-narrated by `ShortcutRecorderPopover`, a small **132 × 82** callout above it: caps, one label line, an
+the modifier identity macOS reports after remapping. Sided combos prefix each restricted modifier
+with L/R. Recording and editing share `ShortcutRecorderPopover`, a fixed **300 × 112** callout: caps, one label line, an
 `esc` cap in the top-left corner. Its fixed frame shows the prompt (`⌥ A` at half opacity, "Type a
 shortcut"), live held keys with their reported side, a pending second modifier tap, or a conflict
 (rejected caps + owner, orange).
@@ -850,17 +850,19 @@ shortcut"), live held keys with their reported side, a pending second modifier t
   `Form`, and on `OnboardingView`. An overlay on the row would be clipped by the scroll view. A
   recorder in a `LauncherItemsTable` cell sits in its own hosting view, where the preference stops,
   so the cell reports the recorder's frame and `LauncherItemsSection` republishes it as the anchor.
-- **`shortcutPopover.width` is load-bearing.** The callout centres on the recorder only while it
-  fits either side of it; wider than that and the clamp kicks in and skews the caret.
-  `Tests/callout-test.swift` pins this.
+- **`shortcutPopover` is fixed for every state.** The callout clamps inside the pane; its caret
+  follows the recorder while the body stays inside the inset. `Tests/callout-test.swift` pins this.
 - **One glass shape.** `CalloutShape` (`HotKeys/UI/`) draws body and caret as a single path so `glassEffect`
   lenses them together. The caret is two straight edges meeting at an arc — a rounded-tip triangle,
   not a dome. Stock `.regular` glass, no hand-tuned shadow, as in `PopoverMenu`.
 - **Placement is pure.** `CalloutPlacement` (`HotKeys/UI/`) picks above-vs-below, clamps, and walks the caret;
   the harness compiles it against the real `Theme` so a retuned token can't outdate the assertions.
 - **`KeyCapChip.Scale`** is `compact` / `standard` / `hero` — three tokenised sizes, no stray frames.
-- `allowsHitTesting(false)`: clicks reach the capture session's mouse monitor; a click on the active
-  recorder toggles it off, and a click elsewhere closes it.
+- **Key clicks cycle in place.** `ShortcutKeyEditor` saves modifier Any / Left / Right and printable
+  key Pos / Char changes directly. There are no menus or additional option rows; info help is on hover.
+- **Only the callout receives overlay clicks.** The active recorder and callout register their AppKit
+  bounds with the capture session. A click in either keeps the editor open for its control to handle;
+  a click outside closes it and continues to its target. Empty overlay space does not intercept clicks.
 
 The calculator's inline `CalculatorCard` reuses this card language (`cardFill` + `cardStroke`) rather than the row language, since it's a highlighted answer, not a list item. A value answer is a **two-column** layout: a source column (input echo) and a target column (result), separated by a centered `arrow.right` glyph (no divider line). `LeadCardColumn` is that column, pill included, so the colour card is built from the same part rather than a copy of it. Each column optionally carries a word-name **badge pill** beneath its value (`keyCap` font, `controlSurface` fill, `keyCap` radius) — `Expression`→`Result` for scalar arithmetic, unit or currency names for typed results (`Expression`→`Kilograms`), and moment labels for a date/time calc (`12:18 AM`→`9:00 AM`, `Friday, 24 July`→`Friday, 9 April, 2027`). A trailing operator keeps the last complete result and its badge visible while the next operand is being typed.
 

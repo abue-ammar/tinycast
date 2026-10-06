@@ -35,8 +35,16 @@ struct ShortcutRecorder: View {
             // An over-long binding truncates rather than resizing the field.
             .clipShape(shape)
             .contentShape(shape)
-            .onTapGesture { hotKeys.recordingAction = isRecording ? nil : action }
+            .onTapGesture { toggleRecording() }
             .onHover { hovered = $0 }
+            .focusable(false)
+            .accessibilityElement(children: .contain)
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel("Record or edit shortcut")
+            .accessibilityValue(
+                hotKeys.binding(for: action)?.keycaps.joined(separator: " ") ?? "Not set"
+            )
+            .accessibilityAction { toggleRecording() }
             // Hand the callout this field's bounds while it's the open one.
             .anchorPreference(key: ShortcutRecorderAnchorKey.self, value: .bounds) {
                 isRecording ? $0 : nil
@@ -64,8 +72,10 @@ struct ShortcutRecorder: View {
 
     private func boundLabel(_ binding: HotKeyBinding) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
-            // A modifier-only binding is dead without the grant, so say so where the binding is.
-            if binding.usesModifierTapMonitor, modifierTapMonitor.needsAccessibility {
+            // An event-tap binding is inactive without the Accessibility grant.
+            if binding.usesModifierTapMonitor && modifierTapMonitor.needsAccessibility
+                || binding.shortcut?.requiresEventTap == true && hotKeys.needsAccessibility
+            {
                 Button {
                     Permissions.openAccessibilitySettings()
                 } label: {
@@ -74,7 +84,7 @@ struct ShortcutRecorder: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Open Accessibility settings")
-                .help("Modifier-only hotkeys need Accessibility access. Click to grant it.")
+                .help("This hotkey needs Accessibility access. Click to grant it.")
             }
             HStack(spacing: Theme.Spacing.xs) {
                 ForEach(Array(binding.recorderKeycaps.enumerated()), id: \.offset) { _, cap in
@@ -107,35 +117,13 @@ struct ShortcutRecorder: View {
                     .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Clear shortcut")
             .opacity(hovered ? 1 : 0)
             .allowsHitTesting(hovered)
         }
     }
-}
 
-private struct ShortcutRecorderHitRegion: NSViewRepresentable {
-    let capture: ShortcutCaptureSession
-
-    func makeNSView(context: Context) -> PassiveView {
-        let view = PassiveView()
-        view.capture = capture
-        capture.setActiveRecorderView(view)
-        return view
-    }
-
-    func updateNSView(_ view: PassiveView, context: Context) {
-        if view.capture !== capture { view.capture?.clearActiveRecorderView(view) }
-        view.capture = capture
-        capture.setActiveRecorderView(view)
-    }
-
-    static func dismantleNSView(_ view: PassiveView, coordinator: ()) {
-        view.capture?.clearActiveRecorderView(view)
-    }
-
-    final class PassiveView: NSView {
-        weak var capture: ShortcutCaptureSession?
-
-        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    private func toggleRecording() {
+        hotKeys.recordingAction = isRecording ? nil : action
     }
 }

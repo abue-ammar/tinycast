@@ -68,6 +68,10 @@ final class ModifierTapMonitor: HealthCheckable {
 
     @ObservationIgnored weak var healthTicker: HealthTicker?
 
+    init(bound: Set<HotKeyBinding> = []) {
+        self.bound = bound
+    }
+
     // The tap holds an unretained `self`, so it must not outlive it.
     isolated deinit {
         tearDownTap()
@@ -89,7 +93,7 @@ final class ModifierTapMonitor: HealthCheckable {
 
     // MARK: - Detection
 
-    fileprivate func process(isFlagsChanged: Bool, flagsRaw: UInt64, keyCode: Int) {
+    func process(isFlagsChanged: Bool, flagsRaw: UInt64, keyCode: Int) {
         guard !isPaused else { return }
         // `systemUptime` is monotonic, so a wall-clock adjustment can't turn a tap into a hold.
         let now = ProcessInfo.processInfo.systemUptime

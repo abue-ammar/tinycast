@@ -55,6 +55,11 @@ struct DoubleTapDetectorTests {
 
     static func main() {
         modifierGlyphs()
+        shortcutDetailsPersistence()
+        shortcutSides()
+        shortcutCharacterMatching()
+        shortcutOverlaps()
+        shortcutDetailSpelling()
         commandActions()
         layoutCharacters()
         hyperChord()
@@ -130,6 +135,10 @@ struct DoubleTapDetectorTests {
             plusKey.binding(from: "cmd++") == combo(kVK_ANSI_Equal, cmdKey),
             "a layout's plus key is spelled after the separator")
 
+        let plusCharacter = KeyShortcut(carbonKeyCode: kVK_ANSI_Equal, carbonModifiers: cmdKey)
+            .usingKeyEquivalent("+")
+        roundTrips(.combo(plusCharacter), as: "cmd+key-24:character:+", plusKey)
+
         expect(plain.binding(from: "k") == nil, "a bare key is refused, as the recorder refuses it")
         expect(plain.binding(from: "shift+k") == nil, "Shift alone does not command")
         expect(plain.binding(from: "cmd+") == nil, "a chord needs a key")
@@ -139,6 +148,221 @@ struct DoubleTapDetectorTests {
     }
 
     // MARK: - Model
+
+    static func shortcutDetailsPersistence() {
+        let legacy = Data(
+            #"{"combo":{"_0":{"carbonKeyCode":40,"carbonModifiers":256}}}"#.utf8)
+        let decoded = try? JSONDecoder().decode(HotKeyBinding.self, from: legacy)
+        expect(
+            decoded?.shortcut == KeyShortcut(carbonKeyCode: kVK_ANSI_K, carbonModifiers: cmdKey),
+            "an existing saved combo remains the same physical shortcut")
+        expect(decoded?.shortcut?.modifierSide(for: .command) == .any, "old combos use either side")
+        expect(decoded?.shortcut?.keyEquivalent == nil, "old combos keep physical key matching")
+        expect(decoded?.shortcut?.requiresEventTap == false, "old combos retain Carbon registration")
+
+        let detailed = KeyShortcut(
+            carbonKeyCode: kVK_ANSI_K, carbonModifiers: shiftKey | cmdKey,
+            modifierSides: [.shift: .left, .command: .right], keyEquivalent: "k")
+        let encoded = try? JSONEncoder().encode(HotKeyBinding.combo(detailed))
+        expect(
+            encoded.flatMap { try? JSONDecoder().decode(HotKeyBinding.self, from: $0) }
+                == .combo(detailed),
+            "the binding payload used by preferences and backups preserves all key details")
+        expect(
+            detailed.usingPhysicalKey().modifierSides == detailed.modifierSides,
+            "switching character mode keeps modifier sides")
+        expect(
+            detailed.usingPhysicalKey().keyEquivalent == nil,
+            "physical mode clears the saved character")
+        expect(
+            detailed.settingSide(.any, for: .command).modifierSide(for: .command) == .any,
+            "a modifier can be restored to either side")
+
+        let hyper = combo([.control, .option, .command])
+            .settingSide(.right, for: .command).usingKeyEquivalent("g")
+        let retargeted = hyper.retargetingHyper(includesShift: true)
+        expect(
+            retargeted.modifierSide(for: .command) == .right && retargeted.keyEquivalent == "g",
+            "changing the Hyper chord keeps modifier and character details")
+        expect(
+            detailed.keycaps == ["L⇧", "R⌘", "K"],
+            "sided combinations keep their restrictions visible outside the editor")
+    }
+
+    static func shortcutSides() {
+        let deviceBits: [(KeyShortcut.Modifier, UInt, UInt)] = [
+            (.control, 0x0000_0001, 0x0000_2000),
+            (.option, 0x0000_0020, 0x0000_0040),
+            (.shift, 0x0000_0002, 0x0000_0004),
+            (.command, 0x0000_0008, 0x0000_0010)
+        ]
+        for (modifier, leftBit, rightBit) in deviceBits {
+            let flags = modifier.flag.union(.command)
+            let shortcut = KeyShortcut(
+                carbonKeyCode: kVK_ANSI_K,
+                carbonModifiers: KeyShortcut.carbonModifiers(from: flags))
+            let leftFlags = NSEvent.ModifierFlags(rawValue: flags.rawValue | leftBit)
+            let rightFlags = NSEvent.ModifierFlags(rawValue: flags.rawValue | rightBit)
+            let left = shortcut.settingSide(.left, for: modifier)
+            let right = shortcut.settingSide(.right, for: modifier)
+            expect(
+                shortcut.matches(keyCode: kVK_ANSI_K, modifierFlags: leftFlags, character: "k")
+                    && shortcut.matches(
+                        keyCode: kVK_ANSI_K, modifierFlags: rightFlags, character: "k"),
+                "an any-side \(modifier) shortcut accepts both physical modifiers")
+            expect(
+                left.matches(keyCode: kVK_ANSI_K, modifierFlags: leftFlags, character: "k")
+                    && !left.matches(
+                        keyCode: kVK_ANSI_K, modifierFlags: rightFlags, character: "k"),
+                "a left \(modifier) shortcut rejects the right modifier")
+            expect(
+                right.matches(keyCode: kVK_ANSI_K, modifierFlags: rightFlags, character: "k")
+                    && !right.matches(
+                        keyCode: kVK_ANSI_K, modifierFlags: leftFlags, character: "k"),
+                "a right \(modifier) shortcut rejects the left modifier")
+            expect(
+                left.matches(
+                    keyCode: kVK_ANSI_K, modifierFlags: leftFlags.union(.capsLock), character: "k"),
+                "Caps Lock does not change a side-specific \(modifier) shortcut")
+            expect(
+                !left.matches(
+                    keyCode: kVK_ANSI_K,
+                    modifierFlags: NSEvent.ModifierFlags(rawValue: flags.rawValue | leftBit | rightBit),
+                    character: "k"),
+                "both sides held cannot satisfy a left-only \(modifier) shortcut")
+            expect(left.requiresEventTap && right.requiresEventTap, "side matching uses the event tap")
+            expect(!shortcut.requiresEventTap, "an ordinary physical chord keeps the Carbon engine")
+        }
+        let command = KeyShortcut(carbonKeyCode: kVK_ANSI_K, carbonModifiers: cmdKey)
+            .settingSide(.left, for: .command)
+        let leftCommand = NSEvent.ModifierFlags(rawValue: NSEvent.ModifierFlags.command.rawValue | 8)
+        expect(
+            !command.matches(
+                keyCode: kVK_ANSI_K, modifierFlags: leftCommand.union(.shift), character: "k"),
+            "an extra generic modifier does not trigger a side-specific shortcut")
+    }
+
+    static func shortcutCharacterMatching() {
+        let physical = KeyShortcut(carbonKeyCode: kVK_ANSI_K, carbonModifiers: cmdKey)
+        let character = physical.usingKeyEquivalent("k")
+        expect(
+            physical.matches(keyCode: kVK_ANSI_K, modifierFlags: [.command], character: "s"),
+            "physical mode retains its position when another layout types a different letter")
+        expect(
+            !physical.matches(keyCode: kVK_ANSI_S, modifierFlags: [.command], character: "k"),
+            "physical mode does not follow its old letter to a new position")
+        expect(
+            character.matches(keyCode: kVK_ANSI_S, modifierFlags: [.command], character: "k"),
+            "character mode follows the saved letter to a different key position")
+        expect(
+            !character.matches(keyCode: kVK_ANSI_K, modifierFlags: [.command], character: "s"),
+            "character mode rejects its old position after its letter changes")
+        expect(character.requiresEventTap, "character matching uses the event tap")
+        expect(
+            !character.matches(keyCode: kVK_ANSI_S, modifierFlags: [.option], character: "k"),
+            "the right character alone cannot bypass the required modifiers")
+        expect(
+            !KeyShortcut(carbonKeyCode: kVK_Space, carbonModifiers: cmdKey).supportsKeyEquivalent,
+            "Space remains a physical key rather than an invisible character")
+        expect(
+            !KeyShortcut(carbonKeyCode: kVK_Return, carbonModifiers: cmdKey).supportsKeyEquivalent
+                && !KeyShortcut(carbonKeyCode: kVK_F5, carbonModifiers: 0).supportsKeyEquivalent,
+            "Return and function keys cannot switch to character matching")
+        expect(
+            character.keycaps.last == "K",
+            "a saved character remains the label when the current layout moves it")
+        let sided = character.settingSide(.right, for: .command)
+        let rightCommand = NSEvent.ModifierFlags(rawValue: NSEvent.ModifierFlags.command.rawValue | 16)
+        let leftCommand = NSEvent.ModifierFlags(rawValue: NSEvent.ModifierFlags.command.rawValue | 8)
+        expect(
+            sided.matches(keyCode: kVK_ANSI_S, modifierFlags: rightCommand, character: "k")
+                && !sided.matches(
+                    keyCode: kVK_ANSI_S, modifierFlags: leftCommand, character: "k"),
+            "character matching also enforces the selected modifier side")
+    }
+
+    static func shortcutOverlaps() {
+        let physical = KeyShortcut(carbonKeyCode: kVK_ANSI_K, carbonModifiers: cmdKey)
+        let left = physical.settingSide(.left, for: .command)
+        let right = physical.settingSide(.right, for: .command)
+        let usLayout: (Int, Int) -> String? = { code, _ in
+            code == kVK_ANSI_K ? "k" : code == kVK_ANSI_S ? "s" : nil
+        }
+        expect(
+            physical.overlaps(with: left, characterForKeyCode: usLayout)
+                && left.overlaps(with: physical, characterForKeyCode: usLayout),
+            "any-side and left-side registrations conflict in both directions")
+        expect(
+            !left.overlaps(with: right, characterForKeyCode: usLayout),
+            "left and right versions can be assigned to separate actions")
+        expect(
+            physical.overlaps(
+                with: physical.usingKeyEquivalent("k"), characterForKeyCode: usLayout),
+            "physical and character shortcuts conflict when this layout maps them to the same key")
+        let movedLayout: (Int, Int) -> String? = { code, _ in
+            code == kVK_ANSI_K ? "s" : code == kVK_ANSI_S ? "k" : nil
+        }
+        let equivalent = physical.usingKeyEquivalent("k")
+        expect(
+            !physical.overlaps(with: equivalent, characterForKeyCode: movedLayout),
+            "a character shortcut stops conflicting with its old physical position")
+        expect(
+            KeyShortcut(carbonKeyCode: kVK_ANSI_S, carbonModifiers: cmdKey)
+                .overlaps(with: equivalent, characterForKeyCode: movedLayout),
+            "a character shortcut conflicts with its new physical position")
+        let commandLayout: (Int, Int) -> String? = { code, modifiers in
+            guard code == kVK_ANSI_K else { return nil }
+            return modifiers & cmdKey != 0 ? "k" : "s"
+        }
+        expect(
+            physical.overlaps(with: equivalent, characterForKeyCode: commandLayout),
+            "overlap lookup uses the layout's Command table for Command shortcuts")
+    }
+
+    static func shortcutDetailSpelling() {
+        let spelling = HotKeySpelling(characters: usKeys, hyperModifiers: hyperModifiers)
+        let detailed = KeyShortcut(
+            carbonKeyCode: kVK_ANSI_K, carbonModifiers: shiftKey | cmdKey,
+            modifierSides: [.shift: .left, .command: .right], keyEquivalent: "k")
+        expect(
+            spelling.text(for: .combo(detailed)) == "left-shift+right-cmd+key-40:character:k",
+            "the settings file spells modifier sides and character mode explicitly")
+        expect(
+            spelling.binding(from: "left-shift+right-cmd+key-40:character:k") == .combo(detailed),
+            "the settings file restores modifier sides and character mode")
+        let keypad = KeyShortcut(carbonKeyCode: kVK_ANSI_Keypad1, carbonModifiers: cmdKey)
+            .usingKeyEquivalent("1")
+        let keypadText = spelling.text(for: .combo(keypad))
+        expect(keypadText == "cmd+key-83:character:1", "Char spelling retains its keypad anchor")
+        let restoredKeypad = spelling.binding(from: keypadText)?.shortcut
+        expect(restoredKeypad == keypad, "a keypad character round-trips without moving to the top row")
+        expect(
+            restoredKeypad?.usingPhysicalKey().carbonKeyCode == kVK_ANSI_Keypad1,
+            "returning to Pos still selects the original keypad key")
+        let movedLayout = HotKeySpelling(
+            characters: [kVK_ANSI_K: "s", kVK_ANSI_S: "k"], hyperModifiers: hyperModifiers)
+        let originalText = spelling.text(for: .combo(detailed))
+        expect(
+            movedLayout.binding(from: originalText) == .combo(detailed),
+            "a layout change cannot move the saved Pos anchor of a Char shortcut")
+        let commandTableCharacter = KeyShortcut(carbonKeyCode: kVK_ANSI_K, carbonModifiers: cmdKey)
+            .usingKeyEquivalent("x")
+        let commandText = movedLayout.text(for: .combo(commandTableCharacter))
+        expect(
+            movedLayout.binding(from: commandText) == .combo(commandTableCharacter),
+            "a Command-table character missing from the base table still preserves its anchor")
+        expect(
+            spelling.binding(from: "cmd+key-40:character:") == nil,
+            "an anchored Char shortcut must contain a character")
+        expect(
+            spelling.binding(from: "cmd+character:k") == nil,
+            "an unanchored Char spelling is not part of the format")
+        let hyper = combo([.control, .option, .shift, .command])
+            .settingSide(.right, for: .command)
+        let text = spelling.text(for: .combo(hyper))
+        expect(!text.contains("hyper"), "Hyper spelling cannot hide a modifier side restriction")
+        expect(spelling.binding(from: text) == .combo(hyper), "a detailed Hyper chord round-trips")
+    }
 
     static func globeTap() {
         var detector = ModifierKeyDetector()

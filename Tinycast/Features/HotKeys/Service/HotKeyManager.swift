@@ -61,6 +61,10 @@ final class HotKeyManager {
     let capture = ShortcutCaptureSession()
 
     private let center = HotKeyCenter()
+    var needsAccessibility: Bool { center.needsAccessibility || modifierTapMonitor.needsAccessibility }
+    weak var healthTicker: HealthTicker? {
+        didSet { center.healthTicker = healthTicker }
+    }
     private var modifierTaps: [HotKeyBinding: HotKeyAction] = [:]
     /// Every binding, loaded once in `start()` and written through on change.
     private var bindings: [HotKeyAction: HotKeyBinding] = [:]
@@ -252,9 +256,15 @@ final class HotKeyManager {
                 dictationHoldToTalk
                 && (action == .dictation && binding.holdKey != nil
                     || candidate == .dictation && other.holdKey != nil)
-            if binding.conflicts(with: other, holdsModifier: holdsModifier) {
-                return displayName(of: candidate)
+            let conflicts: Bool
+            if let shortcut = binding.shortcut, let otherShortcut = other.shortcut {
+                conflicts = shortcut.overlaps(with: otherShortcut) { keyCode, modifiers in
+                    KeyShortcut.character(for: keyCode, carbonModifiers: modifiers)
+                }
+            } else {
+                conflicts = binding.conflicts(with: other, holdsModifier: holdsModifier)
             }
+            if conflicts { return displayName(of: candidate) }
         }
         return nil
     }
@@ -320,7 +330,13 @@ final class HotKeyManager {
         guard let shortcut = binding(for: action)?.shortcut else { return }
         center.register(
             id: action.defaultsKey, shortcut: shortcut,
-            onKeyDown: { [weak self] in self?.perform(action) },
+            onKeyDown: { [weak self] in
+                if shortcut.requiresEventTap {
+                    self?.modifierTapMonitor.process(
+                        isFlagsChanged: false, flagsRaw: 0, keyCode: shortcut.carbonKeyCode)
+                }
+                self?.perform(action)
+            },
             onKeyUp: action == .dictation ? { [weak self] in self?.onDictationReleased?() } : nil)
     }
 

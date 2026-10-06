@@ -2,7 +2,8 @@
 
 `Features/HotKeys/` holds:
 
-- `KeyShortcut` — Sendable model, Carbon keycode + modifiers, layout-aware glyphs via `UCKeyTranslate`.
+- `KeyShortcut` — Sendable model, Carbon keycode + modifiers, optional modifier sides and character.
+- `ShortcutEventTap` — sided / character combo matching, with key release for Dictation hold-to-talk.
 - `HotKeyBinding` — what an action is bound to: `.combo(KeyShortcut)`,
   `.doubleTap(DoubleTapModifier)`, sided `.modifier` / `.doubleModifier`, `.globe`, or `.doubleGlobe`.
 - `HotKeyCenter` — the Carbon `RegisterEventHotKey` layer, pausable.
@@ -30,8 +31,9 @@ return `OSStatus` synchronously, preserving event order and hold-to-talk release
 - **A command that opens a palette mode toggles it.** Every one of them enters through
   `PaletteCoordinator.togglePalette(mode:)`, so a second press closes what the first opened. From a
   launcher row the palette is in `.launcher`, so the row always re-points instead.
-- **`HotKeyBinding` is the one thing an action is bound to, with two engines.** A
-  `.combo` is a Carbon registration; all modifier-only bindings are recognized by
+- **`HotKeyBinding` is the one thing an action is bound to.** An ordinary physical
+  `.combo` is a Carbon registration; a sided or character combo uses `ShortcutEventTap`.
+  All modifier-only bindings are recognized by
   `ModifierTapMonitor`, because Carbon cannot see a lone modifier at all. Its `Codable` is the
   synthesised one.
 - `KeyShortcut`'s hand-written `init(from:)` is a correctness seam, not a format one: it routes every
@@ -59,6 +61,13 @@ Shortcuts are also spelled as typeable chords (`ctrl+option+left`) in the opt-in
 `HotKeySpelling` is that grammar; `HotKeySettingsFile` applies through `setBinding`, so `UserDefaults`
 stays the one store either way.
 
+Sided combos spell as `left-ctrl+right-cmd+k`; character mode spells as `cmd+key-40:character:k`.
+The raw keycode keeps its original Pos anchor even when the character moves across layouts or the
+key was on the numeric keypad.
+The existing sided modifier-only spelling (`left cmd`, `double-tap right option`) stays unchanged.
+Detailed combos use the same settings-file and backup paths as physical combos, including the launcher
+binding; their JSON additionally carries `modifierSides` and `keyEquivalent` only when set.
+
 System Settings panes use `boundPaneBundleIDs`; custom commands, quicklinks, window layouts, rooms
 and custom window sizes use their stable UUIDs in `boundCustomCommandIDs`, `boundQuicklinkIDs`,
 `boundWindowLayoutIDs`, `boundWindowRoomIDs` and `boundCustomWindowSizeIDs`. Those five are the per-item case — unlike a fixed catalog, there is no `allCases` to walk — so each needs an index for `start()`
@@ -81,7 +90,9 @@ travels in a backup, where an imported snippet lands at a new path
 `{"combo":{"_0":{"carbonKeyCode":N,"carbonModifiers":N}}}` and a `.doubleTap` writes
 `{"doubleTap":{"_0":"command"}}`. `KeyShortcut` keeps a hand-written `init(from:)` — not a format seam,
 but the guarantee that every decode runs through the initializer that masks device modifier bits off.
-`SettingsBackup.HotkeyBackup` stores the same values, so the backup file carries this shape too; only
+Optional `modifierSides` and `keyEquivalent` are carried by the same payload;
+absent fields retain any-side, physical matching. `SettingsBackup.HotkeyBackup` stores the same values,
+so the backup file carries this shape too; only
 export → import within one build is guaranteed to round-trip.
 
 Every built-in command is bindable: `CommandID.hotKeyAction` answers `.command(self)` by default, and
@@ -116,7 +127,7 @@ Every recorder accepts a single or double press of a lone modifier, including Gl
 Control, Option and Shift remember the Left or Right identity reported by macOS after remapping.
 Single bindings display a small L/R inside the recorder's glyph cap; double bindings display only
 the two modifier glyphs while retaining their side for matching and conflicts. Ordinary key
-combinations remain side-agnostic. `ModifierKeyDetector` uses injected timestamps and device
+combinations default to either side and can be narrowed in the key editor. `ModifierKeyDetector` uses injected timestamps and device
 flags, so holding both sides or unwinding a chord cannot create a new lone press. Holding a modifier
 while recording saves its single binding when released. Existing generic double-tap bindings keep
 their meaning; conflicts with overlapping sided double taps are refused rather than overwritten.
@@ -263,7 +274,7 @@ stops until this session is active again. The HID remap outlives the process, so
 
 The settings recorder (`Features/HotKeys/UI/ShortcutRecorder.swift`) is deliberately **not** a focusable
 control: the active recorder is `HotKeyManager.recordingAction` state, and keys are captured by local
-NSEvent monitors while both engines are paused. It records combos and single or double modifier taps,
+NSEvent monitors while all hotkey engines are paused. It records combos and single or double modifier taps,
 including their reported side, by feeding its `.flagsChanged` / `.keyDown` monitors into the same pure detectors
 as the global monitor, so recording needs no event tap and no permission.
 
@@ -272,3 +283,27 @@ Setting `recordingAction` is what starts and stops the capture, so there is exac
 callout above the field render the live state from outside the row that opened it. The field itself
 only ever shows the binding; the prompt, the live preview and the conflict message all live in the
 callout. See [ui.md](../ui.md#the-shortcut-recorder-callout).
+
+### Per-key combo options
+
+Recording a combo saves it immediately and keeps the callout open for editing. Click each modifier
+cap to cycle **Any Side → Left → Right → Any Side**: no prefix, `L`, or `R` before the glyph.
+Both sides held together do not satisfy a Left-only or Right-only binding. Sides follow the modifier
+identity macOS reports after remapping, as for modifier-only taps.
+
+Click a printable key to cycle **Pos / Char**. Pos keeps its physical keycode; Char follows the saved
+lowercase character through the current ASCII-capable layout, including its Command table for ⌘.
+Shift and Option remain required modifiers, rather than changing the stored character. IME text is not
+used. Space, Return, arrows and F-keys remain physical-only. Info and key help appear on hover;
+clicking never opens a menu or changes the **300 × 112** callout frame.
+
+Any-side physical combos keep Carbon registration and do not need Accessibility. A sided or Char
+combo uses a modifying session event tap installed only while such a binding exists, after Hyper's
+rewrite. It consumes matching key-down, repeat and key-up events, and retains the matched entry until
+release so Dictation hold-to-talk works even if its modifiers are released first. A consumed combo
+also feeds the modifier monitor's other-input path, so it cannot become a lone tap or hold when that
+listen-only tap sits later in the event chain. Pause and teardown
+release any tracked key. Missing Accessibility is shown by the recorder's existing inline warning;
+the health ticker installs the tap once access is granted. All combo conflict checks compare sides
+and the active layout: Any overlaps either side, Left and Right can coexist, and Pos / Char overlap
+when the current layout maps them to the same key.
