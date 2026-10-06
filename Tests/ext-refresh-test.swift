@@ -194,6 +194,28 @@ struct ExtensionRefreshTests {
             "userInitiated matches LaunchType.UserInitiated")
     }
 
+    static func refreshNowExplainsARefusal() {
+        let mine = "extension:coffee/status"
+        expect(
+            ExtensionRefreshPolicy.refreshNowRefusal(
+                foregroundRunning: false, refreshingCommand: nil, command: mine) == nil,
+            "an idle runtime refreshes now")
+        expect(
+            ExtensionRefreshPolicy.refreshNowRefusal(
+                foregroundRunning: false, refreshingCommand: mine, command: mine)
+                == "Already refreshing.",
+            "the same command mid-refresh says so")
+        expect(
+            ExtensionRefreshPolicy.refreshNowRefusal(
+                foregroundRunning: false, refreshingCommand: "extension:other/tick", command: mine)
+                != nil,
+            "another command's tick refuses with a reason")
+        expect(
+            ExtensionRefreshPolicy.refreshNowRefusal(
+                foregroundRunning: true, refreshingCommand: nil, command: mine) != nil,
+            "an open foreground command refuses with a reason")
+    }
+
     static func main() {
         parseAcceptsAllUnits()
         parseClampsToTheFloor()
@@ -209,6 +231,7 @@ struct ExtensionRefreshTests {
         ownerRestatementIsDropped()
         indicatorNamesTheState()
         launchTypesMatchTheJSContract()
+        refreshNowExplainsARefusal()
 
         print(failures == 0 ? "Extension refresh tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)

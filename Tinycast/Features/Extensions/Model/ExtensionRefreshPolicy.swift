@@ -60,6 +60,15 @@ enum ExtensionRefreshPolicy {
                 + jitter(entryID: entryID, interval: interval))
     }
 
+    /// Why Refresh Now can't start; nil when it can. The runtime holds one command at a time.
+    static func refreshNowRefusal(
+        foregroundRunning: Bool, refreshingCommand: String?, command: String
+    ) -> String? {
+        if refreshingCommand == command { return "Already refreshing." }
+        guard foregroundRunning || refreshingCommand != nil else { return nil }
+        return "Another extension command is running. Try again when it finishes."
+    }
+
     /// A hung background run dies before its successor is due, or ticks pile up behind it.
     static func timeout(interval: TimeInterval) -> TimeInterval {
         min(max(interval, 15), 120)

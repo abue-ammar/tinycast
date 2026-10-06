@@ -570,9 +570,18 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     /// One headless run right now, without touching the enable flag or the palette.
     func refreshNow(_ entry: AppEntry) {
         guard let (owner, command) = resolve(entry),
-            ExtensionRefreshPolicy.isSchedulable(mode: command.mode, interval: command.interval),
-            running == nil, backgroundSessionID == nil
+            ExtensionRefreshPolicy.isSchedulable(mode: command.mode, interval: command.interval)
         else { return }
+        let reference = ExtensionCommandRef(
+            extensionName: owner.manifest.name, commandName: command.name)
+        if let refusal = ExtensionRefreshPolicy.refreshNowRefusal(
+            foregroundRunning: running != nil,
+            refreshingCommand: backgroundRef?.entryID,
+            command: reference.entryID)
+        {
+            coordinator?.showHUD(refusal)
+            return
+        }
         Task { [weak self] in
             await self?.runInBackground(owner, command: command)
             self?.restartBackgroundLoop()
