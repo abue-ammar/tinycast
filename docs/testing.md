@@ -100,6 +100,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `emoji-search-test` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format, multilingual search |
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
+| `command-deeplink-test` | Native command URL round trips, invalid routes, and installed extension URL generation |
+| `command-dispatch-test` | `LauncherCoordinator.runCommand` — default toggle behavior, deeplink reveal, and feature dispatch |
 | `interface-size-test` | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `ModifierKey.swift`, `ModifierKeyDetector.swift`, `HotKeyBinding.swift`, `HotKeySpelling.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
@@ -440,6 +442,12 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   even with the scrollbar thumb dragged from end to end in under a second
 - An app removed since the last open drops out after a reopen
 - Learned ranking still surfaces your habitual result for a short query
+- A built-in or installed extension command offers Copy Deeplink in ⌘K and on ⇧⌘C; other rows do not
+- Opening a copied native link opens its command; opening it again keeps that screen visible, while
+  its global hotkey still toggles. Disable its feature or Commands switch: the link reports through
+  the HUD and runs nothing. Hiding only its launcher row leaves the link usable
+- An unknown native command or one with a query or fragment reports through the HUD without running
+  an extension; existing extension and OAuth links retain their own routing
 - An application row drags onto the Dock and into a Finder window as a copy, never a move, and a
   landed drop hides the palette; a click still launches; no other kind of row drags
 

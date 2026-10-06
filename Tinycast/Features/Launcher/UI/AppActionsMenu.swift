@@ -141,6 +141,12 @@ enum AppActionsMenu {
                     core.launcherCoordinator.showInFinder(app)
                 })
         }
+        if core.launcherCoordinator.deeplink(for: app) != nil {
+            items.append(
+                PopoverMenuItem(title: "Copy Deeplink", systemImage: "link", shortcut: "⇧⌘C") {
+                    core.launcherCoordinator.copyDeeplink(for: app)
+                })
+        }
         return items
     }
 }

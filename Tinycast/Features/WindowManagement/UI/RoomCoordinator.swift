@@ -96,13 +96,17 @@ final class RoomCoordinator {
 
     // MARK: - The Rooms screen
 
-    func showRooms() {
+    func showRooms(reveal: Bool = false) {
         guard settings.windowManagementEnabled else { return }
         guard Permissions.ensureAccessibility() else {
             Task { await reportPermissionFailure() }
             return
         }
-        paletteCoordinator.togglePalette(mode: .rooms)
+        if reveal {
+            paletteCoordinator.showPalette(mode: .rooms)
+        } else {
+            paletteCoordinator.togglePalette(mode: .rooms)
+        }
     }
 
     /// Every open reads the desk anew, one turn after the screen appears so it never waits on AX.

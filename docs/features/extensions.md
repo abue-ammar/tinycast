@@ -592,7 +592,8 @@ on Raycast winning the scheme. Both accept Raycast's query parameters: `argument
 JSON, `fallbackText`, and `launchType=background`, which only a no-view command receives — a view
 command always takes over the palette, so it launches as `userInitiated`. The owner is a hint: a
 scoped install matches by `owner/extension` first and falls back to the bare slug, so short links
-keep working. Anything else on a claimed scheme just reopens the palette, and an unknown command says
+keep working. Native `tinycast://command/…` links are handled before extension routing. Other URLs on
+a claimed scheme just reopen the palette, and an unknown extension command says
 so rather than failing silently. `ExtensionDeepLink` owns the claimed schemes and the parsing,
 covered by `Tests/ext-test.swift`; an extension's own `open("raycast://…")` resolves through the same
 `ExtensionManager.resolve(_:)` instead of launching Raycast.
@@ -600,6 +601,10 @@ covered by `Tests/ext-test.swift`; an extension's own `open("raycast://…")` re
 For view commands, nonempty `fallbackText` also prefills the search field: lists and grids filter
 locally or receive it through `onSearchTextChange` when their handler mounts. It remains available
 in the view command's launch props as well.
+
+An installed command's launcher ⌘K menu offers **Copy Deeplink**, also on **⇧⌘C**. It copies
+`tinycast://extensions/<manifest-name>/<command>` with the scoped manifest name intact and no launch
+arguments, so opening it uses the command's normal argument flow and user-initiated launch type.
 
 ## Background refresh
 

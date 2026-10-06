@@ -29,7 +29,8 @@ return `OSStatus` synchronously, preserving event order and hold-to-talk release
   per command rather than one per invocation route.
 - **A command that opens a palette mode toggles it.** Every one of them enters through
   `PaletteCoordinator.togglePalette(mode:)`, so a second press closes what the first opened. From a
-  launcher row the palette is in `.launcher`, so the row always re-points instead.
+  launcher row the palette is in `.launcher`, so the row always re-points instead. Native command
+  deeplinks explicitly reveal instead, so reopening the same URL keeps the screen open.
 - **`HotKeyBinding` is the one thing an action is bound to, with two engines.** A
   `.combo` is a Carbon registration; all modifier-only bindings are recognized by
   `ModifierTapMonitor`, because Carbon cannot see a lone modifier at all. Its `Codable` is the

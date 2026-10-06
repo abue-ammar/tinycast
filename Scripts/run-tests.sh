@@ -281,6 +281,21 @@ run palette-filter-test    Tinycast/Palette/PaletteMode.swift \
 run action-menu-search-test Tinycast/Palette/ActionMenuSearchQuery.swift \
                             Tinycast/Features/Launcher/Model/SearchRelevance.swift
 run palette-shortcut-test  Tinycast/Palette/PaletteShortcut.swift
+run command-dispatch-test  Tinycast/Features/Launcher/UI/LauncherCoordinator.swift \
+                           $L/CommandDeepLink.swift $L/CommandID.swift \
+                           Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionDeepLink.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionLaunchType.swift
+run command-deeplink-test  $L/CommandDeepLink.swift $L/CommandID.swift \
+                           Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Tinycast/Features/SystemActions/Model/SystemAction.swift \
+                           Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Tinycast/Features/Snippets/Model/Snippet.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionDeepLink.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionLaunchType.swift
 run ascii-layout-test      Tinycast/Platform/ASCIIKeyboardLayout.swift
 run palette-tab-test       Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Palette/PaletteTabAction.swift \

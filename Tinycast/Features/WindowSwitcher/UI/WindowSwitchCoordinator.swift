@@ -31,15 +31,19 @@ final class WindowSwitchCoordinator {
         if palette.mode == .switchWindows { palette.prepare(mode: .launcher) }
     }
 
-    func show() {
+    func show(reveal: Bool = false) {
         guard settings.navigationEnabled else { return }
         guard Permissions.ensureAccessibility() else {
             Task { await self.reportPermissionFailure() }
             return
         }
-        if paletteCoordinator.isShowing(.switchWindows) { return step() }
+        if !reveal, paletteCoordinator.isShowing(.switchWindows) { return step() }
         disarmSwitchOnRelease()
-        paletteCoordinator.togglePalette(mode: .switchWindows)
+        if reveal {
+            paletteCoordinator.showPalette(mode: .switchWindows)
+        } else {
+            paletteCoordinator.togglePalette(mode: .switchWindows)
+        }
     }
 
     /// The first step lands on the window behind the current one, which the list opens on.

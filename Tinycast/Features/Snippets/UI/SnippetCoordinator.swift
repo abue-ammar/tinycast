@@ -117,9 +117,13 @@ final class SnippetCoordinator {
     // MARK: - Browsing and editing
 
     /// The switch gates the browser, the way Search Files re-checks its own before opening.
-    func showSnippets() {
+    func showSnippets(reveal: Bool = false) {
         guard settings.snippetsEnabled else { return }
-        paletteCoordinator.togglePalette(mode: .snippets)
+        if reveal {
+            paletteCoordinator.showPalette(mode: .snippets)
+        } else {
+            paletteCoordinator.togglePalette(mode: .snippets)
+        }
     }
 
     /// Opens the Snippets pane with the editor showing `record`; nil is a new snippet.

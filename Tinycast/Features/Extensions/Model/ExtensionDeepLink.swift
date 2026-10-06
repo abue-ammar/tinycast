@@ -27,6 +27,14 @@ struct ExtensionDeepLink: Sendable, Equatable {
         return ["raycast", "tinycast", "com.raycast", "raycastinternal"].contains(scheme)
     }
 
+    static func url(extensionName: String, commandName: String) -> URL? {
+        var components = URLComponents()
+        components.scheme = "tinycast"
+        components.host = "extensions"
+        components.path = "/\(extensionName)/\(commandName)"
+        return components.url
+    }
+
     /// Host and first path segment unify `raycast://extensions/…` and `com.raycast:/extensions/…`.
     static func parse(url: URL) -> ExtensionDeepLink? {
         guard claims(url) else { return nil }

@@ -33,13 +33,17 @@ final class MenuSearchCoordinator {
         if palette.mode == .menuSearch { palette.prepare(mode: .launcher) }
     }
 
-    func show() {
+    func show(reveal: Bool = false) {
         guard settings.navigationEnabled else { return }
         guard Permissions.ensureAccessibility() else {
             Task { await self.reportPermissionFailure() }
             return
         }
-        paletteCoordinator.togglePalette(mode: .menuSearch)
+        if reveal {
+            paletteCoordinator.showPalette(mode: .menuSearch)
+        } else {
+            paletteCoordinator.togglePalette(mode: .menuSearch)
+        }
     }
 
     /// Every open walks anew, a restore included: hiding dropped the last snapshot.

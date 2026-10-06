@@ -129,6 +129,10 @@ final class NotesCoordinator {
         }
     }
 
+    func show() {
+        request(.editor)
+    }
+
     func createNote() {
         request(.create)
     }

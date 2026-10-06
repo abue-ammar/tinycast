@@ -476,6 +476,18 @@ final class AppCore {
         case .ignored:
             break
         }
+        if CommandDeepLink.claims(url) {
+            guard let command = CommandDeepLink.parse(url) else {
+                showMessage("Unsupported command deeplink", tone: .danger)
+                return
+            }
+            guard visibility.allowsHotKey(.command(command)), appIndex.isCommandEnabled(command) else {
+                showMessage("Enable \(command.name) in Settings first", tone: .danger)
+                return
+            }
+            launcherCoordinator.runCommand(command, reveal: true)
+            return
+        }
         guard ExtensionDeepLink.claims(url) else { return }
         guard let link = ExtensionDeepLink.parse(url: url) else {
             paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)

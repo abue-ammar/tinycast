@@ -304,6 +304,9 @@ struct LauncherScreen: PaletteScreen {
         case .restart: return restart(at: selection)
         case .favoriteSlot(let index): return launchFavorite(at: index)
         case .copyCalculation: return copyCalculation(at: selection)
+        case .copyFile:
+            guard let app = entry(at: selection) else { return false }
+            return core.launcherCoordinator.copyDeeplink(for: app)
         case .openInApp, .showDetails:
             guard let meeting = meeting(at: selection) else { return false }
             return MeetingActionsMenu.perform(shortcut, meeting: meeting, core: core)

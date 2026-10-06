@@ -23,14 +23,17 @@ final class QuickAICoordinator {
     private var chat: AIChatState { chats.quickAI }
     private var chatCoordinator: AIChatCoordinator { core.aiChatCoordinator }
 
-    func show() {
+    func show(reveal: Bool = false) {
         guard settings.aiEnabled else { return }
         // Not `togglePalette`: the open policy decides a chat only on the way in.
-        guard !paletteCoordinator.isShowing(.ai) else {
-            paletteCoordinator.hidePalette()
-            return
+        if paletteCoordinator.isShowing(.ai) {
+            guard reveal else {
+                paletteCoordinator.hidePalette()
+                return
+            }
+        } else {
+            applyOpenPolicy()
         }
-        applyOpenPolicy()
         paletteCoordinator.showPalette(mode: .ai)
     }
 

@@ -364,8 +364,12 @@ final class CalendarCoordinator {
         MeetingLauncher.showInCalendar(meeting)
     }
 
-    func showSchedule() {
-        paletteCoordinator.togglePalette(mode: .schedule)
+    func showSchedule(reveal: Bool = false) {
+        if reveal {
+            paletteCoordinator.showPalette(mode: .schedule)
+        } else {
+            paletteCoordinator.togglePalette(mode: .schedule)
+        }
     }
 
     /// Loaded before the push, so the page's first frame is already filled.

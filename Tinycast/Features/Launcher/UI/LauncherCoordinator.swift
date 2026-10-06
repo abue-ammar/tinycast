@@ -161,13 +161,17 @@ final class LauncherCoordinator {
     }
 
     /// The one funnel a built-in command runs through, from a palette row or its global shortcut.
-    func runCommand(_ id: CommandID) {
+    func runCommand(_ id: CommandID, reveal: Bool = false) {
         switch id {
         case .quickAI:
-            core.quickAICoordinator.show()
+            core.quickAICoordinator.show(reveal: reveal)
         case .aiChat:
             dismissPalette()
-            core.aiChatCoordinator.toggleWindow()
+            if reveal {
+                core.aiChatCoordinator.showWindow()
+            } else {
+                core.aiChatCoordinator.toggleWindow()
+            }
         case .fixGrammar:
             core.quickActionCoordinator.run(.fixGrammar)
         case .rewrite:
@@ -177,24 +181,24 @@ final class LauncherCoordinator {
         case .summarize:
             core.quickActionCoordinator.run(.summarize)
         case .calculatorHistory:
-            paletteCoordinator.togglePalette(mode: .calculatorHistory)
+            presentPalette(.calculatorHistory, reveal: reveal)
         case .clipboardHistory:
-            paletteCoordinator.togglePalette(mode: .clipboard)
+            presentPalette(.clipboard, reveal: reveal)
         case .pasteSequentially:
             core.clipboardCoordinator.pasteNextInSequence()
         case .searchEmoji:
-            paletteCoordinator.togglePalette(mode: .emoji)
+            presentPalette(.emoji, reveal: reveal)
         case .searchFiles:
-            fileSearchCoordinator.show()
+            fileSearchCoordinator.show(reveal: reveal)
         case .searchMenuItems:
-            menuSearchCoordinator.show()
+            menuSearchCoordinator.show(reveal: reveal)
         case .switchWindows:
-            windowSwitchCoordinator.show()
+            windowSwitchCoordinator.show(reveal: reveal)
         case .openCamera:
             dismissPalette()
             Task { await core.cameraCoordinator.show() }
         case .define:
-            core.dictionaryCoordinator.show()
+            core.dictionaryCoordinator.show(reveal: reveal)
         case .openInBrowser, .runShellCommand:
             break  // Query-driven: each runs where the typed text is, never through this funnel.
         case .joinNextMeeting:
@@ -202,14 +206,18 @@ final class LauncherCoordinator {
         case .copyMeetingLink:
             calendarCoordinator.copyNextMeetingLink()
         case .mySchedule:
-            calendarCoordinator.showSchedule()
+            calendarCoordinator.showSchedule(reveal: reveal)
         case .openInCalendar:
             calendarCoordinator.openNextMeetingInCalendar()
         case .createEvent:
             calendarCoordinator.createEvent()
         case .showNotes:
             dismissPalette()
-            notesCoordinator.toggle()
+            if reveal {
+                notesCoordinator.show()
+            } else {
+                notesCoordinator.toggle()
+            }
         case .createNote:
             dismissPalette()
             notesCoordinator.createNote()
@@ -217,9 +225,9 @@ final class LauncherCoordinator {
             dismissPalette()
             notesCoordinator.searchNotes()
         case .searchQuicklinks:
-            paletteCoordinator.togglePalette(mode: .quicklinks)
+            presentPalette(.quicklinks, reveal: reveal)
         case .searchSnippets:
-            snippetCoordinator.showSnippets()
+            snippetCoordinator.showSnippets(reveal: reveal)
         case .createSnippet:
             dismissPalette()
             snippetCoordinator.editSnippet(nil)
@@ -230,7 +238,7 @@ final class LauncherCoordinator {
             dismissPalette()
             windowLayoutCoordinator.captureWindowLayout()
         case .switchRoom:
-            core.roomCoordinator.showRooms()
+            core.roomCoordinator.showRooms(reveal: reveal)
         case .createRoom:
             core.roomCoordinator.createRoom()
         case .createQuicklink:
@@ -275,6 +283,37 @@ final class LauncherCoordinator {
     }
 
     // MARK: - Row actions
+
+    func deeplink(for app: AppEntry) -> URL? {
+        switch app.kind {
+        case .command, .quickAction:
+            guard let command = CommandCatalog.command(for: app) else { return nil }
+            return CommandDeepLink.url(for: command)
+        case .extensionCommand:
+            guard let (owner, command) = core.extensions.resolve(app) else { return nil }
+            return ExtensionDeepLink.url(
+                extensionName: owner.manifest.name, commandName: command.name)
+        default:
+            return nil
+        }
+    }
+
+    @discardableResult
+    func copyDeeplink(for app: AppEntry) -> Bool {
+        guard let url = deeplink(for: app) else { return false }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(url.absoluteString, forType: .string)
+        core.showMessage("Deeplink copied", tone: .success)
+        return true
+    }
+
+    private func presentPalette(_ mode: PaletteMode, reveal: Bool) {
+        if reveal {
+            paletteCoordinator.showPalette(mode: mode)
+        } else {
+            paletteCoordinator.togglePalette(mode: mode)
+        }
+    }
 
     func resetRanking(for app: AppEntry) {
         ranking.reset(itemKey: app.preferenceKey)

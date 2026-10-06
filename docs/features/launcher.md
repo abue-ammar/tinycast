@@ -761,6 +761,25 @@ Settings or About window) yet inactive, which the non-activating palette makes c
 state does the reveal also open the viewer named by the global `NSFileViewer` default, Finder when it
 is unset, so every other reveal is exactly the one system call.
 
+## Command deeplinks
+
+`tinycast://command/<slug>` runs a built-in command using its stable `CommandID` slug. For example,
+`tinycast://command/open-camera` opens the camera and `tinycast://command/search-emoji` opens the emoji
+picker. **Copy Deeplink** in the command's ⌘K Actions menu, or **⇧⌘C** on its selected row, copies
+that address. Installed extension commands offer the same action with their existing
+[`tinycast://extensions/…` route](extensions.md#deeplinks).
+
+Commands that need the current query, Open in Browser and Run Shell Command, have no input-free
+deeplink and do not offer the action. Custom actions and other result kinds do not offer it either.
+Native command links take no query or fragment. Unknown or unsupported command links report through
+the HUD and run nothing; they never fall back to an extension or to another command.
+
+Deeplinks use `LauncherCoordinator.runCommand` with `reveal: true`: reopening a picker keeps it open
+instead of toggling it closed, and reopening Switch Windows does not step its selection. Launcher
+rows and hotkeys retain their existing toggle behavior. A feature's enabled switch and the Commands
+master switch apply just as they do to global hotkeys; hiding one launcher row does not disable its
+link. No additional preferences, observers, or background work are created.
+
 ## Dragging an application out
 
 An application row drags its bundle onto the Dock, into a System Settings privacy list, or anywhere

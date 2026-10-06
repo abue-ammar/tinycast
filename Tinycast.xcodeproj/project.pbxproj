@@ -130,6 +130,7 @@
 		295AA3F6F9E005C57698201B /* ExtensionListPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA6DDE1843D16C172AAA1002 /* ExtensionListPanel.swift */; };
 		29AE7D39F2969F706A8038A6 /* FileSearchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 847C792F7F5F31259EB56ACC /* FileSearchScreen.swift */; };
 		2BEBF78104855A7E0014D223 /* UnitDef.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E153308EF724D552155C4D2 /* UnitDef.swift */; };
+		2C128DEB589400604E93B3CB /* CommandDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = C19CF0B6485039CB6C7D9950 /* CommandDeepLink.swift */; };
 		2C8F7F5073D77EDC1070E639 /* ToolRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DFEBE220187043060F7F286 /* ToolRunner.swift */; };
 		2C9B845C83930B9EEA188C0C /* WindowLayoutInspector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A29ED24604BE67E562B07D /* WindowLayoutInspector.swift */; };
 		2D40FB3C6B78FE746AB0F7EB /* WindowSwitchOrder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 867B0475618A01A765AC0DC5 /* WindowSwitchOrder.swift */; };
@@ -1446,6 +1447,7 @@
 		C004F2C2EFDD340A73C6AB02 /* PaletteCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaletteCoordinator.swift; sourceTree = "<group>"; };
 		C01EA2D102571E10CCE4E1B0 /* MathAttachmentCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathAttachmentCell.swift; sourceTree = "<group>"; };
 		C0599199132DAFBE12C59FBD /* MeetingDay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingDay.swift; sourceTree = "<group>"; };
+		C19CF0B6485039CB6C7D9950 /* CommandDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandDeepLink.swift; sourceTree = "<group>"; };
 		C214E40D42F4812F141C16A8 /* ColorPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorPreview.swift; sourceTree = "<group>"; };
 		C2EAA357A9F0317320CFAADF /* TerminalLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalLogView.swift; sourceTree = "<group>"; };
 		C330E1D58D9A9A71D35D4019 /* QuicklinkEditorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuicklinkEditorPanel.swift; sourceTree = "<group>"; };
@@ -3467,6 +3469,7 @@
 			isa = PBXGroup;
 			children = (
 				5F0A68B2040582996EFBA877 /* CommandCatalog.swift */,
+				C19CF0B6485039CB6C7D9950 /* CommandDeepLink.swift */,
 				164CB3E1BB5B7D87AF8E7023 /* CommandID.swift */,
 				B07F172974DA662EBE25422E /* EntryNaming.swift */,
 				0437C802C1F3E33E8532A7E3 /* Fallback.swift */,
@@ -3955,6 +3958,7 @@
 				F13789E3732E844EE7584561 /* ColorValue.swift in Sources */,
 				4EBFBA1CC7DA9B22C396DBEC /* CommandArgumentsRow.swift in Sources */,
 				89872774514D83EC2BD60F1E /* CommandCatalog.swift in Sources */,
+				2C128DEB589400604E93B3CB /* CommandDeepLink.swift in Sources */,
 				42CDB6A71960204B194EDC8B /* CommandEscapeTap.swift in Sources */,
 				BEAAD72E748375E0039AC90F /* CommandID.swift in Sources */,
 				51E8877F53ABA0E51B2493FA /* CommandOutputPresenter.swift in Sources */,
