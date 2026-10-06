@@ -193,6 +193,7 @@ final class PalettePanel: NSPanel {
         if event.type == .keyDown,
             Int(event.keyCode) == kVK_Delete,
             event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
+            fieldEditor?.hasMarkedText() != true,
             onBareBackspace?() == true
         {
             return

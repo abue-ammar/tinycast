@@ -350,6 +350,10 @@ editor's own storage, so the bound `query` stays empty for the whole romanisatio
 would sit under the in-flight pinyin. `PalettePanel` publishes the editor's `hasMarkedText()` as
 `PaletteState.isComposing`, and the placeholder is gated on `query.isEmpty && !isComposing`.
 
+The same empty `query` would read as "nothing left to delete" to the bare-backspace step back, so
+`PalettePanel.sendEvent` asks the editor's `hasMarkedText()` itself and lets Backspace through to the
+IME while a composition is in flight. That covers every screen, an extension's search field included.
+
 The observation follows first responder, since SwiftUI hands the window's one field editor to
 whichever field holds focus, and it watches `NSTextView.didChangeSelectionNotification`. Measured,
 that is the **only** notification a marked-text change posts: `NSText.didChangeNotification` fires on
