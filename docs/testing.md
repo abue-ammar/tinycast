@@ -713,6 +713,18 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   supported; an alias set there finds the command from its start and shows the chip
 - Hiding the extension from the launcher, or turning off Show in launcher, dims its alias fields
 
+### Extension store
+
+- Open **Store** from the launcher or Settings → Extensions → Browse Raycast Store.
+- Popular extensions appear before typing. Search and category changes reset the list.
+- Scroll beyond the first fifty results; more arrive without duplicate rows.
+- Return opens details with screenshots, commands, README, contributors and categories.
+- Escape restores the query and selected extension. Closing and reopening resumes the store.
+- Install from details. With extensions off, enabling requires the existing consent dialog.
+- Progress prevents duplicate installs. Success updates the checkmark and Installed filter.
+- Installed includes folder/GitHub imports and opens extension settings rather than replacing them.
+- Network failures offer Retry. Switching queries during a request never shows stale results.
+
 ### Settings and backup
 
 - General → Automatically check for updates defaults on; turn it off and relaunch: it stays off,

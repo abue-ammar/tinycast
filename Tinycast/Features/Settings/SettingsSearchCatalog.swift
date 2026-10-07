@@ -579,7 +579,7 @@ enum SettingsSearchCatalog {
             .extensionsExtensions, "Enable extensions",
             keywords: ["raycast", "third party", "javascript"]),
         .init(
-            .extensionsInstall, "Search extensions",
+            .extensionsInstall, "Browse Raycast Store",
             keywords: ["store", "browse", "install"]),
         .init(
             .extensionsInstall, "Install from GitHub",

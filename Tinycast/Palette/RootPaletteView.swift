@@ -109,6 +109,13 @@ struct RootPaletteView: View {
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
                 openActions: openActions)
+        case .extensionStore:
+            return ExtensionStoreScreen(
+                session: core.extensionStore, coordinator: core.extensionStoreCoordinator,
+                vm: vm, openActions: openActions, openArgumentOptions: openArgumentOptions)
+        case .extensionStoreDetails:
+            return ExtensionStoreDetailsScreen(
+                session: core.extensionStore, coordinator: core.extensionStoreCoordinator)
         case .extensionCommand:
             return ExtensionCommandScreen(
                 screen: extensionScreen, extensions: extensions, vm: vm, openActions: openActions)
@@ -371,7 +378,10 @@ struct RootPaletteView: View {
                 searchFocused = !screen.hidesSearchField
             }
             // A preserved screen re-summons as it was left, so a menu must end with the palette.
-            .modifier(PaletteHideObserver { if menuOpen { closeMenus() } })
+            .modifier(PaletteHideObserver {
+                if menuOpen { closeMenus() }
+                core.extensionStoreCoordinator.suspend()
+            })
             .onChange(of: vm.query) {
                 if vm.collapseQueryLineBreaks() { return }
                 land()
@@ -379,6 +389,7 @@ struct RootPaletteView: View {
                 if vm.mode == .dictionary { dictionary.lookUp(vm.query) }
                 if vm.mode == .menuSearch { menuSearch.filter(vm.query) }
                 if vm.mode == .switchWindows { windowSwitch.filter(vm.query) }
+                if vm.mode == .extensionStore { core.extensionStoreCoordinator.search(vm.query) }
                 // A command that took over the search text filters its own list.
                 if vm.mode == .extensionCommand, let handler = extensionScreen.searchTextHandler {
                     extensions.dispatch(handler: handler, arguments: [vm.query])
@@ -397,7 +408,7 @@ struct RootPaletteView: View {
                 land()
                 fileSearch.search(vm.query, filter: vm.fileSearchFilter)
             }
-            .onChange(of: vm.mode) {
+            .onChange(of: vm.mode) { old, new in
                 vm.clipboardFilter = .all
                 vm.fileSearchFilter = .all
                 vm.emojiCategoryFilter = .all
@@ -422,10 +433,21 @@ struct RootPaletteView: View {
                 if vm.mode != .menuSearch { menuSearch.reset() }
                 if vm.mode != .switchWindows { windowSwitch.reset() }
                 if vm.mode != .meetingDetails { calendarStore.clearDetails() }
+                if vm.mode == .extensionStore {
+                    core.extensionStoreCoordinator.search(vm.query)
+                } else if vm.mode != .extensionStoreDetails {
+                    core.extensionStoreCoordinator.close()
+                }
                 if vm.mode != .rooms, vm.mode != .roomWindows { core.roomCoordinator.screensDidClose() }
                 // Leaving the screen any other way than Escape still ends the command's session.
                 if vm.mode != .extensionCommand, extensions.running != nil, !extensions.isAuthorizing {
                     Task { await extensions.stop() }
+                }
+                if old == .extensionStoreDetails, new == .extensionStore {
+                    Task { @MainActor in
+                        core.extensionStoreCoordinator.restoreSelection()
+                        scroll = ScrollIntent(kind: .follow)
+                    }
                 }
             }
             // `prepare` may change nothing else, so this still lands the list as freshly opened.
@@ -888,8 +910,14 @@ struct RootPaletteView: View {
     ) -> some View {
         // Floating controls, no bar; the edge dissolve ghosts the rows passing beneath.
         HStack(spacing: 0) {
-            appMenuButton
-                .modifier(ExtensionToastSlot(extensions: extensions, showing: vm.mode == .extensionCommand))
+            if vm.mode == .extensionStore || vm.mode == .extensionStoreDetails {
+                ExtensionStoreFooter(
+                    listing: vm.mode == .extensionStoreDetails ? core.extensionStore.detail : nil,
+                    onMenu: toggleAppMenu)
+            } else {
+                appMenuButton
+                    .modifier(ExtensionToastSlot(extensions: extensions, showing: vm.mode == .extensionCommand))
+            }
             if showActionGroup {
                 actionGroup(
                     pillLabel: pillLabel, formPrimaryShortcut: formPrimaryShortcut,
@@ -904,9 +932,11 @@ struct RootPaletteView: View {
     }
 
     private var appMenuButton: some View {
-        MenuCircleButton {
-            if openMenu == .app { closeMenus() } else { open(.app, highlighting: 0) }
-        }
+        MenuCircleButton(action: toggleAppMenu)
+    }
+
+    private func toggleAppMenu() {
+        if openMenu == .app { closeMenus() } else { open(.app, highlighting: 0) }
     }
 
     /// The footer control group: primary action and the Actions toggle sharing one glass capsule.

@@ -11,6 +11,7 @@ struct ExtensionStoreTests {
         gitHubSourceParsing()
         gitHubURLs()
         storeResponse()
+        storePaginationAndMetadata()
         gitHubTree()
         packageManagers()
         abbreviation()
@@ -148,7 +149,7 @@ struct ExtensionStoreTests {
         check("the query is escaped", url.contains("q=co%20ffee"))
         check("the page is passed", url.contains("page=2"))
         // Case-sensitive: "macos" matches only extensions listing no platforms.
-        check("macOS is requested, as the endpoint spells it", url.contains("platform=macOS"))
+        check("macOS is requested, as the endpoint spells it", url.contains("explicit_platform=macOS"))
 
         check(
             "a lookup addresses the handle and name",
@@ -172,6 +173,89 @@ struct ExtensionStoreTests {
         check(
             "a de-listed lookup offers nothing",
             (try? ExtensionStoreResponse.parseEntry(Data(delisted.utf8))) == .some(nil))
+    }
+
+    static func storePaginationAndMetadata() {
+        print("\n# store browsing and detail")
+        let browse = ExtensionStoreResponse.searchURL(query: "", page: 1)
+        check(
+            "an empty query browses popular extensions",
+            browse?.host == "backend.raycast.com" && browse?.path == "/api/v1/store_listings")
+        let category = ExtensionStoreResponse.searchURL(
+            query: "git hub", page: 3, category: "Developer Tools")
+        let items = category.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems }
+        check(
+            "a category uses the store's search syntax",
+            items?.first { $0.name == "q" }?.value == "git hub category:\"Developer Tools\"")
+        check("category queries use search", category?.path == "/api/v1/store_listings/search")
+        check("page zero is refused", ExtensionStoreResponse.searchURL(query: "", page: 0) == nil)
+
+        let pagePayload = storePayload.replacingOccurrences(
+            of: "{\"data\":", with: "{\"total_results\":125,\"data\":")
+        let firstPage = try? ExtensionStoreResponse.parsePage(Data(pagePayload.utf8), page: 1)
+        check("the raw result total is retained", firstPage?.totalResults == 125)
+        check("discarded entries do not end pagination", firstPage?.hasMore == true)
+        let lastPage = try? ExtensionStoreResponse.parsePage(Data(pagePayload.utf8), page: 3)
+        check("the total ends pagination", lastPage?.hasMore == false)
+        let empty = try? ExtensionStoreResponse.parsePage(
+            Data(#"{"data":[],"total_results":125}"#.utf8), page: 1)
+        check("an empty server page ends pagination", empty?.hasMore == false)
+        let delisted = #"{"data":[{"id":"x","name":"gone","status":"kill_listed"}],"total_results":125}"#
+        let filtered = try? ExtensionStoreResponse.parsePage(Data(delisted.utf8), page: 1)
+        check(
+            "a fully discarded page still advances",
+            filtered?.listings.isEmpty == true && filtered?.hasMore == true)
+
+        let entries = (0..<50).map { "{\"id\":\"\($0)\",\"name\":\"gone\",\"status\":\"kill_listed\"}" }
+        let withoutTotal = Data(("{\"data\":[" + entries.joined(separator: ",") + "]}").utf8)
+        let nativePage = try? ExtensionStoreResponse.parsePage(withoutTotal, page: 1)
+        check("native pages have no result total", nativePage?.totalResults == nil)
+        check("a full native page advances after all entries are discarded", nativePage?.hasMore == true)
+        let partial = try? ExtensionStoreResponse.parsePage(Data(storePayload.utf8), page: 2)
+        check("a partial native page ends pagination", partial?.hasMore == false)
+        check("native page size is requested", browse?.absoluteString.contains("per_page=50") == true)
+        check(
+            "the native categories include News and Other",
+            ExtensionStoreResponse.categories.contains("News")
+                && ExtensionStoreResponse.categories.last == "Other")
+
+        let detail = """
+            {"id":"github","name":"github","title":"GitHub","status":"active",
+             "download_url":"https://example.com/github.zip",
+             "author":{"name":"Thomas","handle":"thomas","avatar":"https://example.com/author.png"},
+             "owner":{"handle":"raycast"},
+             "commands":[{"name":"issues","title":"My Issues","description":"List issues","mode":"view"},
+                         {"name":"menu","mode":"menu-bar"}],
+             "metadata":["https://example.com/screenshot.png"],
+             "contributors":[{"name":"Jo","handle":"jo","avatar":"https://example.com/jo.png"}],
+             "categories":["Developer Tools","Productivity"],
+             "readme_url":"https://example.com/README.md","store_url":"https://www.raycast.com/raycast/github",
+             "source_url":"https://github.com/raycast/extensions","updated_at":1790258695}
+            """
+        guard let listing = try? ExtensionStoreResponse.parseEntry(Data(detail.utf8)) else {
+            check("detail metadata parses", false)
+            return
+        }
+        check("the author's identity is kept", listing.authorHandle == "thomas")
+        check("the author's avatar is kept", listing.authorAvatarURL?.lastPathComponent == "author.png")
+        check("the owner is separate from the author", listing.ownerHandle == "raycast")
+        check(
+            "command detail is retained",
+            listing.commands.first?.title == "My Issues"
+                && listing.commands.first?.summary == "List issues")
+        check("command modes are retained", listing.commands.last?.mode == "menu-bar")
+        check("missing command titles use names", listing.commands.last?.title == "menu")
+        check("screenshots are retained", listing.screenshots.first?.lastPathComponent == "screenshot.png")
+        check(
+            "contributors are retained",
+            listing.contributors.first?.name == "Jo"
+                && listing.contributors.first?.handle == "jo"
+                && listing.contributors.first?.avatarURL?.lastPathComponent == "jo.png")
+        check("categories are retained", listing.categories == ["Developer Tools", "Productivity"])
+        check("the README link is retained", listing.readmeURL?.lastPathComponent == "README.md")
+        check("the store link is retained", listing.storeURL?.path == "/raycast/github")
+        check("the source link is retained", listing.sourceURL?.host == "github.com")
+        check("the Unix update date is decoded", listing.updatedAt?.timeIntervalSince1970 == 1790258695)
     }
 
     // MARK: - GitHub trees

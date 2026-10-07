@@ -7,7 +7,6 @@ struct ExtensionsSettingsView: View {
     @State private var expanded: String?
     @State private var filter = ""
     @State private var importCandidates: ImportCandidates?
-    @State private var browsingStore = false
     @State private var installingFromGitHub = false
     @State private var error: String?
     @State private var updateError: String?
@@ -32,6 +31,8 @@ struct ExtensionsSettingsView: View {
                     set: { core.extensionCoordinator.setExtensionsEnabled($0) }),
                 showsInLauncher: $settings.extensionsShowInLauncher,
                 showsIcon: true)
+
+            store
 
             Group {
                 install
@@ -58,9 +59,6 @@ struct ExtensionsSettingsView: View {
                     Task { await importAll(chosen) }
                 },
                 onCancel: { importCandidates = nil })
-        }
-        .settingsEditorPanel(isPresented: $browsingStore) {
-            ExtensionStorePanel(onClose: { browsingStore = false })
         }
         .settingsEditorPanel(isPresented: $installingFromGitHub) {
             ExtensionGitHubPanel(onClose: { installingFromGitHub = false })
@@ -189,17 +187,23 @@ struct ExtensionsSettingsView: View {
         }
     }
 
+    private var store: some View {
+        Section {
+            FeatureCommandRow(entry: CommandCatalog.makeEntry(.extensionStore))
+            SettingsRow(
+                title: "Browse Raycast Store", subtitle: "Discover and install Raycast extensions.",
+                anchor: .extensionsInstall
+            ) {
+                ExtensionSettingsIcon(systemName: "bag")
+            } trailing: {
+                Button("Browse…") { core.extensionStoreCoordinator.show() }
+            }
+        }
+    }
+
     /// Rows rather than a menu: each route installs differently.
     private var install: some View {
         Section {
-            SettingsRow(
-                title: "Search extensions", subtitle: "Ready-built from the Raycast Store.",
-                anchor: .extensionsInstall
-            ) {
-                ExtensionSettingsIcon(systemName: "magnifyingglass")
-            } trailing: {
-                Button("Search…") { browsingStore = true }
-            }
             SettingsRow(
                 title: "Install from GitHub",
                 subtitle: "Builds from source with your package manager.",

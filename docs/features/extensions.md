@@ -461,12 +461,16 @@ like everything else, so a Debug build never shares installs with a release chan
 `package.json`, `assets/` and one `<command>.js` per command — byte-for-byte the layout Raycast's own
 build produces.
 
-Settings → Extensions offers four routes, under **Install New**:
+Settings → Extensions offers four install routes:
 
-1. **Search extensions** — searches the Raycast Store and installs the bundle it already built. Nothing
-   is compiled, so no Node or package manager is involved. The search is
-   `raycast.com/frontend_api/extensions/search`, the endpoint the store's own site uses; it is
-   unofficial, so Install from GitHub is the way in when it changes.
+1. **Browse Raycast Store** — opens the same palette store as the **Store** launcher command.
+   Browse popular extensions, search, or choose a category. The Installed filter reads Tinycast's own
+   library, including folder and GitHub installs. Return opens details; Return there installs the
+   ready-built bundle, with no Node or package manager. Installed extensions open their settings.
+   The detail page shows screenshots, commands, contributors, categories and README/source links.
+   Store browsing stays available while extensions are off; installation asks to enable them first.
+   These are Raycast's unofficial `backend.raycast.com/api/v1/store_listings` and
+   `store_listings/search` endpoints, so Install from GitHub remains another route if they change.
 2. **Install from GitHub** — builds one extension from its source on this Mac. See below.
 3. **Import from Raycast** — copies the already-built bundles out of a local Raycast. Nothing is
    compiled, so no Node, npm or network is involved. The pane also scans whenever it opens, and says
@@ -479,6 +483,16 @@ Settings → Extensions offers four routes, under **Install New**:
 
 Only `package.json`, the built commands and `assets/` are copied — never `node_modules` or the
 multi-megabyte `.js.map` Raycast writes beside each bundle.
+
+The store loads fifty results at a time and fetches more as the list scrolls. Category searches use the
+store's `category:"…"` query syntax. Search requests are debounced and cancelled when replaced; late
+responses cannot overwrite newer results. Pagination uses the raw entry count,
+so a de-listed entry does not cut off later results. Detail lookup uses the publisher's handle, which
+can differ from the author's. Escape returns to the list with its query and selected extension.
+
+Store requests use a private ephemeral session without URL caching. Nothing is fetched on app launch;
+browsing starts when the store opens. Closing the store cancels its search. An installation already
+started continues, reports progress, and keeps the existing install/update/uninstall storage rules.
 
 ## Installing from GitHub
 

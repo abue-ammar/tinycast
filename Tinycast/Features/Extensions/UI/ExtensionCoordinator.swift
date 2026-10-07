@@ -44,22 +44,24 @@ final class ExtensionCoordinator {
             return
         }
 
-        NSApp.activate(ignoringOtherApps: true)
-        Task {
-            guard
-                await core.confirm(
-                    title: "Enable extensions?",
-                    message:
-                        "Extensions are third-party JavaScript, run on this Mac. A running command "
-                        + "holds a JavaScript engine in memory until you leave it — expect Tinycast "
-                        + "to use noticeably more RAM while one is open.",
-                    symbol: "puzzlepiece.extension", confirmTitle: "Enable", tone: .neutral,
-                    confirmRole: .standard)
-            else { return }
+        Task { [weak self] in _ = await self?.enableExtensions() }
+    }
 
-            settings.extensionsEnabled = true
-            await extensions.setEnabled(true)
-        }
+    func enableExtensions() async -> Bool {
+        if settings.extensionsEnabled { return true }
+        NSApp.activate(ignoringOtherApps: true)
+        guard await core.confirm(
+            title: "Enable extensions?",
+            message:
+                "Extensions are third-party JavaScript, run on this Mac. A running command "
+                + "holds a JavaScript engine in memory until you leave it — expect Tinycast "
+                + "to use noticeably more RAM while one is open.",
+            symbol: "puzzlepiece.extension", confirmTitle: "Enable", tone: .neutral,
+            confirmRole: .standard)
+        else { return false }
+        settings.extensionsEnabled = true
+        await extensions.setEnabled(true)
+        return true
     }
 
     func applyExtensionsLauncherPresence() {

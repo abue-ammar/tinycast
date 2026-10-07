@@ -117,6 +117,18 @@ struct PaletteNavigationTests {
             chatted.pop() && chatted.mode == .launcher,
             "and a second step back reaches the launcher the ring started on")
 
+        let store = searchingLauncher()
+        store.push(mode: .extensionStore)
+        store.query = "github"
+        store.selection = 4
+        store.push(mode: .extensionStoreDetails)
+        expect(
+            store.pop() && store.mode == .extensionStore && store.query == "github" && store.selection == 4,
+            "returning from an extension restores the Store search and highlighted result")
+        expect(
+            store.pop() && store.mode == .launcher && store.query == "clipboard",
+            "leaving the Store returns to the launcher query that opened it")
+
         let pasted = searchingLauncher()
         pasted.query = "\nfirst pasted row,\r\nsecond pasted row\u{2028}third\n"
         expect(

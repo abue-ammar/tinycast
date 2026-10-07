@@ -2,14 +2,32 @@ import Foundation
 
 /// Someone else's endpoint, so every field an install doesn't need is optional.
 enum ExtensionStoreResponse {
-    /// The endpoint the store's own site searches with; unofficial, so it can change unannounced.
-    static func searchURL(query: String, page: Int) -> URL? {
-        var components = URLComponents(string: "https://www.raycast.com/frontend_api/extensions/search")
+    static let categories = [
+        "AI Extensions", "Applications", "Communication", "Data", "Documentation",
+        "Design Tools", "Developer Tools", "Finance", "Fun", "Media", "News", "Productivity",
+        "Security", "System", "Web", "Other"
+    ]
+    static let pageSize = 50
+
+    struct Page: Sendable {
+        let listings: [ExtensionListing]
+        let totalResults: Int?
+        let hasMore: Bool
+    }
+
+    static func searchURL(query: String, page: Int, category: String? = nil) -> URL? {
+        guard page > 0 else { return nil }
+        let category = category.flatMap { $0.isEmpty ? nil : $0 }
+        let search = ([query] + (category.map { ["category:\"\($0)\""] } ?? []))
+            .filter { !$0.isEmpty }.joined(separator: " ")
+        let path = search.isEmpty ? "store_listings" : "store_listings/search"
+        var components = URLComponents(string: "https://backend.raycast.com/api/v1/\(path)")
         components?.queryItems = [
-            URLQueryItem(name: "q", value: query),
+            URLQueryItem(name: "q", value: search),
             URLQueryItem(name: "page", value: String(page)),
             // Case-sensitive: any other spelling returns only extensions listing no platforms.
-            URLQueryItem(name: "platform", value: "macOS")
+            URLQueryItem(name: "per_page", value: String(pageSize)),
+            URLQueryItem(name: "explicit_platform", value: "macOS")
         ]
         return components?.url
     }
@@ -24,6 +42,12 @@ enum ExtensionStoreResponse {
 
     private struct StorePayload: Decodable {
         let data: [StoreEntry]
+        let totalResults: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case data
+            case totalResults = "total_results"
+        }
     }
 
     private struct StoreEntry: Decodable {
@@ -38,10 +62,19 @@ enum ExtensionStoreResponse {
         let downloadURL: String?
         let commitSHA: String?
         let status: String?
+        let owner: Author?
+        let contributors: [Author]?
+        let categories: [String]?
+        let metadata: [String]?
+        let readmeURL: String?
+        let storeURL: String?
+        let sourceURL: String?
+        let updatedAt: Double?
 
         struct Author: Decodable {
             let name: String?
             let handle: String?
+            let avatar: String?
         }
         struct Icons: Decodable {
             let light: String?
@@ -49,10 +82,18 @@ enum ExtensionStoreResponse {
         }
         struct Command: Decodable {
             let name: String?
+            let title: String?
+            let description: String?
+            let mode: String?
         }
 
         enum CodingKeys: String, CodingKey {
             case id, name, title, description, author, icons, commands, status
+            case owner, contributors, categories, metadata
+            case readmeURL = "readme_url"
+            case storeURL = "store_url"
+            case sourceURL = "source_url"
+            case updatedAt = "updated_at"
             case downloadCount = "download_count"
             case downloadURL = "download_url"
             case commitSHA = "commit_sha"
@@ -60,7 +101,19 @@ enum ExtensionStoreResponse {
     }
 
     static func parseStore(_ data: Data) throws -> [ExtensionListing] {
-        try JSONDecoder().decode(StorePayload.self, from: data).data.compactMap(listing(from:))
+        try parsePage(data, page: 1).listings
+    }
+
+    static func parsePage(_ data: Data, page: Int) throws -> Page {
+        let payload = try JSONDecoder().decode(StorePayload.self, from: data)
+        let hasMore =
+            !payload.data.isEmpty
+            && (payload.totalResults.map {
+                page * pageSize < $0
+            } ?? (payload.data.count == pageSize))
+        return Page(
+            listings: payload.data.compactMap(listing(from:)),
+            totalResults: payload.totalResults, hasMore: hasMore)
     }
 
     /// A lookup answers with the entry itself, not a page of them.
@@ -84,7 +137,28 @@ enum ExtensionStoreResponse {
             commandCount: entry.commands?.count ?? 0,
             downloadCount: entry.downloadCount,
             downloadURL: url,
-            commitSHA: entry.commitSHA)
+            commitSHA: entry.commitSHA,
+            authorHandle: entry.author?.handle,
+            authorAvatarURL: entry.author?.avatar.flatMap(URL.init(string:)),
+            ownerHandle: entry.owner?.handle ?? entry.author?.handle,
+            commands: (entry.commands ?? []).compactMap { command in
+                guard let name = command.name else { return nil }
+                return ExtensionListing.Command(
+                    name: name, title: command.title ?? name,
+                    summary: command.description ?? "", mode: command.mode ?? "view")
+            },
+            screenshots: (entry.metadata ?? []).compactMap(URL.init(string:)),
+            contributors: (entry.contributors ?? []).compactMap { contributor in
+                guard let handle = contributor.handle else { return nil }
+                return ExtensionListing.Contributor(
+                    name: contributor.name ?? handle, handle: handle,
+                    avatarURL: contributor.avatar.flatMap(URL.init(string:)))
+            },
+            categories: entry.categories ?? [],
+            readmeURL: entry.readmeURL.flatMap(URL.init(string:)),
+            storeURL: entry.storeURL.flatMap(URL.init(string:)),
+            sourceURL: entry.sourceURL.flatMap(URL.init(string:)),
+            updatedAt: entry.updatedAt.map(Date.init(timeIntervalSince1970:)))
     }
 }
 

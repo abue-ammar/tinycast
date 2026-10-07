@@ -578,6 +578,11 @@ run ext-store-test         $E/Model/ExtensionGitHubSource.swift \
                            $E/Model/ExtensionListing.swift \
                            $E/Model/ExtensionPackageManager.swift \
                            $E/Model/ExtensionStoreResponse.swift
+run ext-store-session-test $E/Model/ExtensionGitHubSource.swift \
+                           $E/Model/ExtensionListing.swift \
+                           $E/Model/ExtensionStoreResponse.swift \
+                           $E/Service/ExtensionStoreClient.swift \
+                           $E/Service/ExtensionStoreSession.swift
 run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
                            $E/Model/ExtensionFormField.swift \
                            $E/UI/ExtensionFormKey.swift \

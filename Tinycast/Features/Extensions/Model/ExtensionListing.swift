@@ -17,6 +17,65 @@ struct ExtensionListing: Identifiable, Hashable, Sendable {
     /// What an update check compares: it moves with every version the store publishes.
     let commitSHA: String?
 
+    let authorHandle: String?
+    let authorAvatarURL: URL?
+    let ownerHandle: String?
+    let commands: [Command]
+    let screenshots: [URL]
+    let contributors: [Contributor]
+    let categories: [String]
+    let readmeURL: URL?
+    let storeURL: URL?
+    let sourceURL: URL?
+    let updatedAt: Date?
+
+    struct Command: Identifiable, Hashable, Sendable {
+        var id: String { name }
+        let name: String
+        let title: String
+        let summary: String
+        let mode: String
+    }
+
+    struct Contributor: Identifiable, Hashable, Sendable {
+        var id: String { handle }
+        let name: String
+        let handle: String
+        let avatarURL: URL?
+    }
+
+    init(
+        id: String, name: String, title: String, summary: String, author: String,
+        lightIconURL: URL?, darkIconURL: URL?, commandCount: Int, downloadCount: Int?,
+        downloadURL: URL, commitSHA: String?, authorHandle: String? = nil,
+        authorAvatarURL: URL? = nil, ownerHandle: String? = nil, commands: [Command] = [],
+        screenshots: [URL] = [], contributors: [Contributor] = [], categories: [String] = [],
+        readmeURL: URL? = nil, storeURL: URL? = nil, sourceURL: URL? = nil, updatedAt: Date? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.title = title
+        self.summary = summary
+        self.author = author
+        self.lightIconURL = lightIconURL
+        self.darkIconURL = darkIconURL
+        self.commandCount = commandCount
+        self.downloadCount = downloadCount
+        self.downloadURL = downloadURL
+        self.commitSHA = commitSHA
+        self.authorHandle = authorHandle
+        self.authorAvatarURL = authorAvatarURL
+        self.ownerHandle = ownerHandle
+        self.commands = commands
+        self.screenshots = screenshots
+        self.contributors = contributors
+        self.categories = categories
+        self.readmeURL = readmeURL
+        self.storeURL = storeURL
+        self.sourceURL = sourceURL
+        self.updatedAt = updatedAt
+    }
+
     /// Either side stands in for a missing other, so a one-artwork listing still draws.
     func iconURL(isDark: Bool) -> URL? {
         isDark ? (darkIconURL ?? lightIconURL) : (lightIconURL ?? darkIconURL)

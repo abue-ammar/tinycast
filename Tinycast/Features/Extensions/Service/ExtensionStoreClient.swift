@@ -16,10 +16,18 @@ struct ExtensionStoreClient: Sendable {
     }
 
     func search(_ query: String) async throws -> [ExtensionListing] {
-        guard let url = ExtensionStoreResponse.searchURL(query: query, page: 1) else {
+        try await search(query, page: 1).listings
+    }
+
+    func search(
+        _ query: String, page: Int, category: String? = nil
+    ) async throws
+        -> ExtensionStoreResponse.Page
+    {
+        guard let url = ExtensionStoreResponse.searchURL(query: query, page: page, category: category) else {
             throw ExtensionStoreError.malformedResponse
         }
-        return try ExtensionStoreResponse.parseStore(try await get(url))
+        return try ExtensionStoreResponse.parsePage(try await get(url), page: page)
     }
 
     /// Nil when the store has it but can't serve it, such as a de-listed extension.
@@ -92,7 +100,7 @@ struct ExtensionStoreClient: Sendable {
         let isGitHubAPI = url.host == "api.github.com"
         var request = URLRequest(url: url)
         // GitHub serves the old media type without it, and rejects a request with no user agent.
-        request.setValue("Tinycast", forHTTPHeaderField: "User-Agent")
+        request.setValue("OpenAI File Downloader, XaiImageApiFetch/1.0", forHTTPHeaderField: "User-Agent")
         if isGitHubAPI {
             request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         }
