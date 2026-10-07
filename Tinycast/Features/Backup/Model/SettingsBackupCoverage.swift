@@ -15,6 +15,7 @@ enum SettingsBackupCoverage {
         "automaticallyCheckForUpdates": .automaticallyCheckForUpdates,
         "emojiSkinTone": .emojiSkinTone,
         "emojiGridColumns": .emojiGridColumns,
+        "emojiPopsToRootAfterPick": .emojiPopsToRootAfterPick,
         "popToRootSeconds": .popToRootTimeout,
         "escapeKeyBehavior": .escapeKeyBehavior,
         "appearance": .appearance,

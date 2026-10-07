@@ -31,6 +31,15 @@ struct EmojiSettingsView: View {
             } header: {
                 SettingsSectionHeader(.emojiAppearance)
             }
+
+            Section {
+                Toggle(isOn: $settings.emojiPopsToRootAfterPick) {
+                    SettingsRowTitle(.emojiBehaviour, "Pop to root after picking")
+                    Text("Off leaves it to Pop to Root Search.")
+                }
+            } header: {
+                SettingsSectionHeader(.emojiBehaviour)
+            }
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.emoji)

@@ -199,6 +199,13 @@ final class AppSettings {
         didSet { defaults.set(emojiGridColumns.rawValue, forKey: Key.emojiGridColumns.rawValue) }
     }
 
+    /// Whether a pick resets to the root search at once; off leaves it to Pop to Root Search.
+    var emojiPopsToRootAfterPick: Bool {
+        didSet {
+            defaults.set(emojiPopsToRootAfterPick, forKey: Key.emojiPopsToRootAfterPick.rawValue)
+        }
+    }
+
     /// How long a closed palette keeps its state before popping back to the root launcher.
     var popToRootTimeout: PopToRootTimeout {
         didSet { defaults.set(popToRootTimeout.rawValue, forKey: Key.popToRootTimeout.rawValue) }
@@ -662,6 +669,9 @@ final class AppSettings {
         emojiGridColumns =
             EmojiGridColumns(rawValue: defaults.integer(forKey: Key.emojiGridColumns.rawValue))
             ?? .default
+        emojiPopsToRootAfterPick =
+            defaults.object(forKey: Key.emojiPopsToRootAfterPick.rawValue) == nil
+            || defaults.bool(forKey: Key.emojiPopsToRootAfterPick.rawValue)
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout.rawValue))
             ?? .immediately

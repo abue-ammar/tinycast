@@ -10,6 +10,13 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
   (Node 18+ for global `fetch`) and are never edited by hand. Regenerate and commit instead.
 - **Keyword packs are plain files, never `.lproj` folders.** One localization folder in the bundle
   would switch AppKit's own menus and text out of English; the app stays English.
+- **A pick is the picker's whole errand, by default.** ↵ and ⌘↵ hide the palette and pop to the root
+  search at once, whatever General ▸ Pop to Root Search says, so a re-summon never lands back in the
+  picker: the delay exists to keep a thing being done, and a pasted emoji is done. Emoji & Symbols ▸
+  `Pop to root after picking` (`AppSettings.emojiPopsToRootAfterPick`, mirrored as
+  `emoji.popsToRootAfterPick` and carried by the backup) switches it off, and a pick then leaves the
+  delay to decide like any dismissal. Escape and a click away always keep the picker for the delay
+  like any other screen; ⌥↵ is the way to paste a run.
 
 ## Layout
 

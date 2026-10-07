@@ -68,6 +68,11 @@ are reset together rather than the screen alone. A reply still streaming is the 
 asked for, and resetting would throw the answer away. Nothing is lost either way: a conversation is
 written to Chat History, and the AI Chat window's sidebar, as soon as it has a message.
 
+The delay exists to keep a thing being done, so a finished errand skips it through
+`PaletteCoordinator.popToRootNow`: Escape under `closeAndPopToRoot`, and a pick in the emoji picker
+(↵ or ⌘↵) while `emojiPopsToRootAfterPick` is on, its default — which is why ⌘Space after pasting an
+emoji lands on the root search, while Escape out of the picker still brings it back inside the delay.
+
 Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the protocol is what keeps the
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
 palette indexes into it. Adding a mode means adding a conformer, not a branch in `RootPaletteView`.

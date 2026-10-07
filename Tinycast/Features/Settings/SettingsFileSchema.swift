@@ -130,6 +130,7 @@ enum SettingsFileSchema {
         case .clipboardCommands: return launcher.commandsBinding(for: key, owner: .clipboard)
         case .emojiSkinTone: return bind(settings, \.emojiSkinTone)
         case .emojiGridColumns: return bind(settings, \.emojiGridColumns)
+        case .emojiPopsToRootAfterPick: return bind(settings, \.emojiPopsToRootAfterPick)
         case .emojiCommands: return launcher.commandsBinding(for: key, owner: .emoji)
         case .calendarShowInLauncher: return bind(settings, \.calendarShowInLauncher)
         case .calendarLauncherLimit: return bind(settings, \.calendarLauncherLimit)

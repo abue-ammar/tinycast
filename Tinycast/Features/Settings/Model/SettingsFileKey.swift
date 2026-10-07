@@ -94,6 +94,7 @@ enum SettingsFileKey: String, CaseIterable, Sendable {
     case clipboardCommands = "clipboard.commands"
     case emojiSkinTone = "emoji.skinTone"
     case emojiGridColumns = "emoji.gridColumns"
+    case emojiPopsToRootAfterPick = "emoji.popsToRootAfterPick"
     case emojiCommands = "emoji.commands"
     case calendarShowInLauncher = "calendar.showInLauncher"
     case calendarLauncherLimit = "calendar.launcherLimit"

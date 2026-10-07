@@ -23,14 +23,20 @@ final class EmojiCoordinator {
     func pasteEmoji(_ entry: EmojiEntry) {
         frequentEmoji.record(entry.glyph)
         let previous = windowController.previousApp
-        paletteCoordinator.hidePalette(restoreFocus: false)
+        leaveAfterPick()
         Paster.pasteString(entry.display(tone: settings.emojiSkinTone), previousApp: previous)
     }
 
     func copyEmoji(_ entry: EmojiEntry) {
         frequentEmoji.record(entry.glyph)
-        paletteCoordinator.hidePalette(restoreFocus: false)
+        leaveAfterPick()
         Paster.copyString(entry.display(tone: settings.emojiSkinTone))
+    }
+
+    /// A pick is the picker's whole errand, so by default Pop to Root Search has nothing to keep.
+    private func leaveAfterPick() {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        if settings.emojiPopsToRootAfterPick { paletteCoordinator.popToRootNow() }
     }
 
     func pasteEmojiKeepingWindowOpen(_ entry: EmojiEntry) {
