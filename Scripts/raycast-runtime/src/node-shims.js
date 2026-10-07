@@ -466,7 +466,16 @@ const fs = {
   chmodSync(file, mode) {
     hostCallSync("fs", "chmod", [fsPath(file), fsMode(mode)]);
   },
-  utimesSync() {},
+  utimesSync(file, atime, mtime) {
+    const times = [atime, mtime].map((time) => {
+      const seconds = time instanceof Date ? time.getTime() / 1000 : Number(time);
+      if (!Number.isFinite(seconds)) {
+        throw Object.assign(new TypeError("Invalid file timestamp"), { code: "ERR_INVALID_ARG_VALUE" });
+      }
+      return typeof time === "number" && seconds < 0 ? Date.now() / 1000 : seconds;
+    });
+    hostCallSync("fs", "utimes", [fsPath(file), ...times]);
+  },
   futimesSync() {},
   watch() {
     throw new Error("fs.watch is not supported in Tinycast extensions.");
@@ -591,6 +600,7 @@ for (const [name, sync] of [
   ["open", fs.openSync],
   ["close", fs.closeSync],
   ["futimes", fs.futimesSync],
+  ["utimes", fs.utimesSync],
   ["readFile", fs.readFileSync],
   ["writeFile", fs.writeFileSync],
   ["appendFile", fs.appendFileSync],
@@ -641,6 +651,7 @@ const fsPromises = {
   access: promisify1(fs.accessSync),
   mkdtemp: promisify1(fs.mkdtempSync),
   chmod: promisify1(fs.chmodSync),
+  utimes: promisify1(fs.utimesSync),
   constants: fs.constants,
 };
 fs.promises = fsPromises;

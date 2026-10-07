@@ -1471,6 +1471,28 @@ struct ExtensionTests {
               assert.equal(fs.readFileSync(moved).subarray(0, 3).toString(), "YaX");
               const listing = "\(directory.path)/listing";
               fs.mkdirSync(listing + "/folder", { recursive: true });
+              assert.equal(code(() => fs.mkdirSync(listing + "/folder")), "EEXIST");
+              assert.equal(code(() => fs.mkdirSync(moved)), "EEXIST");
+              assert.equal(code(() => fs.mkdirSync(listing + "/missing/child")), "ENOENT");
+              assert.equal(await call("mkdir", listing + "/folder").then(
+                () => "none", (error) => error.code), "EEXIST");
+              fs.mkdirSync(listing + "/folder", { recursive: true });
+              fs.utimesSync(listing, new Date(1000000), new Date(2000005));
+              assert.equal(fs.statSync(listing).mtime.getTime(), 2000005);
+              await call("utimes", listing, 3000, 4000.25);
+              assert.equal(fs.statSync(listing).mtime.getTime(), 4000250);
+              await fs.promises.utimes(listing, "5000", "6000.125");
+              assert.equal(fs.statSync(listing).mtime.getTime(), 6000125);
+              for (const stamp of [1700000000001, 1700000000999, Date.now()]) {
+                await call("utimes", listing, new Date(stamp), new Date(stamp));
+                assert.equal(fs.statSync(listing).mtime.getTime(), stamp);
+              }
+              const touched = Date.now();
+              fs.utimesSync(listing, -1, -1);
+              assert(fs.statSync(listing).mtimeMs >= touched);
+              assert(fs.statSync(listing).mtimeMs <= Date.now());
+              assert.equal(code(() => fs.utimesSync(listing + "/missing", 0, 0)), "ENOENT");
+              assert.equal(code(() => fs.utimesSync(listing, Infinity, 0)), "ERR_INVALID_ARG_VALUE");
               fs.writeFileSync(listing + "/entry", "");
               const handle = fs.opendirSync(listing);
               assert.equal(handle.path, listing);

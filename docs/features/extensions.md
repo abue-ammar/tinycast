@@ -730,6 +730,9 @@ that as absence, like Node. Raycast's Visual Studio Code extension leans on the 
 always does) would otherwise pass `isFolderEntry` and reach `fileURLToPath`, which took the whole
 Search Recent Projects command down.
 
+Non-recursive `mkdir` is atomic and returns POSIX error codes. `utimes` updates real timestamps,
+so extension lockfiles can detect stale owners and refresh their heartbeat.
+
 A bundle that ships its own HTTP client rather than calling `fetch` — node-fetch travels inside
 `@raycast/utils`, and axios has a Node adapter — reaches the network through `http.request`, so the
 shim answers it: one request when the body ends, one response chunk when the bridge replies. The

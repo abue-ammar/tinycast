@@ -203,6 +203,9 @@ function syncHostCall(api, method, args) {
       }));
     case "fs.mkdir":
       return fs.mkdirSync(args[0], { recursive: args[1] }) ?? null;
+    case "fs.utimes":
+      fs.utimesSync(args[0], args[1], args[2]);
+      return null;
     case "fs.realpath":
       return fs.realpathSync(args[0]);
     case "fs.mkdtemp":

@@ -1318,6 +1318,22 @@ export async function runFixtures() {
     check("renders the resolved items", dump.includes("alpha") && dump.includes("beta"));
   });
 
+  await run("error boundary can recover its view", `
+    import { Component } from "react";
+    import { Detail } from "@raycast/api";
+    class Boundary extends Component {
+      state = { failed: false };
+      componentDidCatch() { this.setState({ failed: true }); }
+      render() {
+        return this.state.failed ? <Detail markdown="Recovered" /> : this.props.children;
+      }
+    }
+    function Broken() { throw new Error("Handled failure"); }
+    export default function Command() { return <Boundary><Broken /></Boundary>; }
+  `, "view", async (harness) => {
+    check("boundary fallback reaches host", findNode(harness.state.trees.at(-1), "Detail")?.props.markdown === "Recovered");
+  });
+
   await run("Menu bar hooks, alternates and async actions", `
     import { MenuBarExtra } from "@raycast/api";
     import { useEffect, useState } from "react";

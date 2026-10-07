@@ -220,9 +220,29 @@ final class ExtensionNodeShims: @unchecked Sendable {
         case "mkdir":
             let target = try path(0)
             let recursive = arguments[safe: 1] as? Bool ?? false
-            try fileManager.createDirectory(
-                atPath: target, withIntermediateDirectories: recursive)
-            return recursive ? target : nil
+            if recursive {
+                try fileManager.createDirectory(atPath: target, withIntermediateDirectories: true)
+                return target
+            }
+            guard Darwin.mkdir(target, 0o777) == 0 else { throw fileError("mkdir", target) }
+            return nil
+
+        case "utimes":
+            let target = try path(0)
+            let times = try (1...2).map { index -> timeval in
+                guard let seconds = (arguments[safe: index] as? NSNumber)?.doubleValue,
+                    seconds >= Double(Int.min), seconds < Double(Int.max)
+                else { throw ShimError.failed("fs.utimes needs valid timestamps.", "EINVAL") }
+                let wholeSeconds = seconds.rounded(.down)
+                let microseconds = Int(((seconds - wholeSeconds) * 1_000_000).rounded())
+                return timeval(
+                    tv_sec: Int(wholeSeconds) + microseconds / 1_000_000,
+                    tv_usec: Int32(microseconds % 1_000_000))
+            }
+            guard times.withUnsafeBufferPointer({ Darwin.utimes(target, $0.baseAddress) }) == 0 else {
+                throw fileError("utimes", target)
+            }
+            return nil
 
         case "remove":
             let target = try path(0)
@@ -384,7 +404,7 @@ final class ExtensionNodeShims: @unchecked Sendable {
 
         let type = attributes[.type] as? FileAttributeType
         func milliseconds(_ key: FileAttributeKey) -> Double {
-            ((attributes[key] as? Date)?.timeIntervalSince1970 ?? 0) * 1000
+            (((attributes[key] as? Date)?.timeIntervalSince1970 ?? 0) * 1_000_000).rounded() / 1000
         }
         return [
             "size": (attributes[.size] as? NSNumber)?.doubleValue ?? 0,
