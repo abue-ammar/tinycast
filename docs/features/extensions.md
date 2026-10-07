@@ -402,8 +402,8 @@ screens hold (see [palette.md](palette.md)).
   edge without shifting their initial position; hover keeps the shared 10pt menu-row corner. The
   panel opens and closes from its bottom-right attachment with extension-owned opacity and scale
   timing, briefly reaching 1.003; its attached corner matches the footer button. The first action is
-  the primary ↵ action; an action's own `shortcut` is matched against modified keystrokes.
-  `ExtensionCommandScreen.menuContent` hands the whole panel to the palette as a
+  the primary ↵ action; an action's own `shortcut` is matched against modified keystrokes, with the
+  panel open or closed. `ExtensionCommandScreen.menuContent` hands the whole panel to the palette as a
   `PaletteMenuContent`, so the palette never learns the row type — and a row's handler is taken from
   the flattened `ExtensionAction` list rather than the drawn rows, so ↵ and the panel fire the same
   one without resolving an icon per arrow key. Header accessory symbols use the same 14pt Medium

@@ -124,7 +124,10 @@ struct ExtensionCommandScreen: PaletteScreen {
                 AnyView(
                     ExtensionActionsPanel(
                         header: ExtensionActionsMenu.header(screen: screen, selection: selection),
-                        items: items, selection: menuSelection, onActivate: onActivate))
+                        items: items, selection: menuSelection, onActivate: onActivate,
+                        shortcutRow: { key, modifiers in
+                            filteredActions.firstIndex { $0.matches(key: key, modifiers: modifiers) }
+                        }))
             },
             activate: { index in
                 guard let handler = filteredActions[index].handler else { return }

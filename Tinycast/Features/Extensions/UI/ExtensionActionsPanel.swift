@@ -52,6 +52,7 @@ struct ExtensionActionsPanel: View {
     let items: [ExtensionActionItem]
     @Binding var selection: Int
     let onActivate: (Int) -> Void
+    let shortcutRow: (KeyEquivalent, EventModifiers) -> Int?
 
     /// The palette arms this only once the pointer has moved of its own accord.
     @Environment(PaletteState.self) private var palette
@@ -78,6 +79,15 @@ struct ExtensionActionsPanel: View {
             ExtensionMenuSearchField(
                 placeholder: "Search for actions…", height: panel.rowHeight,
                 verticalOffset: -metrics.spacing.xxs / 2)
+        }
+        // The panel holds focus while open, so the screen's own shortcut keys never see these.
+        .onKeyPress(phases: .down) { press in
+            guard !press.modifiers.isEmpty,
+                let row = shortcutRow(
+                    ASCIIKeyboardLayout.keyEquivalent(fallingBackTo: press.key), press.modifiers)
+            else { return .ignored }
+            onActivate(row)
+            return .handled
         }
         .frame(width: panel.width)
         .glassEffect(.regular, in: shape)
