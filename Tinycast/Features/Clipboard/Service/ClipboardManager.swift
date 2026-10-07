@@ -17,19 +17,23 @@ final class ClipboardManager {
 
     private let store: ClipboardStore
     private let settings: AppSettings
+    private let sourceMonitor: ClipboardSourceMonitor
     private var timer: Timer?
     private var sessionTokens: [NotificationToken] = []
     private var lastChangeCount = 0
     private var isCapturing = false
+    private var waitingChangeCount: Int?
 
-    init(store: ClipboardStore, settings: AppSettings) {
+    init(store: ClipboardStore, settings: AppSettings, sourceMonitor: ClipboardSourceMonitor) {
         self.store = store
         self.settings = settings
+        self.sourceMonitor = sourceMonitor
     }
 
     // Isolated so teardown can touch the main-actor timer; the poll block is already weak.
     isolated deinit {
         timer?.invalidate()
+        sourceMonitor.stop()
     }
 
     func start() {
@@ -72,6 +76,8 @@ final class ClipboardManager {
     private func startPolling() {
         guard isCapturing, timer == nil else { return }
         lastChangeCount = NSPasteboard.general.changeCount
+        waitingChangeCount = nil
+        sourceMonitor.start()
         let timer = Timer(timeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.poll() }
         }
@@ -83,18 +89,21 @@ final class ClipboardManager {
     private func stopPolling() {
         timer?.invalidate()
         timer = nil
+        waitingChangeCount = nil
+        sourceMonitor.stop()
     }
 
     // Drain first: the real copy must reach history before we overwrite the pasteboard.
     func prepareForTinycastPasteboardMutation() {
-        guard isCapturing else { return }
-        poll()
+        guard isCapturing, timer != nil else { return }
+        poll(waitForSource: false)
     }
 
     // Load-bearing: a mismatched count means a foreign write the next poll must still see.
     func synchronizeAfterTinycastPasteboardMutation(changeCount: Int) {
         guard NSPasteboard.general.changeCount == changeCount else { return }
         lastChangeCount = changeCount
+        waitingChangeCount = nil
     }
 
     /// A Finder select-all must not insert ten thousand rows on one poll tick.
@@ -126,22 +135,41 @@ final class ClipboardManager {
         return !roots.contains { path.hasPrefix($0) }
     }
 
-    private func poll() {
+    private func poll(waitForSource: Bool = true) {
+        sourceMonitor.start()
         let pb = NSPasteboard.general
-        guard pb.changeCount != lastChangeCount else { return }
-        lastChangeCount = pb.changeCount
+        let changeCount = pb.changeCount
+        guard changeCount != lastChangeCount else { return }
+        let source = sourceMonitor.source(for: changeCount)
+        guard pb.changeCount == changeCount else { return }
+        if source == nil, sourceMonitor.isActive, waitForSource, waitingChangeCount != changeCount {
+            waitingChangeCount = changeCount
+            return
+        }
+        lastChangeCount = changeCount
+        waitingChangeCount = nil
+        capture(on: pb, source: source, changeCount: changeCount)
+    }
 
+    func capture(on pb: NSPasteboard, source: ClipboardSource?, changeCount: Int) {
+        guard pb.changeCount == changeCount else { return }
         if pb.types?.contains(Self.internalType) == true { return }
 
         // Never record secrets: skip copies tagged sensitive by any of the marker owners.
         if let types = pb.types, !Set(types).isDisjoint(with: Self.sensitiveTypes) { return }
 
-        // The pasteboard carries no source, so attribute it to the frontmost app.
-        let sourceBundleID = NSWorkspace.shared.frontmostApplication?.bundleIdentifier
-        if let sourceBundleID, settings.clipboardDisabledApps.contains(sourceBundleID) { return }
+        let explicitSource = pb.string(forType: .init("org.nspasteboard.source"))
+        let disabledApps = Set(settings.clipboardDisabledApps)
+        if source?.isDisabled(in: disabledApps, explicitBundleID: explicitSource) == true { return }
+        if let explicitSource, disabledApps.contains(explicitSource) { return }
+        // An unknown writer must not turn an excluded helper's copy into a Finder copy.
+        guard source != nil || disabledApps.isEmpty else { return }
+        let isRemote = pb.types?.contains(.init("com.apple.is-remote-clipboard")) == true
+        let sourceBundleID = isRemote || explicitSource == "" ? nil : explicitSource ?? source?.bundleID
 
         // Ahead of the text branch: Finder puts the file's *name* on `.string` beside its URL.
         if let paths = Self.fileURLs(on: pb) {
+            guard pb.changeCount == changeCount else { return }
             store.addFiles(paths, sourceBundleID: sourceBundleID)
             return
         }
@@ -149,12 +177,13 @@ final class ClipboardManager {
         if let text = pb.string(forType: .string),
             !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         {
-            guard text.count <= Self.maxTextLength else { return }
+            guard text.count <= Self.maxTextLength, pb.changeCount == changeCount else { return }
             store.addText(text, sourceBundleID: sourceBundleID)
             return
         }
 
         if let type = pb.availableType(from: [.png, .tiff]), let data = pb.data(forType: type) {
+            guard pb.changeCount == changeCount else { return }
             let isPNG = type == .png
             let store = store
             // A big TIFF→PNG re-encode can take 100ms+, so keep the poll off that path.

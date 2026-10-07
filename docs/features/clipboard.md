@@ -78,7 +78,25 @@ the cap, and even a rejected modern file URL suppresses the legacy filenames fal
 re-capturing Tinycast's own writes, every write stamps a private `internalType` marker on the
 pasteboard and the poller skips anything carrying it.
 
-`stop()` is the off switch: it drops the timer and the fast-user-switching observers, and clears the
+`AppCore` owns `ClipboardSourceMonitor`, injected into the manager. It uses the private
+LoggingSupport live stream to read **pboard's writer PID and pasteboard generation**, matching only
+the exact `changeCount` being captured. It retains at most 64 generation/PID pairs and no clipboard
+contents. The frontmost app is never used as the source: a Passwords menu-bar copy leaves Finder
+frontmost, but its writer is `com.apple.Passwords.MenuBarExtra`. Exclusions check the writer's own
+bundle ID and every containing `.app` bundle, so excluding `com.apple.Passwords` also excludes that
+helper. An `org.nspasteboard.source` marker can supply attribution or exclude a copy, but cannot
+override an excluded actual writer. Remote clipboard copies have no local source attribution.
+
+A writer without a bundle ID or an identifiable containing `.app` is unknown, even if macOS
+returns a running application for its PID. A generation without writer metadata gets one extra
+poll tick for delivery. If its writer remains unknown and any apps are excluded, the copy is skipped
+rather than risking recording a secret as
+Finder. With no exclusions it can be captured with no source. This also means a broken or unavailable
+private log stream suppresses capture while exclusions are configured; the manager retries the stream
+every five seconds. Sensitive markers stay unconditional. The stream and its cache stop on disabling
+or leaving the login session, and a session identity rejects callbacks queued before a restart.
+
+`stop()` is the off switch: it drops the timer, source stream and fast-user-switching observers, and clears the
 `isCapturing` flag that `prepareForTinycastPasteboardMutation` reads — so a paste Tinycast performs
 itself no longer drains the pasteboard into history either.
 

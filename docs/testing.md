@@ -96,6 +96,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `paste-sequence-test` | `Clipboard/Model/PasteSequence.swift` — the walk's order, its end, and what starts it over |
 | `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file entry writes back |
+| `clipboard-source-test` | Writer-generation correlation, bounded metadata, malformed events, parent-app exclusions and native log-stream lifecycle on a private pasteboard |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data and keyword packs |
 | `emoji-search-test` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format, multilingual search |
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` |
@@ -269,7 +270,8 @@ per build with identical `-O` settings:
 ```sh
 swiftc -O -swift-version 6 Tinycast/Platform/PasteboardFiles.swift \
     Tinycast/Features/Clipboard/Model/{ClipboardStore,ClipboardFilter,ClipboardFileKind,ColorValue,ColorFormat,ColorSpaces}.swift \
-    Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
+    Tinycast/Features/Clipboard/Model/{ClipboardSource,ClipboardSourceHistory}.swift \
+    Tinycast/Features/Clipboard/Service/{ClipboardManager,ClipboardSourceMonitor}.swift \
     Tests/clipboard-file-performance.swift -o /tmp/clipboard-file-performance
 /tmp/clipboard-file-performance
 ```
@@ -422,6 +424,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   pill says **Clipboard changed, text not copied**
 - A tall phone screenshot and a full-width Retina screenshot copy each line once, whole, in order
 - A copy from an excluded app (Settings ▸ Clipboard ▸ Disabled Applications) is **not** recorded
+- With Finder frontmost, copy a dummy credential from the Passwords menu-bar helper: excluding
+  Passwords blocks the copy, and a subsequent ordinary Finder copy still appears. Use a fixture,
+  never a real credential. Disable and reenable history to check that source tracking restarts.
 - Password-manager copies are still not recorded
 - Off (Settings ▸ Clipboard ▸ Enable Clipboard History): nothing new is recorded, the launcher rows
   and their shortcuts are gone, the menu-bar row is gone, and Tab rings straight past the screen

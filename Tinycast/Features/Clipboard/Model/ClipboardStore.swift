@@ -14,7 +14,7 @@ struct ClipboardItem: Identifiable, Hashable, Sendable {
     /// Absolute path on disk; only files under `imagesDir` are ours to delete.
     let imagePath: String?
     let createdAt: Date
-    /// Bundle ID of the app frontmost when the copy was captured (see `ClipboardManager.poll`).
+    /// Bundle ID attributed to the clipboard writer; unknown and remote sources stay nil.
     let sourceBundleID: String?
     /// When the entry was pinned; pins lead the list and are exempt from pruning.
     let pinnedAt: Date?

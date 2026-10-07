@@ -22,6 +22,7 @@ struct PasteboardTests {
         aModernFileURLSuppressesTheLegacyFallback()
         fileEntriesWriteBackAsFiles()
         aVanishedFileWritesNothing()
+        sourceExclusionsRunBeforeCapture()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -307,6 +308,63 @@ struct PasteboardTests {
     }
 
     // MARK: - Harness
+
+    static func sourceExclusionsRunBeforeCapture() {
+        withScratch { dir in
+            let store = ClipboardStore(directory: dir.appendingPathComponent("sources"))
+            let settings = AppSettings()
+            settings.clipboardDisabledApps = ["com.apple.Passwords"]
+            let manager = ClipboardManager(
+                store: store, settings: settings, sourceMonitor: ClipboardSourceMonitor())
+            let helper = ClipboardSource(bundleIDs: ["com.apple.Passwords.MenuBarExtra", "com.apple.Passwords"])
+            let finder = ClipboardSource(bundleIDs: ["com.apple.finder"])
+            let pb = board()
+            defer { pb.releaseGlobally() }
+            pb.setString("dummy credential fixture", forType: .string)
+            manager.capture(on: pb, source: helper, changeCount: pb.changeCount)
+            expect(store.items.isEmpty, "a Passwords helper copy is excluded even with Finder in front")
+            manager.capture(on: pb, source: nil, changeCount: pb.changeCount)
+            expect(store.items.isEmpty, "an unknown writer cannot bypass active exclusions")
+            let unbundled = ClipboardSourceMonitor.source(
+                bundleID: nil, bundleURL: URL(fileURLWithPath: "/private/tmp/tinycast-unbundled-writer"))
+            expect(unbundled == nil, "an unbundled writer resolves to unknown rather than an empty identity")
+            manager.capture(on: pb, source: unbundled, changeCount: pb.changeCount)
+            expect(store.items.isEmpty, "an unbundled registered writer cannot bypass active exclusions")
+            pb.setString("com.apple.finder", forType: .init("org.nspasteboard.source"))
+            manager.capture(on: pb, source: helper, changeCount: pb.changeCount)
+            expect(store.items.isEmpty, "an explicit Finder marker cannot override an excluded real writer")
+            pb.clearContents()
+            pb.setString("ordinary Finder fixture", forType: .string)
+            manager.capture(on: pb, source: finder, changeCount: pb.changeCount - 1)
+            expect(store.items.isEmpty, "writer metadata for an older generation never captures a newer copy")
+            manager.capture(on: pb, source: finder, changeCount: pb.changeCount)
+            expect(store.items.first?.sourceBundleID == "com.apple.finder", "ordinary Finder copies remain captured")
+            store.clearAll()
+            pb.setString("com.apple.Passwords", forType: .init("org.nspasteboard.source"))
+            manager.capture(on: pb, source: finder, changeCount: pb.changeCount)
+            expect(store.items.isEmpty, "an explicit excluded source blocks capture")
+            for marker in ClipboardManager.sensitiveTypes.union([ClipboardManager.internalType]) {
+                pb.clearContents()
+                pb.setString("tagged fixture", forType: .string)
+                pb.setData(Data(), forType: marker)
+                manager.capture(on: pb, source: finder, changeCount: pb.changeCount)
+                expect(store.items.isEmpty, "\(marker.rawValue) stays unconditional")
+            }
+            pb.clearContents()
+            pb.setString("remote fixture", forType: .string)
+            pb.setData(Data(), forType: .init("com.apple.is-remote-clipboard"))
+            manager.capture(on: pb, source: finder, changeCount: pb.changeCount)
+            expect(store.items.count == 1 && store.items.first?.sourceBundleID == nil,
+                   "remote copies are captured without a misleading local source")
+            store.clearAll()
+            settings.clipboardDisabledApps = []
+            pb.clearContents()
+            pb.setString("unknown fixture", forType: .string)
+            manager.capture(on: pb, source: nil, changeCount: pb.changeCount)
+            expect(store.items.count == 1 && store.items.first?.sourceBundleID == nil,
+                   "unknown writers remain usable when no apps are excluded")
+        }
+    }
 
     static func board() -> NSPasteboard { NSPasteboard.withUniqueName() }
 

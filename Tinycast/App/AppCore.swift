@@ -18,6 +18,7 @@ final class AppCore {
         fileURL: AppPaths.applicationSupport().appendingPathComponent("room-parking.json"))
     let roomSession = RoomSession()
     let clipboardStore = ClipboardStore()
+    let clipboardSourceMonitor = ClipboardSourceMonitor()
     @ObservationIgnored private var clipboardTextIndexer: ClipboardTextIndexer?
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
@@ -256,7 +257,8 @@ final class AppCore {
         supportReminders = SupportReminderStore(settings: settings)
         aiChats = AIChatSurfacesState(history: chatHistory)
         appIndex = AppIndex(ranking: launcherRanking, aliases: aliases)
-        let clipboardManager = ClipboardManager(store: clipboardStore, settings: settings)
+        let clipboardManager = ClipboardManager(
+            store: clipboardStore, settings: settings, sourceMonitor: clipboardSourceMonitor)
         self.clipboardManager = clipboardManager
         extensions = ExtensionManager(clipboardStore: clipboardStore)
         snippetsStore = SnippetsStore(repository: Self.snippetsRepository(for: settings))
