@@ -68,7 +68,7 @@ export function Gallery() {
       index={2}
       label="In action"
       title="Straight from the app."
-      intro="The palette at the top of this page is a recreation. These screenshots come from Tinycast itself. Click one to see it full size."
+      intro="The palette at the top of this page is a recreation. These screenshots and videos come from Tinycast itself. Click to enlarge an image or play a video."
     >
       <div className="overflow-hidden rounded-xl border border-border/70 bg-surface shadow-xs">
         <div className="flex min-h-11 items-center gap-3 border-b border-border/60 px-4 py-1.5 font-mono text-micro uppercase text-fg-muted">
@@ -77,7 +77,7 @@ export function Gallery() {
             className="size-1.5 rounded-full bg-violet"
           />
           Captured in Tinycast
-          <span className="ml-auto hidden sm:inline">Click any to enlarge</span>
+          <span className="ml-auto hidden sm:inline">Click to view or play</span>
         </div>
         <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
           {galleryItems.map((item, i) => {
