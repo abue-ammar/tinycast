@@ -31,7 +31,7 @@ export function Support() {
       <div className="mt-8 flex flex-wrap justify-center gap-3">
         <Button href={site.support} size="lg">
           <SupportIcon size={18} />
-          Get wallpapers
+          Support Tinycast
         </Button>
         <Button href={site.repo} variant="ghost" size="lg">
           <GitHubLogo size={16} />
