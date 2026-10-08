@@ -103,9 +103,15 @@ private struct CustomCommandSettingsRow: View {
         SettingsRow(title: command.name, subtitle: command.command) {
             Image(systemName: command.symbol)
         } trailing: {
+            if !command.showsInRootSearch {
+                Image(systemName: "eye.slash")
+                    .foregroundStyle(.secondary)
+                    .help("Hidden from root search")
+            }
+
             // An alias only reaches the ranker through the launcher slice, so it dims with it.
             AliasField(key: command.entryID, name: command.name)
-                .settingsEnabled(command.isEnabled && showsInLauncher)
+                .settingsEnabled(command.isEnabled && showsInLauncher && command.showsInRootSearch)
 
             // A disabled command's shortcut fires into the funnel's refusal, so it dims too.
             ShortcutRecorder(action: .customCommand(id: command.id))

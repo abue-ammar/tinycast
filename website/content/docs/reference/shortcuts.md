@@ -37,6 +37,7 @@ Shortcuts follow key positions, so they work the same on any keyboard layout or 
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>H</kbd>                | Hide from Search                        |
 | <kbd>⌘</kbd><kbd>R</kbd>                            | Restart Application (running apps only) |
 | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd>                | Quit Application (running apps only)    |
+| <kbd>⌘</kbd><kbd>E</kbd>                            | Edit Quicklink                          |
 | <kbd>⌘</kbd><kbd>return</kbd>                       | Put Answer in Search Bar (calculator)   |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd>           | Copy Calculation, on a calculator card  |
 
@@ -115,13 +116,24 @@ When **Default action** is set to Copy to Clipboard, <kbd>return</kbd> and
 
 ## Quicklinks
 
-| Key                           | Does                  |
-| ----------------------------- | --------------------- |
-| <kbd>return</kbd>             | Open Quicklink        |
-| <kbd>⌘</kbd><kbd>return</kbd> | Open With Default App |
-| <kbd>⌘</kbd><kbd>.</kbd>      | Pin / Unpin           |
-| <kbd>⌘</kbd><kbd>F</kbd>      | Show in Finder        |
-| <kbd>⌘</kbd><kbd>delete</kbd> | Delete Quicklink      |
+| Key                                  | Does                            |
+| ------------------------------------ | ------------------------------- |
+| <kbd>return</kbd>                    | Open Quicklink                  |
+| <kbd>⌘</kbd><kbd>return</kbd>        | Open With Default App           |
+| <kbd>⌘</kbd><kbd>E</kbd>             | Edit Quicklink                  |
+| <kbd>⌘</kbd><kbd>D</kbd>             | Duplicate Quicklink             |
+| <kbd>⌘</kbd><kbd>.</kbd>             | Pin / Unpin                     |
+| <kbd>⌘</kbd><kbd>F</kbd>             | Show in Finder                  |
+| <kbd>⌘</kbd><kbd>delete</kbd>        | Delete Quicklink                |
+
+## Snippets
+
+| Key                           | Does           |
+| ----------------------------- | -------------- |
+| <kbd>return</kbd>             | Paste Snippet  |
+| <kbd>⌘</kbd><kbd>return</kbd> | Show in Finder |
+| <kbd>⌘</kbd><kbd>E</kbd>      | Edit Snippet   |
+| <kbd>⌘</kbd><kbd>N</kbd>      | Create Snippet |
 
 ## Meeting card
 

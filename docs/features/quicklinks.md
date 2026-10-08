@@ -177,6 +177,9 @@ rest by name — and both the store and the launcher slice sort through it, so t
 disagree. **Pinned means the top of the Quicklinks section**, not above Applications: a second
 position in root search would need a second `AppEntry.Kind`, which the kind invariant forbids for one
 feature. The Search Quicklinks screen gives pins their own section, like the clipboard's.
+A root-search row's ⌘K menu adds **Edit Quicklink** (`⌘E`), opening the same editor as Search
+Quicklinks, and **Hide from Root Search** (`⇧⌘H`), which clears `showsInRootSearch` rather than writing
+`VisibilityStore` — the editor's toggle is its undo, and the row stays in Search Quicklinks.
 
 ## Search Quicklinks
 
@@ -185,9 +188,10 @@ like Search Snippets and the clipboard: the list on the left, a **detail pane** 
 the selected quicklink's glyph over an Information block (name, link, the app it opens with, its
 shortcut, when it was created). Like Calculator History it stays out of the Tab cycle and exits via the
 back chevron or a bare backspace.
-Its ⌘K menu carries Open (`↵`), Open With Default App (`⌘↵`, only when a handler is saved), Edit,
-Duplicate, Pin/Unpin (`⌘.`), Hide/Show in Root Search, Show in Finder (`⌘F`, only for a resolved
-path), and Delete (`⌘⌫`).
+Its ⌘K menu carries Open (`↵`), Open With Default App (`⌘↵`, only when a handler is saved), Edit
+(`⌘E`), Duplicate (`⌘D`), Pin/Unpin (`⌘.`), Show in Finder (`⌘F`, only for a resolved path), and
+Delete (`⌘⌫`). `QuicklinkCoordinator` owns each action, so a chord and its menu row can't drift.
+Root-search visibility is not offered here: the launcher row hides itself, and the editor restores it.
 
 Choosing an _arbitrary_ app belongs to the editor, which has a picker; `PopoverMenu` is a flat list
 with no nesting, so the palette offers the one alternative that always exists — bypass the saved app

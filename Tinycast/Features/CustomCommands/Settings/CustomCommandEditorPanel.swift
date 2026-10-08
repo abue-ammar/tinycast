@@ -9,6 +9,7 @@ struct CustomCommandEditorPanel: View {
     @Environment(AppCore.self) private var core
     @State private var name: String
     @State private var shellCommand: String
+    @State private var showsInRootSearch: Bool
     @State private var loadsShellEnvironment: Bool
     @State private var requiresConfirmation: Bool
     @State private var showsConfirmation: Bool
@@ -30,6 +31,7 @@ struct CustomCommandEditorPanel: View {
         self.command = command
         _name = State(initialValue: command?.name ?? "")
         _shellCommand = State(initialValue: command?.command ?? "")
+        _showsInRootSearch = State(initialValue: command?.showsInRootSearch ?? true)
         _loadsShellEnvironment = State(initialValue: command?.loadsShellEnvironment ?? false)
         _requiresConfirmation = State(initialValue: command?.requiresConfirmation ?? false)
         _showsConfirmation = State(initialValue: command?.showsConfirmation ?? false)
@@ -74,6 +76,9 @@ struct CustomCommandEditorPanel: View {
             argumentsSection
 
             VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                optionToggle(
+                    "Show in root search", isOn: $showsInRootSearch,
+                    detail: "List this command alongside apps and other commands.")
                 optionToggle(
                     "Load shell environment", isOn: $loadsShellEnvironment,
                     detail: "Sources ~/.zshrc for aliases, functions and PATH. Slower to start.")
@@ -252,6 +257,7 @@ struct CustomCommandEditorPanel: View {
             id: command?.id ?? UUID(), name: name, command: shellCommand,
             // The pane's row owns the checkbox; an edit carries the flag rather than resetting it.
             isEnabled: command?.isEnabled ?? true,
+            showsInRootSearch: showsInRootSearch,
             loadsShellEnvironment: loadsShellEnvironment,
             requiresConfirmation: requiresConfirmation,
             showsConfirmation: showsConfirmation,

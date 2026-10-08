@@ -232,8 +232,9 @@ shortcut, file name and character count.
 which reads `previousApp` before hiding the panel and then calls the same `expandSnippet` funnel a
 launcher row does — so template expansion, cursor placement, the Accessibility prompt, the
 confirmation HUD and the pasteboard lease are the ones described below, not a second copy of them.
-The rest of the menu is **Edit Snippet** and **Create Snippet**, which hand off to the pane's editor
-through `AppCore.pendingSnippetEdit`, and **Show in Finder**.
+The rest of the menu is **Edit Snippet** (`⌘E`) and **Create Snippet** (`⌘N`), which hand off to the
+pane's editor through `AppCore.pendingSnippetEdit`, and **Show in Finder** (`⌘↵`, as on a launcher
+row).
 
 `Create Snippet` is a launcher command as well as a menu row because the palette swallows ⌘K when a
 screen has no rows: an empty library would otherwise open a browser with nothing to do.

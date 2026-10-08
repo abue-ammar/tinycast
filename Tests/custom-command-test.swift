@@ -69,6 +69,13 @@ struct CustomCommandTests {
             store.command(id: added.id)?.command == "/usr/bin/true")
         store.setEnabled(true, id: added.id)
 
+        check("a new command shows in root search", store.command(id: added.id)?.showsInRootSearch == true)
+        store.setShowsInRootSearch(false, id: added.id)
+        check(
+            "hiding from root search is stored and leaves it enabled",
+            store.command(id: added.id)?.showsInRootSearch == false
+                && store.command(id: added.id)?.isEnabled == true)
+
         let expected = store.commands
         check(
             "commands survive a reload with their flags",
@@ -117,6 +124,9 @@ struct CustomCommandTests {
         check(
             "a record written before the enabled flag loads as enabled",
             CustomCommandStore(defaults: defaults).commands.first?.isEnabled == true)
+        check(
+            "a record written before the root-search flag still shows there",
+            CustomCommandStore(defaults: defaults).commands.first?.showsInRootSearch == true)
 
         // MARK: Batch add
 

@@ -735,9 +735,11 @@ favorite, alias and learned ranking survive the round trip, and its shortcut kee
 The row is offered only where Settings can undo it, and `KindDescriptor.canHideFromSearch` is that
 rule — per kind, and a new `Kind` case has to answer it to compile. Applications, System Settings,
 Commands, Quick Actions, System Actions, Window Commands, Window Layouts, Rooms and extension commands each
-draw a per-row checkbox in their pane, so they carry it. Custom commands, quicklinks and snippets do
-not: their panes list a record with its own switches, not a launcher checkbox — a hide nothing in
-Settings can visibly undo is a trap, not a shortcut.
+draw a per-row checkbox in their pane, so they carry it. Snippets do not: their pane lists a record
+with its own switches, not a launcher checkbox — a hide nothing in Settings can visibly undo is a
+trap, not a shortcut. Quicklinks and custom commands differ: each editor has its own **Show in root
+search** switch, so the row offers **Hide from Root Search** and `hideFromSearch(at:)` clears that
+`showsInRootSearch` flag instead of writing `VisibilityStore`.
 `AppActionsMenu` adds the query-driven guard the favorites row already uses: a typed URL lives only
 for its query and has no preference to write.
 

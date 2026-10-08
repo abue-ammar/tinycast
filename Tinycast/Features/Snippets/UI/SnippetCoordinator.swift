@@ -124,6 +124,7 @@ final class SnippetCoordinator {
 
     /// Opens the Snippets pane with the editor showing `record`; nil is a new snippet.
     func editSnippet(_ record: StoredSnippet?) {
+        if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
         core.pendingSnippetEdit = SnippetEditRequest(record: record)
         settingsCoordinator.showSettings(tab: .snippets)
     }

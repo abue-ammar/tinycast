@@ -46,12 +46,12 @@ The preview shows the **template as written**, with its placeholders, along with
 shortcut, file name and character count. The preview never fills in placeholders, so browsing never
 reads your clipboard or asks for an argument.
 
-| Action (<kbd>⌘</kbd><kbd>K</kbd>) | Shortcut          |
-| --------------------------------- | ----------------- |
-| Paste Snippet                     | <kbd>return</kbd> |
-| Edit Snippet                      |                   |
-| Create Snippet                    |                   |
-| Show in Finder                    |                   |
+| Action (<kbd>⌘</kbd><kbd>K</kbd>) | Shortcut                      |
+| --------------------------------- | ----------------------------- |
+| Paste Snippet                     | <kbd>return</kbd>             |
+| Edit Snippet                      | <kbd>⌘</kbd><kbd>E</kbd>      |
+| Create Snippet                    | <kbd>⌘</kbd><kbd>N</kbd>      |
+| Show in Finder                    | <kbd>⌘</kbd><kbd>return</kbd> |
 
 Press <kbd>esc</kbd>, or <kbd>delete</kbd> in an empty search, to go back.
 

@@ -302,6 +302,7 @@ struct LauncherScreen: PaletteScreen {
         case .hideFromSearch: return hideFromSearch(at: selection)
         case .quit, .forceQuit: return quit(at: selection, force: shortcut == .forceQuit)
         case .restart: return restart(at: selection)
+        case .edit: return editQuicklink(at: selection)
         case .favoriteSlot(let index): return launchFavorite(at: index)
         case .copyCalculation: return copyCalculation(at: selection)
         case .openInApp, .showDetails:
@@ -328,6 +329,12 @@ struct LauncherScreen: PaletteScreen {
     private func restart(at selection: Int) -> Bool {
         guard let app = runningApplication(at: selection) else { return false }
         core.launcherCoordinator.restart(app)
+        return true
+    }
+
+    private func editQuicklink(at selection: Int) -> Bool {
+        guard let quicklink = entry(at: selection).flatMap(quicklink(for:)) else { return false }
+        core.quicklinkCoordinator.editQuicklink(quicklink)
         return true
     }
 
@@ -385,10 +392,19 @@ struct LauncherScreen: PaletteScreen {
 
     /// ⇧⌘H — the row leaves the list for good, so the highlight takes the place it vacated.
     private func hideFromSearch(at selection: Int) -> Bool {
-        guard let app = entry(at: selection), app.canHideFromSearch,
-            !CommandCatalog.isQueryDriven(app), let index = results.firstIndex(of: app)
+        guard let app = entry(at: selection), !CommandCatalog.isQueryDriven(app),
+            let index = results.firstIndex(of: app)
         else { return false }
-        visibility.setItemVisible(false, for: app)
+        // Each editor's Show in root search toggle is the undo, so neither hide is one-way.
+        if let id = Quicklink.id(fromEntryID: app.id) {
+            core.quicklinkCoordinator.setQuicklinkShowsInRootSearch(false, id: id)
+        } else if let id = CustomCommand.id(fromEntryID: app.id) {
+            core.customCommandCoordinator.setCustomCommandShowsInRootSearch(false, id: id)
+        } else if app.canHideFromSearch {
+            visibility.setItemVisible(false, for: app)
+        } else {
+            return false
+        }
         select(row: min(index, max(reorderedResults().entries.count - 1, 0)))
         return true
     }

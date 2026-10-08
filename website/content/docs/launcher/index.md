@@ -146,6 +146,8 @@ results. The palette stays open on the same search.
 
 It works for apps, System Settings panes, commands, Quick Actions, system actions, window commands
 and window layouts. To show an entry again, select its checkbox in the matching Settings pane.
+On a quicklink or custom command it's **Hide from Root Search**, and you turn **Show in root search**
+back on in its editor.
 
 Hiding only changes what search shows. The app stays installed, and its favorite, alias, learned
 ranking and shortcut keep working.

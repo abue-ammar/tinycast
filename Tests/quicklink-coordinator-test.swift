@@ -13,6 +13,8 @@ struct QuicklinkCoordinatorTests {
         try await clipboardFallback()
         try await combinedArguments()
         try await plainLink()
+        try editing()
+        try revealing()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -122,6 +124,38 @@ struct QuicklinkCoordinatorTests {
         expect(
             QuicklinkLauncher.opened.first?.link == fixture.link.link,
             "a plain link opens without selection input")
+    }
+
+    static func editing() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        fixture.window.isVisible = true
+        fixture.coordinator.editQuicklink(fixture.link)
+        expect(!fixture.window.isVisible, "editing leaves the palette for Settings")
+        expect(
+            fixture.core.pendingQuicklinkEdit?.quicklink == fixture.link,
+            "the editor opens on the chosen quicklink")
+    }
+
+    static func revealing() throws {
+        let folder = try Fixture(link: "/Applications")
+        defer { folder.cleanUp() }
+        AppLauncher.revealed = []
+        folder.window.isVisible = true
+        expect(folder.coordinator.showQuicklinkInFinder(folder.link), "a folder link is revealed")
+        expect(
+            AppLauncher.revealed == [URL(fileURLWithPath: "/Applications")],
+            "Finder is shown the folder itself")
+        expect(!folder.window.isVisible, "revealing leaves the palette")
+
+        for link in ["https://example.com/", "~/Notes/{date}.md"] {
+            let fixture = try Fixture(link: link)
+            defer { fixture.cleanUp() }
+            fixture.window.isVisible = true
+            expect(!fixture.coordinator.showQuicklinkInFinder(fixture.link), "\(link) has nothing to reveal")
+            expect(fixture.window.isVisible, "\(link) leaves the palette open")
+        }
+        expect(AppLauncher.revealed.count == 1, "only the folder link reached Finder")
     }
 
     static func waitForOpen() async {
@@ -257,7 +291,14 @@ final class PaletteCoordinator {
         state.commandArguments = [:]
         state.pendingArgumentEntryID = nil
     }
+    var isVisible: Bool { window.isVisible }
     func hidePalette(restoreFocus: Bool) { window.isVisible = false }
+}
+
+@MainActor
+enum AppLauncher {
+    static var revealed: [URL] = []
+    static func showInFinder(_ url: URL) { revealed.append(url) }
 }
 
 enum SettingsTab { case quicklinks }

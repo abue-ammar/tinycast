@@ -78,6 +78,10 @@ final class CustomCommandCoordinator {
         store.setEnabled(enabled, id: id)
     }
 
+    func setCustomCommandShowsInRootSearch(_ shows: Bool, id: UUID) {
+        store.setShowsInRootSearch(shows, id: id)
+    }
+
     func deleteCustomCommand(id: UUID) {
         guard let command = store.command(id: id) else { return }
         removeCustomCommandReferences(ids: [id], entryIDs: [command.entryID])

@@ -60,24 +60,17 @@ struct QuicklinkListScreen: PaletteScreen {
     }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        guard let quicklink = quicklink(at: selection) else { return false }
+        let coordinator = core.quicklinkCoordinator
         switch shortcut {
-        case .commandDelete: return delete(at: selection)
-        case .pin: return pin(at: selection)
+        case .edit: coordinator.editQuicklink(quicklink)
+        case .duplicate: coordinator.duplicateQuicklink(id: quicklink.id)
+        case .pin: coordinator.toggleQuicklinkPinned(id: quicklink.id)
+        case .showInFinder: return coordinator.showQuicklinkInFinder(quicklink)
+        // Deletion honours the "confirm before deleting" setting inside `AppCore`.
+        case .commandDelete: Task { await coordinator.deleteQuicklink(id: quicklink.id) }
         default: return false
         }
-    }
-
-    /// ⌘. — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
-    private func pin(at selection: Int) -> Bool {
-        guard let quicklink = quicklink(at: selection) else { return false }
-        core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
-        return true
-    }
-
-    /// ⌘⌫ — deletion honours the "confirm before deleting" setting inside `AppCore`.
-    private func delete(at selection: Int) -> Bool {
-        guard let quicklink = quicklink(at: selection) else { return false }
-        Task { await core.quicklinkCoordinator.deleteQuicklink(id: quicklink.id) }
         return true
     }
 
@@ -136,12 +129,15 @@ enum QuicklinkActionsMenu {
                 })
         }
         items.append(
-            PopoverMenuItem(title: "Edit Quicklink", systemImage: "pencil", startsSection: true) {
-                core.paletteCoordinator.hidePalette(restoreFocus: false)
+            PopoverMenuItem(
+                title: "Edit Quicklink", systemImage: "pencil", startsSection: true, shortcut: "⌘E"
+            ) {
                 core.quicklinkCoordinator.editQuicklink(quicklink)
             })
         items.append(
-            PopoverMenuItem(title: "Duplicate Quicklink", systemImage: "plus.square.on.square") {
+            PopoverMenuItem(
+                title: "Duplicate Quicklink", systemImage: "plus.square.on.square", shortcut: "⌘D"
+            ) {
                 core.quicklinkCoordinator.duplicateQuicklink(id: quicklink.id)
             })
         items.append(
@@ -157,25 +153,12 @@ enum QuicklinkActionsMenu {
                 ) {
                     core.quicklinkCoordinator.toggleQuicklinkPinned(id: quicklink.id)
                 })
-        items.append(
-            PopoverMenuItem(
-                title: quicklink.showsInRootSearch
-                    ? "Hide from Root Search" : "Show in Root Search",
-                systemImage: quicklink.showsInRootSearch ? "eye.slash" : "eye"
-            ) {
-                core.quicklinkCoordinator.setQuicklinkShowsInRootSearch(
-                    !quicklink.showsInRootSearch, id: quicklink.id)
-            })
-        // Revealing needs a real path, which a template lacks until it expands.
-        if case .path(let path)? = QuicklinkDestination.detect(quicklink.link),
-            !QuicklinkDestination.containsPlaceholder(quicklink.link)
-        {
+        if QuicklinkCoordinator.revealablePath(of: quicklink) != nil {
             items.append(
                 PopoverMenuItem(
                     title: "Show in Finder", systemImage: "folder", startsSection: true, shortcut: "⌘F"
                 ) {
-                    core.paletteCoordinator.hidePalette(restoreFocus: false)
-                    AppLauncher.showInFinder(URL(fileURLWithPath: path))
+                    core.quicklinkCoordinator.showQuicklinkInFinder(quicklink)
                 })
         }
         items.append(

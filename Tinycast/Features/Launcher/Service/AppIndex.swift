@@ -446,7 +446,7 @@ final class AppIndex {
 
     /// Replaces the command slice without rescanning, so Settings edits land at once.
     func setCustomCommands(_ commands: [CustomCommand]) {
-        let entries = commands.filter(\.isEnabled).map(AppEntry.init)
+        let entries = commands.filter { $0.isEnabled && $0.showsInRootSearch }.map(AppEntry.init)
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         guard entries != customCommandEntries else { return }
         customCommandEntries = entries
