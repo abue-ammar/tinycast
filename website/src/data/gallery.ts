@@ -7,7 +7,6 @@
 import { site } from "./site";
 
 export type GalleryItem = {
-  hidden?: boolean;
   type: "image" | "video";
   // Full-size media shown in the lightbox (image src, or video file for clips).
   src: string;
@@ -22,17 +21,6 @@ export type GalleryItem = {
 };
 
 export const galleryItems: GalleryItem[] = [
-  {
-    hidden: true,
-    type: "video",
-    src: `${site.cdn}/tinycast-in-action.mp4`,
-    poster: "/screenshot.png",
-    title: "Tinycast in action",
-    caption:
-      "A short tour of the launcher, clipboard history, calculator and more.",
-    width: 3024,
-    height: 1964,
-  },
   {
     type: "video",
     src: `${site.cdn}/calculator.mp4`,

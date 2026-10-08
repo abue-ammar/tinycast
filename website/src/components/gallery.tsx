@@ -10,7 +10,6 @@ import { Section } from "./ui/section";
 
 // The lightbox is ~30 KB gzipped and does nothing until a tile is clicked.
 const GalleryLightbox = dynamic(() => import("./gallery-lightbox"));
-const visibleItems = galleryItems.filter((item) => !item.hidden);
 
 // The grid thumbnail: an explicit thumb, else a video's poster, else the image.
 const tileImage = (item: GalleryItem) =>
@@ -81,7 +80,7 @@ export function Gallery() {
           <span className="ml-auto hidden sm:inline">Click any to enlarge</span>
         </div>
         <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
-          {visibleItems.map((item, i) => {
+          {galleryItems.map((item, i) => {
             return (
               <button
                 key={`${item.title}-${i}`}
@@ -120,7 +119,7 @@ export function Gallery() {
       {everOpened && (
         <GalleryLightbox
           index={index}
-          slides={visibleItems.map(toSlide)}
+          slides={galleryItems.map(toSlide)}
           close={() => setIndex(-1)}
         />
       )}
