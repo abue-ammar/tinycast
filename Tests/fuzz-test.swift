@@ -19,6 +19,7 @@ struct FuzzTest {
         sensitivity()
         transliteration()
         naming()
+        categories()
         comparator()
         denseIndex()
         suggestions()
@@ -164,8 +165,10 @@ struct FuzzTest {
 
     // MARK: - The comparator, rule by rule
 
-    struct Item {
+    struct Item: Identifiable {
         let name: String
+        var id: String { name }
+        var kind = "application"
         var alternates: [String] = []
         var subtitle: String?
         var keywords: [String] = []
@@ -312,6 +315,81 @@ struct FuzzTest {
             usage == ["Maps", "Arc", "Mail", "Zed"], "got \(usage)")
     }
 
+    static func categories() {
+        print("\n# category queries")
+        let names = ["Window Management", "Window Command", "Window Layouts", "Window Layout"]
+            .map(FuzzyMatch.Candidate.init)
+        func matching(_ raw: String) -> [String] {
+            names.filter(LauncherOrder.CategoryQuery(raw).matches).map(\.text)
+        }
+        for query in ["win", "window", "WINDOW", "ｗｉｎｄｏｗ", "wíndow", " \twindow\n"] {
+            check("'\(query)' finds both window categories", matching(query).count == names.count)
+        }
+        check(
+            "a partial category phrase narrows to management",
+            matching("window man") == ["window management"])
+        check(
+            "category whitespace is folded once",
+            matching("window \t\n man") == ["window management"])
+        check("a later word finds its category", matching("manage") == ["window management"])
+        check("a label finds the same category", matching("window com") == ["window command"])
+        check("a later layout word stays specific", matching("lay") == ["window layouts", "window layout"])
+        for query in ["", " \t\n", "w", "wi", "ind", "wnd", "windowx", "window manager"] {
+            check("'\(query)' expands no categories", matching(query).isEmpty)
+        }
+        check(
+            "an exact short category is still valid",
+            LauncherOrder.CategoryQuery("AI").matches(FuzzyMatch.Candidate("AI")))
+        check(
+            "canonical category names share the launcher fold",
+            LauncherOrder.CategoryQuery(" \nＳＹＳＴＥＭ\tSettings ").name == "system settings")
+
+        let items = [
+            Item(name: "Window Studio", priority: 4),
+            Item(name: "Window Helper", priority: 4),
+            Item(name: "Documents", kind: "layout"),
+            Item(name: "Left Half", kind: "window", frecency: 1),
+            Item(name: "Center", kind: "window", frecency: 200),
+            Item(name: "Window Width", kind: "window"),
+            Item(name: "Switch Windows", kind: "command"),
+            Item(name: "Search Files", kind: "command", alias: "window", frecency: 300)
+        ]
+        let namesByKind = [
+            "window": FuzzyMatch.Candidate("Window Management"),
+            "layout": FuzzyMatch.Candidate("Window Layouts")
+        ]
+        let query = LauncherOrder.CategoryQuery("window")
+        func listed(_ items: [Item], limit: Int = 200) -> [String] {
+            let ranked = LauncherOrder.ranked(
+                items, query: LauncherOrder.Query("window"), sensitivity: .medium, limit: limit,
+                profile: \.profile, signals: \.signals)
+            return LauncherOrder.includingCategories(
+                items, ranked: ranked, kind: \.kind,
+                includes: { namesByKind[$0].map(query.matches) ?? false },
+                preservesOrder: { $0 == "meeting" }, signals: \.signals
+            ).map(\.name)
+        }
+        check(
+            "window includes commands without window in their names and keeps ordinary matches",
+            listed(items) == [
+                "Window Helper", "Window Studio", "Documents", "Window Width", "Center", "Left Half",
+                "Search Files", "Switch Windows"
+            ], "got \(listed(items))")
+        check(
+            "a category-only item is included even when ordinary results reach the limit",
+            listed(items, limit: 1) == ["Documents", "Center", "Left Half", "Window Width", "Search Files"])
+        let merged = listed(items)
+        check("category merging never repeats a ranked row", Set(merged).count == merged.count)
+        let meetings = [
+            Item(name: "Soon", kind: "meeting", frecency: 1),
+            Item(name: "Later", kind: "meeting", frecency: 300)
+        ]
+        let agenda = LauncherOrder.includingCategories(
+            meetings, ranked: [meetings[1]], kind: \.kind, includes: { $0 == "meeting" },
+            preservesOrder: { $0 == "meeting" }, signals: \.signals)
+        check("category expansion keeps meetings chronological", agenda.map(\.name) == ["Soon", "Later"])
+    }
+
     // MARK: - A dense index
 
     static let now = Date(timeIntervalSince1970: 2_000_000_000)
@@ -335,6 +413,7 @@ struct FuzzTest {
             Item(name: "Game Center", priority: 1), Item(name: "Sound", priority: 1),
             Item(name: "Tinycast Settings"), Item(name: "Calculator History"),
             Item(name: "AI Chat", boosted: ["ai", "chat"]), Item(name: "Search Files"),
+            Item(name: "Switch Windows"),
             Item(name: "Search Notes"), Item(name: "Show Notes"), Item(name: "Set Volume"),
             Item(name: "Search", subtitle: "Brew"), Item(name: "Upgrade", subtitle: "Brew"),
             Item(name: "Signature Block", alternates: ["sig"])
@@ -376,7 +455,8 @@ struct FuzzTest {
             ("wx", "微信", "…as pinyin initials"), ("wyyyl", "网易云音乐", "…initials of a longer name"),
             ("telegram", "Телеграм", "a Cyrillic name typed in Latin"),
             ("sig", "Signature Block", "a snippet's keyword"),
-            ("brew", "Search", "an extension's title lists its commands")
+            ("brew", "Search", "an extension's title lists its commands"),
+            ("window", "Switch Windows", "an ordinary command still matches a category prefix")
         ]
         for test in cases {
             let ranked = rank(test.query, index)

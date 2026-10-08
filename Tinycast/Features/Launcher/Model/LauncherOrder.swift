@@ -20,6 +20,28 @@ enum LauncherOrder {
         }
     }
 
+    struct CategoryQuery: Sendable {
+        let name: String
+        private let query: FuzzyMatch.Query
+        private static let prefixLength = 3
+
+        init(_ raw: String) {
+            name = FuzzyMatch.normalized(raw.split(whereSeparator: \.isWhitespace).joined(separator: " "))
+            query = FuzzyMatch.Query(name)
+        }
+
+        func matches(_ candidate: FuzzyMatch.Candidate) -> Bool {
+            guard !query.isEmpty, let match = FuzzyMatch.match(query, candidate: candidate) else {
+                return false
+            }
+            switch match.tier {
+            case .exact: return true
+            case .prefix, .wordStart: return match.queryLength >= Self.prefixLength
+            case .substring, .subsequence: return false
+            }
+        }
+    }
+
     struct Signals: Sendable {
         var alias: SearchText?
         var usage: LauncherUsage
@@ -60,6 +82,27 @@ enum LauncherOrder {
                 return order != 0 ? order < 0 : $0.1.position < $1.1.position
             }
             .map(\.0)
+    }
+
+    static func includingCategories<Item: Identifiable, Kind: Hashable>(
+        _ items: [Item], ranked: [Item], kind: (Item) -> Kind,
+        includes: (Kind) -> Bool, preservesOrder: (Kind) -> Bool, signals: (Item) -> Signals
+    ) -> [Item] {
+        let matched = Set(ranked.map(\.id))
+        let additional = items.filter { includes(kind($0)) && !matched.contains($0.id) }
+        let listed = byUsage(additional, signals: signals)
+        var sections = Dictionary(grouping: ranked + listed, by: kind)
+        let preserved = Dictionary(
+            grouping: items.filter { includes(kind($0)) && preservesOrder(kind($0)) }, by: kind)
+        sections.merge(preserved) { _, original in original }
+        var entries: [Item] = []
+        entries.reserveCapacity(ranked.count + listed.count)
+        for item in items {
+            if let section = sections.removeValue(forKey: kind(item)) {
+                entries.append(contentsOf: section)
+            }
+        }
+        return entries
     }
 
     // MARK: - One entry's match

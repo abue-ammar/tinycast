@@ -248,24 +248,29 @@ by the title's own score, then by name. The subtitle does not name the entry, so
 
 ### Category search
 
-A query that *equals* a category's own name lists that whole category under its section header, in the
-order the section shows when the field is empty. Both words a kind already carries work — the section
-title and the singular label, `Snippets`/`Snippet`, `Window Management`/`Window Command` — read straight
-off `KindDescriptor` by `AppEntry.Kind.named(by:)`, so no category name is written a second time and a
-new `Kind` case gets its category word for free.
+A query that *equals* a category's name lists that whole category under its section header, in the
+order the section shows when the field is empty. The section title and singular label,
+`Snippets`/`Snippet` or `Window Management`/`Window Command`, come straight from `KindDescriptor`.
+An entry whose display name equals the query joins the listing: `System Settings` still shows the
+installed application above its panes.
 
-**The trigger is exact equality, never a prefix or a fuzzy hit**, because a looser rule would take a word
-away from a real entry: `System Settings` names both a category and an installed application. That one
-collision is answered rather than avoided — an entry whose display name equals the query joins the
-listing, so the app appears under Applications above the panes. Since slice order is section order
-(`publishEntries`), `categoryListing` filters and then sorts within each kind's run, as the empty list
-does, and the sectioned view stays 1:1 with the flat selection. Visibility still applies downstream,
-and no `limit` does, matching the empty query.
+At three characters or more, a prefix at the start of either name or one of its words also includes
+the category. `win` and `window` include Window Management and Window Layouts; `window man` and
+`management` include Window Management alone. Exact names select their own category first.
+`LauncherOrder.CategoryQuery` uses the shared fold and collapses whitespace, so case, accents,
+full-width text and pasted whitespace behave alike. Mid-word substrings and fuzzy subsequences
+never expand a category; short queries retain ordinary search ranking.
 
-`LauncherScreen` therefore separates the two jobs the empty query used to do at once: `showSections`
-draws the headers, `pinsFavorites` pins the Favorites prefix and hands out the ⌘-digit slots. A category
-listing takes the first only. Opening a row from one records the visit but not the word — a category
-word is not a search for the row that ran, and learning it would rank that row under `s`.
+Partial category queries retain all ordinary ranked matches, including apps and aliases. Each section
+starts with those matches in relevance order, followed by its remaining category entries in usage
+order. Meetings retain agenda order. The sections follow publication order, so visible rows and flat
+selection stay aligned. `AppIndex.Results.showSections` carries that ordering decision to the view.
+Visibility still applies downstream. The result limit bounds ordinary matches, while whole categories
+remain uncapped, as they are for an empty query.
+
+Category queries show headers without pinning favorites or handing out their ⌘-digit slots. Opening
+a row records its visit; the query is learned only when it did not match that row's category, so
+category browsing cannot teach every window command the same search term.
 
 ### Contextual commands
 

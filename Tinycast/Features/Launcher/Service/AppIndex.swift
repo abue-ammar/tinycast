@@ -314,15 +314,25 @@ extension AppEntry {
 }
 
 extension AppEntry.Kind {
-    /// The descriptors' own words, lowercased once, so a keystroke costs a lookup and not a scan.
     private static let byCategoryName: [String: AppEntry.Kind] = allCases.reduce(into: [:]) {
-        $0[$1.descriptor.sectionTitle.lowercased()] = $1
-        $0[$1.descriptor.label.lowercased()] = $1
+        $0[FuzzyMatch.normalized($1.descriptor.sectionTitle)] = $1
+        $0[FuzzyMatch.normalized($1.descriptor.label)] = $1
     }
 
-    /// The category a query names outright. Exact only — a prefix would take a word from an entry.
-    static func named(by query: String) -> AppEntry.Kind? {
-        byCategoryName[query.trimmingCharacters(in: .whitespaces).lowercased()]
+    private static let categoryNames = allCases.map { kind in
+        (kind, [kind.descriptor.sectionTitle, kind.descriptor.label].map(FuzzyMatch.Candidate.init))
+    }
+
+    static func named(by query: LauncherOrder.CategoryQuery) -> AppEntry.Kind? {
+        byCategoryName[query.name]
+    }
+
+    static func matching(by query: LauncherOrder.CategoryQuery) -> Set<AppEntry.Kind> {
+        if let kind = named(by: query) { return [kind] }
+        return Set(
+            categoryNames.compactMap { kind, names in
+                names.contains(where: query.matches) ? kind : nil
+            })
     }
 }
 
@@ -336,6 +346,7 @@ final class AppIndex {
     /// The launcher's rows in order, with the size of each pinned section at their head.
     struct Results: Equatable {
         var entries: [AppEntry] = []
+        var showSections = false
         var favoriteCount = 0
         var meetingCount = 0
         var suggestionCount = 0
@@ -343,6 +354,7 @@ final class AppIndex {
 
     private struct MatchKey: Equatable {
         let query: String
+        let limit: Int
         let entriesRevision: Int
         let rankingRevision: Int
         let aliasRevision: Int
@@ -360,7 +372,7 @@ final class AppIndex {
     }
 
     /// Repeated renders for the same query reuse the ranking instead of re-matching every frame.
-    @ObservationIgnored private var matchMemo = Memo<MatchKey, [AppEntry]>()
+    @ObservationIgnored private var matchMemo = Memo<MatchKey, Results>()
     @ObservationIgnored private var resultsMemo = Memo<ResultsKey, Results>()
     /// Bumped whenever `apps` changes, so both memos above name the entry set they were built from.
     private var entriesRevision = 0
@@ -669,20 +681,37 @@ final class AppIndex {
         entriesRevision &+= 1
     }
 
-    /// Ranked matches, or a whole category when the query names one. Empty returns the full list.
     func matches(_ query: String, limit: Int = 200) -> [AppEntry] {
-        let q = query.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return apps }
-        return matchMemo.value(for: matchKey(q)) {
-            guard let kind = AppEntry.Kind.named(by: q) else { return rank(q, limit: limit) }
-            return categoryListing(kind, query: q)
+        searchResults(query, limit: limit).entries
+    }
+
+    private func searchResults(_ query: String, limit: Int = 200) -> Results {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return Results(entries: apps, showSections: true) }
+        return matchMemo.value(for: matchKey(q, limit: limit)) {
+            let categoryQuery = LauncherOrder.CategoryQuery(q)
+            if let kind = AppEntry.Kind.named(by: categoryQuery) {
+                return Results(
+                    entries: categoryListing(kind, query: categoryQuery.name), showSections: true)
+            }
+            let ranked = rank(q, limit: limit)
+            let kinds = AppEntry.Kind.matching(by: categoryQuery)
+            guard !kinds.isEmpty else { return Results(entries: ranked) }
+            return Results(entries: categoryMatches(kinds, ranked: ranked), showSections: true)
         }
+    }
+
+    private func categoryMatches(_ kinds: Set<AppEntry.Kind>, ranked: [AppEntry]) -> [AppEntry] {
+        let usage = ranking.snapshot()
+        return LauncherOrder.includingCategories(
+            apps, ranked: ranked, kind: \.kind, includes: kinds.contains,
+            preservesOrder: { $0 == .meeting }, signals: { self.signals(for: $0, usage: usage) })
     }
 
     /// Slice order is section order, so filtering keeps sections and selection aligned.
     private func categoryListing(_ kind: AppEntry.Kind, query: String) -> [AppEntry] {
         let listed = apps.filter {
-            $0.kind == kind || FuzzyMatch.normalized($0.name) == FuzzyMatch.normalized(query)
+            $0.kind == kind || FuzzyMatch.normalized($0.name) == query
         }
         return byUsage(listed, usage: ranking.snapshot())
     }
@@ -691,17 +720,20 @@ final class AppIndex {
     func orderedResults(
         query: String, visibility: VisibilityStore, favorites: FavoritesStore, hotKeys: HotKeyManager
     ) -> Results {
-        let q = query.trimmingCharacters(in: .whitespaces)
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         let showsSuggestions = settings?.launcherShowsSuggestions ?? true
         let usage = ranking.snapshot()
         let key = ResultsKey(
-            match: matchKey(q), visibilityRevision: visibility.revision,
+            match: matchKey(q, limit: 200), visibilityRevision: visibility.revision,
             favoritesRevision: favorites.revision, hotKeysRevision: hotKeys.revision,
             showsSuggestions: showsSuggestions, minute: Int(usage.now.timeIntervalSince1970 / 60))
         return resultsMemo.value(for: key) {
             // Filtering stays downstream of `matches` so that memo is never keyed on hidden state.
-            let visible = matches(q).filter(visibility.isVisible)
-            guard q.isEmpty else { return Results(entries: visible) }
+            let matched = searchResults(q)
+            let visible = matched.entries.filter(visibility.isVisible)
+            guard q.isEmpty else {
+                return Results(entries: visible, showSections: matched.showSections)
+            }
             let split = favorites.ordered(visible)
             let suggested =
                 showsSuggestions ? suggestions(from: split.rest, usage: usage, hotKeys: hotKeys) : []
@@ -711,6 +743,7 @@ final class AppIndex {
             let meetings = rest.filter { $0.kind == .meeting }
             return Results(
                 entries: split.favorites + meetings + suggested + rest.filter { $0.kind != .meeting },
+                showSections: true,
                 favoriteCount: split.favorites.count, meetingCount: meetings.count,
                 suggestionCount: suggested.count)
         }
@@ -718,9 +751,9 @@ final class AppIndex {
 
     private var sensitivity: SearchSensitivity { settings?.rootSearchSensitivity ?? .default }
 
-    private func matchKey(_ query: String) -> MatchKey {
+    private func matchKey(_ query: String, limit: Int) -> MatchKey {
         MatchKey(
-            query: query, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
+            query: query, limit: limit, entriesRevision: entriesRevision, rankingRevision: ranking.revision,
             aliasRevision: aliases.revision, sensitivity: sensitivity)
     }
 
