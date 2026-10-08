@@ -771,14 +771,12 @@ Launch contexts also carry JSON `props.launchContext`.
 
 Measured against the 37 extensions installed in a real Raycast on the development machine: **32
 extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
-`Scripts/run-tests.sh ext-test` reproduce that measurement. The three OAuth-dependent extensions
-excluded by that run remain unsupported.
+`Scripts/run-tests.sh ext-test` reproduce that measurement.
 
 ## What isn't supported yet
 
 | Gap                                                          | Why                                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`OAuth`** | Extension OAuth authentication is not provided. Extensions that depend on this API cannot authenticate. |
 | **`AI`, `BrowserExtension`, `WindowManagement`**             | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason.                                                                                                                                                                                                                                     |
 | **A WebSocket to a host with a certificate macOS distrusts** | `ws`'s `rejectUnauthorized: false` is ignored — URLSession validates the chain either way.                                                                                                                                                                                                                                                   |
 | **Aborting a `fetch` already in flight**                     | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |

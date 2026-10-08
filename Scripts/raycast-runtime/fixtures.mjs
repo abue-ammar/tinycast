@@ -724,7 +724,6 @@ export default async function Command() {
   await Clipboard.copy("from no-view");
   await showHUD("done");
   globalThis.__ranNoView = true;
-  globalThis.__hasOAuth = Object.hasOwn(require("@raycast/api"), "OAuth");
 }
 `;
 
@@ -1192,7 +1191,6 @@ export async function runFixtures() {
   await run("no-view command", noViewSource, "no-view", async (harness) => {
     check("ran to completion", harness.state.finished === true);
     check("ran the body", harness.call("globalThis.__ranNoView") === true);
-    check("does not export OAuth", harness.call("globalThis.__hasOAuth") === false);
     check(
       "used the clipboard and HUD host calls",
       harness.state.hostCalls.includes("clipboard.copy") && harness.state.hostCalls.includes("feedback.showHUD"),

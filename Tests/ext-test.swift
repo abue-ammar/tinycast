@@ -1332,15 +1332,13 @@ struct ExtensionTests {
                 const api = require("@raycast/api");
                 module.exports.default = async function () {
                   await api.showHUD("done");
-                  await api.showHUD(String(Object.hasOwn(api, "OAuth")));
                 };
                 """,
             file: URL(fileURLWithPath: "/tmp/headless.js"), mode: .noView,
             context: launchContext(mode: .noView))
         await settle()
         check("no-view command finished", headlessRecorder.finished, headlessRecorder.failures.joined())
-        check("no-view HUD reached the host", headlessHost.huds.first == "done")
-        check("runtime does not export OAuth", headlessHost.huds == ["done", "false"])
+        check("no-view HUD reached the host", headlessHost.huds == ["done"])
         await headless.stop(session: "s2")
 
         // A throwing command surfaces its error rather than taking the runtime down.

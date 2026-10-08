@@ -64,14 +64,16 @@ function collectEnums(source) {
 const publicPath = (path) => path.replace(/_\d+(\.|$)/g, "$1");
 
 const { enums: rawEnums, aliases } = collectEnums(dts);
+const supportedNamespaces = new Set(["Alert", "Image", "Toast", "WindowManagement"]);
 const enums = new Map();
 for (const [path, members] of rawEnums) {
   if (!members.length) continue;
   const clean = publicPath(path);
-  if (clean.startsWith("OAuth.")) continue;
+  if (clean.includes(".") && !supportedNamespaces.has(clean.split(".")[0])) continue;
   if (!enums.has(clean)) enums.set(clean, members);
 }
 for (const [path, target] of aliases) {
+  if (!supportedNamespaces.has(publicPath(path).split(".")[0])) continue;
   const members = enums.get(publicPath(target));
   if (members && !enums.has(path)) enums.set(path, members);
 }

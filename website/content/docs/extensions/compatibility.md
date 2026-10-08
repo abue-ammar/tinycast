@@ -9,9 +9,6 @@ We tested Tinycast against the 37 extensions installed in Raycast on the develop
 
 **32 of 37 extensions, and 114 of 147 view commands, open and render.**
 
-These numbers come from that test, which excluded extensions requiring OAuth authentication.
-That API is unsupported.
-
 ## Supported
 
 **Components.** `List` and `Grid` with sections, empty views, item details and search bar dropdowns.
@@ -53,7 +50,6 @@ reopens the palette, since passing it on would open Raycast itself.
 
 | Gap                                              | Why                                                                                       |
 | ------------------------------------------------ | ----------------------------------------------------------------------------------------- |
-| **`OAuth`** | Extension OAuth authentication is not provided. Extensions that depend on this API cannot authenticate. |
 | **`AI`, `BrowserExtension`, `WindowManagement`** | These are Raycast services with no local equivalent. Using one fails with a clear message |
 | **WebSocket**                                    | Not available yet                                                                         |
 | **Canceling a `fetch` in progress**              | The caller gets its `AbortError`, but the request still finishes in the background        |

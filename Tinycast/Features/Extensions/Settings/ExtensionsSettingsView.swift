@@ -104,7 +104,7 @@ struct ExtensionsSettingsView: View {
             }
             SettingsRow(
                 title: "What doesn't, yet",
-                subtitle: "OAuth authentication, and Raycast's AI, browser and window services.",
+                subtitle: "Raycast's AI, browser and window services.",
                 subtitleLineLimit: 2
             ) {
                 ExtensionSettingsIcon(systemName: "xmark.circle")
