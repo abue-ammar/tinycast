@@ -124,6 +124,9 @@ enum WindowPlacementEngine {
         if let half = Half.of(input.command) {
             return halfPlacement(input, half: half, host: host, step: step)
         }
+        if input.command == .centerHalf {
+            return tilePlacement(centeredFractions(sizeCycle[step]), on: host, gap: gap)
+        }
         if let fractions = tileFractions(input.command) {
             return tilePlacement(fractions, on: host, gap: gap)
         }
@@ -335,8 +338,8 @@ enum WindowPlacementEngine {
         switch cycle {
         case .off: return 1
         case .sizes: return sizeCycle.count
-        // One display makes the display cycle a no-op rather than a left/right flip in place.
-        case .displays: return screens.count > 1 ? screens.count * 2 : 1
+        // Only an edge half has a strip slot; one display is a no-op, not an in-place flip.
+        case .displays: return screens.count > 1 && Half.of(command) != nil ? screens.count * 2 : 1
         }
     }
 
@@ -372,6 +375,13 @@ enum WindowPlacementEngine {
             y1: fractions.y1, gap: sanitizedGap(gap, in: screen.visibleFrame))
         return Placement(
             frame: frame, screenID: screen.id, anchor: fractions.anchor, resizes: true)
+    }
+
+    /// `width` of the screen at full height, centred: Center Half's shape at every cycle step.
+    private static func centeredFractions(_ width: CGFloat) -> Fractions {
+        Fractions(
+            x0: (1 - width) / 2, x1: (1 + width) / 2, y0: 0, y1: 1,
+            anchor: Anchor(horizontal: .center, vertical: .min))
     }
 
     /// Fractional bounds of a tile command at its base position, or `nil` if it isn't one.
@@ -415,9 +425,7 @@ enum WindowPlacementEngine {
 
         // Half the screen's area, so it reads as the family sibling of Center Third.
         case .centerHalf:
-            return Fractions(
-                x0: 0.25, x1: 0.75, y0: 0, y1: 1,
-                anchor: Anchor(horizontal: .center, vertical: .min))
+            return centeredFractions(0.5)
         case .centerTwoThirds:
             return Fractions(
                 x0: oneThird / 2, x1: 1 - oneThird / 2, y0: 0, y1: 1,

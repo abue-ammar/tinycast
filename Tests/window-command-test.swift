@@ -145,8 +145,8 @@ struct WindowCommandTests {
 
         let cycling = Set(commands.filter(\.cyclesOnRepeat).map(\.id))
         expect(
-            cycling == [.leftHalf, .rightHalf, .topHalf, .bottomHalf],
-            "only the four halves cycle on repeat")
+            cycling == [.leftHalf, .rightHalf, .topHalf, .bottomHalf, .centerHalf],
+            "only the five halves cycle on repeat")
         let moveOnly = Set(commands.filter { !$0.resizes }.map(\.id))
         expect(
             moveOnly == [.moveLeft, .moveRight, .moveUp, .moveDown],
@@ -277,7 +277,7 @@ struct WindowCommandTests {
             frame(.firstTwoThirds)!.union(frame(.lastThird)!) == mainScreen.visibleFrame,
             "first two thirds and last third partition the screen")
 
-        // Size cycling: halves only, ½ → ⅓ → ⅔, wrapping.
+        // Size cycling: the five halves only, ½ → ⅓ → ⅔, wrapping.
         expectRect(
             frame(.leftHalf, step: 1, cycle: .sizes)!, frame(.firstThird)!,
             "left half step 1 is a third")
@@ -307,6 +307,18 @@ struct WindowCommandTests {
             frame(.bottomHalf, step: 2, cycle: .sizes)!,
             CGRect(x: 0, y: 300, width: 1440, height: 600),
             "bottom half step 2 is vertical two thirds")
+        expectRect(
+            frame(.centerHalf, step: 1, cycle: .sizes)!, frame(.centerThird)!,
+            "center half step 1 is the center third")
+        expectRect(
+            frame(.centerHalf, step: 2, cycle: .sizes)!, frame(.centerTwoThirds)!,
+            "center half step 2 is the center two thirds")
+        expectRect(
+            frame(.centerHalf, step: 3, cycle: .sizes)!, frame(.centerHalf)!,
+            "center half step 3 wraps to the half")
+        expectRect(
+            frame(.centerHalf, gap: 10, step: 1, cycle: .sizes)!,
+            frame(.centerThird, gap: 10)!, "center half step 1 shares the center third's gaps")
 
         // A step handed to a command that doesn't cycle must be ignored outright.
         for step in 0...5 {
@@ -710,6 +722,8 @@ struct WindowCommandTests {
         expect(length(.leftHalf, .sizes, both) == 3, "the size cycle is three steps")
         expect(length(.leftHalf, .displays, both) == 4, "two displays give four slots")
         expect(length(.maximize, .displays, both) == 1, "a non-cycling command never cycles")
+        expect(length(.centerHalf, .sizes, both) == 3, "center half cycles sizes")
+        expect(length(.centerHalf, .displays, both) == 1, "center half has no strip slot to walk")
         expect(
             length(.leftHalf, .displays) == 1,
             "one display makes the display leg a no-op")
@@ -755,6 +769,13 @@ struct WindowCommandTests {
                 frame(.leftHalf, window: onLeft, step: step, cycle: .sizes, allScreens: both)!,
                 frame(.leftHalf, on: left, step: step, cycle: .sizes)!,
                 "the size cycle ignores the other display at step \(step)")
+        }
+
+        // Center Half hugs no edge, so the display cycle leaves it centred on its own display.
+        for step in 0..<4 {
+            expectRect(
+                frame(.centerHalf, window: onLeft, step: step, cycle: .displays, allScreens: both)!,
+                frame(.centerHalf, on: left)!, "center half ignores the display cycle at step \(step)")
         }
 
         // Real presses: from the second one on, the window sits on a display it was just moved to.

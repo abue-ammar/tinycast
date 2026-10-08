@@ -66,14 +66,15 @@ area already excludes the menu bar, the Dock and the notch.
 
 ## Cycling and Restore
 
-**Cycling** only applies to the four halves, and it's off by default. With cycling off, pressing
-Left Half again leaves the window where it is. The two cycling modes work like this:
+**Cycling** only applies to the four halves and Center Half, and it's off by default. With cycling
+off, pressing Left Half again leaves the window where it is. The two cycling modes work like this:
 
 - **Cycle ½, ⅓ and ⅔** changes the width with each press, keeping the same side. Top Half and Bottom
-  Half cycle through heights instead.
+  Half cycle through heights instead. Center Half stays centered as its width changes.
 - **Cycle displays** moves the window through every half of every display, so one shortcut can reach
   your whole setup. With two displays, Left Half goes from Display 1 left → Display 2 right →
-  Display 2 left → Display 1 right, then starts over. With one display, it does nothing.
+  Display 2 left → Display 1 right, then starts over. With one display, it does nothing. Center Half
+  stays where it is in this mode.
 
 The cycle starts over when you move the window yourself (by more than 2 points), use a different
 command, move the window to a different display, or wait a while.

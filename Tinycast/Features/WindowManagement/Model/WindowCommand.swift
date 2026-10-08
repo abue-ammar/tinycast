@@ -113,7 +113,7 @@ enum WindowCommandCatalog {
     }
 
     static let cyclesOnRepeat: Set<WindowCommand.ID> = [
-        .leftHalf, .rightHalf, .topHalf, .bottomHalf
+        .leftHalf, .rightHalf, .topHalf, .bottomHalf, .centerHalf
     ]
 
     /// Nudges reposition without ever touching the size.
