@@ -121,6 +121,10 @@ struct CalendarTests {
                 .absoluteString == "https://whereby.com/acme",
             "a newline ends the URL")
         expect(
+            MeetingLink.detect(in: "line one\r\nhttps://whereby.com/acme\r\nline three")?.url
+                .absoluteString == "https://whereby.com/acme",
+            "a CRLF line break ends the URL")
+        expect(
             MeetingLink.detect(in: "HTTPS://WHEREBY.COM/Acme")?.provider == .whereby,
             "the scheme and host match case-insensitively")
     }
