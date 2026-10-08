@@ -775,6 +775,13 @@ struct CalcTests {
         expectDisplay("1kUSD to EUR", "920.00 EUR")
         expectDisplay("£50 in dollars", "63.29 USD")
         expectDisplay("$100 to yen", "15,700.00 JPY")
+        // An `x`-led code after an amount stays a word, never `400K × of`
+        expectDisplay("400K xof in €", "609.80 EUR")
+        expectDisplay("400k XOF to €", "609.80 EUR")
+        expectBadges("400K xof in €", source: "West African CFA Franc", target: "Euro")
+        expectDisplay("10 xof x 2", "20.00 XOF")
+        expectError("100 xrp to usd", "No exchange rate for XRP.")
+        expectError("1 xau to usd", "No exchange rate for XAU.")
         // Sub-cent cross-rates widen instead of collapsing to 0.00
         expectDisplay("1 jpy to usd", "0.006369 USD")
         // …and stay in plain notation past 1e-5, where "%g" would flip to "5.539e-05"
@@ -1860,7 +1867,7 @@ struct CalcTests {
         base: "USD",
         rates: [
             "USD": 1, "EUR": 0.92, "GBP": 0.79, "JPY": 157, "INR": 83.5, "CAD": 1.36,
-            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725, "SGD": 1.35,
+            "KRW": 1330, "IDR": 18053, "CHF": 0.81, "AED": 3.6725, "SGD": 1.35, "XOF": 603.48,
             "BTC": 1.0 / 60_000, "ETH": 1.0 / 2_000, "SOL": 1.0 / 100, "DOGE": 10
         ],
         fetchedAt: Date(timeIntervalSince1970: 1_785_000_000))

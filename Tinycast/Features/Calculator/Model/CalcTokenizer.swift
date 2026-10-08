@@ -214,13 +214,11 @@ enum CalcTokenizer {
         guard index > 0, !chars[index - 1].isLetter, let previous, endsOperand(previous) else {
             return false
         }
-        if index + 2 < chars.count,
-            ["o", "O"].contains(chars[index + 1]),
-            ["r", "R"].contains(chars[index + 2]),
-            index + 3 == chars.count || !chars[index + 3].isLetter
-        {
-            return false
-        }
+        var wordEnd = index + 1
+        while wordEnd < chars.count, chars[wordEnd].isLetter { wordEnd += 1 }
+        let word = String(String.UnicodeScalarView(chars[index..<wordEnd])).lowercased()
+        // `400 xof` is the CFA franc and `5 xor 3` the operator, never 400 × of or 5 × or 3.
+        if word == "xor" || CalcCurrency.byName[word] != nil { return false }
         let attached = !chars[index - 1].isWhitespace
         var next = index + 1
         while next < chars.count, chars[next].isWhitespace { next += 1 }
