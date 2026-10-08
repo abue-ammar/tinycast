@@ -6,11 +6,11 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import type { Slide } from "yet-another-react-lightbox";
 import { galleryItems, type GalleryItem } from "../data/gallery";
-import { cn } from "../lib/cn";
 import { Section } from "./ui/section";
 
 // The lightbox is ~30 KB gzipped and does nothing until a tile is clicked.
 const GalleryLightbox = dynamic(() => import("./gallery-lightbox"));
+const visibleItems = galleryItems.filter((item) => !item.hidden);
 
 // The grid thumbnail: an explicit thumb, else a video's poster, else the image.
 const tileImage = (item: GalleryItem) =>
@@ -80,38 +80,21 @@ export function Gallery() {
           Captured in Tinycast
           <span className="ml-auto hidden sm:inline">Click any to enlarge</span>
         </div>
-        {/* The tour video leads at double size and the last still runs double
-            width, so the stills fill every row without a gap. */}
         <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
-          {galleryItems.map((item, i) => {
-            const isLead = i === 0;
-            const isLast = i === galleryItems.length - 1;
+          {visibleItems.map((item, i) => {
             return (
               <button
                 key={`${item.title}-${i}`}
                 type="button"
                 onClick={() => open(i)}
-                className={cn(
-                  "group flex flex-col gap-2 text-left",
-                  isLead && "sm:col-span-2 lg:row-span-2",
-                  isLast && "sm:col-span-2",
-                )}
+                className="group flex flex-col gap-2 text-left"
               >
-                <figure
-                  className={cn(
-                    "relative aspect-video w-full overflow-hidden rounded-lg ring-1 ring-border/60 transition-shadow duration-200 group-hover:ring-border-strong",
-                    (isLead || isLast) && "lg:aspect-auto lg:flex-1",
-                  )}
-                >
+                <figure className="relative aspect-video w-full overflow-hidden rounded-lg ring-1 ring-border/60 transition-shadow duration-200 group-hover:ring-border-strong">
                   <Image
                     src={tileImage(item)}
                     alt={item.title}
                     fill
-                    sizes={
-                      isLead || isLast
-                        ? "(min-width: 640px) 50vw, 90vw"
-                        : "(min-width: 1024px) 25vw, (min-width: 640px) 45vw, 90vw"
-                    }
+                    sizes="(min-width: 1024px) 25vw, (min-width: 640px) 45vw, 90vw"
                     className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                   />
                   {item.type === "video" && (
@@ -137,7 +120,7 @@ export function Gallery() {
       {everOpened && (
         <GalleryLightbox
           index={index}
-          slides={galleryItems.map(toSlide)}
+          slides={visibleItems.map(toSlide)}
           close={() => setIndex(-1)}
         />
       )}

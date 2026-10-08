@@ -7,6 +7,7 @@
 import { site } from "./site";
 
 export type GalleryItem = {
+  hidden?: boolean;
   type: "image" | "video";
   // Full-size media shown in the lightbox (image src, or video file for clips).
   src: string;
@@ -22,6 +23,7 @@ export type GalleryItem = {
 
 export const galleryItems: GalleryItem[] = [
   {
+    hidden: true,
     type: "video",
     src: `${site.cdn}/tinycast-in-action.mp4`,
     poster: "/screenshot.png",
@@ -32,61 +34,78 @@ export const galleryItems: GalleryItem[] = [
     height: 1964,
   },
   {
-    type: "image",
-    src: "/calculator.png",
+    type: "video",
+    src: `${site.cdn}/calculator.mp4`,
+    poster: "/calculator.jpg",
     title: "Inline calculator",
     caption: "Answers math and converts units and currencies as you type.",
-    width: 2148,
-    height: 1302,
+    width: 3456,
+    height: 2234,
   },
   {
     type: "image",
-    src: "/clipboard.png",
+    src: "/clipboard-history.jpg",
     title: "Clipboard history",
     caption:
       "Search the text and images you've copied. History is stored only on your Mac.",
-    width: 2092,
-    height: 1268,
+    width: 3359,
+    height: 2171,
   },
   {
-    type: "image",
-    src: "/unlimited-clipboard-history.png",
-    title: "Keep history as long as you want",
-    caption: "Choose how long history is kept, from one day to forever.",
-    width: 2226,
-    height: 1604,
+    type: "video",
+    src: `${site.cdn}/dictation.mp4`,
+    poster: "/dictation.jpg",
+    title: "Dictation",
+    caption:
+      "Turn your voice into text in any app. Fast, private and fully on-device.",
+    width: 3456,
+    height: 2234,
   },
   {
-    type: "image",
-    src: "/emoji.png",
+    type: "video",
+    src: `${site.cdn}/emoji-and-symbols.mp4`,
+    poster: "/emoji-and-symbols.jpg",
     title: "Emoji & symbols",
     caption: "Search every emoji. The ones you use most show up first.",
-    width: 2106,
-    height: 1244,
+    width: 3456,
+    height: 2234,
   },
   {
-    type: "image",
-    src: "/per-app-hotkey.png",
-    title: "Per-app hotkeys",
+    type: "video",
+    src: `${site.cdn}/notes.mp4`,
+    poster: "/notes.jpg",
+    title: "Notes",
     caption:
-      "Give an app its own shortcut. Press it to bring the app forward, and again to hide it.",
-    width: 2212,
-    height: 1606,
+      "Capture ideas in Markdown. Keep your notes close, without breaking your flow.",
+    width: 3456,
+    height: 2234,
+  },
+  {
+    type: "video",
+    src: `${site.cdn}/quick-ai.mp4`,
+    poster: "/quick-ai.jpg",
+    title: "Quick AI",
+    caption:
+      "Ask your favorite AI. Get quick answers or open a full chat with history.",
+    width: 3456,
+    height: 2234,
+  },
+  {
+    type: "video",
+    src: `${site.cdn}/quick-actions.mp4`,
+    poster: "/quick-actions.jpg",
+    title: "Quick Actions",
+    caption:
+      "Rewrite, translate, summarize and more with AI. Create your own custom actions.",
+    width: 3456,
+    height: 2234,
   },
   {
     type: "image",
-    src: "/ram-usage.png",
+    src: "/activity-monitor.jpg",
     title: "Light on memory",
     caption: "Stays under 100 MB of memory, no matter how long it runs.",
-    width: 2558,
-    height: 1754,
-  },
-  {
-    type: "image",
-    src: "/backup-import-settings.png",
-    title: "Backup & import",
-    caption: "Export your setup to one file and restore it on any Mac.",
-    width: 2098,
-    height: 1600,
+    width: 3359,
+    height: 2171,
   },
 ];
