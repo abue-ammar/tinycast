@@ -744,8 +744,10 @@ struct RootPaletteView: View {
         .frame(height: metrics.size.headerHeight)
         .padding(.top, metrics.size.headerPadding)
         .frame(maxWidth: .infinity)
-        // Set after the show, so the field it names is focused rather than the search field.
-        .onChange(of: vm.pendingArgumentEntryID) { focusPendingArgument() }
+        // Next turn, once the show's `land()` and search refocus are done, so neither undoes it.
+        .onChange(of: vm.pendingArgumentEntryID) {
+            Task { @MainActor in focusPendingArgument() }
+        }
         .onChange(of: argumentFocused) { _, field in vm.noteEditingField(field != nil) }
         .onChange(of: quickAI.pendingAttachments.map(\.id)) { refreshAttachmentsMenu() }
     }

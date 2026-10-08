@@ -79,8 +79,9 @@ Where a reset leaves the highlight is the screen's to say too. Every reset — a
 new filter — goes through `RootPaletteView.land()`, which reads `landingSelection`, so handlers that
 fire in one update agree whatever order they run in. `onAppear` lands as well: the first show builds
 the view after `prepare` has run, so no change handler ever sees that reset. The landing is row 0 on
-every screen but the clipboard, which lands past its pins
-([clipboard.md](clipboard.md#pinned-entries)).
+every screen but two: the clipboard lands past its pins
+([clipboard.md](clipboard.md#pinned-entries)), and Search Quicklinks lands on the row a prompt names
+([quicklinks.md](quicklinks.md)).
 
 | Mode | Screen | Inner list |
 | --- | --- | --- |
@@ -210,9 +211,10 @@ The typed values live on `PaletteState.commandArguments`, keyed by
 `$1`–`$3` — and are cleared with the rest of the screen.
 `PaletteState.pendingArgumentEntryID` is how a *shortcut* reaches them: a quicklink opened with values
 still missing shows its own screen and names the row, and the header focuses that row's first empty
-field instead of the search field. A custom command has no screen of its own, so it also sets
-`argumentEntryID`, which lists that row alone in root search while the query is its name. Both are set
-**after** `showPalette`, since `prepare` clears them.
+field instead of the search field. The focus waits a turn, so every `land()` the show fired has
+already settled on that row and no search refocus can take it back. A custom command has no screen of
+its own, so it also sets `argumentEntryID`, which lists that row alone in root search while the query
+is its name. Both are set **after** `showPalette`, since `prepare` clears them.
 
 The flat `selection` index is the single source of truth for highlight / activation and **must always
 match the visible row order**, including the card at index 0 when present — the calculator's (see

@@ -128,9 +128,11 @@ the window the user was actually in.
 its values through `LauncherScreen.argumentValues(for:)` into the same funnel, so a filled row never
 takes a detour. **Only a shortcut whose values are still missing lands on Search Quicklinks**, on that
 row, with its first empty chip focused — carried across by `PaletteState.pendingArgumentEntryID` and
-`commandArguments`, both set after the show because `prepare` clears them. One argument surface, whether
-the row is reached from root search, from Search Quicklinks or from a hotkey. A ⌘↵ "open with default
-app" override survives that trip on `pendingDefaultAppOverride`, keyed by the quicklink it applies to.
+`commandArguments`, both set after the show because `prepare` clears them. The screen's
+`landingSelection` reads that ID, so the show's reset stays on the row instead of returning to the
+top. One argument surface, whether the row is reached from root search, from Search Quicklinks or from
+a hotkey. A ⌘↵ "open with default app" override survives that trip on `pendingDefaultAppOverride`,
+keyed by the quicklink it applies to.
 
 **A launcher fallback fills the first argument.** Declaring a placeholder is exactly what puts a
 quicklink in the `Use “…” with…` section (see [launcher.md](launcher.md#fallbacks));

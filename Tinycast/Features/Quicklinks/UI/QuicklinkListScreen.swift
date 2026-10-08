@@ -19,6 +19,12 @@ struct QuicklinkListScreen: PaletteScreen {
 
     var primaryActionTitle: String { "Open Quicklink" }
 
+    /// A prompt for one row opens on that row, so the show's reset can't move it back to the top.
+    var landingSelection: Int {
+        guard let pending = vm.pendingArgumentEntryID else { return 0 }
+        return rows.firstIndex { $0.entryID == pending } ?? 0
+    }
+
     private func quicklink(at selection: Int) -> Quicklink? {
         let rows = rows
         return rows.indices.contains(selection) ? rows[selection] : nil
