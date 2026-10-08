@@ -157,8 +157,9 @@ to come back before returning parked windows.
   `boundWindowRoomIDs` index, dispatched to `enterRoom(id:)`.
 - **Commands**: Switch Room and Create Room, owned by
   `SettingsTab.windowManagement` and gated with the feature.
-- **Settings**: `windowRoomsShowInLauncher` (on). Rooms and their shortcuts ride in settings
-  backups; learned minimum sizes and the ledger do not — one is a cache, the other this Mac's state.
+- **Settings**: `windowRoomsShowInLauncher` (on), which also dims each room row's alias field. Rooms
+  and their shortcuts ride in settings backups; learned minimum sizes and the ledger do not — one is
+  a cache, the other this Mac's state.
   The [settings file](settings-file.md) carries rooms without their window numbers or entry times, and
   an edit made there keeps both through `Room.keepingRuntime(of:)`.
 

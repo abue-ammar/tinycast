@@ -204,7 +204,8 @@ also removes a whole failure class and any run-time dependency on `QuicklinkStor
 - **Settings** — one new key, `windowLayoutsShowInLauncher` (on). Its own flag rather than sharing
   `windowManagementShowInLauncher`: 34 command rows and three named layouts are different amounts of
   launcher noise, and wanting the layouts without the commands is the likelier preference. Layouts
-  and their bindings ride in settings backups.
+  and their bindings ride in settings backups. A layout's row carries an alias field, dimmed with
+  this switch or the row's own launcher checkbox.
 - **Two commands** — `Create Window Layout` and `Create Layout from Current Windows`, both dropped
   from the launcher with the feature.
 

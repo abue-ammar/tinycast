@@ -434,7 +434,7 @@ enum SettingsSearchCatalog {
             keywords: ["rectangle", "magnet", "spectacle", "defaults", "import", "shortcuts"]),
         .init(
             group: .windowManagementOptions, "Window commands",
-            keywords: ["shortcut", "left half", "maximize", "center"]),
+            keywords: ["shortcut", "alias", "left half", "maximize", "center"]),
         .init(
             group: .windowManagementLayoutCommands, "Layout and room commands",
             keywords: [
@@ -444,7 +444,7 @@ enum SettingsSearchCatalog {
             group: .windowManagementLayouts, "Window Layouts",
             keywords: [
                 "layout", "arrangement", "workspace", "preset", "restore windows",
-                "multi display", "monitor"
+                "multi display", "monitor", "alias"
             ]),
         .init(
             .windowManagementLayouts, "Show layouts in launcher",
@@ -459,7 +459,7 @@ enum SettingsSearchCatalog {
             group: .windowManagementRooms, "Rooms",
             keywords: [
                 "room", "project", "workspace", "tile", "focus", "columns", "grid", "stack",
-                "hide other apps", "switch project"
+                "hide other apps", "switch project", "alias"
             ]),
         .init(
             .windowManagementRooms, "Show rooms in launcher",
@@ -469,7 +469,7 @@ enum SettingsSearchCatalog {
             keywords: ["add", "create", "project", "windows"]),
         .init(
             group: .windowManagementCustomSizes, "Custom Sizes",
-            keywords: ["custom", "size", "resize", "dimensions", "pixels", "points", "percent"]),
+            keywords: ["custom", "size", "resize", "dimensions", "pixels", "points", "percent", "alias"]),
         .init(
             .windowManagementCustomSizes, "New Custom Size",
             keywords: ["add", "create", "resize", "window size"])

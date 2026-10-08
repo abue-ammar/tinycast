@@ -376,9 +376,10 @@ and every shortcut stays editable afterwards.
   (0) and `windowCycle` (`.off`). All four ride in settings backups: unlike `snippetsEnabled` they
   grant no permission class of their own.
 - **Per-command visibility** reuses `VisibilityStore` as-is; clearing a recorded shortcut is how a
-  hotkey is disabled, so there is no separate per-command enabled flag. Window commands deliberately
-  get **no** launcher-category pane of their own — they are managed inside Settings › Window
-  Management, the same call already made for snippets.
+  hotkey is disabled, so there is no separate per-command enabled flag. Each command and custom-size
+  row carries an alias field, dimmed while its entry is hidden from the launcher. Window commands
+  deliberately get **no** launcher-category pane of their own — they are managed inside Settings ›
+  Window Management, the same call already made for snippets.
 
 ## Testing
 

@@ -18,7 +18,7 @@ struct RoomsSection: View {
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(store.rooms) { room in
-                    RoomSettingsRow(room: room)
+                    RoomSettingsRow(room: room, showsInLauncher: settings.windowRoomsShowInLauncher)
                 }
             }
 
@@ -33,9 +33,10 @@ struct RoomsSection: View {
     }
 }
 
-/// One room's shortcut, launcher checkbox and actions, shaped like the layout row.
+/// One room's alias, shortcut, launcher checkbox and actions, shaped like the layout row.
 private struct RoomSettingsRow: View {
     let room: Room
+    let showsInLauncher: Bool
 
     @Environment(RoomCoordinator.self) private var coordinator
     @Environment(VisibilityStore.self) private var visibility
@@ -45,9 +46,14 @@ private struct RoomSettingsRow: View {
     }
 
     var body: some View {
+        let entry = AppEntry(room)
+        let isVisible = visibility.isItemVisible(entry)
         SettingsRow(title: room.name, subtitle: subtitle) {
             SymbolImage(name: Room.sfSymbol, size: 13)
         } trailing: {
+            AliasField(entry: entry)
+                .settingsEnabled(showsInLauncher && isVisible)
+
             ShortcutRecorder(action: .windowRoom(id: room.id))
 
             Button {
@@ -78,17 +84,13 @@ private struct RoomSettingsRow: View {
             .help("Delete")
             .accessibilityLabel("Delete \(room.name)")
 
-            Toggle("", isOn: visibilityBinding)
-                .labelsHidden()
-                .toggleStyle(.checkbox)
-                .launcherVisibilityHelp()
-                .accessibilityLabel("Show \(room.name) in launcher")
+            Toggle(
+                "", isOn: Binding(get: { isVisible }, set: { visibility.setItemVisible($0, for: entry) })
+            )
+            .labelsHidden()
+            .toggleStyle(.checkbox)
+            .launcherVisibilityHelp()
+            .accessibilityLabel("Show \(room.name) in launcher")
         }
-    }
-
-    private var visibilityBinding: Binding<Bool> {
-        Binding(
-            get: { visibility.isItemVisible(AppEntry(room)) },
-            set: { visibility.setItemVisible($0, for: AppEntry(room)) })
     }
 }
