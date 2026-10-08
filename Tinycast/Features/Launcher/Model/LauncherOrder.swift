@@ -84,27 +84,6 @@ enum LauncherOrder {
             .map(\.0)
     }
 
-    static func includingCategories<Item: Identifiable, Kind: Hashable>(
-        _ items: [Item], ranked: [Item], kind: (Item) -> Kind,
-        includes: (Kind) -> Bool, preservesOrder: (Kind) -> Bool, signals: (Item) -> Signals
-    ) -> [Item] {
-        let matched = Set(ranked.map(\.id))
-        let additional = items.filter { includes(kind($0)) && !matched.contains($0.id) }
-        let listed = byUsage(additional, signals: signals)
-        var sections = Dictionary(grouping: ranked + listed, by: kind)
-        let preserved = Dictionary(
-            grouping: items.filter { includes(kind($0)) && preservesOrder(kind($0)) }, by: kind)
-        sections.merge(preserved) { _, original in original }
-        var entries: [Item] = []
-        entries.reserveCapacity(ranked.count + listed.count)
-        for item in items {
-            if let section = sections.removeValue(forKey: kind(item)) {
-                entries.append(contentsOf: section)
-            }
-        }
-        return entries
-    }
-
     // MARK: - One entry's match
 
     private struct Candidate {

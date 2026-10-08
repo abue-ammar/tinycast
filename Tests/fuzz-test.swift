@@ -165,10 +165,8 @@ struct FuzzTest {
 
     // MARK: - The comparator, rule by rule
 
-    struct Item: Identifiable {
+    struct Item {
         let name: String
-        var id: String { name }
-        var kind = "application"
         var alternates: [String] = []
         var subtitle: String?
         var keywords: [String] = []
@@ -343,51 +341,6 @@ struct FuzzTest {
         check(
             "canonical category names share the launcher fold",
             LauncherOrder.CategoryQuery(" \nＳＹＳＴＥＭ\tSettings ").name == "system settings")
-
-        let items = [
-            Item(name: "Window Studio", priority: 4),
-            Item(name: "Window Helper", priority: 4),
-            Item(name: "Documents", kind: "layout"),
-            Item(name: "Left Half", kind: "window", frecency: 1),
-            Item(name: "Center", kind: "window", frecency: 200),
-            Item(name: "Window Width", kind: "window"),
-            Item(name: "Switch Windows", kind: "command"),
-            Item(name: "Search Files", kind: "command", alias: "window", frecency: 300)
-        ]
-        let namesByKind = [
-            "window": FuzzyMatch.Candidate("Window Management"),
-            "layout": FuzzyMatch.Candidate("Window Layouts")
-        ]
-        let query = LauncherOrder.CategoryQuery("window")
-        func listed(_ items: [Item], limit: Int = 200) -> [String] {
-            let ranked = LauncherOrder.ranked(
-                items, query: LauncherOrder.Query("window"), sensitivity: .medium, limit: limit,
-                profile: \.profile, signals: \.signals)
-            return LauncherOrder.includingCategories(
-                items, ranked: ranked, kind: \.kind,
-                includes: { namesByKind[$0].map(query.matches) ?? false },
-                preservesOrder: { $0 == "meeting" }, signals: \.signals
-            ).map(\.name)
-        }
-        check(
-            "window includes commands without window in their names and keeps ordinary matches",
-            listed(items) == [
-                "Window Helper", "Window Studio", "Documents", "Window Width", "Center", "Left Half",
-                "Search Files", "Switch Windows"
-            ], "got \(listed(items))")
-        check(
-            "a category-only item is included even when ordinary results reach the limit",
-            listed(items, limit: 1) == ["Documents", "Center", "Left Half", "Window Width", "Search Files"])
-        let merged = listed(items)
-        check("category merging never repeats a ranked row", Set(merged).count == merged.count)
-        let meetings = [
-            Item(name: "Soon", kind: "meeting", frecency: 1),
-            Item(name: "Later", kind: "meeting", frecency: 300)
-        ]
-        let agenda = LauncherOrder.includingCategories(
-            meetings, ranked: [meetings[1]], kind: \.kind, includes: { $0 == "meeting" },
-            preservesOrder: { $0 == "meeting" }, signals: \.signals)
-        check("category expansion keeps meetings chronological", agenda.map(\.name) == ["Soon", "Later"])
     }
 
     // MARK: - A dense index

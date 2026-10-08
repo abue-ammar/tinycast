@@ -261,12 +261,13 @@ the category. `win` and `window` include Window Management and Window Layouts; `
 full-width text and pasted whitespace behave alike. Mid-word substrings and fuzzy subsequences
 never expand a category; short queries retain ordinary search ranking.
 
-Partial category queries retain all ordinary ranked matches, including apps and aliases. Each section
-starts with those matches in relevance order, followed by its remaining category entries in usage
-order. Meetings retain agenda order. The sections follow publication order, so visible rows and flat
-selection stay aligned. `AppIndex.Results.showSections` carries that ordering decision to the view.
-Visibility still applies downstream. The result limit bounds ordinary matches, while whole categories
-remain uncapped, as they are for an empty query.
+A partial category query never reorders the ordinary search. Its ranked matches, including apps and
+aliases, lead under Results in relevance order, so the best match keeps the row Return opens. The
+category's remaining entries follow under their section headers in usage order, and meetings retain
+agenda order. Those sections follow publication order, so visible rows and flat selection stay aligned;
+`AppIndex.Results.matchCount` tells the view where the ranked rows end. Visibility still applies
+downstream. The result limit bounds ordinary matches, while whole categories remain uncapped, as they
+are for an empty query.
 
 Category queries show headers without pinning favorites or handing out their ⌘-digit slots. Opening
 a row records its visit; the query is learned only when it did not match that row's category, so
@@ -459,8 +460,8 @@ never suggested, however often they are opened:
    index, so it is never offered.
 
 A suggested entry leaves its kind section below, so no row appears twice. `AppIndex.Results` carries
-`favoriteCount`, `meetingCount` and `suggestionCount`, which `LauncherScreen` hands to `LauncherList`
-for its three leading headers. **Show suggestions** in Settings › General › Search turns the section
+`favoriteCount`, `meetingCount`, `suggestionCount` and, for a typed query, `matchCount`, which
+`LauncherScreen` hands to `LauncherList` for its leading headers. **Show suggestions** in Settings › General › Search turns the section
 off (`launcherShowsSuggestions`, carried by a settings backup). `HotKeyManager.revision` is part of
 `AppIndex`'s results key, because binding a shortcut takes an entry out of the section.
 

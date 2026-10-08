@@ -343,13 +343,13 @@ final class AppIndex {
 
     private var snippetEntries: [AppEntry] = []
 
-    /// The launcher's rows in order, with the size of each pinned section at their head.
+    /// The launcher's rows in order, with the size of each leading section at their head.
     struct Results: Equatable {
         var entries: [AppEntry] = []
-        var showSections = false
         var favoriteCount = 0
         var meetingCount = 0
         var suggestionCount = 0
+        var matchCount = 0
     }
 
     private struct MatchKey: Equatable {
@@ -685,27 +685,19 @@ final class AppIndex {
         searchResults(query, limit: limit).entries
     }
 
+    /// Ranked matches lead so Return still opens the best one; a started category only appends.
     private func searchResults(_ query: String, limit: Int = 200) -> Results {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !q.isEmpty else { return Results(entries: apps, showSections: true) }
+        guard !q.isEmpty else { return Results(entries: apps) }
         return matchMemo.value(for: matchKey(q, limit: limit)) {
-            let categoryQuery = LauncherOrder.CategoryQuery(q)
-            if let kind = AppEntry.Kind.named(by: categoryQuery) {
-                return Results(
-                    entries: categoryListing(kind, query: categoryQuery.name), showSections: true)
+            let category = LauncherOrder.CategoryQuery(q)
+            if let kind = AppEntry.Kind.named(by: category) {
+                return Results(entries: categoryListing(kind, query: category.name))
             }
             let ranked = rank(q, limit: limit)
-            let kinds = AppEntry.Kind.matching(by: categoryQuery)
-            guard !kinds.isEmpty else { return Results(entries: ranked) }
-            return Results(entries: categoryMatches(kinds, ranked: ranked), showSections: true)
+            let listed = categoryRemainder(AppEntry.Kind.matching(by: category), excluding: ranked)
+            return Results(entries: ranked + listed, matchCount: ranked.count)
         }
-    }
-
-    private func categoryMatches(_ kinds: Set<AppEntry.Kind>, ranked: [AppEntry]) -> [AppEntry] {
-        let usage = ranking.snapshot()
-        return LauncherOrder.includingCategories(
-            apps, ranked: ranked, kind: \.kind, includes: kinds.contains,
-            preservesOrder: { $0 == .meeting }, signals: { self.signals(for: $0, usage: usage) })
     }
 
     /// Slice order is section order, so filtering keeps sections and selection aligned.
@@ -713,6 +705,15 @@ final class AppIndex {
         let listed = apps.filter {
             $0.kind == kind || FuzzyMatch.normalized($0.name) == query
         }
+        return byUsage(listed, usage: ranking.snapshot())
+    }
+
+    private func categoryRemainder(
+        _ kinds: Set<AppEntry.Kind>, excluding ranked: [AppEntry]
+    ) -> [AppEntry] {
+        guard !kinds.isEmpty else { return [] }
+        let matched = Set(ranked.map(\.id))
+        let listed = apps.filter { kinds.contains($0.kind) && !matched.contains($0.id) }
         return byUsage(listed, usage: ranking.snapshot())
     }
 
@@ -732,7 +733,8 @@ final class AppIndex {
             let matched = searchResults(q)
             let visible = matched.entries.filter(visibility.isVisible)
             guard q.isEmpty else {
-                return Results(entries: visible, showSections: matched.showSections)
+                let matchCount = matched.entries.prefix(matched.matchCount).count(where: visibility.isVisible)
+                return Results(entries: visible, matchCount: matchCount)
             }
             let split = favorites.ordered(visible)
             let suggested =
@@ -743,7 +745,6 @@ final class AppIndex {
             let meetings = rest.filter { $0.kind == .meeting }
             return Results(
                 entries: split.favorites + meetings + suggested + rest.filter { $0.kind != .meeting },
-                showSections: true,
                 favoriteCount: split.favorites.count, meetingCount: meetings.count,
                 suggestionCount: suggested.count)
         }
