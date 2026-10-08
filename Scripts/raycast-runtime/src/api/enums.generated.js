@@ -567,14 +567,6 @@ export const nestedEnums = {
       "RoundedRectangle": "roundedRectangle",
     }),
   },
-  "OAuth": {
-    "RedirectMethod": Object.freeze({
-      "Web": "web",
-      "App": "app",
-      "AppURI": "appURI",
-      "ClientIdMetadataDocument": "clientIdMetadataDocument",
-    }),
-  },
   "Toast": {
     "Style": Object.freeze({
       "Success": "SUCCESS",

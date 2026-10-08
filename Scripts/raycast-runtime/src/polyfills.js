@@ -433,7 +433,6 @@ function bodyToBytes(body) {
   return utf8Encode(String(body));
 }
 
-// Fetch spec: a body implies a Content-Type, which an OAuth token POST relies on rather than sets.
 function bodyContentType(body) {
   if (typeof body === "string") return "text/plain;charset=UTF-8";
   if (body instanceof URLSearchParams) return "application/x-www-form-urlencoded;charset=UTF-8";

@@ -13,7 +13,7 @@ body:
         - Raycast AI — `AI.ask`, AI commands, `tools/` AI extensions
         - the Raycast browser extension (`BrowserExtension`)
         - Raycast's `WindowManagement` service
-        - Raycast's OAuth proxy, `oauth.raycast.com`
+        - OAuth authentication (`OAuth`)
         - Raycast Pro, cloud sync, accounts or teams
         - an OS permission or entitlement Tinycast doesn't hold
         - Raycast-internal APIs, private modules and unpublished behaviour

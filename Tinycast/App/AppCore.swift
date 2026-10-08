@@ -467,16 +467,6 @@ final class AppCore {
     }
 
     func handleOpenURL(_ url: URL) {
-        switch ExtensionOAuthSession.handleCallbackURL(url) {
-        case .delivered:
-            paletteCoordinator.showPalette(mode: .extensionCommand, restoreAnyMode: true)
-            return
-        case .expired:
-            showMessage("Sign-in expired — run the command again", tone: .danger)
-            return
-        case .ignored:
-            break
-        }
         guard ExtensionDeepLink.claims(url) else { return }
         guard let route = ExtensionDeepLink.route(url: url) else {
             paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)

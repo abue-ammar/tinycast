@@ -258,9 +258,6 @@ final class ExtensionCoordinator {
     /// True while the palette is on screen — a toast has somewhere to render only then.
     var isPaletteVisible: Bool { paletteCoordinator.isVisible }
 
-    /// True while an OAuth authorization flow is actively awaiting callback.
-    var isAuthorizing: Bool { extensions.isAuthorizing }
-
     func closeMainWindow() {
         paletteCoordinator.hidePalette(restoreFocus: false)
     }

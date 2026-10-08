@@ -86,8 +86,7 @@ Mac_:
 
 Everything is stored in Tinycast's Application Support folder, and **uninstalling an extension
 removes all of it**: the extension, its storage and cache, its preferences, its support folder, its
-sign-ins in the Keychain, its icon choice, and its command shortcuts, favorites, aliases and learned
-ranking.
+icon choice, and its command shortcuts, favorites, aliases and learned ranking.
 
 **Settings → Extensions → Storage** shows the size of leftover build folders, like those a crashed
 install can leave behind, and offers to remove them. It works even while extensions are off, and

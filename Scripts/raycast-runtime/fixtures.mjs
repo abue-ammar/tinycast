@@ -357,8 +357,6 @@ export default async function Command() {
 }
 `;
 
-// A URLSearchParams body sets no header of its own, so the spec's derived Content-Type is the only
-// thing an OAuth token endpoint has: without it Google reads the form body as JSON and rejects it.
 const contentTypeSource = `
 export default async function Command() {
   const url = "https://example.test/token";
@@ -719,82 +717,6 @@ export default async function Command() {
 }
 `;
 
-const oauthSource = `
-import { OAuth } from "@raycast/api";
-
-export default async function Command() {
-  const client = new OAuth.PKCEClient({
-    redirectMethod: OAuth.RedirectMethod.Web,
-    providerName: "GitHub",
-    providerId: "github",
-    description: "Connect your GitHub account",
-  });
-
-  const req = await client.authorizationRequest({
-    endpoint: "https://github.com/login/oauth/authorize",
-    clientId: "client-123",
-    scope: "repo read:user",
-  });
-
-  const authRes = await client.authorize(req);
-
-  const tokenSet = new OAuth.TokenSet({
-    accessToken: "gho_secret123",
-    refreshToken: "ghr_secret456",
-    expiresIn: 3600,
-  });
-
-  await client.setTokens(tokenSet);
-  const retrieved = await client.getTokens();
-
-  const expiredToken = new OAuth.TokenSet({
-    accessToken: "expired_token",
-    expiresIn: 20,
-    updatedAt: new Date(Date.now() - 30000),
-  });
-
-  globalThis.__oauthTest = {
-    verifierLen: req.codeVerifier.length,
-    challengeLen: req.codeChallenge.length,
-    stateLen: req.state.length,
-    url: req.toURL(),
-    authCode: authRes.authorizationCode,
-    retrievedAccessToken: retrieved?.accessToken,
-    retrievedRefreshToken: retrieved?.refreshToken,
-    isExpiredLive: tokenSet.isExpired(),
-    isExpiredOld: expiredToken.isExpired(),
-  };
-
-  await client.removeTokens();
-  const afterRemove = await client.getTokens();
-  globalThis.__oauthTest.afterRemove = afterRemove;
-}
-`;
-
-// `@raycast/utils` stores the provider's raw token response, which carries no timestamp, so the
-// stored time is the only thing `isExpired()` can count from; without it a token never expired.
-const tokenExpirySource = `
-import { OAuth } from "@raycast/api";
-
-export default async function Command() {
-  const client = new OAuth.PKCEClient({ redirectMethod: OAuth.RedirectMethod.Web, providerName: "Google", providerId: "google" });
-  await client.setTokens({ access_token: "ya29.a", refresh_token: "1//r", expires_in: 3599, token_type: "Bearer" });
-  const fresh = await client.getTokens();
-  const realNow = Date.now;
-  Date.now = () => realNow() + 2 * 3600 * 1000;
-  const laterExpired = (await client.getTokens()).isExpired();
-  Date.now = realNow;
-  const unstamped = new OAuth.PKCEClient({ redirectMethod: OAuth.RedirectMethod.Web, providerName: "Old", providerId: "unstamped" });
-  const legacy = await unstamped.getTokens();
-  globalThis.__expiry = {
-    freshExpired: fresh.isExpired(),
-    freshStampedNow: fresh.updatedAt instanceof Date && Math.abs(fresh.updatedAt.getTime() - realNow()) < 5000,
-    laterExpired,
-    unstampedExpired: legacy.isExpired(),
-  };
-}
-`;
-
 const noViewSource = `
 import { Clipboard, showHUD } from "@raycast/api";
 
@@ -802,6 +724,7 @@ export default async function Command() {
   await Clipboard.copy("from no-view");
   await showHUD("done");
   globalThis.__ranNoView = true;
+  globalThis.__hasOAuth = Object.hasOwn(require("@raycast/api"), "OAuth");
 }
 `;
 
@@ -1266,43 +1189,10 @@ export async function runFixtures() {
     },
   );
 
-  await run("OAuth PKCEClient and TokenSet", oauthSource, "no-view", async (harness) => {
-    const result = harness.call("globalThis.__oauthTest");
-    check("generates PKCE codeVerifier and challenge", result?.verifierLen >= 43 && result?.challengeLen >= 43, JSON.stringify(result));
-    check("generates OAuth state", result?.stateLen >= 20);
-    check("builds correct authorization URL with redirect_uri", new URL(result.url).searchParams.get("redirect_uri") === "https://raycast.com/redirect?packageName=Extension" && new URL(result.url).searchParams.get("client_id") === "client-123");
-    check("authorize returns authorization code", result?.authCode === "auth-code-12345");
-    check("stores and retrieves TokenSet with tokens", result?.retrievedAccessToken === "gho_secret123" && result?.retrievedRefreshToken === "ghr_secret456");
-    check("TokenSet isExpired calculation works", result?.isExpiredLive === false && result?.isExpiredOld === true);
-    check("removeTokens cleans up tokens", result?.afterRemove === undefined || result?.afterRemove === null);
-  });
-
-  const storedTokens = new Map([["unstamped", JSON.stringify({ access_token: "ya29.old", expires_in: 3599 })]]);
-  await run(
-    "a stored token expires from the time it was stored",
-    tokenExpirySource,
-    "no-view",
-    async (harness) => {
-      const result = harness.call("globalThis.__expiry");
-      check("a just-stored token is not expired", result?.freshExpired === false, JSON.stringify(result));
-      check("setTokens stamps updatedAt with the storage time", result?.freshStampedNow === true, JSON.stringify(result));
-      check("the same token two hours later is expired", result?.laterExpired === true, JSON.stringify(result));
-      check("a stored token with no timestamp counts as expired", result?.unstampedExpired === true, JSON.stringify(result));
-    },
-    {
-      stubs: {
-        "oauth.setTokens": (args) => {
-          storedTokens.set(args[0], args[1]);
-          return null;
-        },
-        "oauth.getTokens": (args) => storedTokens.get(args[0]) ?? null,
-      },
-    },
-  );
-
   await run("no-view command", noViewSource, "no-view", async (harness) => {
     check("ran to completion", harness.state.finished === true);
     check("ran the body", harness.call("globalThis.__ranNoView") === true);
+    check("does not export OAuth", harness.call("globalThis.__hasOAuth") === false);
     check(
       "used the clipboard and HUD host calls",
       harness.state.hostCalls.includes("clipboard.copy") && harness.state.hostCalls.includes("feedback.showHUD"),

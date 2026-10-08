@@ -24,7 +24,6 @@ struct ExtensionTests {
         var calls: [String] = []
         var toasts: [String] = []
         var huds: [String] = []
-        var oauthTokens: [String: String] = [:]
         private let fetcher = ExtensionFetcher()
         private let sockets = ExtensionWebSocketBridge()
 
@@ -63,21 +62,6 @@ struct ExtensionTests {
                     #"{"name":"Finder","path":"/System/Library/CoreServices/Finder.app","bundleId":"com.apple.finder"}"#
             case "system.applications":
                 return "[]"
-            case "oauth.authorize":
-                let state = arguments[safe: 1]?.stringValue ?? ""
-                return "{\"authorizationCode\":\"auth_code_swift_test\",\"state\":\"\(state)\"}"
-            case "oauth.getTokens":
-                let providerId = arguments.first?.stringValue ?? ""
-                return oauthTokens[providerId] ?? ""
-            case "oauth.setTokens":
-                let providerId = arguments.first?.stringValue ?? ""
-                let tokens = arguments[safe: 1]?.stringValue ?? ""
-                oauthTokens[providerId] = tokens
-                return ""
-            case "oauth.removeTokens":
-                let providerId = arguments.first?.stringValue ?? ""
-                oauthTokens.removeValue(forKey: providerId)
-                return ""
             default:
                 return ""
             }
@@ -194,7 +178,6 @@ struct ExtensionTests {
         screenChecks()
         navigationSearchChecks()
         actionIconChecks()
-        oauthUnitChecks()
         deepLinkChecks()
         nodeShimChecks()
         await runtimeChecks()
@@ -837,82 +820,6 @@ struct ExtensionTests {
             String(describing: destructiveArtwork))
     }
 
-    private final class MockTokenStore: ExtensionOAuthTokenStore, @unchecked Sendable {
-        var storage: [String: String] = [:]
-
-        func get(account: String) -> String? {
-            storage[account]
-        }
-
-        func set(_ value: String, account: String) -> Bool {
-            storage[account] = value
-            return true
-        }
-
-        func remove(account: String) -> Bool {
-            storage.removeValue(forKey: account) != nil
-        }
-
-        func removeAll(prefix: String, exactMatch: String) {
-            storage = storage.filter { key, _ in
-                key != exactMatch && !key.hasPrefix(prefix)
-            }
-        }
-    }
-
-    @MainActor
-    static func oauthUnitChecks() {
-        let originalStore = ExtensionOAuthKeychain.store
-        ExtensionOAuthKeychain.store = MockTokenStore()
-        defer { ExtensionOAuthKeychain.store = originalStore }
-
-        // Keychain round-trip
-        let extName = "com.test.unit"
-        let provId = "unit_provider"
-        let json = "{\"accessToken\":\"token_xyz\",\"refreshToken\":\"refresh_abc\"}"
-
-        ExtensionOAuthKeychain.setTokens(json, extensionName: extName, providerId: provId)
-        let read = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: provId)
-        check("OAuth Keychain sets and gets tokens", read == json, read ?? "nil")
-
-        ExtensionOAuthKeychain.removeTokens(extensionName: extName, providerId: provId)
-        let afterRemove = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: provId)
-        check("OAuth Keychain removes tokens", afterRemove == nil, afterRemove ?? "not nil")
-
-        ExtensionOAuthKeychain.setTokens(json, extensionName: extName, providerId: "prov1")
-        ExtensionOAuthKeychain.setTokens(json, extensionName: extName, providerId: "prov2")
-        ExtensionOAuthKeychain.removeAllTokens(extensionName: extName)
-        let afterRemoveAll1 = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: "prov1")
-        let afterRemoveAll2 = ExtensionOAuthKeychain.getTokens(extensionName: extName, providerId: "prov2")
-        check(
-            "OAuth Keychain removeAllTokens clears all for extension",
-            afterRemoveAll1 == nil && afterRemoveAll2 == nil)
-
-        // URL parsing in ExtensionOAuthSession
-        let raycastURL = URL(string: "raycast://oauth?code=auth_123&state=state_456")!
-        let params = ExtensionOAuthSession.parseCallback(url: raycastURL)
-        check(
-            "parseCallback parses query parameters",
-            params["code"] == "auth_123" && params["state"] == "state_456")
-
-        let fragmentURL = URL(string: "raycast://oauth#access_token=token_xyz&state=state_789")!
-        let fragParams = ExtensionOAuthSession.parseCallback(url: fragmentURL)
-        check(
-            "parseCallback parses hash fragment",
-            fragParams["access_token"] == "token_xyz" && fragParams["state"] == "state_789")
-
-        let nonOAuthURL = URL(string: "raycast://extensions/installed")!
-        check(
-            "handleCallbackURL ignores a non-oauth URL",
-            ExtensionOAuthSession.handleCallbackURL(nonOAuthURL) == .ignored)
-
-        // A callback with nothing waiting for it is reported, not silently dropped.
-        let strayURL = URL(string: "tinycast://oauth?code=abc&state=xyz")!
-        check(
-            "handleCallbackURL reports an expired callback",
-            ExtensionOAuthSession.handleCallbackURL(strayURL) == .expired)
-    }
-
     static func deepLinkChecks() {
         let canonical = ExtensionDeepLink.parse(
             url: URL(string: "raycast://extensions/linear/linear/create-issue")!)
@@ -985,9 +892,6 @@ struct ExtensionTests {
             "store route rejects other schemes",
             ExtensionDeepLink.route(
                 url: URL(string: "https://extensions/linear/linear?source=webstore")!) == nil)
-        check(
-            "store route rejects OAuth callbacks",
-            ExtensionDeepLink.route(url: URL(string: "raycast://oauth?source=webstore&code=abc")!) == nil)
 
         let args = ExtensionDeepLink.parse(
             url: URL(
@@ -1024,9 +928,6 @@ struct ExtensionTests {
             "deeplink rejects a non-extensions link",
             ExtensionDeepLink.parse(url: URL(string: "raycast://confetti")!) == nil)
         check(
-            "deeplink rejects an OAuth callback",
-            ExtensionDeepLink.parse(url: URL(string: "raycast://oauth?code=abc")!) == nil)
-        check(
             "deeplink rejects other schemes",
             ExtensionDeepLink.parse(url: URL(string: "https://example.com/x")!) == nil)
 
@@ -1044,18 +945,24 @@ struct ExtensionTests {
     static func navigationSearchChecks() {
         let parent = ExtensionSearchState.Screen(query: "github", selection: 2)
         var search = ExtensionSearchState()
-        check("push starts with empty search and first row", search.navigate(to: 2, current: parent) == .init())
+        check(
+            "push starts with empty search and first row", search.navigate(to: 2, current: parent) == .init())
         check("same-depth render leaves search unchanged", search.navigate(to: 2, current: .init()) == nil)
         check("pop restores parent query and row", search.navigate(to: 1, current: .init()) == parent)
         search.queryChanged(to: parent.query)
-        check("query landing preserves restored row", search.landingSelection(for: "github", rowCount: 4) == 2)
-        check("repeated landing preserves restored row", search.landingSelection(for: "github", rowCount: 4) == 2)
+        check(
+            "query landing preserves restored row", search.landingSelection(for: "github", rowCount: 4) == 2)
+        check(
+            "repeated landing preserves restored row",
+            search.landingSelection(for: "github", rowCount: 4) == 2)
         check("fewer rows clamp restored selection", search.landingSelection(for: "github", rowCount: 1) == 0)
         check("empty parent has a valid landing", search.landingSelection(for: "github", rowCount: 0) == 0)
         search.queryChanged(to: "git")
         check("edited query lands on first row", search.landingSelection(for: "git", rowCount: 4) == 0)
         search.queryChanged(to: "github")
-        check("retyping old query never revives old selection", search.landingSelection(for: "github", rowCount: 4) == 0)
+        check(
+            "retyping old query never revives old selection",
+            search.landingSelection(for: "github", rowCount: 4) == 0)
 
         let child = ExtensionSearchState.Screen(query: "username", selection: 1)
         _ = search.navigate(to: 2, current: parent)
@@ -1063,7 +970,9 @@ struct ExtensionTests {
         check("nested pop restores immediate parent", search.navigate(to: 2, current: .init()) == child)
         check("nested pop restores root", search.navigate(to: 1, current: child) == parent)
         _ = search.navigate(to: 3, current: parent)
-        check("coalesced push gives skipped screen empty search", search.navigate(to: 2, current: .init()) == .init())
+        check(
+            "coalesced push gives skipped screen empty search",
+            search.navigate(to: 2, current: .init()) == .init())
         check("coalesced push preserves root", search.navigate(to: 1, current: .init()) == parent)
         _ = search.navigate(to: 2, current: parent)
         _ = search.navigate(to: 3, current: child)
@@ -1122,15 +1031,21 @@ struct ExtensionTests {
             check("navigation fixture pushes a list", false)
             return
         }
-        check("old query reproduces hidden details", ExtensionScreen(tree: details, query: original.query).items.isEmpty)
-        check("push exposes all detail rows", ExtensionScreen(tree: details, query: pushed.query).items.count == 2)
+        check(
+            "old query reproduces hidden details",
+            ExtensionScreen(tree: details, query: original.query).items.isEmpty)
+        check(
+            "push exposes all detail rows",
+            ExtensionScreen(tree: details, query: pushed.query).items.count == 2)
         check("runtime pops detail list", await runtime.popNavigation(session: "navigation"))
         await settle()
         let restored = recorder.trees.last.flatMap {
             search.navigate(to: $0.depth, current: pushed)
         }
         check("runtime pop restores original search", restored == original)
-        check("navigation reports no runtime failures", recorder.failures.isEmpty, recorder.failures.joined(separator: "\n"))
+        check(
+            "navigation reports no runtime failures", recorder.failures.isEmpty,
+            recorder.failures.joined(separator: "\n"))
         check("navigation needs no external calls", host.calls.isEmpty)
         await runtime.stop(session: "navigation")
     }
@@ -1321,46 +1236,6 @@ struct ExtensionTests {
                 screen.items.first?.node.string("title") ?? "nil")
         }
 
-        // OAuth PKCE and TokenSet runtime tests
-        let (oauthRuntime, oauthHost, oauthRecorder) = makeRuntime()
-        try? await oauthRuntime.boot(
-            config: .current(supportDirectory: FileManager.default.temporaryDirectory))
-        let oauthCommand = """
-            "use strict";
-            const { OAuth, showHUD } = require("@raycast/api");
-            module.exports.default = async function () {
-              const client = new OAuth.PKCEClient({
-                redirectMethod: OAuth.RedirectMethod.Web,
-                providerName: "GitHub",
-                providerId: "gh",
-              });
-              const req = await client.authorizationRequest({
-                endpoint: "https://github.com/login/oauth/authorize",
-                clientId: "id123",
-              });
-              const auth = await client.authorize(req);
-              const tokens = new OAuth.TokenSet({
-                accessToken: "token_" + auth.authorizationCode,
-                refreshToken: "refresh_123",
-                expiresIn: 3600,
-              });
-              await client.setTokens(tokens);
-              const read = await client.getTokens();
-              await showHUD(read.accessToken);
-            };
-            """
-        await oauthRuntime.start(
-            session: "sOAuth", code: oauthCommand,
-            file: URL(fileURLWithPath: "/tmp/oauth.js"), mode: .noView,
-            context: launchContext(mode: .noView))
-        await settle()
-        check("oauth command finished", oauthRecorder.finished, oauthRecorder.failures.joined())
-        check(
-            "oauth flow reached token storage",
-            oauthHost.huds == ["token_auth_code_swift_test"],
-            oauthHost.huds.joined(separator: ","))
-        await oauthRuntime.stop(session: "sOAuth")
-
         // Command arguments must reach `props.arguments`, and the bag must exist even when empty.
         let (withArguments, _, argumentRecorder) = makeRuntime()
         try? await withArguments.boot(
@@ -1454,14 +1329,18 @@ struct ExtensionTests {
             session: "s2",
             code: """
                 "use strict";
-                const { showHUD } = require("@raycast/api");
-                module.exports.default = async function () { await showHUD("done"); };
+                const api = require("@raycast/api");
+                module.exports.default = async function () {
+                  await api.showHUD("done");
+                  await api.showHUD(String(Object.hasOwn(api, "OAuth")));
+                };
                 """,
             file: URL(fileURLWithPath: "/tmp/headless.js"), mode: .noView,
             context: launchContext(mode: .noView))
         await settle()
         check("no-view command finished", headlessRecorder.finished, headlessRecorder.failures.joined())
-        check("no-view HUD reached the host", headlessHost.huds == ["done"])
+        check("no-view HUD reached the host", headlessHost.huds.first == "done")
+        check("runtime does not export OAuth", headlessHost.huds == ["done", "false"])
         await headless.stop(session: "s2")
 
         // A throwing command surfaces its error rather than taking the runtime down.

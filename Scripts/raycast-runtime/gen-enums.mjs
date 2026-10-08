@@ -68,6 +68,7 @@ const enums = new Map();
 for (const [path, members] of rawEnums) {
   if (!members.length) continue;
   const clean = publicPath(path);
+  if (clean.startsWith("OAuth.")) continue;
   if (!enums.has(clean)) enums.set(clean, members);
 }
 for (const [path, target] of aliases) {

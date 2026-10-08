@@ -374,8 +374,6 @@ run ext-icon-test          Tinycast/Platform/Appearance.swift \
                            Tinycast/Features/Extensions/Service/ExtensionFetcher.swift \
                            Tinycast/Platform/ProcessExit.swift \
                            Tinycast/Features/Extensions/Service/ExtensionNodeShims.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionOAuthKeychain.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionOAuthSession.swift \
                            Tinycast/Features/Extensions/Service/ExtensionRuntime.swift \
                            Tinycast/Features/Extensions/Service/ExtensionIconCache.swift \
                            Tinycast/Features/Extensions/UI/ExtensionAnimatedImage.swift \
@@ -622,8 +620,6 @@ run slow ext-test          -parse-as-library \
                            Tinycast/Platform/ProcessExit.swift \
                            $E/Service/ExtensionIconCache.swift \
                            $E/Service/ExtensionNodeShims.swift \
-                           $E/Service/ExtensionOAuthKeychain.swift \
-                           $E/Service/ExtensionOAuthSession.swift \
                            $E/Service/ExtensionRuntime.swift \
                            $E/Service/ExtensionNameResolver.swift \
                            $E/Service/ExtensionWebSocketBridge.swift \

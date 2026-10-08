@@ -291,7 +291,6 @@ function syncHostCall(api, method, args) {
   }
 }
 
-const oauthTokens = new Map();
 const runningChildren = new Map();
 const openSockets = new Map();
 let nextSocketId = 1;
@@ -361,17 +360,6 @@ async function stubHostCall(api, method, args) {
       return null;
     }
     case "websocket.ping":
-      return null;
-    // Positional arguments throughout, matching `src/api/oauth.js`.
-    case "oauth.authorize":
-      return { authorizationCode: "auth-code-12345", state: args[1] ?? "" };
-    case "oauth.getTokens":
-      return oauthTokens.get(args[0]) ?? null;
-    case "oauth.setTokens":
-      oauthTokens.set(args[0], args[1]);
-      return null;
-    case "oauth.removeTokens":
-      oauthTokens.delete(args[0]);
       return null;
     default:
       if (["window", "feedback", "cache", "storage", "clipboard", "system"].includes(api)) return null;
