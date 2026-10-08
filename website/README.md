@@ -70,9 +70,11 @@ to `.dev.vars` (gitignored), fill it in, and run `npm run preview` (http://local
 
 ## Media
 
-Files over 25 MiB cannot ship in `public/`. Put them in `media/` and reference them as
-`` `${site.cdn}/<name>` ``; they are uploaded on push. A new file extension also needs its content
-type added to `Scripts/upload-website-media.sh`.
+Videos and files over 25 MiB never enter git. Put them in `media/` (gitignored), run
+`npm run upload-media` to copy them to the R2 bucket behind `cdn.tinycast.dev`, and reference them
+as `` `${site.cdn}/<name>` ``. The bucket is the only copy, and the upload needs Cloudflare
+credentials (`wrangler login`). A new file extension also needs its content type added to
+`Scripts/upload-website-media.sh`.
 
 ## Deploy
 

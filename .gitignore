@@ -63,6 +63,10 @@ website/.next/
 website/out/
 website/.source/
 website/.wrangler/
+# `next dev` and `next build` each rewrite it to point at their own types directory.
+website/next-env.d.ts
+# Staging for `npm run upload-media`; the R2 bucket behind cdn.tinycast.dev is the only copy.
+website/media/
 
 # Real Raycast exports carry the author's clipboard history; the harness builds its own fixtures.
 *.rayconfig

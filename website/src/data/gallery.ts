@@ -27,8 +27,8 @@ export const galleryItems: GalleryItem[] = [
     poster: "/calculator.jpg",
     title: "Inline calculator",
     caption: "Answers math and converts units and currencies as you type.",
-    width: 3456,
-    height: 2234,
+    width: 1728,
+    height: 1118,
   },
   {
     type: "image",
@@ -46,8 +46,8 @@ export const galleryItems: GalleryItem[] = [
     title: "Dictation",
     caption:
       "Turn your voice into text in any app. Fast, private and fully on-device.",
-    width: 3456,
-    height: 2234,
+    width: 1728,
+    height: 1118,
   },
   {
     type: "video",
@@ -55,8 +55,8 @@ export const galleryItems: GalleryItem[] = [
     poster: "/emoji-and-symbols.jpg",
     title: "Emoji & symbols",
     caption: "Search every emoji. The ones you use most show up first.",
-    width: 3456,
-    height: 2234,
+    width: 1728,
+    height: 1118,
   },
   {
     type: "video",
@@ -65,8 +65,8 @@ export const galleryItems: GalleryItem[] = [
     title: "Notes",
     caption:
       "Capture ideas in Markdown. Keep your notes close, without breaking your flow.",
-    width: 3456,
-    height: 2234,
+    width: 1728,
+    height: 1118,
   },
   {
     type: "video",
@@ -75,8 +75,8 @@ export const galleryItems: GalleryItem[] = [
     title: "Quick AI",
     caption:
       "Ask your favorite AI. Get quick answers or open a full chat with history.",
-    width: 3456,
-    height: 2234,
+    width: 1728,
+    height: 1118,
   },
   {
     type: "video",
@@ -85,8 +85,8 @@ export const galleryItems: GalleryItem[] = [
     title: "Quick Actions",
     caption:
       "Rewrite, translate, summarize and more with AI. Create your own custom actions.",
-    width: 3456,
-    height: 2234,
+    width: 1728,
+    height: 1118,
   },
   {
     type: "image",

@@ -22,7 +22,7 @@ for FILE in "${FILES[@]}"; do
         *.mov) TYPE="video/quicktime" ;;
         *.png) TYPE="image/png" ;;
         *.jpg | *.jpeg) TYPE="image/jpeg" ;;
-        *) echo "::error::$NAME: add its content type to Scripts/upload-website-media.sh first."; exit 1 ;;
+        *) echo "$NAME: add its content type to Scripts/upload-website-media.sh first." >&2; exit 1 ;;
     esac
     printf '▸ %s (%s, %s)\n' "$NAME" "$TYPE" "$(du -h "$FILE" | cut -f1)"
     npx wrangler r2 object put "${BUCKET}/${NAME}" --file "$FILE" --content-type "$TYPE" --remote
