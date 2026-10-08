@@ -24,6 +24,7 @@ final class FileSearchSession {
     @ObservationIgnored private var policy: FileSearchPolicy
     @ObservationIgnored private let debounce: Duration
     @ObservationIgnored private let searchOperation: SearchOperation
+    @ObservationIgnored private let index: FileIndexManager?
 
     private struct Request: Equatable {
         let query: String
@@ -36,16 +37,20 @@ final class FileSearchSession {
         let earliestStart: ContinuousClock.Instant
     }
 
-    init() {
+    init(index: FileIndexManager) {
         let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
         self.homeDirectory = homeDirectory
+        self.index = index
         policy = FileSearchPolicy(
             scopes: FileSearchScope.defaultScopes, ignorePatterns: [],
             homeDirectory: homeDirectory)
         debounce = .milliseconds(120)
         searchOperation = { query, filter, policy in
-            try await Task.detached(priority: .userInitiated) {
-                try FileSearchService.search(query: query, policy: policy, filter: filter)
+            guard query.isEmpty else {
+                return await index.search(query, filter: filter, policy: policy)
+            }
+            return try await Task.detached(priority: .userInitiated) {
+                try FileSearchService.recent(policy: policy, filter: filter)
             }.value
         }
     }
@@ -55,19 +60,25 @@ final class FileSearchSession {
         searchOperation: @escaping SearchOperation
     ) {
         homeDirectory = policy.homeDirectory
+        index = nil
         self.policy = policy
         self.debounce = debounce
         self.searchOperation = searchOperation
     }
 
+    /// The first typed query waits on a walk of every scope, which the screen says rather than hides.
+    var isIndexing: Bool { index?.isIndexing == true }
+
     /// Resolved here rather than per search, so glob compilation stays off the keystroke path.
-    func apply(scopes: [String], ignorePatterns: [String]) {
+    @discardableResult
+    func apply(scopes: [String], ignorePatterns: [String]) -> Bool {
         let policy = FileSearchPolicy(
             scopes: scopes, ignorePatterns: ignorePatterns, homeDirectory: homeDirectory)
-        guard policy != self.policy else { return }
+        guard policy != self.policy else { return false }
         self.policy = policy
         // A result found under the old rules must not publish, and the same query has to re-run.
         cancel()
+        return true
     }
 
     /// An empty query is a request too: the blank screen lists what was used recently.

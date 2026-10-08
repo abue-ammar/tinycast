@@ -70,7 +70,16 @@ enum FileSearchFilter: CaseIterable, Sendable {
         return "(" + clauses.joined(separator: " || ") + ")"
     }
 
-    /// The home-root branch never reaches Spotlight, so it answers the same question locally.
+    /// The index reads no file, so a type is the one its extension declares; a folder has none.
+    func accepts(pathExtension: String, isPackage: Bool) -> Bool {
+        guard self != .folders else { return false }
+        let contentType =
+            pathExtension.isEmpty
+            ? nil
+            : UTType(filenameExtension: pathExtension, conformingTo: isPackage ? .package : .data)
+        return accepts(contentType: contentType, isDirectory: isPackage)
+    }
+
     func accepts(contentType: UTType?, isDirectory: Bool) -> Bool {
         guard self != .all else { return true }
         // An unresolved type is only ever a plain directory: everything else carries one.

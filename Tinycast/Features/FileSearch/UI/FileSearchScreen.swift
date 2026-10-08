@@ -120,11 +120,15 @@ struct FileSearchScreen: PaletteScreen {
         }
     }
 
-    /// Nothing is said while a query runs: the rows it replaces would only flash a message.
+    /// A running query says nothing, as a message would only flash; the first walk takes long enough.
     @ViewBuilder
     private var emptyState: some View {
         if session.state != .ready {
-            Color.clear
+            if session.isIndexing && !isShowingRecents {
+                EmptyResults(text: "Indexing files…")
+            } else {
+                Color.clear
+            }
         } else if isShowingRecents {
             EmptyResults(text: "Type to search files and folders")
         } else {

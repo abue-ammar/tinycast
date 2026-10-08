@@ -123,6 +123,11 @@ run file-search-session-test Tinycast/Platform/Signposts.swift \
                              $L/SearchRelevance.swift \
                              Tinycast/Features/FileSearch/Model/*.swift \
                              Tinycast/Features/FileSearch/Service/*.swift
+run file-index-test        Tinycast/Platform/Signposts.swift \
+                           $L/SearchRelevance.swift \
+                           Tinycast/Features/FileSearch/Model/*.swift \
+                           Tinycast/Features/FileSearch/Service/FileIndexScanner.swift \
+                           Tinycast/Features/FileSearch/Service/FileEventMonitor.swift
 run menu-search-test       $L/SearchRelevance.swift \
                            Tinycast/Features/MenuSearch/Model/*.swift \
                            Tinycast/Features/MenuSearch/Service/*.swift
@@ -131,6 +136,7 @@ run window-switch-test     $L/SearchRelevance.swift \
 run index file-search-performance Tinycast/Platform/Signposts.swift \
                            $L/SearchRelevance.swift \
                            Tinycast/Features/FileSearch/Model/*.swift \
+                           Tinycast/Features/FileSearch/Service/FileIndexScanner.swift \
                            Tinycast/Features/FileSearch/Service/FileSearchService.swift
 run ranking-test           $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/LauncherRankingStore.swift

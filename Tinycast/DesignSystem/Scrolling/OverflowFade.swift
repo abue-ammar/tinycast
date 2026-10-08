@@ -37,8 +37,8 @@ struct OverflowFadeMask: ViewModifier {
     private func stops(height: CGFloat) -> [Gradient.Stop] {
         guard includesTop else { return bottomStops(height: height) }
         // Popup edges use several stops so neither end cuts abruptly through a row.
-        let topStrength = min(overflow.top / band, 1)
-        let bottomStrength = min(overflow.bottom / band, 1)
+        let topStrength = Double(min(overflow.top / band, 1))
+        let bottomStrength = Double(min(overflow.bottom / band, 1))
         guard max(topStrength, bottomStrength) > 0, height > 0 else {
             return [.init(color: .black, location: 0)]
         }

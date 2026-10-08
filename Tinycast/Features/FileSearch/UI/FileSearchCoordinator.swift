@@ -5,6 +5,7 @@ final class FileSearchCoordinator {
     private let settings: AppSettings
     private let appIndex: AppIndex
     private let session: FileSearchSession
+    private let index: FileIndexManager
     private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
     private let windowController: PaletteWindowController
@@ -13,12 +14,13 @@ final class FileSearchCoordinator {
 
     init(
         settings: AppSettings, appIndex: AppIndex, session: FileSearchSession,
-        palette: PaletteState, paletteCoordinator: PaletteCoordinator,
+        index: FileIndexManager, palette: PaletteState, paletteCoordinator: PaletteCoordinator,
         windowController: PaletteWindowController, core: AppCore
     ) {
         self.settings = settings
         self.appIndex = appIndex
         self.session = session
+        self.index = index
         self.palette = palette
         self.paletteCoordinator = paletteCoordinator
         self.windowController = windowController
@@ -29,12 +31,15 @@ final class FileSearchCoordinator {
         appIndex.setCommandsVisible([.searchFiles], settings.fileSearchEnabled)
         guard !settings.fileSearchEnabled else { return }
         session.cancel()
+        index.stop()
         if palette.mode == .fileSearch { palette.prepare(mode: .launcher) }
     }
 
+    /// The index walked under the old scopes is dropped now, not left watching until the next query.
     func applyPolicy() {
-        session.apply(
+        let changed = session.apply(
             scopes: settings.fileSearchScopes, ignorePatterns: settings.fileSearchIgnorePatterns)
+        if changed { index.stop() }
     }
 
     /// `query` is the fallback row's: the screen opens already narrowed to what was typed.

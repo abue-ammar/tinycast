@@ -4,7 +4,7 @@ description: What Tinycast asks for, why it needs it, and when it asks.
 ---
 
 Tinycast asks for a permission **only when you use a feature that needs it**, never at launch. The
-launcher, calculator, emoji picker and search all work without any permissions.
+launcher, calculator, emoji picker and app search all work without any permissions.
 
 **Settings → Permissions** shows the status of Accessibility and Calendars, and opens the right
 System Settings pane for you.
@@ -73,6 +73,17 @@ A few actions show their own macOS prompt the first time you run them:
 If you decline, Tinycast tells you and links to the right System Settings pane, so the action never
 fails silently.
 
+## Folders
+
+[File Search](/docs/features/file-search) reads the names of files in your search scopes the first
+time you type a search. macOS protects **Desktop**, **Documents**, **Downloads** and **iCloud Drive**,
+so it asks once whether Tinycast may read each one that's in your scopes. Nothing is asked while File
+Search is off, or before you type.
+
+Tinycast only reads names and dates, never what's inside your files, and keeps them in memory only.
+If you decline a folder, File Search leaves it out and searches everything else. You can change your
+answer in **System Settings → Privacy & Security → Files & Folders**.
+
 ## Full Disk Access
 
 Tinycast **checks** whether it has Full Disk Access but **never asks** for it.
@@ -84,9 +95,7 @@ those by hand.
 
 ## What Tinycast never needs
 
-- **File access for File Search.** [File Search](/docs/features/file-search) uses the Spotlight
-  index that macOS already maintains. If Spotlight hasn't indexed something, you get fewer results,
-  not a permission prompt.
+- **Full Disk Access for File Search.** Folders it can't read are left out rather than asked for.
 - **Screen Recording.** The window switcher reads window titles through Accessibility.
 - **Location.** The calculator picks your currency from your Mac's region setting.
 - **Input Monitoring.** Snippets listen through Accessibility, as described above.

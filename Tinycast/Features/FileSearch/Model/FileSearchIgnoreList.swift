@@ -32,13 +32,19 @@ struct FileSearchIgnoreList: Sendable, Equatable {
     }
 
     func excludes(path: String) -> Bool {
-        for component in path.split(separator: "/") {
-            let name = String(component)
-            if literalNames.contains(name.lowercased()) { return true }
-            if nameGlobs.contains(where: { $0.matches(name) }) { return true }
-        }
-        return pathGlobs.contains { $0.matches(path) }
+        path.split(separator: "/").contains { excludes(name: String($0)) } || excludesWhole(path: path)
     }
+
+    /// One component, for a walk that has already tested every folder above it.
+    func excludes(name: String) -> Bool {
+        literalNames.contains(name.lowercased()) || nameGlobs.contains { $0.matches(name) }
+    }
+
+    func excludesWhole(path: String) -> Bool {
+        pathGlobs.contains { $0.matches(path) }
+    }
+
+    var hasPathPatterns: Bool { !pathGlobs.isEmpty }
 
     /// Name globs Spotlight can evaluate itself, so ignored files never fill the candidate cap.
     var spotlightNameExclusions: [String] {

@@ -84,6 +84,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `fuzz-test` | `Launcher/Model/LauncherMatch.swift`, `LauncherOrder.swift`, `LauncherSuggestions.swift`, `EntryNaming.swift`, `ScriptRomanization.swift`, `SearchRelevance.swift`, `LauncherRankingStore.swift` — **a new ranking complaint is a new case in its `denseIndex`** |
 | `file-search-test` | `FileSearch/Model/`, plus the shared `FuzzyMatch` scorer |
 | `file-search-session-test` | serialized query execution, debounce coalescing and cancellation |
+| `file-index-test` | `FileIndexScanner`'s walk, exclusions and live refresh over a temporary tree, and `FileEventMonitor`'s batching and delivery |
 | `menu-search-test` | `MenuSearch/Model/` decisions, `MenuSearch/Service/` session filtering, the shared `FuzzyMatch` scorer |
 | `action-menu-search-test` | Action-menu query normalization and shared fuzzy matching |
 | `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
@@ -222,28 +223,33 @@ search result that navigates and then sits there.
 
 ## Performance measurement
 
-`Platform/Signposts.swift` emits eight intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
+`Platform/Signposts.swift` emits these intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
 `AppIndex.scan`, `AppIndex.rank`, `PaletteWindowController.show`, `UninstallScanner.discover` and
-`UninstallScanner.measure`, `FileSearchService.search`, and `Notes.search`. Open the Time Profiler or
+`UninstallScanner.measure`, `FileIndexScanner.build` and `.refresh`, `FileIndexManager.search`,
+`FileSearchService.recent`, and `Notes.search`. Open the Time Profiler or
 `os_signpost` instrument in Instruments and filter to that subsystem; nothing needs recompiling.
 
 None of the benchmarks below join the suite, so each is registered in `run-tests.sh` as `run index`
 instead: `--index` hands it editor flags without queueing it, and without that entry nothing in the
 file resolves. Keep the entry's source list matching the command beside it.
 
-Run the real Spotlight-backed file-search benchmark separately from the deterministic harnesses:
+Run the file-search benchmark — a real walk of your home folder and the Spotlight recents query —
+separately from the deterministic harnesses:
 
 ```sh
 swiftc -O -swift-version 6 Tinycast/Platform/Signposts.swift \
     Tinycast/Features/Launcher/Model/SearchRelevance.swift \
     Tinycast/Features/FileSearch/Model/*.swift \
+    Tinycast/Features/FileSearch/Service/FileIndexScanner.swift \
     Tinycast/Features/FileSearch/Service/FileSearchService.swift \
     Tests/file-search-performance.swift -o /tmp/file-search-performance
-/tmp/file-search-performance
+/tmp/file-search-performance                 # or pass your own queries as arguments
 ```
 
-Every query runs twice: once on the shipped rules and once with five extra user patterns, so the output
-says what the ignore list itself costs rather than only what Spotlight does.
+It walks twice, once on the shipped rules and once with five extra user patterns, so the output says what
+the ignore list costs during the walk. Each pass reports the walk time, entry count and footprint, one
+root-folder refresh, then every query's first and repeated latency against that index. Only the first
+pass's footprint is meaningful: the second reuses pages the first index freed.
 
 The calculator benchmark is deterministic — an injected clock, calendar and rate table — so it is a
 timing harness rather than an assertion one, and stays out of `run-tests.sh` for that reason:
@@ -484,11 +490,21 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 - With File Search **off**: Search Files is absent, its shortcut no-ops, and no permission appears
 - Enabling in Settings exposes Search Files immediately; it persists across relaunch and backup import
-- Disabling during a query cancels it and returns the open screen to the launcher
+- Disabling during a query cancels it and returns the open screen to the launcher, and Console shows no
+  further `FileIndex` activity
 - File Search and Quicklinks remain independently visible in all four enabled/disabled combinations
-- An empty query performs no search; a filename query returns only files and folders beneath the scopes
-- Library internals, generated trees, application bundles and hidden paths do not appear
-- Visible custom top-level home folders and cloud-drive files remain searchable
+- The blank screen lists Recently Used and walks nothing; the first typed query in a fresh launch shows
+  "Indexing files…", then results, and macOS asks once each for Desktop, Documents, Downloads and iCloud
+  Drive — on a fresh `Tinycast Dev` with `tccutil reset All com.tinycast.app.dev`
+- Denying one of those prompts leaves that folder out and everything else searchable
+- A filename query returns only files and folders beneath the scopes
+- Library internals, generated trees, application bundles, package contents and hidden paths do not
+  appear; a package such as a Photos library or a `.pages` document is one row
+- Visible custom top-level home folders and cloud-drive files remain searchable, and an iCloud
+  placeholder is listed without being downloaded
+- Saving a new file in Finder makes it findable within about two seconds, with the screen still open;
+  deleting a folder drops it and everything inside it
+- `tinycast !test`, `ext:pdf`, `kind:folder`, `in:Documents` and `mtime:<7d` each narrow as documented
 - Return opens, Command-Return reveals in Finder, and Copy Path keeps the palette open with a HUD
 - A file and a folder drag into Finder as copies and into a browser's upload field; a cancelled drag
   flies back and leaves the palette up, a landed one hides it
@@ -498,7 +514,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Removing home and adding one folder narrows results to it; restoring the default brings them back
 - A cleared scope list returns nothing rather than falling back to home, and never hangs
 - A missing scope shows the warning triangle without failing the rest of the search
-- Adding `*.log` takes effect on the next query with no relaunch; removing it restores those results
+- Adding `*.log` takes effect on the next query with no relaunch — that query re-walks, showing
+  "Indexing files…" — and removing it restores those results
 - Built-in ignore rows carry no remove button; user rows do, and a duplicate or blank is refused
 - Recording a shortcut opens the palette straight into File Search, hidden from the launcher or not
 - Search Files is absent from Settings ▸ Commands, and `Enable Commands` off leaves its shortcut live

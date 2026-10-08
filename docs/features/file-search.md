@@ -1,46 +1,53 @@
 # Search Files
 
 Search Files is an on-demand palette screen for opening files and folders from the folders the user
-configures. It searches filenames through Spotlight, adds no private index or launch work, and is
-reached from the built-in Search Files launcher command — or its own global shortcut — after the
-feature is enabled in Settings.
+configures. Typed queries are answered by Tinycast's own in-memory filename index — a native port of
+fsearch's name engine — which is walked on the first typed query and then kept current by FSEvents. The
+blank screen's Recently Used list still comes from Spotlight. The screen is reached from the built-in
+Search Files launcher command, or its own global shortcut, after the feature is enabled in Settings.
 
 ## Invariants
 
-- **Every Spotlight query is capped at 1,000 candidates before execution, and 200 rows after filtering.**
-  `MDQuerySetMaxCount` is the reason the
-  feature uses `MDQuery`; `NSMetadataQuery` has no source-result cap and can break the 100 MB budget on
-  a broad filename.
+- **The index lives in memory and nowhere else.** Nothing is written to disk: no index file, no query
+  cache, no history. Quitting, disabling the feature or changing the scopes drops it, and the next typed
+  query walks again. Search is filename-only; there is no content index.
+- **File Search is off by default, and off means no entry point, no walk and no watcher.** The first
+  typed query on the screen is the first operation that touches the disk. The blank screen walks
+  nothing, the global shortcut no-ops while the feature switch is off, and disabling stops the
+  FSEvents stream and frees the index.
+- **The walk asks macOS for the folders it reads.** Desktop, Documents, Downloads and iCloud Drive are
+  TCC-protected, so the first walk raises one system consent prompt for each that falls under a scope.
+  A denied folder is skipped and the rest of the index is unaffected. Nothing asks for Full Disk Access.
+  Each prompt's wording is the matching `NS…FolderUsageDescription` in `Info.plist`.
+- **Hidden names, application bundles, package contents and home's own `Library` are structural.** The
+  walk never lists them, so no user setting can re-admit them, and an excluded tree is never opened.
+  A package — anything whose extension conforms to `com.apple.package` — is one entry, never walked.
+  Everything else that is dropped comes from the ignore list.
+- **The walk never downloads anything.** It runs with `IOPOL_MATERIALIZE_DATALESS_FILES_OFF` set on its
+  own thread, so an iCloud or File Provider placeholder is listed as it stands. Symlinks are listed and
+  never followed; mount points and other roots are listed and not descended.
+- **The index holds at most 1,000,000 entries, and a search publishes at most 200 rows.** An entry is
+  12 bytes plus its share of the interned names; the cap keeps the worst case inside the 100 MB budget.
 - **Everything under `Model/` stays Foundation-only and pure**, `FileSearchIgnoreList`'s `import Darwin`
   and the `UniformTypeIdentifiers` of `FileSearchFilter` and `FileSearchPreviewKind` included — value
-  types with no environment of their own. `file-search-test` compiles the shipped files together with
-  the existing pure fuzzy scorer.
-- **Search is filename-only, and every list comes from Spotlight.** Tinycast creates no content index,
-  history, query cache, watcher or search data — the blank screen's Recently Used rows are one more
-  Spotlight query over the configured scopes, read from the system's own `kMDItemLastUsedDate` and
-  `kMDItemFSContentChangeDate`, never from anything Tinycast recorded. The type filter narrows *which*
-  files Spotlight is asked for; it never adds a second pass over the ones it returned.
+  types with no environment of their own. `FileNameIndex` is mutated through an explicit API, so
+  `file-search-test` builds one in memory without a disk.
 - **The filter belongs to the query, not to the rows.** `FileSearchSession` keys its de-dup and its
   supersession check on the query and the filter together, so narrowing re-runs the same words rather
   than thinning a result set that was already capped at 200.
-- **Hidden paths and application-bundle contents are structural, not patterns.** They are what keeps
-  the feature permission-free, so no user setting can re-admit them. Everything else that is dropped
-  comes from the ignore list.
-- **`~/Library` is never a scope Tinycast picks by itself.** A configured home root expands into its
-  visible children plus the two cloud-storage roots instead. A user who adds a folder under `~/Library`
+- **`~/Library` is never a scope Tinycast picks by itself.** A configured home root walks home without
+  its top-level `Library`, plus the two cloud-storage roots. A user who adds a folder under `~/Library`
   by hand gets what they asked for.
 - **The shipped ignore rules are compiled in and never persisted.** `fileSearchIgnorePatterns` stores
   only what the user added, so changing `FileSearchIgnoreList.defaults` reaches installs that already
   ran. The consequence is that the shipped six cannot be switched off.
-- **File Search is off by default, and off means no entry point or Spotlight work.** A nonempty query
-  on that screen is the first operation that searches, and the global shortcut no-ops while the
-  feature switch is off.
-- **Tinycast asks for no file permission.** Hidden metadata items and application bundles are filtered,
-  and Spotlight or TCC omissions produce a thinner result set rather than a prompt for Full Disk Access.
-- **A superseded query never publishes.** The session cancels its pending task and checks cancellation
-  after the synchronous Spotlight call, so a late result cannot replace the newer query's rows. Editing
-  the scopes or the patterns cancels the session for the same reason: a result found under the old
-  rules must not land under the new ones.
+- **A superseded query never publishes.** The session checks its revision after every search returns,
+  so a late result cannot replace the newer query's rows. Editing the scopes or the patterns cancels the
+  session and drops the index for the same reason: a result found under the old rules must not land
+  under the new ones.
+- **A rebuild never blanks results, and a walk under old rules never lands.** `FileIndexManager` keeps
+  answering from the current index while a replacement walks, and a generation counter discards any
+  walk or refresh that finishes after a newer one started.
 - **Share is the one system popover, and the palette stays up under it.** `AGENTS.md` keeps Tinycast's
   own dialogs because a question or a report is Tinycast's to word. A share sheet is neither: it is
   AirDrop, Mail and Messages, and re-drawing it would mean re-implementing the transports and losing
@@ -53,53 +60,99 @@ feature is enabled in Settings.
 
 ## Query path
 
-`FileSearchQuery` trims and tokenizes input on whitespace, escapes Spotlight metacharacters, and builds
-one `kMDItemFSName` clause per term. The clauses are joined with AND, so `annual report` requires both
-words in the filename without requiring them to be adjacent or in that order. The active filter's
-`kMDItemContentTypeTree` clause joins them, ahead of the ignore-list exclusions.
+`FileSearchSession.search` retains the previous rows, debounces a typed query for 120 ms, then runs its
+`searchOperation`. One worker serializes searches and coalesces changes to the newest pending query, so
+slower typing cannot accumulate overlapping work. The session owns *when* a search runs and nothing
+else. Its operation sends an empty query to `FileSearchService.recent` (Spotlight, in a detached task)
+and anything typed to `FileIndexManager.search`.
 
-`FileSearchSession.search` retains the previous rows, debounces for 120 ms, then drives
-`FileSearchService.search` in a detached user-initiated task. One worker serializes synchronous
-Spotlight calls and coalesces changes to the newest pending query, so slower typing cannot accumulate
-overlapping queries. The session owns *when* a search runs and nothing else — the expressions are the
-service's, built where the policy that shapes them already is. The service resolves the configured roots,
-then keeps every `MDQuery` reference inside one nonisolated synchronous function. Spotlight returns at
-most 1,000 candidates. `FileSearchQuery` removes hidden path components and app-bundle contents, applies
-the ignore list, then applies `FuzzyMatch` and publishes at most 200. Localized filename then path order
-makes ties deterministic.
+`FileIndexManager` is the `@MainActor` owner on `AppCore`. A search first waits for an index built
+under the current `FileSearchPolicy` — starting the walk if there is none, which is what the screen's
+"Indexing files…" waits on — then parses the words into a `FileNameQuery` and scores the snapshot in a
+detached user-initiated task. The index is a value type, so the search reads a copy that a concurrent
+refresh cannot change under it. A search over the developer home's 99k entries takes 1–5 ms.
 
-**`kMDItemPath` is the only attribute read from a result.** `MDQuery` hands the path back from its own
-cache; every other attribute is a metadata fetch costing about half a millisecond, which over a thousand
-candidates was the whole of the old latency — a broad query spent a full second fetching content types
-alone. What a row needs beyond the path (is it a folder, is it hidden, is it an application) comes from
-one `resourceValues` stat, taken only for candidates the ignore list did not already drop. Measured on
-the developer home: 200 URLs stat in 13 ms, where 200 metadata fetches cost 200 ms.
+## The index
 
-Visible files and document packages directly under home are matched locally with the same case- and
-diacritic-insensitive all-terms rule, since scoping Spotlight to home itself would pull in `~/Library`.
+`FileNameIndex` is the store, laid out for one pass over every name per keystroke:
+
+- **Names are interned.** Each distinct filename is stored once as UTF-8 in one byte buffer, with a
+  64-bit character-class mask beside it — which letters and digits occur, plus hash bits for the
+  letters that start a word. A non-ASCII name also stores its `FuzzyMatch.normalized` key, so
+  `resume` finds `Résumé` without folding anything at query time.
+- **A folder is a list of 12-byte entries** — name id, modification time, and either a child folder id
+  or a code for file, link, package or folder not walked. Folders know their parent, a location prior
+  inherited from fsearch's table (`src` and `Documents` up, `vendor` and caches down), and nothing else;
+  a path is rebuilt from the parent chain only for the rows that publish.
+- **A query scores names, not entries.** Every name whose mask can hold a token is scored once, so a
+  `README.md` that appears in four hundred repositories costs one fuzzy match. Entries then add the
+  folder prior and a recency bonus, apply the filters, and feed a top-k buffer.
+
+Matching is fsearch's: fzf-style fuzzy scoring with boundary, camel-case and consecutive bonuses, and
+one forgiven typo for a word of five ASCII letters or more. Every positive word must match the name or
+a folder above it, and at least one must match the name itself, so `tinycast palette` finds
+`Tinycast/Palette.swift` without listing every file under `Tinycast`. A word a folder answers scores
+three quarters of what the name would. Ties fall to the localized name, then the path.
+
+`FileIndexScanner` is the disk half. One `getattrlistbulk` call per folder returns every child's name,
+type, modification time, flags and mount status, read into a reused 256 KB buffer; children are opened
+with `openat` relative to their parent, so no path is re-resolved. Exclusions are tested one name at a
+time as the walk descends — `FileSearchIgnoreList.excludes(name:)` — and path globs only when the user
+has any. The developer home walks in about half a second.
+
+`FileEventMonitor` turns an FSEvents stream over the roots into batches of changed folders. A batch
+relists each changed folder one level deep, keeping the ids of child folders that are still there; a
+folder that is gone takes its subtree with it. A must-scan-subdirs event relists the whole subtree. A
+dropped-events or root-changed flag, or lost history above a root, rebuilds. The watcher starts before
+the walk, so a change made while it runs is applied after it. A refresh runs detached on a copy of the
+index and is published only if no rebuild started meanwhile.
+
+## Query language
+
+Words are separated by spaces; "double quotes" keep a run of words together. Every positive word is
+required, in any order.
+
+| Form | Means |
+| --- | --- |
+| `word` | fuzzy, in order, one typo forgiven at five letters or more |
+| `'word` | the exact substring |
+| `^word` / `word$` | the name starts / ends with it |
+| `!word` | no match in the name or any folder above it |
+| `src/main` | each piece is a word, which a folder can answer |
+| `ext:pdf,md` | one of these extensions |
+| `kind:file` / `kind:folder` | `f`, `dir` and `d` also work |
+| `in:path` | under this folder; a relative path is under home |
+| `mtime:<7d` | changed within seven days; `>7d`, `1d..7d`; units `s m h d w mo y`, days by default |
+
+An unknown `key:` is searched for as typed, so a filename with a colon still matches. An empty or
+invalid filter value filters nothing. At most eight positive words count.
 
 ## Recently used
 
 An empty query is a request of its own, and it skips the typing debounce — there is no next keystroke for
-it to coalesce with. `FileSearchQuery.RecentStamp` names the two stamps it asks about, each with its own
-window: changed in the last 3 days, used in the last 30. Both are needed because macOS writes
-`kMDItemLastUsedDate` for very few opens now — a used-only list is a handful of downloads — and the
-shorter change window is what keeps a busy machine's matches under the candidate cap.
+it to coalesce with. It is Spotlight's, because the filesystem records no last-used date for the index
+to read. `FileSearchRecents.Stamp` names the two stamps it asks about, each with its own window: changed
+in the last 3 days, used in the last 30. Both are needed because macOS writes `kMDItemLastUsedDate` for
+very few opens now — a used-only list is a handful of downloads — and the shorter change window is what
+keeps a busy machine's matches under the 1,000-candidate `MDQuerySetMaxCount` cap.
 
 Spotlight sorts on one attribute, so the service runs **one sorted query per stamp** and merges their heads
 by date, newest first, before publishing 20. Only the first 20 rows of each list are dated: no row past
 that can reach the merged list, and every date read costs a metadata fetch. The sort attribute has to be
 named in `MDQueryCreate`; set afterwards through `MDQuerySetSortOrder` it is ignored, which is what the
-first attempt at this measured.
+first attempt at this measured. **`kMDItemPath` is the only other attribute read**; what a row needs
+beyond it comes from one `resourceValues` stat. Its scopes are home's visible non-package folders plus
+the cloud roots, since scoping Spotlight to home itself would pull in `~/Library`.
 
 ## Type filter
 
 `FileSearchFilter` is the header's **All Types** pop-up: All Types, Folders, Documents, Images, Audio,
-Videos, Archives. Each case names the `UTType`s it admits, and everything else is derived from that list —
-the Spotlight clause (`kMDItemContentTypeTree == "public.image"`, parenthesized when a case names several)
-and `accepts(contentType:isDirectory:)`, which the home-root branch uses because it never reaches
-Spotlight. A type resolved from disk answers both, so a `.pages` package files under Documents and a plain
-folder under Folders.
+Videos, Archives. Each case names the `UTType`s it admits, and everything else is derived from that list.
+The index types an entry by its extension through `accepts(pathExtension:isPackage:)` — resolved as a
+package type for a package and a data type otherwise, so a `.pages` package files under Documents — and
+memoizes the verdict per extension, so a filter costs one `UTType` lookup per distinct extension.
+Folders keeps folders, walked or not, and nothing else. Recents use the same list as a
+`kMDItemContentTypeTree` clause, parenthesized when a case names several.
 
 The filter lives on `PaletteState` beside the clipboard's, is reset on every summon, and is never
 persisted. ⌘P and the header button open it through `PaletteFilterAction` and the one `PopoverMenu` path
@@ -109,17 +162,17 @@ re-runs the query.
 ## Scopes and ignore patterns
 
 `FileSearchPolicy` is the resolved answer to "what does this scope list mean": it splits the configured
-roots into the ones Spotlight takes verbatim and the home root that has to be expanded, and it compiles
-the ignore list. It is rebuilt when either setting changes, never per keystroke, so glob compilation and
-tilde expansion stay off the typing path.
+roots into the ones walked as they stand and the home root, and it compiles the ignore list. It is rebuilt
+when either setting changes, never per keystroke. `FileIndexScanner.plan` resolves it against the disk:
+every root through `realpath`, home's two cloud roots added when they exist, duplicates dropped. A root
+nested inside another is listed by its parent and walked as its own root, so nothing is indexed twice.
 
 Scopes are stored tilde-abbreviated in `fileSearchScopes` so a backup taken on one machine still points
-somewhere on another. Home expands into its visible children plus `Library/CloudStorage` and the current
-iCloud Drive root; every other root is handed to `MDQuerySetSearchScope` as it stands. An empty list
-searches nothing rather than falling back to home — a cleared list is a deliberate choice, not an unset one.
+somewhere on another. An empty list searches nothing rather than falling back to home — a cleared list is
+a deliberate choice, not an unset one.
 
 `FileSearchIgnoreList` compiles each pattern once into one of three buckets, which is what keeps matching
-cheap enough to run against every candidate:
+cheap enough to run against every name the walk lists:
 
 | Pattern shape | Matched against | Example |
 | --- | --- | --- |
@@ -131,31 +184,27 @@ cheap enough to run against every candidate:
 `**/…/**` pattern behaves as written. Patterns are stored pre-terminated as `ContiguousArray<CChar>`, so
 the hot path never re-encodes a `String` into a temporary C buffer.
 
-Bare `*` name globs are also pushed into the Spotlight expression as `kMDItemFSName != "…"cd` clauses, so
-ignored files cannot consume the 1,000-candidate cap. Only that shape is pushed: Spotlight reads `?` and
-`[` literally, and `kMDItemPath` is not queryable at all, so path globs have no server-side spelling and
-stay local. Quotes and backslashes are escaped on the way in, and any pattern still carrying one is kept
-out of the expression — an unescaped pattern would otherwise nil `MDQueryCreate` and break every search
-until it was deleted.
+For recents, bare `*` name globs are also pushed into the Spotlight expression as `kMDItemFSName != "…"cd`
+clauses, so ignored files cannot consume the candidate cap. Only that shape is pushed: Spotlight reads `?`
+and `[` literally, and `kMDItemPath` is not queryable at all. Quotes and backslashes are escaped on the
+way in, and any pattern still carrying one is kept out of the expression.
 
-The synchronous API cannot stop mid-call. A superseded result is discarded through the session's
-revision check, then the same worker runs only the newest pending query. Leaving or hiding the screen
-cancels and clears the session as well.
+## Measuring
 
-`FileSearchService.search` emits a `FileSearchService.search` interval on the shared
-`com.tinycast.perf` signpost subsystem. `Tests/file-search-performance.swift` exercises the same service
-against the current user's Spotlight index and reports first-run and repeated-query latency; it stays
-outside `run-tests.sh` because filesystem contents and Spotlight state are machine-dependent.
+`FileIndexScanner.build`, `FileIndexScanner.refresh`, `FileIndexManager.search` and
+`FileSearchService.recent` emit intervals on the shared `com.tinycast.perf` signpost subsystem, and
+`FileIndexManager` logs each walk's entry count and duration under the `FileIndex` category.
+`Tests/file-search-performance.swift` walks the current user's home and reports walk time, footprint, one
+refresh and per-query latency; it stays outside `run-tests.sh` because filesystem contents are
+machine-dependent.
 
-The 2026-09-12 baseline used a release-optimized standalone process against the developer home, after
-the path-only rewrite above. The blank screen's recents took 41 ms on a repeat and 184 ms cold; across
-`a`, `e`, `swift`, `pdf` and `project` on the shipped settings, first runs took 88–397 ms and repeated
-medians 54–107 ms. The 2026-08-11 measurement of the same queries, when every candidate's content type
-and invisible flag were fetched, was 192–831 ms first and 191–668 ms repeated. The benchmark runs every
-query twice, once on the shipped rules and once with five extra user patterns, and the second pass is
-within a few ms — so pattern matching is not where the time goes. The palette's debounce adds 120 ms
-before a typed query's measured interval and nothing before the recents one. These are local orders of
-magnitude, not budgets; rerun the benchmark after query-policy work.
+The 2026-10-08 baseline used a release-optimized standalone process against the developer home on the
+shipped rules: 98,856 entries in 14,120 folders walked in 0.5 s, the index added 8.8 MB, and a root
+folder refresh took 0.24 ms. Across `a`, `e`, `swift`, `pdf`, `project`, `main`, `readme` and `agents md`,
+repeated searches took 2.7–4.7 ms and first runs within 0.3 ms of that. The Spotlight search these
+replaced measured 64–440 ms for the same queries on the same machine that morning. Recents stayed at
+74 ms repeated. The palette's debounce adds 120 ms before a typed query and nothing before recents.
+These are local orders of magnitude, not budgets; rerun the benchmark after index or matching work.
 
 ## Palette and actions
 
@@ -237,10 +286,11 @@ undoable, as it is for Uninstall and for an extension's `trash` — and has no �
 is no "all" to trash. The three ⌘C chords differ only by their second modifier, which
 `PaletteShortcut` reads in order — ⇧, then ⌥, then ⌃; bare ⌘C stays with the search field.
 
-The first in-flight query says nothing — the rows it is about to replace would only flash a message — an
-empty completed query says what the active filter admits ("No files found", "No images found"), a blank
-screen with no recents says "Type to search files and folders", and query creation or execution failure
-says "File search is unavailable" inline.
+An in-flight query says nothing — the rows it is about to replace would only flash a message — except a
+typed one waiting on the first walk, which says "Indexing files…". An empty completed query says what
+the active filter admits ("No files found", "No images found"), a blank screen with no recents says
+"Type to search files and folders", and a Spotlight failure behind the recents query says "File search
+is unavailable" inline. An index search cannot fail; a folder it could not read is simply absent.
 
 ### Dragging out
 
@@ -257,14 +307,15 @@ cleared whenever the palette hides.
 
 Settings ▸ File Search owns the `fileSearchEnabled` switch, which is off when its preference is absent,
 along with the scope list, the ignore patterns and the Search Files command row. All of them are
-ordinary settings carried by Tinycast settings backups; importing them grants no permission or
-background access.
+ordinary settings carried by Tinycast settings backups; importing them grants no permission and starts
+no walk — the first typed query does that, and macOS still asks for each protected folder itself.
 
 `AppCore` observes the switch and asks `FileSearchCoordinator` to project `CommandID.searchFiles` into
-the launcher; a second observation rebuilds the policy when either list changes. The coordinator also
-guards entry into `.fileSearch`, so neither a stale selected command nor the global shortcut can open
-the screen after the feature is disabled. Disabling cancels the session and returns an open File Search
-screen to the launcher without changing palette visibility.
+the launcher; a second observation rebuilds the policy when either list changes, and drops the index
+when the policy actually differs. The coordinator also guards entry into `.fileSearch`, so neither a
+stale selected command nor the global shortcut can open the screen after the feature is disabled.
+Disabling cancels the session, stops `FileIndexManager` — freeing the index and ending its FSEvents
+stream — and returns an open File Search screen to the launcher without changing palette visibility.
 
 Search Files is bindable like every other built-in command — `AppEntry.hotKeyAction` answers
 `.command(.searchFiles)`, so its launcher row prints a bound chord as a keycap.

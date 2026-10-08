@@ -44,8 +44,8 @@ Tinycast is **free, and it stays that way**. If you enjoy it, consider buying a 
   or every app at once.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
-- **Search Files** — open files and folders from the folders you choose, through Spotlight, with no
-  index of our own.
+- **Search Files** — open files and folders from the folders you choose, through an in-memory name
+  index that answers in milliseconds and follows changes live.
 - **Dictionary** — look a word up with the Define Word command, or define whatever you typed from the
   launcher's fallbacks, read from the Mac's own dictionaries.
 - **Clipboard history** — text and images, searchable, pasted back into the app you were using.

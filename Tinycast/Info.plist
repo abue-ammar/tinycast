@@ -75,6 +75,14 @@
 	<string>Tinycast lets extensions you run read and edit your reminders.</string>
 	<key>NSBluetoothAlwaysUsageDescription</key>
 	<string>Tinycast uses Bluetooth access only when you run the Toggle Bluetooth action.</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>File Search reads the names of files on your Desktop so you can find them. Nothing leaves your Mac.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>File Search reads the names of files in Documents so you can find them. Nothing leaves your Mac.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>File Search reads the names of files in Downloads so you can find them. Nothing leaves your Mac.</string>
+	<key>NSFileProviderDomainUsageDescription</key>
+	<string>File Search reads the names of your cloud files so you can find them, without downloading any.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Tinycast</string>
 </dict>
