@@ -2,7 +2,7 @@ import Foundation
 
 @main
 struct ScopesTest {
-    static func main() {
+    static func main() throws {
         let fm = FileManager.default
         let root = fm.temporaryDirectory
             .appendingPathComponent("tinycast-scopes-\(UUID().uuidString)")
@@ -31,6 +31,13 @@ struct ScopesTest {
             try? data?.write(to: contents.appendingPathComponent("Info.plist"))
         }
 
+        func paths(in scopes: [String]) -> [String] {
+            SearchScopes.appBundles(in: scopes).map {
+                $0.pathComponents.drop(while: { $0 != root.lastPathComponent }).dropFirst()
+                    .joined(separator: "/")
+            }
+        }
+
         // Two direct apps, a non-app file, a hidden app, one nested app, one two-deep nested app.
         let apps = root.appendingPathComponent("Apps")
         makeDir(apps.appendingPathComponent("Alpha.app"))
@@ -52,6 +59,55 @@ struct ScopesTest {
         check(
             "a deeply nested folder works as its own scope",
             SearchScopes.appBundles(in: [deep.path]).map(\.lastPathComponent) == ["TooDeep.app"])
+
+        // A linked scope must keep its logical paths, including children and alternate aliases.
+        let scopeLink = root.appendingPathComponent("LinkedApps")
+        try fm.createSymbolicLink(at: scopeLink, withDestinationURL: apps)
+        let expectedLinkedPaths = [
+            "LinkedApps/Alpha.app", "LinkedApps/Beta.app", "LinkedApps/Vendor/Nested.app"
+        ]
+        check(
+            "a symlinked directory scope preserves its paths",
+            paths(in: [scopeLink.path]) == expectedLinkedPaths)
+        let scopeChain = root.appendingPathComponent("LinkedAgain")
+        try fm.createSymbolicLink(at: scopeChain, withDestinationURL: scopeLink)
+        check(
+            "directory symlink chains preserve the configured scope",
+            paths(in: [scopeChain.path])
+                == ["LinkedAgain/Alpha.app", "LinkedAgain/Beta.app", "LinkedAgain/Vendor/Nested.app"])
+        check(
+            "separate scopes retain their aliases in scope order",
+            paths(in: [scopeLink.path, apps.path]) == expectedLinkedPaths + paths(in: [apps.path]))
+
+        // App links remain leaves; folder links keep the same visibility and depth limits.
+        let links = root.appendingPathComponent("Links")
+        makeDir(links)
+        let appLink = links.appendingPathComponent("Renamed.app")
+        try fm.createSymbolicLink(
+            at: appLink, withDestinationURL: apps.appendingPathComponent("Alpha.app"))
+        check(
+            "an app symlink is indexed with its own name and path",
+            paths(in: [links.path]) == ["Links/Renamed.app"])
+        check(
+            "an app symlink works as its own scope",
+            paths(in: [appLink.path]) == ["Links/Renamed.app"])
+        let vendorLink = links.appendingPathComponent("Vendor")
+        try fm.createSymbolicLink(at: vendorLink, withDestinationURL: vendor)
+        try fm.createSymbolicLink(
+            at: links.appendingPathComponent(".HiddenVendor"), withDestinationURL: vendor)
+        try fm.createSymbolicLink(
+            at: links.appendingPathComponent("Missing"),
+            withDestinationURL: root.appendingPathComponent("Nope"))
+        check(
+            "symlinked subfolders preserve paths without indexing hidden or deeper children",
+            paths(in: [links.path]) == ["Links/Renamed.app", "Links/Vendor/Nested.app"])
+        try fm.createSymbolicLink(at: links.appendingPathComponent("Back"), withDestinationURL: links)
+        let cycle = links.appendingPathComponent("Cycle")
+        try fm.createSymbolicLink(at: cycle, withDestinationURL: cycle)
+        check("a cyclic directory scope is skipped", SearchScopes.appBundles(in: [cycle.path]).isEmpty)
+        check(
+            "ancestor and cyclic directory links do not loop or hide other apps",
+            SearchScopes.appBundles(in: [links.path]).count == 2)
 
         // A scope may be a single bundle: that is how Finder ships as a default.
         check(
@@ -79,6 +135,26 @@ struct ScopesTest {
         check(
             "an .app scope also yields its embedded apps",
             Set(SearchScopes.appBundles(in: [xcode.path]).map(\.lastPathComponent)) == embedded)
+
+        // Embedded application folders can be links without changing the indexed paths.
+        let linkedHost = root.appendingPathComponent("LinkedHost.app")
+        makeDir(linkedHost.appendingPathComponent("Contents"))
+        try fm.createSymbolicLink(
+            at: linkedHost.appendingPathComponent("Contents/Applications"), withDestinationURL: tools)
+        check(
+            "symlinked embedded-app folders preserve paths",
+            paths(in: [linkedHost.path]).contains("LinkedHost.app/Contents/Applications/Xcode.app"))
+
+        // An embedded app link can point back to its host, so traversal must stop at the ancestor.
+        let loopHost = root.appendingPathComponent("LoopHost.app")
+        let loopFolder = loopHost.appendingPathComponent("Contents/Applications")
+        makeDir(loopFolder)
+        try fm.createSymbolicLink(
+            at: loopFolder.appendingPathComponent("Back.app"), withDestinationURL: loopHost)
+        check(
+            "embedded app symlinks cannot recurse into an ancestor folder",
+            SearchScopes.appBundles(in: [loopHost.path]).map(\.lastPathComponent)
+                == ["LoopHost.app", "Back.app"])
 
         func listing(_ folder: String, versions: [String: String]) -> [String] {
             let url = root.appendingPathComponent(folder)

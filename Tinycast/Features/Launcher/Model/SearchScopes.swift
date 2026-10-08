@@ -54,21 +54,34 @@ enum SearchScopes {
     }
 
     /// An `.app` is never descended into beyond its embedded-app folders.
-    private static func appBundles(under url: URL, subfolderDepth: Int) -> [URL] {
+    private static func appBundles(under url: URL, subfolderDepth: Int, ancestors: Set<String> = []) -> [URL] {
+        let fm = FileManager.default
+        var isDirectory: ObjCBool = false
+        // Skip non-directories early without rejecting directory symlinks.
+        guard fm.fileExists(atPath: url.path, isDirectory: &isDirectory), isDirectory.boolValue
+        else { return [] }
+        let resolved = url.resolvingSymlinksInPath()
         guard
-            let items = try? FileManager.default.contentsOfDirectory(
-                at: url, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]
+            !ancestors.contains(resolved.path),
+            let items = try? fm.contentsOfDirectory(
+                at: resolved, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
             )
         else { return [] }
+        let ancestors = ancestors.union([resolved.path])
+        // Keep logical app paths stable when a directory link points to a new target.
+        let scopedItems =
+            items.first?.deletingLastPathComponent().path == url.path
+            ? items
+            : items.map {
+                url.appendingPathComponent($0.lastPathComponent, isDirectory: $0.hasDirectoryPath)
+            }
 
         var result: [URL] = []
-        for item in newestFirst(items) {
+        for item in newestFirst(scopedItems) {
             if item.pathExtension == "app" {
-                result.append(contentsOf: withEmbedded(item))
-            } else if subfolderDepth > 0,
-                (try? item.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
-            {
-                result.append(contentsOf: appBundles(under: item, subfolderDepth: subfolderDepth - 1))
+                result.append(contentsOf: withEmbedded(item, ancestors: ancestors))
+            } else if subfolderDepth > 0 {
+                result.append(contentsOf: appBundles(under: item, subfolderDepth: subfolderDepth - 1, ancestors: ancestors))
             }
         }
         return result
@@ -99,10 +112,10 @@ enum SearchScopes {
         url.deletingPathExtension().lastPathComponent
     }
 
-    private static func withEmbedded(_ app: URL) -> [URL] {
+    private static func withEmbedded(_ app: URL, ancestors: Set<String> = []) -> [URL] {
         [app]
             + embeddedAppFolders.flatMap {
-                appBundles(under: app.appendingPathComponent($0), subfolderDepth: 0)
+                appBundles(under: app.appendingPathComponent($0), subfolderDepth: 0, ancestors: ancestors)
             }
     }
 
