@@ -428,8 +428,9 @@ consuming a token before parsing the right operand.
 
 A parenthesis, constant, function or spoken root starts an implicit product (`2 square root of 9` → 6).
 Adjacent numbers never do — `5 3` stays an app search — and unit and currency names keep their own
-operand positions. The tokenizer only folds a lone `x` after an operand, keeping names such as `max`
-and incomplete hexadecimal input such as `0x` out of arithmetic. The same rule covers typed values
+operand positions. The tokenizer only folds a lone `x` after an operand, preserving registered
+currency names such as `xof` and `xrp`, the `xor` operator, names such as `max` and incomplete
+hexadecimal input such as `0x`. The same rule covers typed values
 (`$5(2)` → `10.00 USD`, `2(3)kg` → `6 kg`, matching `2*(3)kg`); adjacent quantities still use the
 composite `+` described above.
 

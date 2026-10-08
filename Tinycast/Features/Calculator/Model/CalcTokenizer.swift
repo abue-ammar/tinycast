@@ -214,12 +214,11 @@ enum CalcTokenizer {
         guard index > 0, !chars[index - 1].isLetter, let previous, endsOperand(previous) else {
             return false
         }
-        if index + 2 < chars.count,
-            ["o", "O"].contains(chars[index + 1]),
-            ["r", "R"].contains(chars[index + 2]),
-            index + 3 == chars.count || !chars[index + 3].isLetter
-        {
-            return false
+        var end = index + 1
+        while end < chars.count, chars[end].isLetter { end += 1 }
+        if end > index + 1 {
+            let name = String(String.UnicodeScalarView(chars[index..<end])).lowercased()
+            if name == "xor" || CalcCurrency.byName[name] != nil { return false }
         }
         let attached = !chars[index - 1].isWhitespace
         var next = index + 1
