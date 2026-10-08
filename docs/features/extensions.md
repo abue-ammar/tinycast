@@ -587,6 +587,11 @@ global Show in launcher switch, or this extension's — because the ranker never
 
 ## Deeplinks
 
+`raycast://extensions/<owner>/<extension>?source=webstore`, used by the Store website's Install
+buttons, opens Settings → Extensions and looks up that exact listing to offer the existing Install
+or Reinstall action. Nothing installs or runs until asked. When extensions are disabled, the link
+opens their Settings pane so they can be enabled through the usual consent flow.
+
 `raycast://extensions/<owner>/<extension>/<command>` runs an installed command from outside the app —
 a browser link, another app, a Shortcut — and `tinycast://` mirrors it so our own links never depend
 on Raycast winning the scheme. Both accept Raycast's query parameters: `arguments` as URL-encoded
@@ -595,7 +600,9 @@ command always takes over the palette, so it launches as `userInitiated`. The ow
 scoped install matches by `owner/extension` first and falls back to the bare slug, so short links
 keep working. Anything else on a claimed scheme just reopens the palette, and an unknown command says
 so rather than failing silently. `ExtensionDeepLink` owns the claimed schemes and the parsing,
-covered by `Tests/ext-test.swift`; an extension's own `open("raycast://…")` resolves through the same
+covered by `Tests/ext-test.swift`. Two-segment links without `source=webstore` keep running commands
+as `<extension>/<command>`; three-segment command links keep running even with that parameter.
+An extension's own `open("raycast://…")` resolves through the same
 `ExtensionManager.resolve(_:)` instead of launching Raycast.
 
 For view commands, nonempty `fallbackText` also prefills the search field: lists and grids filter

@@ -708,6 +708,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### Extensions
 
+- Open `raycast://extensions/linear/linear?source=webstore` from a browser: Settings → Extensions
+  offers the exact Store listing with Install (or Reinstall). Close it without installing, then open
+  a different Store link and verify its listing replaces the first. Repeat with extensions disabled:
+  Settings opens without looking up, installing or running anything; enabling still asks for consent.
 - Open a view-command deeplink with `fallbackText=beta`, with the palette hidden and already open:
   the field shows `beta`; a locally filtered List/Grid shows matching rows, and a command using
   `onSearchTextChange` receives the query when it mounts. Repeat without fallback text: the field

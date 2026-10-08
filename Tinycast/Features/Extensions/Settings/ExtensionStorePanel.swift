@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The Raycast Store's search, and an install button per result.
 struct ExtensionStorePanel: View {
+    let storeInstall: ExtensionDeepLink.StoreInstall?
     let onClose: () -> Void
     @Environment(AppCore.self) private var core
 
@@ -15,13 +16,21 @@ struct ExtensionStorePanel: View {
     @State private var installed: Set<String> = []
     @State private var searchTask: Task<Void, Never>?
 
+    init(storeInstall: ExtensionDeepLink.StoreInstall? = nil, onClose: @escaping () -> Void) {
+        self.storeInstall = storeInstall
+        self.onClose = onClose
+        _searching = State(initialValue: storeInstall != nil)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
             ExtensionSettingsEditorHeader(
-                title: "Search Extensions",
+                title: storeInstall == nil ? "Search Extensions" : "Install Extension",
                 subtitle: "The Raycast Store's extensions arrive built, so they install as they are.")
             // The same borderless field the panes use, rather than a bordered capsule of its own.
-            SettingsFilterField(prompt: "Search extensions…", query: $query)
+            if storeInstall == nil {
+                SettingsFilterField(prompt: "Search extensions…", query: $query)
+            }
             content
             // The list scrolls right up to the footer without it, cutting the last row.
             Divider()
@@ -32,22 +41,28 @@ struct ExtensionStorePanel: View {
         .extensionSettingsEditorPanelSurface()
         .onChange(of: query) { _, value in scheduleSearch(value) }
         .onDisappear { searchTask?.cancel() }
+        .task {
+            if let storeInstall { await loadListings(query: storeInstall.name) }
+        }
     }
 
     @ViewBuilder
     private var content: some View {
-        if query.trimmingCharacters(in: .whitespaces).isEmpty {
+        if storeInstall == nil && query.trimmingCharacters(in: .whitespaces).isEmpty {
             emptyState
         } else if searching && results.isEmpty {
             VStack(spacing: Theme.Spacing.md) {
                 ProgressView()
-                Text("Searching…").font(.callout).foregroundStyle(.secondary)
+                Text(storeInstall == nil ? "Searching…" : "Looking up extension…")
+                    .font(.callout).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let searchFailure {
             placeholder(searchFailure)
         } else if results.isEmpty && searched {
-            placeholder("Nothing matches “\(query)”.")
+            placeholder(
+                storeInstall.map { "“\($0.handle)/\($0.name)” is unavailable in the Raycast Store." }
+                    ?? "Nothing matches “\(query)”.")
         } else {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
@@ -129,18 +144,26 @@ struct ExtensionStorePanel: View {
         searchTask = Task {
             try? await Task.sleep(for: .milliseconds(350))
             guard !Task.isCancelled else { return }
-            await search(trimmed)
+            await loadListings(query: trimmed)
         }
     }
 
-    private func search(_ trimmed: String) async {
+    private func loadListings(query: String) async {
         searching = true
         defer {
             searching = false
             searched = true
         }
         do {
-            let found = try await ExtensionStoreClient().search(trimmed)
+            let client = ExtensionStoreClient()
+            let found: [ExtensionListing]
+            if let storeInstall {
+                found =
+                    try await client.lookup(handle: storeInstall.handle, name: storeInstall.name)
+                    .map { [$0] } ?? []
+            } else {
+                found = try await client.search(query)
+            }
             guard !Task.isCancelled else { return }
             (results, searchFailure) = (found, nil)
         } catch {

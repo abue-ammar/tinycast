@@ -1,8 +1,18 @@
 import Foundation
 
-/// An `extensions` deep link: `raycast://extensions/<owner>/<extension>/<command>?arguments={…}`.
-/// `tinycast://` mirrors it so our own links never depend on Raycast winning the scheme.
 struct ExtensionDeepLink: Sendable, Equatable {
+    enum Route: Sendable, Equatable {
+        case command(ExtensionDeepLink)
+        case storeInstall(StoreInstall)
+    }
+
+    struct StoreInstall: Sendable, Equatable, Identifiable {
+        let handle: String
+        let name: String
+
+        var id: String { "\(handle)/\(name)" }
+    }
+
     let ownerOrAuthor: String?
     let extensionName: String
     let commandName: String
@@ -27,8 +37,13 @@ struct ExtensionDeepLink: Sendable, Equatable {
         return ["raycast", "tinycast", "com.raycast", "raycastinternal"].contains(scheme)
     }
 
-    /// Host and first path segment unify `raycast://extensions/…` and `com.raycast:/extensions/…`.
     static func parse(url: URL) -> ExtensionDeepLink? {
+        guard case .command(let link)? = route(url: url) else { return nil }
+        return link
+    }
+
+    /// Host and first path segment unify `raycast://extensions/…` and `com.raycast:/extensions/…`.
+    static func route(url: URL) -> Route? {
         guard claims(url) else { return nil }
         var segments: [String] = []
         if let host = url.host, !host.isEmpty { segments.append(host) }
@@ -37,6 +52,12 @@ struct ExtensionDeepLink: Sendable, Equatable {
         guard segments.count >= 3, segments[0].lowercased() == "extensions" else { return nil }
         let body = Array(segments.dropFirst())
         guard body.count >= 2 else { return nil }
+        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        if body.count == 2,
+            items.contains(where: { $0.name.lowercased() == "source" && $0.value == "webstore" })
+        {
+            return .storeInstall(StoreInstall(handle: body[0], name: body[1]))
+        }
         let ownerOrAuthor: String?
         let extensionName: String
         let commandName: String
@@ -55,7 +76,6 @@ struct ExtensionDeepLink: Sendable, Equatable {
             commandName = body[body.count - 1]
         }
         guard !extensionName.isEmpty, !commandName.isEmpty else { return nil }
-        let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         var arguments: [String: String] = [:]
         var fallbackText: String?
         var launchType = ExtensionLaunchType.userInitiated
@@ -71,9 +91,10 @@ struct ExtensionDeepLink: Sendable, Equatable {
                 break
             }
         }
-        return ExtensionDeepLink(
-            ownerOrAuthor: ownerOrAuthor, extensionName: extensionName, commandName: commandName,
-            arguments: arguments, fallbackText: fallbackText, launchType: launchType)
+        return .command(
+            ExtensionDeepLink(
+                ownerOrAuthor: ownerOrAuthor, extensionName: extensionName, commandName: commandName,
+                arguments: arguments, fallbackText: fallbackText, launchType: launchType))
     }
 
     /// Raycast sends one URL-encoded JSON object; anything else means no arguments, not a failure.

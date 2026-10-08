@@ -85,6 +85,7 @@ final class AppCore {
     var pendingSnippetEdit: SnippetEditRequest?
     /// Set when a layout editor should open with Settings; the pane consumes it.
     var pendingWindowLayoutEdit: WindowLayoutEditRequest?
+    var pendingExtensionStoreInstall: ExtensionDeepLink.StoreInstall?
 
     @ObservationIgnored private(set) lazy var snippetCoordinator = SnippetCoordinator(
         store: snippetsStore, listener: snippetListener, injector: textInjector,
@@ -477,11 +478,16 @@ final class AppCore {
             break
         }
         guard ExtensionDeepLink.claims(url) else { return }
-        guard let link = ExtensionDeepLink.parse(url: url) else {
+        guard let route = ExtensionDeepLink.route(url: url) else {
             paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
             return
         }
-        extensionCoordinator.runDeepLink(link)
+        switch route {
+        case .command(let link):
+            extensionCoordinator.runDeepLink(link)
+        case .storeInstall(let install):
+            extensionCoordinator.showStoreInstall(install)
+        }
     }
 
     /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.

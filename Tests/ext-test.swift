@@ -936,6 +936,59 @@ struct ExtensionTests {
             bare?.ownerOrAuthor == nil && bare?.extensionName == "demo"
                 && bare?.commandName == "search")
 
+        let installURL = URL(string: "raycast://extensions/linear/linear?source=webstore")!
+        let install = ExtensionDeepLink.Route.storeInstall(.init(handle: "linear", name: "linear"))
+        check(
+            "store Install routes by owner and extension",
+            ExtensionDeepLink.route(url: installURL) == install)
+        check("store Install is never parsed as a command", ExtensionDeepLink.parse(url: installURL) == nil)
+        check(
+            "store Install accepts the Tinycast scheme",
+            ExtensionDeepLink.route(
+                url: URL(string: "tinycast://extensions/linear/linear?source=webstore")!) == install)
+        check(
+            "store Install accepts the path-based scheme",
+            ExtensionDeepLink.route(
+                url: URL(string: "com.raycast:/extensions/linear/linear?source=webstore")!) == install)
+        check(
+            "store Install keeps the publisher separate from the slug",
+            ExtensionDeepLink.route(
+                url: URL(string: "raycast://extensions/acme/demo?source=webstore")!)
+                == .storeInstall(.init(handle: "acme", name: "demo")))
+        check(
+            "store Install decodes path and query values",
+            ExtensionDeepLink.route(
+                url: URL(string: "raycast://extensions/ac%6De/de%6Do?source=web%73tore")!)
+                == .storeInstall(.init(handle: "acme", name: "demo")))
+        check(
+            "store Install tolerates other query parameters and a trailing slash",
+            ExtensionDeepLink.route(
+                url: URL(string: "raycast://extensions/linear/linear/?source=webstore&ref=popular")!)
+                == install)
+        check(
+            "command route preserves short links",
+            ExtensionDeepLink.route(url: URL(string: "raycast://extensions/demo/search")!)
+                == bare.map(ExtensionDeepLink.Route.command))
+        check(
+            "a different source preserves short command links",
+            ExtensionDeepLink.parse(url: URL(string: "raycast://extensions/demo/search?source=shortcut")!)
+                == bare)
+        check(
+            "webstore source preserves a fully qualified command link",
+            ExtensionDeepLink.parse(
+                url: URL(string: "raycast://extensions/linear/linear/create-issue?source=webstore")!)
+                == canonical)
+        check(
+            "store route rejects an incomplete Install link",
+            ExtensionDeepLink.route(url: URL(string: "raycast://extensions/linear?source=webstore")!) == nil)
+        check(
+            "store route rejects other schemes",
+            ExtensionDeepLink.route(
+                url: URL(string: "https://extensions/linear/linear?source=webstore")!) == nil)
+        check(
+            "store route rejects OAuth callbacks",
+            ExtensionDeepLink.route(url: URL(string: "raycast://oauth?source=webstore&code=abc")!) == nil)
+
         let args = ExtensionDeepLink.parse(
             url: URL(
                 string:
