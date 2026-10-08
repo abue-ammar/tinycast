@@ -1,7 +1,7 @@
 # Search Files
 
 Search Files is an on-demand palette screen for opening files and folders from the folders the user
-configures. It searches filenames through Spotlight, adds no private index or launch work, and is
+configures. It searches filenames through Spotlight or an already-running fsearch daemon, adds no private index or launch work, and is
 reached from the built-in Search Files launcher command — or its own global shortcut — after the
 feature is enabled in Settings.
 
@@ -15,7 +15,7 @@ feature is enabled in Settings.
   and the `UniformTypeIdentifiers` of `FileSearchFilter` and `FileSearchPreviewKind` included — value
   types with no environment of their own. `file-search-test` compiles the shipped files together with
   the existing pure fuzzy scorer.
-- **Search is filename-only, and every list comes from Spotlight.** Tinycast creates no content index,
+- **Search is filename-only.** Tinycast creates no content index,
   history, query cache, watcher or search data — the blank screen's Recently Used rows are one more
   Spotlight query over the configured scopes, read from the system's own `kMDItemLastUsedDate` and
   `kMDItemFSContentChangeDate`, never from anything Tinycast recorded. The type filter narrows *which*
@@ -63,7 +63,7 @@ words in the filename without requiring them to be adjacent or in that order. Th
 Spotlight calls and coalesces changes to the newest pending query, so slower typing cannot accumulate
 overlapping queries. The session owns *when* a search runs and nothing else — the expressions are the
 service's, built where the policy that shapes them already is. The service resolves the configured roots,
-then keeps every `MDQuery` reference inside one nonisolated synchronous function. Spotlight returns at
+then uses fsearch for eligible queries when its daemon is available, otherwise keeping every `MDQuery` reference inside one nonisolated synchronous function. Spotlight returns at
 most 1,000 candidates. `FileSearchQuery` removes hidden path components and app-bundle contents, applies
 the ignore list, then applies `FuzzyMatch` and publishes at most 200. Localized filename then path order
 makes ties deterministic.
@@ -77,6 +77,55 @@ the developer home: 200 URLs stat in 13 ms, where 200 metadata fetches cost 200 
 
 Visible files and document packages directly under home are matched locally with the same case- and
 diacritic-insensitive all-terms rule, since scoping Spotlight to home itself would pull in `~/Library`.
+
+## Optional fsearch acceleration
+
+If [fsearch](https://github.com/noahdunnagan/fsearch) is already running, Search Files connects to its
+Unix socket at `~/Library/Application Support/FSearch/fsearch.sock`. Tinycast never installs, starts,
+or owns the daemon. Install and run it separately using its documented `fsearch install --login`
+command. Without it, the same build continues to use Spotlight.
+
+The accelerated path handles All Types filename queries of up to eight ASCII words containing only
+letters, digits, dots, hyphens and underscores, with at least one word of three characters. Very broad
+one- and two-character searches did not consistently improve in local measurements. Non-ASCII text,
+special query syntax, type-filtered searches and Recently Used stay on Spotlight; fsearch's extension
+lists do not replace macOS UTType conformance or last-used metadata. Other launcher search engines are
+unchanged: a disk index does not improve searches of small, already-loaded app or clipboard lists.
+
+For accelerated queries, matching and ordering come from fsearch, including typo-tolerant and path
+matching. This intentionally differs from Spotlight's all-terms filename substring search, and ASCII
+queries do not acquire Spotlight's diacritic folding against accented filenames. Home-root items retain
+the existing local matching behavior. fsearch results are not passed through a second fuzzy scorer.
+
+One request contains a literal-escaped union of the resolved search folders and asks for at most 1,000
+candidates. The service independently validates every returned path against those scopes, hidden/app
+bundle exclusions and the existing ignore list, then stats only enough accepted candidates to fill 200
+rows. Paths that vanished, duplicates and malformed paths are dropped. As with Spotlight, exclusions
+after the candidate cap can leave fewer than 200 rows. A successful empty response remains empty.
+
+The client uses a fresh local connection per search, accepts only a same-user peer, has a 250 ms total
+I/O deadline and a 1 MiB response limit, and closes its descriptor on every exit path. Missing, stale,
+unready, malformed or unresponsive daemons fall back to Spotlight. A stalled daemon can therefore add
+up to 250 ms before that fallback. No process is spawned per keystroke, and the existing session still
+serializes and coalesces requests and rejects superseded results.
+
+The tradeoff is explicit: fsearch has its own persistent disk index and background process, outside
+Tinycast's memory footprint. Its memory, initial crawl and update work must be counted separately when
+assessing the total cost. It also has independent filesystem permissions and may omit protected files
+or unmaterialized cloud content that Spotlight knows about. This integration does not request Full
+Disk Access. Keep Spotlight when those semantics matter more than fuzzy local search.
+
+The request builder costs O(m log m + q) time and O(m + q) space for m scope-path bytes and q query bytes;
+the reply and local filtering are bounded by 1,000 candidates and 1 MiB. Native row materialization
+stops at 200 results. fsearch performs its own indexed-name scan and ranking; this adapter does not
+claim constant-time whole-disk search. No query cache, watcher, timer or persistent state is added to
+Tinycast.
+
+Run the existing release-optimized benchmark with `--compare-fsearch` to compare Spotlight and automatic
+selection on the same scopes and queries. The reported intervals include scope resolution, IPC,
+filtering and row materialization, but exclude the unchanged 120 ms typing debounce. Different matching
+semantics can produce different result counts; this is a latency comparison, not a recall equivalence
+test. Run it after builds and tests finish to avoid CPU contention.
 
 ## Recently used
 

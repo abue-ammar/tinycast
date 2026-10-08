@@ -123,6 +123,14 @@ run file-search-session-test Tinycast/Platform/Signposts.swift \
                              $L/SearchRelevance.swift \
                              Tinycast/Features/FileSearch/Model/*.swift \
                              Tinycast/Features/FileSearch/Service/*.swift
+run fsearch-test -F "$(xcode-select -p)/Platforms/MacOSX.platform/Developer/Library/Frameworks" \
+                           -Xlinker -rpath -Xlinker "$(xcode-select -p)/Platforms/MacOSX.platform/Developer/Library/Frameworks" \
+                           -load-plugin-library "$(xcode-select -p)/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing/libTestingMacros.dylib" \
+                           $L/SearchRelevance.swift \
+                           Tinycast/Features/FileSearch/Model/*.swift \
+                           Tinycast/Features/FileSearch/Service/FSearchClient.swift \
+                           Tinycast/Features/FileSearch/Service/FileSearchService.swift \
+                           Tinycast/Platform/Signposts.swift
 run menu-search-test       $L/SearchRelevance.swift \
                            Tinycast/Features/MenuSearch/Model/*.swift \
                            Tinycast/Features/MenuSearch/Service/*.swift
@@ -131,7 +139,8 @@ run window-switch-test     $L/SearchRelevance.swift \
 run index file-search-performance Tinycast/Platform/Signposts.swift \
                            $L/SearchRelevance.swift \
                            Tinycast/Features/FileSearch/Model/*.swift \
-                           Tinycast/Features/FileSearch/Service/FileSearchService.swift
+                           Tinycast/Features/FileSearch/Service/FileSearchService.swift \
+                           Tinycast/Features/FileSearch/Service/FSearchClient.swift
 run ranking-test           $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/LauncherRankingStore.swift
 run scopes-test            $L/SearchScopes.swift

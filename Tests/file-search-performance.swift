@@ -4,7 +4,8 @@ import Foundation
 struct FileSearchPerformance {
     static func main() throws {
         let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
-        let arguments = Array(CommandLine.arguments.dropFirst())
+        let compare = CommandLine.arguments.contains("--compare-fsearch")
+        let arguments = CommandLine.arguments.dropFirst().filter { $0 != "--compare-fsearch" }
         let queries = arguments.isEmpty ? ["a", "e", "swift", "pdf", "project"] : arguments
         // The second list is deliberately heavy, so the run prices pattern matching.
         let policies = [
@@ -28,20 +29,23 @@ struct FileSearchPerformance {
         for (label, policy) in policies {
             // The empty query is the blank screen's own list, and its latency is the one felt most.
             for query in [""] + queries {
-                try measure(query: query, policy: policy, label: label)
+                if compare {
+                    try measure(query: query, policy: policy, label: label + " Spotlight", socketPath: "/dev/null")
+                }
+                try measure(query: query, policy: policy, label: label + (compare ? " automatic" : ""))
             }
         }
     }
 
     private static func measure(
-        query: String, policy: FileSearchPolicy, label: String
+        query: String, policy: FileSearchPolicy, label: String, socketPath: String? = nil
     ) throws {
         var samples: [Double] = []
         var first = 0.0
         var resultCount = 0
         for run in 0..<6 {
             let start = ContinuousClock.now
-            let results = try FileSearchService.search(query: query, policy: policy)
+            let results = try FileSearchService.search(query: query, policy: policy, fsearchSocket: socketPath)
             let elapsed = milliseconds(start.duration(to: .now))
             if run == 0 {
                 first = elapsed
@@ -52,7 +56,7 @@ struct FileSearchPerformance {
         }
         let ordered = samples.sorted()
         let name = "\(label) \(query.isEmpty ? "(recents)" : query)"
-            .padding(toLength: 22, withPad: " ", startingAt: 0)
+            .padding(toLength: 35, withPad: " ", startingAt: 0)
         let metrics = String(
             format: "first %7.2f ms  repeat median %7.2f ms  max %7.2f ms  %3d results",
             first, ordered[ordered.count / 2], ordered.last ?? 0, resultCount)

@@ -3,7 +3,7 @@ title: File search
 description: Find files and folders through the Spotlight index, with a preview and no file permissions.
 ---
 
-Search file and folder names in the folders you choose, using the index macOS already maintains.
+Search file and folder names in the folders you choose, using Spotlight or an already-running fsearch daemon.
 
 Turn it on in **Settings → File Search**. It's **off** by default. While it's off, there's no
 command and Tinycast doesn't query Spotlight.
@@ -19,6 +19,18 @@ app bundles are always excluded, and no setting can include them. That's what le
 without permissions.
 
 If Spotlight hasn't indexed something, you get fewer results instead of a Full Disk Access prompt.
+
+## Optional fsearch
+
+If you install and start [fsearch](https://github.com/noahdunnagan/fsearch) separately, Tinycast can use
+it for faster, typo-tolerant filename searches in **All Types**. Tinycast does not install or start an
+indexer itself. fsearch maintains its own disk index and uses additional background memory and CPU.
+
+Recent files, type filters, very short searches and non-ASCII queries still use Spotlight. The two
+engines match differently: fsearch adds fuzzy and path matching, while Spotlight provides language
+folding and metadata. If fsearch is unavailable, Tinycast uses Spotlight automatically. Your configured
+folders and ignore rules still apply. fsearch's own permissions and cloud-file coverage can differ
+from Spotlight's, so it may not find every file Spotlight knows about.
 
 ## The screen
 

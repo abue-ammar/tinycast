@@ -10,7 +10,8 @@ enum FileSearchService {
 
     /// An empty query is the blank screen: what was used or changed lately, newest first.
     nonisolated static func search(
-        query rawQuery: String, policy: FileSearchPolicy, filter: FileSearchFilter = .all
+        query rawQuery: String, policy: FileSearchPolicy, filter: FileSearchFilter = .all,
+        fsearchSocket: String? = nil
     ) throws -> [FileSearchResult] {
         try Signposts.interval("FileSearchService.search") {
             let selection = resolveScopes(policy)
@@ -18,6 +19,33 @@ enum FileSearchService {
                 return try recent(scopes: selection.directories, policy: policy, filter: filter)
             }
             var results = rootResults(selection, query: rawQuery, policy: policy, filter: filter)
+            if filter == .all,
+                let request = FSearchRequest(
+                    query: rawQuery, directories: selection.directories.map { $0.resolvingSymlinksInPath() }),
+                let paths = try? FSearchClient.search(
+                    request,
+                    socketPath: fsearchSocket
+                        ?? policy.homeDirectory.appending(
+                            path: "Library/Application Support/FSearch/fsearch.sock"
+                        ).path),
+                let scope = try? NSRegularExpression(pattern: request.path)
+            {
+                var seen = Set(results.map(\.id))
+                results.reserveCapacity(FileSearchQuery.resultLimit)
+                for hit in paths {
+                    guard results.count < FileSearchQuery.resultLimit else { break }
+                    let path = hit.path
+                    guard path.hasPrefix("/"),
+                        URL(fileURLWithPath: path).standardizedFileURL.path == path,
+                        scope.firstMatch(in: path, range: NSRange(path.startIndex..., in: path)) != nil,
+                        !FileSearchQuery.isExcludedPath(path, ignoring: policy.ignore),
+                        seen.insert(path).inserted,
+                        let result = resolve(path, homeDirectory: policy.homeDirectory)
+                    else { continue }
+                    results.append(result)
+                }
+                return Array(results.prefix(FileSearchQuery.resultLimit))
+            }
             guard
                 !selection.directories.isEmpty,
                 let expression = FileSearchQuery.expression(
@@ -71,6 +99,7 @@ enum FileSearchService {
     ) -> [FileSearchResult] {
         selection.rootItems.compactMap { candidate in
             guard
+                !FileSearchQuery.isExcludedPath(candidate.url.path, ignoring: policy.ignore),
                 filter.accepts(
                     contentType: candidate.contentType, isDirectory: candidate.isDirectory),
                 FileSearchQuery.matches(filename: candidate.url.lastPathComponent, query: query)
