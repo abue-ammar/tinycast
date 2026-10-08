@@ -38,9 +38,11 @@ enum SystemActionRunner {
         case .sleepDisplays:
             try await runProcess("/usr/bin/pmset", arguments: ["displaysleepnow"])
         case .restart:
-            try await runAppleScript("tell application \"System Events\" to restart")
+            try await runAppleScript(
+                "tell application \"System Events\" to restart with state saving preference")
         case .shutDown:
-            try await runAppleScript("tell application \"System Events\" to shut down")
+            try await runAppleScript(
+                "tell application \"System Events\" to shut down with state saving preference")
         case .logOut:
             try await runAppleScript("tell application \"System Events\" to log out")
         case .showScreenSaver:

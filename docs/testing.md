@@ -683,6 +683,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 ### System actions and window management
 
 - A confirmation-gated action (Restart, Quit All) confirms, showing the subject's own glyph
+- Restart and Shut Down follow "Reopen windows when logging back in": after logging back in,
+  apps and windows reopen with it on and stay closed with it off. Check both actions and settings
+  from the launcher and a global hotkey
 - Empty Trash confirms while Finder's "Show warning before emptying the Trash" is on, and runs
   without a dialog once it is off
 - Volume actions show the volume HUD; everything else shows the message pill

@@ -491,6 +491,9 @@ Automation, Accessibility or Bluetooth permission is requested at first use, and
 alert linking to the relevant System Settings pane.
 Toggle System Appearance changes macOS; Tinycast follows it only while its own Appearance is System.
 
+Restart and Shut Down follow macOS's "Reopen windows when logging back in" preference through
+System Events' `with state saving preference`; omitting it always saves window state.
+
 Restart, Shut Down, Log Out, Empty Trash and Quit All Applications confirm before execution: ↵ runs
 the action, Escape cancels. **Empty Trash follows Finder's own "Show warning before emptying the
 Trash"** (Finder ▸ Settings ▸ Advanced) rather than overriding it: with the box off it runs without a
