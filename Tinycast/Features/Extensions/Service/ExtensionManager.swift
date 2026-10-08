@@ -60,6 +60,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     @ObservationIgnored private var backgroundTask: Task<Void, Never>?
     @ObservationIgnored private var nextToastID = 1
     @ObservationIgnored private var lastOAuthExtensionName: String?
+    @ObservationIgnored private var searchState = ExtensionSearchState()
 
     init(clipboardStore: ClipboardStore) {
         storage = ExtensionStorage(directory: ExtensionCatalog.storageDirectory())
@@ -511,6 +512,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         toasts = []
         navigationDepth = 1
         accessoryValues = [:]
+        searchState = ExtensionSearchState()
     }
 
     // MARK: - Background refresh
@@ -785,6 +787,14 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         Task { await runtime.dispatch(session: sessionID, handler: handler, payload: payload) }
     }
 
+    func searchQueryChanged(to query: String) {
+        searchState.queryChanged(to: query)
+    }
+
+    func landingSelection(for query: String, rowCount: Int) -> Int {
+        searchState.landingSelection(for: query, rowCount: rowCount)
+    }
+
     // MARK: - Search-bar dropdowns
 
     /// What the dropdown shows: the extension's own `value` when it controls one, else the pick.
@@ -835,6 +845,11 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     func runtime(_ runtime: ExtensionRuntime, session: String, didRender tree: RenderTree) {
         guard session == sessionID else { return }
+        if let current = coordinator?.extensionSearch,
+            let search = searchState.navigate(to: tree.depth, current: current)
+        {
+            coordinator?.showExtensionSearch(search, tree: tree)
+        }
         state = .rendered(tree)
         navigationDepth = tree.depth
         seedSearchBarAccessory(in: tree)

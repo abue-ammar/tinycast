@@ -433,7 +433,8 @@ screens hold (see [palette.md](palette.md)).
 Escape clears a non-empty search field first, and dispatches `onSearchTextChange` as any other edit
 would, so a command that took the search text over sees the empty string. Only over an empty field do
 Escape and a bare backspace pop the extension's own navigation stack, and only leave the command once
-it's at its root. Pushed screens stay mounted, so popping back restores their state.
+it's at its root. Pushed screens stay mounted, so popping back restores their state. Each pushed
+screen starts with an empty search; going back restores the parent's query and selected row.
 
 ## Turning it on
 

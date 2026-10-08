@@ -265,6 +265,17 @@ final class ExtensionCoordinator {
         palette.query = ""
     }
 
+    var extensionSearch: ExtensionSearchState.Screen? {
+        guard palette.mode == .extensionCommand else { return nil }
+        return ExtensionSearchState.Screen(query: palette.query, selection: palette.selection)
+    }
+
+    func showExtensionSearch(_ search: ExtensionSearchState.Screen, tree: RenderTree) {
+        let count = ExtensionScreen(tree: tree, query: search.query).items.count
+        palette.query = search.query
+        palette.selection = min(max(search.selection, 0), max(count - 1, 0))
+    }
+
     /// Its own window: a no-view command closes the palette before the pill is done.
     func showHUD(_ message: String) {
         core.showMessage(message)

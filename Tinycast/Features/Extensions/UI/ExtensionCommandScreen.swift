@@ -39,6 +39,10 @@ struct ExtensionCommandScreen: PaletteScreen {
     /// A form owns the whole keyboard: its fields are the text, so the search field steps aside.
     var hidesSearchField: Bool { isForm }
 
+    var landingSelection: Int {
+        extensions.landingSelection(for: vm.query, rowCount: rows.count)
+    }
+
     /// A form or rowless Detail's primary action stands even with no row to land on.
     var actsWithoutRows: Bool { isForm || screen.kind == .detail }
 
@@ -233,7 +237,8 @@ struct ExtensionCommandScreen: PaletteScreen {
                     guard let handler = field.handler("onTinycastChange") else { return }
                     extensions.dispatch(handler: handler, arguments: [value])
                 }
-            ))
+            )
+            .onChange(of: vm.query) { _, query in extensions.searchQueryChanged(to: query) })
     }
 
     /// Matched before the palette's own handling; true when an action fired.
