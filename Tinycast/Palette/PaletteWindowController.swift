@@ -61,6 +61,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     func show() {
         Signposts.interval("PaletteWindowController.show") {
             isPoppedToRoot = false
+            core.palette.focusToken = UUID()
             // Summoned over one of our own windows: there is no external paste or focus target.
             let frontmost = NSWorkspace.shared.frontmostApplication
             let ownPID = NSRunningApplication.current.processIdentifier
@@ -241,12 +242,10 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         core.paletteCoordinator.hidePalette(restoreFocus: false)
     }
 
-    /// Re-bump a turn later: on the first show a synchronous bump lands before `onChange`.
     func windowDidBecomeKey(_ notification: Notification) {
         panel?.level = .palette
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            core.palette.focusToken = UUID()
             // A re-summon leaves first responder where it was, so neither of these gets an event.
             panel?.trackComposition()
             if let context = panel?.fieldEditorContext {

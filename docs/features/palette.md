@@ -56,9 +56,10 @@ only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 ## Screens
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.
-Showing the palette calls `prepare(mode:)`, which resets state and bumps `focusToken` (a UUID) so the
-SwiftUI search field re-focuses. `prepare` is one of four motions over the screen — see
-[Navigation](#navigation).
+Preparing a screen resets state and bumps `focusToken` (a UUID). `PaletteWindowController.show()`
+also bumps it before presenting the panel, so a preserved screen re-focuses its search field too.
+Window activation does not request another search refocus after a shortcut's argument handoff.
+`prepare` is one of four motions over the screen — see [Navigation](#navigation).
 
 Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path: the
 palette returns to the launcher *and* chat starts a new conversation, at once or after
@@ -211,8 +212,8 @@ The typed values live on `PaletteState.commandArguments`, keyed by
 `$1`–`$3` — and are cleared with the rest of the screen.
 `PaletteState.pendingArgumentEntryID` is how a *shortcut* reaches them: a quicklink opened with values
 still missing shows its own screen and names the row, and the header focuses that row's first empty
-field instead of the search field. The focus waits a turn, so every `land()` the show fired has
-already settled on that row and no search refocus can take it back. A custom command has no screen of
+field instead of the search field. On first mount the view handles the pending request after landing;
+later requests wait a turn for the show's navigation to settle. A custom command has no screen of
 its own, so it also sets `argumentEntryID`, which lists that row alone in root search while the query
 is its name. Both are set **after** `showPalette`, since `prepare` clears them.
 

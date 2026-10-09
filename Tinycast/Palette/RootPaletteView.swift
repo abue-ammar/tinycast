@@ -461,6 +461,7 @@ struct RootPaletteView: View {
             .onAppear {
                 searchFocused = !screen.hidesSearchField
                 land()
+                focusPendingArgument()
             }
             .modifier(SearchFieldHiding(hidden: hidesSearchField, apply: applySearchFieldHiding))
             // Several paths flip `paletteIsCollapsed`, so resize the window to match.
