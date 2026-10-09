@@ -445,6 +445,7 @@ extension ExtensionTests {
         let name: String
         let storage: ExtensionStorage
         var didCancel = false
+        var didStartFetch = false
         var isInteractive = false
 
         init(name: String, storage: ExtensionStorage) {
@@ -461,6 +462,7 @@ extension ExtensionTests {
                 storage.setLocalStorage(extension: name, key: key, value: value)
             }
             if api == "fetch" {
+                didStartFetch = true
                 do { try await Task.sleep(for: .seconds(5)) } catch { didCancel = true; throw error }
             }
             return ""
@@ -807,18 +809,23 @@ extension ExtensionTests {
             "no-view launch creates no menu snapshot",
             !metadata.metadata(extension: "job", command: "bar").menuBarEnabled)
         manager.run(first, command: first.manifest.commands[0], type: .background)
-        await settle(300)
+        await settle(until: {
+            recorder.trees.count > foregroundRenders + 3
+                && recorder.failures.isEmpty && !manager.isRunning
+        })
         check(
             "foreground keeps rendering during background commands",
             recorder.trees.count > foregroundRenders + 3
-                && recorder.failures.isEmpty && !manager.isRunning)
+                && recorder.failures.isEmpty && !manager.isRunning,
+            "renders=\(recorder.trees.count), baseline=\(foregroundRenders), " + stateDetails())
         foreground.shutdown()
 
         manager.run(hanging, command: hanging.manifest.commands[0])
-        await settle(150)
+        await settle(until: { hosts.last?.didStartFetch == true && manager.isRunning })
+        check("hanging request starts before disabling", hosts.last?.didStartFetch == true && manager.isRunning)
         manager.disable("extension:hanging/bar")
-        await settle(150)
-        check("disable cancels host requests", hosts.last?.didCancel == true && lastRuntime == nil)
+        await settle(until: { hosts.last?.didCancel == true && lastRuntime == nil })
+        check("disable cancels host requests", hosts.last?.didCancel == true && lastRuntime == nil, stateDetails())
         check(
             "disable removes snapshot and schedule",
             !metadata.metadata(extension: "hanging", command: "bar").menuBarEnabled)
