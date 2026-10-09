@@ -37,40 +37,88 @@ final class MCPHTTPTransport: MCPTransport {
         let id = nextID
         nextID += 1
         let body = try MCPProtocol.request(id: id, method: method, params: params)
-        let timeout: TimeInterval = method == "tools/call" ? 60 : 15
-        let (data, response) = try await post(body, timeout: timeout)
-        try check(response)
+        let session = MCPOAuthHTTP.session(followsSameOrigin: true)
+        defer { session.invalidateAndCancel() }
+        let (bytes, response) = try await open(
+            body, in: session, timeout: MCPProtocol.timeout(for: method))
+        try check(response, method: method)
         // The session id arrives on whichever response opens the session, so it is read every time.
         if let header = response.value(forHTTPHeaderField: "Mcp-Session-Id") { sessionID = header }
-        for message in Self.messages(in: data, contentType: response.mimeType) {
-            switch message {
-            case .response(id, let result): return result
-            case .failure(id, let message): throw MCPTransportError.requestFailed(message)
-            case .notification(let method, let params): onNotification?(method, params)
-            default: continue
+        do {
+            // An SSE answer is read as it arrives: a server need not close the stream after it.
+            if response.mimeType == "text/event-stream" {
+                var parser = SSEParser()
+                var line = Data()
+                for try await byte in bytes {
+                    line.append(byte)
+                    guard byte == 0x0A else { continue }
+                    for payload in parser.feed(line) {
+                        if let result = try answer(payload, to: id) { return result }
+                    }
+                    line.removeAll(keepingCapacity: true)
+                }
+                for payload in parser.feed(line) + parser.finish() {
+                    if let result = try answer(payload, to: id) { return result }
+                }
+                throw MCPTransportError.malformedResponse
             }
+            var data = Data()
+            for try await byte in bytes { data.append(byte) }
+            if let result = try answer(String(decoding: data, as: UTF8.self), to: id) { return result }
+            throw MCPTransportError.malformedResponse
+        } catch let error as URLError {
+            throw MCPTransportError.requestFailed(Self.networkMessage(error.code))
         }
-        throw MCPTransportError.malformedResponse
     }
 
-    func notify(_ method: String, _ params: [String: Any]?) throws {
+    /// Ordered rather than fire and forget, and best effort: 202 is the whole answer.
+    func notify(_ method: String, _ params: [String: Any]?) async throws {
         guard isConnected else { throw MCPTransportError.notRunning }
         let body = try MCPProtocol.notification(method: method, params: params)
-        // Fire and forget: a notification has no reply to wait for, and 202 is the whole answer.
-        Task { [weak self] in _ = try? await self?.post(body, timeout: 15) }
+        let session = MCPOAuthHTTP.session(followsSameOrigin: true)
+        defer { session.invalidateAndCancel() }
+        _ = try? await open(body, in: session, timeout: .seconds(30))
+    }
+
+    func didNegotiate(protocolVersion: String) {
+        self.protocolVersion = protocolVersion
     }
 
     func close() {
         isConnected = false
         sessionID = nil
+        protocolVersion = MCPProtocol.version
     }
 
-    private func post(
-        _ body: Data, timeout: TimeInterval
-    ) async throws -> (Data, HTTPURLResponse) {
+    /// One JSON-RPC message from the reply: the answer, a failure, or something to pass on.
+    private func answer(_ payload: String, to id: Int) throws -> JSONValue? {
+        switch MCPProtocol.parse(Data(payload.utf8)) {
+        case .response(id, let result): return result
+        case .failure(id, let message): throw MCPTransportError.requestFailed(message)
+        case .notification(let method, let params): onNotification?(method, params)
+        case .request(let requestID, let method): reply(to: requestID, method: method)
+        default: break
+        }
+        return nil
+    }
+
+    /// A server may ask mid-answer (a `ping`); the reply is its own POST.
+    private func reply(to id: JSONValue, method: String) {
+        guard let body = try? MCPProtocol.reply(toRequest: id, method: method) else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            let session = MCPOAuthHTTP.session(followsSameOrigin: true)
+            defer { session.invalidateAndCancel() }
+            _ = try? await self.open(body, in: session, timeout: .seconds(30))
+        }
+    }
+
+    private func open(
+        _ body: Data, in session: URLSession, timeout: Duration
+    ) async throws -> (URLSession.AsyncBytes, HTTPURLResponse) {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
-        request.timeoutInterval = timeout
+        request.timeoutInterval = TimeInterval(timeout.components.seconds)
         request.httpBody = body
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("application/json, text/event-stream", forHTTPHeaderField: "Accept")
@@ -82,47 +130,44 @@ final class MCPHTTPTransport: MCPTransport {
         } else if !headerName.isEmpty, !headerValue.isEmpty {
             request.setValue(headerValue, forHTTPHeaderField: headerName)
         }
-        let session = MCPOAuthHTTP.session(followsSameOrigin: true)
-        defer { session.invalidateAndCancel() }
         do {
-            let (data, response) = try await session.data(for: request)
+            let (bytes, response) = try await session.bytes(for: request)
             guard let response = response as? HTTPURLResponse else {
                 throw MCPTransportError.malformedResponse
             }
             if response.statusCode == 401, let authorization, let token {
                 let refreshed = try await authorization(token)
                 request.setValue("Bearer \(refreshed)", forHTTPHeaderField: "Authorization")
-                let (retried, reply) = try await session.data(for: request)
-                guard let reply = reply as? HTTPURLResponse else { throw MCPTransportError.malformedResponse }
+                let (retried, reply) = try await session.bytes(for: request)
+                guard let reply = reply as? HTTPURLResponse else {
+                    throw MCPTransportError.malformedResponse
+                }
                 if reply.statusCode == 401 { throw MCPOAuth.Failure.signInRequired }
                 return (retried, reply)
             }
-            return (data, response)
+            return (bytes, response)
         } catch let error as URLError {
             throw MCPTransportError.requestFailed(Self.networkMessage(error.code))
         }
     }
 
-    private func check(_ response: HTTPURLResponse) throws {
+    private func check(_ response: HTTPURLResponse, method: String) throws {
+        // The TypeScript SDK's own fallback rule: a 4xx to the first POST means the 2024-11-05 shape.
+        if method == "initialize", sessionID == nil, [400, 404, 405].contains(response.statusCode) {
+            throw MCPTransportError.streamableHTTPUnsupported(response.statusCode)
+        }
         switch response.statusCode {
         case 200...299: return
         case 401, 403:
             throw MCPTransportError.requestFailed("The server rejected Tinycast's credentials.")
-        // A dropped session is the server's to end; the next request opens a fresh one.
+        // A dropped session is the server's to end; the connection re-initializes and retries once.
         case 404 where sessionID != nil:
             sessionID = nil
-            throw MCPTransportError.requestFailed("The server ended the session.")
+            throw MCPTransportError.sessionExpired
         default:
             throw MCPTransportError.requestFailed(
                 "The server answered HTTP \(response.statusCode).")
         }
-    }
-
-    /// A JSON body is one message; an SSE body is every `data:` frame it carried.
-    private static func messages(in data: Data, contentType: String?) -> [MCPProtocol.Message] {
-        guard contentType == "text/event-stream" else { return [MCPProtocol.parse(data)] }
-        var parser = SSEParser()
-        return (parser.feed(data) + parser.finish()).map { MCPProtocol.parse(Data($0.utf8)) }
     }
 
     private static func networkMessage(_ code: URLError.Code) -> String {

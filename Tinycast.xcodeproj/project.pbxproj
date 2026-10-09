@@ -141,6 +141,7 @@
 		2E9CDC24A175FE8AAE4F03D9 /* InstalledAIStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = D817AF0E23DDCC95147B5AFB /* InstalledAIStream.swift */; };
 		2EBB42C7EB17F37628765B17 /* CurrencyData.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5C7F0C39D24F068A8F84864 /* CurrencyData.generated.swift */; };
 		2ED6B99BCA201DB001FF5638 /* ChatChoices.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD13EDD2115B31C790C8646C /* ChatChoices.swift */; };
+		2EEC7CC1C5749DC48BA21827 /* MCPLegacySSETransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7487EAEFA00400113B24844D /* MCPLegacySSETransport.swift */; };
 		2F2360730BE4992D5745FAD3 /* ExtensionListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 471E1C3C250FD0A89E2C6430 /* ExtensionListView.swift */; };
 		2F38A89B3481A4C9A13F13A8 /* SnippetKeywordPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37B00EC4FD8D4D0CD2FE596A /* SnippetKeywordPolicy.swift */; };
 		2FF364B8C778BCDBEDC81D1D /* MathAttachmentCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = C01EA2D102571E10CCE4E1B0 /* MathAttachmentCell.swift */; };
@@ -311,6 +312,7 @@
 		5E155BEE2FC62267F516A343 /* CalculatorHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60CCB1A47E0022BAEDD1EE96 /* CalculatorHistoryView.swift */; };
 		5E7ABF41CE97983E05653D69 /* AppAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5A8F78D3F1BFA8E86F9CB47 /* AppAppearance.swift */; };
 		5EFFB1E7D84965D155133A67 /* ChatTitle.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE8C8077B002AFD9A9C496EF /* ChatTitle.swift */; };
+		5FB687C9563AE7434EE7A2D4 /* MCPEventStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B9306BE0B50C5643A4A444D /* MCPEventStream.swift */; };
 		5FB708EC91426C41762AB96B /* CalculatorHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2D032AC22E53BB9997E492F /* CalculatorHistoryStore.swift */; };
 		5FC53F9968A5DFF24CD109DD /* VisibilityStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17EA0B9FFCBAB10941EC7702 /* VisibilityStore.swift */; };
 		5FED92BC16B1463EBDE38D77 /* ShortcutRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9D41B9E6F2C617D28C83AFF /* ShortcutRecorder.swift */; };
@@ -1176,6 +1178,7 @@
 		68952539C0BD045BA175CBB6 /* SettingsRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsRootView.swift; sourceTree = "<group>"; };
 		6951305850D11CA90D16A162 /* WindowLayoutRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowLayoutRunner.swift; sourceTree = "<group>"; };
 		6AF26598BE61F114D5999541 /* NotesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesSettingsView.swift; sourceTree = "<group>"; };
+		6B9306BE0B50C5643A4A444D /* MCPEventStream.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPEventStream.swift; sourceTree = "<group>"; };
 		6C045C66BB654E4CB407A673 /* AppActionsMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppActionsMenu.swift; sourceTree = "<group>"; };
 		6C7717F4851345ED38592B1C /* LauncherMatch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LauncherMatch.swift; sourceTree = "<group>"; };
 		6D469F0ACEE4F696616EA39B /* WindowSwitchList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSwitchList.swift; sourceTree = "<group>"; };
@@ -1200,6 +1203,7 @@
 		73E25B87C692D5FEE1FBF994 /* PanelTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelTransition.swift; sourceTree = "<group>"; };
 		741FA289335C5264BCBBE17C /* RoomStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomStore.swift; sourceTree = "<group>"; };
 		74284B4E771DA0B2869C914E /* RaycastRuntime.generated.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = RaycastRuntime.generated.js; sourceTree = "<group>"; };
+		7487EAEFA00400113B24844D /* MCPLegacySSETransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPLegacySSETransport.swift; sourceTree = "<group>"; };
 		74904E7C8CE9B121B32594B9 /* TextInjector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextInjector.swift; sourceTree = "<group>"; };
 		75614189EED9B440D911B412 /* FallbackStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FallbackStore.swift; sourceTree = "<group>"; };
 		757234C5623740BAF7ABE358 /* WindowInventory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowInventory.swift; sourceTree = "<group>"; };
@@ -2183,6 +2187,7 @@
 			isa = PBXGroup;
 			children = (
 				6F2CBDE3042FDA4FCA561857 /* MCPComposerAddress.swift */,
+				6B9306BE0B50C5643A4A444D /* MCPEventStream.swift */,
 				222F9EE432F608B5C907E7C2 /* MCPOAuth.swift */,
 				3265CBD6C91FC67E3996AF8E /* MCPOAuthChallenge.swift */,
 				19E96BEA3A5436619297675B /* MCPOAuthRequest.swift */,
@@ -3318,6 +3323,7 @@
 			isa = PBXGroup;
 			children = (
 				3FD57D9B2C6C46B5ADDDE173 /* MCPHTTPTransport.swift */,
+				7487EAEFA00400113B24844D /* MCPLegacySSETransport.swift */,
 				10A05EA2484C7E9EC8B05A69 /* MCPOAuthHTTP.swift */,
 				98310BAA8713A12DF56F19D7 /* MCPOAuthListener.swift */,
 				370B1767182D5C53ADBEDA35 /* MCPOAuthManager.swift */,
@@ -4183,7 +4189,9 @@
 				67516BE31774EE56EE2173BA /* LeadCard.swift in Sources */,
 				50A5E2CC839C7A65B3391391 /* MCPComposerAddress.swift in Sources */,
 				F37AC0478A0A96243E833900 /* MCPCoordinator.swift in Sources */,
+				5FB687C9563AE7434EE7A2D4 /* MCPEventStream.swift in Sources */,
 				B374B57D0E9D902AF877153D /* MCPHTTPTransport.swift in Sources */,
+				2EEC7CC1C5749DC48BA21827 /* MCPLegacySSETransport.swift in Sources */,
 				C8D4DDD0DDA678429552E062 /* MCPOAuth.swift in Sources */,
 				195465DB2A155EDD8C0809BA /* MCPOAuthChallenge.swift in Sources */,
 				C0D1D4D7D03F48E8AC7901CF /* MCPOAuthHTTP.swift in Sources */,

@@ -5,7 +5,10 @@ import Foundation
 protocol MCPTransport: AnyObject {
     func connect() async throws
     func request(_ method: String, _ params: [String: Any]?) async throws -> JSONValue
-    func notify(_ method: String, _ params: [String: Any]?) throws
+    /// Awaited, so `notifications/initialized` is on the server before `tools/list` is sent.
+    func notify(_ method: String, _ params: [String: Any]?) async throws
+    /// The version `initialize` settled on; HTTP has to name it on every later request.
+    func didNegotiate(protocolVersion: String)
     func close()
 }
 
@@ -13,6 +16,8 @@ extension MCPTransport {
     func request(_ method: String) async throws -> JSONValue {
         try await request(method, nil)
     }
+
+    func didNegotiate(protocolVersion: String) {}
 }
 
 enum MCPTransportError: LocalizedError, Equatable {
@@ -22,6 +27,10 @@ enum MCPTransportError: LocalizedError, Equatable {
     case requestFailed(String)
     case malformedResponse
     case timedOut
+    /// The server forgot the `Mcp-Session-Id`; the spec's answer is a fresh `initialize`.
+    case sessionExpired
+    /// A 400/404/405 to the first POST: a server from before Streamable HTTP, reached over SSE.
+    case streamableHTTPUnsupported(Int)
 
     var errorDescription: String? {
         switch self {
@@ -31,6 +40,8 @@ enum MCPTransportError: LocalizedError, Equatable {
         case .requestFailed(let detail): return detail
         case .malformedResponse: return "The server sent a response Tinycast could not read."
         case .timedOut: return "The server did not respond in time."
+        case .sessionExpired: return "The server ended the session."
+        case .streamableHTTPUnsupported(let status): return "The server answered HTTP \(status)."
         }
     }
 }

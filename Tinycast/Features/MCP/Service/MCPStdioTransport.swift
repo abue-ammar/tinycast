@@ -82,7 +82,7 @@ final class MCPStdioTransport: MCPTransport {
         guard isRunning else { throw MCPTransportError.notRunning }
         let id = nextID
         nextID += 1
-        let timeout: Duration = method == "tools/call" ? .seconds(60) : .seconds(15)
+        let timeout = MCPProtocol.timeout(for: method)
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
                 let watchdog = Task { [weak self] in
@@ -104,7 +104,7 @@ final class MCPStdioTransport: MCPTransport {
         }
     }
 
-    func notify(_ method: String, _ params: [String: Any]?) throws {
+    func notify(_ method: String, _ params: [String: Any]?) async throws {
         try send(MCPProtocol.notification(method: method, params: params, newlineTerminated: true))
     }
 
@@ -150,8 +150,8 @@ final class MCPStdioTransport: MCPTransport {
             finish(id, with: .failure(MCPTransportError.requestFailed(message)))
         case .notification(let method, let params):
             onNotification?(method, params)
-        case .request(let id, _):
-            try? send(MCPProtocol.decline(id: id, newlineTerminated: true))
+        case .request(let id, let method):
+            try? send(MCPProtocol.reply(toRequest: id, method: method, newlineTerminated: true))
         case .invalid:
             break
         }
