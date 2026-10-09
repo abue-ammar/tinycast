@@ -3,6 +3,7 @@
 import { Action, ActionPanel, Detail, Form, Grid, List, MenuBarExtra, Navigation, setActionEffects, useNavigation } from "./components.js";
 import * as enums from "./enums.generated.js";
 import * as system from "./system.js";
+import { AI } from "./ai.js";
 
 const { nestedEnums, ...flatEnums } = enums;
 
@@ -80,18 +81,14 @@ function rejectingNamespace(name, members) {
   return target;
 }
 
-const AI = {
-  ...rejectingNamespace("AI", ["ask"]),
-  Model: Object.freeze({}),
-  Creativity: Object.freeze({}),
-};
-
 const BrowserExtension = rejectingNamespace("BrowserExtension", ["getContent", "getTabs"]);
 
 const WindowManagement = {
   DesktopType: nestedEnums.WindowManagement.DesktopType,
   ...rejectingNamespace("WindowManagement", ["getWindowsOnActiveDesktop", "getActiveWindow", "setWindowBounds", "getDesktops"]),
 };
+
+system.setAccessCheck((api) => api === AI && system.aiAvailable());
 
 export const raycastApi = {
   // Components
@@ -144,8 +141,9 @@ export const raycastApi = {
   launchCommand: system.launchCommand,
   updateCommandMetadata: system.updateCommandMetadata,
 
-  // Unimplemented namespaces
   AI,
+
+  // Unimplemented namespaces
   BrowserExtension,
   WindowManagement,
 

@@ -1272,6 +1272,9 @@ export async function runFixtures() {
   check("a throwing component reports a failure", harness.state.failures.some((message) => message.includes("kaboom")), harness.state.failures.join("|"));
   harness.stop("s1");
 
+  const { runAIFixtures } = await import("./ai-fixtures.mjs");
+  failures += await runAIFixtures();
+
   console.log(failures === 0 ? "\nAll runtime fixtures passed." : `\n${failures} check(s) failed.`);
   if (import.meta.url === `file://${process.argv[1]}`) process.exit(failures === 0 ? 0 : 1);
   return failures;

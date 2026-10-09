@@ -9,6 +9,7 @@
   },
   "devDependencies": {
     "@raycast/api": "^2.0.3",
+    "@raycast/utils": "2.3.2",
     "esbuild": "^0.25.0",
     "react": "^19.2.0",
     "react-reconciler": "^0.33.0"

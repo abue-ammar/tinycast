@@ -75,12 +75,22 @@ export function createHarness({ onRender, onFail, verbose = false, stubs = {} } 
       const name = `${api}.${method}`;
       state.hostCalls.push(name);
       const args = JSON.parse(argsJson);
+      const progress = (value) =>
+        runInContext(
+          `__tinycast.progress(${JSON.stringify(String(callId))}, ${JSON.stringify(JSON.stringify(value))})`,
+          context,
+        );
       Promise.resolve()
-        .then(() => (stubs[name] ? stubs[name](args) : stubHostCall(api, method, args)))
+        .then(() =>
+          stubs[name] ? stubs[name](args, { progress, callId }) : stubHostCall(api, method, args),
+        )
         .then(
           (value) => settle(callId, true, value),
           (error) => settle(callId, false, String(error?.message ?? error)),
         );
+    },
+    cancel(callId) {
+      state.cancelled = [...(state.cancelled ?? []), String(callId)];
     },
     invokeSync(api, method, argsJson) {
       try {
@@ -93,7 +103,7 @@ export function createHarness({ onRender, onFail, verbose = false, stubs = {} } 
 
   function settle(callId, ok, value) {
     runInContext(
-      `__tinycast.settle(${JSON.stringify(String(callId))}, ${ok}, ${JSON.stringify(value === undefined ? "" : JSON.stringify(value))})`,
+      `__tinycast.settle(${JSON.stringify(String(callId))}, ${ok}, ${JSON.stringify(settlement(ok, value))})`,
       context,
     );
   }
@@ -135,6 +145,12 @@ export function createHarness({ onRender, onFail, verbose = false, stubs = {} } 
       for (const id of [...timers.keys()]) host.clearTimer(id);
     },
   };
+}
+
+/// Swift settles a success as JSON and a failure as its bare message, so the mock does the same.
+function settlement(ok, value) {
+  if (!ok) return String(value ?? "");
+  return value === undefined ? "" : JSON.stringify(value);
 }
 
 function syncHostCall(api, method, args) {

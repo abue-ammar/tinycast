@@ -134,6 +134,18 @@ function cacheSnapshot(namespace) {
 
 // ─── Preferences & environment ──────────────────────────────────────
 
+let accessCheck = () => false;
+
+/// `environment.canAccess` answers for the APIs Tinycast backs; everything else stays false.
+export function setAccessCheck(check) {
+  accessCheck = check;
+}
+
+/// Swift says per launch whether Settings → AI has a route `AI.ask` can use.
+export function aiAvailable() {
+  return boot.ai?.available === true;
+}
+
 export function getPreferenceValues() {
   return { ...boot.preferences };
 }
@@ -142,7 +154,7 @@ export const environment = new Proxy(
   {},
   {
     get(_target, key) {
-      if (key === "canAccess") return () => false;
+      if (key === "canAccess") return (api) => accessCheck(api) === true;
       return boot.environment?.[key];
     },
     has: (_target, key) => key in (boot.environment ?? {}),

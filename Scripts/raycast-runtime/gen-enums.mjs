@@ -43,8 +43,9 @@ function collectEnums(source) {
     }
 
     if (current) {
-      const member = /^\s*([A-Za-z0-9_]+)\s*=\s*"([^"]*)"/.exec(line);
-      if (member) current.members.push([member[1], member[2]]);
+      // `AI.Model` quotes its member names, since they carry dots and dashes.
+      const member = /^\s*(?:"([^"]+)"|([A-Za-z0-9_]+))\s*=\s*"([^"]*)"/.exec(line);
+      if (member) current.members.push([member[1] ?? member[2], member[3]]);
     }
 
     for (const char of line) {
@@ -64,7 +65,7 @@ function collectEnums(source) {
 const publicPath = (path) => path.replace(/_\d+(\.|$)/g, "$1");
 
 const { enums: rawEnums, aliases } = collectEnums(dts);
-const supportedNamespaces = new Set(["Alert", "Image", "Toast", "WindowManagement"]);
+const supportedNamespaces = new Set(["AI", "Alert", "Image", "Toast", "WindowManagement"]);
 const enums = new Map();
 for (const [path, members] of rawEnums) {
   if (!members.length) continue;

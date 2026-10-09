@@ -6,7 +6,7 @@ import "./url.js";
 import { createElement } from "react";
 import * as React from "react";
 import * as JSXRuntime from "react/jsx-runtime";
-import { describeError, log, settle } from "./host.js";
+import { describeError, log, progress, settle } from "./host.js";
 import { fireTimer, setUncaughtHandler } from "./polyfills.js";
 import { configureNodeShims } from "./node-shims.js";
 import { defineModule, evaluateCommonJS } from "./modules.js";
@@ -178,6 +178,7 @@ globalThis.__tinycast = {
   },
 
   settle,
+  progress,
   fireTimer,
   runToastAction,
 

@@ -12,9 +12,15 @@ const pending = new Map();
 /// Every Raycast API that touches the system is an async host call: Swift answers later via
 /// `__tinycast.settle`, so the JS thread never blocks waiting on the main actor.
 export function hostCall(api, method, args) {
-  return new Promise((resolve, reject) => {
-    const callId = nextCallId++;
-    pending.set(callId, { resolve, reject });
+  return hostCallStreaming(api, method, args).promise;
+}
+
+/// A host call that may report progress before it settles (`AI.ask`'s chunks). `onProgress` gets
+/// each JSON payload Swift sends through `__tinycast.progress`, always ahead of the settle.
+export function hostCallStreaming(api, method, args, onProgress) {
+  const callId = nextCallId++;
+  const promise = new Promise((resolve, reject) => {
+    pending.set(callId, { resolve, reject, onProgress });
     try {
       raw.invoke(String(callId), api, method, JSON.stringify(args === undefined ? [] : args));
     } catch (error) {
@@ -22,6 +28,27 @@ export function hostCall(api, method, args) {
       reject(error);
     }
   });
+  return { callId, promise };
+}
+
+/// Forgets a call and asks Swift to cancel its task; a settle that still arrives is dropped.
+export function cancelHostCall(callId) {
+  if (!pending.delete(Number(callId))) return;
+  try {
+    raw.cancel?.(String(callId));
+  } catch {
+    // A host without cancellation simply finishes the work and its answer is ignored.
+  }
+}
+
+export function progress(callId, payload) {
+  const entry = pending.get(Number(callId));
+  if (!entry?.onProgress) return;
+  try {
+    entry.onProgress(payload === undefined || payload === "" ? undefined : JSON.parse(payload));
+  } catch (error) {
+    log("error", [error]);
+  }
 }
 
 /// The blocking counterpart, for the node shims only (fs, child_process, crypto, zlib). Safe because
