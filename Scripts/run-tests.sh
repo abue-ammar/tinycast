@@ -539,6 +539,51 @@ run ext-form-test          $E/Model/ExtensionFormMetrics.swift \
                            $E/UI/ExtensionListKey.swift \
                            Tests/ext-list-key-test.swift
 run ext-image-size-test   $E/Model/ExtensionImageSize.swift
+run ext-host-test         $E/Service/ExtensionHostBridge.swift \
+                           $E/Service/ExtensionOAuthSession.swift \
+                           $E/Service/ExtensionOAuthKeychain.swift \
+                           $E/Service/ExtensionStorage.swift \
+                           $E/Service/ExtensionFetcher.swift \
+                           $E/Service/ExtensionNodeShims.swift \
+                           $E/Service/ExtensionRuntime.swift \
+                           $E/Service/ExtensionNameResolver.swift \
+                           $E/Service/ExtensionWebSocketBridge.swift \
+                           $E/Service/ExtensionCatalog.swift \
+                           $E/Service/ExtensionIconCache.swift \
+                           $E/Model/ExtensionLaunchType.swift \
+                           $E/Model/ExtensionDeepLink.swift \
+                           $E/Model/ExtensionLaunchError.swift \
+                           $E/Model/ExtensionMenuBarSnapshot.swift \
+                           $E/Model/ExtensionCommandMetadata.swift \
+                           $E/Service/ExtensionCommandMetadataStore.swift \
+                           $E/Model/ExtensionBootConfig.swift \
+                           $E/Model/ExtensionFormField.swift \
+                           $E/Model/ExtensionGridLayout.swift \
+                           $E/Model/ExtensionManifest.swift \
+                           $E/Model/ExtensionRefreshPolicy.swift \
+                           $E/Model/ExtensionRefreshState.swift \
+                           $E/Model/ExtensionPickerItem.swift \
+                           $E/Model/ExtensionSearchAccessory.swift \
+                           $E/Model/RenderNode.swift \
+                           $E/UI/ExtensionAnimatedImage.swift \
+                           $E/UI/ExtensionImage.swift \
+                           $E/UI/ExtensionScreen.swift \
+                           Tinycast/Platform/ProcessExit.swift \
+                           Tinycast/Platform/Appearance.swift \
+                           Tinycast/Platform/AppDisplayName.swift \
+                           Tinycast/Platform/Images/IconCache.swift \
+                           Tinycast/Platform/Compression/Zlib.swift \
+                           Tinycast/DesignSystem/Theme.swift \
+                           Tinycast/Features/Clipboard/Service/Paster.swift \
+                           Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
+                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
+                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
+                           Tinycast/Features/Settings/AppSettings.swift \
+                           Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Platform/Permissions.swift \
+                           Tinycast/Platform/AccessibilityText.swift \
+                           Tinycast/Features/Launcher/Service/AppLauncher.swift
 run ext-accessory-test     $E/Model/RenderNode.swift \
                            $E/Model/ExtensionPickerItem.swift \
                            $E/Model/ExtensionSearchAccessory.swift \

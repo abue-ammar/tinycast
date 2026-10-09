@@ -210,7 +210,11 @@ final class ExtensionHostBridge: ExtensionHostAPI {
                     Paster.copyPlainText(text)
                 }
             } else {
-                Paster.pasteString(text, previousApp: context?.pasteTarget)
+                // Same dance as the file branch: the palette is still key, so ⌘V would land
+                // in its search field unless the window hides and focus returns to `previousApp`.
+                let target = context?.pasteTarget
+                context?.closeMainWindow(clearRootSearch: false)
+                Paster.pasteString(text, previousApp: target)
             }
             return nil
 
