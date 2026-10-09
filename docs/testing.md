@@ -299,8 +299,12 @@ swiftc -O -swift-version 6 Tinycast/Features/Emoji/Model/{EmojiCatalog,EmojiData
 
 `Tests/notes-editor-performance.swift` installs a 100,000-character note in a real rendered editor and
 prints, as JSON, the median over 30 runs of the install with its full restyle, one typed character at
-the end, middle and start, and a caret move between distant lines. The budget is 150 ms, 8 ms (end and
-middle) and 4 ms:
+the end, middle and start, the window fit's height read after an install and after each of those
+characters, and a caret move between distant lines. The budget is 150 ms, 8 ms (end and middle) and
+4 ms, and the fit's read gets 10 ms after an install and 1 ms after a character. The read after a
+character runs once the edit has laid out the caret's screen, so it is the fit's cost on top of the
+keystroke. Inside `didChange`, near the top of the note, the read does that layout itself, in about
+2 ms:
 
 ```sh
 N=Tinycast/Features/Notes
@@ -573,6 +577,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   scrolls. A dragged height holds until the next keystroke, which fits the window again. Switching
   to a shorter note shrinks it. Repeat with rendering on and off, Find and the formatting bar open,
   and on a secondary display
+- Typing, Return and Delete in a bulleted list, in its last item and in the middle, grow or shrink the
+  window by whole rows and never shrink it for a frame, scroll the first line away or flash the
+  scrollbar
 - With Render Markdown **off**, the note is fully literal (markers visible, links inert, task syntax
   plain) and Return, Tab, Delete, and formatting-looking shortcuts keep native plain-text behavior;
   flipping it back re-renders without dirtying the note or touching undo

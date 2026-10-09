@@ -157,9 +157,10 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
             let editor, let clipView = editor.enclosingScrollView?.contentView,
             let visibleFrame = (panel.screen ?? NSScreen.main)?.visibleFrame
         else { return }
+        let textHeight = editor.textHeight(upTo: Theme.Size.noteWindowMaxHeight)
         let frame = NoteWindowPlacement.fitting(
             panel.frame,
-            toHeight: panel.frame.height - clipView.bounds.height + editor.textHeight(),
+            toHeight: panel.frame.height - clipView.bounds.height + textHeight,
             within: Theme.Size.noteWindow.height...Theme.Size.noteWindowMaxHeight,
             in: visibleFrame)
         guard frame != panel.frame else { return }
