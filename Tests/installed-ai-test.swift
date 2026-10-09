@@ -124,6 +124,7 @@ struct InstalledAITests {
         await aDeclinedCallComesBackAsAnErrorResult(fixture)
         await theRoundCapEndsTheTurnTheWayTheLoopDoes(fixture)
         await unlimitedPassesNoTurnCap(fixture)
+        await queuedConsentWaitsForTheFirstAnswer(fixture)
         await concurrentCallsAreAskedOneAtATime(fixture)
         await aCrashedTurnsFilesAreRemovedAtLaunch(fixture)
         await aManagedMCPPolicyLeavesBothFlagsOff(fixture)
@@ -615,9 +616,47 @@ struct InstalledAITests {
             "a control request Tinycast does not know is answered with an error, not left waiting")
     }
 
+    private static func queuedConsentWaitsForTheFirstAnswer(_ fixture: Fixture) async {
+        let reader = GrantingReader(holdsFirstAnswer: true)
+        let session = AIToolServerSession(rounds: 25, servers: { [] }) { call in
+            await reader.answer(call)
+        }
+        let first = Task { await session.consent(.init(handle: "probe", tool: "first_tool")) }
+        guard await fixture.awaitCondition({ reader.firstAnswerPending }) else {
+            expect(false, "the first consent answer is held open")
+            first.cancel()
+            reader.releaseFirstAnswer()
+            return
+        }
+        var secondStarted = false
+        let second = Task {
+            secondStarted = true
+            return await session.consent(.init(handle: "probe", tool: "second_tool"))
+        }
+        defer {
+            reader.releaseFirstAnswer()
+            first.cancel()
+            second.cancel()
+        }
+        expect(await fixture.awaitCondition({ secondStarted }), "the second consent request starts")
+        // Observe exclusion while the first answer is explicitly held open.
+        try? await Task.sleep(for: .milliseconds(150))
+        expect(
+            reader.calls.map(\.tool) == ["first_tool"] && reader.mostAtOnce == 1,
+            "a queued consent request cannot enter the reader before the first answer")
+        reader.releaseFirstAnswer()
+        let firstAllowed = await first.value
+        let secondAllowed = await second.value
+        expect(firstAllowed && secondAllowed, "both queued consent requests receive an answer")
+        expect(
+            reader.calls.map(\.tool) == ["first_tool", "second_tool"]
+                && reader.mostAtOnce == 1 && reader.dialogs == 1,
+            "the queued request observes the first answer's grant in admission order")
+    }
+
     /// The dialog shows one question at a time, and the second must see what the first granted.
     private static func concurrentCallsAreAskedOneAtATime(_ fixture: Fixture) async {
-        let reader = GrantingReader(root: fixture.root)
+        let reader = GrantingReader()
         let session = AIToolServerSession(rounds: 25) {
             await fixture.session(allowing: true, asked: Box()).servers()
         } consent: { call in
@@ -625,10 +664,9 @@ struct InstalledAITests {
         }
         let events = await fixture.events(
             kind: .claude, model: "pair", effort: nil, toolServers: session)
-        expect(reader.handshakeCompleted, "the second request was emitted while the first answer was pending")
         expect(
-            reader.calls.map(\.tool) == ["first_tool", "second_tool"] && reader.mostAtOnce == 1,
-            "two calls held open together are asked about one after the other, in order")
+            reader.calls.map(\.tool).sorted() == ["first_tool", "second_tool"] && reader.mostAtOnce == 1,
+            "both CLI calls are asked about one at a time regardless of pipe arrival order")
         expect(
             reader.dialogs == 1,
             "and the second is decided after the first dialog closes, so its grant is seen")
@@ -763,41 +801,36 @@ private final class Box {
     var calls: [AIToolServerCall] = []
 }
 
-/// A reader who holds the first answer until the fixture emits its second request.
 @MainActor
 private final class GrantingReader {
     var calls: [AIToolServerCall] = []
     var dialogs = 0
     var mostAtOnce = 0
-    var handshakeCompleted = false
+    var firstAnswerPending: Bool { firstAnswer != nil }
     private var atOnce = 0
     private var granted = false
-    private let root: URL
+    private let holdsFirstAnswer: Bool
+    private var firstAnswer: CheckedContinuation<Void, Never>?
 
-    init(root: URL) { self.root = root }
+    init(holdsFirstAnswer: Bool = false) { self.holdsFirstAnswer = holdsFirstAnswer }
+
+    func releaseFirstAnswer() {
+        firstAnswer?.resume()
+        firstAnswer = nil
+    }
 
     func answer(_ call: AIToolServerCall) async -> Bool {
+        guard !Task.isCancelled else { return false }
         calls.append(call)
         atOnce += 1
         mostAtOnce = max(mostAtOnce, atOnce)
         defer { atOnce -= 1 }
         guard !granted else { return true }
         dialogs += 1
-        do {
-            try Data().write(to: root.appending(path: "claude-pair-first-entered"))
-            let pending = root.appending(path: "claude-pair-second-pending")
-            let deadline = ContinuousClock.now + .seconds(5)
-            while !FileManager.default.fileExists(atPath: pending.path) {
-                guard ContinuousClock.now < deadline else {
-                    print("Claude pair fixture did not emit its second request while the first answer was pending")
-                    return false
-                }
-                try await Task.sleep(for: .milliseconds(10))
-            }
-            handshakeCompleted = true
-        } catch {
-            print("Claude pair fixture handshake failed: \(error)")
-            return false
+        if holdsFirstAnswer, calls.count == 1 {
+            await withCheckedContinuation { firstAnswer = $0 }
+        } else {
+            try? await Task.sleep(for: .milliseconds(150))
         }
         granted = true
         return true
@@ -946,7 +979,7 @@ private final class Fixture {
     }
 
     /// Cleanup outlives the stream on purpose, so the assertion waits instead of racing it.
-    private func awaitCondition(_ isSatisfied: () -> Bool) async -> Bool {
+    func awaitCondition(_ isSatisfied: () -> Bool) async -> Bool {
         let deadline = ContinuousClock.now + .seconds(5)
         while ContinuousClock.now < deadline {
             if isSatisfied() { return true }

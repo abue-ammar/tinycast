@@ -160,7 +160,7 @@ struct ExtensionTests {
         let clock = ContinuousClock()
         let deadline = clock.now.advanced(by: .seconds(5))
         while !condition(), clock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(20))
+            do { try await Task.sleep(for: .milliseconds(20)) } catch { return }
         }
     }
 

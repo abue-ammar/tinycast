@@ -158,6 +158,12 @@ exits does. `installed-cli-stub.js` reads the same way for the one turn shape th
 Claude's consent channel is a reply on stdin in the middle of a turn, so the stub has to be sitting
 on the pipe when it arrives.
 
+The installed-CLI consent harness checks pipe-delivered calls without assuming which request arrives
+first. A separate queue regression holds the first answer explicitly, observes exclusion while a
+second request waits, then releases the answer and verifies admission order and the shared grant.
+Completion checks use bounded state waits; exclusion windows and intentional timeout cases keep their
+observation delays.
+
 `mcp-oauth-test` starts `Tests/ai-fixtures/mcp-oauth-stub.js` on `127.0.0.1:4963` and tests the
 single-use callback on `127.0.0.1:4962`. Both ports must be free; the harness never chooses another
 port. Its Keychain scope is unique to each run and removed on completion.

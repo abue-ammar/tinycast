@@ -602,10 +602,12 @@ extension ExtensionTests {
             metadata.metadata(extension: "first", command: "bar").lastRun != nil)
 
         let controller = manager.controller(for: firstRef, owner: first)
+        func menuIsReady() -> Bool {
+            manager.isRunning
+                && controller.menu.items.first { $0.title == "Refresh" }?.representedObject != nil
+        }
         controller.menuWillOpen(controller.menu)
-        await settle(until: {
-            boots.count == 2 && manager.isRunning && controller.menu.items.first?.title == "Usage"
-        })
+        await settle(until: { boots.count == 2 && menuIsReady() })
         check("opening a menu reloads its runtime", boots.count == 2 && manager.isRunning)
         let items = controller.menu.items
         check("native section header", items.first?.isSectionHeader == true && items.first?.title == "Usage")
@@ -627,13 +629,13 @@ extension ExtensionTests {
             alternate?.isAlternate == true
                 && alternate?.keyEquivalent == "r"
                 && alternate?.keyEquivalentModifierMask == [.command, .option])
-        await settle(900)
+        await settle(1100)
         check("an open settled menu outlives background timeout", manager.isRunning)
         if let index = controller.menu.items.firstIndex(where: { $0.title == "Refresh" }) {
             controller.menuDidClose(controller.menu)
             controller.menu.performActionForItem(at: index)
             await settle(150)
-            check("closing menu does not cancel an async action", manager.isRunning)
+            check("closing menu does not cancel an async action", manager.isRunning, stateDetails())
             await settle(until: {
                 snapshot(firstRef)?.title == "Updated" && !manager.isRunning && lastRuntime == nil
             })
@@ -641,17 +643,17 @@ extension ExtensionTests {
                 "action writes into its own extension",
                 storage.localStorageValue(extension: "first", key: "clicked")
                     == .string("left-click")
-                    && storage.localStorageValue(extension: "second", key: "clicked") == nil)
+                    && storage.localStorageValue(extension: "second", key: "clicked") == nil, stateDetails())
             check(
                 "action snapshot updates before unloading",
                 snapshot(firstRef)?.title == "Updated"
-                    && !manager.isRunning && lastRuntime == nil)
+                    && !manager.isRunning && lastRuntime == nil, stateDetails())
         } else {
             check("refresh action exists", false)
         }
 
         controller.menuWillOpen(controller.menu)
-        await settle(200)
+        await settle(until: menuIsReady)
         let beforeReopen = boots.count
         if let index = controller.menu.items.firstIndex(where: { $0.title == "Refresh" }) {
             controller.menuDidClose(controller.menu)
@@ -685,7 +687,7 @@ extension ExtensionTests {
         check("reopened action sessions unload after closing", !manager.isRunning && lastRuntime == nil, stateDetails())
 
         controller.menuWillOpen(controller.menu)
-        await settle(200)
+        await settle(until: menuIsReady)
         manager.run(
             second, command: second.manifest.commands[0], arguments: ["value": "kept"],
             type: .background, context: ["origin": .string("payload")])
@@ -693,22 +695,25 @@ extension ExtensionTests {
         manager.synchronize(installed)
         await settle(100)
         controller.menuDidClose(controller.menu)
-        await settle(550)
+        await settle(until: {
+            storage.localStorageValue(extension: "second", key: "launch")
+                == .string("background:kept:payload") && !manager.isRunning && lastRuntime == nil
+        })
         check(
             "scheduled refresh preserves an explicit background launch's payload",
             storage.localStorageValue(extension: "second", key: "launch")
                 == .string("background:kept:payload")
-                && !manager.isRunning)
+                && !manager.isRunning, stateDetails())
 
         manager.run(first, command: first.manifest.commands[0], type: .background)
         let backgroundBoots = boots.count
         check("background hosts begin without interactive prompts", hosts.last?.isInteractive == false)
         controller.menuWillOpen(controller.menu)
-        await settle(200)
+        await settle(until: menuIsReady)
         check(
             "opening promotes the existing background host",
             boots.count == backgroundBoots
-                && hosts.last?.isInteractive == true)
+                && hosts.last?.isInteractive == true, stateDetails())
         if let index = controller.menu.items.firstIndex(where: { $0.title == "Confirm" }) {
             controller.menuDidClose(controller.menu)
             controller.menu.performActionForItem(at: index)
@@ -774,12 +779,12 @@ extension ExtensionTests {
             "queued refreshes finish serially",
             boots.suffix(2).map(\.0) == ["first", "second"] && !manager.isRunning)
         manager.run(empty, command: empty.manifest.commands[0])
-        await settle(300)
+        await settle(until: { !manager.isRunning && lastRuntime == nil })
         check(
             "null removes item without forgetting activation",
             metadata.metadata(extension: "empty", command: "bar").menuBarEnabled
                 && metadata.metadata(extension: "empty", command: "bar").menuBarSnapshot == nil
-                && !manager.isRunning)
+                && !manager.isRunning, stateDetails())
         let (foreground, _, recorder) = makeRuntime()
         defer { foreground.shutdown() }
         try? await foreground.boot(config: .current(supportDirectory: directory))
@@ -795,7 +800,7 @@ extension ExtensionTests {
                 };
                 """#, file: directory.appendingPathComponent("foreground.js"), mode: .view,
             context: launchContext())
-        await settle(100)
+        await settle(until: { !recorder.trees.isEmpty })
         let foregroundRenders = recorder.trees.count
         manager.run(
             job, command: job.manifest.commands[0], type: .background, context: ["origin": .string("menu")])
