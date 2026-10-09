@@ -78,3 +78,9 @@ test('visual shards retain reports without writing duplicate user case summaries
   assert.doesNotMatch(job('visual'), /GITHUB_STEP_SUMMARY|npm run report|Add shard results/);
   assert.match(job('desktop-capability'), /GITHUB_STEP_SUMMARY/);
 });
+
+test('a failed case writes the final Summary before its nonzero exit marks the job failed', () => {
+  const final = job('report-results');
+  assert.match(final, /\n          npm run report -- --summary-only\s*$/);
+  assert.doesNotMatch(final, /if npm run report|&&.*GITHUB_STEP_SUMMARY/);
+});
