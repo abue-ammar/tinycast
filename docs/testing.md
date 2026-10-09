@@ -567,6 +567,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   rendered note and is styled at once
 - The derived title of an Untitled note shows no Markdown markers
 - A narrow window wraps list items under their text, not under the marker
+- A bullet, task or numbered item whose first word is wider than the window keeps a whole marker on
+  its first line of text, and its checkbox toggles where it is drawn
 - Typing new lines, wrapping text, and pasting grow the note vertically without changing its width,
   and deleting shrinks it back to the 180pt floor; the top edge stays put until growth reaches the
   screen's bottom, then the window moves up. It stops at 860pt or the screen's usable height and

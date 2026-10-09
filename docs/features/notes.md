@@ -203,7 +203,10 @@ carries a `NoteBlockDecoration` is laid out by `NoteBlockLayoutFragment`, which 
 their language label, quote bars, rules, bullets, the source's own list numbers, and checkboxes, all
 list markers in a neutral gray. Vertical
 spacing comes from paragraph styles: overriding the fragment's frame would leave the caret above the
-glyphs. There are no text attachments, overlay controls, `NSTextList`, `NSTextTable` or private API.
+glyphs. A marker sits on the item's first line of text, not its first line fragment: a first word
+too wide for the line wraps below the hidden marker, leaving the marker a line of almost no height,
+and the checkbox hit test reads the same line. There are no text attachments, overlay controls,
+`NSTextList`, `NSTextTable` or private API.
 
 ### Editing
 

@@ -263,7 +263,7 @@ final class NoteTextView: NSTextView, InjectableTextView {
             let fragment = textLayoutManager?.textLayoutFragment(for: point) as? NoteBlockLayoutFragment,
             case .task(let level, _) = fragment.decoration.shape
         else { return nil }
-        let firstLine = fragment.textLineFragments.first?.typographicBounds ?? .zero
+        let firstLine = fragment.firstLine
         let box = NoteCheckboxGeometry.rect(
             level: level, firstLineHeight: firstLine.height,
             bodyPointSize: fragment.decoration.bodyPointSize

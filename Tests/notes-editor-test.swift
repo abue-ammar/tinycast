@@ -30,6 +30,7 @@ struct NotesEditorTests {
         testTaskRuleCheckboxesAndLinks()
         testTasks()
         testTaskEdits()
+        testMarkersFollowAWrappedFirstWord()
         testTextHeight(rendersMarkdown: false)
         testTextHeight(rendersMarkdown: true)
         print(failures == 0 ? "Notes editor tests passed" : "\(failures) tests failed")
@@ -427,7 +428,7 @@ struct NotesEditorTests {
         let second = text.range(of: "- [x] second").location
         if let top = fragments[0], let bottom = fragments[second] {
             let box = { (fragment: NSTextLayoutFragment) -> CGRect in
-                let line = fragment.textLineFragments.first?.typographicBounds ?? .zero
+                let line = (fragment as? NoteBlockLayoutFragment)?.firstLine ?? .zero
                 return NoteCheckboxGeometry.rect(
                     level: 0, firstLineHeight: line.height,
                     bodyPointSize: NoteMarkdownTypography.body.pointSize
@@ -559,7 +560,7 @@ struct NotesEditorTests {
             "consecutive code rows abut with no seam",
             fenceFrame != nil && fenceFrame?.maxY == codeFrame?.minY)
         if let task = fragment("- [ ] open") as? NoteBlockLayoutFragment {
-            let firstLine = task.textLineFragments.first?.typographicBounds ?? .zero
+            let firstLine = task.firstLine
             let box = NoteCheckboxGeometry.rect(
                 level: 0, firstLineHeight: firstLine.height,
                 bodyPointSize: NoteMarkdownTypography.body.pointSize)
@@ -872,11 +873,48 @@ struct NotesEditorTests {
             ?? NSEvent()
     }
 
+    /// A first word too wide for the line strands the hidden marker on a hairline above it.
+    private static func testMarkersFollowAWrappedFirstWord() {
+        let word = String(repeating: "wrap", count: 40)
+        let source = "- \(word)\n- [ ] \(word)\n1. \(word)"
+        let taskStart = (source as NSString).range(of: "- [ ]").location
+        let orderedStart = (source as NSString).range(of: "1. ").location
+        var changes: [String] = []
+        let editor = makeEditor(
+            input: NoteEditorInput(id: NoteID(rawValue: "LongWords.md"), source: source, epoch: 0),
+            rendersMarkdown: true, onSourceChange: { changes.append($0) })
+        let fragments = layoutFragments(in: editor.textView)
+        guard let bullet = fragments[0] as? NoteBlockLayoutFragment,
+            let task = fragments[taskStart] as? NoteBlockLayoutFragment,
+            let ordered = fragments[orderedStart] as? NoteBlockLayoutFragment,
+            [bullet, task, ordered].allSatisfy({ $0.textLineFragments.count > 1 })
+        else { return check("long first words wrap inside their list items", false) }
+        check(
+            "a long first word leaves the hidden marker on a hairline",
+            bullet.textLineFragments[0].typographicBounds.height < 1)
+        check(
+            "the bullet lines up with the first line of text",
+            bullet.firstLine == bullet.textLineFragments[1].typographicBounds)
+        let orderedText = ordered.textLineFragments[1]
+        check(
+            "the number sits on the first line of text's baseline",
+            ordered.firstBaseline == orderedText.typographicBounds.minY + orderedText.glyphOrigin.y)
+
+        let text = task.textLineFragments[1].typographicBounds
+        let box = NoteCheckboxGeometry.rect(
+            level: 0, firstLineHeight: text.height, bodyPointSize: NoteMarkdownTypography.body.pointSize)
+        let lowerEdge = CGPoint(x: box.midX, y: task.layoutFragmentFrame.minY + text.minY + box.maxY - 1)
+        check(
+            "a checkbox under a long first word clicks where it is drawn",
+            editor.textView.toggleTask(atContainerPoint: lowerEdge))
+        check("clicking it checks that task", changes.last?.contains("- [x] ") == true)
+    }
+
     private static func checkboxCenter(in textView: NSTextView, lineStart: Int) -> CGPoint? {
         guard let fragment = layoutFragments(in: textView)[lineStart] as? NoteBlockLayoutFragment else {
             return nil
         }
-        let firstLine = fragment.textLineFragments.first?.typographicBounds ?? .zero
+        let firstLine = fragment.firstLine
         let box = NoteCheckboxGeometry.rect(
             level: 0, firstLineHeight: firstLine.height, bodyPointSize: NoteMarkdownTypography.body.pointSize)
         return CGPoint(x: box.midX, y: fragment.layoutFragmentFrame.minY + firstLine.minY + box.midY)
