@@ -155,6 +155,15 @@ struct ExtensionTests {
         try? await Task.sleep(nanoseconds: milliseconds * 1_000_000)
     }
 
+    @MainActor
+    static func settle(until condition: () -> Bool) async {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(5))
+        while !condition(), clock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+    }
+
     // MARK: - Results
 
     nonisolated(unsafe) static var failures = 0
@@ -1161,7 +1170,13 @@ struct ExtensionTests {
         await runtime.start(
             session: "s1", code: command, file: URL(fileURLWithPath: "/tmp/synthetic.js"),
             mode: .view, context: launchContext())
-        await settle()
+        await settle(until: {
+            guard let tree = recorder.trees.last else { return false }
+            let item = ExtensionScreen(tree: tree, query: "").items.first
+            let crypto = ExtensionAccessoriesView_labelForTest(item?.node.array("accessories").dropFirst(4).first)
+            return item?.node.string("title") == "count=1" && host.toasts == ["hello"]
+                && crypto?.hasSuffix(",6cba6dd1d44f53a3") == true
+        })
 
         check("no failures", recorder.failures.isEmpty, recorder.failures.joined(separator: "\n"))
         check("rendered at least once", !recorder.trees.isEmpty)
@@ -1228,7 +1243,10 @@ struct ExtensionTests {
             await runtime.dispatch(
                 session: "s1", handler: handler,
                 payload: ExtensionRuntime.jsonString(from: []))
-            await settle()
+            await settle(until: {
+                recorder.trees.last.map { ExtensionScreen(tree: $0, query: "").items.first?.node.string("title") }
+                    == "count=11"
+            })
             screen = ExtensionScreen(tree: recorder.trees.last!, query: "")
             check(
                 "action re-rendered the row",

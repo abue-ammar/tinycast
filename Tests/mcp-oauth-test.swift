@@ -1,4 +1,5 @@
 import CryptoKit
+import Darwin
 import Foundation
 
 @main
@@ -227,6 +228,7 @@ struct MCPOAuthTests {
         expect(accepted.statusCode == 200, "browser receives close-tab page")
         let code = try await listener.code()
         expect(code == "fixture-code", "callback yields code once")
+        try await waitForCallbackPortRelease(before: "timeout listener")
         let expiring = MCPOAuthListener()
         try await expiring.start(
             state: "expected", issuer: "https://auth.test", requiresIssuer: false, timeout: .milliseconds(80))
@@ -236,6 +238,7 @@ struct MCPOAuthTests {
         } catch {
             expect(error as? MCPOAuth.Failure == .timedOut, "timeout tears down listener")
         }
+        try await waitForCallbackPortRelease(before: "cancelled listener")
         let cancelled = MCPOAuthListener()
         try await cancelled.start(state: "expected", issuer: "https://auth.test", requiresIssuer: false)
         cancelled.cancel()
@@ -245,6 +248,45 @@ struct MCPOAuthTests {
         } catch {
             expect(error is CancellationError, "cancel releases waiter")
         }
+    }
+
+    static func waitForCallbackPortRelease(before stage: String) async throws {
+        guard let endpoint = URLComponents(string: MCPOAuthListener.redirectURI),
+            endpoint.host == "127.0.0.1", let number = endpoint.port,
+            let port = UInt16(exactly: number)
+        else { throw MCPOAuth.Failure.listenerUnavailable }
+        // Callback completion resumes before Network's cancelled run releases the fixed port.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while ContinuousClock.now < deadline {
+            if try callbackPortAvailable(port: port) { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        print("Callback port \(port) was not released before \(stage)")
+        throw MCPOAuth.Failure.listenerUnavailable
+    }
+
+    static func callbackPortAvailable(port: UInt16) throws -> Bool {
+        let descriptor = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard descriptor >= 0 else { throw MCPOAuth.Failure.listenerUnavailable }
+        defer { Darwin.close(descriptor) }
+        var reuse: Int32 = 1
+        guard Darwin.setsockopt(
+            descriptor, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout.size(ofValue: reuse))) == 0
+        else { throw MCPOAuth.Failure.listenerUnavailable }
+        var address = sockaddr_in()
+        address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_port = port.bigEndian
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        let bound = withUnsafePointer(to: &address) { pointer in
+            pointer.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                Darwin.bind(descriptor, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+            }
+        }
+        if bound == 0 { return true }
+        if errno == EADDRINUSE { return false }
+        print("Callback port \(port) availability probe failed: errno \(errno)")
+        throw MCPOAuth.Failure.listenerUnavailable
     }
 
     /// A refresh the server could not serve is not a rejected grant: the session must survive it.
@@ -450,6 +492,7 @@ struct MCPOAuthTests {
     }
 
     static func networkFlow() async throws {
+        try await waitForCallbackPortRelease(before: "network OAuth fixtures")
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = ["node", "Tests/ai-fixtures/mcp-oauth-stub.js"]

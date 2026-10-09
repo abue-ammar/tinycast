@@ -100,11 +100,20 @@ function claudeParallelCalls(read, emit) {
       })),
     },
   });
-  calls.forEach(([, tool], index) => emit({
+  const request = (tool, index) => ({
     type: "control_request",
     request_id: "req_" + index,
     request: { subtype: "can_use_tool", tool_name: "mcp__probe__" + tool, input: {} },
-  }));
+  });
+  emit(request(calls[0][1], 0));
+  const entered = path.join(root, "claude-pair-first-entered");
+  const deadline = Date.now() + 5000;
+  while (!fs.existsSync(entered)) {
+    if (Date.now() >= deadline) throw new Error("Claude pair fixture's first request was not admitted");
+    sleep(5);
+  }
+  emit(request(calls[1][1], 1));
+  record("claude-pair-second-pending", "emitted");
   for (const _ of calls) record("claude-control.log", read.next().value ?? "{}");
   emit({
     type: "user",
@@ -115,7 +124,9 @@ function claudeParallelCalls(read, emit) {
   emit({ type: "result", is_error: false, usage: { input_tokens: 8, output_tokens: 2 } });
 }
 
-const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
 
 /** One line at a time off fd 0, so a reply is read the moment it is written. */
 function* lines() {
