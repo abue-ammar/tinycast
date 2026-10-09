@@ -1,7 +1,8 @@
 # Testing and verification
 
-How to check that a change holds up. Tinycast has no XCTest target and no UI tests: the automated half
-is a set of standalone harnesses, and the manual half is the sweep at the bottom of this file.
+How to check that a change holds up. Tinycast has no XCTest target. Standalone Swift harnesses
+cover business decisions; `Tests/Midscene` adds AI-driven UI journeys through the native app.
+The manual sweep remains at the bottom of this file.
 
 ## Definition of done
 
@@ -15,9 +16,10 @@ The mechanical bar, in one place so it cannot drift. All five pass before a chan
 | A clean build | `xcodebuild … -configuration Debug CODE_SIGNING_ALLOWED=NO`, zero **new** warnings |
 | Docs still true | any doc your change made wrong, fixed in the same commit |
 
-There is no CI: every item is on you, run locally. CodeRabbit reviews each PR, but it is a reviewer,
-not a gate. Each is expanded below; the manual sweep at the end of this file is the sixth, judged by
-what you touched.
+The Midscene workflow runs the harnesses, lint, model purity and a Debug build without model
+secrets on PRs and pushes. AI desktop tests run only on configured trusted refs; see
+[the E2E guide](../Tests/Midscene/README.md) for isolation, model configuration and native reports.
+CodeRabbit remains a reviewer. The manual sweep below is the sixth check, judged by what you touched.
 
 ## The harnesses
 

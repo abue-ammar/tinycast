@@ -1,0 +1,26 @@
+{
+  "name": "tinycast-midscene-e2e",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types scripts/run.ts",
+    "typecheck": "tsc --noEmit",
+    "collect": "node scripts/collect.mjs",
+    "check": "npm run typecheck && npm run collect && npm run nodes && node --experimental-strip-types --test scripts/*.test.mjs",
+    "report": "node scripts/report.mjs",
+    "nodes": "midscene-test nodes"
+  },
+  "devDependencies": {
+    "@midscene/computer": "1.14.0",
+    "@midscene/core": "1.14.0",
+    "@midscene/test": "1.14.0",
+    "@types/node": "22.19.15",
+    "typescript": "5.9.3"
+  },
+  "overrides": {
+    "tsx": "4.21.0"
+  }
+}

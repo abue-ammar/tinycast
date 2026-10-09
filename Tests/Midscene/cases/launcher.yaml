@@ -1,0 +1,10 @@
+cases:
+  - name: launcher-fixture
+    tags: [launcher]
+    steps:
+      - app.open:
+          id: launcher-fixture
+      - aiAct: 'Click the Tinycast palette search field and type "E2E Lantern".'
+      - aiAssert: 'Tinycast shows an application result named E2E Lantern.'
+      - aiAct: 'Use only the keyboard to select the E2E Lantern application result, using arrow keys if necessary, then press Return to open it. Do not click the application result.'
+      - aiAssert: 'A window titled E2E Lantern is visible with the text "Lantern fixture ready" and "Opened from Tinycast". The Tinycast palette is dismissed.'

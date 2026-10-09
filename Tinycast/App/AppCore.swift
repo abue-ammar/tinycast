@@ -273,6 +273,15 @@ final class AppCore {
             saveSelection: { UserDefaults.standard.set($0?.rawValue, forKey: noteSelectionKey) })
     }
 
+    private var isVisualTest: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["TINYCAST_E2E_VISIBLE"] == "1"
+            && Bundle.main.bundleIdentifier?.hasPrefix("com.tinycast.app.midscene.") == true
+        #else
+        false
+        #endif
+    }
+
     func start() {
         Signposts.interval("AppCore.start") {
             // Shorten AppKit's ~2–3s tooltip delay; registration domain, so a user default wins.
@@ -343,11 +352,11 @@ final class AppCore {
             calendarCoordinator.applyEnabled()
             Task { await appIndex.refresh() }
             Task { await emojiIndex.load(languages: Locale.preferredLanguages) }
-            currencyRates.start()
+            if !isVisualTest { currencyRates.start() }
             updateChecker.onUpdateAvailable = { [weak self] release in
                 self?.updateCoordinator.presentIfAvailable(release) ?? true
             }
-            updateCoordinator.applyAutomaticChecking()
+            if !isVisualTest { updateCoordinator.applyAutomaticChecking() }
             supportReminders.onDue = { [weak self] in self?.supportCoordinator.presentIfDue() }
             supportReminders.start()
 
@@ -421,15 +430,17 @@ final class AppCore {
             SystemActionRunner.onAsyncFailure = { [weak self] id, failure in
                 self?.systemActionCoordinator.presentSystemActionFailure(id: id, failure: failure)
             }
-            hotKeys.start(
-                customCommandIDs: Set(customCommands.commands.map(\.id)),
-                quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)),
-                windowLayoutIDs: Set(windowLayouts.layouts.map(\.id)),
-                windowRoomIDs: Set(rooms.rooms.map(\.id)),
-                customWindowSizeIDs: Set(customWindowSizes.sizes.map(\.id)),
-                quickActionIDs: Set(customQuickActions.actions.map(\.id)))
-            // Keeps running while Carbon pauses: the recorder needs its rewritten flags.
-            hyperKeyTap.start(settings: settings)
+            if !isVisualTest {
+                hotKeys.start(
+                    customCommandIDs: Set(customCommands.commands.map(\.id)),
+                    quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)),
+                    windowLayoutIDs: Set(windowLayouts.layouts.map(\.id)),
+                    windowRoomIDs: Set(rooms.rooms.map(\.id)),
+                    customWindowSizeIDs: Set(customWindowSizes.sizes.map(\.id)),
+                    quickActionIDs: Set(customQuickActions.actions.map(\.id)))
+                // Keeps running while Carbon pauses: the recorder needs its rewritten flags.
+                hyperKeyTap.start(settings: settings)
+            }
 
             snippetsStore.onSnapshot = { [weak self] snapshot in
                 guard let self else { return }
@@ -451,6 +462,10 @@ final class AppCore {
             if !OnboardingState.hasOnboarded {
                 OnboardingState.markShown()
                 onboardingCoordinator.showOnboarding()
+            }
+            if isVisualTest {
+                NSApp.activate()
+                paletteCoordinator.showPalette(mode: .launcher)
             }
         }
     }

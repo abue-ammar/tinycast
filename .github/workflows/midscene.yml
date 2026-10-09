@@ -1,0 +1,477 @@
+name: Midscene desktop E2E
+on:
+  pull_request:
+    paths: ['Tinycast/**', 'Tests/**', 'Scripts/**', 'project.yml', 'Tinycast.xcodeproj/**', '.swiftlint.yml', '.github/workflows/midscene.yml']
+  push:
+    branches: ['**']
+    paths: ['Tinycast/**', 'Tests/**', 'Scripts/**', 'project.yml', 'Tinycast.xcodeproj/**', '.swiftlint.yml', '.github/workflows/midscene.yml']
+  workflow_dispatch:
+    inputs:
+      report_source_run_id:
+        description: Rebuild reports from a trusted completed run without model calls
+        required: false
+        type: string
+      publish_pages:
+        description: Publish reports when Pages is already configured and this repository opts in
+        required: false
+        type: boolean
+        default: false
+permissions:
+  contents: read
+env:
+  MIDSCENE_UPSTREAM_REPOSITORY: abue-ammar/tinycast
+jobs:
+  validation:
+    name: Harness validation (no model secrets)
+    runs-on: ubuntu-24.04
+    outputs:
+      upstream-repository: ${{ steps.policy.outputs.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Tests/Midscene/package-lock.json
+      - run: npm ci --ignore-scripts
+        working-directory: Tests/Midscene
+      - run: npm run check
+        working-directory: Tests/Midscene
+      - id: policy
+        run: echo "repository=$MIDSCENE_UPSTREAM_REPOSITORY" >> "$GITHUB_OUTPUT"
+  swift:
+    if: inputs.report_source_run_id == ''
+    name: Apple silicon Swift regression, lint and build (no model secrets)
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Select Xcode 26
+        run: |
+          XCODE_PATH="$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -n1)"
+          test -n "$XCODE_PATH"
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
+      - name: Run every Swift harness
+        run: ./Scripts/run-tests.sh
+      - name: Lint Swift and settings search
+        run: |
+          command -v swiftlint >/dev/null || brew install swiftlint
+          ./Scripts/lint.sh
+      - name: Check pure model layers
+        run: |
+          if rg -l 'import (AppKit|SwiftUI|Cocoa)' Tinycast/Features/*/Model/; then
+            echo '::error::Model layers must not import UI frameworks'
+            exit 1
+          fi
+      - name: Build Debug app without signing credentials
+        run: |
+          xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" CODE_SIGNING_ALLOWED=NO build
+  build:
+    if: inputs.report_source_run_id == ''
+    name: Build Intel E2E app on Apple silicon (no model secrets)
+    runs-on: macos-26
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Select Xcode 26
+        run: |
+          XCODE_PATH="$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -n1)"
+          test -n "$XCODE_PATH"
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
+      - name: Cross-build Debug app and bundled helper for Intel
+        run: |
+          xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" ARCHS=x86_64 ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO build
+      - name: Verify Intel binaries and preserve bundle metadata
+        run: |
+          APP="$RUNNER_TEMP/DerivedData/Build/Products/Debug/Tinycast Dev.app"
+          EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
+          for BIN in "$APP/Contents/MacOS/$EXECUTABLE" "$APP/Contents/Helpers/ClipboardTextHelper"; do
+            SLICES="$(lipo -archs "$BIN")"
+            echo "${BIN##*/}: arch=$SLICES"
+            test "$SLICES" = x86_64
+          done
+          mkdir -p "$RUNNER_TEMP/e2e-app"
+          ditto "$APP" "$RUNNER_TEMP/e2e-app/TinycastDev.app"
+          ditto -c -k --keepParent --sequesterRsrc \
+            "$RUNNER_TEMP/e2e-app/TinycastDev.app" "$RUNNER_TEMP/tinycast-e2e-app.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tinycast-e2e-app-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/tinycast-e2e-app.zip
+          if-no-files-found: error
+          retention-days: 14
+  desktop-capability:
+    if: inputs.report_source_run_id == ''
+    name: Hosted macOS 26 Intel desktop capability (no model secrets)
+    runs-on: macos-26-intel
+    continue-on-error: true
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+        working-directory: Tests/Midscene
+      - name: Check desktop permissions and SDK health
+        run: node --experimental-strip-types scripts/desktop-health.ts
+        working-directory: Tests/Midscene
+      - name: Record capability results
+        if: always()
+        run: cat Tests/Midscene/desktop-health/summary.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hosted-macos-desktop-health-${{ github.run_attempt }}
+          path: Tests/Midscene/desktop-health/
+          retention-days: 14
+  visual:
+    needs: [validation, desktop-capability, build]
+    # Every PR stays secret-free; repository owners explicitly enable trusted refs.
+    if: >-
+      inputs.report_source_run_id == '' &&
+      vars.MIDSCENE_DESKTOP_ENABLED == 'true' &&
+      github.event_name != 'pull_request' &&
+      needs.validation.outputs.upstream-repository != '' &&
+      (github.repository == needs.validation.outputs.upstream-repository && github.ref == 'refs/heads/main' ||
+       github.repository != needs.validation.outputs.upstream-repository && github.event_name == 'workflow_dispatch')
+    runs-on: macos-26-intel
+    timeout-minutes: 35
+    concurrency:
+      group: tinycast-midscene-desktop
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        shard: [calculator, launcher]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: Tests/Midscene/package-lock.json
+      - run: npm ci
+        working-directory: Tests/Midscene
+      - name: Clear previous reports
+        working-directory: Tests/Midscene
+        run: node -e "require('fs').rmSync('midscene_run', {recursive:true, force:true})"
+      - name: Select Xcode 26
+        run: |
+          XCODE_PATH="$(find /Applications -maxdepth 1 -name 'Xcode_26*.app' | sort -V | tail -n1)"
+          test -n "$XCODE_PATH"
+          echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
+      - uses: actions/download-artifact@v4
+        with:
+          name: tinycast-e2e-app-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/e2e-download
+      - name: Extract test app for this desktop shard
+        run: |
+          mkdir -p "$RUNNER_TEMP/e2e-app"
+          ditto -x -k "$RUNNER_TEMP/e2e-download/tinycast-e2e-app.zip" "$RUNNER_TEMP/e2e-app"
+          test -d "$RUNNER_TEMP/e2e-app/TinycastDev.app"
+      - name: Run visual shard
+        id: run-shard
+        working-directory: Tests/Midscene
+        env:
+          TINYCAST_APP_PATH: ${{ runner.temp }}/e2e-app/TinycastDev.app
+          MIDSCENE_DESKTOP_ENABLED: '1'
+          MIDSCENE_SHARD: ${{ matrix.shard }}
+          MIDSCENE_MODEL_API_KEY: ${{ secrets.MIDSCENE_MODEL_API_KEY }}
+          MIDSCENE_MODEL_NAME: ${{ secrets.MIDSCENE_MODEL_NAME }}
+          MIDSCENE_MODEL_BASE_URL: ${{ secrets.MIDSCENE_MODEL_BASE_URL }}
+          MIDSCENE_MODEL_FAMILY: ${{ secrets.MIDSCENE_MODEL_FAMILY }}
+        run: npm test
+      - name: Preserve shard reports even on failure
+        id: upload-shard
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: midscene-shard-${{ matrix.shard }}-${{ github.run_attempt }}
+          path: Tests/Midscene/midscene_run/
+          if-no-files-found: warn
+          retention-days: 14
+  reports:
+    name: Aggregate native reports without Pages
+    needs: visual
+    if: >-
+      always() && !cancelled() && github.event_name != 'pull_request' &&
+      (needs.visual.result != 'skipped' || inputs.report_source_run_id != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+    outputs:
+      report-artifact-name: ${{ steps.upload-report.outcome == 'success' && format('midscene-combined-{0}', github.run_attempt) || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+        working-directory: Tests/Midscene
+      - name: Validate trusted report source
+        id: source-run
+        if: inputs.report_source_run_id != ''
+        env:
+          REPORT_SOURCE_RUN_ID: ${{ inputs.report_source_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: node Tests/Midscene/scripts/trusted-report-runs.mjs validate-source
+      - name: Clear report aggregation output
+        run: node -e "require('fs').rmSync('Tests/Midscene/midscene_run', {recursive:true, force:true}); require('fs').mkdirSync('Tests/Midscene/midscene_run', {recursive:true})"
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: midscene-shard-calculator-${{ steps.source-run.outputs.source_attempt || github.run_attempt }}
+          path: Tests/Midscene/midscene_run/midscene-calculator
+          run-id: ${{ inputs.report_source_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: midscene-shard-launcher-${{ steps.source-run.outputs.source_attempt || github.run_attempt }}
+          path: Tests/Midscene/midscene_run/midscene-launcher
+          run-id: ${{ inputs.report_source_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Merge native reports and save publication-independent Summary
+        id: merge
+        continue-on-error: true
+        working-directory: Tests/Midscene
+        env:
+          MIDSCENE_SUMMARY_OUTPUT: midscene_run/summary.md
+          MIDSCENE_PRODUCER_RESULT: ${{ inputs.report_source_run_id != '' && 'success' || needs.visual.result }}
+          MIDSCENE_PUBLICATION_RESULT: pending
+          REPORT_SOURCE_RUN_ID: ${{ inputs.report_source_run_id }}
+        run: npm run report
+      - name: Preserve all available reports before requiring success
+        id: upload-report
+        if: always() && (inputs.report_source_run_id == '' || steps.source-run.outcome == 'success')
+        uses: actions/upload-artifact@v4
+        with:
+          name: midscene-combined-${{ github.run_attempt }}
+          path: Tests/Midscene/midscene_run/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Require complete reports
+        if: steps.merge.outcome != 'success' || steps.upload-report.outcome != 'success'
+        run: exit 1
+  available-results:
+    name: Results before publication
+    needs: [visual, reports]
+    if: >-
+      always() && !cancelled() && github.event_name != 'pull_request' &&
+      (needs.visual.result != 'skipped' || inputs.report_source_run_id != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        if: needs.reports.outputs.report-artifact-name != ''
+        continue-on-error: true
+        with:
+          name: ${{ needs.reports.outputs.report-artifact-name }}
+          path: ${{ runner.temp }}/available-results
+      - name: Show available results without waiting for Pages
+        if: always()
+        env:
+          REPORT_RESULT: ${{ needs.reports.result }}
+        run: |
+          if [ -f "$RUNNER_TEMP/available-results/summary.md" ]; then
+            cat "$RUNNER_TEMP/available-results/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo '## Tinycast × Midscene · Summary unavailable'
+              echo
+              echo "Report aggregation: $REPORT_RESULT. Case counts could not be read."
+              echo "[Inspect available artifacts]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID#artifacts)."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+  prepare-pages:
+    name: Prepare optional Pages publication
+    needs: [validation, reports]
+    if: >-
+      always() && !cancelled() && github.event_name != 'pull_request' &&
+      (github.event_name != 'workflow_dispatch' || inputs.publish_pages) &&
+      needs.validation.outputs.upstream-repository != '' &&
+      (github.repository == needs.validation.outputs.upstream-repository && github.ref == 'refs/heads/main' ||
+       github.repository != needs.validation.outputs.upstream-repository && github.repository == vars.MIDSCENE_PUBLISH_REPO && github.event_name == 'workflow_dispatch') &&
+      needs.reports.outputs.report-artifact-name != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pages: read
+    outputs:
+      pages-artifact-name: ${{ steps.upload-pages.outcome == 'success' && format('midscene-e2e-report-pages-{0}', github.run_attempt) || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read existing Pages configuration without enabling it
+        id: pages
+        continue-on-error: true
+        uses: actions/configure-pages@v5
+        with:
+          enablement: false
+      - name: Explain unavailable Pages configuration
+        if: steps.pages.outcome != 'success'
+        run: echo '::warning::Pages is not configured. Available artifacts and results are unaffected; a maintainer must configure Pages separately.'
+      - uses: actions/download-artifact@v4
+        if: steps.pages.outcome == 'success'
+        with:
+          name: ${{ needs.reports.outputs.report-artifact-name }}
+          path: ${{ runner.temp }}/pages-reports
+      - name: Find trusted completed report history
+        id: previous-report
+        if: steps.pages.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node Tests/Midscene/scripts/trusted-report-runs.mjs find-previous
+      - uses: actions/download-artifact@v4
+        if: steps.pages.outcome == 'success' && steps.previous-report.outputs.run_id != ''
+        with:
+          name: ${{ steps.previous-report.outputs.name }}
+          run-id: ${{ steps.previous-report.outputs.run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/previous-pages-artifact
+      - name: Extract trusted previous site
+        if: steps.pages.outcome == 'success' && steps.previous-report.outputs.run_id != ''
+        run: |
+          mkdir -p "$RUNNER_TEMP/previous-pages"
+          tar -xf "$RUNNER_TEMP/previous-pages-artifact/artifact.tar" -C "$RUNNER_TEMP/previous-pages"
+      - name: Preserve the repository's static site without executing it
+        if: steps.pages.outcome == 'success' && vars.MIDSCENE_PAGES_PRESERVE_REF != ''
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ vars.MIDSCENE_PAGES_PRESERVE_REF }}
+          path: pages-baseline
+          persist-credentials: false
+      - name: Stage reports alongside existing Pages content
+        if: steps.pages.outcome == 'success'
+        env:
+          PAGES_SITE: ${{ runner.temp }}/midscene-pages
+          PAGES_REPORTS: ${{ runner.temp }}/pages-reports
+          PAGES_PREVIOUS: ${{ runner.temp }}/previous-pages
+          PAGES_BASELINE: pages-baseline
+        run: node Tests/Midscene/scripts/prepare-pages.mjs
+      - uses: actions/upload-pages-artifact@v3
+        id: upload-pages
+        if: steps.pages.outcome == 'success'
+        with:
+          name: midscene-e2e-report-pages-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/midscene-pages
+          retention-days: 90
+  publish:
+    name: Publish optional Pages reports
+    needs: prepare-pages
+    if: always() && !cancelled() && needs.prepare-pages.outputs.pages-artifact-name != ''
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    concurrency:
+      group: tinycast-midscene-pages
+      cancel-in-progress: false
+    outputs:
+      page-url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy
+        with:
+          artifact_name: ${{ needs.prepare-pages.outputs.pages-artifact-name }}
+  report-results:
+    name: Results and publication status
+    needs: [visual, reports, prepare-pages, publish]
+    if: >-
+      always() && !cancelled() && github.event_name != 'pull_request' &&
+      (needs.visual.result != 'skipped' || inputs.report_source_run_id != '')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci --ignore-scripts
+        working-directory: Tests/Midscene
+      - name: Revalidate report source before reading artifacts
+        id: source-run
+        if: inputs.report_source_run_id != ''
+        continue-on-error: true
+        env:
+          REPORT_SOURCE_RUN_ID: ${{ inputs.report_source_run_id }}
+          GH_TOKEN: ${{ github.token }}
+        run: node Tests/Midscene/scripts/trusted-report-runs.mjs validate-source
+      - uses: actions/download-artifact@v4
+        id: combined
+        if: needs.reports.outputs.report-artifact-name != '' && (inputs.report_source_run_id == '' || steps.source-run.outcome == 'success')
+        continue-on-error: true
+        with:
+          name: ${{ needs.reports.outputs.report-artifact-name }}
+          path: Tests/Midscene/midscene_run
+      - name: Recover available calculator reports
+        if: steps.combined.outcome != 'success' && (inputs.report_source_run_id == '' || steps.source-run.outcome == 'success')
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: midscene-shard-calculator-${{ steps.source-run.outputs.source_attempt || github.run_attempt }}
+          path: Tests/Midscene/midscene_run/midscene-calculator
+          run-id: ${{ inputs.report_source_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Recover available launcher reports
+        if: steps.combined.outcome != 'success' && (inputs.report_source_run_id == '' || steps.source-run.outcome == 'success')
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: midscene-shard-launcher-${{ steps.source-run.outputs.source_attempt || github.run_attempt }}
+          path: Tests/Midscene/midscene_run/midscene-launcher
+          run-id: ${{ inputs.report_source_run_id || github.run_id }}
+          github-token: ${{ github.token }}
+      - name: Render a read-only Summary with verified publication links
+        if: always()
+        working-directory: Tests/Midscene
+        env:
+          PAGE_URL: ${{ needs.publish.result == 'success' && needs.publish.outputs.page-url || '' }}
+          REPORT_SOURCE_RUN_ID: ${{ inputs.report_source_run_id }}
+          MIDSCENE_REPORT_RESULT: ${{ needs.reports.result }}
+          MIDSCENE_PUBLICATION_RESULT: ${{ needs.prepare-pages.result == 'failure' && 'failure' || needs.publish.result }}
+          MIDSCENE_PRODUCER_RESULT: ${{ needs.reports.result == 'success' && (inputs.report_source_run_id != '' || needs.visual.result == 'success') && 'success' || 'failure' }}
+        run: |
+          if [ -n "$PAGE_URL" ]; then
+            export MIDSCENE_REPORT_URL="${PAGE_URL%/}/midscene/runs/$GITHUB_RUN_ID/$GITHUB_RUN_ATTEMPT"
+          fi
+          npm run report -- --summary-only

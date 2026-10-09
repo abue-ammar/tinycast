@@ -1,0 +1,17 @@
+cases:
+  - name: calculator-expression
+    tags: [calculator]
+    steps:
+      - app.open:
+          id: calculator-expression
+      - aiAct: 'Click the search field in the Tinycast palette and type "2+2". Do not press Return.'
+      - aiAssert: 'The Tinycast search field contains 2+2 and the visible calculator result is 4.'
+      - aiAct: 'Replace the text in the Tinycast search field with "(12+8)*3". Do not press Return.'
+      - aiAssert: 'The search field contains (12+8)*3 and the visible calculator result is 60.'
+  - name: calculator-units
+    tags: [calculator]
+    steps:
+      - app.open:
+          id: calculator-units
+      - aiAct: 'Click the search field in the Tinycast palette and type "10 in in cm". Do not press Return.'
+      - aiAssert: 'The search field contains 10 in in cm and the visible calculator result is 25.4 cm.'

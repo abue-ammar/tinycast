@@ -1,0 +1,5 @@
+[
+  {"id":"calculator-expression","title":"Calculate an expression in the palette","shard":"calculator"},
+  {"id":"calculator-units","title":"Convert units in the palette","shard":"calculator"},
+  {"id":"launcher-fixture","title":"Find and launch an isolated fixture application","shard":"launcher"}
+]
