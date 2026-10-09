@@ -149,18 +149,10 @@ If a change touches anything in the right column, the harness on the left is man
 | `mcp-stdio-test` | `MCP/Service/` against a stub server — handshake, listing, calling, and every way one can go away |
 | `mcp-oauth-test` | OAuth parsing, RFC 7636 PKCE, discovery and resource binding, loopback callback validation/cancellation, dynamic registration, supplied client credentials and their token-endpoint authentication, Keychain token rotation, concurrent refresh, the wider margin for a token lent to a CLI, redirects and one-retry 401 handling |
 
-The subprocess harnesses bring their own servers: `Tests/ai-fixtures/codex-stub.js`
-and `mcp-stub.js`, each copied into a scratch directory and put in front of PATH so the locator finds
-it the way it would find a real one. Both read fd 0 synchronously rather than through a stream —
-`codex-stub.js` stalls mid-turn on purpose, and an event loop would read the next line while it is
-still holding — and both write with `fs.writeSync`, so a reply is on the pipe before a mode that
-exits does. `installed-cli-stub.js` reads the same way for the one turn shape that answers back:
-Claude's consent channel is a reply on stdin in the middle of a turn, so the stub has to be sitting
-on the pipe when it arrives.
+`mcp-stdio-test` copies `Tests/ai-fixtures/mcp-stub.js` into a scratch directory. The stub
+reads fd 0 synchronously and writes replies with `fs.writeSync`, so a reply reaches the pipe before
+an exit mode finishes.
 
-The installed-CLI consent harness checks pipe-delivered calls without assuming which request arrives
-first. A separate queue regression holds the first answer explicitly, observes exclusion while a
-second request waits, then releases the answer and verifies admission order and the shared grant.
 Completion checks use bounded state waits; exclusion windows and intentional timeout cases keep their
 observation delays.
 

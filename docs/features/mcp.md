@@ -353,6 +353,4 @@ caught there rather than in the middle of a conversation.
 - Harnesses: `mcp-test`, `mcp-stdio-test` and `mcp-oauth-test`, plus the tool halves of `ai-provider-test`
   (catalog and turn encoding, fragmented argument decoding, both CLIs' launch encodings and their
   two consent channels), `ai-chat-test` (the loop, its cap, its output bounds, and tool-use
-  persistence), `codex-turn-test` (the launch boundary and its failing closed, one launch for
-  concurrent starts, the elicitation, the rows and the call cap) and `installed-ai-test` (the flags, the `0600` configuration and its deletion, the control
-  channel, the round cap and the managed-policy branch).
+  persistence).

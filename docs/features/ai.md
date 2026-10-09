@@ -170,8 +170,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   endpoints, request bodies, stream parsing, persistence repair, Codex protocol framing and both
   CLI routes' MCP launch encodings. Request
   bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
-  conversation. `installed-ai-test` runs the Claude, Grok, OpenCode and Cursor adapters against real
-  subprocess stubs and pins their safety boundaries.
+  conversation.
 - **Grok, OpenCode and Cursor are text transports, not agents, and so is Claude with no server to
   run.** Claude runs one turn with no tools, browser integration, slash commands or persisted
   session — but never `--bare`, which reads neither
@@ -612,13 +611,7 @@ window, and every chat action either surface sends — is the nineteenth feature
   `ai-chat-test` (`ChatSession`, `MarkdownBlock` with its math delimiters, LaTeX subset and
   mid-stream hold-back, `ChatHistoryStore` with renames and pins,
   `AIToolLoopProvider`, regenerate, and `AIChatSurfacesState`'s one-live-place rule),
-  `codex-turn-test` (the Stop path, driven against a stub app-server stalled where Stop races the
-  turn ID, plus the MCP launch boundary, one launch for concurrent starts, the elicitation, the
-  rows, the call cap and a custom provider's access without an account),
-  `installed-ai-test` (Claude/Grok/OpenCode/Cursor flags, prompt
-  framing, streaming and cleanup, and Claude's private MCP configuration, control channel, round
-  cap and managed-policy branch, a reader's variables against Tinycast's own, and a set command
-  path that runs or fails) and `apple-intelligence-test` (status copy, snapshot deltas,
+  and `apple-intelligence-test` (status copy, snapshot deltas,
   transcript assembly, error mapping, plus one real generation when this Mac can run one), all in
   `run-tests.sh`.
 
