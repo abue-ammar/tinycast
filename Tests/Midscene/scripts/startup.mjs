@@ -1,11 +1,12 @@
 import { setTimeout as delay } from 'node:timers/promises';
 
-export async function waitForOwnedWindow({ pid, inspect, raise, timeoutMs = 30_000, now = Date.now, pause = delay }) {
+export async function waitForOwnedWindow({ pid, inspect, raise, timeoutMs = 30_000, now = Date.now, pause = delay, checkAlive = () => {} }) {
   const started = now();
   const attempts = [];
   const warnings = [];
   let inspection;
   while (now() - started < timeoutMs) {
+    checkAlive();
     try {
       inspection = await inspect();
       if (Number(inspection.windowCount) > 0 && inspection.focusedApplicationPID === pid) {

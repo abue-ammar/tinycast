@@ -142,9 +142,11 @@ print(String(decoding: data, as: UTF8.self))
   child.on('error', error => { launchError = error; });
   startup = await waitForOwnedWindow({
     pid: child.pid!,
-    inspect: () => {
+    checkAlive: () => {
       if (launchError) throw launchError;
       if (child!.exitCode !== null || child!.signalCode !== null || signal.aborted) throw new Error('Tinycast exited before readiness');
+    },
+    inspect: () => {
       return JSON.parse(execFileSync(focusTool, [String(child!.pid), bundle, copy], {
         encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'],
       })) as Record<string, unknown>;

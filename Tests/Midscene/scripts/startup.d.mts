@@ -1,5 +1,6 @@
 export function waitForOwnedWindow(options: {
   pid: number;
+  checkAlive?: () => void;
   inspect: () => Record<string, unknown> | Promise<Record<string, unknown>>;
   raise: () => void | Promise<void>;
   timeoutMs?: number;

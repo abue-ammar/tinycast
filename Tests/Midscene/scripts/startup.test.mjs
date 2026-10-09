@@ -23,3 +23,7 @@ test('windows owned by an unfocused process do not pass readiness and absent win
   assert.equal(result.ready, false);
   assert.equal(result.attempts.length, 2);
 });
+
+test('an exited owned process aborts immediately instead of becoming a retry warning', async () => {
+  await assert.rejects(waitForOwnedWindow({ pid: 7, checkAlive: () => { throw new Error('process exited'); }, inspect: () => assert.fail('process already exited'), raise: () => assert.fail('process already exited') }), /process exited/);
+});
