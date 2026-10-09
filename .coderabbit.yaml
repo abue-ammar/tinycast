@@ -1,290 +1,178 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
-# Review rules restate AGENTS.md and docs/standards.md; when they disagree, those docs win.
+# Swift-only review. AGENTS.md and docs/standards.md are the house rules and win over this file.
 
 language: en-US
 
 tone_instructions: >-
-  Senior macOS engineer. Direct and terse. Only high-confidence defects: races, leaks,
-  main-thread work, deprecated APIs, broken invariants, security, regressions. No nits.
-
-early_access: false
+  Senior Swift and macOS engineer. Direct and terse. Name the problem, the fix and why it matters.
+  No praise, no recaps, no formatting nits.
 
 reviews:
   profile: assertive
-  request_changes_workflow: false
 
-  high_level_summary: true
-  high_level_summary_in_walkthrough: true
-  collapse_walkthrough: true
-  changed_files_summary: true
+  high_level_summary: false
+  changed_files_summary: false
   sequence_diagrams: false
-  estimate_code_review_effort: true
-  assess_linked_issues: true
-  related_issues: true
-  related_prs: true
-
-  suggested_labels: true
-  auto_apply_labels: false
-
-  labeling_instructions:
-    - label: extension
-      instructions: Apply when the PR changes Tinycast/Features/Extensions/ or Scripts/raycast-runtime/.
-    - label: bug
-      instructions: Apply when the PR fixes incorrect existing behaviour.
-    - label: enhancement
-      instructions: Apply when the PR adds a feature or extends existing behaviour.
-
+  estimate_code_review_effort: false
+  assess_linked_issues: false
+  related_issues: false
+  related_prs: false
+  suggested_labels: false
   suggested_reviewers: false
   poem: false
   in_progress_fortune: false
-  review_status: true
-  review_details: false
-  enable_prompt_for_ai_agents: true
-  abort_on_close: false
 
   auto_review:
-    enabled: true
-    auto_incremental_review: true
-    drafts: false
     ignore_title_keywords:
       - WIP
       - DO NOT REVIEW
 
+  # These filters also drive the sparse checkout, so the lint config and guideline docs stay listed.
   path_filters:
+    - "**/*.swift"
     - "!**/*.generated.swift"
-    - "!Tinycast/Resources/RaycastRuntime.generated.js"
-    - "!Tinycast.xcodeproj/**"
-    - "!Tinycast/Assets.xcassets/**"
-    - "!Tinycast/tinycast.icon/**"
-    - "!Tests/ai-fixtures/*.txt"
-    - "!**/node_modules/**"
-    - "!**/package-lock.json"
-    - "!**/pnpm-lock.yaml"
-    - "!build/**"
-    - "!website/.next/**"
-    - "!website/out/**"
-    - "!website/.source/**"
-    - "!**/*.png"
-    - "!**/*.svg"
+    - ".swiftlint.yml"
+    - "project.yml"
+    - "AGENTS.md"
+    - "docs/standards.md"
 
   path_instructions:
     - path: "**/*.swift"
       instructions: |
-        Tinycast targets only macOS 26+, Xcode 26 and Swift 6 language mode.
+        Tinycast targets only the current stable macOS release: macOS 27. The Swift 6.4 compiler,
+        Swift 6 language mode and complete strict concurrency are the baseline. Prefer the latest
+        Swift patterns and modern Apple APIs; no compatibility layers or legacy workarounds.
+        Verify API and language-feature availability against the SDK and compiler used by the build
+        and CI; state any SDK or compiler requirement with a suggested replacement.
 
-        Repository authority:
-        - Review against AGENTS.md and docs/standards.md; use docs/architecture.md, docs/ui.md
-          and docs/testing.md where relevant.
-        - Do not invent conventions that contradict the repository.
-        - Review against the actual current implementation, not an imagined architecture.
+        Comment only when the change makes the code wrong, slower, harder to change, or older than
+        it needs to be. A few strong findings beat many weak ones. Always give the concrete fix.
 
-        Review discipline:
-        - Flag high-confidence defects, regressions, unsafe behavior, meaningful performance or
-          memory problems, and violations of explicit project rules.
-        - Do not flag code merely because another implementation is possible.
-        - Do not request refactors without a concrete correctness, performance, memory,
-          concurrency, security, or maintainability benefit.
-        - Do not turn subjective style preferences into findings.
-        - Do not repeat what SwiftLint already enforces unless there is an extra correctness concern.
-        - Prefer a few high-confidence findings over speculative comments.
-        - Respect intentional Tinycast conventions even when they differ from generic Swift advice.
+        Review the changed Swift code and affected call sites directly for bugs, regressions,
+        code smells and better modern implementations. Check bounds, optional handling, state
+        transitions, error paths and persistence for data loss or inconsistent state.
 
-        Concurrency (Swift 6 strict; concurrency violations are defects):
-        - @MainActor is the default. Flag any new custom actor or global actor; the app has one actor.
-        - Heavy or IO work (file scans, image decode, SQLite, shell, JSON of real size) must run
-          off-main as a nonisolated (usually static) function driven by Task.detached.
-          Flag it on MainActor.
-        - Types crossing an isolation boundary must be Sendable.
-        - Flag @unchecked Sendable, nonisolated(unsafe) and @preconcurrency without a clear
-          one-line reason.
-        - Flag new MainActor.assumeIsolated; it traps at runtime.
-        - Ignore @available(*, unavailable) on init(coder:); that is the house idiom.
-        - Do not silence strict-concurrency diagnostics merely to make code compile.
-        - Flag DispatchQueue, DispatchGroup, DispatchSemaphore, OperationQueue, completion
-          handlers and performSelector where async/await is appropriate.
-        - DispatchQueue.main.async is never an ordering fix.
-        - Every long-lived Task is stored and cancelled in stop() or deinit. Flag fire-and-forget
-          tasks that can outlive their owner.
-        - Flag loops that never check Task.isCancelled where cancellation matters.
-        - Prefer structured concurrency (async let, task groups) over detached bookkeeping
-          where it fits.
-        - Escaping closures that can outlive their owner should not strongly retain self unless
-          that ownership is intentional and bounded. Prefer [weak self]; [unowned self]
-          requires a lifetime invariant.
-        - Flag retain cycles through Task, Timer, NotificationCenter, KVO and stored closures.
-        - Block observers use NotificationToken, not a bare addObserver plus deinit removal.
-        - A resource that must be torn down on its actor uses isolated deinit (see ClipboardStore).
-        - withObservationTracking's onChange fires before the write; the re-read and re-arm must
-          be deferred into a Task (AppCore.track is the shape).
-        - Signpost .end must sit in defer so a throwing path cannot leak the interval.
+        Code quality and smells:
+        - A function or type with more than one job, or a body that needs section comments.
+        - Deep nesting that guard and early return would flatten.
+        - Flag arguments (doThing(true)) and stringly-typed state where an enum fits.
+        - Duplicated logic that should be one function. Duplicating extension views and layout
+          math for containment is intentional; duplicated runtime logic still needs review.
+        - Abstraction with no payoff: unnecessary protocols, generics, factories and forwarding
+          wrappers. A single use can reveal this smell; check whether the abstraction has a purpose.
+        - var that could be let, a class that could be a struct, any P where some P or a generic
+          works, AnyView where a concrete type or @ViewBuilder works.
+        - Force unwraps and casts whose assumed invariant can fail; try? that drops an error
+          the user should see. Do not repeat mechanical checks already covered by SwiftLint.
+        - Dead code, unused parameters, commented-out code, obsolete compatibility paths.
+        - Hard-coded colours, spacing, radii or fonts where an existing token applies. Theme owns
+          shared tokens; extension-specific layout values stay in Features/Extensions/.
+        - Comments that restate the code, run two lines in a row, or narrate the change.
 
-        Modern APIs only:
-        - @Observable only. Flag ObservableObject, @Published, @StateObject, @ObservedObject,
-          @EnvironmentObject and Combine used for state.
+        Modern Swift:
+        - Typed throws where the error set is closed; if and switch expressions where clearer.
+        - Checked Sendable value types for sharing and sending for ownership transfer, instead
+          of @unchecked Sendable workarounds where the invariant can be expressed safely.
+        - Mutex (Synchronization) over NSLock or a serial DispatchQueue for state outside an actor.
+        - Duration, ContinuousClock and Task.sleep(for:) for elapsed time and delays, instead of
+          raw nanoseconds or wall-clock Date arithmetic. Keep Date for calendar and wall-clock time.
+        - AsyncStream.makeStream(of:) and async sequences over callback plumbing.
+        - FormatStyle (.formatted) over new DateFormatter or NumberFormatter instances for display.
+        - URL(filePath:), appending(path:) and URL.homeDirectory over string paths; pure models
+          still receive the home directory as a parameter.
+
+        Strict concurrency:
+        - @MainActor is the default. Never suggest a new actor or global actor.
+        - Heavy or IO work (file scans, image decode, SQLite, shell, large JSON) runs off-main.
+          Prefer @concurrent async functions for work that must leave the caller's actor; use
+          Task.detached when an independent task is needed. async or nonisolated alone is not a
+          guarantee of off-main execution. Check the actual isolation and compiler settings.
+        - Values shared across isolation boundaries are Sendable; use sending for safe ownership
+          transfer. Flag @unchecked Sendable, nonisolated(unsafe) and @preconcurrency without a reason.
+        - Flag new MainActor.assumeIsolated; it traps if the executor assumption is wrong. Use an
+          isolated conformance when the protocol is MainActor-bound; otherwise establish the
+          callback's actor boundary without breaking synchronous return or ordering semantics.
+        - Flag DispatchQueue, DispatchGroup, semaphores, OperationQueue, performSelector and
+          completion handlers where async/await fits. DispatchQueue.main.async never fixes an
+          ordering bug.
+        - Every long-lived Task has an owner and teardown. Store and cancel service tasks in
+          stop() or deinit; SwiftUI .task follows view lifetime. Long loops check cancellation.
+          Prefer async let and task groups to detached bookkeeping. Propagate cancellation to
+          detached or callback-backed work owned by the caller; do not cancel shared work for one
+          waiter or report CancellationError as an ordinary failure.
+        - After awaits and before mutation, revalidate cancellation, operation identity and the
+          destination when a result can become stale. Actor isolation alone does not prevent this.
+        - Use [weak self] to prevent cycles or unintended retention; [unowned self] needs a
+          lifetime guarantee. Bounded intentional strong capture is valid. Check Task, Timer,
+          NotificationCenter, KVO and stored closures; unwrapping weak self before a long await
+          can still retain the owner for the whole operation.
+        - Teardown that must run on the actor uses isolated deinit.
+        - A continuation resumes exactly once across success, failure and cancellation; no
+          suspended waiter or owned producer work is left behind.
+
+        SwiftUI and AppKit:
+        - @Observable with @State, @Bindable and @Environment(Type.self); no type annotation on
+          keyless @Environment properties. Flag ObservableObject, @Published, @StateObject,
+          @ObservedObject, @EnvironmentObject and Combine for state.
         - @ObservationIgnored on memo caches and lazy collaborators.
-        - SMAppService for login items; Swift Concurrency over callbacks.
-        - No #available/@available(macOS …) gates, version flags, compatibility shims,
-          migration code or "just in case" fallbacks. Suggest deleting obsolete compatibility code.
-        - Carbon is allowed only for global hotkeys (RegisterEventHotKey) and TIS input sources;
-          raw C pointers are decoded to plain values before crossing into actor code.
+        - @Entry for environment keys, .task or .task(id:) over onAppear plus Task, and the zero- or
+          two-parameter onChange.
+        - Flag deprecated and soft-deprecated API and name the replacement: foregroundColor,
+          cornerRadius, NavigationView, activate(ignoringOtherApps:), launchApplication, lockFocus,
+          kUTType, icon(forFileType:), SMLoginItemSetEnabled and the like.
+        - Bodies stay declarative: move IO, business logic and expensive sorting or formatting
+          out of body. Extract a subview before a computed some View helper.
+        - Flag ForEach ids that are not stable and unique, duplicated state that can drift, and
+          state that invalidates a whole view tree when one property changed. Check environment
+          injection when adding a hosting boundary; a missing injection can trap at runtime.
+        - Custom controls carry an accessibility label and traits.
 
-        Memory and speed:
-        - Resident memory must stay under 100 MB and return to baseline after the palette closes.
-        - Flag unbounded caches, arrays or histories without eviction.
-        - Flag a new cache of non-trivial size with no measurement cited in the PR.
-        - Flag allocation, sorting, regex compilation, formatter creation or filtering repeated
-          per keystroke, per row or per render; hoist it or build it once per palette show.
-        - Flag new work in AppCore.start() or initializers that could be deferred or done on
-          first use.
-        - Prefer value types and cheaper data structures over unnecessary caches.
-        - Flag large copies in hot loops.
-        - Flag NSImage, CGImage or Data held longer than the view that shows it.
+        Efficiency (resident memory under 100 MB, and the palette must feel instant):
+        - Flag unnecessary allocation and expensive sorting, filtering, regex or formatter
+          creation repeated per keystroke, per row or per render. Hoist it, or build it once per show.
+        - Flag hidden O(n^2): contains or firstIndex inside a loop where a Set or Dictionary fits.
+        - Flag synchronous IO on the main actor, and new work in AppCore.start() or an init that
+          could run on first use.
+        - Flag unbounded caches and histories, and obsolete NSImage, CGImage or Data retained past
+          their useful lifetime. Respect intentional shared caches and persisted history.
+          A new cache needs a measurement in the PR.
 
-        Architecture and ownership:
-        - AppCore is the sole owner of long-lived state. Flag any new singleton or static let shared.
-        - Views reach a feature through its coordinator via @Environment, never through AppCore.
-        - AppEntry.Kind is the only source of an entry's category. Flag category logic that
-          parses IDs.
-        - Networking uses a private URLSessionConfiguration.ephemeral session with
-          urlCache = nil (copy CurrencyRateStore). Flag URLSession.shared.
-        - Dialogs go through DialogController, reports through HUDPresenter. Flag NSAlert,
-          NSSlider, NSPopover and SwiftUI .alert, .confirmationDialog and .popover.
-        - Anything newly persisted is keyed by Bundle.main.bundleIdentifier.
-        - Type suffixes must match their responsibility (docs/standards.md#naming).
-        - Flag protocols with one conformer, generics with one use and factories for one type.
-        - Flag force unwraps and try! outside tests unless the invariant is obvious.
+        Never suggest:
+        - Compatibility layers, legacy workarounds, older-OS version flags, migration scaffolding
+          or speculative fallbacks.
+        - A singleton or static shared; AppCore owns long-lived state.
+        - NSAlert, .alert, .confirmationDialog or .popover; use DialogController or HUDPresenter.
+        - URLSession.shared; networking copies CurrencyRateStore's ephemeral session.
+        - scrollEdgeEffectStyle in the borderless panels; they use edgeDissolve().
+        - XCTest or Swift Testing; Tests/ holds standalone harnesses.
+        - Doc comments or comment blocks; comments are rare, one line, and explain the why.
+        - Third-party packages.
+        - isEmpty for count on LauncherRankingRecord or PaletteRowIndex; that count is a hit count.
+        - Anything SwiftLint already reports, or formatting.
 
-        Comments:
-        - Rare, one line, why not what, max 100 chars.
-        - Flag two consecutive comment lines, comment blocks, comments that restate code, and
-          comments narrating the change itself.
+        Recommend newer APIs such as Observations and @concurrent when they improve changed code.
+        Check observation timing, task ownership, priority and cancellation semantics; they are not
+        automatic drop-in replacements. @available(*, unavailable) on init(coder:) is intentional.
 
     - path: "Tinycast/Features/*/Model/**"
       instructions: |
         Pure model layer, compiled directly by the test harnesses.
-        - Must not import AppKit, SwiftUI or Cocoa. This is a hard error.
-        - Every environment fact (clock, filesystem, home directory, rates, locale) is an
-          injected parameter. A defaulted parameter (now: Date = Date()) is fine.
-        - Flag new ambient reads of Date(), FileManager.default, NSHomeDirectory(),
-          Locale.current or UserDefaults that a harness cannot override.
-        - Types crossing actors are Sendable value types. Prefer nonisolated pure functions.
-
-    - path: "Tinycast/App/**"
-      instructions: |
-        Composition root.
-        - New long-lived state goes on AppCore and is wired in start().
-        - Launch time is protected most: flag synchronous work added to start() or init that
-          could be deferred into a Task or done on first use.
-        - Check every started task and observer is torn down.
-
-    - path: "Tinycast/Palette/**"
-      instructions: |
-        The summon path must feel instant.
-        - Anything resolved per show must not be recomputed per render or keystroke.
-        - Flag state that invalidates the whole palette view tree.
-        - Flag observation of whole stores where one property is read.
-        - Flag synchronous IO on show.
+        - No import of AppKit, SwiftUI or Cocoa.
+        - Clock, filesystem, home directory, locale and rates come in as parameters. Flag new
+          ambient reads of Date(), FileManager.default, NSHomeDirectory() or Locale.current that
+          a harness cannot override; defaulted injected parameters are allowed.
 
     - path: "Tinycast/Features/Extensions/**"
       instructions: |
         Runs untrusted Raycast extensions in JavaScriptCore.
-        - Containment: every view, row, menu, geometry and sizing constant lives here. Flag
-          anything added to DesignSystem, Theme, or shared with another feature. Duplicating
-          layout here is the correct trade.
-        - Only Theme base tokens, InterfaceMetrics, PopoverMenuItem and Platform/ may be used
-          from outside.
-        - Treat all extension input as hostile: validate sizes, paths, URLs and types. Flag path
-          traversal, unbounded payloads, and JS values trusted without checks.
-        - JSContext/JSValue stay on their owning actor. Flag retain cycles between JS callbacks
-          and Swift owners.
-
-    - path: "Tinycast/DesignSystem/**"
-      instructions: |
-        Theme.swift is the only design-token source.
-        - Flag hard-coded colours, spacing, radii or fonts elsewhere.
-        - Dark is the baseline: a colour's dark branch is the literal Color.white.opacity(...)
-          it always was. Flag any change to a dark value unless the PR explicitly changes Dark.
-        - DesignSystem must not depend on any feature.
+        - Treat every JS value as hostile: check types, sizes, paths and URLs.
+        - Flag retain cycles between JS callbacks and Swift owners.
+        - Views, layout and sizing stay in this folder. Only Theme base tokens, InterfaceMetrics,
+          PopoverMenuItem and Platform/ come from outside.
 
     - path: "Tinycast/DesignSystem/Scrolling/{EdgeDissolve,ThinScrollbar}.swift"
       instructions: |
-        Off-limits. Any edit here is a visual regression. Ask the author to fix the underlying
-        scroll issue elsewhere unless the PR explicitly exists to change this file.
-
-    - path: "Tinycast/**/*View*.swift"
-      instructions: |
-        SwiftUI:
-        - Keep bodies declarative and small; prefer extracted subviews to large bodies and
-          computed some View helpers.
-        - Flag business logic, IO or formatting work inside body.
-        - Minimise @State; derive instead of duplicate.
-        - No type annotation on @Environment for @Observable types.
-        - Check a new hosting view injects every environment object it reads.
-        - Every custom control needs an accessibility label and traits.
-        - Follow docs/ui.md.
-
-    - path: "Tinycast/Platform/**"
-      instructions: |
-        System shims shared by all features.
-        - Must not depend on any feature.
-        - Keep them thin and Sendable-correct.
-        - Decode C/CF values to Swift values at the boundary.
-
-    - path: "Tinycast/{Info.plist,Tinycast.entitlements}"
-      instructions: |
-        Flag any new entitlement, usage-description key or privilege, and ask why it is required.
-
-    - path: "Tests/**/*.swift"
-      instructions: |
-        Standalone harnesses (one Swift file each, no XCTest) that compile shipped sources and
-        run by ./Scripts/run-tests.sh.
-        - Tests must be deterministic: inject clocks and temp directories, no network, no sleeps
-          for timing.
-        - Check new behaviour has a covering case.
-        - Check a new harness is registered in Scripts/run-tests.sh.
-        - Performance harnesses must assert a budget.
-
-    - path: "Scripts/**/*.sh"
-      instructions: |
-        Run by macOS /bin/bash 3.2.
-        - Flag bash 4+ features (associative arrays, mapfile, ${var,,}, &>>).
-        - Use set -uo pipefail or stricter, and quote expansions.
-        - No step may need a secret only the maintainer holds.
-
-    - path: "Scripts/**/*.{js,mjs}"
-      instructions: |
-        Node generators and the Raycast runtime build.
-        - Their output is committed; check the PR regenerates and commits the matching
-          *.generated.* file.
-        - Keep the runtime small because it is loaded into every extension context. Flag heavy
-          polyfills and eager work.
-
-    - path: "project.yml"
-      instructions: |
-        XcodeGen source of truth.
-        - Check Tinycast.xcodeproj was regenerated in the same PR.
-        - Keep Swift 6 language mode, strict concurrency, the macOS 26 deployment target and
-          zero third-party dependencies.
-        - Flag SwiftPM packages and Bundle.module.
-
-    - path: ".github/workflows/**"
-      instructions: |
-        Runs on macos-26 with Xcode 26.
-        - Keep permissions minimal and pin actions.
-        - Never interpolate untrusted PR input into run:.
-        - Workflows call the scripts rather than restating their rules.
-
-    - path: "{AGENTS.md,docs/**/*.md}"
-      instructions: |
-        Check the text matches the code in this PR.
-        - Flag stale type names, paths and commands.
-        - A code change that makes a doc wrong must fix that doc in the same PR.
-
-    - path: "website/**"
-      instructions: |
-        Next.js static export (fumadocs, React 19, Tailwind 4), linted with oxlint.
-        Focus on broken links, accessibility and content accuracy against the app.
-        Skip style nits.
+        Off-limits, tuned by eye. Flag any edit unless the PR says it exists to change this file.
 
   finishing_touches:
     docstrings:
@@ -298,111 +186,22 @@ reviews:
     docstrings:
       mode: "off"
     title:
-      mode: warning
-      requirements: >-
-        Imperative mood, sentence case, no conventional-commit prefix (feat:, fix:),
-        no trailing period, at most 72 characters. Example:
-        "Keep the palette above other apps' modal windows".
+      mode: "off"
     description:
-      mode: warning
+      mode: "off"
     issue_assessment:
-      mode: warning
-
-    custom_checks:
-      - name: Model purity
-        mode: error
-        instructions: >-
-          Fail if any added or modified file under Tinycast/Features/*/Model/
-          contains import AppKit, import SwiftUI or import Cocoa. Otherwise pass.
-
-      - name: Generated files untouched
-        mode: error
-        instructions: >-
-          Fail if a file whose name contains .generated. changed while none of
-          its generators changed in the same PR: Scripts/gen-emoji.js,
-          Scripts/gen-currencies.js, Scripts/gen-countries.js, or files under
-          Scripts/raycast-runtime/. Otherwise pass.
-
-      - name: Protected scroll files
-        mode: error
-        instructions: >-
-          Fail if Tinycast/DesignSystem/Scrolling/EdgeDissolve.swift or
-          Tinycast/DesignSystem/Scrolling/ThinScrollbar.swift changed and the
-          PR title or description does not explicitly state the change is
-          intended for that file. Otherwise pass.
-
-      - name: No legacy concurrency or state
-        mode: error
-        instructions: >-
-          Fail if added Swift lines introduce ObservableObject, @Published,
-          @StateObject, @ObservedObject, @EnvironmentObject, MainActor.assumeIsolated,
-          URLSession.shared, NSAlert, or a new actor declaration.
-          Also fail if an added @unchecked Sendable or nonisolated(unsafe) has
-          no comment on the same or preceding line giving a reason. Otherwise pass.
-
-      - name: XcodeGen project in sync
-        mode: error
-        instructions: >-
-          Fail only if project.yml changed and Tinycast.xcodeproj/project.pbxproj
-          did not. A project.pbxproj change without a project.yml change is
-          expected: XcodeGen globs source folders, so adding, moving or removing
-          a file regenerates the project alone. Otherwise pass.
-
-      - name: Memory footprint reported
-        mode: warning
-        instructions: >-
-          Pass if the PR changes no Swift file under Tinycast/. Otherwise pass
-          only if the description's "Memory footprint" section has values filled
-          in, or states plainly why measurement does not apply or was not done.
-          Fail if the section is missing or left as the empty template.
+      mode: "off"
 
   tools:
     swiftlint:
       enabled: true
       config_file: .swiftlint.yml
-    shellcheck:
-      enabled: true
-    actionlint:
-      enabled: true
-    zizmor:
-      enabled: true
-    gitleaks:
-      enabled: true
-    yamllint:
-      enabled: false
-    oxc:
-      enabled: true
-    github-checks:
-      enabled: true
-    markdownlint:
-      enabled: false
-    languagetool:
-      enabled: false
-    biome:
-      enabled: false
-    eslint:
-      enabled: false
 
 chat:
-  auto_reply: true
   art: false
 
 knowledge_base:
-  opt_out: false
-  web_search:
-    enabled: true
   code_guidelines:
-    enabled: true
     filePatterns:
-      - AGENTS.md
-      - docs/standards.md
-      - docs/architecture.md
-      - docs/ui.md
-      - docs/testing.md
-      - docs/features/*.md
-  learnings:
-    scope: local
-  issues:
-    scope: local
-  pull_requests:
-    scope: local
+      - files: "docs/standards.md"
+        applyTo: "**/*.swift"
