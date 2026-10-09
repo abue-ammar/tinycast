@@ -13,17 +13,17 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 
 ## Layout
 
-| Path | Role |
-| --- | --- |
-| `Model/EmojiCatalog.swift` | The catalog model — groups, names, keywords |
-| `Model/EmojiGridGeometry.swift` | Pure grid math — columns, item sizing |
-| `Model/EmojiData.generated.swift` | The dataset |
-| `Resources/EmojiKeywords/<language>.txt` | CLDR keyword packs, `glyph\|terms` per line |
-| `Service/EmojiIndex.swift` | Search index over the catalog |
-| `Service/FrequentEmojiStore.swift` | Persisted emoji history and usage counts |
-| `Service/PinnedEmojiStore.swift` | Persisted pins, in the order the user set |
-| `UI/EmojiGridView.swift` | The SwiftUI grid |
-| `UI/EmojiScreen.swift`, `UI/EmojiCoordinator.swift` | The palette screen and its action surface |
+| Path                                                | Role                                        |
+| --------------------------------------------------- | ------------------------------------------- |
+| `Model/EmojiCatalog.swift`                          | The catalog model — groups, names, keywords |
+| `Model/EmojiGridGeometry.swift`                     | Pure grid math — columns, item sizing       |
+| `Model/EmojiData.generated.swift`                   | The dataset                                 |
+| `Resources/EmojiKeywords/<language>.txt`            | CLDR keyword packs, `glyph\|terms` per line |
+| `Service/EmojiIndex.swift`                          | Search index over the catalog               |
+| `Service/FrequentEmojiStore.swift`                  | Persisted emoji history and usage counts    |
+| `Service/PinnedEmojiStore.swift`                    | Persisted pins, in the order the user set   |
+| `UI/EmojiGridView.swift`                            | The SwiftUI grid                            |
+| `UI/EmojiScreen.swift`, `UI/EmojiCoordinator.swift` | The palette screen and its action surface   |
 
 The index and the store are **effects**, so they live under `Service/` — only the three files above them
 are pure.
