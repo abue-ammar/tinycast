@@ -501,7 +501,7 @@ async function runExtension(dir, commandName) {
       },
     }),
   );
-  harness.start("s1", readFileSync(file, "utf8"), file, dir, target.mode === "view" ? "view" : "no-view", {});
+  harness.start("s1", readFileSync(file, "utf8"), file, dir, target.mode, {});
 
   await new Promise((resolve) => setTimeout(resolve, Number(process.env.EXT_TEST_SETTLE_MS ?? 1500)));
   if (harness.state.failures.length) {
