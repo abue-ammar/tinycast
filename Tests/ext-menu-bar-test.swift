@@ -634,7 +634,9 @@ extension ExtensionTests {
             controller.menu.performActionForItem(at: index)
             await settle(150)
             check("closing menu does not cancel an async action", manager.isRunning)
-            await settle(400)
+            await settle(until: {
+                snapshot(firstRef)?.title == "Updated" && !manager.isRunning && lastRuntime == nil
+            })
             check(
                 "action writes into its own extension",
                 storage.localStorageValue(extension: "first", key: "clicked")
