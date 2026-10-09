@@ -735,6 +735,9 @@ statuses, headers and binary bodies through the same bridge. Cancellation termin
 that request's child; request-body scratch files are private and removed on exit. Requests without
 `socketPath` continue through the shared ephemeral URLSession. Responses remain buffered, so Docker
 log streams, event streams and interactive attach sessions are outside this transport's support.
+An unavailable socket reports an actionable connection error and shows the existing failure toast
+for a foreground command. Background commands stay silent, and the extension still receives the
+rejected request so its own error handling can run.
 
 Two things decide whether it gets there. Axios enables that adapter only when
 `Object.prototype.toString.call(process)` reads `[object process]`, so `process` carries the tag; and

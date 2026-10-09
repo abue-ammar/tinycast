@@ -151,12 +151,31 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         case "window": return window(method: method, arguments: arguments)
         case "feedback": return try await feedback(method: method, arguments: arguments)
         case "system": return try await system(method: method, arguments: arguments)
-        case "fetch": return try await fetcher.request(arguments.first)
+        case "fetch": return try await fetch(arguments.first)
         case "websocket": return try await sockets.perform(method: method, arguments: arguments)
         case "dns": return await ExtensionNameResolver.resolve(arguments.first)
         case "proc" where method == "read": return try await ExtensionAsyncProcess.read(arguments)
         case "proc": return try await ExtensionAsyncProcess.wait(arguments.first)
         default: throw ExtensionHostError.unknown("\(api).\(method)")
+        }
+    }
+
+    private func fetch(_ spec: RenderValue?) async throws -> [String: Any] {
+        let context = context
+        let name = context?.activeExtensionName
+        do {
+            return try await fetcher.request(spec)
+        } catch let error as ExtensionFetcher.FetchError {
+            try Task.checkCancellation()
+            if case .socketUnavailable(let path) = error,
+                let context, self.context === context, context.activeExtensionName == name,
+                context.activeLaunchType != .background
+            {
+                _ = context.present(toast: ExtensionToast(
+                    style: .failure, title: "Connection failed",
+                    message: "Start the local service or check its socket path: \(path)"))
+            }
+            throw error
         }
     }
 

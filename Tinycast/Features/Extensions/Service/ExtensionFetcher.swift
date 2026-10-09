@@ -19,10 +19,13 @@ final class ExtensionFetcher: Sendable {
 
     enum FetchError: LocalizedError {
         case badURL(String)
+        case socketUnavailable(String)
 
         var errorDescription: String? {
             switch self {
             case .badURL(let url): return "Invalid URL: \(url)"
+            case .socketUnavailable(let path):
+                return "Could not connect to the local service. Start its app or check the socket path: \(path)"
             }
         }
     }
@@ -118,6 +121,7 @@ final class ExtensionFetcher: Sendable {
             exit.wait()
             try Task.checkCancellation()
             guard process.terminationStatus == 0 else {
+                if process.terminationStatus == 7 { throw FetchError.socketUnavailable(socketPath) }
                 throw URLError(process.terminationStatus == 28 ? .timedOut : .cannotConnectToHost)
             }
             return bytes

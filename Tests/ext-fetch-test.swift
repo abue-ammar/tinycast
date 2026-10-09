@@ -182,8 +182,14 @@ enum ExtensionFetchTests {
             ]))
             expect(false, "Missing Unix socket fails without falling back to TCP")
         } catch {
-            expect((error as? URLError)?.code == .cannotConnectToHost,
-                "Missing Unix socket fails without falling back to TCP")
+            if case .socketUnavailable(let path) = error as? ExtensionFetcher.FetchError {
+                expect(path == socketPath + ".missing",
+                    "Missing Unix socket fails without falling back to TCP")
+                expect(error.localizedDescription.contains("Start its app or check the socket path"),
+                    "Missing Unix socket reports an actionable error instead of an NSURL error code")
+            } else {
+                expect(false, "Missing Unix socket reports its connection failure")
+            }
         }
     }
 
