@@ -125,6 +125,8 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     private let clipboardStore: ClipboardStore
     private let fetcher: ExtensionFetcher
     private let sockets = ExtensionWebSocketBridge()
+    /// Set by `AppCore`; nil until wired, which `AI.ask` reports as AI being off.
+    var ai: ExtensionAIAccess?
 
     init(clipboardStore: ClipboardStore, fetcher: ExtensionFetcher = ExtensionFetcher()) {
         self.clipboardStore = clipboardStore
@@ -134,11 +136,24 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     func scoped(to context: ExtensionHostContext) -> ExtensionHostBridge {
         let bridge = ExtensionHostBridge(clipboardStore: clipboardStore, fetcher: fetcher)
         bridge.context = context
+        bridge.ai = ai
         return bridge
     }
 
     func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String {
+        try await perform(api: api, method: method, arguments: arguments, progress: { _ in })
+    }
+
+    func perform(
+        api: String, method: String, arguments: [RenderValue],
+        progress: @escaping @Sendable (String) -> Void
+    ) async throws -> String {
         guard context != nil else { throw ExtensionHostError.noActiveExtension }
+        if api == "ai" {
+            guard method == "ask" else { throw ExtensionHostError.unknown("ai.\(method)") }
+            let text = try await ExtensionAIBridge.ask(arguments, access: ai, progress: progress)
+            return ExtensionRuntime.jsonString(from: text)
+        }
         let value = try await dispatch(api: api, method: method, arguments: arguments)
         return ExtensionRuntime.jsonString(from: value)
     }

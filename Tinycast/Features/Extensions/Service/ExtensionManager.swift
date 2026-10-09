@@ -65,6 +65,14 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         bridge.context = self
     }
 
+    /// `AI.ask` answers through the reader's own AI routes; `AppCore` owns which ones.
+    func setAIAccess(_ access: ExtensionAIAccess) {
+        bridge.ai = access
+        menuBars?.canAccessAI = access.isAvailable
+    }
+
+    private var canAccessAI: Bool { bridge.ai?.isAvailable() == true }
+
     /// Wires collaborators only; the coordinator decides whether anything scans.
     func start(appIndex: AppIndex, coordinator: ExtensionCoordinator) {
         self.appIndex = appIndex
@@ -114,6 +122,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
                     coordinator?.showHUD(message)
                     if needsPreferences { coordinator?.showExtensionSettings(for: owner) }
                 })
+            if let ai = bridge.ai { menuBars?.canAccessAI = ai.isAvailable }
         }
         await refresh()
         ensureBackgroundLoop()
@@ -483,7 +492,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             fallbackText: fallbackText,
             launchType: launchType,
             isDarkAppearance: NSApp.effectiveAppearance.isDark,
-            launchContext: launchContext)
+            launchContext: launchContext,
+            canAccessAI: canAccessAI)
     }
 
     func stop() async {

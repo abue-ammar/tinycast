@@ -288,6 +288,7 @@ final class AppCore {
             appIndex.start(settings: settings)
             clipboardCoordinator.applyEnabled()
             extensions.start(appIndex: appIndex, coordinator: extensionCoordinator)
+            extensions.setAIAccess(extensionAIAccess)
             extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
             windowSwitchCoordinator.applyEnabled()
@@ -615,6 +616,46 @@ final class AppCore {
             selection: selection, settings: aiSettings, subscription: chatGPTSubscription,
             installedAI: installedAI,
             guardrails: .permissiveContentTransformations)
+    }
+
+    /// `AI.ask` from a Raycast extension runs on the reader's own routes, never a hosted one.
+    private var extensionAIAccess: ExtensionAIAccess {
+        ExtensionAIAccess(
+            isAvailable: { [weak self] in
+                guard let self, self.settings.aiEnabled else { return false }
+                return self.extensionAISelection(for: nil) != nil
+            },
+            provider: { [weak self] model in
+                guard let self, self.settings.aiEnabled else {
+                    throw AIProviderError.unavailable(
+                        "AI is off in Tinycast. Turn it on in Settings \u{2192} AI.")
+                }
+                guard let selection = self.extensionAISelection(for: model) else {
+                    throw AIProviderError.unavailable("Choose a model in Settings \u{2192} AI.")
+                }
+                return try AIProviderFactory.make(
+                    selection: selection, settings: self.aiSettings,
+                    subscription: self.chatGPTSubscription, installedAI: self.installedAI)
+            })
+    }
+
+    /// Every route a picker offers, so a model id an extension names maps onto one the reader has.
+    private func extensionAISelection(for requestedModel: String?) -> AIModelSelection? {
+        let candidates = AIModelOption.availableGroups(
+            settings: aiSettings, subscription: chatGPTSubscription, installedAI: installedAI
+        )
+        .flatMap(\.options)
+        .map { option in
+            var provider: AIProviderKind?
+            if case .api(let connection, _, _) = option.selection {
+                provider = aiSettings.connection(id: connection)?.provider
+            }
+            return RaycastAIModelMatch.Candidate(
+                selection: option.selection,
+                vendor: RaycastAIModelMatch.vendor(of: option.selection, provider: provider))
+        }
+        return RaycastAIModelMatch.choose(
+            requested: requestedModel, candidates: candidates, fallback: aiSettings.defaultModel)
     }
 
     // MARK: - Feature switches

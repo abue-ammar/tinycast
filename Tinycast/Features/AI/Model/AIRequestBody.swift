@@ -33,6 +33,7 @@ enum AIRequestBody {
         if configuration.disablesThinking {
             body["thinking"] = ["type": "disabled"]
         }
+        if let temperature = input.temperature { body["temperature"] = min(max(temperature, 0), 2) }
         if !input.tools.isEmpty {
             body["tools"] = input.tools.map {
                 [
@@ -61,6 +62,8 @@ enum AIRequestBody {
             "stream": true
         ]
         if !systemParts.isEmpty { body["system"] = systemParts.joined(separator: "\n\n") }
+        // Anthropic's range is 0–1, so the shared 0–2 scale is halved rather than clipped.
+        if let temperature = input.temperature { body["temperature"] = min(max(temperature, 0), 2) / 2 }
         if !input.tools.isEmpty {
             body["tools"] = input.tools.map {
                 [

@@ -75,6 +75,8 @@ struct ExtensionLaunchContext: Sendable {
     /// Injected, never read: a running command keeps what it booted with.
     var isDarkAppearance: Bool
     var launchContext: [String: RenderValue] = [:]
+    /// Whether Settings → AI has a route `AI.ask` can use; `environment.canAccess(AI)` reads it.
+    var canAccessAI = false
 
     func jsonString() -> String {
         var environment: [String: Any] = [
@@ -102,7 +104,8 @@ struct ExtensionLaunchContext: Sendable {
                 "environment": environment,
                 "preferences": preferences.mapValues(\.jsonValue),
                 "caches": caches,
-                "launchProps": launchProps
+                "launchProps": launchProps,
+                "ai": ["available": canAccessAI]
             ])
     }
 }

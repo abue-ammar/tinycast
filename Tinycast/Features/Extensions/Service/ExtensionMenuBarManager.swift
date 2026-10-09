@@ -10,6 +10,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
     private let showsStatusItems: Bool
     private let makeExecution: (InstalledExtension, ExtensionCommand, ExtensionLaunchType) -> Execution?
     private let onError: (String, InstalledExtension, Bool) -> Void
+    /// Read at each launch, so a menu-bar command sees AI switched on or off since the last one.
+    var canAccessAI: @MainActor () -> Bool = { false }
     private var installed: [InstalledExtension] = []
     private var controllers: [String: ExtensionMenuBarController] = [:]
     private var requests: [Request] = []
@@ -204,7 +206,8 @@ final class ExtensionMenuBarManager: ExtensionRuntimeDelegate {
             caches: storage.caches(extension: owner.manifest.name),
             arguments: command.completeArguments(request.arguments),
             fallbackText: nil, launchType: request.type,
-            isDarkAppearance: NSApp.effectiveAppearance.isDark, launchContext: request.context)
+            isDarkAppearance: NSApp.effectiveAppearance.isDark, launchContext: request.context,
+            canAccessAI: canAccessAI())
         launchTask = Task { [weak self] in
             do {
                 let code = try await Task.detached(priority: .utility) {

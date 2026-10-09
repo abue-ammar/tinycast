@@ -5,8 +5,22 @@ import JavaScriptCore
 @MainActor
 protocol ExtensionHostAPI: AnyObject, Sendable {
     func perform(api: String, method: String, arguments: [RenderValue]) async throws -> String
+    /// `progress` hands JS a JSON payload ahead of the settle — `AI.ask`'s chunks ride it.
+    func perform(
+        api: String, method: String, arguments: [RenderValue],
+        progress: @escaping @Sendable (String) -> Void
+    ) async throws -> String
     /// The context is gone; release anything opened on its behalf.
     func sessionEnded()
+}
+
+extension ExtensionHostAPI {
+    func perform(
+        api: String, method: String, arguments: [RenderValue],
+        progress: @escaping @Sendable (String) -> Void
+    ) async throws -> String {
+        try await perform(api: api, method: method, arguments: arguments)
+    }
 }
 
 /// Where a running command's UI or failure lands. Every callback arrives on the main actor.
@@ -203,6 +217,9 @@ final class ExtensionRuntime: @unchecked Sendable {
             [weak self] callId, api, method, argsJSON in
             self?.invokeAsync(callId: callId, api: api, method: method, argsJSON: argsJSON)
         }
+        let cancel: @convention(block) (String) -> Void = { [weak self] callId in
+            self?.cancelHostCall(callId: callId)
+        }
         let invokeSync: @convention(block) (String, String, String) -> String = {
             [weak self] api, method, argsJSON in
             guard let self else { return #"{"ok":false,"error":"runtime gone"}"# }
@@ -223,6 +240,7 @@ final class ExtensionRuntime: @unchecked Sendable {
         host?.setObject(finished, forKeyedSubscript: "finished" as NSString)
         host?.setObject(fieldCommand, forKeyedSubscript: "fieldCommand" as NSString)
         host?.setObject(invoke, forKeyedSubscript: "invoke" as NSString)
+        host?.setObject(cancel, forKeyedSubscript: "cancel" as NSString)
         host?.setObject(invokeSync, forKeyedSubscript: "invokeSync" as NSString)
         host?.setObject(startTimer, forKeyedSubscript: "startTimer" as NSString)
         host?.setObject(clearTimer, forKeyedSubscript: "clearTimer" as NSString)
@@ -244,11 +262,14 @@ final class ExtensionRuntime: @unchecked Sendable {
         let arguments = RenderValue.arguments(from: argsJSON)
         let hostAPI = self.hostAPI
         let generation = self.generation
+        let progress: @Sendable (String) -> Void = { [weak self] payload in
+            self?.deliverProgress(callId: callId, generation: generation, payload: payload)
+        }
         hostTasks[callId] = Task { @MainActor [weak self] in
             guard !Task.isCancelled else { return }
             do {
                 let json = try await hostAPI.perform(
-                    api: api, method: method, arguments: arguments)
+                    api: api, method: method, arguments: arguments, progress: progress)
                 await self?.settle(callId: callId, generation: generation, ok: true, payload: json)
             } catch {
                 await self?.settle(
@@ -269,6 +290,22 @@ final class ExtensionRuntime: @unchecked Sendable {
                 if self.hostTasks.isEmpty { self.resumeIdleWaiters() }
             }
         }
+    }
+
+    /// Queued behind any earlier chunk and ahead of the settle, so JS sees them in order.
+    private func deliverProgress(callId: String, generation: UUID, payload: String) {
+        queue.async {
+            guard generation == self.generation, self.hostTasks[callId] != nil else { return }
+            _ = self.context?.objectForKeyedSubscript("__tinycast")?
+                .invokeMethod("progress", withArguments: [callId, payload])
+        }
+    }
+
+    /// JS already rejected the call; the task is dropped here so a drain never waits on it.
+    private func cancelHostCall(callId: String) {
+        guard let task = hostTasks.removeValue(forKey: callId) else { return }
+        task.cancel()
+        if hostTasks.isEmpty { resumeIdleWaiters() }
     }
 
     func drainHostCalls() async {

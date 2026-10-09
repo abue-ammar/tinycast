@@ -3,8 +3,9 @@
 Tinycast has one app-wide provider layer for features that need text generation. Chat chooses its
 model from Quick AI's header or the AI Chat composer, and `AIChatCoordinator.provider(for:)`
 builds that chat's route through `AIProviderFactory` to stream an `AIRequest`.
-Chat is the first consumer and [Quick Actions](quick-actions.md) the second; the provider layer
-depends on neither, and Quick Actions carries its own route rather than borrowing this one.
+Chat is the first consumer, [Quick Actions](quick-actions.md) the second and a Raycast extension's
+`AI.ask` ([Extensions](extensions.md#ai-aiask-useai)) the third; the provider layer depends on none
+of them, and each of the other two carries its own route rather than borrowing chat's.
 
 Chat has two surfaces over one history, as Raycast's does. **Quick AI** is the palette screen: Tab
 from the launcher asks what you typed, and the answer appears in place. **AI Chat** is a window —

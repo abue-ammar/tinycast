@@ -98,10 +98,13 @@ struct AIRequest: Equatable, Sendable {
     let webSearch: Bool
     /// Empty for every route that cannot call one, so a transport need not ask whether it may.
     let tools: [AITool]
+    /// On OpenAI's 0–2 scale, which is Raycast's creativity scale too; nil keeps the route's own.
+    let temperature: Double?
 
     init(
         instructions: String? = nil, messages: [AIMessage], maxOutputTokens: Int = 4_096,
-        webSearch: Bool = false, tools: [AITool] = [], conversationID: UUID? = nil
+        webSearch: Bool = false, tools: [AITool] = [], conversationID: UUID? = nil,
+        temperature: Double? = nil
     ) {
         self.conversationID = conversationID
         self.instructions = instructions
@@ -109,13 +112,15 @@ struct AIRequest: Equatable, Sendable {
         self.maxOutputTokens = maxOutputTokens
         self.webSearch = webSearch
         self.tools = tools
+        self.temperature = temperature
     }
 
     /// The same turn carried forward, armed with what the loop wrapping it may call.
     func continuing(with messages: [AIMessage], tools: [AITool]) -> AIRequest {
         AIRequest(
             instructions: instructions, messages: messages, maxOutputTokens: maxOutputTokens,
-            webSearch: webSearch, tools: tools, conversationID: conversationID)
+            webSearch: webSearch, tools: tools, conversationID: conversationID,
+            temperature: temperature)
     }
 }
 

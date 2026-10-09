@@ -773,11 +773,24 @@ Measured against the 37 extensions installed in a real Raycast on the developmen
 extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
 `Scripts/run-tests.sh ext-test` reproduce that measurement.
 
+## AI (`AI.ask`, `useAI`)
+
+`AI.ask` is answered by the reader's own Settings → AI routes, never a hosted model, and only while
+AI is on. The runtime sends `ai.ask` as a host call whose chunks arrive as progress
+(`__tinycast.progress`) ahead of its settle, so `.on("data")` streams and `await` resolves the
+whole text; an `AbortSignal` rejects with `AbortError` and cancels the Swift task through
+`__tinycastHost.cancel`. `useAI` from `@raycast/utils` is bundled by each extension and only calls
+`AI.ask`, so it works unchanged, failure toast included. `environment.canAccess(AI)` is true when a
+route exists at launch. `RaycastAIModelMatch` maps an `AI.Model` id onto the reader's closest route
+of the same vendor, else their default; creativity crosses on Raycast's 0–2 scale and becomes a
+temperature (halved for Anthropic), retried without one when a model refuses it. The design and the
+Chinese write-up are in [raycast-ai-mcp-compat.md](../raycast-ai-mcp-compat.md).
+
 ## What isn't supported yet
 
 | Gap                                                          | Why                                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **`AI`, `BrowserExtension`, `WindowManagement`**             | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason.                                                                                                                                                                                                                                     |
+| **`BrowserExtension`, `WindowManagement`**                   | Raycast services with no local equivalent. Importing them works; calling one throws with a clear reason.                                                                                                                                                                                                                                     |
 | **A WebSocket to a host with a certificate macOS distrusts** | `ws`'s `rejectUnauthorized: false` is ignored — URLSession validates the chain either way.                                                                                                                                                                                                                                                   |
 | **Aborting a `fetch` already in flight**                     | `AbortSignal` is complete — `timeout`, `abort` and `any` included — and `fetch` checks it on both sides of the host call, so a caller gets its `AbortError`. The request itself still runs to completion: the signal isn't carried across the bridge, so nothing cancels the `URLSessionTask`. A timeout bounds the caller, not the network. |
 | **Interactive `spawn` stdin**                                | stdout and stderr stream, but stdin is sent once as the child starts: whatever was written in the same tick. A later `stdin.write` is dropped.                                                                                                                                                                                               |
