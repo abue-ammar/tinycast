@@ -198,7 +198,8 @@ Root-search visibility is not offered here: the launcher row hides itself, and t
 
 **Copy Link** (`⌃⌘C`) writes the saved destination to the clipboard without opening it. Placeholders stay
 literal, even when the header has argument values filled in. Copying closes the palette and shows
-"Link copied"; it never reads the selected text or expands the template.
+"Link copied" only after a successful clipboard write, or "Couldn’t copy link" if the write fails.
+It never reads the selected text or expands the template.
 
 Choosing an _arbitrary_ app belongs to the editor, which has a picker; `PopoverMenu` is a flat list
 with no nesting, so the palette offers the one alternative that always exists — bypass the saved app

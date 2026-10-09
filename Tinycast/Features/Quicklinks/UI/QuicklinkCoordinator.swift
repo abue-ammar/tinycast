@@ -244,7 +244,10 @@ final class QuicklinkCoordinator {
             quicklink.isEnabled
         else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)
-        Paster.copyPlainText(quicklink.link)
+        guard Paster.copyPlainText(quicklink.link) else {
+            core.showMessage("Couldn’t copy link")
+            return
+        }
         core.showMessage("Link copied")
     }
 

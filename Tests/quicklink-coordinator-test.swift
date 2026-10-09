@@ -13,6 +13,7 @@ struct QuicklinkCoordinatorTests {
         try await clipboardFallback()
         try await combinedArguments()
         try await plainLink()
+        try copying()
         try editing()
         try revealing()
         print("\(passes) passed, \(failures) failed")
@@ -124,6 +125,24 @@ struct QuicklinkCoordinatorTests {
         expect(
             QuicklinkLauncher.opened.first?.link == fixture.link.link,
             "a plain link opens without selection input")
+    }
+
+    static func copying() throws {
+        for succeeds in [true, false] {
+            let fixture = try Fixture(link: "https://example.com/?q={argument}&selection={selection}")
+            defer { fixture.cleanUp() }
+            Paster.copies = []
+            Paster.succeeds = succeeds
+            fixture.window.isVisible = true
+            fixture.coordinator.copyQuicklink(id: fixture.link.id)
+            expect(Paster.copies == [fixture.link.link], "copying writes the saved template literally")
+            expect(!fixture.window.isVisible, "copying dismisses the palette")
+            expect(QuicklinkLauncher.opened.isEmpty, "copying never opens the destination")
+            expect(
+                fixture.core.messages == [succeeds ? "Link copied" : "Couldn’t copy link"],
+                "copy feedback reflects whether the clipboard write succeeded")
+        }
+        Paster.succeeds = true
     }
 
     static func editing() throws {
@@ -297,7 +316,12 @@ final class PaletteCoordinator {
 
 @MainActor
 enum Paster {
-    static func copyPlainText(_ text: String) {}
+    static var copies: [String] = []
+    static var succeeds = true
+    static func copyPlainText(_ text: String) -> Bool {
+        copies.append(text)
+        return succeeds
+    }
 }
 
 @MainActor
@@ -318,12 +342,13 @@ final class AppCore {
         fatalError("The fixture must wire the coordinator")
     }()
     var pendingQuicklinkEdit: QuicklinkEditRequest?
+    var messages: [String] = []
     func showNotice(title: String, message: String, symbol: String, tone: DialogTone) async {}
     func reportFailure(title: String, message: String, symbol: String, recovery: String) async -> Bool {
         false
     }
     func confirm(title: String, message: String, symbol: String, confirmTitle: String) async -> Bool { false }
-    func showMessage(_ message: String) {}
+    func showMessage(_ message: String) { messages.append(message) }
 }
 
 enum BackupActions {
