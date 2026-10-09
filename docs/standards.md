@@ -10,13 +10,14 @@ When this document and the code disagree, the code is probably right and this fi
 
 ## Posture
 
-Tinycast targets only the current stable macOS release: macOS 27. The Swift 6.4 compiler, Swift 6
-language mode and complete strict concurrency are the baseline. Modern Apple APIs and no compatibility
-layers are the rule in [`AGENTS.md`](../AGENTS.md#posture-latest-only-always).
+Tinycast supports macOS 26 and later, with macOS 27 strongly preferred. Swift 6+ with complete strict
+concurrency is required. Prefer the latest Swift patterns and modern Apple APIs, following
+[`AGENTS.md`](../AGENTS.md#posture-modern-first-always).
 
-Prefer current API replacements and language features. Verify their availability against the SDK and
-compiler used by the build and CI. Do not introduce compatibility layers, legacy workarounds,
-older-OS version flags, migration scaffolding or speculative fallbacks.
+Verify API and language-feature availability against the SDK and compiler used by the build and CI.
+Use direct availability checks where macOS 27+ APIs require them to preserve macOS 26 support. Do not
+introduce compatibility layers, legacy workarounds, support below macOS 26, migration scaffolding or
+speculative fallbacks.
 
 In practice that means Observation and never `ObservableObject` or `@Published`; `async`/`await` and
 never a completion handler or a `DispatchQueue` hop; `SMAppService` and never an `LSSharedFileList`

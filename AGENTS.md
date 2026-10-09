@@ -6,14 +6,12 @@ and an emoji picker. It also **runs Raycast extensions** natively, in JavaScript
 SwiftUI + AppKit, running as an accessory with no Dock icon (`LSUIElement`). Zero third-party
 dependencies.
 
-## Posture: latest-only, always
+## Posture: modern-first, always
 
-**Tinycast targets one macOS — the current stable release — and nothing else.** macOS 27,
-the Swift 6.4 compiler, Swift 6 language mode with complete strict concurrency. There is no
-compatibility floor to defend, no shim layer and no deprecation debt, and that is the single largest
-reason the codebase stays as small as it does.
+**Tinycast supports macOS 26 and later, with macOS 27 strongly preferred.** Swift 6+ with complete
+strict concurrency is required. Prefer the latest Swift patterns and modern Apple APIs.
 
-Write code as if the platform released yesterday:
+Prefer current APIs and language features:
 
 - **Prefer the modern Apple API**, always. Observation over `ObservableObject`. Swift Concurrency over
   `DispatchQueue` or completion handlers. `SMAppService` over login-item shims. Structured concurrency
@@ -22,9 +20,9 @@ Write code as if the platform released yesterday:
   keep wrappers that only preserve an old spelling.
 - **A deprecated API is a defect**, not a warning to live with.
 - **Verify API and language-feature availability** against the SDK and compiler used by the build
-  and CI.
+  and CI. Use direct availability checks where macOS 27+ APIs require them to preserve macOS 26 support.
 - **No compatibility layers, legacy workarounds or obsolete patterns.** No migration scaffolding,
-  older-OS version flags or speculative fallbacks. Keep the implementation direct.
+  support below macOS 26 or speculative fallbacks. Keep the implementation direct.
 
 Carbon is a deliberate capability-gap dependency rather than inertia: nothing modern registers a
 system-wide chord, and HIToolbox's TIS APIs remain the public input-source mechanism. Full reasoning in
