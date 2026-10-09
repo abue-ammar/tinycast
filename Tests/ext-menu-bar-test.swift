@@ -668,7 +668,7 @@ extension ExtensionTests {
             boots.last?.0 == "second"
                 && storage.localStorageValue(extension: "first", key: "completed") == .number(2))
         secondController.menuDidClose(secondController.menu)
-        await settle(200)
+        await settle(until: { !manager.isRunning && lastRuntime == nil })
         check("reopened action sessions unload after closing", !manager.isRunning && lastRuntime == nil)
 
         controller.menuWillOpen(controller.menu)
@@ -718,7 +718,10 @@ extension ExtensionTests {
                 item.isEnabled && item.representedObject == nil)
             controller.menuDidClose(controller.menu)
             controller.menu.performActionForItem(at: index)
-            await settle(400)
+            await settle(until: {
+                storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true)
+                    && boots.count == beforeEarlyClick + 1 && !manager.isRunning && lastRuntime == nil
+            })
             check(
                 "clicking immediately after opening runs the fresh action and unloads",
                 storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true)
