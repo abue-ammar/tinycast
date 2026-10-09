@@ -11,7 +11,7 @@ final class LanternDelegate: NSObject, NSApplicationDelegate {
         window.title = "E2E Lantern"
         let title = NSTextField(labelWithString: "Lantern fixture ready")
         title.font = .systemFont(ofSize: 28, weight: .semibold)
-        let detail = NSTextField(labelWithString: "Opened from Tinycast")
+        let detail = NSTextField(labelWithString: "Isolated launcher fixture")
         detail.font = .systemFont(ofSize: 20)
         let stack = NSStackView(views: [title, detail])
         stack.orientation = .vertical
