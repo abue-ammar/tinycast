@@ -472,6 +472,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   already-open palette; repeat with a required `{argument}` and confirm the first missing field wins
 - Opening Search Quicklinks normally focuses search; a readable selection and clipboard fallback open
   directly. Custom-command argument prompts still focus their first missing field
+- In the launcher and Search Quicklinks, open Actions with ⌘K and close with ⌘K or Escape. Immediately
+  type a query, use the arrows and press Return; the palette must accept keyboard input again
 - Pin, duplicate, delete and Open with Default all behave; import and export round-trip
 - Display order is pinned first by pin time, then by name
 

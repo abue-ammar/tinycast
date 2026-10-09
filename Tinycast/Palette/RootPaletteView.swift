@@ -1082,6 +1082,7 @@ struct RootPaletteView: View {
 
     private func closeMenus() {
         menuPanel.hide()
+        if menuOpen { searchFocused = !screen.hidesSearchField }
         openMenu = nil
         argumentOptionsField = nil
         vm.menuQuery = ""

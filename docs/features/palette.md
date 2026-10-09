@@ -59,6 +59,7 @@ only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 Preparing a screen resets state and bumps `focusToken` (a UUID). `PaletteWindowController.show()`
 also bumps it before presenting the panel, so a preserved screen re-focuses its search field too.
 Window activation does not request another search refocus after a shortcut's argument handoff.
+Closing a palette menu explicitly restores search focus after its panel returns key status.
 `prepare` is one of four motions over the screen — see [Navigation](#navigation).
 
 Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path: the
@@ -448,7 +449,8 @@ it follow a palette drag and vanish with it. Glass renders against the desktop r
 already-blurred, clipped panel, and no menu can be cropped by `RootPaletteView`'s `clipShape` however
 long it grows. The menu temporarily becomes key so its native `TextField` owns the caret and selection, while
 `MenuPanel` hands navigation and action shortcuts back to `RootPaletteView`. It restores key status
-to the palette when it closes. Resigning to the palette closes only the menu; resigning to another
+to the palette when it closes, and `closeMenus()` restores search focus unless the screen hides it.
+Resigning to the palette closes only the menu; resigning to another
 app closes the palette as well. `MenuPanel.sendEvent` also mirrors `PalettePanel`'s hover arming — rows
 light on real pointer movement, never on a scroll under a still cursor.
 
