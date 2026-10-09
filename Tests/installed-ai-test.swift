@@ -617,7 +617,7 @@ struct InstalledAITests {
 
     /// The dialog shows one question at a time, and the second must see what the first granted.
     private static func concurrentCallsAreAskedOneAtATime(_ fixture: Fixture) async {
-        let reader = GrantingReader()
+        let reader = GrantingReader(root: fixture.root)
         let session = AIToolServerSession(rounds: 25) {
             await fixture.session(allowing: true, asked: Box()).servers()
         } consent: { call in
@@ -625,6 +625,7 @@ struct InstalledAITests {
         }
         let events = await fixture.events(
             kind: .claude, model: "pair", effort: nil, toolServers: session)
+        expect(reader.handshakeCompleted, "the second request was emitted while the first answer was pending")
         expect(
             reader.calls.map(\.tool) == ["first_tool", "second_tool"] && reader.mostAtOnce == 1,
             "two calls held open together are asked about one after the other, in order")
@@ -762,14 +763,18 @@ private final class Box {
     var calls: [AIToolServerCall] = []
 }
 
-/// A reader who is asked once, takes a moment over it, and grants the server for the chat.
+/// A reader who holds the first answer until the fixture emits its second request.
 @MainActor
 private final class GrantingReader {
     var calls: [AIToolServerCall] = []
     var dialogs = 0
     var mostAtOnce = 0
+    var handshakeCompleted = false
     private var atOnce = 0
     private var granted = false
+    private let root: URL
+
+    init(root: URL) { self.root = root }
 
     func answer(_ call: AIToolServerCall) async -> Bool {
         calls.append(call)
@@ -778,7 +783,22 @@ private final class GrantingReader {
         defer { atOnce -= 1 }
         guard !granted else { return true }
         dialogs += 1
-        try? await Task.sleep(for: .milliseconds(150))
+        do {
+            try Data().write(to: root.appending(path: "claude-pair-first-entered"))
+            let pending = root.appending(path: "claude-pair-second-pending")
+            let deadline = ContinuousClock.now + .seconds(5)
+            while !FileManager.default.fileExists(atPath: pending.path) {
+                guard ContinuousClock.now < deadline else {
+                    print("Claude pair fixture did not emit its second request while the first answer was pending")
+                    return false
+                }
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            handshakeCompleted = true
+        } catch {
+            print("Claude pair fixture handshake failed: \(error)")
+            return false
+        }
         granted = true
         return true
     }
