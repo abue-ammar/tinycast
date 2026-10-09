@@ -138,6 +138,7 @@ the link, the app it opens with, its shortcut and when you created it.
 | ------------------------------- | ------------------------------------ |
 | Open Quicklink                  | <kbd>return</kbd>                    |
 | Open With Default App           | <kbd>⌘</kbd><kbd>return</kbd>        |
+| Copy Link                       | <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> |
 | Edit Quicklink                  | <kbd>⌘</kbd><kbd>E</kbd>             |
 | Duplicate Quicklink             | <kbd>⌘</kbd><kbd>D</kbd>             |
 | Pin / Unpin Quicklink           | <kbd>⌘</kbd><kbd>.</kbd>             |
@@ -146,6 +147,11 @@ the link, the app it opens with, its shortcut and when you created it.
 
 **Open With Default App** only appears when the quicklink opens with a specific app, and
 **Show in Finder** only appears for files and folders.
+
+**Copy Link** is available in the actions menu (<kbd>⌘</kbd><kbd>K</kbd> or right-click) in both the
+launcher and Search Quicklinks, or directly with <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd>.
+It copies the saved destination without opening it. Placeholders
+such as `{argument}` and `{clipboard}` stay as written, even when you've filled in values.
 
 ## Three ways to hide a quicklink
 

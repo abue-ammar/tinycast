@@ -296,6 +296,11 @@ final class PaletteCoordinator {
 }
 
 @MainActor
+enum Paster {
+    static func copyPlainText(_ text: String) {}
+}
+
+@MainActor
 enum AppLauncher {
     static var revealed: [URL] = []
     static func showInFinder(_ url: URL) { revealed.append(url) }

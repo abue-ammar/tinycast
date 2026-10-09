@@ -239,6 +239,15 @@ final class QuicklinkCoordinator {
         do { try store.setEnabled(enabled, id: id) } catch { report(error) }
     }
 
+    func copyQuicklink(id: UUID) {
+        guard settings.quicklinksEnabled, let quicklink = store.quicklink(id: id),
+            quicklink.isEnabled
+        else { return }
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Paster.copyPlainText(quicklink.link)
+        core.showMessage("Link copied")
+    }
+
     func duplicateQuicklink(id: UUID) {
         do { _ = try store.duplicate(id: id) } catch { report(error) }
     }

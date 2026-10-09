@@ -91,7 +91,14 @@ enum AppActionsMenu {
         if app.kind == .quicklink, let quicklink = core.quicklinks.quicklink(entryID: app.id) {
             items.append(
                 PopoverMenuItem(
-                    title: "Edit Quicklink", systemImage: "pencil", startsSection: true, shortcut: "⌘E"
+                    title: "Copy Link", systemImage: "doc.on.clipboard", startsSection: true,
+                    shortcut: "⌃⌘C"
+                ) {
+                    core.quicklinkCoordinator.copyQuicklink(id: quicklink.id)
+                })
+            items.append(
+                PopoverMenuItem(
+                    title: "Edit Quicklink", systemImage: "pencil", shortcut: "⌘E"
                 ) {
                     core.quicklinkCoordinator.editQuicklink(quicklink)
                 })
