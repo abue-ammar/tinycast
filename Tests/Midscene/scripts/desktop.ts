@@ -103,11 +103,14 @@ guard let app = NSRunningApplication(processIdentifier: pid),
     app.bundleIdentifier == args[2],
     app.bundleURL?.resolvingSymlinksInPath() == URL(fileURLWithPath: args[3]).resolvingSymlinksInPath()
 else { print("{}"); exit(1) }
-if args.count == 5 && args[4] == "activate" { _ = app.activate(options: []) }
+let activated = args.count == 5 && args[4] == "activate" ? app.activate(options: []) : false
+var attributeErrors: [String: Int] = [:]
 let element = AXUIElementCreateApplication(pid)
+@MainActor
 func value(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
     var value: CFTypeRef?
-    AXUIElementCopyAttributeValue(element, name as CFString, &value)
+    let error = AXUIElementCopyAttributeValue(element, name as CFString, &value)
+    attributeErrors[name] = Int(error.rawValue)
     return value
 }
 let windows = value(element, kAXWindowsAttribute) as? [AXUIElement] ?? []
@@ -117,7 +120,8 @@ if let focused = value(AXUIElementCreateSystemWide(), kAXFocusedApplicationAttri
     AXUIElementGetPid(unsafeDowncast(focused, to: AXUIElement.self), &focusedPID)
 }
 let result: [String: Any] = [
-    "pid": Int(pid), "active": app.isActive,
+    "pid": Int(pid), "active": app.isActive, "activated": activated,
+    "accessibilityTrusted": AXIsProcessTrusted(), "attributeErrors": attributeErrors,
     "terminated": app.isTerminated, "windowCount": windows.count, "focusedApplicationPID": Int(focusedPID),
     "windows": windows.map { window in [
         "title": value(window, kAXTitleAttribute) as? String ?? "",
@@ -156,7 +160,7 @@ print(String(decoding: data, as: UTF8.self))
       const activated = JSON.parse(execFileSync(focusTool, [String(child!.pid), bundle, copy, 'activate'], {
         encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'],
       })) as Record<string, unknown>;
-      if (Number(activated.windowCount) > 0 && activated.focusedApplicationPID === child!.pid) return;
+      if (Number(activated.windowCount) > 0 && activated.focusedApplicationPID === child!.pid) return activated;
       execFileSync('osascript', ['-e', `tell application "System Events"
         tell (first process whose unix id is ${child!.pid})
           set frontmost to true
@@ -165,6 +169,7 @@ print(String(decoding: data, as: UTF8.self))
           end if
         end tell
       end tell`], { encoding: 'utf8', timeout: 3000, stdio: ['ignore', 'pipe', 'pipe'] });
+      return activated;
     },
   });
   await writeFile(path.join(out, `${id}-startup.json`), JSON.stringify(startup, null, 2));

@@ -5,19 +5,22 @@ export async function waitForOwnedWindow({ pid, inspect, raise, timeoutMs = 30_0
   const attempts = [];
   const warnings = [];
   let inspection;
+  const ready = sample => Number(sample?.windowCount) > 0 && sample?.focusedApplicationPID === pid;
   while (now() - started < timeoutMs) {
     checkAlive();
     try {
       inspection = await inspect();
-      if (Number(inspection.windowCount) > 0 && inspection.focusedApplicationPID === pid) {
-        return { ready: true, inspection, attempts, warnings, elapsedMs: now() - started };
-      }
+      if (ready(inspection)) return { ready: true, inspection, attempts, warnings, elapsedMs: now() - started };
       attempts.push({ phase: 'inspect', elapsedMs: now() - started, inspection });
-      if (Number(inspection.windowCount) > 0) {
-        try { await raise(); }
-        catch (error) { warnings.push({ phase: 'raise', elapsedMs: now() - started, error: String(error) }); }
-      }
     } catch (error) { warnings.push({ phase: 'inspect', elapsedMs: now() - started, error: String(error) }); }
+    try {
+      const raised = await raise();
+      if (raised) {
+        inspection = raised;
+        attempts.push({ phase: 'raise', elapsedMs: now() - started, inspection });
+        if (ready(inspection)) return { ready: true, inspection, attempts, warnings, elapsedMs: now() - started };
+      }
+    } catch (error) { warnings.push({ phase: 'raise', elapsedMs: now() - started, error: String(error) }); }
     await pause(100);
   }
   return { ready: false, inspection, attempts, warnings, elapsedMs: now() - started };
