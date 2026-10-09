@@ -1,0 +1,729 @@
+{
+  "_comment": "Generated from Tests/ standalone @main harnesses; should mirror Scripts/run-tests.sh's run lines. Excludes the *-performance sources (benchmarks, outside the assert suite) and the three helper files ext-test compiles as its own (ext-fetch-test, ext-menu-bar-test, ext-list-key-test), which have no main entry point.",
+  "configurations": [
+    {
+      "id": "E2D66A92-71FE-4758-8D7F-CA5FEA5790C1",
+      "name": "All Harnesses",
+      "options": {}
+    }
+  ],
+  "defaultOptions": {
+    "testInteropMode": "complete",
+    "testTimeoutsEnabled": true
+  },
+  "testTargets": [
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "action-menu-search-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ai-chat-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ai-instructions-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ai-provider-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "app-name-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "appearance-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "apple-intelligence-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "apple-shortcut-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ascii-layout-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "backup-archive-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "calc-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "calendar-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "callout-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "chat-markdown-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "clipboard-search-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "clipboard-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "clipboard-text-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "codex-turn-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "custom-command-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "dictation-inference-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "dictation-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "dictation-volume-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "dictation-worker-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "dictionary-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "emoji-search-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "emoji-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "entry-icon-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-accessory-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-cleanup-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-form-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-host-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-icon-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-image-size-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-metadata-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-refresh-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-store-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ext-version-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "fallback-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "favorites-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "file-search-session-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "file-search-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "fuzz-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "hotkey-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "hover-arming-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "icon-cache-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "installed-ai-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "interface-size-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "keyboard-focus-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "mcp-oauth-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "mcp-stdio-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "mcp-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "menu-search-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "notes-editor-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "notes-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "palette-escape-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "palette-filter-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "palette-navigation-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "palette-placement-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "palette-selection-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "palette-shortcut-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "palette-tab-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "paste-sequence-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "pasteboard-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "quick-action-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "quicklink-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "ranking-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "raycast-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "redaction-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "scopes-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "scroll-reveal-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "settings-backup-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "settings-file-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "settings-history-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "snippets-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "space-gesture-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "support-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "symbols-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "system-action-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "text-diff-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "uninstall-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "updates-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "volume-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "window-command-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "window-file-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "window-layout-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "window-preset-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "window-room-test"
+      }
+    },
+    {
+      "target": {
+        "containerPath": {
+          "container": "project://Tests"
+        },
+        "targetName": "window-switch-test"
+      }
+    }
+  ],
+  "version": 1
+}
