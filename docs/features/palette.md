@@ -63,7 +63,7 @@ Closing a palette menu explicitly restores search focus after its panel returns 
 `prepare` is one of four motions over the screen — see [Navigation](#navigation).
 
 Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path: the
-palette returns to the launcher *and* chat starts a new conversation, at once or after
+palette returns to the launcher _and_ chat starts a new conversation, at once or after
 `popToRootTimeout`, unless a re-summon inside that window consumes the pending reset first. An
 unfinished chat is a thing being done, exactly like a typed query, so the screen and the conversation
 are reset together rather than the screen alone. A reply still streaming is the one exception — it was
@@ -85,20 +85,20 @@ every screen but two: the clipboard lands past its pins
 ([clipboard.md](clipboard.md#pinned-entries)), and Search Quicklinks lands on the row a prompt names
 ([quicklinks.md](quicklinks.md)).
 
-| Mode | Screen | Inner list |
-| --- | --- | --- |
-| `.launcher` | `LauncherScreen` | `LauncherList` |
-| `.clipboard` | `ClipboardScreen` | `ClipboardList` + preview |
-| `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList` |
-| `.emoji` | `EmojiScreen` | `EmojiGridView` |
-| `.fileSearch` | `FileSearchScreen` | `FileSearchList` (see [file-search.md](file-search.md)) |
-| `.schedule` | `ScheduleScreen` | `ScheduleList` (see [calendar.md](calendar.md)) |
-| `.meetingDetails` | `MeetingDetailsScreen` | `MeetingDetailsView` (see [calendar.md](calendar.md#the-details-page)) |
-| `.uninstall` | `UninstallScreen` | `UninstallList` (see [uninstall.md](uninstall.md)) |
-| `.quicklinks` | `QuicklinkListScreen` | `QuicklinkList` + preview (see [quicklinks.md](quicklinks.md#search-quicklinks)) |
-| `.snippets` | `SnippetsScreen` | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets)) |
-| `.dictionary` | `DictionaryScreen` | `DictionaryEntryView` (see [dictionary.md](dictionary.md)) |
-| `.extensionCommand` | `ExtensionCommandScreen` | `ExtensionCommandView` (see [extensions.md](extensions.md)) |
+| Mode                 | Screen                    | Inner list                                                                       |
+| -------------------- | ------------------------- | -------------------------------------------------------------------------------- |
+| `.launcher`          | `LauncherScreen`          | `LauncherList`                                                                   |
+| `.clipboard`         | `ClipboardScreen`         | `ClipboardList` + preview                                                        |
+| `.calculatorHistory` | `CalculatorHistoryScreen` | `CalculatorHistoryList`                                                          |
+| `.emoji`             | `EmojiScreen`             | `EmojiGridView`                                                                  |
+| `.fileSearch`        | `FileSearchScreen`        | `FileSearchList` (see [file-search.md](file-search.md))                          |
+| `.schedule`          | `ScheduleScreen`          | `ScheduleList` (see [calendar.md](calendar.md))                                  |
+| `.meetingDetails`    | `MeetingDetailsScreen`    | `MeetingDetailsView` (see [calendar.md](calendar.md#the-details-page))           |
+| `.uninstall`         | `UninstallScreen`         | `UninstallList` (see [uninstall.md](uninstall.md))                               |
+| `.quicklinks`        | `QuicklinkListScreen`     | `QuicklinkList` + preview (see [quicklinks.md](quicklinks.md#search-quicklinks)) |
+| `.snippets`          | `SnippetsScreen`          | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets))        |
+| `.dictionary`        | `DictionaryScreen`        | `DictionaryEntryView` (see [dictionary.md](dictionary.md))                       |
+| `.extensionCommand`  | `ExtensionCommandScreen`  | `ExtensionCommandView` (see [extensions.md](extensions.md))                      |
 
 **Tab rings the three surfaces a reader opens directly — launcher → AI chat → clipboard → launcher**
 — unless the screen claims it through `tabTarget(from:backwards:)` (an extension's `Form` walks its
@@ -110,8 +110,8 @@ Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is s
 ### Navigation
 
 **The summon decides where a screen sits, not the mode.** `PaletteCoordinator.navigate(to:)` is the
-one rule: a palette already on screen is being *navigated*, so the current screen is pushed and
-becomes the step back; a hidden one is being *summoned*, so the new screen is a root with nothing
+one rule: a palette already on screen is being _navigated_, so the current screen is pushed and
+becomes the step back; a hidden one is being _summoned_, so the new screen is a root with nothing
 behind it. Every mode command and every global hotkey funnels through `showPalette`, which calls it —
 so typing "Clipboard History" at the root and pressing ↵ leaves a step back to the search that found
 it, while the Clipboard History hotkey does not. **The launcher is the exception, because it is the
@@ -121,13 +121,13 @@ stacking the launcher over the screen it replaced. Nothing per-feature encodes t
 `PaletteState` holds the screens below `mode` as `[PaletteFrame]` — mode, query and selection, enough
 that returning looks like never having left — and offers four motions over it:
 
-| Motion | Meaning |
-| --- | --- |
-| `prepare(mode:)` | become the root: open fresh, drop the stack |
-| `replace(mode:)` | swap the screen, keep what it was opened over (a new chat, not a new root) |
-| `push(mode:)` | open over the current screen, which a back step returns to |
-| `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring |
-| `pop()` | restore the screen underneath; `false` when this one is the root |
+| Motion                     | Meaning                                                                    |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `prepare(mode:)`           | become the root: open fresh, drop the stack                                |
+| `replace(mode:)`           | swap the screen, keep what it was opened over (a new chat, not a new root) |
+| `push(mode:)`              | open over the current screen, which a back step returns to                 |
+| `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring        |
+| `pop()`                    | restore the screen underneath; `false` when this one is the root           |
 
 `pop()` bumps `followToken` rather than `resetToken`: the reset token exists to land a list afresh,
 which would throw away the very selection being restored.
@@ -157,7 +157,7 @@ It is drawn only when Tab really would open Quick AI, a condition read
 back out of `PaletteTabAction` rather than restated, so a hint can never promise a destination the
 key does not go to: an argument field to walk takes Tab first, and the hint steps aside for it.
 
-`PaletteTabAction` decides where Tab goes *and* what happens to the typed text. The clipboard hands
+`PaletteTabAction` decides where Tab goes _and_ what happens to the typed text. The clipboard hands
 the query over, since one search narrows either list. **From the launcher, Tab `.ask`s** — Quick AI opens
 fresh with the typed text already sent, so one key turns a search into a question. Leaving chat is
 still a `.freshScreen`: that field holds a half-written message rather than a query, and a draft
@@ -183,7 +183,7 @@ these invariants:
 
 - The search field sits at **one structural position, always**. It is never moved inside an `if`:
   flipping the branch tears down its field editor, which drops first responder mid-navigation. Only
-  its *width* changes — it is sized to its own text so the chips sit right after it, as they do in
+  its _width_ changes — it is sized to its own text so the chips sit right after it, as they do in
   Raycast. That width is a ceiling rather than a size, and the spacer after the strip is given room
   last, so a long query is squeezed before the strip can run into the screen's own header controls.
 - **`Placement` is what a strip does to the field beside it.** `.afterQuery` (root search) drops the
@@ -211,7 +211,7 @@ these invariants:
 The typed values live on `PaletteState.commandArguments`, keyed by
 `PaletteState.argumentKey(entryID, field)` — the argument's name, or a custom command's positional
 `$1`–`$3` — and are cleared with the rest of the screen.
-`PaletteState.pendingArgumentEntryID` is how a *shortcut* reaches them: a quicklink opened with values
+`PaletteState.pendingArgumentEntryID` is how a _shortcut_ reaches them: a quicklink opened with values
 still missing shows its own screen and names the row, and the header focuses that row's first empty
 field instead of the search field. On first mount the view handles the pending request after landing;
 later requests wait a turn for the show's navigation to settle. A custom command has no screen of
@@ -255,7 +255,7 @@ position it was summoned at. That write is idempotent, since `positionPanel` pla
 the anchor and its own `setFrame` round-trips the same values.
 
 **The handle tracks the gesture itself rather than calling `performDrag(with:)`.** That method hands the
-drag to the window server and returns immediately, so it can say when a drag *starts* but never when it
+drag to the window server and returns immediately, so it can say when a drag _starts_ but never when it
 ends — the mouse-up arrives long after it has returned. `DragView.mouseDown` instead runs
 `trackEvents(matching:timeout:mode:)` over `.leftMouseDragged` / `.leftMouseUp`, moving the window by
 the `NSEvent.mouseLocation` delta, which puts the whole gesture inside one call. **A press only becomes
@@ -375,8 +375,8 @@ field's frame, the arrow everywhere else. Without it the palette's pointer stick
 whole window and flickers along the field's edge — the two AppKit mechanisms that claim a cursor here
 disagree, and neither yields.
 
-- SwiftUI's `HostingClipView` claims the **arrow** across the entire window as a *cursor rect*.
-- The field editor claims the **I-beam** from its own *tracking area*.
+- SwiftUI's `HostingClipView` claims the **arrow** across the entire window as a _cursor rect_.
+- The field editor claims the **I-beam** from its own _tracking area_.
 
 Both fire on the same crossings, so the cursor alternates while the pointer is over the field, and the
 last claim simply stays put once it leaves — nothing re-evaluates a cursor rect until the pointer
@@ -387,7 +387,7 @@ Two measured details the policy depends on:
 - **The field publishes its own frame.** `RootPaletteView` reports it into `PaletteState.searchFieldFrame`
   via `onGeometryChange`, and the panel does a containment test against that. Hit-testing for the field
   instead does not work: SwiftUI rebuilds it as it re-renders, and a hit test taken mid-rebuild misses
-  it and reads as *the pointer left the field*. The frame only moves on layout, so it never lies.
+  it and reads as _the pointer left the field_. The frame only moves on layout, so it never lies.
   It arrives top-left-down and is flipped into AppKit's bottom-left-up window space.
 - **The rect is outset by 2pt.** AppKit's field editor is a point taller than the field it serves — the
   same measurement the placeholder section above rests on — so its I-beam overhangs the published
