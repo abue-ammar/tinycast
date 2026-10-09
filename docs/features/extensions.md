@@ -738,6 +738,8 @@ log streams, event streams and interactive attach sessions are outside this tran
 An unavailable socket reports an actionable connection error and shows the existing failure toast
 for a foreground command. Background commands stay silent, and the extension still receives the
 rejected request so its own error handling can run.
+Repeated failures of that socket show one toast until a connection succeeds or the command session
+ends, so polling cannot continually replay its entrance or undo a dismissal.
 
 Two things decide whether it gets there. Axios enables that adapter only when
 `Object.prototype.toString.call(process)` reads `[object process]`, so `process` carries the tag; and

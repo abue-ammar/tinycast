@@ -125,6 +125,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     private let clipboardStore: ClipboardStore
     private let fetcher: ExtensionFetcher
     private let sockets = ExtensionWebSocketBridge()
+    private var reportedSocketFailures: Set<String> = []
 
     init(clipboardStore: ClipboardStore, fetcher: ExtensionFetcher = ExtensionFetcher()) {
         self.clipboardStore = clipboardStore
@@ -164,12 +165,19 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         let context = context
         let name = context?.activeExtensionName
         do {
-            return try await fetcher.request(spec)
+            let response = try await fetcher.request(spec)
+            try Task.checkCancellation()
+            if self.context === context, context?.activeExtensionName == name,
+                let path = spec?.objectValue?["socketPath"]?.stringValue
+            {
+                reportedSocketFailures.remove(path)
+            }
+            return response
         } catch let error as ExtensionFetcher.FetchError {
             try Task.checkCancellation()
             if case .socketUnavailable(let path) = error,
                 let context, self.context === context, context.activeExtensionName == name,
-                context.activeLaunchType != .background
+                context.activeLaunchType != .background, reportedSocketFailures.insert(path).inserted
             {
                 _ = context.present(toast: ExtensionToast(
                     style: .failure, title: "Connection failed",
@@ -189,6 +197,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
     /// Called wherever a command's context is discarded: nothing left open outlives its session.
     func sessionEnded() {
         sockets.closeAll()
+        reportedSocketFailures.removeAll()
     }
 
     // MARK: - Clipboard
