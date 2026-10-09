@@ -14,6 +14,12 @@ const server = http.createServer(async (request, response) => {
     save();
     return;
   }
+  if (request.url === "/slow") {
+    state.slow++;
+    save();
+    setTimeout(() => { response.writeHead(200); response.end("ok"); }, 2000);
+    return;
+  }
   if (request.url === "/binary") {
     response.writeHead(200, { "Content-Encoding": "gzip", "Content-Type": "application/octet-stream" });
     response.end(zlib.gzipSync(Buffer.from([0, 255, 1, 10])));

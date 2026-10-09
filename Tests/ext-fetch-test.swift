@@ -161,6 +161,7 @@ enum ExtensionFetchTests {
             "Unix HTTP handles an empty response")
         let head = try await fetch("/containers/json", method: "HEAD")
         expect(head["status"] as? Int == 201 && decodedBody(head).isEmpty, "Unix HTTP handles HEAD")
+        try await socketConcurrencyCheck(fetcher, socketPath: socketPath)
         let cancelled = Task { _ = try await fetch("/hold") }
         expect(await waitForState(stateFile) { $0.holding == 1 }, "Unix request starts before cancellation")
         cancelled.cancel()
@@ -191,6 +192,27 @@ enum ExtensionFetchTests {
                 expect(false, "Missing Unix socket reports its connection failure")
             }
         }
+    }
+
+    private static func socketConcurrencyCheck(_ fetcher: ExtensionFetcher, socketPath: String) async throws {
+        let spec = RenderValue.object([
+            "url": .string("http://localhost/slow"), "socketPath": .string(socketPath)
+        ])
+        let requests = (0..<(ProcessInfo.processInfo.activeProcessorCount * 2)).map { _ in
+            Task { _ = try await fetcher.request(spec) }
+        }
+        defer { for request in requests { request.cancel() } }
+        let responsive = await withCheckedContinuation { continuation in
+            DispatchQueue.global().asyncAfter(deadline: .now() + 0.2) {
+                let clock = ContinuousClock()
+                let enqueued = clock.now
+                Task.detached {
+                    continuation.resume(returning: enqueued.duration(to: clock.now) < .seconds(1))
+                }
+            }
+        }
+        expect(responsive, "Slow Unix requests leave unrelated Swift tasks responsive")
+        for request in requests { try await request.value }
     }
 
     private static func socketRuntimeCheck(directory: URL, socketPath: String) async throws {

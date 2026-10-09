@@ -730,6 +730,8 @@ have the client gunzip plaintext.
 
 An explicit `socketPath` selects Unix-socket HTTP, which Docker uses for its local daemon. The host
 runs macOS's bundled `/usr/bin/curl` off-main because URLSession has no public Unix-socket transport.
+Pipe draining and process-exit waits run on a Dispatch worker while the Swift task suspends, so slow
+socket responses do not occupy Swift's cooperative thread pool.
 The child bypasses proxies and user curl configuration, decodes compressed bodies, and returns HTTP
 statuses, headers and binary bodies through the same bridge. Cancellation terminates and collects
 that request's child; request-body scratch files are private and removed on exit. Requests without

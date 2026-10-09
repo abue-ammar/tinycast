@@ -112,13 +112,20 @@ final class ExtensionFetcher: Sendable {
         process.standardError = FileHandle.nullDevice
         let bytes = try await withTaskCancellationHandler {
             let exit = try process.runObservingExit()
-            defer {
-                if process.isRunning { process.terminate() }
-                exit.wait()
-            }
             if Task.isCancelled, process.isRunning { process.terminate() }
-            let bytes = try output.fileHandleForReading.readToEnd() ?? Data()
-            exit.wait()
+            let bytes: Data = try await withCheckedThrowingContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    continuation.resume(with: Result {
+                        defer {
+                            if process.isRunning { process.terminate() }
+                            exit.wait()
+                        }
+                        let bytes = try output.fileHandleForReading.readToEnd() ?? Data()
+                        exit.wait()
+                        return bytes
+                    })
+                }
+            }
             try Task.checkCancellation()
             guard process.terminationStatus == 0 else {
                 if process.terminationStatus == 7 { throw FetchError.socketUnavailable(socketPath) }
