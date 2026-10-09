@@ -48,6 +48,15 @@ final class MCPServerManager {
         armIdleTimer()
     }
 
+    /// What a model's tool call names, resolved to the listing that produced it. Looked up rather
+    /// than parsed, since a sanitised or trimmed wire name no longer spells its server or tool.
+    func route(_ wireName: String) -> (tool: MCPTool, connection: MCPServerConnection)? {
+        guard let tool = MCPToolRoutes(tools).tool(named: wireName),
+            let connection = connections[tool.serverID], connection.status.isReady
+        else { return nil }
+        return (tool, connection)
+    }
+
     func connection(slug: String) -> MCPServerConnection? {
         connections.values.first { $0.server.slug == slug }
     }

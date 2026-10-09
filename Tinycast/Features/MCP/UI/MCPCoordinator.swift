@@ -108,23 +108,29 @@ final class MCPCoordinator {
     }
 
     func invoke(_ call: AIToolCall, in chat: UUID) async -> AIToolResult {
-        guard let route = MCPToolName.parse(call.name),
-            let server = server(slug: route.slug),
-            let connection = manager.connection(slug: route.slug)
+        guard isActive, let route = manager.route(call.name),
+            let server = store.server(id: route.tool.serverID), server.isEnabled
         else {
             return .failure(call.id, "That tool is no longer connected.")
         }
-        guard await isPermitted(server, tool: route.tool, in: chat) else {
+        // The dialog and the call both name the tool as its server listed it, never the wire name.
+        guard await isPermitted(server, tool: route.tool.name, in: chat) else {
             return .failure(call.id, "The user declined this tool call.")
         }
         manager.markUsed()
         do {
-            let (content, isError) = try await connection.call(
-                route.tool, arguments: JSONValue(data: Data(call.arguments.utf8)) ?? .object([:]))
+            let (content, isError) = try await route.connection.call(
+                route.tool.name,
+                arguments: JSONValue(data: Data(call.arguments.utf8)) ?? .object([:]))
             return AIToolResult(callID: call.id, content: content, isError: isError)
         } catch {
             return .failure(call.id, error.localizedDescription)
         }
+    }
+
+    /// The server a wire name belongs to, for a chat's per-server tool switches.
+    func serverSlug(forTool wireName: String) -> String? {
+        manager.route(wireName).map { $0.tool.serverSlug }
     }
 
     func signIn(_ server: MCPServer, credentials: MCPOAuth.Credentials) async throws {

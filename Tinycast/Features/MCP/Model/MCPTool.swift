@@ -35,19 +35,27 @@ struct MCPTool: Equatable, Sendable {
 }
 
 /// The one place a server's slug and a tool's own name become a single provider-safe identifier.
+///
+/// A wire name is only ever looked up, never parsed back: a sanitised or trimmed name cannot say
+/// which server or which original tool it came from, so `MCPToolRoutes` keeps that answer.
 enum MCPToolName {
     static let separator = "__"
     /// OpenAI's ceiling, and the tighter of the two.
     static let maxLength = 64
+    private static let hashLength = 8
 
     static func compose(slug: String, tool: String) -> String {
-        let tail = sanitize(tool)
-        let room = maxLength - separator.count - sanitize(slug).count
-        // The slug is what routes the call, so the tool's own name is the half that gives way.
-        return sanitize(slug) + separator + String(tail.suffix(max(room, 1)))
+        let handle = String(sanitize(slug).prefix(MCPSlug.maxLength))
+        let cleaned = sanitize(tool)
+        let room = max(maxLength - separator.count - handle.count, hashLength + 2)
+        // A name that survives untouched stays readable; one that had to change carries a hash
+        // of the original, so `get.file` and `get_file`, or two long names, never collide.
+        guard cleaned != tool || cleaned.count > room else { return handle + separator + cleaned }
+        let kept = String(cleaned.prefix(room - hashLength - 1))
+        return handle + separator + kept + "_" + fingerprint(tool)
     }
 
-    /// Back to the slug that routes it; a name without the separator was never one of ours.
+    /// The slug half of a wire name, for display and legacy callers; routing uses `MCPToolRoutes`.
     static func parse(_ wireName: String) -> (slug: String, tool: String)? {
         guard let range = wireName.range(of: separator) else { return nil }
         let slug = String(wireName[..<range.lowerBound])
@@ -62,6 +70,29 @@ enum MCPToolName {
         }
         return String(cleaned)
     }
+
+    /// FNV-1a, so the same tool gets the same wire name on every launch and every Mac.
+    private static func fingerprint(_ value: String) -> String {
+        var hash: UInt32 = 0x811C_9DC5
+        for byte in value.utf8 {
+            hash ^= UInt32(byte)
+            hash = hash &* 0x0100_0193
+        }
+        let hex = String(hash, radix: 16)
+        return String(repeating: "0", count: hashLength - hex.count) + hex
+    }
+}
+
+/// Wire name → the server and the tool's own name, built from what the servers listed.
+struct MCPToolRoutes: Sendable {
+    private var routes: [String: MCPTool] = [:]
+
+    init(_ tools: [MCPTool]) {
+        // First listed wins: a duplicate wire name would be a hash collision, not a second tool.
+        for tool in tools where routes[tool.wireName] == nil { routes[tool.wireName] = tool }
+    }
+
+    func tool(named wireName: String) -> MCPTool? { routes[wireName] }
 }
 
 /// What a `tools/call` answered, flattened to the text a model can read.

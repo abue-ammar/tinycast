@@ -116,8 +116,9 @@ enum MCPSlug {
     static func normalize(_ name: String) -> String {
         var slug = ""
         var pendingSeparator = false
-        for character in name.lowercased() {
-            if character.isLetter || character.isNumber {
+        // A handle has to survive a provider's ASCII-only tool names, so `文件` becomes `wen-jian`.
+        for character in latin(name).lowercased() {
+            if character.isASCII, character.isLetter || character.isNumber {
                 if pendingSeparator, !slug.isEmpty { slug.append("-") }
                 pendingSeparator = false
                 slug.append(character)
@@ -127,5 +128,11 @@ enum MCPSlug {
             if slug.count >= maxLength { break }
         }
         return slug.isEmpty ? "server" : slug
+    }
+
+    private static func latin(_ name: String) -> String {
+        guard !name.allSatisfy(\.isASCII) else { return name }
+        let latin = name.applyingTransform(.toLatin, reverse: false) ?? name
+        return latin.applyingTransform(.stripDiacritics, reverse: false) ?? latin
     }
 }

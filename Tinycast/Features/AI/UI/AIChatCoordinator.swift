@@ -341,9 +341,10 @@ final class AIChatCoordinator {
     private func tools(for chat: AIChatState, scopedTo slug: String?) -> [AITool] {
         guard chat.toolScope.isEnabled else { return [] }
         let excluded = chat.toolScope.excluded
-        return core.mcpCoordinator.tools(scopedTo: slug).filter { tool in
-            guard let route = MCPToolName.parse(tool.name) else { return true }
-            return !excluded.contains(route.slug)
+        let mcp = core.mcpCoordinator
+        return mcp.tools(scopedTo: slug).filter { tool in
+            guard let server = mcp.serverSlug(forTool: tool.name) else { return true }
+            return !excluded.contains(server)
         }
     }
 
