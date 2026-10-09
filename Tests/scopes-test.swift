@@ -79,6 +79,15 @@ struct ScopesTest {
             "separate scopes retain their aliases in scope order",
             paths(in: [scopeLink.path, apps.path]) == expectedLinkedPaths + paths(in: [apps.path]))
 
+        // A stable scope path must pick up a changed symlink target without reconfiguration.
+        let replacement = root.appendingPathComponent("Replacement")
+        makeDir(replacement.appendingPathComponent("Updated.app"))
+        try fm.removeItem(at: scopeChain)
+        try fm.createSymbolicLink(at: scopeChain, withDestinationURL: replacement)
+        check(
+            "a retargeted directory link uses its new contents on the next scan",
+            paths(in: [scopeChain.path]) == ["LinkedAgain/Updated.app"])
+
         // App links remain leaves; folder links keep the same visibility and depth limits.
         let links = root.appendingPathComponent("Links")
         makeDir(links)
@@ -108,6 +117,14 @@ struct ScopesTest {
         check(
             "ancestor and cyclic directory links do not loop or hide other apps",
             SearchScopes.appBundles(in: [links.path]).count == 2)
+
+        // Cycle detection is per ancestry, so sibling links must not suppress each other.
+        try fm.createSymbolicLink(
+            at: links.appendingPathComponent("OtherVendor"), withDestinationURL: vendor)
+        check(
+            "sibling links to one directory retain both logical paths",
+            paths(in: [links.path])
+                == ["Links/OtherVendor/Nested.app", "Links/Renamed.app", "Links/Vendor/Nested.app"])
 
         // A scope may be a single bundle: that is how Finder ships as a default.
         check(
@@ -178,6 +195,14 @@ struct ScopesTest {
             "equal versions fall back to Finder's name order",
             listing("Ties", versions: ["Xcode-beta.app": "26.0", "Xcode.app": "26.0"])
                 == ["Xcode.app", "Xcode-beta.app"])
+
+        // Preserving logical paths must not prevent reading bundle versions through the link.
+        let versionLink = root.appendingPathComponent("Versions")
+        try fm.createSymbolicLink(
+            at: versionLink, withDestinationURL: root.appendingPathComponent("Rising"))
+        check(
+            "a linked directory still lists its newest app version first",
+            paths(in: [versionLink.path]) == ["Versions/C.app", "Versions/B.app", "Versions/A.app"])
 
         let unreadable = root.appendingPathComponent("Unreadable")
         makeDir(unreadable.appendingPathComponent("Aardvark.app"))
