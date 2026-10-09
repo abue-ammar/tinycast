@@ -292,5 +292,5 @@ failure handler, so automatic expansion stays silent as before.
   button closes the panel and opens Language & Region.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.
 - Harnesses: `quick-action-test` (action metadata, prompt boundaries, preview choices, routes and
-  their repair, diffs) and
-  `text-diff-test` (exact chunks, Unicode, ties, token boundaries and fast paths).
+  their repair) and
+  `text-diff-test` (exact chunks, coalescing, Unicode, ties, token boundaries and fast paths).

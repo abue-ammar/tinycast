@@ -15,6 +15,24 @@ struct AIProviderTests {
         }
     }
 
+    static func instructionsFollowTheSetting() {
+        for prompt in [nil, "", "   \n\t "] as [String?] {
+            expect(
+                AIInstructions.compose(userPrompt: prompt, isEnabled: true) == AIPreamble.text,
+                "an absent or blank user prompt sends the preamble alone")
+        }
+        expect(
+            AIInstructions.compose(userPrompt: "  Answer only in haiku.  ", isEnabled: true)
+                == AIPreamble.text + "\n\nAnswer only in haiku.",
+            "instructions put the preamble before the trimmed user prompt with a blank line")
+        for prompt in [nil, "Answer only in haiku."] as [String?] {
+            expect(
+                AIInstructions.compose(userPrompt: prompt, isEnabled: false) == nil,
+                "disabled instructions withhold both the preamble and the user prompt")
+        }
+        expect(AIPreamble.text.count < 1_800, "the preamble stays within its per-turn budget")
+    }
+
     /// A wrong document shape must fail here rather than mid-conversation.
     static func requestBodiesCarryDocuments() {
         let pdf = AIDocument(
@@ -77,6 +95,7 @@ struct AIProviderTests {
     }
 
     static func main() {
+        instructionsFollowTheSetting()
         providerPresetsResolveEndpoints()
         modelCatalogBuildsProviderRequests()
         modelCatalogDecodesProviderResponses()

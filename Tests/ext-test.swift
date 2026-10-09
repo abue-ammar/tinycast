@@ -1173,7 +1173,8 @@ struct ExtensionTests {
         await settle(until: {
             guard let tree = recorder.trees.last else { return false }
             let item = ExtensionScreen(tree: tree, query: "").items.first
-            let crypto = ExtensionAccessoriesView_labelForTest(item?.node.array("accessories").dropFirst(4).first)
+            let crypto = ExtensionAccessoriesView_labelForTest(
+                item?.node.array("accessories").dropFirst(4).first)
             return item?.node.string("title") == "count=1" && host.toasts == ["hello"]
                 && crypto?.hasSuffix(",6cba6dd1d44f53a3") == true
         })
@@ -1244,7 +1245,9 @@ struct ExtensionTests {
                 session: "s1", handler: handler,
                 payload: ExtensionRuntime.jsonString(from: []))
             await settle(until: {
-                recorder.trees.last.map { ExtensionScreen(tree: $0, query: "").items.first?.node.string("title") }
+                recorder.trees.last.map {
+                    ExtensionScreen(tree: $0, query: "").items.first?.node.string("title")
+                }
                     == "count=11"
             })
             screen = ExtensionScreen(tree: recorder.trees.last!, query: "")

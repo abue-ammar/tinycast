@@ -25,7 +25,8 @@ final class ExtensionFetcher: Sendable {
             switch self {
             case .badURL(let url): return "Invalid URL: \(url)"
             case .socketUnavailable(let path):
-                return "Could not connect to the local service. Start its app or check the socket path: \(path)"
+                return
+                    "Could not connect to the local service. Start its app or check the socket path: \(path)"
             }
         }
     }
@@ -115,15 +116,16 @@ final class ExtensionFetcher: Sendable {
             if Task.isCancelled, process.isRunning { process.terminate() }
             let bytes: Data = try await withCheckedThrowingContinuation { continuation in
                 DispatchQueue.global(qos: .userInitiated).async {
-                    continuation.resume(with: Result {
-                        defer {
-                            if process.isRunning { process.terminate() }
+                    continuation.resume(
+                        with: Result {
+                            defer {
+                                if process.isRunning { process.terminate() }
+                                exit.wait()
+                            }
+                            let bytes = try output.fileHandleForReading.readToEnd() ?? Data()
                             exit.wait()
-                        }
-                        let bytes = try output.fileHandleForReading.readToEnd() ?? Data()
-                        exit.wait()
-                        return bytes
-                    })
+                            return bytes
+                        })
                 }
             }
             try Task.checkCancellation()
@@ -142,8 +144,9 @@ final class ExtensionFetcher: Sendable {
             let rawHeaders = metadata["headers"] as? [String: [String]]
         else { throw URLError(.badServerResponse) }
         let headers = rawHeaders.mapValues { $0.joined(separator: ", ") }
-        guard let response = HTTPURLResponse(
-            url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)
+        guard
+            let response = HTTPURLResponse(
+                url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)
         else { throw URLError(.badServerResponse) }
         return (request.httpMethod == "HEAD" ? Data() : bytes.prefix(upTo: boundary.lowerBound), response)
     }

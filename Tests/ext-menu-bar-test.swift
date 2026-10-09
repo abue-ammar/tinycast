@@ -587,7 +587,8 @@ extension ExtensionTests {
         func stateDetails() -> String {
             let completed = storage.localStorageValue(extension: "first", key: "completed")
             let confirmed = storage.localStorageValue(extension: "first", key: "confirmed")
-            return "boots=\(boots.map(\.0)), running=\(manager.isRunning), runtimeAlive=\(lastRuntime != nil), "
+            return
+                "boots=\(boots.map(\.0)), running=\(manager.isRunning), runtimeAlive=\(lastRuntime != nil), "
                 + "completed=\(String(describing: completed)), confirmed=\(String(describing: confirmed)), errors=\(failures)"
         }
         check("install does not run a menu command", boots.isEmpty && metadata.menuBarCommands().isEmpty)
@@ -681,10 +682,13 @@ extension ExtensionTests {
         check(
             "both actions finish before the queued menu opens",
             boots.last?.0 == "second"
-                && storage.localStorageValue(extension: "first", key: "completed") == .number(2), stateDetails())
+                && storage.localStorageValue(extension: "first", key: "completed") == .number(2),
+            stateDetails())
         secondController.menuDidClose(secondController.menu)
         await settle(until: { !manager.isRunning && lastRuntime == nil })
-        check("reopened action sessions unload after closing", !manager.isRunning && lastRuntime == nil, stateDetails())
+        check(
+            "reopened action sessions unload after closing", !manager.isRunning && lastRuntime == nil,
+            stateDetails())
 
         controller.menuWillOpen(controller.menu)
         await settle(until: menuIsReady)
@@ -746,7 +750,8 @@ extension ExtensionTests {
             check(
                 "clicking immediately after opening runs the fresh action and unloads",
                 storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true)
-                    && boots.count == beforeEarlyClick + 1 && !manager.isRunning && lastRuntime == nil, stateDetails())
+                    && boots.count == beforeEarlyClick + 1 && !manager.isRunning && lastRuntime == nil,
+                stateDetails())
         } else {
             check("early confirmation action exists", false)
         }
@@ -829,10 +834,13 @@ extension ExtensionTests {
 
         manager.run(hanging, command: hanging.manifest.commands[0])
         await settle(until: { hosts.last?.didStartFetch == true && manager.isRunning })
-        check("hanging request starts before disabling", hosts.last?.didStartFetch == true && manager.isRunning)
+        check(
+            "hanging request starts before disabling", hosts.last?.didStartFetch == true && manager.isRunning)
         manager.disable("extension:hanging/bar")
         await settle(until: { hosts.last?.didCancel == true && lastRuntime == nil })
-        check("disable cancels host requests", hosts.last?.didCancel == true && lastRuntime == nil, stateDetails())
+        check(
+            "disable cancels host requests", hosts.last?.didCancel == true && lastRuntime == nil,
+            stateDetails())
         check(
             "disable removes snapshot and schedule",
             !metadata.metadata(extension: "hanging", command: "bar").menuBarEnabled)

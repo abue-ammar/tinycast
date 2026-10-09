@@ -179,9 +179,10 @@ final class ExtensionHostBridge: ExtensionHostAPI {
                 let context, self.context === context, context.activeExtensionName == name,
                 context.activeLaunchType != .background, reportedSocketFailures.insert(path).inserted
             {
-                _ = context.present(toast: ExtensionToast(
-                    style: .failure, title: "Connection failed",
-                    message: "Start the local service or check its socket path: \(path)"))
+                _ = context.present(
+                    toast: ExtensionToast(
+                        style: .failure, title: "Connection failed",
+                        message: "Start the local service or check its socket path: \(path)"))
             }
             throw error
         }

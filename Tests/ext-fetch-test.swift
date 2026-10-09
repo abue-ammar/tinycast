@@ -128,12 +128,13 @@ enum ExtensionFetchTests {
         }
         let fetcher = ExtensionFetcher()
         func fetch(_ path: String, method: String = "GET", body: Data? = nil) async throws -> [String: Any] {
-            try await fetcher.request(.object([
-                "url": .string("http://unresolvable.invalid" + path),
-                "socketPath": .string(socketPath), "method": .string(method),
-                "headers": .object(["Authorization": .string("socket-token")]),
-                "bodyBase64": body.map { .string($0.base64EncodedString()) } ?? .null
-            ]))
+            try await fetcher.request(
+                .object([
+                    "url": .string("http://unresolvable.invalid" + path),
+                    "socketPath": .string(socketPath), "method": .string(method),
+                    "headers": .object(["Authorization": .string("socket-token")]),
+                    "bodyBase64": body.map { .string($0.base64EncodedString()) } ?? .null
+                ]))
         }
         func decodedBody(_ result: [String: Any]) -> Data {
             Data(base64Encoded: result["bodyBase64"] as? String ?? "") ?? Data()
@@ -142,22 +143,28 @@ enum ExtensionFetchTests {
         let posted = try await fetch("/containers/create?name=fixture", method: "POST", body: payload)
         let echo = try JSONSerialization.jsonObject(with: decodedBody(posted)) as? [String: String]
         expect(posted["status"] as? Int == 201, "Unix HTTP preserves the response status")
-        expect(echo?["path"] == "/containers/create?name=fixture" && echo?["method"] == "POST",
+        expect(
+            echo?["path"] == "/containers/create?name=fixture" && echo?["method"] == "POST",
             "Unix HTTP preserves the API path, query and method")
-        expect(echo?["body"] == String(repeating: "ff", count: payload.count),
+        expect(
+            echo?["body"] == String(repeating: "ff", count: payload.count),
             "Unix HTTP sends a large binary request body without blocking")
-        expect(echo?["authorization"] == "socket-token" && echo?["cookie"] == "",
+        expect(
+            echo?["authorization"] == "socket-token" && echo?["cookie"] == "",
             "Unix HTTP carries request headers without retaining response cookies")
         let headers = posted["headers"] as? [String: String]
-        expect(headers?["x-socket-probe"] == "unix" && headers?["set-cookie"]?.contains("b=2") == true,
+        expect(
+            headers?["x-socket-probe"] == "unix" && headers?["set-cookie"]?.contains("b=2") == true,
             "Unix HTTP preserves response headers including repeated cookies")
         let binary = try await fetch("/binary")
         expect(decodedBody(binary) == Data([0, 255, 1, 10]), "Unix HTTP decodes compressed binary responses")
         let missing = try await fetch("/missing")
-        expect(missing["status"] as? Int == 404 && !decodedBody(missing).isEmpty,
+        expect(
+            missing["status"] as? Int == 404 && !decodedBody(missing).isEmpty,
             "Unix HTTP returns error status and body to the extension")
         let empty = try await fetch("/empty")
-        expect(empty["status"] as? Int == 204 && decodedBody(empty).isEmpty,
+        expect(
+            empty["status"] as? Int == 204 && decodedBody(empty).isEmpty,
             "Unix HTTP handles an empty response")
         let head = try await fetch("/containers/json", method: "HEAD")
         expect(head["status"] as? Int == 201 && decodedBody(head).isEmpty, "Unix HTTP handles HEAD")
@@ -174,19 +181,23 @@ enum ExtensionFetchTests {
         let survivor = try await fetch("/images/json")
         expect(survivor["status"] as? Int == 201, "Unix transport remains usable after cancellation")
         try await socketRuntimeCheck(directory: directory, socketPath: socketPath)
-        expect(await waitForState(stateFile) { $0.opened == $0.closed },
+        expect(
+            await waitForState(stateFile) { $0.opened == $0.closed },
             "Unix requests close their connections, including the cancelled request")
         do {
-            _ = try await fetcher.request(.object([
-                "url": .string("http://localhost/containers/json"),
-                "socketPath": .string(socketPath + ".missing")
-            ]))
+            _ = try await fetcher.request(
+                .object([
+                    "url": .string("http://localhost/containers/json"),
+                    "socketPath": .string(socketPath + ".missing")
+                ]))
             expect(false, "Missing Unix socket fails without falling back to TCP")
         } catch {
             if case .socketUnavailable(let path) = error as? ExtensionFetcher.FetchError {
-                expect(path == socketPath + ".missing",
+                expect(
+                    path == socketPath + ".missing",
                     "Missing Unix socket fails without falling back to TCP")
-                expect(error.localizedDescription.contains("Start its app or check the socket path"),
+                expect(
+                    error.localizedDescription.contains("Start its app or check the socket path"),
                     "Missing Unix socket reports an actionable error instead of an NSURL error code")
             } else {
                 expect(false, "Missing Unix socket reports its connection failure")
@@ -238,14 +249,18 @@ enum ExtensionFetchTests {
               await api.showHUD("Docker socket passed");
             };
             """
-        await runtime.start(session: "socket", code: code, file: directory.appendingPathComponent("socket.js"),
-            mode: .noView, context: ExtensionTests.launchContext(mode: .noView,
+        await runtime.start(
+            session: "socket", code: code, file: directory.appendingPathComponent("socket.js"),
+            mode: .noView,
+            context: ExtensionTests.launchContext(
+                mode: .noView,
                 preferences: ["socketPath": .string(socketPath)]))
         for _ in 0..<100 {
             if recorder.finished || !recorder.failures.isEmpty { break }
             await ExtensionTests.settle(20)
         }
-        expect(host.huds == ["Docker socket passed"],
+        expect(
+            host.huds == ["Docker socket passed"],
             "JavaScriptCore http.request reaches the real Unix socket and reads its response")
         await runtime.stop(session: "socket")
     }

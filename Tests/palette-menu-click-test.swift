@@ -69,10 +69,11 @@ struct PaletteMenuClickTests {
         defer { panel.orderOut(nil) }
 
         func send(_ type: NSEvent.EventType, clicks: Int = 1) {
-            guard let event = NSEvent.mouseEvent(
-                with: type, location: CGPoint(x: 50, y: 50), modifierFlags: [],
-                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
-                context: nil, eventNumber: 1, clickCount: clicks, pressure: 1)
+            guard
+                let event = NSEvent.mouseEvent(
+                    with: type, location: CGPoint(x: 50, y: 50), modifierFlags: [],
+                    timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
+                    context: nil, eventNumber: 1, clickCount: clicks, pressure: 1)
             else {
                 check(false, "mouse event creation")
                 return

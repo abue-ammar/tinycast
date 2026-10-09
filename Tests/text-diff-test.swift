@@ -15,6 +15,21 @@ enum TextDiffTests {
             TextDiffEngine.diff(original: "café 👩🏽‍💻\n", modified: "cafe 👩🏽‍💻\n")
                 == [.deleted("café"), .inserted("cafe"), .equal(" 👩🏽‍💻\n")])
 
+        precondition(
+            TextDiffEngine.diff(original: "same", modified: "same") == [.equal("same")])
+        precondition(
+            TextDiffEngine.diff(
+                original: "Their going to the meeting", modified: "They're going to the meeting")
+                == [.deleted("Their"), .inserted("They're"), .equal(" going to the meeting")])
+        let phrase = TextDiffEngine.diff(original: "one two three", modified: "four five three")
+        for (first, second) in zip(phrase, phrase.dropFirst()) {
+            switch (first, second) {
+            case (.equal, .equal), (.inserted, .inserted), (.deleted, .deleted):
+                preconditionFailure("adjacent chunks must have different kinds")
+            default: break
+            }
+        }
+
         for count in Array(1...33) + [127, 128, 129] {
             let original = (0..<count).map { $0.isMultiple(of: 2) ? "old" : " " }.joined()
             let modified = (0..<count).map { $0.isMultiple(of: 2) ? "new" : " " }.joined()
@@ -49,6 +64,10 @@ enum TextDiffTests {
         precondition(TextDiffEngine.diff(original: overCap, modified: overCap) == [.equal(overCap)])
         precondition(TextDiffEngine.diff(original: "", modified: overCap) == [.inserted(overCap)])
         precondition(TextDiffEngine.diff(original: overCap, modified: "") == [.deleted(overCap)])
+        let commonPrefix = String(repeating: "word ", count: TextDiffEngine.maxTokens)
+        precondition(
+            TextDiffEngine.diff(original: commonPrefix, modified: commonPrefix + "tail")
+                == [.deleted(commonPrefix), .inserted(commonPrefix + "tail")])
         print("Exact chunks, Unicode, ties, packed boundaries, high LCS values and fast paths passed")
     }
 }

@@ -604,7 +604,8 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Escape closes AI Chat with the composer focused, preserving its draft and any streaming reply.
   Menus and rename fields cancel first; the sidebar clears a nonempty filter, then closes on the
   next Escape. Find in Chat cancels before a second Escape closes the window.
-- Harnesses: `ai-provider-test` (endpoints, request bodies, stream decoding including leading
+- Harnesses: `ai-provider-test` (instruction composition and its enable/disable setting, endpoints,
+  request bodies, stream decoding including leading
   think tags across content and SSE splits, persistence repair,
   Codex framing, on-device routing, the two MCP launch encodings and the two consent channels, the
   shown-model and switched-off-route rules, and a tool's override from settings to launch),
@@ -612,7 +613,8 @@ window, and every chat action either surface sends — is the nineteenth feature
   mid-stream hold-back, `ChatHistoryStore` with renames and pins,
   `AIToolLoopProvider`, regenerate, and `AIChatSurfacesState`'s one-live-place rule),
   and `apple-intelligence-test` (status copy, snapshot deltas,
-  transcript assembly, error mapping, plus one real generation when this Mac can run one), all in
+  transcript assembly and error mapping, plus an optional real generation enabled with
+  `TINYCAST_TEST_APPLE_INTELLIGENCE=1` when this Mac can run one), all in
   `run-tests.sh`.
 
 ## Installed commands

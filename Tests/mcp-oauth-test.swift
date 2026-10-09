@@ -270,8 +270,10 @@ struct MCPOAuthTests {
         guard descriptor >= 0 else { throw MCPOAuth.Failure.listenerUnavailable }
         defer { Darwin.close(descriptor) }
         var reuse: Int32 = 1
-        guard Darwin.setsockopt(
-            descriptor, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout.size(ofValue: reuse))) == 0
+        guard
+            Darwin.setsockopt(
+                descriptor, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout.size(ofValue: reuse)))
+                == 0
         else { throw MCPOAuth.Failure.listenerUnavailable }
         var address = sockaddr_in()
         address.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)

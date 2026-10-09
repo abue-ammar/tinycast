@@ -286,9 +286,10 @@ struct PopoverMenu: View {
     /// Exact, not measured; a capped viewport ends mid-row, never on a separator or section title.
     private var listExtent: (content: CGFloat, viewport: CGFloat) {
         let rowHeight = metrics.size.menuRowHeight
-        let rowsMaxHeight = visibleRows.map {
-            ($0 * (rowHeight + metrics.size.menuRowSpacing)).rounded()
-        } ?? metrics.size.menuRowsMaxHeight
+        let rowsMaxHeight =
+            visibleRows.map {
+                ($0 * (rowHeight + metrics.size.menuRowSpacing)).rounded()
+            } ?? metrics.size.menuRowsMaxHeight
         let capacity = rowsMaxHeight + headerExtent
         var offset = headerExtent
         var fold: CGFloat = 0
