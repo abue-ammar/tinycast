@@ -36,6 +36,13 @@ final class MCPSettingsStore {
         }
     }
 
+    /// What an imported config adds: a server already set up with the same command or URL is
+    /// skipped, so pasting the same `mcpServers` block twice does not double every server.
+    func newEntries(in entries: [MCPServerImport.Entry]) -> [MCPServerImport.Entry] {
+        var known = Set(servers.map(\.transport))
+        return entries.filter { known.insert($0.server.transport).inserted }
+    }
+
     func remove(id: UUID) {
         servers.removeAll { $0.id == id }
     }

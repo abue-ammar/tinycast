@@ -8,6 +8,7 @@ struct MCPSettingsSection: View {
     @State private var editor: MCPServerEditorTarget?
     @State private var pendingRemoval: MCPServer?
     @State private var removalError: String?
+    @State private var importResult: (message: String, failed: Bool)?
 
     var body: some View {
         @Bindable var appSettings = appSettings
@@ -36,6 +37,26 @@ struct MCPSettingsSection: View {
                         Image(systemName: "plus")
                             .foregroundStyle(.primary)
                     }
+                }
+                // Raycast, Claude Desktop, Cursor and VS Code all export the same `mcpServers` JSON.
+                Button(action: importFromClipboard) {
+                    Label {
+                        SettingsRowTitle(.aiMCPServers, "Import from Clipboard")
+                    } icon: {
+                        Image(systemName: "doc.on.clipboard")
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .help("Paste the mcpServers JSON from Raycast, Claude Desktop, Cursor or VS Code")
+                if let importResult {
+                    Label(
+                        importResult.message,
+                        systemImage: importResult.failed
+                            ? "exclamationmark.triangle" : "checkmark.circle"
+                    )
+                    .foregroundStyle(
+                        importResult.failed
+                            ? AnyShapeStyle(Color.orange) : AnyShapeStyle(HierarchicalShapeStyle.secondary))
                 }
             }
             .settingsEnabled(appSettings.mcpEnabled)
@@ -76,6 +97,18 @@ struct MCPSettingsSection: View {
         }
         editor = nil
         return nil
+    }
+
+    private func importFromClipboard() {
+        let text = NSPasteboard.general.string(forType: .string) ?? ""
+        do {
+            let summary = try coordinator.importServers(from: text)
+            importResult = (summary.message, false)
+        } catch let failure as MCPServerImport.Failure {
+            importResult = (failure.localizedDescription, true)
+        } catch {
+            importResult = ("The imported credentials could not be saved to your login Keychain.", true)
+        }
     }
 
     private func remove(_ server: MCPServer) {

@@ -157,6 +157,26 @@ final class MCPCoordinator {
         applyEnabled()
     }
 
+    /// Servers read from pasted `mcpServers` JSON; answers how many were added and what was not.
+    func importServers(from text: String) throws -> MCPServerImport.Summary {
+        let entries = try MCPServerImport.parse(text)
+        let fresh = store.newEntries(in: entries)
+        let secrets = MCPSecretStore()
+        var added = 0
+        var dropped: [String] = []
+        for entry in fresh {
+            try secrets.save(
+                MCPSecretStore.Secrets(headerValue: entry.headerValue, environment: entry.environment),
+                for: entry.server.id)
+            store.save(entry.server)
+            added += 1
+            dropped += entry.dropped.map { "\(entry.server.name): \($0)" }
+        }
+        if added > 0 { applyEnabled() }
+        return MCPServerImport.Summary(
+            added: added, skipped: entries.count - fresh.count, dropped: dropped)
+    }
+
     func remove(_ id: UUID) throws {
         core.mcpOAuth.cancelSignIn(id)
         try MCPSecretStore().remove(for: id)

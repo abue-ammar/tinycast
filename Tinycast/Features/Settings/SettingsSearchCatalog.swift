@@ -304,6 +304,12 @@ enum SettingsSearchCatalog {
             .aiMCPServers, "Add MCP Server",
             keywords: ["tools", "model context protocol", "stdio"]),
         .init(
+            .aiMCPServers, "Import from Clipboard",
+            keywords: [
+                "mcp", "mcpservers", "json", "paste", "raycast", "claude", "cursor", "vs code",
+                "config"
+            ]),
+        .init(
             group: .aiCommands, "AI commands",
             keywords: ["shortcut", "launcher", "chat"])
     ]

@@ -421,6 +421,7 @@
 		84A1F72DA5038C3725DCA201 /* FileSearchService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 71B96B69CB4E52319BB3EC7D /* FileSearchService.swift */; };
 		84DC02099149C542C886B019 /* EmojiCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B710F99B5B4E42FFB3EAA8FB /* EmojiCatalog.swift */; };
 		84ED01EE8786B9D874FF32B1 /* SettingsFileJSON.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1752EFD965C5AC8168FAA07F /* SettingsFileJSON.swift */; };
+		850D07886ECDA3447E480360 /* MCPServerImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73704B60F5DA1241B75D617C /* MCPServerImport.swift */; };
 		85734D451C5E8B4E9F1DB8A1 /* RoomGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1F749283370AC9B506E6529 /* RoomGrid.swift */; };
 		85B372E9A8F8D00D3A5FA260 /* HyperKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95BFA41B0D7F369A8CF1E013 /* HyperKey.swift */; };
 		85FF7D441BD782A29EDD95A8 /* TextTranslator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D0371F4748011D45C185444 /* TextTranslator.swift */; };
@@ -1199,6 +1200,7 @@
 		732AEAA3A5C5DE559B739295 /* DictionaryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryService.swift; sourceTree = "<group>"; };
 		732C28E00A15CFBE3C8FAD1A /* QuickAICoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickAICoordinator.swift; sourceTree = "<group>"; };
 		7355ACD6D1BE7BC7FCA26BD2 /* CodexAppServerClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexAppServerClient.swift; sourceTree = "<group>"; };
+		73704B60F5DA1241B75D617C /* MCPServerImport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerImport.swift; sourceTree = "<group>"; };
 		737C126A1DB2FA800A32A8AE /* AIToolServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIToolServer.swift; sourceTree = "<group>"; };
 		73E25B87C692D5FEE1FBF994 /* PanelTransition.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelTransition.swift; sourceTree = "<group>"; };
 		741FA289335C5264BCBBE17C /* RoomStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoomStore.swift; sourceTree = "<group>"; };
@@ -2193,6 +2195,7 @@
 				19E96BEA3A5436619297675B /* MCPOAuthRequest.swift */,
 				DBED1FDAAD4735FDB4B2453A /* MCPProtocol.swift */,
 				5B2DBBB997953D2E50EBB050 /* MCPServer.swift */,
+				73704B60F5DA1241B75D617C /* MCPServerImport.swift */,
 				A7B8990163AB02BC5E29D7B8 /* MCPTool.swift */,
 				A724FAAD08B77AA54D080E45 /* MCPTrustPolicy.swift */,
 			);
@@ -4204,6 +4207,7 @@
 				54D56A2119945AA73F4FBA99 /* MCPServer.swift in Sources */,
 				16A8F14D5FC9C26CA6B616FB /* MCPServerConnection.swift in Sources */,
 				2E0957985928EC32511A5969 /* MCPServerEditor.swift in Sources */,
+				850D07886ECDA3447E480360 /* MCPServerImport.swift in Sources */,
 				44646A576847F2D9FB68D8CF /* MCPServerManager.swift in Sources */,
 				D37F4361928A38602002FAEF /* MCPSettingsSection.swift in Sources */,
 				F70A66A5BC558684091F6603 /* MCPSettingsStore.swift in Sources */,
