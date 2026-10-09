@@ -1788,6 +1788,44 @@ const diagnosticsChannel = unsupportedModule("diagnostics_channel", {
   unsubscribe: (name, onMessage) => channels.get(name)?.unsubscribe(onMessage) ?? false,
 });
 
+// ─── net ────────────────────────────────────────────────────────────
+
+function isIPv4(input) {
+  const parts = `${input}`.split(".");
+  return parts.length === 4 && parts.every((part) =>
+    part.length > 0 && part.length <= 3 && !/[^0-9]/.test(part) &&
+    (part.length === 1 || part[0] !== "0") && Number(part) <= 255,
+  );
+}
+
+function isIPv6(input) {
+  let address = `${input}`;
+  const zone = address.indexOf("%");
+  if (zone !== -1) {
+    const scope = address.slice(zone + 1);
+    if (!scope || /[^0-9a-z.:-]/i.test(scope)) return false;
+    address = address.slice(0, zone);
+  }
+  if (!address.includes(":")) return false;
+  if (address.includes(".")) {
+    const tail = address.lastIndexOf(":") + 1;
+    if (!isIPv4(address.slice(tail))) return false;
+    address = address.slice(0, tail) + "0:0";
+  }
+  const halves = address.split("::");
+  if (halves.length > 2) return false;
+  const groups = halves.flatMap((half) => half ? half.split(":") : []);
+  if (!groups.every((group) => group.length > 0 && group.length <= 4 && !/[^0-9a-f]/i.test(group))) {
+    return false;
+  }
+  return halves.length === 2 ? groups.length < 8 : groups.length === 8;
+}
+
+function isIP(input) {
+  if (isIPv4(input)) return 4;
+  return isIPv6(input) ? 6 : 0;
+}
+
 // ─── Registry ───────────────────────────────────────────────────────
 
 export const nodeModules = {
@@ -1814,7 +1852,7 @@ export const nodeModules = {
   http: httpLike("http"),
   https: httpLike("https"),
   dgram,
-  net: unsupportedModule("net"),
+  net: unsupportedModule("net", { isIP, isIPv4, isIPv6 }),
   tls: unsupportedModule("tls", { TLSSocket }),
   dns: unsupportedModule("dns"),
   stream: streamModule,
