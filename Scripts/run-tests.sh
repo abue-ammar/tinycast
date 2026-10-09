@@ -743,6 +743,20 @@ run slow mcp-stdio-test    Tinycast/Platform/ExecutableLocator.swift \
                            Tinycast/Features/AI/Model/JSONValue.swift \
                            Tinycast/Features/MCP/Model/*.swift \
                            Tinycast/Features/MCP/Service/*.swift
+run mcp-http-test          Tinycast/Platform/ExecutableLocator.swift \
+                           Tinycast/Platform/ProcessExit.swift \
+                           Tinycast/Platform/KeychainSecretStore.swift \
+                           Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Features/AI/Model/AIConnection.swift \
+                           Tinycast/Features/AI/Model/AppleIntelligence.swift \
+                           Tinycast/Features/AI/Model/AITool.swift \
+                           Tinycast/Features/AI/Model/AIToolServer.swift \
+                           Tinycast/Features/AI/Model/AIStreamDecoder.swift \
+                           Tinycast/Features/AI/Model/AIThinkTagDecoder.swift \
+                           Tinycast/Features/AI/Model/AIRequest.swift \
+                           Tinycast/Features/AI/Model/JSONValue.swift \
+                           Tinycast/Features/MCP/Model/*.swift \
+                           Tinycast/Features/MCP/Service/*.swift
 run slow codex-turn-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \

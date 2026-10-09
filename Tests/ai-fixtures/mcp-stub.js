@@ -42,23 +42,39 @@ function* lines() {
     }
 }
 
+let pinged = false;
+
 for (const line of lines()) {
     if (!line.trim()) continue;
     const message = JSON.parse(line);
     const { method, id } = message;
 
-    if (method === "initialize") {
+    if (id === "srv-ping" && message.result) {
+        pinged = true;
+    } else if (method === "initialize") {
+        // A first `npx -y` downloads before it answers; 15 s was once the whole budget.
+        if (MODE === "slow-init") sleep(16_000);
         if (MODE === "die-on-initialize") {
             fs.writeSync(2, "the server refused to start\n");
             process.exit(3);
         }
+        // Ahead of the reply, so the answer to the ping is on stdin before `tools/list` is.
+        if (MODE === "ping") send({ jsonrpc: "2.0", id: "srv-ping", method: "ping" });
         reply(id, { protocolVersion: "2025-06-18", capabilities: { tools: {} } });
     } else if (method === "notifications/initialized") {
         if (MODE === "unsolicited-request") {
             send({ jsonrpc: "2.0", id: "srv-1", method: "sampling/createMessage" });
         }
     } else if (method === "tools/list") {
-        reply(id, { tools: TOOLS });
+        if (MODE === "paged") {
+            const second = message.params?.cursor === "page-2";
+            reply(id, second ? { tools: TOOLS.slice(1) } : { tools: TOOLS.slice(0, 1), nextCursor: "page-2" });
+        } else if (MODE === "ping") {
+            // Only a server whose ping was answered lists the extra tool.
+            reply(id, { tools: pinged ? [...TOOLS, { name: "pinged" }] : TOOLS });
+        } else {
+            reply(id, { tools: TOOLS });
+        }
     } else if (method === "tools/call") {
         if (MODE === "die-on-call") process.exit(4);
         if (MODE === "hang-on-call") continue;

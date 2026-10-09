@@ -125,23 +125,35 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   Codex **Ask Each Chat** covers a server's tools, not its resources; **Never Allow** still keeps
   the server out, because it is never passed.
 - **Tinycast exposes nothing back.** A server request — sampling, elicitation, roots — is declined
-  with a JSON-RPC error. The client advertises no capabilities in `initialize`.
+  with a JSON-RPC error. The client advertises no capabilities in `initialize`. `ping` is the one
+  exception: it is answered with an empty result, since a server may hang up on a client that
+  ignores it.
 - **`Model/` stays Foundation-only.** `mcp-test` compiles the shipped models and pins the framing,
   handles, tool names, output flattening, trust and addressing; `mcp-stdio-test` drives a real
-  subprocess. `mcp-oauth-test` pins OAuth parsing, PKCE, endpoint binding, callback lifetime,
+  subprocess and `mcp-http-test` a real HTTP server in both of its shapes. `mcp-oauth-test` pins OAuth parsing, PKCE, endpoint binding, callback lifetime,
   dynamic and supplied client registration, refresh coalescing, redirects and bounded 401 recovery.
 
 ## Transports
 
-Both speak JSON-RPC 2.0 through one encoder, `MCPProtocol`; only the framing differs.
+All three speak JSON-RPC 2.0 through one encoder, `MCPProtocol`; only the framing differs.
 
 | | `MCPHTTPTransport` | `MCPStdioTransport` |
 | --- | --- | --- |
 | Shape | one POST per message | newline-delimited over the process's stdin/stdout |
-| Reply | a JSON body, or an SSE stream read with the AI layer's `SSEParser` | a line, matched by id |
-| Session | `Mcp-Session-Id` captured from any response and replayed | the process itself |
-| Timeouts | 15 s, 60 s for `tools/call` | the same, per pending request |
+| Reply | a JSON body, or an SSE stream read frame by frame as it arrives — a server need not close it | a line, matched by id |
+| Session | `Mcp-Session-Id` captured and replayed; a 404 for it re-initializes once | the process itself |
+| Version | `MCP-Protocol-Version` names what `initialize` negotiated | negotiated, no header |
+| Timeouts | 120 s `initialize`, 300 s `tools/call`, 30 s otherwise | the same, per pending request |
 | Teardown | the session is dropped | stdin closed, SIGTERM a second later |
+
+The handshake is `initialize` → the negotiated version handed to the transport → an *awaited*
+`notifications/initialized` → every page of `tools/list`, following `nextCursor` up to 50 pages. A
+server from before Streamable HTTP answers the first POST with 400, 404 or 405 (the TypeScript SDK's
+own fallback rule); the connection then retries the same URL with `MCPLegacySSETransport`, the
+2024-11-05 shape: a long-lived `GET` whose `endpoint` event names where to POST, answers arriving as
+`message` events on that stream. The endpoint is held to the stream's own origin, so a credential
+never follows a server elsewhere. A start cancelled mid-handshake goes back to stopped rather than
+staying at "Connecting…".
 
 `MCPStdioTransport` is `CodexAppServerClient`'s mechanism applied to a second protocol: a pending-id
 map with per-request watchdogs, an 8 MB guard on an unterminated line, and a `cleanup` that fails
@@ -194,8 +206,12 @@ sign-in; it does not revoke the provider-side grant.
 
 `MCPToolName` is the one place a server's handle and a tool's own name become a single identifier the
 providers accept: `slug__tool`, sanitized to `[A-Za-z0-9_-]` and capped at 64 characters, OpenAI's
-limit and the tighter of the two. When it has to trim, the handle is the half that survives, because
-it is what routes the call back. `MCPTool.aiTool` also carries the display pair — the server's title
+limit and the tighter of the two. A name that had to change — sanitized or trimmed — carries an
+FNV-1a hash of the original, so two tools never collapse onto one wire name. A wire name is never
+parsed back: `MCPToolRoutes` maps it to the listing that produced it (server id and the tool's own
+name), which is how `MCPCoordinator.invoke` routes a call and how a chat's per-server switches find
+a tool's server. Handles are transliterated to ASCII (`文件` → `wen-jian`), and a slug saved before
+that still routes, since nothing reads it out of the wire name. `MCPTool.aiTool` also carries the display pair — the server's title
 and the tool's own name — so the AI layer renders a row without ever parsing a wire name.
 
 ## The loop
@@ -319,9 +335,18 @@ HTTP or command, Header or OAuth authentication, optional client ID/secret, one 
 sign-in status, enabled, trust, and a Test Connection button that runs a real handshake so a typo is
 caught there rather than in the middle of a conversation.
 
+**Import from Clipboard** reads the `mcpServers` JSON that Raycast, Claude Desktop and Cursor share
+(VS Code's `servers` and a single bare server too) through `MCPServerImport`. A `command`/`args`/`env`
+entry becomes a stdio server with its environment in the Keychain; a `url` entry becomes an HTTP
+server keeping its `Authorization` header (or its first header). A server whose command or URL is
+already set up is skipped, and what had nowhere to go — extra headers, `cwd` — is named under the
+button rather than dropped silently.
+
 ## Manual sweep
 
 - An HTTP server with a bearer header reports its tool count from Test Connection and from its row.
+- A 2024-11-05 HTTP+SSE server (one that answers POST with 405) connects through the fallback.
+- Pasting a Claude Desktop `mcpServers` block imports every server once; pasting it again adds none.
 - An OAuth-only server signs in through the browser with client fields empty when DCR is available;
   Test Connection and a BYOK chat use the session. Repeat with supplied client credentials.
 - Relaunch retains the sign-in, refresh retains connectivity, and Sign Out makes Test Connection

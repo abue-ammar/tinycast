@@ -29,6 +29,11 @@ struct MCPTests {
         settingsPersistAndKeepHandlesApart()
         serversBecomeWhatACLICanRunItself()
         onlyOneCopyOfALocalServerRuns()
+        nonASCIINamesStillMakeAHandle()
+        wireNamesAreLookedUpNotParsed()
+        theHandshakeIsNegotiatedAndPaged()
+        legacyStreamsAreReadByEventName()
+        sharedConfigurationImports()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -325,5 +330,165 @@ struct MCPTests {
         expect(
             remote.runsInTinycast(whileCLIRouteSelected: true),
             "while a remote one stays connected: a session, no process, and a live status row")
+    }
+
+    /// `文件` once slugged to `文件`, which sanitised to `__` and could never be routed back.
+    static func nonASCIINamesStillMakeAHandle() {
+        let slug = MCPSlug.normalize("文件")
+        expect(slug == "wen-jian", "a Chinese name is transliterated, got \(slug)")
+        expect(
+            MCPSlug.normalize("Café Tools") == "cafe-tools", "diacritics are stripped, not dropped")
+        expect(
+            MCPSlug.normalize("数据库 DB").allSatisfy { $0.isASCII },
+            "a mixed name still yields an ASCII handle")
+    }
+
+    static func wireNamesAreLookedUpNotParsed() {
+        let id = UUID()
+        func tool(_ name: String, slug: String = "files") -> MCPTool {
+            MCPTool(
+                serverID: id, serverSlug: slug, serverTitle: "文件", name: name, description: "",
+                inputSchema: .object([:]))
+        }
+        let long = String(repeating: "browser_navigate_and_capture_", count: 4)
+        let tools = [
+            tool(long + "screenshot"), tool(long + "pdf"), tool("get.file"), tool("get_file"),
+            tool("读取")
+        ]
+        let wire = tools.map(\.wireName)
+        expect(Set(wire).count == wire.count, "trimmed or sanitised names never collide")
+        expect(wire.allSatisfy { $0.count <= MCPToolName.maxLength }, "every name fits the cap")
+        expect(
+            wire.allSatisfy { name in
+                name.allSatisfy { $0.isASCII && ($0.isLetter || $0.isNumber || "-_".contains($0)) }
+            },
+            "and is provider-safe")
+        expect(wire[3] == "files__get_file", "an untouched name stays readable")
+        expect(
+            MCPToolName.compose(slug: "files", tool: "读取") == wire[4],
+            "the same tool composes the same wire name every time")
+        let routes = MCPToolRoutes(tools)
+        for (index, name) in wire.enumerated() {
+            expect(
+                routes.tool(named: name)?.name == tools[index].name,
+                "\(name) routes back to the tool's own name, not the trimmed one")
+        }
+        expect(routes.tool(named: "files__nothing") == nil, "an unknown name routes nowhere")
+        // A slug saved before transliteration existed still routes, since nothing parses it.
+        let legacy = tool("search", slug: "文件")
+        expect(
+            MCPToolRoutes([legacy]).tool(named: legacy.wireName)?.serverSlug == "文件",
+            "an old non-ASCII handle is found by lookup")
+    }
+
+    static func theHandshakeIsNegotiatedAndPaged() {
+        expect(
+            MCPProtocol.negotiatedVersion(.object(["protocolVersion": .string("2024-11-05")]))
+                == "2024-11-05", "an older version the server picked is held to")
+        expect(
+            MCPProtocol.negotiatedVersion(.object(["protocolVersion": .string("1999-01-01")]))
+                == MCPProtocol.version, "an unknown one falls back to Tinycast's own")
+        expect(MCPProtocol.negotiatedVersion(.object([:])) == MCPProtocol.version, "and so does none")
+        expect(
+            MCPProtocol.nextCursor(.object(["nextCursor": .string("p2")])) == "p2",
+            "a cursor asks for another page")
+        expect(
+            MCPProtocol.nextCursor(.object(["nextCursor": .string("")])) == nil
+                && MCPProtocol.nextCursor(.object([:])) == nil, "an empty or absent one ends the list")
+        expect(MCPProtocol.timeout(for: "initialize") == .seconds(120), "a first npx gets two minutes")
+        expect(MCPProtocol.timeout(for: "tools/call") == .seconds(300), "a tool call five")
+        expect(MCPProtocol.timeout(for: "tools/list") == .seconds(30), "anything else thirty seconds")
+        guard let data = try? MCPProtocol.reply(toRequest: .string("p1"), method: "ping"),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return expect(false, "a ping reply encodes") }
+        expect(
+            object["id"] as? String == "p1" && object["result"] is [String: Any]
+                && object["error"] == nil, "a ping is answered with an empty result")
+        let declined = (try? MCPProtocol.reply(toRequest: .number(2), method: "sampling/createMessage"))
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+        expect(declined?["error"] != nil, "anything else is still declined")
+    }
+
+    static func legacyStreamsAreReadByEventName() {
+        var stream = MCPEventStream()
+        expect(stream.feed(Data("event: endpoint\nda".utf8)).isEmpty, "half an event waits")
+        let events = stream.feed(
+            Data("ta: /messages?session=1\n\n: keepalive\n\nevent: message\r\ndata: {}\r\n\r\n".utf8))
+        expect(
+            events == [
+                .init(name: "endpoint", data: "/messages?session=1"), .init(name: "message", data: "{}")
+            ], "named events arrive whole, comments skipped, CRLF accepted")
+        let base = URL(string: "https://mcp.test:8443/sse")!
+        expect(
+            MCPEventStream.endpoint("/messages?session=1", relativeTo: base)?.absoluteString
+                == "https://mcp.test:8443/messages?session=1", "a relative endpoint joins the stream's")
+        expect(
+            MCPEventStream.endpoint("https://evil.test/messages", relativeTo: base) == nil,
+            "an endpoint on another origin is refused")
+    }
+
+    static func sharedConfigurationImports() {
+        let claude = """
+            {"mcpServers": {
+              "filesystem": {"command": "npx",
+                             "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+                             "env": {"DEBUG": "1"}},
+              "linear": {"url": "https://mcp.linear.app/sse",
+                         "headers": {"Authorization": "Bearer x", "X-Team": "a"}},
+              "off": {"command": "uvx mcp-server-time", "disabled": true}
+            }}
+            """
+        guard let entries = try? MCPServerImport.parse(claude) else {
+            return expect(false, "a Claude Desktop config imports")
+        }
+        expect(entries.map(\.server.name) == ["filesystem", "linear", "off"], "every server, in order")
+        expect(
+            entries[0].server.transport
+                == .stdio(
+                    command: "npx", arguments: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
+                    environmentKeys: ["DEBUG"]) && entries[0].environment == ["DEBUG": "1"],
+            "a command keeps its arguments and environment")
+        expect(
+            entries[1].server.transport == .http(url: "https://mcp.linear.app/sse", headerName: "Authorization")
+                && entries[1].headerValue == "Bearer x" && entries[1].dropped == ["header X-Team"],
+            "a URL keeps its auth header and names the one it could not keep")
+        expect(
+            entries[2].server.transport
+                == .stdio(command: "uvx", arguments: ["mcp-server-time"], environmentKeys: [])
+                && !entries[2].server.isEnabled, "a one-string command is split; disabled stays off")
+        let vscode = #"{"servers": {"gh": {"type": "http", "url": "https://api.githubcopilot.com/mcp/"}}}"#
+        expect((try? MCPServerImport.parse(vscode))?.first?.server.name == "gh", "VS Code's shape imports")
+        expect(
+            (try? MCPServerImport.parse(#"{"command": "node", "args": ["s.js"], "name": "One"}"#))?
+                .first?.server.name == "One", "a single bare server imports")
+        do {
+            _ = try MCPServerImport.parse("not json")
+            expect(false, "plain text is refused")
+        } catch {
+            expect(error as? MCPServerImport.Failure == .notJSON, "plain text is refused as not JSON")
+        }
+        do {
+            _ = try MCPServerImport.parse(#"{"mcpServers": {}}"#)
+            expect(false, "an empty map is refused")
+        } catch {
+            expect(error as? MCPServerImport.Failure == .noServers, "an empty map names no server")
+        }
+
+        let suite = "mcp-import-test-\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: suite) else { return }
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let store = MCPSettingsStore(defaults: defaults)
+        for entry in store.newEntries(in: entries) { store.save(entry.server) }
+        expect(store.servers.count == 3, "an import adds every new server")
+        expect(store.server(slug: "filesystem") != nil, "each under a derived handle")
+        let again = try? MCPServerImport.parse(claude)
+        expect(store.newEntries(in: again ?? []).isEmpty, "pasting the same JSON twice adds nothing")
+        let chinese = try? MCPServerImport.parse(#"{"mcpServers": {"文件": {"command": "files-mcp"}}}"#)
+        for entry in store.newEntries(in: chinese ?? []) { store.save(entry.server) }
+        expect(store.server(slug: "wen-jian") != nil, "a Chinese server name imports with an ASCII handle")
+        expect(
+            MCPServerImport.Summary(added: 2, skipped: 1, dropped: ["linear: header X-Team"]).message
+                == "Imported 2 servers. 1 was already set up. Not kept: linear: header X-Team.",
+            "the summary says what happened")
     }
 }

@@ -19,6 +19,9 @@ struct MCPStdioTests {
         await aServerThatDiesMidCallFailsThatCall()
         await anUnsolicitedServerRequestIsDeclined()
         await stoppingLeavesNothingRunning()
+        await aServersPingIsAnswered()
+        await everyToolPageIsListed()
+        await aSlowFirstLaunchIsWaitedFor()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -117,6 +120,43 @@ struct MCPStdioTests {
         manager.stop()
         expect(manager.tools.isEmpty, "stopping withdraws every tool")
         expect(manager.status(of: stub.server.id) == .stopped, "and forgets the connection")
+    }
+}
+
+extension MCPStdioTests {
+    static func aServersPingIsAnswered() async {
+        guard let stub = StubMCPServer(mode: "ping") else { return }
+        defer { stub.tearDown() }
+
+        let connection = stub.connection()
+        await connection.start()
+        expect(
+            connection.status == .ready(tools: 3),
+            "a ping is answered rather than declined, so the server keeps talking")
+        connection.stop()
+    }
+
+    static func everyToolPageIsListed() async {
+        guard let stub = StubMCPServer(mode: "paged") else { return }
+        defer { stub.tearDown() }
+
+        let connection = stub.connection()
+        await connection.start()
+        expect(
+            connection.tools.map(\.name) == ["read_file", "write_file"],
+            "tools/list follows nextCursor to the last page")
+        connection.stop()
+    }
+
+    /// `npx -y` and `uvx` download on first launch; a 15 s handshake budget failed them.
+    static func aSlowFirstLaunchIsWaitedFor() async {
+        guard let stub = StubMCPServer(mode: "slow-init") else { return }
+        defer { stub.tearDown() }
+
+        let connection = stub.connection()
+        await connection.start()
+        expect(connection.status.isReady, "an initialize that takes 16 s still connects")
+        connection.stop()
     }
 }
 
