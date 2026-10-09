@@ -582,6 +582,12 @@ extension ExtensionTests {
             metadata.recordMenuBarRun(
                 extension: reference.extensionName, command: reference.commandName, now: .distantPast)
         }
+        func stateDetails() -> String {
+            let completed = storage.localStorageValue(extension: "first", key: "completed")
+            let confirmed = storage.localStorageValue(extension: "first", key: "confirmed")
+            return "boots=\(boots.map(\.0)), running=\(manager.isRunning), runtimeAlive=\(lastRuntime != nil), "
+                + "completed=\(String(describing: completed)), confirmed=\(String(describing: confirmed)), errors=\(failures)"
+        }
         check("install does not run a menu command", boots.isEmpty && metadata.menuBarCommands().isEmpty)
         manager.run(first, command: first.manifest.commands[0])
         await settle(until: {
@@ -662,14 +668,17 @@ extension ExtensionTests {
         check(
             "another menu waits for every overlapping action",
             boots.count == beforeReopen && manager.isRunning)
-        await settle(550)
+        await settle(until: {
+            boots.last?.0 == "second"
+                && storage.localStorageValue(extension: "first", key: "completed") == .number(2)
+        })
         check(
             "both actions finish before the queued menu opens",
             boots.last?.0 == "second"
-                && storage.localStorageValue(extension: "first", key: "completed") == .number(2))
+                && storage.localStorageValue(extension: "first", key: "completed") == .number(2), stateDetails())
         secondController.menuDidClose(secondController.menu)
         await settle(until: { !manager.isRunning && lastRuntime == nil })
-        check("reopened action sessions unload after closing", !manager.isRunning && lastRuntime == nil)
+        check("reopened action sessions unload after closing", !manager.isRunning && lastRuntime == nil, stateDetails())
 
         controller.menuWillOpen(controller.menu)
         await settle(200)
@@ -699,11 +708,14 @@ extension ExtensionTests {
         if let index = controller.menu.items.firstIndex(where: { $0.title == "Confirm" }) {
             controller.menuDidClose(controller.menu)
             controller.menu.performActionForItem(at: index)
-            await settle(250)
+            await settle(until: {
+                storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true)
+                    && !manager.isRunning && lastRuntime == nil
+            })
             check(
                 "actions can confirm after opening a background refresh",
                 storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true)
-                    && !manager.isRunning)
+                    && !manager.isRunning, stateDetails())
         } else {
             check("confirmation action exists", false)
         }
@@ -725,16 +737,18 @@ extension ExtensionTests {
             check(
                 "clicking immediately after opening runs the fresh action and unloads",
                 storage.localStorageValue(extension: "first", key: "confirmed") == .bool(true)
-                    && boots.count == beforeEarlyClick + 1 && !manager.isRunning && lastRuntime == nil)
+                    && boots.count == beforeEarlyClick + 1 && !manager.isRunning && lastRuntime == nil, stateDetails())
         } else {
             check("early confirmation action exists", false)
         }
 
         makeOverdue(firstRef)
         manager.synchronize(installed)
-        await settle(450)
+        await settle(until: {
+            boots.last?.1 == .background && !manager.isRunning && lastRuntime == nil
+        })
         check("overdue refresh runs with background launch type", boots.last?.1 == .background)
-        check("background refresh unloads", !manager.isRunning && lastRuntime == nil)
+        check("background refresh unloads", !manager.isRunning && lastRuntime == nil, stateDetails())
         metadata.flush()
         let restored = ExtensionCommandMetadataStore(fileURL: metadataFile)
         check(
@@ -781,11 +795,14 @@ extension ExtensionTests {
         let foregroundRenders = recorder.trees.count
         manager.run(
             job, command: job.manifest.commands[0], type: .background, context: ["origin": .string("menu")])
-        await settle(300)
+        await settle(until: {
+            storage.localStorageValue(extension: "job", key: "context")
+                == .string("background:menu") && !manager.isRunning && lastRuntime == nil
+        })
         check(
             "background no-view receives scoped context",
             storage.localStorageValue(extension: "job", key: "context")
-                == .string("background:menu") && !manager.isRunning && lastRuntime == nil)
+                == .string("background:menu") && !manager.isRunning && lastRuntime == nil, stateDetails())
         check(
             "no-view launch creates no menu snapshot",
             !metadata.metadata(extension: "job", command: "bar").menuBarEnabled)
