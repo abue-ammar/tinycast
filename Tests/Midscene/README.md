@@ -72,6 +72,6 @@ within a 900 MiB site limit. Original report artifacts remain available for 14 d
 artifacts retain history for 90 days. Shard, combined and Pages artifact names include the attempt,
 and reruns clear prior output before merging so stale evidence is not mixed into new results.
 
-Startup checks the owned application window and focused PID before attempting to raise it. An already ready palette incurs no AppleScript call. Startup artifacts record final `ready` and `inspection` separately from historical `attempts` and `warnings`.
+Startup checks the owned application window and focused PID before attempting to raise it. An already ready palette incurs no activation or AppleScript call. Otherwise the owned app is activated natively before attempting AppleScript as a fallback. Startup artifacts record final `ready` and `inspection` separately from historical `attempts` and `warnings`.
 
 The launcher journey uses a synthetic, isolated AppKit fixture. The visible fixture label does not prove its launch origin; the keyboard action trace and owned fixture PID provide that evidence. This case does not cover the global hotkey, the real application index, or a Release distribution package.

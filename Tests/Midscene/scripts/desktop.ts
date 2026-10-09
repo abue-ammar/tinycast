@@ -97,12 +97,13 @@ export async function openCase(id: string, onTeardown: (cleanup: () => Promise<v
 import ApplicationServices
 import Foundation
 let args = CommandLine.arguments
-if args.count != 4 { exit(2) }
+if args.count != 4 && args.count != 5 { exit(2) }
 let pid = pid_t(args[1])!
 guard let app = NSRunningApplication(processIdentifier: pid),
     app.bundleIdentifier == args[2],
     app.bundleURL?.resolvingSymlinksInPath() == URL(fileURLWithPath: args[3]).resolvingSymlinksInPath()
 else { print("{}"); exit(1) }
+if args.count == 5 && args[4] == "activate" { _ = app.activate(options: []) }
 let element = AXUIElementCreateApplication(pid)
 func value(_ element: AXUIElement, _ name: String) -> CFTypeRef? {
     var value: CFTypeRef?
@@ -152,6 +153,10 @@ print(String(decoding: data, as: UTF8.self))
       })) as Record<string, unknown>;
     },
     raise: () => {
+      const activated = JSON.parse(execFileSync(focusTool, [String(child!.pid), bundle, copy, 'activate'], {
+        encoding: 'utf8', timeout: 5000, stdio: ['ignore', 'pipe', 'pipe'],
+      })) as Record<string, unknown>;
+      if (Number(activated.windowCount) > 0 && activated.focusedApplicationPID === child!.pid) return;
       execFileSync('osascript', ['-e', `tell application "System Events"
         tell (first process whose unix id is ${child!.pid})
           set frontmost to true
