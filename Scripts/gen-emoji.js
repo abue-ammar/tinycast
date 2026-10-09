@@ -26,7 +26,6 @@ const KEYWORD_LOCALES = {
   pt: "pt",
   ru: "ru",
   zh: "zh-Hans",
-  "zh-Hant": "zh-Hant",
 };
 
 const GROUP_TO_CATEGORY = {

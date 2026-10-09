@@ -71,7 +71,9 @@ struct EmojiTests {
             (try? FileManager.default.contentsOfDirectory(
                 at: packDirectory, includingPropertiesForKeys: nil)) ?? []
         let available = packs.map { $0.deletingPathExtension().lastPathComponent }
-        expect(available.count >= 5, "keyword packs ship (\(available.count))")
+        expect(
+            Set(available) == ["de", "es", "fr", "ja", "ko", "pt", "ru", "zh-Hans"],
+            "keyword packs ship for the supported languages")
         let glyphs = Set(entries.map(\.glyph))
         for pack in packs {
             let lines = ((try? String(contentsOf: pack, encoding: .utf8)) ?? "").split(separator: "\n")
@@ -93,8 +95,8 @@ struct EmojiTests {
             (["en-US"], []),
             (["en-GB", "fr-CA"], ["fr"]),
             (["fr-FR", "de-DE", "fr-CA"], ["fr", "de"]),
-            (["zh-HK"], ["zh-Hant"]),
-            (["zh-Hans-CN", "zh-Hant-TW"], ["zh-Hans", "zh-Hant"]),
+            (["zh-CN"], ["zh-Hans"]),
+            (["zh-Hans-CN", "zh-SG"], ["zh-Hans"]),
             (["pt-PT"], ["pt"]),
             (["sr-Latn-RS"], [])
         ] {
