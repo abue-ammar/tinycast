@@ -5,6 +5,7 @@
 
 import { createHarness, bootConfig, describeTree } from "./test.mjs";
 import { transformSync } from "esbuild";
+import * as nodeNet from "node:net";
 
 let passes = 0;
 let failures = 0;
@@ -572,6 +573,30 @@ export default async function Command() {
 }
 `;
 
+const ipInputs = [
+  "0.0.0.0", "127.0.0.1", "192.168.1.42", "255.255.255.255",
+  "::", "::1", "2001:db8::1", "FE80:0:0:0:0:0:0:1", "fe80::1%en0",
+  "::ffff:192.168.1.42", "1:2:3:4:5:6:192.168.1.42", "::192.168.1.42",
+  "", "hue.local", "256.0.0.1", "192.168.01.42", "127.1", "0x7f.0.0.1",
+  "192.168.1.42/24", "192.168.1.42:80", " 127.0.0.1", "127.0.0.1\n",
+  "[::1]", "::1/128", "::1%", "fe80::1%en_0", "::1%en0%en1",
+  "1:2:3:4:5:6:7", "1:2:3:4:5:6:7:8:9", "1:2:3:4:5:6:7:8::",
+  "1::2::3", ":::1", "1:::2", "::gggg", "::12345", "::1\n",
+  "::ffff:192.168.01.42", "::ffff:256.1.1.1", "1:2:3:4:5:192.168.1.42",
+  null, 123,
+];
+
+const ipValidationSource = `
+import net from "net";
+import { isIP, isIPv4, isIPv6 } from "node:net";
+
+export default function Command() {
+  globalThis.__ipValidation = ${JSON.stringify(ipInputs)}.map((input) => [
+    net.isIP(input), isIP(input), isIPv4(input), isIPv6(input),
+  ]);
+}
+`;
+
 const namespaceImportSource = `
 import * as net from "node:net";
 import * as vm from "node:vm";
@@ -1122,6 +1147,15 @@ export async function runFixtures() {
     check("a once listener fires once and handleEvent sees the target", JSON.stringify(result?.calls) === JSON.stringify(["once", true, true]), JSON.stringify(result?.calls));
     check("preventDefault cancels a cancelable event", result?.notCancelled === false, String(result?.notCancelled));
     check("a port delivers a clone after posting returns", result?.data?.n === 1 && result?.early === false, JSON.stringify(result));
+  });
+
+  await run("net validates IP addresses like Node", ipValidationSource, "no-view", async (harness) => {
+    const results = harness.call("globalThis.__ipValidation");
+    check("address validation does not fail the command", harness.state.failures.length === 0, JSON.stringify(harness.state.failures));
+    for (const [index, input] of ipInputs.entries()) {
+      const expected = [nodeNet.isIP(input), nodeNet.isIP(input), nodeNet.isIPv4(input), nodeNet.isIPv6(input)];
+      check(`validates ${JSON.stringify(input)}`, JSON.stringify(results?.[index]) === JSON.stringify(expected), JSON.stringify(results?.[index]));
+    }
   });
 
   await run("a namespace import keeps the shim's named members", namespaceImportSource, "no-view", async (harness) => {

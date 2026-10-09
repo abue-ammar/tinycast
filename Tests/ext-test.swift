@@ -1081,6 +1081,8 @@ struct ExtensionTests {
             const crypto = require("node:crypto");
             const { fileURLToPath, pathToFileURL } = require("node:url");
             const util = require("node:util");
+            const net = require("net");
+            const { isIPv4, isIPv6 } = require("node:net");
             const h = React.createElement;
             module.exports.default = function Command() {
               const [count, setCount] = React.useState(0);
@@ -1093,6 +1095,9 @@ struct ExtensionTests {
                 return () => clearTimeout(timer);
               }, []);
               const digest = crypto.createHash("sha256").update("abc").digest("hex").slice(0, 8);
+              const addresses = ["192.168.1.42", "::1", "::ffff:192.168.1.42", "hue.local"];
+              const ipValidation = addresses.map(net.isIP).join(",") + ","
+                + isIPv4("192.168.01.42") + "," + isIPv6("fe80::1%en0");
               const cpu = os.cpus()[0];
               const cpuTimes = Object.values(cpu.times).every(Number.isFinite) ? "cpu=ok" : "cpu=bad";
               // AbortSignal's statics, the brand node-fetch checks, and url.parse's legacy `path`.
@@ -1152,6 +1157,7 @@ struct ExtensionTests {
                   accessories: [
                     { text: digest }, { text: abortable }, { text: filePaths },
                     { text: cpuTimes }, { text: cipherShim }, { text: utilShim },
+                    { text: ipValidation },
                   ],
                   actions: h(ActionPanel, null,
                     h(Action, { title: "Bump", onAction: () => setCount((v) => v + 10) }))
@@ -1217,8 +1223,14 @@ struct ExtensionTests {
             String(describing: screen.items.first?.node.array("accessories").dropFirst(4).first))
         check(
             "util shim answers debuglog, stripVTControlCharacters, aborted and inspect.custom",
-            ExtensionAccessoriesView_labelForTest(screen.items.first?.node.array("accessories").last)
+            ExtensionAccessoriesView_labelForTest(
+                screen.items.first?.node.array("accessories").dropFirst(5).first)
                 == "function,false,undefined,red,n=2,true,function",
+            String(describing: screen.items.first?.node.array("accessories").dropFirst(5).first))
+        check(
+            "net validates Hue bridge addresses in JavaScriptCore",
+            ExtensionAccessoriesView_labelForTest(screen.items.first?.node.array("accessories").last)
+                == "4,6,6,0,false,true",
             String(describing: screen.items.first?.node.array("accessories").last))
 
         // Dispatch the row's action and confirm the re-render.
