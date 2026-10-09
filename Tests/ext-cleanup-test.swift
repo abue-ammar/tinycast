@@ -182,6 +182,42 @@ struct ExtensionCleanupTests {
             "the beta channel is searched")
     }
 
+    static func bundledDependenciesSurviveInstall() {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ext-install-test-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let source = base.appendingPathComponent("source", isDirectory: true)
+        let dependencies = source.appendingPathComponent("node_modules/example", isDirectory: true)
+        let destination = base.appendingPathComponent("installed", isDirectory: true)
+        do {
+            try FileManager.default.createDirectory(at: dependencies, withIntermediateDirectories: true)
+            let manifest =
+                #"{"name":"fixture","title":"Fixture","commands":[{"name":"main","title":"Main","mode":"no-view"}]}"#
+            try Data(manifest.utf8).write(to: source.appendingPathComponent("package.json"))
+            try Data("module.exports = {};".utf8).write(to: source.appendingPathComponent("main.js"))
+            try Data("source map".utf8).write(to: source.appendingPathComponent("main.js.map"))
+            try Data("module.exports = 42;".utf8).write(to: dependencies.appendingPathComponent("index.js"))
+            let installed = try ExtensionCatalog.install(from: source, in: destination)
+            let copied = installed.directory.appendingPathComponent("node_modules/example/index.js")
+            let content = try String(contentsOf: copied, encoding: .utf8)
+            expect(content == "module.exports = 42;", "bundled dependency bytes survive installation")
+            expect(
+                !FileManager.default.fileExists(
+                    atPath: installed.directory.appendingPathComponent("main.js.map").path),
+                "command source maps remain excluded")
+            try FileManager.default.removeItem(at: source.appendingPathComponent("node_modules"))
+            let replaced = try ExtensionCatalog.install(from: source, in: destination)
+            expect(
+                !FileManager.default.fileExists(
+                    atPath: replaced.directory.appendingPathComponent("node_modules").path),
+                "reinstall without dependencies removes the previous bundled packages")
+            expect(
+                replaced.bundleURL(for: replaced.manifest.commands[0]) != nil, "inlined builds still install")
+        } catch {
+            expect(false, "install fixture failed: \(error)")
+        }
+    }
+
     static func main() {
         bothRaycastChannelsAreSearched()
         sweepTakesOnlyOurWorkspaces()
@@ -191,6 +227,7 @@ struct ExtensionCleanupTests {
         emptyAndMissingRootsAreSafe()
         workspaceIsSweptByItsOwnPrefix()
         executableAssetsAreRestored()
+        bundledDependenciesSurviveInstall()
 
         print(failures == 0 ? "Extension cleanup tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)

@@ -41,12 +41,12 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 
 ## How it works
 
-A Raycast extension command is a **single prebuilt CommonJS file** that keeps `react`,
-`react/jsx-runtime`, `@raycast/api` and the Node built-ins external. Tinycast supplies exactly those,
-runs the bundle, and renders the React tree it produces:
+A Raycast extension command is a **prebuilt CommonJS file** that keeps `react`,
+`react/jsx-runtime`, `@raycast/api` and the Node built-ins external. Tinycast supplies those and
+resolves any third-party packages shipped under `node_modules/`, then renders the React tree:
 
 ```
-  <command>.js  (esbuild output, deps inlined)
+  <command>.js  (esbuild output, deps inlined or in node_modules)
         │  require("@raycast/api"), require("react"), require("node:fs"), …
         ▼
   RaycastRuntime.generated.js          ← in the app bundle; React 19 + react-reconciler
@@ -456,7 +456,8 @@ real app; see [launcher.md](launcher.md#owner-names).
 
 Extensions live in `~/Library/Application Support/<bundle id>/extensions/<name>/`, keyed by bundle id
 like everything else, so a Debug build never shares installs with a release channel. A directory holds
-`package.json`, `assets/` and one `<command>.js` per command — byte-for-byte the layout Raycast's own
+`package.json`, `assets/`, one `<command>.js` per command and, when the build externalised
+dependencies, a `node_modules/` of pre-built packages — byte-for-byte the layout Raycast's own
 build produces.
 
 Settings → Extensions offers four routes, under **Install New**:
@@ -475,8 +476,11 @@ Settings → Extensions offers four routes, under **Install New**:
 4. **Add from folder** — pick any directory with a manifest and built command files, e.g. an extension
    you just ran `ray build` in.
 
-Only `package.json`, the built commands and `assets/` are copied — never `node_modules` or the
-multi-megabyte `.js.map` Raycast writes beside each bundle.
+Only `package.json`, the built commands, `assets/` and any bundled `node_modules/` are copied —
+never the multi-megabyte `.js.map` Raycast writes beside each bundle. Store `dist` bundles leave
+third-party packages external and ship them, pre-built CommonJS, under `node_modules/`; the embedded
+runtime resolves those from the command's directory, so they must survive the install. A build that
+inlined everything simply has no such folder.
 
 ## Installing from GitHub
 

@@ -21,6 +21,15 @@ what you touched.
 
 ## The harnesses
 
+Runtime dependency resolution also has standalone checks:
+
+```sh
+node Scripts/raycast-runtime/modules-fixtures.mjs
+```
+
+They cover shipped CommonJS packages, exports maps, relative directories, nested dependencies,
+cycles and failed-load retries. The runtime fixture suite includes the same checks.
+
 ```sh
 ./Scripts/run-tests.sh              # all of them
 ./Scripts/run-tests.sh calc-test    # just one, while iterating

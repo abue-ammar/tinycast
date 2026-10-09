@@ -5,6 +5,7 @@
 
 import { createHarness, bootConfig, describeTree } from "./test.mjs";
 import { transformSync } from "esbuild";
+import { runModuleFixtures } from "./modules-fixtures.mjs";
 
 let passes = 0;
 let failures = 0;
@@ -1331,6 +1332,8 @@ export async function runFixtures() {
   await wait();
   check("a throwing component reports a failure", harness.state.failures.some((message) => message.includes("kaboom")), harness.state.failures.join("|"));
   harness.stop("s1");
+
+  await runModuleFixtures(check);
 
   console.log(failures === 0 ? "\nAll runtime fixtures passed." : `\n${failures} check(s) failed.`);
   if (import.meta.url === `file://${process.argv[1]}`) process.exit(failures === 0 ? 0 : 1);

@@ -190,6 +190,7 @@ struct ExtensionTests {
         deepLinkChecks()
         nodeShimChecks()
         await runtimeChecks()
+        await bundledModuleChecks()
         await navigationSearchRuntimeChecks()
         await searchAccessoryRuntimeChecks()
         await nodeContractChecks()
@@ -202,6 +203,52 @@ struct ExtensionTests {
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    @MainActor
+    static func bundledModuleChecks() async {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ext-bundled-test-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let source = base.appendingPathComponent("source", isDirectory: true)
+        let package = source.appendingPathComponent("node_modules/bundled", isDirectory: true)
+        let (runtime, _, recorder) = makeRuntime()
+        defer { runtime.shutdown() }
+        do {
+            try FileManager.default.createDirectory(at: package, withIntermediateDirectories: true)
+            let manifest =
+                #"{"name":"fixture","title":"Fixture","commands":[{"name":"main","title":"Main","mode":"view"}]}"#
+            try Data(manifest.utf8).write(to: source.appendingPathComponent("package.json"))
+            let command = #"""
+                const React = require("react");
+                const { Detail } = require("@raycast/api");
+                const value = require("bundled");
+                module.exports.default = () => React.createElement(Detail, { markdown: String(value) });
+                """#
+            try Data(command.utf8).write(to: source.appendingPathComponent("main.js"))
+            try Data(#"{"exports":{".":"./index.js","./data":"./data.json"}}"#.utf8)
+                .write(to: package.appendingPathComponent("package.json"))
+            try Data(#"module.exports = require("bundled/data").value + 1;"#.utf8)
+                .write(to: package.appendingPathComponent("index.js"))
+            try Data(#"{"value":41}"#.utf8).write(to: package.appendingPathComponent("data.json"))
+            let installed = try ExtensionCatalog.install(
+                from: source, in: base.appendingPathComponent("installed"))
+            let file = installed.directory.appendingPathComponent("main.js")
+            try await runtime.boot(config: .current(supportDirectory: base))
+            await runtime.start(
+                session: "bundled", code: try String(contentsOf: file, encoding: .utf8), file: file,
+                mode: .view, context: launchContext())
+            await settle()
+            check(
+                "installed packages resolve in JavaScriptCore",
+                recorder.trees.last?.activeRoot?.string("markdown") == "42")
+            check(
+                "bundled packages report no native runtime failures", recorder.failures.isEmpty,
+                recorder.failures.joined())
+            await runtime.stop(session: "bundled")
+        } catch {
+            check("bundled module fixture completes", false, String(describing: error))
+        }
     }
 
     static func nodeShimChecks() {
