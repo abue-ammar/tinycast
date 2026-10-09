@@ -458,6 +458,30 @@ export default async function Command() {
 }
 `;
 
+const unixHTTPSource = `
+import http from "node:http";
+
+export default async function Command() {
+  globalThis.__unixHTTP = [];
+  for (const input of [
+    { socketPath: "/var/run/docker.sock", path: "/containers/json?all=1", method: "post" },
+    "http://unused.test/images/json",
+  ]) {
+    const result = await new Promise((resolve, reject) => {
+      const options = typeof input === "string" ? { socketPath: "/tmp/docker.sock" } : {};
+      const request = http.request(input, options, (response) => {
+        const chunks = [];
+        response.on("data", (chunk) => chunks.push(chunk));
+        response.on("end", () => resolve({ status: response.statusCode, hex: Buffer.concat(chunks).toString("hex") }));
+      });
+      request.on("error", reject);
+      request.end(Buffer.from([0, 255, 1]));
+    });
+    globalThis.__unixHTTP.push(result);
+  }
+}
+`;
+
 // Hide My Email hands axios a cookie jar through axios-cookiejar-support, whose http-cookie-agent
 // extends `http.Agent` at load time and hooks each request in `addRequest` — the same way this does.
 // A bundled `ws` reaches the network the way this does: upgrade, then raw frames on the socket.
@@ -1043,6 +1067,7 @@ export async function runFixtures() {
       const result = harness.call("globalThis.__http");
       const spec = httpSpecs[0] ?? {};
       check("sends one request over the fetch bridge", httpSpecs.length === 1, String(httpSpecs.length));
+      check("ordinary HTTP does not select a Unix socket", spec.socketPath === undefined);
       check("uppercases the method", spec.method === "POST", String(spec.method));
       check("joins a multi-valued header", spec.headers?.["x-probe"] === "one, two", JSON.stringify(spec.headers));
       check("leaves content negotiation to the transport", spec.headers?.["accept-encoding"] === undefined);
@@ -1068,6 +1093,19 @@ export async function runFixtures() {
       },
     },
   );
+
+  const unixSpecs = [];
+  await run("Docker HTTP preserves its Unix socket", unixHTTPSource, "no-view", async (harness) => {
+    check("options preserve Docker's socket path", unixSpecs[0]?.socketPath === "/var/run/docker.sock");
+    check("URL requests preserve the supplied socket", unixSpecs[1]?.socketPath === "/tmp/docker.sock");
+    check("keeps the API path and query", unixSpecs[0]?.url === "http://localhost/containers/json?all=1");
+    check("keeps the request method and binary body", unixSpecs[0]?.method === "POST" && unixSpecs[0]?.bodyBase64 === "AP8B");
+    const result = harness.call("globalThis.__unixHTTP");
+    check("returns HTTP errors and binary bodies", result?.length === 2 && result.every((r) => r.status === 404 && r.hex === "00ff01"));
+  }, { stubs: { "fetch.request": ([spec]) => {
+    unixSpecs.push(spec);
+    return { status: 404, headers: {}, bodyBase64: "AP8B" };
+  } } });
 
   const socketOpens = [];
   const lookups = [];

@@ -1157,9 +1157,6 @@ function runAsync(spec, options, callback, label) {
 
 // ─── http / https ───────────────────────────────────────────────────
 
-// Bundles ship their own HTTP client — node-fetch travels inside `@raycast/utils` — and drive
-// `http.request` instead of global `fetch`. One request, buffered both ways, over the same
-// URLSession bridge `fetch` uses: no sockets, no streaming, no keep-alive.
 class IncomingMessage extends PassThrough {
   constructor(raw) {
     super();
@@ -1235,6 +1232,7 @@ class ClientRequest extends EventEmitter {
       this.path = target.pathname + target.search;
     }
     this.method = String(options.method ?? "GET").toUpperCase();
+    this.socketPath = options.socketPath;
     this.writable = true;
     this.writableEnded = false;
     this._headers = new Map();
@@ -1316,6 +1314,7 @@ class ClientRequest extends EventEmitter {
       const raw = await hostCall("fetch", "request", [
         {
           url: this.url,
+          ...(this.socketPath ? { socketPath: this.socketPath } : {}),
           method: this.method,
           headers: this.getHeaders(),
           bodyBase64: body === null ? null : body.toString("base64"),

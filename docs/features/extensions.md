@@ -120,7 +120,7 @@ Two host-call flavours:
 | `Service/ExtensionRuntime.swift`              | the `JSContext`, host-function installation, timers, exception reporting                                   |
 | `Service/ExtensionHostBridge.swift`           | main-actor host APIs (clipboard, storage, cache, window, toasts, system)                            |
 | `Service/ExtensionNodeShims.swift`            | the synchronous `fs` / `os` / `child_process` / `crypto` / `zlib` services                                 |
-| `Service/ExtensionFetcher.swift`              | `fetch` over `URLSession`, plus collecting async `exec` children and the shared PATH resolver              |
+| `Service/ExtensionFetcher.swift`              | HTTP over `URLSession` or a Unix socket, plus async `exec` collection and the shared PATH resolver         |
 | `Service/ExtensionWebSocketBridge.swift`      | `URLSessionWebSocketTask` connections, opened and read from JS                                             |
 | `Service/ExtensionNameResolver.swift`         | `getaddrinfo`, which is how a `.local` name resolves                                                       |
 | `Service/ExtensionStorage.swift`              | per-extension `LocalStorage`, `Cache` and preference values (one JSON file each)                           |
@@ -675,7 +675,7 @@ the descriptor calls `tar` unpacks through), `os`,
 each async form reporting the child's real `pid` for `process.kill` — Timers pauses that way),
 `crypto` (hashes, HMAC, PBKDF2, AES-CBC/ECB, random, UUID), `zlib` (gzip/zlib/raw deflate, both
 directions, plus `create*` streams that buffer until `end`), `http`/`https` (`request`, `get` and `Agent`, buffered over the same URLSession bridge
-as `fetch`), `stream` (`Readable`, `Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`,
+as `fetch`, with `socketPath` for Unix-socket HTTP), `stream` (`Readable`, `Writable`, `Duplex`, `Transform`, `PassThrough`, `pipeline`,
 `finished`, plus `stream/promises` and `stream/web`), `util`, `events`, `buffer`, `url`, `querystring`, `punycode`, `assert`,
 `string_decoder`, `timers`. Every other built-in resolves to a stub that throws only when used, so a
 bundle that merely references `http2` or `domain` still loads. Those stubs are manufactured lazily,
@@ -727,6 +727,14 @@ A bundle that ships its own HTTP client rather than calling `fetch` — node-fet
 shim answers it: one request when the body ends, one response chunk when the bridge replies. The
 transport decodes for us, so the response drops `content-encoding` and `content-length` rather than
 have the client gunzip plaintext.
+
+An explicit `socketPath` selects Unix-socket HTTP, which Docker uses for its local daemon. The host
+runs macOS's bundled `/usr/bin/curl` off-main because URLSession has no public Unix-socket transport.
+The child bypasses proxies and user curl configuration, decodes compressed bodies, and returns HTTP
+statuses, headers and binary bodies through the same bridge. Cancellation terminates and collects
+that request's child; request-body scratch files are private and removed on exit. Requests without
+`socketPath` continue through the shared ephemeral URLSession. Responses remain buffered, so Docker
+log streams, event streams and interactive attach sessions are outside this transport's support.
 
 Two things decide whether it gets there. Axios enables that adapter only when
 `Object.prototype.toString.call(process)` reads `[object process]`, so `process` carries the tag; and

@@ -44,7 +44,13 @@ final class ExtensionFetcher: Sendable {
             request.httpBody = body
         }
 
-        let (data, response) = try await session.data(for: request)
+        let data: Data
+        let response: URLResponse
+        if let socketPath = fields["socketPath"]?.stringValue, !socketPath.isEmpty {
+            (data, response) = try await Self.socketResponse(for: request, socketPath: socketPath)
+        } else {
+            (data, response) = try await session.data(for: request)
+        }
         let http = response as? HTTPURLResponse
         var headers: [String: String] = [:]
         for (key, value) in http?.allHeaderFields ?? [:] {
@@ -59,6 +65,76 @@ final class ExtensionFetcher: Sendable {
             "url": response.url?.absoluteString ?? urlString,
             "bodyBase64": data.base64EncodedString()
         ]
+    }
+
+    @concurrent
+    private static func socketResponse(
+        for request: URLRequest, socketPath: String
+    ) async throws -> (Data, HTTPURLResponse) {
+        try Task.checkCancellation()
+        guard let url = request.url, ["http", "https"].contains(url.scheme) else {
+            throw URLError(.unsupportedURL)
+        }
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let marker = "\nTinycastSocketResponse:"
+        var arguments = [
+            "--disable", "--silent", "--globoff", "--noproxy", "*", "--compressed",
+            "--max-time", "60", "--unix-socket", socketPath,
+            "--request", request.httpMethod ?? "GET",
+            "--write-out", marker + "{\"info\":%{json},\"headers\":%{header_json}}"
+        ]
+        for (name, value) in request.allHTTPHeaderFields ?? [:] {
+            arguments += ["--header", value.isEmpty ? "\(name);" : "\(name): \(value)"]
+        }
+        if let body = request.httpBody {
+            try FileManager.default.createDirectory(
+                at: directory, withIntermediateDirectories: false,
+                attributes: [.posixPermissions: 0o700])
+            let file = directory.appendingPathComponent("body")
+            try body.write(to: file)
+            arguments += ["--data-binary", "@\(file.path)"]
+            if request.value(forHTTPHeaderField: "Content-Type") == nil {
+                arguments += ["--header", "Content-Type:"]
+            }
+        }
+        if request.httpMethod == "HEAD" { arguments += ["--head"] }
+        arguments += ["--url", url.absoluteString]
+        let process = Process()
+        let output = Pipe()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/curl")
+        process.arguments = arguments
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = output
+        process.standardError = FileHandle.nullDevice
+        let bytes = try await withTaskCancellationHandler {
+            let exit = try process.runObservingExit()
+            defer {
+                if process.isRunning { process.terminate() }
+                exit.wait()
+            }
+            if Task.isCancelled, process.isRunning { process.terminate() }
+            let bytes = try output.fileHandleForReading.readToEnd() ?? Data()
+            exit.wait()
+            try Task.checkCancellation()
+            guard process.terminationStatus == 0 else {
+                throw URLError(process.terminationStatus == 28 ? .timedOut : .cannotConnectToHost)
+            }
+            return bytes
+        } onCancel: {
+            if process.isRunning { process.terminate() }
+        }
+        guard let boundary = bytes.range(of: Data(marker.utf8), options: .backwards),
+            let metadata = try JSONSerialization.jsonObject(with: bytes.suffix(from: boundary.upperBound))
+                as? [String: Any],
+            let info = metadata["info"] as? [String: Any], let status = info["http_code"] as? Int,
+            let rawHeaders = metadata["headers"] as? [String: [String]]
+        else { throw URLError(.badServerResponse) }
+        let headers = rawHeaders.mapValues { $0.joined(separator: ", ") }
+        guard let response = HTTPURLResponse(
+            url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)
+        else { throw URLError(.badServerResponse) }
+        return (request.httpMethod == "HEAD" ? Data() : bytes.prefix(upTo: boundary.lowerBound), response)
     }
 }
 
