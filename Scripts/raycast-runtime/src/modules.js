@@ -23,6 +23,13 @@ export function requireModule(name) {
   );
 }
 
+/// Bundles built with `createRequire` (e.g. apple-passwords lazily requires `@raycast/api`
+/// through it) resolve against the same registry; the base path is irrelevant in one-file bundles.
+const nodeRequire = (name) => requireModule(name);
+nodeRequire.resolve = (name) => String(name);
+nodeRequire.cache = {};
+nodeModules["module"].createRequire = () => nodeRequire;
+
 /// Evaluate one CJS bundle. `filename`/`dirname` matter: extensions resolve bundled assets relative
 /// to `__dirname`, and `environment.assetsPath` points at the same directory.
 export function evaluateCommonJS(code, filename, dirname) {

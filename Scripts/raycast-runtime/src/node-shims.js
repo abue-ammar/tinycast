@@ -1830,7 +1830,7 @@ export const nodeModules = {
   readline: unsupportedModule("readline"),
   tty: { isatty: () => false },
   vm: unsupportedModule("vm"),
-  module: { createRequire: () => requireStub, builtinModules: [] },
+  module: { builtinModules: [] },
   constants: {},
   cluster: { isPrimary: true, isMaster: true },
   inspector: {},
@@ -1838,10 +1838,6 @@ export const nodeModules = {
   async_hooks: { AsyncLocalStorage, AsyncResource },
   diagnostics_channel: diagnosticsChannel,
 };
-
-function requireStub(name) {
-  throw new Error(`createRequire is not supported in Tinycast extensions (tried to load "${name}").`);
-}
 
 // Every remaining Node builtin resolves to a refuse-on-use stub. Bundles reference the whole
 // long tail (http2, domain, repl, …) from dependencies that only touch them on paths an

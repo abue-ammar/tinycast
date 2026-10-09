@@ -295,6 +295,22 @@ module.exports.default = () => {
 };
 `;
 
+// apple-passwords lazily requires `@raycast/api` through `createRequire`, so it must resolve
+// through the same registry as a top-level require.
+const createRequireSource = `
+import { createRequire } from "module";
+import { Detail } from "@raycast/api";
+
+const requireFromHere = createRequire("/fixtures/package.json");
+
+export default function Command() {
+  const api = requireFromHere("@raycast/api");
+  const path = requireFromHere("node:path");
+  const parts = [String(api.List !== undefined), String(api.ActionPanel !== undefined), path.join("a", "b")];
+  return <Detail markdown={parts.join("\\n")} />;
+}
+`;
+
 // Bundled HTTP clients (axios) construct and probe a Response at module scope, before any component
 // mounts — a host-shaped constructor took the whole command down with them.
 const responseSource = `
@@ -921,6 +937,12 @@ export async function runFixtures() {
       "ERR_INVALID_URL_SCHEME",
     ];
     expected.forEach((value, index) => check(`shim ${index}: ${value}`, markdown[index] === value, markdown[index]));
+  });
+
+  await run("createRequire resolves through the module registry", createRequireSource, "view", async (harness) => {
+    const markdown = findNode(harness.state.trees.at(-1), "Detail").props.markdown.split("\n");
+    check("lazily requires @raycast/api", markdown[0] === "true" && markdown[1] === "true", markdown.join(","));
+    check("resolves a Node builtin", markdown[2] === "a/b", markdown[2]);
   });
 
   await run("Response takes the Web spec's constructor", responseSource, "no-view", async (harness) => {
