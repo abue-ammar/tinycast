@@ -703,23 +703,32 @@ export function utf8Encode(text) {
   return new Uint8Array(out);
 }
 
-export function utf8Decode(bytes) {
+/// WHATWG decoding, as Node does: a malformed sequence becomes U+FFFD, or throws when `fatal`.
+export function utf8Decode(bytes, fatal = false) {
   let out = "";
   for (let i = 0; i < bytes.length; ) {
     const byte = bytes[i++];
-    if (byte < 0x80) out += String.fromCharCode(byte);
-    else if (byte < 0xe0) out += String.fromCharCode(((byte & 0x1f) << 6) | (bytes[i++] & 0x3f));
-    else if (byte < 0xf0)
-      out += String.fromCharCode(
-        ((byte & 0x0f) << 12) | ((bytes[i++] & 0x3f) << 6) | (bytes[i++] & 0x3f),
-      );
+    if (byte < 0x80) {
+      out += String.fromCharCode(byte);
+      continue;
+    }
+    const needed =
+      byte >= 0xc2 && byte <= 0xdf ? 1 : byte >= 0xe0 && byte <= 0xef ? 2 : byte >= 0xf0 && byte <= 0xf4 ? 3 : 0;
+    let code = needed === 1 ? byte & 0x1f : needed === 2 ? byte & 0x0f : byte & 0x07;
+    let lower = byte === 0xe0 ? 0xa0 : byte === 0xf0 ? 0x90 : 0x80;
+    let upper = byte === 0xed ? 0x9f : byte === 0xf4 ? 0x8f : 0xbf;
+    let seen = 0;
+    while (seen < needed && i < bytes.length && bytes[i] >= lower && bytes[i] <= upper) {
+      code = (code << 6) | (bytes[i++] & 0x3f);
+      lower = 0x80;
+      upper = 0xbf;
+      seen++;
+    }
+    if (needed > 0 && seen === needed) out += String.fromCodePoint(code);
+    else if (!fatal) out += "\ufffd";
     else {
-      const code =
-        ((byte & 0x07) << 18) |
-        ((bytes[i++] & 0x3f) << 12) |
-        ((bytes[i++] & 0x3f) << 6) |
-        (bytes[i++] & 0x3f);
-      out += String.fromCodePoint(code);
+      const error = new TypeError("The encoded data was not valid for encoding utf-8");
+      throw Object.assign(error, { code: "ERR_ENCODING_INVALID_ENCODED_DATA" });
     }
   }
   return out;
@@ -807,7 +816,7 @@ if (!g.TextDecoder) {
       if (!this.ignoreBOM && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
         bytes = bytes.subarray(3);
       }
-      return utf8Decode(bytes);
+      return utf8Decode(bytes, this.fatal);
     }
   };
 }
