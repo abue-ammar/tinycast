@@ -77,12 +77,19 @@ reviews:
         - Mutex (Synchronization) over NSLock or a serial DispatchQueue for state outside an actor.
         - Duration, ContinuousClock and Task.sleep(for:) for elapsed time and delays, instead of
           raw nanoseconds or wall-clock Date arithmetic. Keep Date for calendar and wall-clock time.
-        - AsyncStream.makeStream(of:) and async sequences over callback plumbing.
+        - For genuinely asynchronous event streams, AsyncStream.makeStream(of:) and async
+          sequences over callback plumbing. Preserve synchronous callbacks and their semantics.
         - FormatStyle (.formatted) over new DateFormatter or NumberFormatter instances for display.
         - URL(filePath:), appending(path:) and URL.homeDirectory over string paths; pure models
           still receive the home directory as a parameter.
 
         Strict concurrency:
+        - Prefer synchronous code. Keep short UI and state operations synchronous on @MainActor.
+          Introduce concurrency only for genuinely asynchronous operations or blocking work that
+          must leave the main actor. Shared state alone does not justify async, a Task, or an actor.
+          Preserve synchronous callback returns and event ordering. When concurrency is needed,
+          prefer structured concurrency with clear ownership and cancellation. Strict concurrency
+          checking enforces safety; it does not require making operations asynchronous.
         - @MainActor is the default. Never suggest a new actor or global actor.
         - Heavy or IO work (file scans, image decode, SQLite, shell, large JSON) runs off-main.
           Prefer @concurrent async functions for work that must leave the caller's actor; use

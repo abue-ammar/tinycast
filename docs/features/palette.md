@@ -416,10 +416,11 @@ and states where the highlight starts: the first row, except the pop-up-shaped m
 filter, the AI model and effort menus, an extension's search-bar dropdown — which open on the choice
 they already hold.
 
-**The click-away catcher answers either mouse button.** A left press arrives as a `DragGesture`, so a
-drifting press still dismisses the way a native menu's does; a right press arrives through
-`onRightClick`, whose `NSView` sits above the row catchers beneath it, so a right click on a row
-closes the open menu rather than reopening it on that row.
+**The palette window consumes a click-away press through its release.** While a menu is open,
+`PalettePanel` dismisses it on either mouse button's press and consumes the matching drag and release
+before SwiftUI sees them. A row or footer button beneath the menu cannot inherit a partial click,
+and the next click reaches its control normally. The menu controller installs the dismissal callback
+only while the menu is open and clears it before restoring the palette's key status.
 
 Every row closes the menu behind it — `activateMenuItem` is the one path, and a row that reorders the
 list under itself (Move Favorite Up/Down) is no exception, so no row ever runs against a rebuilt menu.
@@ -429,6 +430,8 @@ row sits as far from it as from the search field's hairline. That height joins t
 sizing, but the separator takes no selection index, so navigation still walks only rows. A menu
 taller than its cap ends its viewport mid-row, so the fold never lands on a separator or section
 title, and both hairlines are one device pixel.
+The app menu keeps its five actions in one group and caps the list at four and a half rows, leaving
+Quit partially visible above the search band until scrolling or keyboard navigation reveals it.
 Built-in action menus mark boundaries between opening or copying, managing the item, settings, and
 deletion. Menus offering one kind of action, such as calculator copies, color formats, or emoji
 transfers, keep their rows in one group.
@@ -453,6 +456,8 @@ to the palette when it closes, and `closeMenus()` restores search focus unless t
 Resigning to the palette closes only the menu; resigning to another
 app closes the palette as well. `MenuPanel.sendEvent` also mirrors `PalettePanel`'s hover arming — rows
 light on real pointer movement, never on a scroll under a still cursor.
+Deferred focus-loss dismissal checks the presentation identity and that the menu has not regained key
+status, so an old callback cannot close a reopened menu.
 
 The panel is a second SwiftUI hierarchy, so it observes nothing of `RootPaletteView`'s `@State`:
 `syncMenuPanel` pushes a rebuilt tree on every `openMenu` or `menuSelection` change, and

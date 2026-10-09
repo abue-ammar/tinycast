@@ -173,6 +173,7 @@ enum Theme {
         static let menuSectionHeader: CGFloat = 16
         /// Five rows and half of the sixth, so a capped menu reads as scrollable, not clipped.
         static let menuVisibleRows: CGFloat = 5.5
+        static let appMenuVisibleRows: CGFloat = 4.5
         /// Rounded: a half-row of an odd pitch lands the glass edge on a half pixel.
         static var menuRowsMaxHeight: CGFloat {
             (menuVisibleRows * (menuRowHeight + menuRowSpacing)).rounded()

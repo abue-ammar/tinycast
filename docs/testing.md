@@ -102,6 +102,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `interface-size-test` | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift` |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
+| `palette-menu-click-test` | `Palette/PalettePanel.swift` — complete click-away presses and subsequent control activation |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `ModifierKey.swift`, `ModifierKeyDetector.swift`, `HotKeyBinding.swift`, `HotKeySpelling.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
 | `dictation-test` | `Dictation/Model/DictationModel.swift`, `DictationTextFormatter.swift` — model paths and text formatting |
 | `dictation-field-test` | Composer rebinding and teardown, field-scoped dictation cancellation, and queued insertion validity; synthetic capture and real AppKit editors |
@@ -387,9 +388,13 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   move the menu highlight. Escape clears a non-empty query, then closes the menu on the next press
 - The bottom-left app menu also searches from its bottom band; every header menu — including Emoji
   categories, File Search filters and extension dropdowns — searches from its top band
+- The app menu has no divider above Quit; Quit opens partially visible above the search band and
+  scrolls fully into view with the pointer or arrow keys. Filtering to fewer rows shrinks the menu
 - A long menu opens with unchanged row insets; while scrolling, rows can reach the panel edges
 - A click in the palette but outside its menu closes only the menu; a click outside the palette
   closes both, regardless of the menu query; the next summon accepts typing immediately
+- Click the menu search field, pause, then dismiss by clicking the other footer control. The next
+  click opens that control's menu once and leaves it open, including when the clicks form a double click
 - Footer menus are about 30pt wider; their row hover keeps the shared 10pt menu-row corner
 - Tab toggles launcher ↔ clipboard; bare Backspace on an empty query backs out of a sub-screen
 - Launching an app focuses it; escaping the palette returns focus to the app you came from

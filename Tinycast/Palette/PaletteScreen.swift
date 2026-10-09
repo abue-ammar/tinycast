@@ -67,6 +67,7 @@ typealias MenuPanelClipPath =
 
     init(
         popover: PopoverMenuContent, selection: Binding<Int>, width: CGFloat? = nil,
+        visibleRows: CGFloat? = nil,
         search: PopoverMenu.Search, onActivate: @escaping (Int) -> Void,
         preferredSelection: Int? = nil
     ) {
@@ -76,7 +77,7 @@ typealias MenuPanelClipPath =
                 AnyView(
                     PopoverMenu(
                         header: popover.header, items: popover.items, selection: selection,
-                        width: width, onActivate: onActivate,
+                        width: width, visibleRows: visibleRows, onActivate: onActivate,
                         attachment: corner.popoverAttachment, search: search))
             },
             activate: { popover.items[$0].action() },

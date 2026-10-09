@@ -109,6 +109,7 @@ struct PopoverMenu: View {
     @Binding var selection: Int
     /// Fixed, never intrinsic: a width tracking the longest row would jitter as rows change.
     var width: CGFloat?
+    var visibleRows: CGFloat?
     let onActivate: (Int) -> Void
     var attachment = Attachment.none
     let search: Search
@@ -284,8 +285,11 @@ struct PopoverMenu: View {
 
     /// Exact, not measured; a capped viewport ends mid-row, never on a separator or section title.
     private var listExtent: (content: CGFloat, viewport: CGFloat) {
-        let capacity = metrics.size.menuRowsMaxHeight + headerExtent
         let rowHeight = metrics.size.menuRowHeight
+        let rowsMaxHeight = visibleRows.map {
+            ($0 * (rowHeight + metrics.size.menuRowSpacing)).rounded()
+        } ?? metrics.size.menuRowsMaxHeight
+        let capacity = rowsMaxHeight + headerExtent
         var offset = headerExtent
         var fold: CGFloat = 0
         for (index, item) in items.enumerated() {

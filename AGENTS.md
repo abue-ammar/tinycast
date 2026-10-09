@@ -13,9 +13,14 @@ strict concurrency is required. Prefer the latest Swift patterns and modern Appl
 
 Prefer current APIs and language features:
 
-- **Prefer the modern Apple API**, always. Observation over `ObservableObject`. Swift Concurrency over
-  `DispatchQueue` or completion handlers. `SMAppService` over login-item shims. Structured concurrency
-  over detached bookkeeping.
+- **Prefer the modern Apple API**, always. Observation over `ObservableObject`. `SMAppService` over
+  login-item shims.
+- **Prefer synchronous code.** Keep short UI and state operations synchronous on `@MainActor`.
+  Introduce concurrency only for genuinely asynchronous operations or blocking work that must leave
+  the main actor. Shared state alone does not justify `async`, a `Task`, or an actor. Preserve
+  synchronous callback returns and event ordering. When concurrency is needed, prefer structured
+  concurrency with clear ownership and cancellation. Strict concurrency checking enforces safety;
+  it does not require making operations asynchronous.
 - **Migrate, never wrap.** Adopt modern replacements directly and delete obsolete call sites. Do not
   keep wrappers that only preserve an old spelling.
 - **A deprecated API is a defect**, not a warning to live with.

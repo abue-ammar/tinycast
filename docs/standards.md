@@ -19,10 +19,16 @@ Use direct availability checks where macOS 27+ APIs require them to preserve mac
 introduce compatibility layers, legacy workarounds, support below macOS 26, migration scaffolding or
 speculative fallbacks.
 
-In practice that means Observation and never `ObservableObject` or `@Published`; `async`/`await` and
-never a completion handler or a `DispatchQueue` hop; `SMAppService` and never an `LSSharedFileList`
-shim; structured concurrency and never detached bookkeeping you have to remember to cancel. Adopt
-successors directly and delete obsolete call sites rather than wrapping an old spelling.
+In practice that means Observation and never `ObservableObject` or `@Published`; `SMAppService` and
+never an `LSSharedFileList` shim. Adopt successors directly and delete obsolete call sites rather
+than wrapping an old spelling.
+
+**Prefer synchronous code.** Keep short UI and state operations synchronous on `@MainActor`.
+Introduce concurrency only for genuinely asynchronous operations or blocking work that must leave
+the main actor. Shared state alone does not justify `async`, a `Task`, or an actor. Preserve
+synchronous callback returns and event ordering. When concurrency is needed, prefer structured
+concurrency with clear ownership and cancellation. Strict concurrency checking enforces safety;
+it does not require making operations asynchronous.
 
 Carbon has two deliberate capability-gap uses. The global hotkey engine uses `RegisterEventHotKey`
 because nothing modern can register a system-wide chord, and `CGEventTap` cannot see a lone modifier
