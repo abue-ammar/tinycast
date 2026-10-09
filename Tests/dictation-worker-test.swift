@@ -121,12 +121,18 @@ struct DictationWorkerTest {
         let started = AsyncStream<Void>.makeStream()
         DownloadFixture.state.withLock {
             $0.hold = true
-            $0.onFile = { started.continuation.yield(()) }
         }
         let cancelled = Task.detached {
             try await DictationModelDownloader.download(
                 .redux, destination: destination,
-                baseURL: base, protocolClasses: [DownloadFixture.self])
+                baseURL: base, protocolClasses: [DownloadFixture.self]
+            ) { received, total in
+                guard received > 0 else { return }
+                guard received == 1024,
+                    total == Int64(DictationModel.redux.requiredFiles.count * DownloadFixture.content.count)
+                else { fatalError("Live progress must report bytes before the first file finishes") }
+                started.continuation.yield(())
+            }
         }
         var iterator = started.stream.makeAsyncIterator()
         _ = await iterator.next()
@@ -221,7 +227,6 @@ private final class DownloadFixture: URLProtocol, @unchecked Sendable {
     struct State {
         var hold = false
         var corrupt = false
-        var onFile: (@Sendable () -> Void)?
     }
 
     static let state = Mutex(State())
@@ -252,7 +257,6 @@ private final class DownloadFixture: URLProtocol, @unchecked Sendable {
             let state = Self.state.withLock { $0 }
             let data = state.corrupt ? Data(repeating: 66, count: Self.content.count) : Self.content
             client?.urlProtocol(self, didLoad: state.hold ? data.prefix(1024) : data)
-            state.onFile?()
             if state.hold { return }
         }
         client?.urlProtocolDidFinishLoading(self)

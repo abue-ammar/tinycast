@@ -72,33 +72,19 @@ enum DictationModelDownloader {
         onProgress(received, total)
         for (file, url) in files {
             try Task.checkCancellation()
-            let progress = TransferProgress()
             let completed = received, expected = total, size = file.size
-            let monitor = Task.detached(priority: .utility) {
-                var lastReceived: Int64 = 0
-                while !Task.isCancelled {
-                    do { try await Task.sleep(for: .milliseconds(200)) } catch { return }
-                    guard !Task.isCancelled else { return }
-                    let received = min(size, max(0, progress.received))
-                    guard received != lastReceived else { continue }
-                    lastReceived = received
-                    onProgress(completed + received, expected)
-                }
-            }
-            defer { monitor.cancel() }
-            let (temporary, response) = try await session.download(from: url, delegate: progress)
-            defer { try? fileManager.removeItem(at: temporary) }
-            monitor.cancel()
-            await monitor.value
-            try validate(response)
-            let actual = try temporary.resourceValues(forKeys: [.fileSizeKey]).fileSize
-            guard actual.map(Int64.init) == file.size else { throw URLError(.badServerResponse) }
-            if let checksum = file.lfs?.oid { try verify(temporary, checksum: checksum) }
             let target = staging.appending(path: file.path)
             try fileManager.createDirectory(
                 at: target.deletingLastPathComponent(),
                 withIntermediateDirectories: true)
-            try fileManager.moveItem(at: temporary, to: target)
+            let response = try await downloadFile(from: url, to: target, using: session) { bytes in
+                onProgress(completed + min(size, max(0, bytes)), expected)
+            }
+            try Task.checkCancellation()
+            try validate(response)
+            let actual = try target.resourceValues(forKeys: [.fileSizeKey]).fileSize
+            guard actual.map(Int64.init) == file.size else { throw URLError(.badServerResponse) }
+            if let checksum = file.lfs?.oid { try verify(target, checksum: checksum) }
             received += file.size
             onProgress(received, total)
         }
@@ -134,13 +120,66 @@ enum DictationModelDownloader {
         }
     }
 
-    private final class TransferProgress: NSObject, URLSessionTaskDelegate {
-        private let progress = Mutex<Progress?>(nil)
+    private static func downloadFile(
+        from url: URL, to destination: URL, using session: URLSession,
+        onProgress: @escaping @Sendable (Int64) -> Void
+    ) async throws -> URLResponse {
+        let responses = AsyncThrowingStream<URLResponse, any Error> { continuation in
+            let task = session.downloadTask(with: url)
+            task.delegate = Transfer(
+                destination: destination, responses: continuation, onProgress: onProgress)
+            continuation.onTermination = { _ in task.cancel() }
+            task.resume()
+        }
+        for try await response in responses { return response }
+        throw CancellationError()
+    }
 
-        var received: Int64 { progress.withLock { $0?.completedUnitCount ?? 0 } }
+    private final class Transfer: NSObject, URLSessionDownloadDelegate {
+        private let destination: URL
+        private let responses: AsyncThrowingStream<URLResponse, any Error>.Continuation
+        private let onProgress: @Sendable (Int64) -> Void
+        private let lastUpdate = Mutex<ContinuousClock.Instant?>(nil)
 
-        func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
-            progress.withLock { $0 = task.progress }
+        init(
+            destination: URL, responses: AsyncThrowingStream<URLResponse, any Error>.Continuation,
+            onProgress: @escaping @Sendable (Int64) -> Void
+        ) {
+            self.destination = destination
+            self.responses = responses
+            self.onProgress = onProgress
+        }
+
+        func urlSession(
+            _ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData: Int64,
+            totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64
+        ) {
+            let now = ContinuousClock.now
+            let shouldUpdate = lastUpdate.withLock { last in
+                if let last, now - last < .milliseconds(100) { return false }
+                last = now
+                return true
+            }
+            if shouldUpdate { onProgress(totalBytesWritten) }
+        }
+
+        func urlSession(
+            _ session: URLSession, downloadTask: URLSessionDownloadTask,
+            didFinishDownloadingTo location: URL
+        ) {
+            do {
+                guard let response = downloadTask.response else { throw URLError(.badServerResponse) }
+                try FileManager.default.moveItem(at: location, to: destination)
+                responses.yield(response)
+                responses.finish()
+            } catch {
+                responses.finish(throwing: error)
+            }
+        }
+
+        func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?)
+        {
+            if let error { responses.finish(throwing: error) }
         }
     }
 

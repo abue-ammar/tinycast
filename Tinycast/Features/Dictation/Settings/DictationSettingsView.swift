@@ -98,41 +98,23 @@ struct DictationSettingsView: View {
 
                     let installed = coordinator.models.isInstalled(settings.dictationModel)
                     let downloading = coordinator.models.downloading == settings.dictationModel
-                    LabeledContent {
-                        if downloading {
-                            Button("Cancel") { coordinator.models.cancelDownload() }
-                        } else if installed {
-                            Button("Remove") { removeModel(settings.dictationModel) }
-                                .disabled(
-                                    coordinator.models.transcribing || coordinator.models.removing != nil)
-                        } else {
-                            Button("Download") { downloadModel(settings.dictationModel) }
-                                .disabled(
-                                    coordinator.models.downloading != nil
-                                        || coordinator.models.removing == settings.dictationModel)
-                        }
-                    } label: {
-                        Text(
-                            downloading
-                                ? "Downloading…"
-                                : installed ? "Installed" : "Not installed")
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                            Text(modelDescription)
-                            if downloading {
-                                if let progress = coordinator.models.downloadProgress, progress.total > 0 {
-                                    ProgressView(
-                                        value: Double(progress.received), total: Double(progress.total)
-                                    )
-                                    .accessibilityLabel("Download progress")
-                                    Text(
-                                        "\(progress.received / 1_000_000) of \(progress.total / 1_000_000) MB"
-                                    )
-                                    .monospacedDigit()
-                                } else {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
+                    if downloading {
+                        DownloadProgressView(models: coordinator.models)
+                    } else {
+                        LabeledContent {
+                            if installed {
+                                Button("Remove") { removeModel(settings.dictationModel) }
+                                    .disabled(
+                                        coordinator.models.transcribing || coordinator.models.removing != nil)
+                            } else {
+                                Button("Download") { downloadModel(settings.dictationModel) }
+                                    .disabled(
+                                        coordinator.models.downloading != nil
+                                            || coordinator.models.removing == settings.dictationModel)
                             }
+                        } label: {
+                            Text(installed ? "Installed" : "Not installed")
+                            Text(modelDescription)
                         }
                     }
                     if settings.dictationModel.isQwen, installed {
@@ -251,7 +233,49 @@ struct DictationSettingsView: View {
 
     private var modelDescription: String {
         modelSize.map { "\(ByteCountFormatter.string(fromByteCount: $0, countStyle: .file)) on disk" }
-            ?? "about \(settings.dictationModel.approximateInstalledMegabytes) MB installed"
+            ?? "About \(settings.dictationModel.approximateInstalledMegabytes) MB on disk"
+    }
+
+    private struct DownloadProgressView: View {
+        let models: DictationModelStore
+
+        var body: some View {
+            let progress = models.downloadProgress
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                LabeledContent {
+                    Button("Cancel") { models.cancelDownload() }
+                } label: {
+                    Text(title)
+                }
+                if let progress, progress.total > 0 {
+                    ProgressView(value: Double(progress.received), total: Double(progress.total))
+                        .tint(.accentColor)
+                        .accessibilityLabel("Model download progress")
+                    HStack {
+                        let received = progress.received.formatted(.byteCount(style: .file))
+                        let total = progress.total.formatted(.byteCount(style: .file))
+                        Text("\(received) of \(total)")
+                        Spacer()
+                        Text(
+                            Double(progress.received) / Double(progress.total),
+                            format: .percent.precision(.fractionLength(0)))
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                } else {
+                    ProgressView()
+                        .progressViewStyle(.linear)
+                        .accessibilityLabel("Preparing model download")
+                }
+            }
+        }
+
+        private var title: String {
+            guard let progress = models.downloadProgress else { return "Preparing download…" }
+            return progress.total > 0 && progress.received >= progress.total
+                ? "Finishing download…" : "Downloading model…"
+        }
     }
 
     private func refreshModelSize(_ model: DictationModel) async {
