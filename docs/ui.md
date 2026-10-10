@@ -557,9 +557,10 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   entrance.
 - **`MessageHUDController`'s pill** is every _other_ transient
   confirmation: Custom Commands and Snippets confirming a run, and every system action whose effect
-  is invisible (`Trash Emptied`, `Hidden Files Shown`, `Bluetooth Off`). One capsule shape, sized to
-  its message (`hudMaxWidth 420` ceiling), clipped to a `Capsule()`, with a plain glyph leading the
-  message: `checkmark` green for `.success`, `exclamationmark` red for `.danger`,
+  is invisible (`Trash Emptied`, `Hidden Files Shown`, `Bluetooth Off`). One capsule shape, as wide
+  as its message on one line up to `hudMaxWidth 420`, past which it wraps to a second line rather than
+  truncating — a refusal's advice is often its second half. Clipped to a `Capsule()`, with a plain
+  glyph leading the message: `checkmark` green for `.success`, `exclamationmark` red for `.danger`,
   `info` secondary for `.neutral`. The glyph's tone also lights the glass — a faint radial glow from
   behind it and a hairline rim that fades across the message, the same treatment an extension toast
   restates in its own feature. **Here the glyph is the tone** — the
@@ -569,7 +570,11 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   `DialogRequest`, where the icon rule is the opposite. It leads, as an extension toast's does, so the
   outcome lands at a glance before the sentence is read. Auto-dismisses after
   `Duration.messageHUD` (2.4s) — longer than the volume box, since a sentence needs reading time and a
-  level only needs a glance — and a repeat call replaces rather than stacks.
+  level only needs a glance — or longer still for a long message, at
+  `Duration.messageHUDReadingRate` (20 characters a second), up to `Duration.messageHUDLongest` (6s),
+  which is about what two lines take to read. Only a message's first paragraph is shown: two lines
+  hold one, and a failure's detail belongs to a surface with the room for it. A repeat call replaces
+  rather than stacks.
 - **The same pill reports work still running**, through `showProgress(message:onCancel:)`: a Quick Action set to
   replace has no panel to watch the answer arrive in, so the pill says `Fixing Grammar…` in its place
   and the result message replaces it when the model is done. Its leading mark is a spinner rather

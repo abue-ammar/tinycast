@@ -46,16 +46,20 @@ struct MessageHUDView: View {
     }
 
     private var content: some View {
-        HStack(spacing: metrics.spacing.md) {
-            mark
-            Text(message)
-                .font(metrics.typography.bar)
-                .foregroundStyle(Color.primary)
-                .lineLimit(1)
+        // Two lines at most: a notice's second half is often what to do about it.
+        WidthCap(maximum: metrics.size.hudMaxWidth - metrics.spacing.xl - metrics.spacing.xxl) {
+            HStack(spacing: metrics.spacing.sm) {
+                mark
+                Text(message)
+                    .font(metrics.typography.bar)
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(2)
+            }
         }
-        .padding(.horizontal, metrics.spacing.xl)
+        // The mark's box is wider than its glyph; the text's end takes the larger inset to match.
+        .padding(.leading, metrics.spacing.xl)
+        .padding(.trailing, metrics.spacing.xxl)
         .padding(.vertical, metrics.spacing.lg)
-        .frame(maxWidth: metrics.size.hudMaxWidth, alignment: .leading)
         .fixedSize()
         .background { glow }
         // Not glass: with nothing to lens it falls back to an opaque backing and shows.
@@ -118,6 +122,23 @@ struct MessageHUDView: View {
                 .foregroundStyle(Theme.Colors.progress)
                 .symbolEffect(.variableColor.iterative.dimInactiveLayers.nonReversing)
         }
+    }
+}
+
+/// One line as wide as it needs, up to `maximum`; past that it wraps rather than truncating.
+private struct WidthCap: Layout {
+    let maximum: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let content = subviews.first else { return .zero }
+        let oneLine = content.sizeThatFits(.unspecified).width
+        return content.sizeThatFits(ProposedViewSize(width: min(oneLine, maximum), height: nil))
+    }
+
+    func placeSubviews(
+        in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()
+    ) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
 
