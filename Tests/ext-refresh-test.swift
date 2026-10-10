@@ -216,6 +216,32 @@ struct ExtensionRefreshTests {
             "an open foreground command refuses with a reason")
     }
 
+    static func backgroundFeedbackSurfacesAsAHUD() {
+        func hud(_ method: String, _ title: String?, _ message: String? = nil, _ style: String? = nil)
+            -> String?
+        {
+            ExtensionRefreshPolicy.backgroundHUD(
+                method: method, title: title, message: message, toastStyle: style)
+        }
+        expect(hud("showHUD", "3 new alerts") == "3 new alerts", "a background showHUD is shown")
+        expect(
+            hud("showToast", "Done", "2 files", "SUCCESS") == "Done — 2 files",
+            "a settled toast falls back to a HUD, message included")
+        expect(
+            hud("showToast", "Sync failed", nil, "FAILURE") == "Sync failed",
+            "a failure toast without a message shows its title")
+        expect(hud("showToast", "Done") == "Done", "a toast with no style is a success")
+        expect(
+            hud("showToast", "Uploading…", nil, "ANIMATED") == nil,
+            "an animated toast is progress, not a notification")
+        expect(
+            hud("updateToast", "Uploaded", nil, "SUCCESS") == "Uploaded",
+            "an animated toast settling into success surfaces")
+        expect(hud("showHUD", "  \n ") == nil, "a blank HUD is dropped")
+        expect(hud("confirmAlert", "Delete?") == nil, "an alert never fires on a timer")
+        expect(hud("hideToast", nil) == nil, "hiding shows nothing")
+    }
+
     static func main() {
         parseAcceptsAllUnits()
         parseClampsToTheFloor()
@@ -232,6 +258,7 @@ struct ExtensionRefreshTests {
         indicatorNamesTheState()
         launchTypesMatchTheJSContract()
         refreshNowExplainsARefusal()
+        backgroundFeedbackSurfacesAsAHUD()
 
         print(failures == 0 ? "Extension refresh tests passed" : "\(failures) tests failed")
         exit(failures == 0 ? 0 : 1)

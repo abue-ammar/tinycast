@@ -213,8 +213,8 @@ other commands installed. Only explicitly activated commands have saved records.
 `launchCommand` preserves `type`, arguments and JSON context. Background menu refreshes and explicit
 background `no-view` launches use the transient lane at utility priority and leave the palette alone.
 A background launch never activates a menu command; it only refreshes one already shown. A
-user-initiated view launch from a menu opens the palette. Menu toasts are suppressed; errors appear
-in the menu and user-initiated failures also use the HUD. `updateCommandMetadata` publishes subtitles
+user-initiated view launch from a menu opens the palette. Menu toasts are suppressed, while a
+background `no-view` launch shows its HUDs as a scheduled run does; errors appear in the menu and user-initiated failures also use the HUD. `updateCommandMetadata` publishes subtitles
 for the executing command, including menu commands, without changing another runtime's command.
 
 Menu-bar icons retain successful small raster variants and let AppKit choose the drawing appearance.
@@ -637,8 +637,11 @@ with nothing due costs a comparison. Three guards keep it cheap:
 
 - Intervals clamp to a minute; failures back off exponentially to a day.
 - A tick never preempts a running command — foreground first, the tick waits for the next due.
-- A hung run dies before its successor is due, and a background run shows no toast, HUD, alert or
-  window call, since those would fire on a timer.
+- A hung run dies before its successor is due, and a background run opens no palette toast, alert
+  or window call, since those would fire on a timer. Its feedback still reaches the user the way
+  Raycast's does with the window closed: `showHUD` shows the HUD, and a settled `showToast` or
+  `updateToast` falls back to one (`title — message`). An animated toast stays silent until it
+  settles. Menu-bar refresh ticks stay fully silent.
 
 `ExtensionRefreshPolicy` is where the parsing, due dates and backoff live, driven by
 `Tests/ext-refresh-test.swift`; `Tests/ext-metadata-test.swift` covers the store behind it. Menu-bar

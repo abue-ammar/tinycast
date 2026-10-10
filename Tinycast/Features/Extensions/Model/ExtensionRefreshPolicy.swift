@@ -85,6 +85,27 @@ enum ExtensionRefreshPolicy {
         return backgroundEnabled ? .active : .idle
     }
 
+    /// What a background feedback call puts in a HUD: Raycast falls a windowless toast back to one.
+    /// An animated toast is progress nobody is watching, so only its settled state surfaces.
+    static func backgroundHUD(
+        method: String, title: String?, message: String?, toastStyle: String?
+    ) -> String? {
+        let parts: [String?]
+        switch method {
+        case "showHUD":
+            parts = [title]
+        case "showToast", "updateToast":
+            guard toastStyle != "ANIMATED" else { return nil }
+            parts = [title, message]
+        default:
+            return nil
+        }
+        let text = parts.compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " — ")
+        return text.isEmpty ? nil : text
+    }
+
     static func headline(_ message: String) -> String {
         String(message.split(separator: "\n").first ?? "Background refresh failed.")
     }

@@ -6,6 +6,8 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     let storage: ExtensionStorage
     private let reference: ExtensionCommandRef
     private var isInteractive: Bool
+    /// A menu refresh tick stays silent; a background `no-view` launch has only its HUD to speak.
+    private let speaksInBackground: Bool
     private weak var manager: ExtensionManager?
     private weak var coordinator: ExtensionCoordinator?
 
@@ -17,6 +19,7 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
         self.owner = owner
         reference = ExtensionCommandRef(extensionName: owner.manifest.name, commandName: command.name)
         isInteractive = launchType == .userInitiated
+        speaksInBackground = command.mode == .noView
         self.storage = storage
         self.manager = manager
         self.coordinator = coordinator
@@ -41,7 +44,7 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     func hide(toast id: Int) {}
 
     func showHUD(_ text: String) {
-        if isInteractive { coordinator?.showHUD(text) }
+        if isInteractive || speaksInBackground { coordinator?.showHUD(text) }
     }
 
     func confirmAlert(_ alert: ExtensionAlert) async -> Bool {

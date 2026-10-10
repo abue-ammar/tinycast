@@ -671,7 +671,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         return delay
     }
 
-    /// A headless `no-view` run: the palette never moves and no feedback fires, only the subtitle can.
+    /// A headless `no-view` run: the palette never moves; only the subtitle and a HUD escape it.
     private func runInBackground(_ owner: InstalledExtension, command: ExtensionCommand) async {
         guard backgroundSessionID == nil, running == nil, let interval = command.interval else {
             return
