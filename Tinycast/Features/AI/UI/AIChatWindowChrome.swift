@@ -88,7 +88,8 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
         switch identifier {
         case Self.sidebar:
             return button(
-                identifier, symbol: "sidebar.left", label: "Sidebar", toolTip: "Show or Hide Sidebar",
+                identifier, symbol: "sidebar.left", label: "Sidebar",
+                toolTip: "Show or Hide Sidebar  ⌘B",
                 action: #selector(toggleSidebar))
         case Self.newChat:
             return button(
@@ -183,6 +184,10 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
         let key = (ASCIIKeyboardLayout.character(for: event) ?? event.charactersIgnoringModifiers)?
             .lowercased()
         switch (modifiers, key) {
+        case ([.command], "b"):
+            toggleSidebar()
+        case ([.control], "\t"), ([.control, .shift], "\t"):
+            coordinator.openAdjacentChat(step: modifiers.contains(.shift) ? -1 : 1)
         case ([.command], "f"):
             searchItem.beginSearchInteraction()
         case ([.command], "g"), ([.command, .shift], "g"):

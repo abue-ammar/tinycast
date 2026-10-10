@@ -163,3 +163,16 @@ struct ChatConversation: Identifiable, Equatable, Sendable {
 
     var displayTitle: String { customTitle ?? generatedTitle ?? title }
 }
+
+extension [ChatConversation] {
+    /// The window sidebar's order; each part keeps the newest-first order the store holds.
+    var pinnedFirst: [ChatConversation] { filter(\.isPinned) + filter { !$0.isPinned } }
+
+    /// Wraps at either end; a chat with no row yet enters from the top, or the bottom going back.
+    func adjacent(to id: UUID, step: Int) -> ChatConversation? {
+        guard !isEmpty else { return nil }
+        guard let index = firstIndex(where: { $0.id == id }) else { return step > 0 ? first : last }
+        let neighbor = self[((index + step) % count + count) % count]
+        return neighbor.id == id ? nil : neighbor
+    }
+}
