@@ -277,15 +277,16 @@ final class MenuPanelController {
             contentSize: size, parentFrame: parent.frame,
             visibleFrame: parent.screen?.visibleFrame ?? parent.frame, inset: inset,
             headerExtent: metrics.size.headerPadding + metrics.size.headerHeight)
-        let canvas = corner.scaledFrame(frame, by: motion.maximumScale)
+        let anchor = corner.layerAnchor(for: frame, parentFrame: parent.frame)
+        let canvas = corner.scaledFrame(frame, by: motion.maximumScale, parentFrame: parent.frame)
         let next = Placement(canvas: canvas, corner: corner)
         // Every arrow key re-pushes the tree; reconfiguring would cut the reveal short.
         guard resetMotion || next != placement else { return }
         placement = next
         panel.setFrame(canvas, display: true)
         configureHosting(
-            contentSize: size, canvasSize: canvas.size, scale: modelScale, corner: corner,
-            metrics: metrics)
+            contentSize: size, canvasSize: canvas.size, scale: modelScale, anchor: anchor,
+            corner: corner, metrics: metrics)
         refreshShadow(panel)
     }
 
@@ -354,8 +355,8 @@ final class MenuPanelController {
     }
 
     private func configureHosting(
-        contentSize: NSSize, canvasSize: NSSize, scale: CGFloat, corner: MenuPanelCorner,
-        metrics: InterfaceMetrics
+        contentSize: NSSize, canvasSize: NSSize, scale: CGFloat, anchor: CGPoint,
+        corner: MenuPanelCorner, metrics: InterfaceMetrics
     ) {
         guard let hosting, let layer = hosting.layer, let clipPath else { return }
         CATransaction.begin()
@@ -364,8 +365,8 @@ final class MenuPanelController {
         layer.setAffineTransform(.identity)
         hosting.frame = NSRect(origin: .zero, size: contentSize)
         layer.bounds = NSRect(origin: .zero, size: contentSize)
-        layer.anchorPoint = corner.layerAnchor
-        layer.position = corner.layerPosition(in: canvasSize)
+        layer.anchorPoint = anchor
+        layer.position = CGPoint(x: canvasSize.width * anchor.x, y: canvasSize.height * anchor.y)
         let mask = (layer.mask as? CAShapeLayer) ?? CAShapeLayer()
         mask.frame = NSRect(origin: .zero, size: contentSize)
         mask.isGeometryFlipped = layer.isGeometryFlipped

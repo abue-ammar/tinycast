@@ -176,7 +176,8 @@ Tab and Shift-Tab cycle the three fields; Return, Space or Down opens a focused 
 whitespace-only title disables Create Event, including ⌘↵. Escape or Back discards the draft and restores
 the previous search and selection; an editor summoned from a hotkey closes instead. Permission and
 feature consent are checked at both open and save. Disabling Calendar closes its editor.
-Invoking Create Event again while its editor is open preserves the current draft and navigation.
+Invoking Create Event again while its editor is open preserves the current draft and navigation;
+while the palette is hidden with that editor kept, it summons the palette back onto the same draft.
 
 ## Reading the store
 

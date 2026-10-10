@@ -221,7 +221,8 @@ stays beside the destination and writes plain placeholder text at the selection;
 markup or tag field. Insert, the icon selector and Open With use the palette's searchable menu with
 their existing choices, including Automatic for icons and Default app for the application.
 Tab/Shift-Tab walk the form;
-Return stays in the text editor, ⌘↵ saves, and Escape or the back chevron discards the draft.
+the link wraps but stays one line, so Return adds no line break. ⌘↵ saves, and Escape or the back
+chevron discards the draft.
 The link field grows with its content and only the whole form scrolls. The Open With popup is at
 least as wide as its field, using the control's actual bounds.
 

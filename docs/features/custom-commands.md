@@ -74,7 +74,7 @@ in Settings; its rows still manage aliases, hotkeys, enabling and deletion.
 `CustomCommandEditorSession` holds a draft of the existing options: name, icon, shell command,
 working directory, root-search visibility, up to three arguments and the four execution checkboxes. The script keeps a
 monospaced native textarea without smart substitutions; its content grows with the page rather than
-scrolling internally.
+scrolling internally. Tab walks the form, so ⌥Tab types a tab character.
 Argument rows keep their identities when one is removed, and Tab skips Add at the three-argument cap.
 ⌘↵ validates and saves through the existing store; Escape discards the draft and restores the previous
 search and selection. Opening or saving is gated by the feature switch, just like running a command.

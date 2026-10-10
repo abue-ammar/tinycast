@@ -305,11 +305,14 @@ struct PalettePlacementTests {
         expect(clamped.maxX, 1000 - inset, "a leading menu clears the display's right edge")
 
         let scale = Theme.MenuMotion.maximumScale
-        let leadingCanvas = MenuPanelCorner.bottomLeading.scaledFrame(leading, by: scale)
-        let trailingCanvas = MenuPanelCorner.bottomTrailing.scaledFrame(trailing, by: scale)
-        let headerCanvas = MenuPanelCorner.belowHeaderTrailing.scaledFrame(header, by: scale)
-        let inputCanvas = controlCorner.scaledFrame(input, by: scale)
-        let inputLeadingCanvas = inputLeadingCorner.scaledFrame(inputLeading, by: scale)
+        let leadingCanvas = MenuPanelCorner.bottomLeading.scaledFrame(leading, by: scale, parentFrame: parent)
+        let trailingCanvas = MenuPanelCorner.bottomTrailing.scaledFrame(
+            trailing, by: scale, parentFrame: parent)
+        let headerCanvas = MenuPanelCorner.belowHeaderTrailing.scaledFrame(
+            header, by: scale, parentFrame: parent)
+        let inputCanvas = controlCorner.scaledFrame(input, by: scale, parentFrame: parent)
+        let inputLeadingCanvas = inputLeadingCorner.scaledFrame(inputLeading, by: scale, parentFrame: parent)
+        let flippedCanvas = bottomControl.scaledFrame(flipped, by: scale, parentFrame: parent)
         expect(leadingCanvas.minX, leading.minX, "left expansion keeps its leading edge fixed")
         expect(leadingCanvas.minY, leading.minY, "left expansion keeps its bottom edge fixed")
         expect(trailingCanvas.maxX, trailing.maxX, "right expansion keeps its trailing edge fixed")
@@ -320,6 +323,7 @@ struct PalettePlacementTests {
         expect(inputCanvas.maxY, input.maxY, "input expansion keeps its top edge fixed")
         expect(inputLeadingCanvas.minX, inputLeading.minX, "leading input expansion keeps its left edge")
         expect(inputLeadingCanvas.maxY, inputLeading.maxY, "leading input expansion keeps its top edge")
+        expect(flippedCanvas.minY, flipped.minY, "a flipped input expansion grows away from its field")
     }
 
     // MARK: - The tokens these rules depend on

@@ -256,7 +256,7 @@ A blank name disables Save.
 An IO or revision failure leaves the draft open and shows the error beside its fields.
 
 **⌘↵** saves; plain **↵** inserts a template line break. **Tab** and **Shift-Tab** walk the fields,
-and **Escape** cancels and returns to the previous launcher screen, or closes a directly summoned
+**⌥Tab** types a tab character, and **Escape** cancels and returns to the previous launcher screen, or closes a directly summoned
 editor. Saving also returns to the previous screen. No snippet expansion or paste is part of editing.
 
 ## Shortcuts

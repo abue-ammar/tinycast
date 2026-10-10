@@ -75,7 +75,7 @@ struct QuicklinkEditorView: View {
                     minimumHeight: metrics.size.headerHeight * 2 + metrics.spacing.xl
                         - metrics.spacing.md * 2 - metrics.spacing.xs
                         - metrics.typography.textNSFont(.body).boundingRectForFont.height,
-                    label: "Quicklink link", moveFocus: editor.advanceFocus
+                    label: "Quicklink link", allowsLineBreaks: false, moveFocus: editor.advanceFocus
                 )
                 HStack {
                     Spacer()
@@ -95,7 +95,9 @@ struct QuicklinkEditorView: View {
     private var destinationPreview: some View {
         let value = editor.link.trimmingCharacters(in: .whitespacesAndNewlines)
         Group {
-            if value.isEmpty || QuicklinkDestination.containsPlaceholder(value) {
+            if value.isEmpty {
+                EmptyView()
+            } else if QuicklinkDestination.containsPlaceholder(value) {
                 Text("Resolved when you open it — placeholders are filled in first.")
             } else if let destination = QuicklinkDestination.detect(value) {
                 Label {

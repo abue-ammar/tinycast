@@ -13,7 +13,7 @@ struct CustomCommandList: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(results) { command in
+                    ForEach(results, id: \.id.uuidString) { command in
                         Row(command: command, selected: command.id == selectedID)
                             .selectionFrame(command.id == selectedID)
                             .contentShape(Rectangle())

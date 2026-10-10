@@ -11,7 +11,7 @@ struct PaletteFrame: Equatable {
 @MainActor
 @Observable
 final class PaletteState {
-    var mode: PaletteMode = .launcher
+    var mode: PaletteMode = .launcher { didSet { restoredSelection = nil } }
     /// The screens below `mode`, innermost last: a summon starts a new one, navigating pushes on.
     private(set) var backStack: [PaletteFrame] = []
     var query: String = "" { didSet { restoredSelection = nil } }

@@ -124,6 +124,8 @@ struct PaletteNavigationTests {
             quicklink.pop(preservingSelection: true) && quicklink.mode == .quicklinks
                 && quicklink.query == "GitHub" && quicklink.restoredSelection == 1,
             "leaving a quicklink editor restores its browser query and row")
+        quicklink.pushCarryingQuery(mode: .launcher)
+        expect(quicklink.restoredSelection == nil, "a ring hop does not carry the restored row along")
         expect(
             !PaletteMode.extensionCommand.isNativeEditor && !PaletteMode.quicklinks.isNativeEditor,
             "native editor keyboard routing excludes extensions and browsers")

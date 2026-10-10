@@ -275,8 +275,9 @@ final class CalendarCoordinator {
             report("Turn Calendar on in Settings first")
             return
         }
-        guard editor == nil else { return }
-        editor = EventEditorSession()
+        guard !paletteCoordinator.isShowing(.eventEditor) else { return }
+        // A hidden palette keeps the editor mounted, so its draft is the one to bring back.
+        if editor == nil { editor = EventEditorSession() }
         paletteCoordinator.showPalette(mode: .eventEditor)
     }
 
