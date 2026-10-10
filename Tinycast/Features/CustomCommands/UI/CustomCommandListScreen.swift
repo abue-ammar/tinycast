@@ -7,12 +7,23 @@ struct CustomCommandListScreen: PaletteScreen {
     let metrics: InterfaceMetrics
     let openActions: () -> Void
 
-    var rows: [CustomCommand] { store.matching(vm.query) }
+    let rows: [CustomCommand]
     var primaryActionTitle: String { rows.isEmpty ? "Create Custom Command" : "Run Command" }
     let actsWithoutRows = true
 
+    init(
+        store: CustomCommandStore, coordinator: CustomCommandCoordinator,
+        vm: PaletteState, metrics: InterfaceMetrics, openActions: @escaping () -> Void
+    ) {
+        self.store = store
+        self.coordinator = coordinator
+        self.vm = vm
+        self.metrics = metrics
+        self.openActions = openActions
+        rows = store.matching(vm.query)
+    }
+
     private func command(at selection: Int) -> CustomCommand? {
-        let rows = rows
         return rows.indices.contains(selection) ? rows[selection] : nil
     }
 
@@ -88,9 +99,10 @@ struct CustomCommandListScreen: PaletteScreen {
 
     @ViewBuilder
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
-        let rows = rows
         if rows.isEmpty {
-            EmptyResults(text: store.matching("").isEmpty ? "No custom commands yet" : "No matching commands")
+            EmptyResults(
+                text: store.commands.contains(where: \.isEnabled)
+                    ? "No matching commands" : "No custom commands yet")
         } else {
             let selected = command(at: selection)
             HStack(spacing: 0) {

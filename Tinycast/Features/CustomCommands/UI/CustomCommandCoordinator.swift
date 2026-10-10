@@ -132,7 +132,7 @@ final class CustomCommandCoordinator {
             panel.directoryURL = URL(
                 fileURLWithPath: (editor.workingDirectory as NSString).expandingTildeInPath)
         }
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         guard panel.runModal() == .OK, let url = panel.url, self.editor === editor else { return }
         editor.workingDirectory = (url.path as NSString).abbreviatingWithTildeInPath
     }

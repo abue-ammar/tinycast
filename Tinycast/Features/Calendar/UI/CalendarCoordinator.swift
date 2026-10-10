@@ -275,6 +275,7 @@ final class CalendarCoordinator {
             report("Turn Calendar on in Settings first")
             return
         }
+        guard editor == nil else { return }
         editor = EventEditorSession()
         paletteCoordinator.showPalette(mode: .eventEditor)
     }

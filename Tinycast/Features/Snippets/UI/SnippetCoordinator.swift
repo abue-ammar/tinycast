@@ -150,6 +150,7 @@ final class SnippetCoordinator {
             guard !Task.isCancelled, self.editor === editor else { return }
             cancelSnippetEditing()
         } catch {
+            guard !Task.isCancelled, self.editor === editor else { return }
             editor.errorMessage = error.localizedDescription
         }
     }

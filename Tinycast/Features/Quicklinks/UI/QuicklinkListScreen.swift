@@ -78,7 +78,6 @@ struct QuicklinkListScreen: PaletteScreen {
         case .copyPath: coordinator.copyQuicklink(id: quicklink.id)
         case .pin: coordinator.toggleQuicklinkPinned(id: quicklink.id)
         case .showInFinder: return coordinator.showQuicklinkInFinder(quicklink)
-        // Deletion honours the "confirm before deleting" setting inside `AppCore`.
         case .delete: Task { await coordinator.deleteQuicklink(id: quicklink.id) }
         default: return false
         }
