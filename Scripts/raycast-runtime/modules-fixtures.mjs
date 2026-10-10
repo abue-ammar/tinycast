@@ -6,8 +6,9 @@ import { bootConfig, createHarness } from "./test.mjs";
 
 export async function runModuleFixtures(check) {
   const root = mkdtempSync(join(tmpdir(), "tinycast-modules-"));
+  const extension = join(root, "extension");
   const write = (path, content) => {
-    const file = join(root, path);
+    const file = join(extension, path);
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, typeof content === "string" ? content : JSON.stringify(content));
   };
@@ -16,7 +17,7 @@ export async function runModuleFixtures(check) {
     harness.boot(bootConfig());
     try {
       harness.start("modules", `module.exports.default = () => { ${body} };`,
-        join(root, "commands/cmd.js"), join(root, "commands"), "no-view", {});
+        join(extension, "cmd.js"), extension, "no-view", {});
       await new Promise((resolve) => setTimeout(resolve, 20));
       const result = harness.call("globalThis.result");
       check(label, harness.state.failures.length === 0 && JSON.stringify(result) === JSON.stringify(expected),
@@ -32,7 +33,7 @@ export async function runModuleFixtures(check) {
     write("node_modules/subpkg/lib/data.json", { value: 41 });
     await command("package root, exports subpath and relative JSON", 'globalThis.result = require("subpkg");', 42);
 
-    write("commands/local/index.js", "module.exports = 7;");
+    write("local/index.js", "module.exports = 7;");
     await command("relative directory resolves index.js", 'globalThis.result = require("./local");', 7);
     write("node_modules/main-dir/package.json", { main: "./lib" });
     write("node_modules/main-dir/lib/index.js", "module.exports = 8;");
@@ -65,6 +66,20 @@ export async function runModuleFixtures(check) {
     write("node_modules/private/hidden.js", "module.exports = 99;");
     await command("exports map does not expose private files", `
       try { require("private/hidden"); globalThis.result = false; }
+      catch { globalThis.result = true; }`, true);
+
+    write("node_modules/up/package.json", { main: "main.js" });
+    write("node_modules/up/main.js", 'module.exports = "root";');
+    write("node_modules/up/lib/index.js", 'module.exports = "lib";');
+    write("node_modules/up/lib/child.js", 'module.exports = require("..");');
+    await command("require('..') resolves the parent directory", 'globalThis.result = require("up/lib/child");', "root");
+    write("node_modules/dot/index.js", 'module.exports = "index";');
+    write("node_modules/dot/other.js", 'module.exports = require(".");');
+    await command("require('.') resolves the current directory", 'globalThis.result = require("dot/other");', "index");
+
+    write("../node_modules/outside/index.js", "module.exports = 99;");
+    await command("packages above the extension root are not resolved", `
+      try { require("outside"); globalThis.result = false; }
       catch { globalThis.result = true; }`, true);
 
     write("node_modules/cycle/index.js", 'exports.first = true; exports.peer = require("./peer").first;');

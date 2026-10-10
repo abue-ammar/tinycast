@@ -21,15 +21,6 @@ what you touched.
 
 ## The harnesses
 
-Runtime dependency resolution also has standalone checks:
-
-```sh
-node Scripts/raycast-runtime/modules-fixtures.mjs
-```
-
-They cover shipped CommonJS packages, exports maps, relative directories, nested dependencies,
-cycles and failed-load retries. The runtime fixture suite includes the same checks.
-
 ```sh
 ./Scripts/run-tests.sh              # all of them
 ./Scripts/run-tests.sh calc-test    # just one, while iterating
@@ -42,6 +33,16 @@ TINYCAST_TEST_APPLE_INTELLIGENCE=1 ./Scripts/run-tests.sh apple-intelligence-tes
 ```
 
 The opt-in check still skips with a reason if the Mac cannot run the on-device model.
+
+Runtime dependency resolution also has standalone checks:
+
+```sh
+node Scripts/raycast-runtime/modules-fixtures.mjs
+```
+
+They cover shipped CommonJS packages, exports maps, relative directories, nested dependencies,
+cycles, failed-load retries and the extension-root boundary. The runtime fixture suite includes the
+same checks.
 
 The suite runs four harnesses at a time by default to reduce CPU usage. `TINYCAST_TEST_JOBS` overrides
 that limit; `TINYCAST_TEST_JOBS=1` runs one at a time. Each result is numbered

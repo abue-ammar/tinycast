@@ -479,8 +479,8 @@ Settings → Extensions offers four routes, under **Install New**:
 Only `package.json`, the built commands, `assets/` and any bundled `node_modules/` are copied —
 never the multi-megabyte `.js.map` Raycast writes beside each bundle. Store `dist` bundles leave
 third-party packages external and ship them, pre-built CommonJS, under `node_modules/`; the embedded
-runtime resolves those from the command's directory, so they must survive the install. A build that
-inlined everything simply has no such folder.
+runtime resolves those from the command's directory, never above the extension's own folder, so
+they must survive the install. A build that inlined everything simply has no such folder.
 
 ## Installing from GitHub
 

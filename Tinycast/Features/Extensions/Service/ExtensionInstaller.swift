@@ -141,6 +141,11 @@ struct ExtensionInstaller: Sendable {
             guard build.status == 0 else {
                 throw ExtensionStoreError.buildFailed(build.trimmedOutput)
             }
+            // The checkout's `node_modules` is its dev install, not build output.
+            let dependencies = source.appendingPathComponent("node_modules")
+            if FileManager.default.fileExists(atPath: dependencies.path) {
+                try FileManager.default.removeItem(at: dependencies)
+            }
             return try validated(source)
         }
 

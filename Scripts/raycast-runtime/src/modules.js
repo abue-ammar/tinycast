@@ -21,6 +21,7 @@ function notFound(key) {
 }
 
 function isBare(request) {
+  if (request === "." || request === "..") return false;
   return !request.startsWith("./") && !request.startsWith("../") && !request.startsWith("/");
 }
 
@@ -92,13 +93,12 @@ function asDirectory(base) {
   return asFile(localPath.join(base, "index"));
 }
 
-function resolvePackage(request, fromDir) {
+function resolvePackage(request, fromDir, root) {
   const parts = request.split("/");
   const packageName = request.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
   const subpath = request.startsWith("@") ? parts.slice(2) : parts.slice(1);
 
-  let dir = fromDir;
-  for (;;) {
+  for (let dir = fromDir; dir === root || dir.startsWith(`${root}/`); dir = localPath.dirname(dir)) {
     const packageDir = localPath.join(dir, "node_modules", packageName);
     if (localFs.existsSync(packageDir)) {
       if (subpath.length === 0) return asDirectory(packageDir);
@@ -110,22 +110,20 @@ function resolvePackage(request, fromDir) {
       const target = localPath.join(packageDir, ...subpath);
       return asFile(target) ?? asDirectory(target);
     }
-    const parent = localPath.dirname(dir);
-    if (parent === dir) return null;
-    dir = parent;
   }
+  return null;
 }
 
-function resolveFile(request, fromDir) {
+function resolveFile(request, fromDir, root) {
   if (!isBare(request)) {
     const target = localPath.resolve(fromDir, request);
     return asFile(target) ?? asDirectory(target);
   }
   if (request.startsWith("node:")) return null;
-  return resolvePackage(request, fromDir);
+  return resolvePackage(request, fromDir, root);
 }
 
-function loadFile(file) {
+function loadFile(file, root) {
   const cached = fileModules.get(file);
   if (cached) return cached.exports;
 
@@ -139,7 +137,7 @@ function loadFile(file) {
     } else {
       const code = localFs.readFileSync(file, "utf8");
       const factory = globalThis.__tinycastCompile(code, file);
-      factory(module.exports, (request) => requireFrom(request, dirname), module, file, dirname);
+      factory(module.exports, (request) => requireFrom(request, dirname, root), module, file, dirname);
     }
     module.loaded = true;
     return module.exports;
@@ -149,7 +147,7 @@ function loadFile(file) {
   }
 }
 
-function requireFrom(request, fromDir) {
+function requireFrom(request, fromDir, root) {
   const key = String(request);
   if (isBare(key)) {
     if (registry.has(key)) return registry.get(key);
@@ -157,9 +155,9 @@ function requireFrom(request, fromDir) {
     const root = key.startsWith("@") ? key.split("/").slice(0, 2).join("/") : key.split("/")[0];
     if (registry.has(root)) return registry.get(root);
   }
-  const file = resolveFile(key, fromDir);
+  const file = resolveFile(key, fromDir, root);
   if (!file) notFound(key);
-  return loadFile(file);
+  return loadFile(file, root);
 }
 
 export function requireModule(name) {
@@ -182,7 +180,8 @@ nodeModules["module"].createRequire = () => nodeRequire;
 export function evaluateCommonJS(code, filename, dirname) {
   const module = { exports: {}, id: filename, filename, loaded: false, children: [], paths: [] };
   const factory = globalThis.__tinycastCompile(code, filename);
-  factory(module.exports, (request) => requireFrom(request, dirname), module, filename, dirname);
+  // The command's folder is the extension root; packages above it belong to the user, not to it.
+  factory(module.exports, (request) => requireFrom(request, dirname, dirname), module, filename, dirname);
   module.loaded = true;
   return module.exports;
 }
