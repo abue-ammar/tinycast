@@ -238,7 +238,7 @@ struct ExtensionTests {
             await runtime.start(
                 session: "bundled", code: try String(contentsOf: file, encoding: .utf8), file: file,
                 mode: .view, context: launchContext())
-            await settle()
+            await settle(until: { recorder.trees.last?.activeRoot?.string("markdown") == "42" })
             check(
                 "installed packages resolve in JavaScriptCore",
                 recorder.trees.last?.activeRoot?.string("markdown") == "42")
