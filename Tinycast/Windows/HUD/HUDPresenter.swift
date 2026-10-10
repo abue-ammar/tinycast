@@ -23,7 +23,10 @@ final class HUDPresenter {
     }
 
     /// A nil `size` lets SwiftUI measure; progress has no dwell, so it waits to be replaced.
-    func show(_ view: some View, size: CGSize? = nil, dwells: Bool = true, interactive: Bool = false) {
+    func show(
+        _ view: some View, size: CGSize? = nil, dwells: Bool = true, dwell: TimeInterval? = nil,
+        interactive: Bool = false
+    ) {
         let panel = panel ?? make(acceptsMouseEvents: interactive)
         panel.ignoresMouseEvents = !interactive
         let host = NSHostingView(rootView: view)
@@ -39,7 +42,7 @@ final class HUDPresenter {
         } else {
             panel.fadeIn(duration: Theme.Duration.enter) { panel.orderFrontRegardless() }
         }
-        if dwells { scheduleDismissal() } else { dismissal?.cancel() }
+        if dwells { scheduleDismissal(after: dwell ?? self.dwell) } else { dismissal?.cancel() }
     }
 
     func dismiss() {
@@ -52,14 +55,14 @@ final class HUDPresenter {
     func extend() {
         guard let panel, panel.isVisible else { return }
         panel.cancelFade()
-        scheduleDismissal()
+        scheduleDismissal(after: dwell)
     }
 
     var isShowing: Bool { panel?.isVisible ?? false }
 
-    private func scheduleDismissal() {
+    private func scheduleDismissal(after dwell: TimeInterval) {
         dismissal?.cancel()
-        dismissal = Task { [weak self, dwell] in
+        dismissal = Task { [weak self] in
             try? await Task.sleep(for: .seconds(dwell))
             guard !Task.isCancelled else { return }
             self?.panel?.fadeOut(duration: Theme.Duration.exit)

@@ -58,14 +58,17 @@ struct AIStreamDecoder: Sendable {
     }
 
     private let shape: AIHTTPConfiguration.APIShape
+    /// What a provider's own error text must never show; the decoder is handed it, never reads it.
+    private let secrets: [String]
     private var parser = SSEParser()
     private var thinkTags = AIThinkTagDecoder()
     private var usage = AIUsage()
     private var partialToolCalls: [Int: PartialToolCall] = [:]
     private(set) var isTerminal = false
 
-    init(shape: AIHTTPConfiguration.APIShape) {
+    init(shape: AIHTTPConfiguration.APIShape, secrets: [String] = []) {
         self.shape = shape
+        self.secrets = secrets
     }
 
     /// Assembled in index order, so a turn's calls reach the loop as the model listed them.
@@ -121,9 +124,11 @@ struct AIStreamDecoder: Sendable {
         }
 
         // OpenRouter reports a mid-stream failure as a 200 payload, so it's an event, not a status.
-        if let message = chunk.error?.message {
+        if chunk.error?.message != nil {
             isTerminal = true
-            throw AIProviderError.responseFailed(message)
+            throw AIProviderError.responseFailed(
+                AIProviderFailure.providerMessage(in: data)
+                    .map { AIProviderFailure.kept($0, secrets: secrets) } ?? Self.stopped)
         }
         var events: [AIStreamEvent] = []
         if let choice = chunk.choices?.first {
@@ -201,17 +206,22 @@ struct AIStreamDecoder: Sendable {
             return flushToolCalls() + [.finished]
         case "error":
             isTerminal = true
-            throw AIProviderError.responseFailed(Self.anthropicErrorMessage(event.error?.type))
+            throw AIProviderError.responseFailed(
+                AIProviderFailure.described(
+                    Self.anthropicErrorMessage(event.error?.type), said: event.error?.message,
+                    secrets: secrets))
         default:
             return []
         }
     }
 
+    private static let stopped = "The provider stopped the response with an error."
+
     private static func anthropicErrorMessage(_ type: String?) -> String {
         switch type {
         case "authentication_error": return "API key rejected — check it in Settings."
         case "rate_limit_error": return "Rate limit reached — try again later."
-        default: return "The provider stopped the response with an error."
+        default: return stopped
         }
     }
 }
@@ -347,7 +357,10 @@ private struct AnthropicEvent: Decodable {
     }
 
     struct Message: Decodable { let usage: Usage? }
-    struct ErrorBody: Decodable { let type: String? }
+    struct ErrorBody: Decodable {
+        let type: String?
+        let message: String?
+    }
 
     let type: String
     let index: Int?

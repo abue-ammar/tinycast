@@ -108,6 +108,7 @@ struct AIProviderTests {
         capturedStreamsDecodeHoweverTheyArrive()
         thinkTagStreamsDecodeHoweverTheyArrive()
         brokenStreamsFailLoudly()
+        refusalsShowTheProvidersOwnWords()
         brandsResolveFromModelIDs()
         requestBodiesCarryDocuments()
         codexProtocolFramesRoundTrip()
@@ -908,6 +909,154 @@ struct AIProviderTests {
         return events
     }
 
+    /// A refusal is read, not discarded: the status's line, then what the provider said under it.
+    static func refusalsShowTheProvidersOwnWords() {
+        func body(_ json: String) -> Data { Data(json.utf8) }
+        func shown(_ status: Int, _ json: String, retryAfter: String? = nil) -> String {
+            AIProviderFailure.description(
+                status: status, body: body(json), retryAfter: retryAfter, secrets: [])
+        }
+        let general = "The provider rejected the model or request (HTTP 400)."
+        expect(
+            shown(
+                400,
+                #"{"error":{"object":"error","type":"invalid_request_error","message":"#
+                    + #""Model accounts/fireworks/models/glm-5p3-flash does not support image input."}}"#)
+                == "\(general)\n\nModel accounts/fireworks/models/glm-5p3-flash does not support image input.",
+            "OpenAI's error shape shows its message under the line")
+        expect(
+            shown(
+                400,
+                #"{"error":{"message":"Provider returned error","code":400,"metadata":"#
+                    + #"{"raw":"{\"error\":{\"message\":\"Maximum context length is 8192 tokens\"}}","#
+                    + #""provider_name":"Fireworks"}}}"#)
+                == "\(general)\n\nMaximum context length is 8192 tokens",
+            "OpenRouter's nested upstream body is read through its raw string")
+        expect(
+            shown(400, #"{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long"}}"#)
+                == "\(general)\n\nprompt is too long",
+            "Anthropic's shape too")
+        expect(
+            shown(400, #"[{"error":{"code":400,"message":"API key not valid.","status":"INVALID_ARGUMENT"}}]"#)
+                == "\(general)\n\nAPI key not valid.",
+            "and Gemini's array")
+        expect(
+            shown(404, #"{"object":"error","message":"The model `x` does not exist.","code":404}"#)
+                == "The provider rejected the model or request (HTTP 404).\n\nThe model `x` does not exist.",
+            "and vLLM's")
+        expect(
+            shown(429, #"{"error":{"message":"You exceeded your current quota."}}"#, retryAfter: "12")
+                == "Rate limit reached — retry after 12 seconds.\n\nYou exceeded your current quota.",
+            "a status keeps its own line, with the provider's reason under it")
+        expect(shown(400, "Bad request: unknown field") == "\(general)\n\nBad request: unknown field",
+            "a plain-text body is shown as sent")
+        expect(
+            shown(502, "<html><body>Bad gateway</body></html>")
+                == "The provider is temporarily unavailable (HTTP 502).",
+            "an HTML error page is not pasted into the chat")
+        expect(shown(401, "") == "API key rejected — check it in Settings.", "an empty body leaves the line alone")
+        expect(
+            shown(
+                502,
+                #"{"error":{"message":"Upstream timed out","metadata":{"raw":"<html>Bad gateway</html>"}}}"#)
+                == "The provider is temporarily unavailable (HTTP 502).\n\nUpstream timed out",
+            "an HTML page nested in the body gives way to the message beside it")
+        expect(
+            shown(502, #"{"error":"<html><body>Bad gateway</body></html>"}"#)
+                == "The provider is temporarily unavailable (HTTP 502).",
+            "and is left out when it is all there is")
+        expect(
+            shown(400, #"{"error":{"message":"Provider returned error","metadata":{"raw":"{\"code\":7}"}}}"#)
+                == "\(general)\n\nProvider returned error",
+            "an upstream body with no message falls back to the wrapper's")
+        expect(shown(400, #""Bad request""#) == "\(general)\n\nBad request", "a bare JSON string loses its quotes")
+        expect(
+            shown(400, "[Errno 111] Connection refused") == "\(general)\n\n[Errno 111] Connection refused",
+            "text that only starts like JSON is still text")
+
+        let echo = String(repeating: "A", count: AIProviderFailure.bodyLimit)
+        let oversized = #"{"detail":[{"type":"string_type","msg":"Input should be a valid string","input":"\#(echo)"}]}"#
+        expect(
+            AIProviderFailure.description(
+                status: 422, body: body(oversized).prefix(AIProviderFailure.bodyLimit), retryAfter: nil,
+                secrets: [])
+                == "The provider rejected the model or request (HTTP 422).\n\nInput should be a valid string",
+            "a body the cap cut still gives up the message near its start")
+        expect(
+            shown(400, #"{"error":{"message":"Half a mess"#) == general,
+            "and one cut inside its message shows no fragment of JSON")
+        expect(
+            shown(400, "[\n  {\"error\": {\"message\": \"Too long\"}") == "\(general)\n\nToo long",
+            "a cut array is read the same way, however it is spaced")
+        expect(shown(400, #"["first error", "second"#) == general, "and a cut list of strings is not shown raw")
+        expect(shown(400, "[1, 2,") == general, "nor a cut list of anything else")
+        expect(
+            shown(400, #"["model"] is not supported"#) == "\(general)\n\n[\"model\"] is not supported",
+            "a sentence that opens with a bracket and closes it is still a sentence")
+        expect(
+            shown(400, "{model} was not found") == "\(general)\n\n{model} was not found",
+            "whichever bracket it is")
+        expect(
+            shown(400, "[request timed out]") == "\(general)\n\n[request timed out]",
+            "and so is one that is bracketed from end to end")
+        expect(
+            shown(
+                400,
+                #"{"message":"<html>Bad gateway</html>","detail":"Reduce your prompt","padding":"#)
+                == "\(general)\n\nReduce your prompt",
+            "a cut body's first candidate being an HTML page does not hide the next one")
+        expect(
+            shown(
+                400,
+                #"{"error":{"message":"Provider returned error","metadata":{"raw":"{\"error\":{\"mess"}}}"#)
+                == "\(general)\n\nProvider returned error",
+            "an upstream body that arrived cut falls back to the wrapper's message")
+        expect(
+            shown(
+                422,
+                #"{"detail":[{"input":{"error":"boom from a tool"},"msg":"Input should be a valid string","x":"#)
+                == "The provider rejected the model or request (HTTP 422).\n\nInput should be a valid string",
+            "an `error` echoed back in the request does not pass for the message")
+
+        let long = String(repeating: "x", count: AIProviderFailure.messageLimit + 50)
+        expect(
+            shown(400, #"{"error":{"message":"\#(long)"}}"#).hasSuffix("x…")
+                && shown(400, #"{"error":{"message":"\#(long)"}}"#).count
+                    == general.count + 2 + AIProviderFailure.messageLimit + 1,
+            "a very long message is cut rather than filling the chat")
+
+        let key = "fw_3c8a7b2e91d04f5a"
+        let echoed = AIProviderFailure.description(
+            status: 400,
+            body: body(#"{"error":{"message":"Bad header: Bearer \#(key), also sk-proj-abcdefghijklmnop"}}"#),
+            retryAfter: nil, secrets: [key])
+        expect(
+            !echoed.contains(key) && !echoed.contains("sk-proj-abcdef") && echoed.contains("[redacted]"),
+            "the key, a bearer token and key-shaped strings never reach the transcript")
+
+        let filler = String(repeating: "x", count: AIProviderFailure.messageLimit - 8)
+        let straddling = AIProviderFailure.description(
+            status: 400, body: body(#"{"error":{"message":"\#(filler) sk-proj-abcdefghijklmnop"}}"#),
+            retryAfter: nil, secrets: [])
+        expect(
+            !straddling.contains("sk-pro"),
+            "a key the cut lands inside is redacted first, not left half-shown")
+        expect(
+            AIProviderFailure.redacted("Invalid key: abc123.", secrets: ["abc123"]) == "Invalid key: [redacted].",
+            "a short key is redacted too")
+        expect(
+            AIProviderFailure.redacted("Port 7 refused key 7 (70 tries)", secrets: ["7", ""])
+                == "Port [redacted] refused key [redacted] (70 tries)",
+            "but only as a whole word, so it cannot eat into a longer one")
+        expect(
+            AIProviderFailure.redacted("Invalid key: abcdef", secrets: ["abcdef"]) == "Invalid key: [redacted]",
+            "a short key with no digit in it is a key all the same")
+        expect(
+            AIProviderFailure.redacted("Received API Key = sk-1234", secrets: ["sk-1234"])
+                == "Received API Key = [redacted]",
+            "as is a local proxy's short key, which no key shape would catch")
+    }
+
     static func brokenStreamsFailLoudly() {
         var decoder = AIStreamDecoder(shape: .openAICompatible)
         let failure = Data(
@@ -928,12 +1077,70 @@ struct AIProviderTests {
         expect(decoder.isTerminal, "a mid-stream error ends the stream")
         expect(events.isEmpty, "nothing after the error is decoded")
 
+        var relayed = AIStreamDecoder(shape: .openAICompatible, secrets: ["hunter2-gateway-key"])
+        let upstream = Data(
+            (#"data: {"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"#
+                + #""{\"error\":{\"message\":\"Too long for key hunter2-gateway-key\"}}"}}}"#).utf8)
+            + Data("\n\n".utf8)
+        var relayedError: Error?
+        do { _ = try relayed.feed(upstream) } catch { relayedError = error }
+        expect(
+            relayedError as? AIProviderError == .responseFailed("Too long for key [redacted]"),
+            "a mid-stream error reads through to the upstream reason, with the connection's key out")
+
+        var paged = AIStreamDecoder(shape: .openAICompatible)
+        let page = Data(#"data: {"error":{"message":"<html>Bad gateway</html>"}}"#.utf8) + Data("\n\n".utf8)
+        var pagedError: Error?
+        do { _ = try paged.feed(page) } catch { pagedError = error }
+        expect(
+            pagedError as? AIProviderError == .responseFailed("The provider stopped the response with an error."),
+            "a mid-stream error that is only an HTML page says so in Tinycast's own words")
+
+        var bracketed = AIStreamDecoder(shape: .openAICompatible)
+        let prose = Data(#"data: {"error":{"message":"[\"model\"] is not supported"}}"#.utf8) + Data("\n\n".utf8)
+        var bracketedError: Error?
+        do { _ = try bracketed.feed(prose) } catch { bracketedError = error }
+        expect(
+            bracketedError as? AIProviderError == .responseFailed(#"["model"] is not supported"#),
+            "a mid-stream message that opens with a bracket is still shown")
+
         var malformed = AIStreamDecoder(shape: .openAICompatible)
         let garbage = Data("data: {not json\n\n".utf8)
         expect(
             (try? malformed.feed(garbage)) == nil,
             "unparseable JSON is rejected rather than skipped")
         expect(malformed.isTerminal, "a malformed frame ends the stream")
+
+        var overloaded = AIStreamDecoder(shape: .anthropic)
+        let said = Data(
+            #"data: {"type":"error","error":{"type":"overloaded_error","message":"Overloaded"}}"#.utf8)
+            + Data("\n\n".utf8)
+        var overloadedError: Error?
+        do { _ = try overloaded.feed(said) } catch { overloadedError = error }
+        expect(
+            overloadedError?.localizedDescription
+                == "The provider stopped the response with an error.\n\nOverloaded",
+            "an Anthropic error event shows what it said under the line")
+
+        var echoing = AIStreamDecoder(shape: .anthropic, secrets: ["hunter2-gateway-key"])
+        let echoed = Data(
+            #"data: {"type":"error","error":{"type":"api_error","message":"Bad key hunter2-gateway-key"}}"#.utf8)
+            + Data("\n\n".utf8)
+        var echoedError: Error?
+        do { _ = try echoing.feed(echoed) } catch { echoedError = error }
+        expect(
+            echoedError?.localizedDescription.hasSuffix("Bad key [redacted]") == true,
+            "and never the key the connection was using")
+
+        var pagedAnthropic = AIStreamDecoder(shape: .anthropic)
+        let anthropicPage = Data(
+            #"data: {"type":"error","error":{"type":"api_error","message":"<html>Bad gateway</html>"}}"#.utf8)
+            + Data("\n\n".utf8)
+        var pagedAnthropicError: Error?
+        do { _ = try pagedAnthropic.feed(anthropicPage) } catch { pagedAnthropicError = error }
+        expect(
+            pagedAnthropicError?.localizedDescription == "The provider stopped the response with an error.",
+            "nor an HTML page in place of a message")
 
         var anthropic = AIStreamDecoder(shape: .anthropic)
         let rejected = Data(
