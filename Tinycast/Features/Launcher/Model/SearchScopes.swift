@@ -54,7 +54,9 @@ enum SearchScopes {
     }
 
     /// An `.app` is never descended into beyond its embedded-app folders.
-    private static func appBundles(under url: URL, subfolderDepth: Int, ancestors: Set<String> = []) -> [URL] {
+    private static func appBundles(
+        under url: URL, subfolderDepth: Int, ancestors: Set<String> = []
+    ) -> [URL] {
         let fm = FileManager.default
         var isDirectory: ObjCBool = false
         // Skip non-directories early without rejecting directory symlinks.
@@ -81,7 +83,9 @@ enum SearchScopes {
             if item.pathExtension == "app" {
                 result.append(contentsOf: withEmbedded(item, ancestors: ancestors))
             } else if subfolderDepth > 0 {
-                result.append(contentsOf: appBundles(under: item, subfolderDepth: subfolderDepth - 1, ancestors: ancestors))
+                result.append(
+                    contentsOf: appBundles(
+                        under: item, subfolderDepth: subfolderDepth - 1, ancestors: ancestors))
             }
         }
         return result
