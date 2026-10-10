@@ -15,6 +15,7 @@ struct QuicklinkCoordinatorTests {
         try await plainLink()
         try copying()
         try editing()
+        try await deleting()
         try revealing()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -150,10 +151,63 @@ struct QuicklinkCoordinatorTests {
         defer { fixture.cleanUp() }
         fixture.window.isVisible = true
         fixture.coordinator.editQuicklink(fixture.link)
-        expect(!fixture.window.isVisible, "editing leaves the palette for Settings")
         expect(
-            fixture.core.pendingQuicklinkEdit?.quicklink == fixture.link,
+            fixture.window.isVisible && fixture.core.palette.mode == .quicklinkEditor,
+            "editing opens the launcher form")
+        expect(
+            fixture.coordinator.editor?.original == fixture.link,
             "the editor opens on the chosen quicklink")
+        fixture.coordinator.editor?.name = "Updated name"
+        fixture.coordinator.setQuicklinkEnabled(false, id: fixture.link.id)
+        fixture.coordinator.saveQuicklink()
+        expect(
+            fixture.store.quicklink(id: fixture.link.id)?.name == "Updated name"
+                && fixture.store.quicklink(id: fixture.link.id)?.isEnabled == false,
+            "saving an edit preserves the current enabled state from Settings")
+        expect(
+            fixture.coordinator.editor == nil && !fixture.window.isVisible,
+            "saving closes a directly summoned editor")
+
+        fixture.settings.quicklinksEnabled = false
+        fixture.coordinator.editQuicklink(nil)
+        expect(fixture.coordinator.editor == nil, "a disabled feature cannot open an editor")
+        fixture.settings.quicklinksEnabled = true
+        fixture.coordinator.editQuicklink(nil)
+        fixture.coordinator.editor?.name = "New link"
+        fixture.coordinator.editor?.link = "https://example.com/new"
+        fixture.settings.quicklinksEnabled = false
+        fixture.coordinator.saveQuicklink()
+        expect(fixture.store.quicklinks.count == 2, "disabling the feature prevents saving a draft")
+        fixture.settings.quicklinksEnabled = true
+        fixture.coordinator.saveQuicklink()
+        expect(fixture.store.quicklinks.count == 3, "creation resumes after re-enabling the feature")
+
+        fixture.coordinator.editQuicklink(fixture.link)
+        try fixture.store.remove(id: fixture.link.id)
+        fixture.coordinator.saveQuicklink()
+        expect(
+            fixture.coordinator.editor?.errorMessage != nil
+                && fixture.coordinator.editor?.original == fixture.link
+                && fixture.store.quicklink(id: fixture.link.id) == nil,
+            "saving a removed item reports the failure without losing the draft or recreating it")
+    }
+
+    static func deleting() async throws {
+        for confirmsInSettings in [false, true] {
+            let fixture = try Fixture()
+            defer { fixture.cleanUp() }
+            fixture.settings.quicklinkConfirmsBeforeDelete = confirmsInSettings
+            await fixture.coordinator.deleteQuicklink(id: fixture.link.id, alwaysConfirm: true)
+            expect(
+                fixture.core.confirmations == 1 && fixture.store.quicklink(id: fixture.link.id) != nil,
+                "Settings deletion always confirms and cancellation preserves the item")
+            fixture.core.confirmations = 0
+            await fixture.coordinator.deleteQuicklink(id: fixture.link.id)
+            expect(
+                fixture.core.confirmations == (confirmsInSettings ? 1 : 0)
+                    && (fixture.store.quicklink(id: fixture.link.id) != nil) == confirmsInSettings,
+                "launcher deletion still follows its confirmation setting")
+        }
     }
 
     static func revealing() throws {
@@ -217,7 +271,7 @@ struct QuicklinkCoordinatorTests {
                 store: store, settings: settings, appIndex: AppIndex(), injector: injector,
                 hotKeys: HotKeyManager(), favorites: FavoritesStore(), visibility: VisibilityStore(),
                 ranking: LauncherRankingStore(), aliases: AliasStore(), windowController: window,
-                paletteCoordinator: palette, settingsCoordinator: SettingsCoordinator(),
+                paletteCoordinator: palette,
                 clipboardHistory: { ["clipboard text"] }, core: core)
             core.quicklinkCoordinator = coordinator
         }
@@ -288,12 +342,15 @@ final class PaletteWindowController {
     var previousTarget: InjectionTarget? = .previous
 }
 
-enum PaletteMode { case quicklinks }
+enum PaletteMode { case launcher, quicklinks, quicklinkEditor }
 @MainActor
 final class PaletteState {
+    var mode = PaletteMode.launcher
     var selection = 0
     var commandArguments: [String: String] = [:]
     var pendingArgumentEntryID: String?
+    func prepare(mode: PaletteMode) { self.mode = mode }
+    func pop(preservingSelection: Bool) -> Bool { false }
     static func argumentKey(_ entryID: String, _ name: String) -> String { entryID + "\u{1}" + name }
 }
 
@@ -304,6 +361,7 @@ final class PaletteCoordinator {
     var shows = 0
     init(window: PaletteWindowController, state: PaletteState) { self.window = window; self.state = state }
     func showPalette(mode: PaletteMode) {
+        state.prepare(mode: mode)
         shows += 1
         window.isVisible = true
         state.selection = 0
@@ -311,7 +369,7 @@ final class PaletteCoordinator {
         state.pendingArgumentEntryID = nil
     }
     var isVisible: Bool { window.isVisible }
-    func hidePalette(restoreFocus: Bool) { window.isVisible = false }
+    func hidePalette(restoreFocus: Bool = true) { window.isVisible = false }
 }
 
 @MainActor
@@ -330,9 +388,6 @@ enum AppLauncher {
     static func showInFinder(_ url: URL) { revealed.append(url) }
 }
 
-enum SettingsTab { case quicklinks }
-final class SettingsCoordinator { func showSettings(tab: SettingsTab) {} }
-struct QuicklinkEditRequest { let quicklink: Quicklink? }
 enum DialogTone { case danger, neutral, success }
 @MainActor
 final class AppCore {
@@ -341,13 +396,16 @@ final class AppCore {
     lazy var quicklinkCoordinator: QuicklinkCoordinator = {
         fatalError("The fixture must wire the coordinator")
     }()
-    var pendingQuicklinkEdit: QuicklinkEditRequest?
     var messages: [String] = []
+    var confirmations = 0
     func showNotice(title: String, message: String, symbol: String, tone: DialogTone) async {}
     func reportFailure(title: String, message: String, symbol: String, recovery: String) async -> Bool {
         false
     }
-    func confirm(title: String, message: String, symbol: String, confirmTitle: String) async -> Bool { false }
+    func confirm(title: String, message: String, symbol: String, confirmTitle: String) async -> Bool {
+        confirmations += 1
+        return false
+    }
     func showMessage(_ message: String) { messages.append(message) }
 }
 

@@ -38,6 +38,7 @@ struct CalendarTests {
         autoJoinRespectsArming()
         autoJoinSkipsBareLinks()
         eventDrafts()
+        eventEditor()
         meetingDetails()
 
         print("\(passes)/\(passes + failures) passed")
@@ -570,6 +571,34 @@ struct CalendarTests {
         expect(EventDraft.label(startOffset: 15) == "15 min", "a smaller offset reads in minutes")
         expect(EventDraft.label(duration: 45) == "45 min", "so does a sub-hour duration")
         expect(EventDraft.label(duration: 60) == "1 hr", "an hour reads as an hour")
+    }
+
+    static func eventEditor() {
+        let editor = EventEditorSession()
+        expect(!editor.draft.isValid, "the event editor opens with an invalid blank title")
+        expect(editor.draft.startOffsetMinutes == 0, "new events still start now")
+        expect(editor.draft.durationMinutes == 30, "new events still last thirty minutes")
+        expect(editor.focusedField == .title, "the title takes initial focus")
+        editor.advanceFocus(backwards: false)
+        expect(editor.focusedField == .start, "Tab reaches the start choice")
+        editor.advanceFocus(backwards: false)
+        expect(editor.focusedField == .duration, "then reaches duration")
+        editor.advanceFocus(backwards: false)
+        expect(editor.focusedField == .title, "Tab wraps without leaving the form")
+        editor.advanceFocus(backwards: true)
+        expect(editor.focusedField == .duration, "Shift-Tab wraps backwards")
+        editor.advanceFocus(backwards: true)
+        expect(editor.focusedField == .start, "Shift-Tab returns to start")
+        editor.advanceFocus(backwards: true)
+        expect(editor.focusedField == .title, "then returns to title")
+        editor.draft.title = " \n "
+        expect(!editor.draft.isValid, "a whitespace-only editor cannot create an event")
+        editor.draft.title = "  Réunion 🎉  "
+        editor.draft.startOffsetMinutes = 15
+        editor.draft.durationMinutes = 45
+        expect(editor.draft.trimmedTitle == "Réunion 🎉", "the editor preserves Unicode titles")
+        expect(editor.draft.start(from: at(10)) == at(25), "start is relative to saving, not opening")
+        expect(editor.draft.end(from: at(10)) == at(70), "duration starts at the selected offset")
     }
 
     // MARK: - Meeting details

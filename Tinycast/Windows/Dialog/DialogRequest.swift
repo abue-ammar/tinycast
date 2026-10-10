@@ -37,7 +37,6 @@ struct DialogRequest {
 /// A dialog carries at most one control, so the cases are exclusive by construction.
 enum DialogAccessory {
     case volume(VolumeState)
-    case eventDraft(EventDraftState)
     case snippetArguments(SnippetArgumentsState)
 
     /// Whether ←/→/↑/↓ belong to the control rather than to whatever has focus inside it.

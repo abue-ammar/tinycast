@@ -1,8 +1,11 @@
 import AppKit
+import Observation
 
 /// Owns custom commands: the library, the one run funnel with its gates, and a deletion's cleanup.
 @MainActor
+@Observable
 final class CustomCommandCoordinator {
+    private(set) var editor: CustomCommandEditorSession?
     private let store: CustomCommandStore
     private let settings: AppSettings
     private let appIndex: AppIndex
@@ -16,7 +19,7 @@ final class CustomCommandCoordinator {
     /// Dialog and message-HUD presentation only — never for state this type owns.
     private unowned let core: AppCore
     /// Built on first use; the window inside it waits for a run that actually shows output.
-    private lazy var outputPresenter = CommandOutputPresenter(
+    @ObservationIgnored private lazy var outputPresenter = CommandOutputPresenter(
         activation: activationPolicy,
         rerun: { [unowned self] in self.rerunOutput(id: $0) },
         stop: { [unowned self] in self.stopOutputRun(id: $0) },
@@ -58,11 +61,81 @@ final class CustomCommandCoordinator {
     // MARK: - Feature presence
 
     func applyCustomCommandsPresence() {
+        if !settings.customCommandsEnabled {
+            if core.palette.mode == .customCommandEditor { cancelCustomCommandEditing() }
+            if core.palette.mode == .customCommands {
+                core.palette.prepare(mode: .launcher)
+            }
+        }
         let visible = settings.customCommandsEnabled && settings.customCommandsShowInLauncher
         appIndex.setCustomCommands(visible ? store.commands : [])
+        let commands = Set(SettingsTab.commands.ownedCommands)
+        appIndex.setCommandsVisible(commands, settings.customCommandsEnabled)
+        appIndex.setCommandsListed(commands, settings.customCommandsShowInLauncher)
     }
 
     // MARK: - Library
+
+    func showCustomCommands() {
+        guard settings.customCommandsEnabled else { return }
+        paletteCoordinator.showPalette(mode: .customCommands)
+    }
+
+    func editCustomCommand(_ command: CustomCommand?) {
+        guard settings.customCommandsEnabled else { return }
+        editor = CustomCommandEditorSession(command: command)
+        paletteCoordinator.showPalette(mode: .customCommandEditor)
+    }
+
+    func saveCustomCommand() {
+        guard settings.customCommandsEnabled, let editor, editor.canSave else { return }
+        do {
+            var draft = editor.draft()
+            if editor.original == nil {
+                try addCustomCommand(draft)
+            } else {
+                guard let current = store.command(id: editor.id) else {
+                    editor.errorMessage = "This command was deleted. Copy your changes before closing."
+                    return
+                }
+                draft.isEnabled = current.isEnabled
+                try updateCustomCommand(draft)
+            }
+            cancelCustomCommandEditing()
+        } catch {
+            editor.errorMessage = error.localizedDescription
+        }
+    }
+
+    func cancelCustomCommandEditing() {
+        guard core.palette.mode == .customCommandEditor else { return }
+        if !core.palette.pop(preservingSelection: true) {
+            paletteCoordinator.hidePalette()
+            core.palette.prepare(mode: .launcher)
+        }
+        editor = nil
+    }
+
+    func editorDidClose(_ editor: CustomCommandEditorSession) {
+        if self.editor === editor { self.editor = nil }
+    }
+
+    func chooseWorkingDirectory() {
+        guard let editor else { return }
+        let panel = NSOpenPanel()
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.allowsMultipleSelection = false
+        panel.prompt = "Choose"
+        panel.message = "Choose the folder this command runs in."
+        if !editor.workingDirectory.isEmpty {
+            panel.directoryURL = URL(
+                fileURLWithPath: (editor.workingDirectory as NSString).expandingTildeInPath)
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url, self.editor === editor else { return }
+        editor.workingDirectory = (url.path as NSString).abbreviatingWithTildeInPath
+    }
 
     @discardableResult
     func addCustomCommand(_ draft: CustomCommand) throws -> CustomCommand {
@@ -82,8 +155,14 @@ final class CustomCommandCoordinator {
         store.setShowsInRootSearch(shows, id: id)
     }
 
-    func deleteCustomCommand(id: UUID) {
+    func deleteCustomCommand(id: UUID) async {
         guard let command = store.command(id: id) else { return }
+        guard
+            await core.confirm(
+                title: "Delete “\(command.name)”?",
+                message: "Its shortcut, favorite slot and learned ranking go with it.",
+                symbol: command.iconSymbol ?? CustomCommand.sfSymbol, confirmTitle: "Delete")
+        else { return }
         removeCustomCommandReferences(ids: [id], entryIDs: [command.entryID])
         store.remove(id: id)
     }

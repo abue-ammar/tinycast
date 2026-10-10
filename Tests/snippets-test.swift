@@ -2,6 +2,7 @@
 
 import AppKit
 import Foundation
+import SwiftUI
 
 @main
 @MainActor
@@ -13,6 +14,7 @@ struct SnippetsTests {
         // The in-process delivery tier drives a real text view, which needs AppKit awake.
         _ = NSApplication.shared
         testIdentityAndRevision()
+        testEditorSession()
         testRaycastImport()
         try testMarkdownCodec()
         try testRepositoryStorage()
@@ -51,6 +53,62 @@ struct SnippetsTests {
         check(
             "source revision changes with source content",
             SnippetSourceRevision(content: "same") != SnippetSourceRevision(content: "same\n"))
+    }
+
+    private static func testEditorSession() {
+        let editor = SnippetEditorSession(record: nil)
+        check(
+            "new editor has no file and cannot save without a name", editor.record == nil && !editor.canSave)
+        check(
+            "new editor preserves the existing option defaults", editor.isEnabled && !editor.showsConfirmation
+        )
+        editor.name = "  Example \n"
+        editor.keyword = "  !example  "
+        editor.text = "  First\nSecond\n"
+        check("named draft can be saved", editor.canSave)
+        check(
+            "editor trims metadata without changing template whitespace",
+            editor.snippet == Snippet(name: "Example", text: editor.text, keyword: "!example"))
+        editor.keyword = " \n"
+        check("blank editor keyword is normalized to nil", editor.snippet.keyword == nil)
+        editor.isSaving = true
+        check("a pending save cannot be submitted twice", !editor.canSave)
+        editor.isSaving = false
+        editor.name = " \n"
+        check("whitespace-only name cannot be saved", !editor.canSave)
+
+        let original = record(
+            "/tmp/editor.md",
+            Snippet(
+                name: "Original", text: "Hello", keyword: "!hello", isEnabled: false,
+                showsConfirmation: true))
+        let editing = SnippetEditorSession(record: original)
+        check("editing keeps the loaded record and source revision", editing.record == original)
+        check("editing starts with every original option", editing.snippet == original.snippet)
+        editing.name = "Changed"
+        check("draft changes do not modify the loaded record", editing.record?.snippet.name == "Original")
+        let end = editing.text.index(editing.text.startIndex, offsetBy: 2)
+        editing.selection = TextSelection(range: editing.text.startIndex..<end)
+        editing.focusedField = .keyword
+        editing.insert("{date}")
+        check("placeholder replaces the selected text", editing.text == "{date}llo")
+        check("placeholder returns focus to the template", editing.focusedField == .template)
+        editing.insert("{time}")
+        check("successive placeholders stay at the caret", editing.text == "{date}{time}llo")
+        editing.selection = nil
+        editing.insert("{cursor}")
+        check("placeholder without a selection appends", editing.text == "{date}{time}llo{cursor}")
+        editing.text = "Avant 👋 après"
+        let cursor = editing.text.index(editing.text.startIndex, offsetBy: 7)
+        editing.selection = TextSelection(range: cursor..<cursor)
+        editing.insert("\n")
+        check("Return inserts a line break at the Unicode caret", editing.text == "Avant 👋\n après")
+        editing.advanceFocus(backwards: false)
+        check("Tab advances to the name", editing.focusedField == .name)
+        editing.advanceFocus(backwards: true)
+        check("Shift-Tab returns to the template", editing.focusedField == .template)
+        editing.advanceFocus(backwards: true)
+        check("form focus wraps through the existing options", editing.focusedField == .confirmation)
     }
 
     private static func testRaycastImport() {

@@ -237,7 +237,6 @@ private struct ExtensionTextField: View {
     @State private var text: String = ""
     /// The last edit dispatched, so an echo of an older one cannot overwrite newer typing.
     @State private var sent: String?
-    @State private var hovered = false
 
     var body: some View {
         Group {
@@ -250,8 +249,7 @@ private struct ExtensionTextField: View {
         .textFieldStyle(.plain)
         .font(metrics.typography.rowTitle)
         .focused($focus, equals: index)
-        .extensionFieldChrome(focused: focus == index, hovered: hovered)
-        .onHover { hovered = $0 }
+        .extensionFieldChrome(focused: focus == index)
         .modifier(ExtensionFormKeys(field: .text, onActivate: {}, onSubmit: onSubmit))
         // The visible label is a Text in the row beside it, which the field cannot claim itself.
         .accessibilityLabel(Text(node.string("title") ?? node.string("placeholder") ?? "Text"))
@@ -295,7 +293,6 @@ private struct ExtensionTextArea: View {
     @State private var text: String = ""
     /// The last edit dispatched; see `ExtensionTextField.adopt` for why an echo can be stale.
     @State private var sent: String?
-    @State private var hovered = false
 
     var body: some View {
         TextEditor(text: $text)
@@ -304,8 +301,7 @@ private struct ExtensionTextArea: View {
             // The text system insets its own line fragments, which the chrome's inset then repeats.
             .padding(.horizontal, -form.textViewGutter)
             .focused($focus, equals: index)
-            .extensionFieldChrome(focused: focus == index, hovered: hovered, multiline: true)
-            .onHover { hovered = $0 }
+            .extensionFieldChrome(focused: focus == index, multiline: true)
             .modifier(ExtensionFormKeys(field: .textArea, onActivate: {}, onSubmit: onSubmit))
             .accessibilityLabel(Text(node.string("title") ?? "Text area"))
             .extensionFieldHint(node.string("info"), error: node.string("error"))
@@ -382,7 +378,8 @@ private struct ExtensionCheckbox: View {
             .fill(isOn ? Color.accentColor : ExtensionColors.fieldFill)
             .overlay(
                 RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    .strokeBorder(borderColor, lineWidth: 1)
+                    .strokeBorder(
+                        borderColor, lineWidth: focus == index ? form.focusStrokeWidth : 1)
             )
             .overlay {
                 if isOn {
@@ -397,9 +394,9 @@ private struct ExtensionCheckbox: View {
     }
 
     private var borderColor: Color {
-        if focus == index { return ExtensionColors.fieldFocusStroke }
+        if focus == index { return ExtensionColors.fieldStroke }
         if isOn { return .clear }
-        return hovered ? ExtensionColors.fieldFocusStroke : ExtensionColors.checkboxStroke
+        return hovered ? ExtensionColors.fieldStroke : ExtensionColors.checkboxStroke
     }
 
     /// A click takes focus too, so the keyboard carries on from where the pointer left off.
@@ -419,7 +416,6 @@ private struct ExtensionFilePicker: View {
     let onSubmit: () -> Void
 
     private var paths: [String] { node.array("value").compactMap(\.stringValue) }
-    @State private var hovered = false
 
     private var label: String {
         guard !paths.isEmpty else { return "Choose…" }
@@ -437,12 +433,11 @@ private struct ExtensionFilePicker: View {
                 .lineLimit(1)
             Spacer(minLength: 0)
         }
-        .extensionFieldChrome(focused: focus == index, hovered: hovered)
+        .extensionFieldChrome(focused: focus == index)
         .contentShape(Rectangle())
         .focusable()
         .focused($focus, equals: index)
         .focusEffectDisabled()
-        .onHover { hovered = $0 }
         .onTapGesture { choose() }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(node.string("title") ?? "File"))

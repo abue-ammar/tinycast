@@ -2,7 +2,9 @@ import AppKit
 
 /// Owns the snippet flow: listener, browser, editor handoff, delivery, presence.
 @MainActor
+@Observable
 final class SnippetCoordinator {
+    private(set) var editor: SnippetEditorSession?
     private let store: SnippetsStore
     private let listener: SnippetKeywordListener
     private let injector: TextInjector
@@ -11,10 +13,10 @@ final class SnippetCoordinator {
     private let settings: AppSettings
     private let windowController: PaletteWindowController
     private let paletteCoordinator: PaletteCoordinator
-    private let settingsCoordinator: SettingsCoordinator
+    private let palette: PaletteState
     /// Routed out so `MessageHUDController` stays owned by `AppCore`.
     private let showMessage: @MainActor (String, DialogTone) -> Void
-    /// The consent dialog and the `pendingSnippetEdit` handoff to the Settings pane.
+    /// The consent dialog stays owned by the composition root.
     private unowned let core: AppCore
 
     init(
@@ -26,7 +28,7 @@ final class SnippetCoordinator {
         settings: AppSettings,
         windowController: PaletteWindowController,
         paletteCoordinator: PaletteCoordinator,
-        settingsCoordinator: SettingsCoordinator,
+        palette: PaletteState,
         showMessage: @escaping @MainActor (String, DialogTone) -> Void,
         core: AppCore
     ) {
@@ -38,7 +40,7 @@ final class SnippetCoordinator {
         self.settings = settings
         self.windowController = windowController
         self.paletteCoordinator = paletteCoordinator
-        self.settingsCoordinator = settingsCoordinator
+        self.palette = palette
         self.showMessage = showMessage
         self.core = core
     }
@@ -110,6 +112,7 @@ final class SnippetCoordinator {
         }
         listener.stop()
         injector.cancelAutomaticExpansion()
+        if palette.mode == .snippetEditor { cancelSnippetEditing() }
         store.stop()
         applySnippetsLauncherPresence()
     }
@@ -122,16 +125,68 @@ final class SnippetCoordinator {
         paletteCoordinator.togglePalette(mode: .snippets)
     }
 
-    /// Opens the Snippets pane with the editor showing `record`; nil is a new snippet.
     func editSnippet(_ record: StoredSnippet?) {
-        if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
-        core.pendingSnippetEdit = SnippetEditRequest(record: record)
-        settingsCoordinator.showSettings(tab: .snippets)
+        guard settings.snippetsEnabled else { return }
+        editor = SnippetEditorSession(record: record)
+        paletteCoordinator.showPalette(mode: .snippetEditor)
+    }
+
+    func requestSnippetSave() {
+        guard settings.snippetsEnabled, let editor, editor.canSave else { return }
+        editor.isSaving = true
+    }
+
+    func saveSnippet(_ editor: SnippetEditorSession) async {
+        guard settings.snippetsEnabled, !Task.isCancelled, self.editor === editor else { return }
+        let snippet = editor.snippet
+        defer { editor.isSaving = false }
+        do {
+            if var record = editor.record {
+                record.snippet = snippet
+                try await store.save(record)
+            } else {
+                try await store.create(snippet)
+            }
+            guard !Task.isCancelled, self.editor === editor else { return }
+            cancelSnippetEditing()
+        } catch {
+            editor.errorMessage = error.localizedDescription
+        }
+    }
+
+    func cancelSnippetEditing() {
+        guard palette.mode == .snippetEditor else { return }
+        if !palette.pop(preservingSelection: true) {
+            paletteCoordinator.hidePalette()
+            palette.prepare(mode: .launcher)
+        }
+        editor = nil
+    }
+
+    func editorDidClose(_ editor: SnippetEditorSession) {
+        if self.editor === editor { self.editor = nil }
     }
 
     func showSnippetInFinder(_ record: StoredSnippet) {
         paletteCoordinator.hidePalette(restoreFocus: false)
         AppLauncher.showInFinder(record.fileURL)
+    }
+
+    func deleteSnippet(id: StoredSnippet.ID) async {
+        guard settings.snippetsEnabled, let record = store.record(id: id) else { return }
+        guard
+            await core.confirm(
+                title: "Delete “\(record.snippet.name)”?",
+                message: "This removes \(record.fileURL.lastPathComponent) from your snippets folder.",
+                symbol: "doc.text", confirmTitle: "Delete")
+        else { return }
+        do {
+            try await store.delete(id: id)
+        } catch {
+            await core.showNotice(
+                title: "Couldn’t Delete “\(record.snippet.name)”", message: error.localizedDescription,
+                symbol: "doc.text", tone: .danger)
+        }
     }
 
     // MARK: - Expansion

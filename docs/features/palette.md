@@ -19,8 +19,7 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
   AppKit field editor; the palette field stays mounted and inert beneath it.
 - **The search field is never mounted conditionally.** A screen that owns the keyboard itself hides it
   through `PaletteScreen.hidesSearchField` — opacity and hit testing, never an `if` — because
-  flipping a branch around it tears its field editor down. The header is simply left empty, and an
-  extension's `Form` is the one screen that does this today.
+  flipping a branch around it tears its field editor down. The header is simply left empty.
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`).
 - **Input-source switching is a palette session.** The source active at summon time is captured before
@@ -93,16 +92,21 @@ every screen but two: the clipboard lands past its pins
 | `.emoji`             | `EmojiScreen`             | `EmojiGridView`                                                                  |
 | `.fileSearch`        | `FileSearchScreen`        | `FileSearchList` (see [file-search.md](file-search.md))                          |
 | `.schedule`          | `ScheduleScreen`          | `ScheduleList` (see [calendar.md](calendar.md))                                  |
+| `.eventEditor`       | `EventEditorScreen`       | `EventEditorView` (see [calendar.md](calendar.md#create-event)) |
+| `.customCommandEditor` | `CustomCommandEditorScreen` | `CustomCommandEditorView` (see [custom-commands.md](custom-commands.md#launcher-editor)) |
+| `.customCommands` | `CustomCommandListScreen` | `CustomCommandList` + script preview (see [custom-commands.md](custom-commands.md#launcher-integration)) |
 | `.meetingDetails`    | `MeetingDetailsScreen`    | `MeetingDetailsView` (see [calendar.md](calendar.md#the-details-page))           |
 | `.uninstall`         | `UninstallScreen`         | `UninstallList` (see [uninstall.md](uninstall.md))                               |
 | `.quicklinks`        | `QuicklinkListScreen`     | `QuicklinkList` + preview (see [quicklinks.md](quicklinks.md#search-quicklinks)) |
+| `.quicklinkEditor`   | `QuicklinkEditorScreen`   | `QuicklinkEditorView` (see [quicklinks.md](quicklinks.md#launcher-editor)) |
 | `.snippets`          | `SnippetsScreen`          | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets))        |
+| `.snippetEditor`     | `SnippetEditorScreen`     | `SnippetEditorView` (see [snippets.md](snippets.md#launcher-editor)) |
 | `.dictionary`        | `DictionaryScreen`        | `DictionaryEntryView` (see [dictionary.md](dictionary.md))                       |
 | `.extensionCommand`  | `ExtensionCommandScreen`  | `ExtensionCommandView` (see [extensions.md](extensions.md))                      |
 
 **Tab rings the three surfaces a reader opens directly — launcher → AI chat → clipboard → launcher**
-— unless the screen claims it through `tabTarget(from:backwards:)` (an extension's `Form` walks its
-own fields), or the selected row declares arguments, in which case it walks those fields first (see
+— unless the screen claims it through `tab(at:backwards:)` (native editors and extension forms walk
+their own fields), or the selected row declares arguments, in which case it walks those fields first (see
 below); every other mode stays off the ring, and is reached by a command or a global hotkey, with
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
 `aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced.
@@ -125,12 +129,20 @@ that returning looks like never having left — and offers four motions over it:
 | -------------------------- | -------------------------------------------------------------------------- |
 | `prepare(mode:)`           | become the root: open fresh, drop the stack                                |
 | `replace(mode:)`           | swap the screen, keep what it was opened over (a new chat, not a new root) |
-| `push(mode:)`              | open over the current screen, which a back step returns to                 |
+| `push(mode:)`              | open over the current screen; replace a transient native editor instead   |
 | `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring        |
 | `pop()`                    | restore the screen underneath; `false` when this one is the root           |
 
 `pop()` bumps `followToken` rather than `resetToken`: the reset token exists to land a list afresh,
-which would throw away the very selection being restored.
+which would throw away the very selection being restored. The native editors opt into
+`pop(preservingSelection: true)` so `restoredSelection` also carries that row through the mode and query
+observers. Typing a new query or opening a fresh screen clears it; filter resets still use the screen's
+own landing row. Other screens keep their existing navigation behaviour.
+
+Native editor drafts live only while their form is mounted. Switching features replaces that form,
+keeping its previous browser or search underneath; Back never restores a discarded draft's mode.
+Closing a menu releases its hosted actions after the exit animation, while reusing the panel itself.
+Scrolling a native form dismisses its menu before the control's anchor moves.
 
 **Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
 leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
@@ -370,8 +382,8 @@ responder, so neither of the other two paths would fire.
 
 ## The panel settles the pointer itself
 
-`PalettePanel.applyCursorPolicy` sets the cursor after every mouse event: the I-beam inside the search
-field's frame, the arrow everywhere else. Without it the palette's pointer sticks as an I-beam over the
+`PalettePanel.applyCursorPolicy` sets the cursor after every mouse event: the I-beam inside editable
+text controls or the search field's frame, the arrow elsewhere. Without it the pointer sticks over the
 whole window and flickers along the field's edge — the two AppKit mechanisms that claim a cursor here
 disagree, and neither yields.
 
@@ -397,6 +409,17 @@ The policy runs after `super.sendEvent`, so it has the last word, and it writes 
 actually differs. It must stay **symmetric**: an earlier version left the field alone and only forced
 the arrow outside it, and AppKit's own alternation over the field came straight back.
 
+All editable text controls use this same cursor policy, including extension fields. It checks visible
+native control bounds, since SwiftUI's hit-test can return a hosting view instead of its text field.
+Hidden or clipped controls cannot claim the cursor. The search rectangle remains the stable fallback.
+`FormTextInput` uses an `NSTextField` and its native placeholder; `FormTextArea` uses a growing
+TextKit 2 `NSTextView`.
+Both clip to their own bounds so AppKit's visible-rect tracking area stays inside the field.
+Without this, the unclipped form scroll view makes each text view track the entire window, and their
+cursor claims overlap even in the gaps between fields. The page itself keeps its edge dissolve.
+Each editor session mounts fresh controls; textarea undo stays local and includes placeholder inserts.
+The textarea routes undo/redo to its own manager, as the Notes editor does in a non-activating panel.
+
 ## One menu at a time
 
 `RootPaletteView` holds a single `OpenMenu?` rather than a flag per menu, so "at most one is open" is
@@ -404,7 +427,12 @@ structural instead of a pair of `onChange` handlers pushing each other closed. T
 hangs `.bottomTrailing`, the app menu `.bottomLeading`, and everything drawn as a header control —
 the clipboard type filter, the AI model and effort menus, an `options=` argument field's choices and
 a running command's `searchBarAccessory` dropdown — hangs `.belowHeaderTrailing`, under its own
-button. `menuContent` resolves the open case to one `PaletteMenuContent` — a row count, a row action
+button. Native editor inputs supply their own choices and control frame through `openInputOptions`;
+`.belowControl` aligns the menu with either edge of that field and allows it beyond the palette's bounds.
+It stays within the display's usable frame and opens above the field if there is no room below.
+Input menus keep a dedicated 200pt minimum width and expand to fit wider controls. Their capped rows
+gain 20pt without changing other menus; each dropdown's chevron follows the open menu's control frame.
+`menuContent` resolves the open case to one `PaletteMenuContent` — a row count, a row action
 and a view built on demand — so ↑/↓, plain ↵, Esc and the click-away catcher serve every menu without
 knowing which is up. A screen supplies its rows as a `PopoverMenuContent` through `actions(at:)` and
 the default `menuContent` wraps them; a screen whose rows the palette's menu can't express overrides
@@ -428,7 +456,7 @@ list under itself (Move Favorite Up/Down) is no exception, so no row ever runs a
 `PopoverMenuItem.startsSection` draws a separator with the list inset (8pt) above and below it, so a
 row sits as far from it as from the search field's hairline. That height joins the menu's exact
 sizing, but the separator takes no selection index, so navigation still walks only rows. A menu
-taller than its cap ends its viewport mid-row, so the fold never lands on a separator or section
+taller than its default cap ends its viewport mid-row, so the fold never lands on a separator or section
 title, and both hairlines are one device pixel.
 The app menu keeps its five actions in one group and caps the list at four and a half rows, leaving
 Quit partially visible above the search band until scrolling or keyboard navigation reveals it.

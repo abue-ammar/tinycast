@@ -61,13 +61,12 @@ struct CommandArgumentsRow: View {
 }
 
 private struct ArgumentField: View {
-
+    private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
     @Environment(\.metrics) private var metrics
     let argument: ExtensionCommandArgument
     @Binding var text: String
     let isFocused: Bool
     let onSubmit: () -> Void
-    @State private var hovered = false
 
     var body: some View {
         TextField(
@@ -83,25 +82,19 @@ private struct ArgumentField: View {
         .padding(.horizontal, metrics.spacing.sm)
         .frame(height: CommandArgumentsRow.height(metrics))
         .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
+            RoundedRectangle(cornerRadius: form.controlCornerRadius, style: .continuous)
+                .fill(ExtensionColors.fieldFill)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                .strokeBorder(stroke, lineWidth: 1)
+            RoundedRectangle(cornerRadius: form.controlCornerRadius, style: .continuous)
+                .strokeBorder(
+                    stroke, lineWidth: isFocused ? form.focusStrokeWidth : Theme.Size.hairline)
         )
-        .onHover { hovered = $0 }
         .help(argument.required ? "\(argument.placeholder) — required" : argument.placeholder)
     }
 
-    private var fill: Color {
-        if isFocused { return Theme.Colors.selection }
-        if hovered { return Theme.Colors.rowHover }
-        return ExtensionColors.fieldFill
-    }
-
-    /// Focus reads as a brighter edge; an unfilled required argument stays amber.
     private var stroke: Color {
-        if isFocused { return ExtensionColors.fieldFocusStroke }
+        if isFocused { return ExtensionColors.fieldStroke }
         if argument.required && text.isEmpty { return Color.orange.opacity(0.45) }
         return ExtensionColors.fieldStroke
     }

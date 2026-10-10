@@ -250,6 +250,7 @@ final class MenuPanelController {
     private func detach(_ panel: MenuPanel) {
         panel.parent?.removeChildWindow(panel)
         panel.orderOut(nil)
+        hosting?.rootView = AnyView(EmptyView())
     }
 
     private func ensurePanel(state: PaletteState) -> MenuPanel {
@@ -273,7 +274,8 @@ final class MenuPanelController {
         // `bottomBar`'s own padding: a menu's edge must line up with the button it hangs off.
         let inset = metrics.spacing.md
         let frame = corner.frame(
-            contentSize: size, parentFrame: parent.frame, inset: inset,
+            contentSize: size, parentFrame: parent.frame,
+            visibleFrame: parent.screen?.visibleFrame ?? parent.frame, inset: inset,
             headerExtent: metrics.size.headerPadding + metrics.size.headerHeight)
         let canvas = corner.scaledFrame(frame, by: motion.maximumScale)
         let next = Placement(canvas: canvas, corner: corner)

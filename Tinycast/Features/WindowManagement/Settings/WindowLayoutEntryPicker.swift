@@ -31,7 +31,7 @@ struct WindowLayoutEntryPicker: View {
         .popover(isPresented: $showingAppPicker, arrowEdge: .bottom) {
             AppPickerPopover { bundleID in
                 showingAppPicker = false
-                guard let bundleID, let display = targetDisplay else { return }
+                guard let display = targetDisplay else { return }
                 draft.addEntry(bundleID: bundleID, on: display)
             }
         }

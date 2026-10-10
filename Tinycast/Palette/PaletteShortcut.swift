@@ -75,7 +75,7 @@ enum PaletteShortcut: Equatable {
         if control, shift, matches("q") { return option ? .forceQuit : .quit }
         if command, matches("r") { return .restart }
         if command, !shift, matches("n") { return .newItem }
-        if command, !shift, matches("e") { return .edit }
+        if command, !shift, !option, !control, matches("e") { return .edit }
         if command, !shift, matches("d") { return .duplicate }
         if command, option, matches(",") { return .settings }
         if command, matches("j") { return .continueInChat }

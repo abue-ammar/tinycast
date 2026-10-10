@@ -85,17 +85,19 @@ enum PalettePlacement {
     }
 }
 
-/// The three screen-space anchors a menu window can follow.
-enum MenuPanelCorner {
+/// The anchors a menu window can follow.
+enum MenuPanelCorner: Equatable {
     case bottomLeading
     case bottomTrailing
     case belowHeaderTrailing
+    case belowControl(CGRect, trailing: Bool = true)
 
     var layerAnchor: CGPoint {
         switch self {
         case .bottomLeading: CGPoint(x: 0, y: 0)
         case .bottomTrailing: CGPoint(x: 1, y: 0)
         case .belowHeaderTrailing: CGPoint(x: 1, y: 1)
+        case .belowControl(_, let trailing): CGPoint(x: trailing ? 1 : 0, y: 1)
         }
     }
 
@@ -104,7 +106,8 @@ enum MenuPanelCorner {
     }
 
     func frame(
-        contentSize: CGSize, parentFrame: CGRect, inset: CGFloat, headerExtent: CGFloat
+        contentSize: CGSize, parentFrame: CGRect, visibleFrame: CGRect,
+        inset: CGFloat, headerExtent: CGFloat
     ) -> CGRect {
         let origin: CGPoint =
             switch self {
@@ -118,8 +121,29 @@ enum MenuPanelCorner {
                 CGPoint(
                     x: parentFrame.maxX - inset * 2 - contentSize.width,
                     y: parentFrame.maxY - headerExtent - contentSize.height)
+            case .belowControl(let control, let trailing):
+                inputOrigin(
+                    control: control, trailing: trailing, contentSize: contentSize,
+                    parentFrame: parentFrame, visibleFrame: visibleFrame, inset: inset)
             }
         return CGRect(origin: origin, size: contentSize)
+    }
+
+    private func inputOrigin(
+        control: CGRect, trailing: Bool, contentSize: CGSize,
+        parentFrame: CGRect, visibleFrame: CGRect, inset: CGFloat
+    ) -> CGPoint {
+        let bounds = visibleFrame.insetBy(dx: inset, dy: inset)
+        let below = parentFrame.maxY - control.maxY - inset - contentSize.height
+        let above = parentFrame.maxY - control.minY + inset
+        let y = below < bounds.minY && above + contentSize.height <= bounds.maxY ? above : below
+        return CGPoint(
+            x: min(
+                max(
+                    parentFrame.minX + (trailing ? control.maxX - contentSize.width : control.minX),
+                    bounds.minX),
+                bounds.maxX - contentSize.width),
+            y: min(max(y, bounds.minY), bounds.maxY - contentSize.height))
     }
 
     func scaledFrame(_ frame: CGRect, by scale: CGFloat) -> CGRect {

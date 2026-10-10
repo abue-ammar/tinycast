@@ -1,5 +1,6 @@
 // Standalone test for the quicklink model, destination detection, store and archive.
 import Foundation
+import SwiftUI
 
 @main
 @MainActor
@@ -16,6 +17,8 @@ struct QuicklinkTests {
         encodingChoice()
         placeholderDetection()
         displayOrder()
+        editorDrafts()
+        editorInput()
         storeCRUD()
         storeValidation()
         pinning()
@@ -136,6 +139,85 @@ struct QuicklinkTests {
         expect(
             sorted.map(\.name) == ["Early Pin", "Late Pin", "alpha", "Zulu"],
             "pins lead in pin order, then the rest sort case-insensitively by name")
+    }
+
+    static func editorDrafts() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let fresh = QuicklinkEditorSession(quicklink: nil)
+        expect(!fresh.canSave, "an empty quicklink cannot be saved")
+        expect(
+            fresh.showsInRootSearch && !fresh.isPinned && fresh.iconSymbol == nil
+                && fresh.openWithBundleID == nil,
+            "a new editor keeps the existing quicklink defaults")
+        fresh.name = " GitHub "
+        fresh.link = " https://github.com "
+        expect(fresh.canSave, "a named destination can be saved")
+        expect(fresh.draft(now: now).id == fresh.id, "a new draft keeps one identity until saved")
+        withStore { store in
+            let saved = try? store.add(fresh.draft(now: now))
+            expect(
+                saved?.name == "GitHub" && saved?.link == "https://github.com",
+                "the editor leaves normalisation to the existing store")
+        }
+        fresh.name = " \n"
+        expect(!fresh.canSave, "a whitespace-only name cannot be saved")
+        fresh.name = "GitHub"
+        fresh.link = " \n"
+        expect(!fresh.canSave, "a whitespace-only destination cannot be saved")
+
+        let original = Quicklink(
+            name: "Original", link: "https://example.com", openWithBundleID: "test.browser",
+            iconSymbol: "star", isEnabled: false, showsInRootSearch: false,
+            pinnedAt: now, createdAt: now.addingTimeInterval(-60))
+        let editor = QuicklinkEditorSession(quicklink: original)
+        expect(editor.draft(now: now) == original, "opening an editor does not change the quicklink")
+        editor.name = "Edited"
+        editor.link = "https://example.com/{argument}"
+        editor.iconSymbol = "globe"
+        editor.openWithBundleID = nil
+        editor.showsInRootSearch = true
+        let edited = editor.draft(now: now.addingTimeInterval(60))
+        expect(
+            edited.id == original.id && edited.entryID == original.entryID && !edited.isEnabled
+                && edited.createdAt == original.createdAt && edited.pinnedAt == original.pinnedAt,
+            "editing preserves identity, enabled state, creation time and pin order")
+        expect(
+            edited.name == "Edited" && edited.link == editor.link && edited.iconSymbol == "globe"
+                && edited.openWithBundleID == nil && edited.showsInRootSearch,
+            "each editable option reaches the draft")
+        editor.isPinned = false
+        expect(editor.draft(now: now).pinnedAt == nil, "unpinning removes the saved pin stamp")
+        fresh.isPinned = true
+        expect(fresh.draft(now: now).pinnedAt == now, "a new pin uses the supplied clock")
+    }
+
+    static func editorInput() {
+        let editor = QuicklinkEditorSession(quicklink: nil)
+        editor.link = "https://example.com/query"
+        let start = editor.link.index(editor.link.endIndex, offsetBy: -5)
+        editor.selection = TextSelection(range: start..<editor.link.endIndex)
+        editor.focusedField = .name
+        editor.insert("{argument}")
+        expect(
+            editor.link == "https://example.com/{argument}" && editor.focusedField == .link,
+            "Insert replaces the selected text and returns focus to the destination")
+        editor.selection = nil
+        editor.insert("{clipboard}")
+        expect(editor.link.hasSuffix("{argument}{clipboard}"), "Insert without a selection appends")
+        editor.link = "avant 👋 après"
+        let cursor = editor.link.index(editor.link.startIndex, offsetBy: 7)
+        editor.selection = TextSelection(range: cursor..<cursor)
+        editor.insert("\n")
+        expect(editor.link == "avant 👋\n après", "Return inserts a line break at the Unicode caret")
+        editor.insert("{date}")
+        expect(editor.link == "avant 👋\n{date} après", "successive placeholders keep the Unicode caret")
+        for field in QuicklinkEditorSession.Field.allCases {
+            expect(editor.focusedField == field, "Tab reaches \(field)")
+            editor.advanceFocus(backwards: false)
+        }
+        expect(editor.focusedField == .link, "Tab wraps to the first field")
+        editor.advanceFocus(backwards: true)
+        expect(editor.focusedField == .pin, "Shift-Tab wraps to the last field")
     }
 
     // MARK: - Store

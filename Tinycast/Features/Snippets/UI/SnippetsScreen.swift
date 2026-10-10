@@ -45,11 +45,16 @@ struct SnippetsScreen: PaletteScreen {
     }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        if shortcut == .newItem {
+            core.snippetCoordinator.editSnippet(nil)
+            return true
+        }
+        guard let record = record(at: selection) else { return false }
         switch shortcut {
         case .edit:
-            guard let record = record(at: selection) else { return false }
             core.snippetCoordinator.editSnippet(record)
-        case .newItem: core.snippetCoordinator.editSnippet(nil)
+        case .delete:
+            Task { await core.snippetCoordinator.deleteSnippet(id: record.id) }
         default: return false
         }
         return true
@@ -114,6 +119,12 @@ enum SnippetActionsMenu {
                     title: "Show in Finder", systemImage: "folder", startsSection: true, shortcut: "⌘↵"
                 ) {
                     core.snippetCoordinator.showSnippetInFinder(record)
+                },
+                PopoverMenuItem(
+                    title: "Delete Snippet", systemImage: "trash", startsSection: true,
+                    shortcut: "⌃X", isDestructive: true
+                ) {
+                    Task { await core.snippetCoordinator.deleteSnippet(id: record.id) }
                 }
             ])
     }

@@ -5,10 +5,7 @@ import SwiftUI
 struct AppPickerPopover: View {
     /// Bundle IDs to leave out — the ones already chosen.
     var excluded: Set<String> = []
-    /// Shown above the list when the caller can also clear its choice.
-    var clearTitle: String?
-    /// Nil means the caller's `clearTitle` row was tapped.
-    let onSelect: (String?) -> Void
+    let onSelect: (String) -> Void
 
     @Environment(AppIndex.self) private var appIndex
     @State private var query = ""
@@ -27,9 +24,6 @@ struct AppPickerPopover: View {
             Divider()
             ScrollView {
                 LazyVStack(spacing: 1) {
-                    if let clearTitle, query.isEmpty {
-                        row(title: clearTitle, icon: nil) { onSelect(nil) }
-                    }
                     ForEach(candidates) { app in
                         row(title: app.name, icon: app.icon) {
                             if let id = app.bundleID { onSelect(id) }
@@ -42,19 +36,11 @@ struct AppPickerPopover: View {
         .frame(width: 220, height: 240)
     }
 
-    private func row(title: String, icon: NSImage?, action: @escaping () -> Void) -> some View {
+    private func row(title: String, icon: NSImage, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: Theme.Spacing.lg) {
-                Group {
-                    if let icon {
-                        Image(nsImage: icon).resizable()
-                    } else {
-                        Image(systemName: "app.dashed")
-                            .font(.system(size: 14))
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                    }
-                }
-                .frame(width: 20, height: 20)
+                Image(nsImage: icon).resizable()
+                    .frame(width: 20, height: 20)
                 Text(title)
                     .lineLimit(1)
                 Spacer(minLength: 0)

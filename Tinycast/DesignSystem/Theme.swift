@@ -33,6 +33,7 @@ enum Theme {
     enum Radius {
         static let panel: CGFloat = 26
         static let row: CGFloat = 10
+        static let formField: CGFloat = 12
         /// Emoji tiles are roomier than list rows, so their corners take one larger step.
         static let emojiCell: CGFloat = 12
         static let menu: CGFloat = 6
@@ -160,6 +161,9 @@ enum Theme {
         static let emojiGridInset: CGFloat = 16
         static let emojiCell: CGFloat = 56
         static let menuWidth: CGFloat = 276
+        static let formMenuMinimumWidth: CGFloat = 200
+        static let formMenuExtraRowsHeight: CGFloat = 20
+        static let formFieldFocusStroke: CGFloat = 2
         static let actionMenuWidth: CGFloat = 320
         /// The clipboard type filter's menu; `menuWidth` is far too wide for six short rows.
         static let clipboardFilterMenuWidth: CGFloat = 200

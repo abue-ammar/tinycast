@@ -1,7 +1,7 @@
 # Custom commands
 
-Custom commands let users add a searchable name and a shell command in **Settings → Custom
-Commands**. They appear in the launcher's Custom Commands section, share the normal fuzzy ranking,
+Custom commands let users add a searchable name and a shell command with **Create Custom Command**
+in the launcher, and browse their library with **Search Custom Commands**. They appear in the launcher's Custom Commands section, share the normal fuzzy ranking,
 and run from Return, a favorite slot, or an optional global shortcut. A command may declare
 [arguments](#arguments) it is asked for first, and may [show what it printed](#show-output) when it
 finishes.
@@ -35,11 +35,12 @@ bundle-scoped `UserDefaults`. Each command has a stable UUID. Its launcher entry
 `hotkey.customCommand.<uuid>` plus the `boundCustomCommandIDs` index.
 
 Editing preserves the UUID and therefore its alias, favorite, visibility, and hotkey references. The row's
-**Enabled** checkbox is the only writer of `isEnabled`, so the editor panel carries the flag through a
+**Enabled** checkbox is the only writer of `isEnabled`, so the editor carries its current value through a
 save rather than offering a second control for it. Deleting
-goes through `AppCore`, which unregisters the hotkey and clears those references before removing the
+goes through `CustomCommandCoordinator`, which unregisters the hotkey and clears those references before removing the
 command. Native settings backups include both commands and bindings; import warns before accepting
 executable content.
+Deletion from Settings or the command browser confirms through Tinycast's dialog before removing the command.
 
 ## Launcher integration
 
@@ -50,9 +51,34 @@ to the flat palette selection while allowing edits to invalidate fuzzy results w
 
 The command text is deliberately not searchable. Only the user-facing name enters fuzzy matching.
 
+**Search Custom Commands** lists enabled commands on the left and previews their literal script on
+the right, including commands hidden from root search. The rows use the same styled icon tiles as the
+launcher. Below the script, Information shows Run In, output mode, declared positional arguments,
+required confirmation and an assigned shortcut when present. The browser filters names, never script content.
+Its header collects the same positional arguments as root search; Return uses the existing run funnel
+and confirmation gates. Run and Edit share their action definitions with the launcher home.
+⌘E edits, ⌘N creates, and the final destructive action deletes with ⌃X. An empty library or filter
+still offers Create. Escape returns to the previous search; editing returns to the browser's query
+and selection. Alias and hotkey assignment remain in Settings.
+
 `showsInRootSearch == false` keeps a command out of that slice — and with it its alias — while its
 shortcut still runs it. The editor's **Show in root search** toggle writes it, and so does the
 launcher row's **Hide from Root Search** (⇧⌘H); the row marks a hidden command with `eye.slash`.
+
+### Launcher editor
+
+**Create Custom Command**, a command row's **Edit Custom Command** action, and the Settings **Add** and
+**Edit** buttons open the same `CustomCommandEditorView` in the launcher. There is no second editor
+in Settings; its rows still manage aliases, hotkeys, enabling and deletion.
+
+`CustomCommandEditorSession` holds a draft of the existing options: name, icon, shell command,
+working directory, root-search visibility, up to three arguments and the four execution checkboxes. The script keeps a
+monospaced native textarea without smart substitutions; its content grows with the page rather than
+scrolling internally.
+Argument rows keep their identities when one is removed, and Tab skips Add at the three-argument cap.
+⌘↵ validates and saves through the existing store; Escape discards the draft and restores the previous
+search and selection. Opening or saving is gated by the feature switch, just like running a command.
+If the item is deleted from Settings during editing, Save reports that failure and keeps the draft.
 
 ## Execution contract
 
@@ -242,8 +268,8 @@ same way.
 A command may carry its own SF Symbol; without one it draws `CustomCommand.sfSymbol`, the shared
 terminal glyph. `CustomCommand.symbol` is the one place that fallback lives, and every surface reads
 it — the launcher row, the Settings list, the confirmation and failure dialogs, and the output
-window's header. The picker is `DesignSystem/SymbolPicker`, shared with the quicklink editor, which
-supplies its own symbol list: what reads as a quicklink is not what reads as a script.
+window's header. The editor supplies its existing symbol list to the palette's searchable input menu;
+the choices stay local to Custom Commands rather than being shared with another feature.
 
 ### Needs confirmation
 
@@ -298,6 +324,14 @@ Foundation-only harness. Verify by hand:
 15. An imported command with arguments asks for them and the script receives them — the `"$@"`
     forwarding has no harness coverage of the inline fields that fill it.
 16. Two arguments sharing a name are separate fields; ↵ with a required one empty focuses it.
+17. Create and Edit in the launcher or Settings open the same form with all existing options. Escape
+    discards changes and returns to the previous search; saving preserves aliases and hotkeys.
+18. Add three arguments, remove the middle one, then Tab and Shift-Tab through the remaining controls.
+    The names and Optional flags stay on their original rows; the folder chooser's Cancel keeps the draft.
+19. Search Custom Commands shows root-hidden commands but not disabled ones. Filtering selects the same
+    command as the script preview and actions; Run collects arguments and respects confirmation.
+20. From the browser, ⌘E opens the existing editor and Escape restores the query and row. ⌘N works
+    with no matches; ⌃X opens the deletion confirmation, and Cancel leaves the command intact.
 
 ## Importing Raycast scripts
 

@@ -166,7 +166,8 @@ run launcher-settings-file-test \
 run apple-shortcut-test    Tinycast/Features/AppleShortcuts/Model/*.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift
 run index calc-performance Tinycast/Features/Calculator/Model/*.swift
-run calendar-test          Tinycast/Features/Calendar/Model/*.swift
+run calendar-test          Tinycast/Features/Calendar/Model/*.swift \
+                           Tinycast/Features/Calendar/UI/EventEditorSession.swift
 run clipboard-test         Tinycast/Features/Clipboard/Model/ClipboardStore.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFilter.swift \
                            Tinycast/Features/Clipboard/Model/ClipboardFileKind.swift \
@@ -239,6 +240,11 @@ run palette-menu-click-test Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/NotificationToken.swift \
                            Tinycast/DesignSystem/Interaction/KeyboardFocus.swift \
                            Tinycast/Palette/PalettePanel.swift
+run form-input-test        Tinycast/Platform/Appearance.swift \
+                           Tinycast/DesignSystem/Theme.swift \
+                           Tinycast/DesignSystem/InterfaceMetrics.swift \
+                           Tinycast/DesignSystem/FormTextInput.swift \
+                           Tinycast/DesignSystem/FormTextArea.swift
 run scroll-reveal-test     Tinycast/DesignSystem/Scrolling/SelectionReveal.swift
 run redaction-test         Tinycast/DesignSystem/RedactedPlaceholder.swift
 run keyboard-focus-test    Tinycast/DesignSystem/Interaction/KeyboardFocus.swift
@@ -439,6 +445,7 @@ run custom-command-test    Tinycast/Platform/PseudoTerminal.swift \
                            Tinycast/Platform/ProcessExit.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
                            Tinycast/Features/CustomCommands/Model/RaycastScriptImport.swift \
+                           Tinycast/Features/CustomCommands/UI/CustomCommandEditorSession.swift \
                            Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
                            Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
@@ -449,12 +456,14 @@ run quicklink-test         Tinycast/Features/Quicklinks/Model/Quicklink.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkStore.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkArchive.swift \
-                           Tinycast/Features/Quicklinks/Model/RaycastQuicklinkImport.swift
+                           Tinycast/Features/Quicklinks/Model/RaycastQuicklinkImport.swift \
+                           Tinycast/Features/Quicklinks/UI/QuicklinkEditorSession.swift
 run quicklink-coordinator-test Tinycast/Features/Quicklinks/Model/Quicklink.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkStore.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkArchive.swift \
                            Tinycast/Features/Quicklinks/UI/QuicklinkCoordinator.swift \
+                           Tinycast/Features/Quicklinks/UI/QuicklinkEditorSession.swift \
                            Tinycast/Features/Quicklinks/UI/QuicklinkArgumentsAccessory.swift \
                            Tinycast/Features/Snippets/Model/Snippet.swift \
                            Tinycast/Features/Snippets/Model/SnippetTemplateEngine.swift
@@ -463,6 +472,7 @@ run slow snippets-test     Tinycast/Platform/NotificationToken.swift \
                            Tinycast/Platform/AccessibilityText.swift \
                            Tinycast/Features/Snippets/Model/*.swift \
                            Tinycast/Features/Snippets/Service/*.swift \
+                           Tinycast/Features/Snippets/UI/SnippetEditorSession.swift \
                            Tinycast/Features/TextInjection/Service/*.swift
 run notes-test             Tinycast/Platform/Signposts.swift \
                            $L/SearchRelevance.swift \

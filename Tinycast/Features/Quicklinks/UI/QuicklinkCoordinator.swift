@@ -2,7 +2,9 @@ import AppKit
 
 /// Owns the quicklink flow: the open funnel, the argument prompt, the library and import/export.
 @MainActor
+@Observable
 final class QuicklinkCoordinator {
+    private(set) var editor: QuicklinkEditorSession?
     private let store: QuicklinkStore
     private let settings: AppSettings
     private let appIndex: AppIndex
@@ -14,10 +16,9 @@ final class QuicklinkCoordinator {
     private let aliases: AliasStore
     private let windowController: PaletteWindowController
     private let paletteCoordinator: PaletteCoordinator
-    private let settingsCoordinator: SettingsCoordinator
     /// `{clipboard offset=N}` reads the history a snippet expansion does; one owner, one depth.
     private let clipboardHistory: @MainActor () -> [String]
-    /// Dialogs, the HUD, and the `pendingQuicklinkEdit` handoff to the Settings pane.
+    /// Dialogs and the HUD stay owned by the composition root.
     private unowned let core: AppCore
 
     /// The quicklink whose ⌘↵ override must survive the trip to the header's argument fields.
@@ -35,7 +36,6 @@ final class QuicklinkCoordinator {
         aliases: AliasStore,
         windowController: PaletteWindowController,
         paletteCoordinator: PaletteCoordinator,
-        settingsCoordinator: SettingsCoordinator,
         clipboardHistory: @escaping @MainActor () -> [String],
         core: AppCore
     ) {
@@ -50,7 +50,6 @@ final class QuicklinkCoordinator {
         self.aliases = aliases
         self.windowController = windowController
         self.paletteCoordinator = paletteCoordinator
-        self.settingsCoordinator = settingsCoordinator
         self.clipboardHistory = clipboardHistory
         self.core = core
     }
@@ -59,6 +58,9 @@ final class QuicklinkCoordinator {
 
     /// Either switch off means the feature reaches the launcher not at all — rows and commands.
     func applyQuicklinksPresence() {
+        if !settings.quicklinksEnabled, core.palette.mode == .quicklinkEditor {
+            cancelQuicklinkEditing()
+        }
         let visible = settings.quicklinksEnabled && settings.quicklinksShowInLauncher
         appIndex.setQuicklinks(visible ? store.quicklinks : [])
         let commands: Set<CommandID> = [
@@ -203,10 +205,9 @@ final class QuicklinkCoordinator {
         try store.update(draft)
     }
 
-    /// Deletes and unwinds every reference; `confirming: false` is for the pane, which asked.
-    func deleteQuicklink(id: UUID, confirming: Bool = true) async {
+    func deleteQuicklink(id: UUID, alwaysConfirm: Bool = false) async {
         guard let quicklink = store.quicklink(id: id) else { return }
-        if confirming, settings.quicklinkConfirmsBeforeDelete {
+        if alwaysConfirm || settings.quicklinkConfirmsBeforeDelete {
             guard
                 await core.confirm(
                     title: "Delete “\(quicklink.name)”?",
@@ -264,11 +265,43 @@ final class QuicklinkCoordinator {
         }
     }
 
-    /// Opens the Quicklinks pane with the editor showing `quicklink`; nil is a new one.
     func editQuicklink(_ quicklink: Quicklink?) {
-        if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
-        core.pendingQuicklinkEdit = QuicklinkEditRequest(quicklink: quicklink)
-        settingsCoordinator.showSettings(tab: .quicklinks)
+        guard settings.quicklinksEnabled else { return }
+        editor = QuicklinkEditorSession(quicklink: quicklink)
+        paletteCoordinator.showPalette(mode: .quicklinkEditor)
+    }
+
+    func saveQuicklink() {
+        guard settings.quicklinksEnabled, let editor, editor.canSave else { return }
+        do {
+            var draft = editor.draft(now: Date())
+            if editor.original == nil {
+                try addQuicklink(draft)
+            } else {
+                guard let current = store.quicklink(id: draft.id) else {
+                    editor.errorMessage = "This quicklink was deleted. Copy your changes before closing."
+                    return
+                }
+                draft.isEnabled = current.isEnabled
+                try updateQuicklink(draft)
+            }
+            cancelQuicklinkEditing()
+        } catch {
+            editor.errorMessage = error.localizedDescription
+        }
+    }
+
+    func cancelQuicklinkEditing() {
+        guard core.palette.mode == .quicklinkEditor else { return }
+        if !core.palette.pop(preservingSelection: true) {
+            paletteCoordinator.hidePalette()
+            core.palette.prepare(mode: .launcher)
+        }
+        editor = nil
+    }
+
+    func editorDidClose(_ editor: QuicklinkEditorSession) {
+        if self.editor === editor { self.editor = nil }
     }
 
     /// Revealing needs a real path, which a template lacks until it expands.

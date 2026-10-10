@@ -4,6 +4,7 @@ import AppKit
 @MainActor
 @Observable
 final class CalendarCoordinator {
+    private(set) var editor: EventEditorSession?
     private let store: CalendarStore
     private let clock: MeetingClock
     private let appIndex: AppIndex
@@ -125,6 +126,7 @@ final class CalendarCoordinator {
         appIndex.setCommandsVisible(
             [.joinNextMeeting, .copyMeetingLink, .mySchedule, .openInCalendar, .createEvent], enabled)
         guard enabled else {
+            cancelEventEditing()
             store.stop()
             clock.stop()
             publishEntries()
@@ -268,23 +270,47 @@ final class CalendarCoordinator {
     }
 
     func createEvent() {
-        paletteCoordinator.hidePalette(restoreFocus: false)
+        store.refreshAccess()
         guard settings.calendarEnabled, store.access == .granted else {
             report("Turn Calendar on in Settings first")
             return
         }
-        NSApp.activate(ignoringOtherApps: true)
-        Task {
-            guard let draft = await core.createEvent() else { return }
-            guard store.createEvent(draft, now: Date()) else {
+        editor = EventEditorSession()
+        paletteCoordinator.showPalette(mode: .eventEditor)
+    }
+
+    func saveEvent() {
+        guard let editor, editor.draft.isValid, !core.isShowingDialog else { return }
+        store.refreshAccess()
+        guard settings.calendarEnabled, store.access == .granted else {
+            cancelEventEditing()
+            report("Turn Calendar on in Settings first")
+            return
+        }
+        guard store.createEvent(editor.draft, now: Date()) else {
+            Task {
                 _ = await core.reportFailure(
                     title: "Couldn't create the event",
                     message: "No calendar on this Mac accepts new events.",
                     symbol: "calendar.badge.exclamationmark", recovery: nil)
-                return
             }
-            core.showMessage("Event created")
+            return
         }
+        cancelEventEditing()
+        core.showMessage("Event created")
+    }
+
+    func cancelEventEditing() {
+        guard core.palette.mode == .eventEditor else { return }
+        if !core.palette.pop(preservingSelection: true) {
+            paletteCoordinator.hidePalette()
+            core.palette.prepare(mode: .launcher)
+        }
+        editor = nil
+    }
+
+    func editorDidClose(_ editor: EventEditorSession) {
+        if self.editor === editor { self.editor = nil }
     }
 
     func openNextMeetingInCalendar() {

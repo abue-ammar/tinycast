@@ -250,7 +250,7 @@ screens hold (see [palette.md](palette.md)).
   of the palette's `OpenMenu` cases, so the arrows, ↵, Escape and the click-away come from the one menu
   path and no second key handler exists to disagree with it. `PaletteFilterAction` routes ⌘P, so a
   command's own dropdown answers before Tinycast's clipboard filter can. The list is
-  `listWidth` (240) rather than a form picker's 360: it hangs off a chip, not a field.
+  `listWidth` (240) rather than a form picker's field width: it hangs off a chip, not a field.
   Its native search field sits above the choices and uses the palette menu's fuzzy matcher.
   **Swift owns the selection** — the runtime keeps `makeSearchDropdown` hook-free so an extension may
   call `List.Dropdown({…})` directly — so `ExtensionManager.accessoryValues` keys it by render-node id
@@ -317,6 +317,14 @@ screens hold (see [palette.md](palette.md)).
   is the one rounded surface they all share and `ExtensionFormMetrics` the one place their geometry
   is stated, so a field, a picker and a text area line up by construction. A `Picker` opens only to a
   click and a `DatePicker` has no expression field, which is why neither is used.
+
+  Form fields use a 12pt corner radius and the same neutral border colour at rest and in focus;
+  focus thickens the border to 2pt without changing the fill. These values stay extension-owned,
+  independently of the native launcher forms. Editable text controls receive the I-beam from their
+  visible native bounds.
+
+  Their height is 34pt, with 12pt horizontal and 8pt vertical text insets. Their width matches native
+  single-column forms at every Interface Size, with the geometry restated locally rather than shared.
 
   A `Form.Dropdown` and a `Form.TagPicker` are the same control — `ExtensionPickerField` — differing
   only in whether it holds one value or several. It drops `ExtensionPickerList`, a searchable list,

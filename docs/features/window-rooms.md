@@ -98,7 +98,7 @@ entered comes first, so the room you just left is one row away. Typing a new nam
 - **↵** enters the selected room. **⇥ / ⇧⇥** step through `RoomPlan.layoutChoices` — the layouts
   that fit its open windows here, each drawn differently; Stack only when nothing tidier fits — and
   store the choice for this display. A single choice says so in a message.
-- **⌘K** holds Enter Room, Next Layout, Remember Arrangement, Choose Windows… and Delete Room (**⌘⌫**, confirmed through `DialogController`). **⌘N** creates a room.
+- **⌘K** holds Enter Room, Next Layout, Remember Arrangement, Choose Windows… and Delete Room (**⌃X**, confirmed through `DialogController`). **⌘N** creates a room.
 - The screen claims ⇥ through `PaletteScreen.tab(at:backwards:)`, asked before `tabTarget` and the
   palette's ring; every other screen keeps today's Tab.
 

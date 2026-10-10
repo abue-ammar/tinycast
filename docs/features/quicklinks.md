@@ -32,6 +32,9 @@ every shortcut without re-registering.
   percent-encoding a URL destination asks for. `{selectedText}` is accepted as an alias for
   `{selection}`, but nothing ever *writes* it.
 
+The launcher editor preserves the current Settings Enabled flag when saving. Deleting the item while
+its form is open makes Save report the missing item without recreating it or discarding the draft.
+
 ## Destinations
 
 `QuicklinkDestination.detect` decides what a link is from its shape alone — no filesystem or Launch
@@ -192,9 +195,10 @@ the selected quicklink's glyph over an Information block (name, link, the app it
 shortcut, when it was created). Like Calculator History it stays out of the Tab cycle and exits via the
 back chevron or a bare backspace.
 Its ⌘K menu carries Open (`↵`), Open With Default App (`⌘↵`, only when a handler is saved), Copy Link (`⌃⌘C`),
-Edit (`⌘E`), Duplicate (`⌘D`), Pin/Unpin (`⌘.`), Show in Finder (`⌘F`, only for a resolved path), and
-Delete (`⌘⌫`). `QuicklinkCoordinator` owns each action, so a chord and its menu row can't drift.
+Edit (`⌘E`), Create (`⌘N`), Duplicate (`⌘D`), Pin/Unpin (`⌘.`), Show in Finder (`⌘F`, only for a resolved path), and
+Delete (`⌃X`). `QuicklinkCoordinator` owns each action, so a chord and its menu row can't drift.
 Root-search visibility is not offered here: the launcher row hides itself, and the editor restores it.
+Edit and Create also work with the menu closed; ⌘N works when the browser has no rows.
 
 **Copy Link** (`⌃⌘C`) writes the saved destination to the clipboard without opening it. Placeholders stay
 literal, even when the header has argument values filled in. Copying closes the palette and shows
@@ -204,6 +208,27 @@ It never reads the selected text or expands the template.
 Choosing an _arbitrary_ app belongs to the editor, which has a picker; `PopoverMenu` is a flat list
 with no nesting, so the palette offers the one alternative that always exists — bypass the saved app
 and use the system handler, once, without changing what is saved.
+
+## Launcher editor
+
+Create Quicklink, Edit from Search Quicklinks or root search, and the settings Library's Add/Edit
+buttons all open `PaletteMode.quicklinkEditor`. `QuicklinkCoordinator` owns the draft session;
+`QuicklinkEditorScreen` only adapts the palette contract, and `QuicklinkEditorView` owns the fields.
+The settings Library keeps its existing enable, alias, hotkey and deletion controls.
+
+The form contains only the existing link, name, icon, Open With, root-search and pin options. Insert
+stays beside the destination and writes plain placeholder text at the selection; there is no token
+markup or tag field. Insert, the icon selector and Open With use the palette's searchable menu with
+their existing choices, including Automatic for icons and Default app for the application.
+Tab/Shift-Tab walk the form;
+Return stays in the text editor, ⌘↵ saves, and Escape or the back chevron discards the draft.
+The link field grows with its content and only the whole form scrolls. The Open With popup is at
+least as wide as its field, using the control's actual bounds.
+
+Saving uses the existing store's validation and normalisation. Editing preserves the quicklink UUID,
+enabled flag, creation date and existing pin stamp, so its alias, shortcut and order survive. An error
+stays in the form without discarding the draft. Save/cancel returns to the preceding palette screen,
+including its query and selected row; an editor opened directly from settings closes instead.
 
 ## Storage
 
@@ -227,7 +252,8 @@ there. That appends it physically, so the prepared statements **name their colum
 order** rather than the table's, and the row reader stays a straight top-to-bottom read.
 
 Editing preserves the UUID, and with it the quicklink's shortcut, favorite slot, visibility and
-learned ranking. Deleting goes through `AppCore`, which unwinds all four before removing the row.
+learned ranking. Deleting goes through `QuicklinkCoordinator`, which unwinds all four after removing
+the row. Settings always confirms; launcher deletion follows the confirmation preference.
 Duplicating takes a **new** identity, so the copy can't inherit the original's shortcut.
 
 ## Hotkeys

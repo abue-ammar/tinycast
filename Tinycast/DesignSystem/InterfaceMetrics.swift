@@ -39,6 +39,7 @@ struct InterfaceMetrics: Equatable, Sendable {
 
         var panel: CGFloat { scaledPoints(Theme.Radius.panel, scale) }
         var row: CGFloat { scaledPoints(Theme.Radius.row, scale) }
+        var formField: CGFloat { scaledPoints(Theme.Radius.formField, scale) }
         var emojiCell: CGFloat { scaledPoints(Theme.Radius.emojiCell, scale) }
         var menu: CGFloat { scaledPoints(Theme.Radius.menu, scale) }
         var menuRow: CGFloat { scaledPoints(Theme.Radius.menuRow, scale) }
@@ -79,6 +80,9 @@ struct InterfaceMetrics: Equatable, Sendable {
         var checkbox: CGFloat { scaledPoints(Theme.Size.checkbox, scale) }
 
         var menuWidth: CGFloat { scaledPoints(Theme.Size.menuWidth, scale) }
+        var formMenuMinimumWidth: CGFloat { scaledPoints(Theme.Size.formMenuMinimumWidth, scale) }
+        var formMenuExtraRowsHeight: CGFloat { scaledPoints(Theme.Size.formMenuExtraRowsHeight, scale) }
+        var formFieldFocusStroke: CGFloat { scaledPoints(Theme.Size.formFieldFocusStroke, scale) }
         var actionMenuWidth: CGFloat { scaledPoints(Theme.Size.actionMenuWidth, scale) }
         var clipboardFilterMenuWidth: CGFloat { scaledPoints(Theme.Size.clipboardFilterMenuWidth, scale) }
         var fileSearchFilterMenuWidth: CGFloat { scaledPoints(Theme.Size.fileSearchFilterMenuWidth, scale) }

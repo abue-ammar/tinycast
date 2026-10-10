@@ -48,7 +48,9 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **A dialog has three independent axes; never let one infer another.** The **icon** (`DialogRequest.symbol`, required) is always the *subject's* own glyph — a command being confirmed uses its `SystemAction.sfSymbol`, so the Restart dialog shows the same icon as the Restart row. Tone never picks an icon. The **tone** (`DialogTone`: `.neutral` / `.success` / `.danger`) tints only that glyph. The **button** takes its color from `DialogAction.Role` (`.standard` white / `.destructive` red / `.cancel` secondary), so a red-glyph security warning can still carry a plain white button — as "Import executable commands?" does.
 - **Resolve every glyph through `SymbolImage`, not `Image(systemName:)`.** Some catalog symbols are bundled assets in `Assets.xcassets` (`toggleBluetooth`), and `Image(systemName:)` silently renders nothing for those.
 - **↵ runs the primary action, Escape cancels, and Cancel always renders leading** (the left button), matching macOS convention. A button never prints its key cap; a deliberate hover reveals its outlined `KeyCapChip` in a `Tooltip`.
+  Native launcher forms save with **⌘↵**; a textarea keeps Return for line breaks.
 - **In the palette, a hover label is Tinycast's `tooltip`, never `.help()`**: an AppKit tooltip never appears while the app sits inactive behind the non-activating panel. A Settings window activates the app, so `.help()` shows there and stays the label to use. The tooltip hangs above its control by default; a control in the palette header passes `edge: .bottom`, since above it is off the window, and a label may run to several lines — the chat's attachment pill lists every staged name.
+  Native form controls opt into `dismissOnPress` to hide the label until the next hover.
 - **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose leading glyph *is* its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it — and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
 - **Glass is for floating controls, with dialogs as the deliberate modal exception.** The action capsule, menu circle and `PopoverMenu` use it inside the palette; dialogs apply one system `.glassEffect(.regular)` to their root surface. Dialog buttons stay matte so their roles remain legible. Both HUDs keep the lighter `panelScrim` → `GlassEffectView()` → `clipShape` recipe.
 
@@ -98,7 +100,17 @@ groups. See "Section headers" below.
 
 ### Radius (`Theme.Radius`)
 
-`panel 26` · `row 10` · `card 10` · `dialog 20` · `dialogSymbol 16` · `menuPanel 16` · `menu 6` · `menuRow 10` · `barControl 8` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+`panel 26` · `row 10` · `formField 12` · `card 10` · `dialog 20` · `dialogSymbol 16` · `menuPanel 16` · `menu 6` · `menuRow 10` · `barControl 8` · `thumbnail 6` · `keyCap 6` · `recorderKeyCap 4`
+
+`formField` dresses the native Snippet, Quicklink, Event and Custom Command editor fields; it does not change settings controls
+or extension forms.
+
+Native editor fields keep the same border ink at focus, thickened to 2pt. Single-line text is centred
+by the font's cap height and AppKit's rounded baseline; multiline editors keep their standard top inset.
+The Custom Command script textarea uses a monospaced font at the same body size.
+Their input menus have a 200pt minimum width and expand to the triggering control's width. Capped
+form menus show 20pt more rows than other native menus; their chevrons use `MenuMotion.chevronAnimation`
+and follow the palette's open menu, without separate presentation state.
 
 `barControl` dresses the header pop-ups (type filter, AI model), which state a value and drop a menu
 the way a native pop-up button does — a rectangle, not a pill.
@@ -498,8 +510,7 @@ sole owner rule) and is the only presenter, so every confirmation in the app loo
   `onChoose(index)` still dispatches against `DialogRequest.actions`' original order, so a caller
   never has to think about layout position when it builds a request. Every role uses the regular
   callout face; semantic roles change colour, never weight. `dialogButtonHeight 34` is shared by the
-  actions, dialog text fields and New Event segmented choices. The fields and segmented choices use
-  the non-pill `row 10` radius.
+  actions and dialog text fields. The fields use the non-pill `row 10` radius.
 - **Keys.** `DialogPanel.sendEvent` intercepts Esc and ↵ directly instead of relying on SwiftUI
   `onKeyPress`, so the keys work without anything inside the dialog holding focus. Buttons don't print
   a key cap; after `tooltipDelay` of deliberate hover, `.tooltip(keyCap:)` fades in the shared
@@ -635,16 +646,10 @@ it would couple two unrelated surfaces.
 ## Dialog accessories
 
 A dialog carries at most one control beyond its buttons, and `DialogAccessory` makes that structural
-rather than a convention — `.volume` for the Set Volume prompt, `.eventDraft` for New Event,
-`.snippetArguments` for a snippet's `{argument}` values. Text fields take `dialogTextField()`;
-New Event groups its fixed start and duration values into two local segmented bars, while a snippet's
-inline enumerated arguments remain `DialogChip`s. Two things follow from the enum:
-
-- **Arrow keys belong to the accessory, not the panel.** `DialogPanel.handlesArrowKeys` is set from
-  `DialogAccessory.claimsArrowKeys`, so the slider still steps on ←/→ while the New Event title field
-  keeps its caret.
-- **An accessory can refuse its own primary action.** An invalid draft leaves the dialog up on ↵ and
-  on a click alike, which is what a greyed-out button would say if `DialogAction` could carry one.
+rather than a convention — `.volume` for the Set Volume prompt and `.snippetArguments` for a snippet's
+`{argument}` values. Text fields take `dialogTextField()`; inline enumerated arguments are `DialogChip`s.
+`DialogPanel.handlesArrowKeys` is set from `DialogAccessory.claimsArrowKeys`, so the slider steps on
+←/→ while snippet argument text fields keep their caret. Create Event uses the launcher form instead.
 
 The first text field takes focus from `DialogController.windowDidBecomeKey`, never from the view.
 When the panel turns key AppKit picks its own first responder — the Cancel button with Keyboard

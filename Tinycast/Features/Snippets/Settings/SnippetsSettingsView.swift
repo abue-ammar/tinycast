@@ -2,11 +2,9 @@ import SwiftUI
 
 struct SnippetsSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(SnippetCoordinator.self) private var coordinator
     @Environment(SnippetsStore.self) private var snippetsStore
     @Environment(AppSettings.self) private var settings
-
-    @State private var editor: SnippetEditRequest?
-    @State private var pendingDeletion: StoredSnippet?
 
     var body: some View {
         @Bindable var settings = settings
@@ -18,7 +16,7 @@ struct SnippetsSettingsView: View {
                 // Enabling is also keyword-expansion consent, so it uses the confirming setter.
                 isEnabled: Binding(
                     get: { settings.snippetsEnabled },
-                    set: { core.snippetCoordinator.setSnippetsEnabled($0) }),
+                    set: { coordinator.setSnippetsEnabled($0) }),
                 showsInLauncher: $settings.snippetsShowInLauncher,
                 showsIcon: true,
                 showsHeader: false)
@@ -52,24 +50,6 @@ struct SnippetsSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.snippets)
-        .settingsEditorPanel(item: $editor) { request in
-            SnippetEditorPanel(record: request.record)
-        }
-        .onChange(of: core.pendingSnippetEdit?.id, initial: true) { _, _ in
-            guard let request = core.pendingSnippetEdit else { return }
-            editor = request
-            core.pendingSnippetEdit = nil
-        }
-        .alert(item: $pendingDeletion) { record in
-            Alert(
-                title: Text("Delete “\(record.snippet.name)”?"),
-                message: Text(
-                    "This removes \(record.fileURL.lastPathComponent) from your snippets folder."),
-                primaryButton: .destructive(Text("Delete")) {
-                    delete(record)
-                },
-                secondaryButton: .cancel())
-        }
     }
 
     private var library: some View {
@@ -81,23 +61,23 @@ struct SnippetsSettingsView: View {
                 ForEach(sortedSnippets) { record in
                     SnippetSettingsRow(
                         record: record,
-                        onEdit: { editor = SnippetEditRequest(record: record) },
-                        onDelete: { pendingDeletion = record })
+                        onEdit: { coordinator.editSnippet(record) },
+                        onDelete: { Task { await coordinator.deleteSnippet(id: record.id) } })
                 }
             }
 
             LabeledContent {
-                Button("Add…") { editor = SnippetEditRequest(record: nil) }
+                Button("Add…") { coordinator.editSnippet(nil) }
             } label: {
                 SettingsRowTitle(.snippetsLibrary, "New Snippet")
             }
 
             LabeledContent {
                 if settings.snippetsFolder != nil {
-                    Button("Use Default", action: core.snippetCoordinator.resetSnippetsFolder)
+                    Button("Use Default", action: coordinator.resetSnippetsFolder)
                 }
-                Button("Choose…", action: core.snippetCoordinator.chooseSnippetsFolder)
-                Button("Open Folder", action: core.snippetCoordinator.revealSnippetsInFinder)
+                Button("Choose…", action: coordinator.chooseSnippetsFolder)
+                Button("Open Folder", action: coordinator.revealSnippetsInFinder)
                     .accessibilityHint("Reveals the snippets folder in Finder.")
             } label: {
                 SettingsRowTitle(.snippetsLibrary, "Snippets Folder")
@@ -122,8 +102,7 @@ struct SnippetsSettingsView: View {
                 retryHint: "Reloads snippet files after you fix them on disk.")
         }
 
-        // The editor reports its own failures, so this covers the ones with no panel behind.
-        if editor == nil, let operationError = snippetsStore.operationError {
+        if let operationError = snippetsStore.operationError {
             noticeSection(
                 "The snippet operation failed", operationError, tint: .red, retryHint: nil)
         }
@@ -167,16 +146,6 @@ struct SnippetsSettingsView: View {
         return
             "\(first.fileURL.lastPathComponent): \(first.message) Plus \(snippetsStore.issues.count - 1) more."
     }
-
-    private func delete(_ record: StoredSnippet) {
-        Task { try? await snippetsStore.delete(id: record.id) }
-    }
-}
-
-struct SnippetEditRequest: Identifiable {
-    let id = UUID()
-    /// nil for a snippet that has no file yet.
-    let record: StoredSnippet?
 }
 
 private struct SnippetSettingsRow: View {
@@ -217,201 +186,5 @@ private struct SnippetSettingsRow: View {
             !keyword.isEmpty
         else { return filename }
         return "\(keyword) · \(filename)"
-    }
-}
-
-private struct SnippetEditorPanel: View {
-    /// nil while adding; otherwise the record whose file (and revision) the save targets.
-    let record: StoredSnippet?
-
-    @Environment(\.settingsEditorDismiss) private var dismiss
-    @Environment(SnippetsStore.self) private var store
-    @FocusState private var isTemplateFocused: Bool
-    @State private var name: String
-    @State private var keyword: String
-    @State private var text: String
-    @State private var selection: TextSelection?
-    @State private var isEnabled: Bool
-    @State private var showsConfirmation: Bool
-    @State private var errorMessage: String?
-    @State private var isSaving = false
-
-    init(record: StoredSnippet?) {
-        self.record = record
-        let snippet = record?.snippet
-        _name = State(initialValue: snippet?.name ?? "")
-        _keyword = State(initialValue: snippet?.keyword ?? "")
-        _text = State(initialValue: snippet?.text ?? "")
-        _isEnabled = State(initialValue: snippet?.isEnabled ?? true)
-        _showsConfirmation = State(initialValue: snippet?.showsConfirmation ?? false)
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            SettingsEditorHeader(title: record == nil ? "Add Snippet" : "Edit Snippet")
-
-            field(
-                title: "Name", placeholder: "Email Sign-off", text: $name,
-                hint: "Required. Shown in the library and launcher.")
-            field(
-                title: "Keyword", placeholder: "Optional, for example !notes", text: $keyword,
-                hint: "Optional. Type this to expand the snippet.")
-
-            templateEditor
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-                optionToggle(
-                    "Enabled", isOn: $isEnabled,
-                    detail: "Disabled snippets cannot be expanded.")
-                optionToggle(
-                    "Show confirmation", isOn: $showsConfirmation,
-                    detail: "Confirm on screen after this snippet is inserted.")
-            }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            HStack(spacing: Theme.Spacing.md) {
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.modalAction(.cancel))
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: save)
-                    .buttonStyle(.modalAction(.primary))
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(
-                        isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-        .padding(Theme.Spacing.dialogInset)
-        .frame(width: Theme.Size.editorSheetWidth)
-        .settingsEditorPanelSurface()
-    }
-
-    private var templateEditor: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack {
-                Text("Template")
-                    .font(.callout.weight(.medium))
-                Spacer()
-                placeholderMenu
-            }
-            TextEditor(text: $text, selection: $selection)
-                .font(.body.monospaced())
-                .settingsEditorTextArea(height: Theme.Size.editorTextHeight)
-                .focused($isTemplateFocused)
-                .accessibilityLabel("Snippet template")
-                .accessibilityHint("Enter the text Tinycast expands.")
-        }
-    }
-
-    /// Every placeholder the engine understands; parameters are in docs/features/snippets.md.
-    private var placeholderMenu: some View {
-        Menu("Insert…") {
-            Section("Text") {
-                placeholderItem("{cursor}")
-                placeholderItem("{clipboard}")
-                placeholderItem("{selection}")
-                placeholderItem("{uuid}")
-            }
-            Section("Date & Time") {
-                placeholderItem("{date}")
-                placeholderItem("{time}")
-                placeholderItem("{datetime}")
-                placeholderItem("{day}")
-            }
-            Section("Arguments") {
-                placeholderItem("{argument name=\"Name\"}")
-            }
-            Section("Snippets") {
-                placeholderItem("{snippet name=\"Name\"}")
-            }
-        }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
-        .accessibilityLabel("Insert a placeholder")
-    }
-
-    private func placeholderItem(_ token: String) -> some View {
-        Button(token) { insert(token) }
-    }
-
-    /// Replaces the selection or lands at the caret; appends when there is no usable one.
-    private func insert(_ token: String) {
-        if let selection, case .selection(let range) = selection.indices,
-            range.lowerBound >= text.startIndex, range.upperBound <= text.endIndex
-        {
-            text.replaceSubrange(range, with: token)
-        } else {
-            text += token
-        }
-        // Those indices belong to the replaced string, so they must not survive the next insert.
-        selection = nil
-        isTemplateFocused = true
-    }
-
-    private func field(
-        title: String, placeholder: String, text: Binding<String>, hint: String
-    ) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text(title)
-                .font(.callout.weight(.medium))
-            TextField(placeholder, text: text)
-                .settingsEditorTextField()
-                .accessibilityLabel("Snippet \(title.lowercased())")
-                .accessibilityHint(hint)
-        }
-    }
-
-    private func optionToggle(
-        _ title: String, isOn: Binding<Bool>, detail: String
-    ) -> some View {
-        Toggle(isOn: isOn) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(title)
-                Text(detail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .toggleStyle(.checkbox)
-    }
-
-    private var draft: Snippet {
-        Snippet(
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            text: text,
-            keyword: trimmedOrNil(keyword),
-            isEnabled: isEnabled,
-            showsConfirmation: showsConfirmation)
-    }
-
-    private func trimmedOrNil(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func save() {
-        guard !isSaving else { return }
-        isSaving = true
-        Task {
-            defer { isSaving = false }
-            do {
-                // Saving keeps the revision, so an edit in between conflicts, not clobbers.
-                if var updated = record {
-                    updated.snippet = draft
-                    try await store.save(updated)
-                } else {
-                    try await store.create(draft)
-                }
-                dismiss()
-            } catch {
-                errorMessage = error.localizedDescription
-            }
-        }
     }
 }

@@ -9,8 +9,14 @@ struct ExtensionFormMetrics {
     let scale: CGFloat
 
     /// One control's width and height, in the proportions an extension's form is authored against.
-    var controlWidth: CGFloat { scaled(360) }
-    var controlHeight: CGFloat { scaled(32) }
+    var controlWidth: CGFloat {
+        let panelWidth = scaled(750)
+        let labelWidth = (panelWidth * 0.16).rounded()
+        return panelWidth - labelWidth * 2 - scaled(28) * 4 - scaled(20) * 2
+    }
+    var controlHeight: CGFloat { scaled(28) + scaled(6) }
+    var controlCornerRadius: CGFloat { scaled(12) }
+    var focusStrokeWidth: CGFloat { scaled(2) }
 
     /// Fits label beside centred control.
     func labelWidth(for panelWidth: CGFloat, gap: CGFloat) -> CGFloat {
@@ -20,9 +26,9 @@ struct ExtensionFormMetrics {
     /// A text area is a control that grew: same width and chrome, several lines tall.
     var textAreaHeight: CGFloat { scaled(78) }
     /// Inset of a control's own text from its rounded edge.
-    var textInset: CGFloat { scaled(10) }
+    var textInset: CGFloat { scaled(12) }
     /// One top inset everywhere, so a field and a text area start their text on one line.
-    var verticalInset: CGFloat { scaled(7) }
+    var verticalInset: CGFloat { scaled(8) }
     /// `NSTextView`'s line-fragment padding, taken off so its text aligns with a field's.
     var textViewGutter: CGFloat { scaled(5) }
     /// The box a checkbox draws, and the gap to the label beside it.

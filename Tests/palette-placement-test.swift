@@ -242,38 +242,84 @@ struct PalettePlacementTests {
 
     static func menuPanelAnchors() {
         let parent = CGRect(x: 100, y: 200, width: 750, height: 475)
+        let visible = CGRect(x: 0, y: -400, width: 1440, height: 1200)
         let content = CGSize(width: 276, height: 240)
         let inset = metrics.spacing.md
         let headerExtent = metrics.size.headerPadding + metrics.size.headerHeight
 
         let leading = MenuPanelCorner.bottomLeading.frame(
-            contentSize: content, parentFrame: parent, inset: inset,
+            contentSize: content, parentFrame: parent, visibleFrame: visible, inset: inset,
             headerExtent: headerExtent)
         expect(leading.minX, parent.minX + inset, "the left menu follows the footer's leading edge")
         expect(leading.minY, parent.minY + inset, "the left menu follows the footer's bottom edge")
 
         let trailing = MenuPanelCorner.bottomTrailing.frame(
-            contentSize: content, parentFrame: parent, inset: inset,
+            contentSize: content, parentFrame: parent, visibleFrame: visible, inset: inset,
             headerExtent: headerExtent)
         expect(trailing.maxX, parent.maxX - inset, "the action menu follows the trailing button")
         expect(trailing.minY, parent.minY + inset, "the action menu follows the footer's bottom edge")
 
         let header = MenuPanelCorner.belowHeaderTrailing.frame(
-            contentSize: content, parentFrame: parent, inset: inset,
+            contentSize: content, parentFrame: parent, visibleFrame: visible, inset: inset,
             headerExtent: headerExtent)
         expect(header.maxX, parent.maxX - inset * 2, "a header menu follows its trailing control")
         expect(header.maxY, parent.maxY - headerExtent, "a header menu opens below the field")
+
+        let control = CGRect(x: 450, y: 100, width: 60, height: 34)
+        let controlCorner = MenuPanelCorner.belowControl(control)
+        let input = controlCorner.frame(
+            contentSize: content, parentFrame: parent, visibleFrame: visible,
+            inset: inset, headerExtent: headerExtent)
+        expect(input.maxX, parent.minX + control.maxX, "an input menu follows its control's trailing edge")
+        expect(
+            input.maxY, parent.maxY - control.maxY - inset, "an input menu converts the flipped control frame"
+        )
+        let inputLeadingCorner = MenuPanelCorner.belowControl(control, trailing: false)
+        let inputLeading = inputLeadingCorner.frame(
+            contentSize: content, parentFrame: parent, visibleFrame: visible,
+            inset: inset, headerExtent: headerExtent)
+        expect(inputLeading.minX, parent.minX + control.minX, "a leading input follows its control")
+        expect(inputLeading.maxY, input.maxY, "both input alignments open at the same height")
+
+        let bottomControl = MenuPanelCorner.belowControl(CGRect(x: 5, y: 420, width: 60, height: 34))
+        let constrained = bottomControl.frame(
+            contentSize: content, parentFrame: parent, visibleFrame: visible,
+            inset: inset, headerExtent: headerExtent)
+        expect(
+            constrained.maxY, parent.maxY - 454 - inset,
+            "a low input opens below its field even outside the palette")
+        expect(
+            constrained.minX, visible.minX + inset, "an input menu stays inside its display"
+        )
+        let nearBottom = CGRect(x: 0, y: 0, width: 1440, height: 800)
+        let flipped = bottomControl.frame(
+            contentSize: content, parentFrame: parent, visibleFrame: nearBottom,
+            inset: inset, headerExtent: headerExtent)
+        expect(flipped.minY, parent.maxY - 420 + inset, "a low input opens above to clear the Dock")
+        let rightControl = MenuPanelCorner.belowControl(
+            CGRect(x: 730, y: 100, width: 100, height: 34), trailing: false)
+        let clamped = rightControl.frame(
+            contentSize: content, parentFrame: parent,
+            visibleFrame: CGRect(x: 0, y: 0, width: 1000, height: 800),
+            inset: inset, headerExtent: headerExtent)
+        expect(clamped.maxX, 1000 - inset, "a leading menu clears the display's right edge")
 
         let scale = Theme.MenuMotion.maximumScale
         let leadingCanvas = MenuPanelCorner.bottomLeading.scaledFrame(leading, by: scale)
         let trailingCanvas = MenuPanelCorner.bottomTrailing.scaledFrame(trailing, by: scale)
         let headerCanvas = MenuPanelCorner.belowHeaderTrailing.scaledFrame(header, by: scale)
+        let inputCanvas = controlCorner.scaledFrame(input, by: scale)
+        let inputLeadingCanvas = inputLeadingCorner.scaledFrame(inputLeading, by: scale)
         expect(leadingCanvas.minX, leading.minX, "left expansion keeps its leading edge fixed")
         expect(leadingCanvas.minY, leading.minY, "left expansion keeps its bottom edge fixed")
         expect(trailingCanvas.maxX, trailing.maxX, "right expansion keeps its trailing edge fixed")
         expect(trailingCanvas.minY, trailing.minY, "right expansion keeps its bottom edge fixed")
         expect(headerCanvas.maxX, header.maxX, "header expansion keeps its trailing edge fixed")
         expect(headerCanvas.maxY, header.maxY, "header expansion keeps its top edge fixed")
+        expect(inputCanvas.maxX, input.maxX, "input expansion keeps its trailing edge fixed")
+        expect(inputCanvas.maxY, input.maxY, "input expansion keeps its top edge fixed")
+        expect(inputLeadingCanvas.minX, inputLeading.minX, "leading input expansion keeps its left edge")
+        expect(inputLeadingCanvas.maxY, inputLeading.maxY, "leading input expansion keeps its top edge")
     }
 
     // MARK: - The tokens these rules depend on

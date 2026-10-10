@@ -96,9 +96,17 @@ struct ExtensionFormTests {
 
     static func labelGeometry() {
         let form = ExtensionFormMetrics.base
+        check("form fields are 34 points high", form.controlHeight == 34)
+        check("form text keeps 12-point horizontal padding", form.textInset == 12)
+        check("form text keeps 8-point vertical padding", form.verticalInset == 8)
+        check("form field radius is 12 points", form.controlCornerRadius == 12)
+        check("form focus edge is 2 points", form.focusStrokeWidth == 2)
+        let scaled = ExtensionFormMetrics(scale: 1.5)
+        check("form field radius follows interface size", scaled.controlCornerRadius == 18)
+        check("form focus edge follows interface size", scaled.focusStrokeWidth == 3)
         check(
             "label reaches the panel edge beside its centred control",
-            form.labelWidth(for: 750, gap: 12) == 183)
+            form.labelWidth(for: 750, gap: 12) == 184)
         check(
             "label width clamps when the panel cannot fit the control",
             form.labelWidth(for: 360, gap: 12) == 0)

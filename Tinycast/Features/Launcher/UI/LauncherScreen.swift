@@ -303,7 +303,7 @@ struct LauncherScreen: PaletteScreen {
         case .hideFromSearch: return hideFromSearch(at: selection)
         case .quit, .forceQuit: return quit(at: selection, force: shortcut == .forceQuit)
         case .restart: return restart(at: selection)
-        case .edit: return editQuicklink(at: selection)
+        case .edit: return editItem(at: selection)
         case .copyPath: return copyQuicklink(at: selection)
         case .favoriteSlot(let index): return launchFavorite(at: index)
         case .copyCalculation: return copyCalculation(at: selection)
@@ -342,9 +342,22 @@ struct LauncherScreen: PaletteScreen {
         return true
     }
 
-    private func editQuicklink(at selection: Int) -> Bool {
-        guard let quicklink = entry(at: selection).flatMap(quicklink(for:)) else { return false }
-        core.quicklinkCoordinator.editQuicklink(quicklink)
+    private func editItem(at selection: Int) -> Bool {
+        guard let entry = entry(at: selection) else { return false }
+        switch entry.kind {
+        case .quicklink:
+            guard let quicklink = quicklink(for: entry) else { return false }
+            core.quicklinkCoordinator.editQuicklink(quicklink)
+        case .snippet:
+            guard let id = StoredSnippet.id(fromEntryID: entry.id),
+                let record = core.snippetsStore.record(id: id)
+            else { return false }
+            core.snippetCoordinator.editSnippet(record)
+        case .customCommand:
+            guard let command = core.customCommands.command(entryID: entry.id) else { return false }
+            core.customCommandCoordinator.editCustomCommand(command)
+        default: return false
+        }
         return true
     }
 

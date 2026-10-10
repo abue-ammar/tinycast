@@ -66,6 +66,7 @@ struct InterfaceSizeTests {
 
         expect(m.radius.panel, Theme.Radius.panel, "radius.panel")
         expect(m.radius.row, Theme.Radius.row, "radius.row")
+        expect(m.radius.formField, Theme.Radius.formField, "radius.formField")
         expect(m.radius.emojiCell, Theme.Radius.emojiCell, "radius.emojiCell")
         expect(m.radius.menu, Theme.Radius.menu, "radius.menu")
         expect(m.radius.menuRow, Theme.Radius.menuRow, "radius.menuRow")
@@ -101,6 +102,11 @@ struct InterfaceSizeTests {
         expect(m.size.menuButton, Theme.Size.menuButton, "size.menuButton")
         expect(m.size.checkbox, Theme.Size.checkbox, "size.checkbox")
         expect(m.size.menuWidth, Theme.Size.menuWidth, "size.menuWidth")
+        expect(m.size.formMenuMinimumWidth, Theme.Size.formMenuMinimumWidth, "size.formMenuMinimumWidth")
+        expect(
+            m.size.formMenuExtraRowsHeight, Theme.Size.formMenuExtraRowsHeight,
+            "size.formMenuExtraRowsHeight")
+        expect(m.size.formFieldFocusStroke, Theme.Size.formFieldFocusStroke, "size.formFieldFocusStroke")
         expect(
             m.size.clipboardFilterMenuWidth, Theme.Size.clipboardFilterMenuWidth,
             "size.clipboardFilterMenuWidth")
@@ -171,6 +177,19 @@ struct InterfaceSizeTests {
 
         // Extensions duplicates the mechanism rather than importing it, so it is checked here too.
         expect(ExtensionFormMetrics.base.scale, 1, "the form metrics base is unscaled")
+        for size in InterfaceSize.allCases {
+            let metrics = size.metrics
+            let form = ExtensionFormMetrics(scale: metrics.scale)
+            let labelWidth = (metrics.size.panelWidth * 0.16).rounded()
+            expect(
+                form.controlWidth,
+                metrics.size.panelWidth - labelWidth * 2 - metrics.spacing.xxxl * 4
+                    - metrics.spacing.xxl * 2,
+                "extension controls match native form width at \(size)")
+            expect(form.controlHeight, metrics.size.dialogButtonHeight, "matching field height at \(size)")
+            expect(form.textInset, metrics.spacing.xl, "matching horizontal text inset at \(size)")
+            expect(form.verticalInset, metrics.spacing.md, "matching vertical text inset at \(size)")
+        }
     }
 
     // MARK: - Fonts
@@ -278,6 +297,7 @@ struct InterfaceSizeTests {
             ("spacing.chatFollowTailSlack", m.spacing.chatFollowTailSlack),
             ("spacing.chatLine", m.spacing.chatLine),
             ("radius.panel", m.radius.panel), ("radius.row", m.radius.row),
+            ("radius.formField", m.radius.formField),
             ("radius.emojiCell", m.radius.emojiCell), ("radius.menu", m.radius.menu),
             ("radius.menuRow", m.radius.menuRow),
             ("radius.barControl", m.radius.barControl), ("radius.menuPanel", m.radius.menuPanel),
@@ -301,6 +321,9 @@ struct InterfaceSizeTests {
             ("size.keyCap", m.size.keyCap), ("size.compactKeyCap", m.size.compactKeyCap),
             ("size.heroKeyCap", m.size.heroKeyCap), ("size.menuButton", m.size.menuButton),
             ("size.checkbox", m.size.checkbox), ("size.menuWidth", m.size.menuWidth),
+            ("size.formMenuMinimumWidth", m.size.formMenuMinimumWidth),
+            ("size.formMenuExtraRowsHeight", m.size.formMenuExtraRowsHeight),
+            ("size.formFieldFocusStroke", m.size.formFieldFocusStroke),
             ("size.clipboardFilterMenuWidth", m.size.clipboardFilterMenuWidth),
             ("size.fileSearchFilterMenuWidth", m.size.fileSearchFilterMenuWidth),
             ("size.emojiCategoryMenuWidth", m.size.emojiCategoryMenuWidth),

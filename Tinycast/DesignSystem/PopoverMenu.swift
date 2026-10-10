@@ -113,6 +113,7 @@ struct PopoverMenu: View {
     let onActivate: (Int) -> Void
     var attachment = Attachment.none
     let search: Search
+    var extraRowsHeight: CGFloat = 0
 
     /// The palette arms this only once the pointer has moved of its own accord.
     @Environment(PaletteState.self) private var palette
@@ -283,7 +284,7 @@ struct PopoverMenu: View {
         }
     }
 
-    /// Exact, not measured; a capped viewport ends mid-row, never on a separator or section title.
+    /// The default cap ends mid-row, never on a separator or section title.
     private var listExtent: (content: CGFloat, viewport: CGFloat) {
         let rowHeight = metrics.size.menuRowHeight
         let rowsMaxHeight =
@@ -305,7 +306,7 @@ struct PopoverMenu: View {
             if midRow <= capacity { fold = midRow }
             offset += rowHeight
         }
-        return (offset, offset > capacity ? fold : offset)
+        return (offset, offset > capacity ? min(offset, fold + extraRowsHeight) : offset)
     }
 
     private var headerExtent: CGFloat {
@@ -379,7 +380,7 @@ private struct PopoverMenuRow: View {
                             .frame(width: metrics.size.menuBrandIcon, height: metrics.size.menuBrandIcon)
                             .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     case .file(let path):
-                        MenuFileIcon(path: path)
+                        MenuFileIcon(path: path).id(path)
                     case .thumbnail(let id, let data):
                         MenuThumbnail(id: id, data: data)
                     }

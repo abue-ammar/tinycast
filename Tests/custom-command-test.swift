@@ -21,6 +21,68 @@ struct CustomCommandTests {
             }
         }
 
+        // MARK: Editor
+
+        let editor = CustomCommandEditorSession(command: nil)
+        check("a new editor starts on its name", editor.focusedField == .name)
+        check("an empty editor cannot save", !editor.canSave)
+        check(
+            "a new editor preserves command defaults",
+            editor.draft().isEnabled && editor.draft().showsInRootSearch
+                && !editor.loadsShellEnvironment && !editor.requiresConfirmation
+                && !editor.showsConfirmation && !editor.showsOutput && editor.arguments.isEmpty
+                && editor.workingDirectory.isEmpty && editor.iconSymbol == nil)
+        editor.name = "   "
+        editor.shellCommand = "/usr/bin/true"
+        check("a whitespace-only name cannot save", !editor.canSave)
+        editor.name = "Test Command"
+        editor.shellCommand = "\n "
+        check("a whitespace-only script cannot save", !editor.canSave)
+        editor.shellCommand = "/usr/bin/true"
+        check("a named nonempty script can save", editor.canSave)
+        editor.advanceFocus(backwards: true)
+        check("Shift-Tab wraps to the last option", editor.focusedField == .output)
+        editor.advanceFocus(backwards: false)
+        check("Tab wraps back to the name", editor.focusedField == .name)
+        for _ in 0..<CustomCommandArgument.limit { editor.addArgument() }
+        let argumentIDs = editor.arguments.map(\.id)
+        check("adding an argument focuses its name", editor.focusedField == .argumentName(argumentIDs[2]))
+        editor.addArgument()
+        check("the editor enforces the argument cap", editor.arguments.map(\.id) == argumentIDs)
+        check("Tab skips Add at the argument cap", !editor.focusOrder.contains(.addArgument))
+        editor.focusedField = .removeArgument(argumentIDs[1])
+        editor.removeArgument(id: argumentIDs[1])
+        check(
+            "removal keeps the neighboring argument identities",
+            editor.arguments.map(\.id)
+                == [argumentIDs[0], argumentIDs[2]])
+        check(
+            "removing a focused argument focuses its successor",
+            editor.focusedField == .argumentName(argumentIDs[2]))
+        check("removal restores Add to the focus order", editor.focusOrder.contains(.addArgument))
+        editor.removeArgument(id: argumentIDs[2])
+        editor.removeArgument(id: argumentIDs[0])
+        check("removing the last argument focuses Add", editor.focusedField == .addArgument)
+        let source = CustomCommand(
+            name: "Original", command: "printf '%s' \"$1\"", isEnabled: false,
+            showsInRootSearch: false,
+            loadsShellEnvironment: true, requiresConfirmation: true, showsConfirmation: true,
+            arguments: [CustomCommandArgument(name: "Query", isOptional: true)], showsOutput: true,
+            workingDirectory: "~/Documents", iconSymbol: "hammer")
+        let editing = CustomCommandEditorSession(command: source)
+        check("editing carries every existing field", editing.draft() == source)
+        editing.focusedField = .rootSearch
+        editing.advanceFocus(backwards: false)
+        check(
+            "Tab includes root-search visibility before execution options",
+            editing.focusedField == .shellEnvironment)
+        editing.name = "Renamed"
+        editing.shellCommand = "/usr/bin/true"
+        check(
+            "editing preserves the UUID and enabled flag",
+            editing.draft().id == source.id
+                && !editing.draft().isEnabled)
+
         // MARK: Store
 
         let store = CustomCommandStore(defaults: defaults)
@@ -64,6 +126,7 @@ struct CustomCommandTests {
         check("a new command is enabled", store.command(id: added.id)?.isEnabled == true)
         store.setEnabled(false, id: added.id)
         check("disabling is stored", store.command(id: added.id)?.isEnabled == false)
+        check("disabled commands are absent from the browser", store.matching("").isEmpty)
         check(
             "disabling keeps every other field intact",
             store.command(id: added.id)?.command == "/usr/bin/true")
@@ -71,6 +134,12 @@ struct CustomCommandTests {
 
         check("a new command shows in root search", store.command(id: added.id)?.showsInRootSearch == true)
         store.setShowsInRootSearch(false, id: added.id)
+        check("the browser includes root-hidden commands", store.matching("").map(\.id) == [added.id])
+        check(
+            "browser search ignores case and outer whitespace",
+            store.matching("  SCREENS\n").map(\.id) == [added.id])
+        check("browser search never matches script content", store.matching("/usr/bin/true").isEmpty)
+        check("unmatched browser search returns no rows", store.matching("No such command").isEmpty)
         check(
             "hiding from root search is stored and leaves it enabled",
             store.command(id: added.id)?.showsInRootSearch == false

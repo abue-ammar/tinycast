@@ -15,7 +15,6 @@ struct ExtensionDateField: View {
     /// When the query last changed, which is where the caret's blink restarts from.
     @State private var typedAt = Date()
     @State private var highlighted = 0
-    @State private var hovered = false
     /// Reported by the panel once it has placed itself, for the chevron that points its way.
     @State private var flipped = false
     /// Told while the list is up, so the palette leaves every navigation key to it.
@@ -124,7 +123,7 @@ struct ExtensionDateField: View {
             Spacer(minLength: metrics.spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: flipped)
         }
-        .extensionFieldChrome(focused: isFocused, open: open, hovered: hovered)
+        .extensionFieldChrome(focused: isFocused, open: open)
         .contentShape(Rectangle())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(node.string("title") ?? "Date"))
@@ -132,7 +131,6 @@ struct ExtensionDateField: View {
         .accessibilityValue(Text(open && !query.isEmpty ? query : label))
         .accessibilityHint(Text(hint))
         .accessibilityAddTraits(.isButton)
-        .onHover { hovered = $0 }
         .onTapGesture {
             focus = index
             if open { close() } else { _ = openList() }

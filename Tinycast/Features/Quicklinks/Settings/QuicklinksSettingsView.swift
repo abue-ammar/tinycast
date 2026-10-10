@@ -3,11 +3,9 @@ import SwiftUI
 /// The quicklink library plus the behaviour that applies to all of them.
 struct QuicklinksSettingsView: View {
     @Environment(QuicklinkStore.self) private var store
-    @Environment(AppCore.self) private var core
+    @Environment(QuicklinkCoordinator.self) private var coordinator
     @Environment(AppSettings.self) private var settings
     @State private var query = ""
-    @State private var editor: QuicklinkEditRequest?
-    @State private var pendingDeletion: Quicklink?
 
     var body: some View {
         @Bindable var settings = settings
@@ -32,25 +30,6 @@ struct QuicklinksSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.quicklinks)
-        .settingsEditorPanel(item: $editor) { request in
-            QuicklinkEditorPanel(quicklink: request.quicklink)
-        }
-        .onChange(of: core.pendingQuicklinkEdit?.id, initial: true) { _, _ in
-            guard let request = core.pendingQuicklinkEdit else { return }
-            editor = request
-            core.pendingQuicklinkEdit = nil
-        }
-        .alert(item: $pendingDeletion) { quicklink in
-            Alert(
-                title: Text("Delete “\(quicklink.name)”?"),
-                message: Text("Its global shortcut and launcher references will also be removed."),
-                primaryButton: .destructive(Text("Delete")) {
-                    Task {
-                        await core.quicklinkCoordinator.deleteQuicklink(id: quicklink.id, confirming: false)
-                    }
-                },
-                secondaryButton: .cancel())
-        }
     }
 
     // MARK: - Sections
@@ -85,14 +64,16 @@ struct QuicklinksSettingsView: View {
                         isEnabled: Binding(
                             get: { quicklink.isEnabled },
                             set: {
-                                core.quicklinkCoordinator.setQuicklinkEnabled($0, id: quicklink.id)
+                                coordinator.setQuicklinkEnabled($0, id: quicklink.id)
                             }),
-                        onEdit: { editor = QuicklinkEditRequest(quicklink: quicklink) },
-                        onDelete: { pendingDeletion = quicklink })
+                        onEdit: { coordinator.editQuicklink(quicklink) },
+                        onDelete: {
+                            Task { await coordinator.deleteQuicklink(id: quicklink.id, alwaysConfirm: true) }
+                        })
                 }
             }
             Button {
-                editor = QuicklinkEditRequest(quicklink: nil)
+                coordinator.editQuicklink(nil)
             } label: {
                 SettingsRowTitle(.quicklinksQuicklinks, "Add Quicklink")
             }
@@ -126,13 +107,13 @@ struct QuicklinksSettingsView: View {
     private var transfer: some View {
         Section {
             LabeledContent {
-                Button("Import…") { Task { await core.quicklinkCoordinator.importQuicklinks() } }
+                Button("Import…") { Task { await coordinator.importQuicklinks() } }
             } label: {
                 SettingsRowTitle(.quicklinksImportExport, "Import quicklinks")
                 Text("From a JSON file; duplicates are skipped.")
             }
             LabeledContent {
-                Button("Export…") { Task { await core.quicklinkCoordinator.exportQuicklinks() } }
+                Button("Export…") { Task { await coordinator.exportQuicklinks() } }
                     .disabled(store.quicklinks.isEmpty)
             } label: {
                 SettingsRowTitle(.quicklinksImportExport, "Export quicklinks")

@@ -7,8 +7,6 @@ struct ExtensionFieldChrome: ViewModifier {
     var focused: Bool
     /// A control that opens a popover keeps its focused edge while the popover has the keyboard.
     var open = false
-    /// Lit under the pointer, so a control that can be clicked says so before it is.
-    var hovered = false
     /// A one-line control centres its text; a text area starts at the top and grows down.
     var multiline = false
 
@@ -17,6 +15,7 @@ struct ExtensionFieldChrome: ViewModifier {
     }
 
     func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: form.controlCornerRadius, style: .continuous)
         content
             .padding(.horizontal, form.textInset)
             // One inset either way, so a text area's first line sits where a field's does.
@@ -25,40 +24,27 @@ struct ExtensionFieldChrome: ViewModifier {
                 width: form.controlWidth, height: height,
                 alignment: multiline ? .topLeading : .leading
             )
-            .background(
-                RoundedRectangle(
-                    cornerRadius: metrics.radius.row, style: .continuous
+            .background(ExtensionColors.fieldFill, in: shape)
+            .overlay {
+                shape.strokeBorder(
+                    ExtensionColors.fieldStroke,
+                    lineWidth: focused || open ? form.focusStrokeWidth : Theme.Size.hairline
                 )
-                .fill(fill)
-            )
-            .overlay(
-                RoundedRectangle(
-                    cornerRadius: metrics.radius.row, style: .continuous
-                )
-                .strokeBorder(stroke, lineWidth: 1)
-            )
+                .allowsHitTesting(false)
+            }
             // The form draws its own focused edge, so AppKit's blue ring would be a second one.
             .focusEffectDisabled()
-    }
-
-    private var fill: Color {
-        hovered && !focused ? ExtensionColors.fieldHoverFill : ExtensionColors.fieldFill
-    }
-
-    private var stroke: Color {
-        if focused || open { return ExtensionColors.fieldFocusStroke }
-        return hovered ? ExtensionColors.fieldHoverStroke : ExtensionColors.fieldStroke
     }
 }
 
 extension View {
     /// One control surface, so every row of a form lines up and reads as the same kind of thing.
     func extensionFieldChrome(
-        focused: Bool, open: Bool = false, hovered: Bool = false, multiline: Bool = false
+        focused: Bool, open: Bool = false, multiline: Bool = false
     ) -> some View {
         modifier(
             ExtensionFieldChrome(
-                focused: focused, open: open, hovered: hovered, multiline: multiline))
+                focused: focused, open: open, multiline: multiline))
     }
 }
 

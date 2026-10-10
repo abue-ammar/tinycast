@@ -395,13 +395,48 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         installPasteMonitor()
         // Handled at the panel: a focused preview answers Escape before the palette's own handler.
         panel.onEscape = { [weak self] in
-            guard let self, core.palette.fileSearchQuickLook else { return false }
+            guard let self else { return false }
+            if core.palette.mode == .customCommandEditor, !core.palette.isComposing {
+                core.customCommandCoordinator.cancelCustomCommandEditing()
+                return true
+            }
+            if core.palette.mode == .eventEditor, !core.palette.isComposing {
+                core.calendarCoordinator.cancelEventEditing()
+                return true
+            }
+            if core.palette.mode == .quicklinkEditor, !core.palette.isComposing {
+                core.quicklinkCoordinator.cancelQuicklinkEditing()
+                return true
+            }
+            if core.palette.mode == .snippetEditor, !core.palette.isComposing {
+                core.snippetCoordinator.cancelSnippetEditing()
+                return true
+            }
+            guard core.palette.fileSearchQuickLook else { return false }
             core.palette.fileSearchQuickLook = false
             return true
         }
         // Handled at the panel: the field editor or a missing main menu eats these first.
         panel.onCommandShortcut = { [weak self] event in
             guard let self else { return false }
+            if core.palette.mode.isNativeEditor,
+                event.keyCode == kVK_Return || event.keyCode == kVK_ANSI_KeypadEnter,
+                event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
+                !core.palette.isComposing
+            {
+                switch core.palette.mode {
+                case .quicklinkEditor:
+                    core.quicklinkCoordinator.saveQuicklink()
+                case .snippetEditor:
+                    core.snippetCoordinator.requestSnippetSave()
+                case .eventEditor:
+                    core.calendarCoordinator.saveEvent()
+                case .customCommandEditor:
+                    core.customCommandCoordinator.saveCustomCommand()
+                default: break
+                }
+                return true
+            }
             if self.core.palette.mode == .emoji, let zoom = Self.emojiGridZoom(from: event) {
                 self.core.palette.noteEmojiGridZoom(zoom)
                 return true

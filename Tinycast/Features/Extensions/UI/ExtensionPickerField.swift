@@ -26,7 +26,6 @@ struct ExtensionPickerField: View {
     /// When the query last changed, which is where the caret's blink restarts from.
     @State private var typedAt = Date()
     @State private var highlighted = 0
-    @State private var hovered = false
     /// Reported by the panel once it has placed itself, for the chevron that points its way.
     @State private var flipped = false
     /// Read from the view, so a resolved icon repaints when the surface flips appearance.
@@ -168,7 +167,7 @@ struct ExtensionPickerField: View {
             Spacer(minLength: metrics.spacing.sm)
             ExtensionDisclosureChevron(open: open, flipped: flipped)
         }
-        .extensionFieldChrome(focused: isFocused, open: open, hovered: hovered)
+        .extensionFieldChrome(focused: isFocused, open: open)
         .contentShape(Rectangle())
         // Without this the control reads as its chevron: no name, no value, no role.
         .accessibilityElement(children: .ignore)
@@ -177,7 +176,6 @@ struct ExtensionPickerField: View {
         .accessibilityValue(Text(announcedValue))
         .accessibilityHint(Text(hint))
         .accessibilityAddTraits(.isButton)
-        .onHover { hovered = $0 }
         .onTapGesture {
             focus = index
             if open { close() } else { _ = openList() }

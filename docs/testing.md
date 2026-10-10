@@ -98,7 +98,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `scopes-test` | `Launcher/Model/SearchScopes.swift` |
 | `app-name-test` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
 | `calc-test` | all of `Calculator/Model/` |
-| `calendar-test` | all of `Calendar/Model/` — link detection, the join window, the day buckets |
+| `calendar-test` | all of `Calendar/Model/` plus `EventEditorSession` — links, join window, day buckets, draft and form focus |
 | `clipboard-search-test` | Ordinary and OCR result ordering, opt-in lifecycle, cancellation, pins and type filters |
 | `clipboard-text-test` | Apple Vision/PDF extraction, scheduling, retry backoff and recovery |
 | `paste-sequence-test` | `Clipboard/Model/PasteSequence.swift` — the walk's order, its end, and what starts it over |
@@ -109,6 +109,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` — and hover arming, pointer drift, scroll disarming and highlight tokens |
 | `palette-selection-test` | `Features/PaletteRowIndex.swift` |
 | `interface-size-test` | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift` |
+| `form-input-test` | Native field/textarea sizing, editing alignment, placeholders, Tab, Unicode selection, undo and code fonts |
 | `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
 | `palette-menu-click-test` | `Palette/PalettePanel.swift` — complete click-away presses and subsequent control activation |
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `ModifierKey.swift`, `ModifierKeyDetector.swift`, `HotKeyBinding.swift`, `HotKeySpelling.swift`, `HyperKey.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
@@ -126,12 +127,12 @@ If a change touches anything in the right column, the harness on the left is man
 | `window-command-test` | `WindowManagement/WindowCommand.swift`, `WindowPlacementEngine.swift`, `WindowActionMemory.swift` |
 | `window-layout-test` | `WindowManagement/Model/WindowLayout*.swift` and `CustomWindowSize*.swift` — the layout record, its geometry and its inverse, the plan and the store; custom sizes' units, frames and store |
 | `window-room-test` | `WindowManagement/Model/Room*.swift` — every room layout and its minimum sizes, the grid, arrangement reading, window matching, parking, the plan, Tab's choices and the three stores |
-| `custom-command-test` | `CustomCommands/Model/CustomCommand.swift`, `Service/ShellCommandRunner.swift` |
+| `custom-command-test` | Command storage and execution, editor drafts, argument identities and dynamic keyboard focus |
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
-| `quicklink-test` | all of `Quicklinks/Model/` |
-| `quicklink-coordinator-test` | Quicklink opening and requested argument field — missing selection, manual input, clipboard fallback and default-app overrides; no platform effects or on-screen focus checks |
+| `quicklink-test` | all of `Quicklinks/Model/`, plus editor drafts and placeholder selection |
+| `quicklink-coordinator-test` | Opening and requested arguments, launcher editing, current enabled-state preservation, deletion during editing and feature gates; no platform effects or on-screen focus checks |
 | `apple-shortcut-test` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |
-| `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus `Platform/HealthTicker.swift` |
+| `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus editor drafts, placeholder selection and `Platform/HealthTicker.swift` |
 | `notes-test` | all of `Notes/Model/` and `Notes/Service/`, including the Markdown parser, edit plans and reveal policy, plus the real fuzzy matcher and signposts |
 | `notes-editor-test` | the Notes editor, rendered and literal, with real TextKit 2 and AppKit editing objects: styling, reveal, layout fragments, keys, chords, checkboxes and links |
 | `raycast-test` | `Backup/Service/RaycastDecoder.swift`, `Scrypt.swift`, `Platform/Compression/Zlib.swift`, `Clipboard/Model/RaycastClipboardImport.swift` and import-time clipboard retention |
@@ -692,9 +693,14 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   card still offers both
 - Sleeping over a meeting's start and waking past it reloads the events; one still inside the window
   joins, one long past does not
+- Create Event opens the launcher form with only Title, Start and Duration, defaulting to Now and
+  30 min. Blank and whitespace-only titles disable the action, including ⌘↵. Tab/Shift-Tab cycle the
+  fields; Return/Space/Down open a focused choice, and Escape closes that menu before the form.
+- Back or Escape restores the search and selection that opened Create Event; a hotkey-opened form
+  closes instead. Disabling Calendar closes the editor, and revoked permission cannot write an event.
 - Create Event writes to the default calendar and shows up on the card, the schedule and the launcher
-  without a relaunch; a blank title leaves the dialog up on ↵ and on a click
-- Arrow keys move the caret in the New Event title field, and still step the Set Volume slider
+  without a relaunch; start offsets are measured at save, not when the editor opens.
+- Arrow keys move the caret in the event title field, and still step the Set Volume slider.
 - Every command row of Settings ▸ Calendar has Add Alias, Record Hotkey and a checkbox, and none of
   the five appears in Settings ▸ Commands
 - Export with auto join and camera preview on, import onto a clean profile: both come back **off**,
