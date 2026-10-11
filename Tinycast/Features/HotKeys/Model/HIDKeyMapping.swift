@@ -7,10 +7,13 @@ struct HIDKeyMapping: Hashable, Codable, Sendable {
 
     static let capsLock: UInt64 = 0x7_0000_0039
     static let f18: UInt64 = 0x7_0000_006D
+    static let f20: UInt64 = 0x7_0000_006F
     static let rightControl: UInt64 = 0x7_0000_00E4
+    static let dictationKey: UInt64 = 0xC_0000_00CF
 
     static let capsLockToF18 = HIDKeyMapping(source: capsLock, destination: f18)
     static let capsLockToRightControl = HIDKeyMapping(source: capsLock, destination: rightControl)
+    static let dictationKeyToF20 = HIDKeyMapping(source: dictationKey, destination: f20)
 
     static let sourceKey = "HIDKeyboardModifierMappingSrc"
     static let destinationKey = "HIDKeyboardModifierMappingDst"

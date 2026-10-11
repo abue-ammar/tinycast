@@ -88,11 +88,12 @@ fit the table.
 | `Remapper`    | Keeps one HID key mapping on every matching device, including later arrivals  |
 
 `Manager` is the one worth thinking twice about. It means _lifecycle plus policy_, which is a lot for one
-type, so there are only three: `ClipboardManager` (polls, and owns the capture policy and the
+type, so there are only four: `ClipboardManager` (polls, and owns the capture policy and the
 paste-side handshake), `HotKeyManager` (persists bindings, and drives Carbon registration and
-double-tap dispatch) and `HyperKeyManager` (drives the tap, the remap and their pauses, and owns the
-conflict and Secure Input policy). Another is fine if it genuinely owns both halves — but check first
-whether `Store`, `Monitor` or `Coordinator` describes it better, because usually one of them does.
+double-tap dispatch), `HyperKeyManager` (drives the tap, the remap and their pauses, and owns the
+conflict and Secure Input policy) and `DictationKeyManager` (the 🎤 remap). Another is fine if it
+genuinely owns both halves — but check first whether `Store`, `Monitor` or `Coordinator` describes it
+better, because usually one of them does.
 
 `Registry` and `ViewModel` are retired: a static table is a `Catalog`, shared app state is a `State`.
 SwiftUI-layer names (`View`, `Screen`, `Card`, `Row`, `Sheet`) are a separate vocabulary and are not

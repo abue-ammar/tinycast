@@ -11,12 +11,18 @@ struct KeyCapChip: View {
             if let prefix {
                 HStack(spacing: spacing) {
                     Text(prefix).textScale(.secondary)
-                    Text(text)
+                    legend
                 }
             } else {
-                Text(text)
+                legend
             }
         }
+
+        private var legend: Text {
+            Self.symbolLegends[text].map { Text(Image(systemName: $0)) } ?? Text(text)
+        }
+
+        private static let symbolLegends = ["🎤": "mic"]
     }
 
     enum Style {

@@ -135,6 +135,12 @@ Control** plus a shortcut's key runs that Hyper shortcut. Left Control never tri
 Tinycast Control shortcuts still work with Left Control. The Control combinations used by Hyper are
 reserved while Secure Input lasts. Other apps' Hyper shortcuts still don't work there.
 
+## Dictation key (🎤)
+
+Press 🎤 (F5) while recording any shortcut to use it in Tinycast, push-to-talk included. While a
+shortcut uses it, macOS Dictation doesn't; remove the shortcut to give it back. With standard function
+keys on, press fn+🎤. Tinycast sends it as F20, so other apps' F20 shortcuts fire too.
+
 ## Hiding versus turning off
 
 **Hiding an item doesn't turn off its shortcut.** Clearing a row's checkbox, or pressing

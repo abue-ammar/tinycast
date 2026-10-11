@@ -100,12 +100,16 @@ struct KeyShortcut: Hashable, Sendable {
         functionKeyNames[keyCode] != nil
     }
 
+    /// 🎤, as remapped by `DictationKeyManager`.
+    var isDictationKey: Bool { carbonKeyCode == kVK_F20 }
+
     private static let allModifiers = cmdKey | optionKey | controlKey | shiftKey | kEventKeyModifierFnMask
 
     // MARK: - Key glyph
 
     /// A fixed table for keys with no character, else translated through the current layout.
     @MainActor private var keyGlyph: String {
+        if isDictationKey { return "🎤" }
         if let special = Self.specialKeyGlyphs[carbonKeyCode] { return special }
         if let name = Self.functionKeyNames[carbonKeyCode] { return name }
         return ASCIIKeyboardLayout.character(for: carbonKeyCode)?.uppercased() ?? "?"

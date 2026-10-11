@@ -28,15 +28,16 @@ final class KeyboardRemapper {
     private(set) var sawKarabinerConflict = false
 
     private let defaults: UserDefaults
+    private let recoveryKey: String
     private let bootSessionID: String?
     private var savedMappings: [String: SavedMapping]
     private lazy var system: HIDEventSystem? = makeSystem()
-    private static let savedMappingsKey = "hyperKeyKeyboardMappings"
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard, recoveryKey: String = "hyperKeyKeyboardMappings") {
         self.defaults = defaults
+        self.recoveryKey = recoveryKey
         bootSessionID = Self.currentBootSessionID()
-        let recovery = defaults.data(forKey: Self.savedMappingsKey).flatMap {
+        let recovery = defaults.data(forKey: recoveryKey).flatMap {
             try? JSONDecoder().decode(Recovery.self, from: $0)
         }
         savedMappings = recovery?.bootSessionID == bootSessionID ? recovery?.keyboards ?? [:] : [:]
@@ -150,12 +151,12 @@ final class KeyboardRemapper {
     private func save(_ mapping: SavedMapping?, for id: String) {
         savedMappings[id] = mapping
         if savedMappings.isEmpty {
-            defaults.removeObject(forKey: Self.savedMappingsKey)
+            defaults.removeObject(forKey: recoveryKey)
         } else if let bootSessionID,
             let data = try? JSONEncoder().encode(
                 Recovery(bootSessionID: bootSessionID, keyboards: savedMappings))
         {
-            defaults.set(data, forKey: Self.savedMappingsKey)
+            defaults.set(data, forKey: recoveryKey)
         }
     }
 

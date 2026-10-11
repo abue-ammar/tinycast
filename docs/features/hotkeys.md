@@ -341,6 +341,13 @@ until the grant lands, notices revocation, revives a tap the system disabled on 
 and polls Secure Input. The HID remap outlives the process, so `applicationWillTerminate` takes it off
 every keyboard before exiting.
 
+## The Dictation key
+
+Apple's 🎤 key (Consumer `0xC000000CF`) can't be recorded. While a recorder is open or a binding uses
+F20, `DictationKeyManager` remaps it to **F20**, a bare F-key Carbon fires on press and release, even
+in Secure Input, with no tap or permission. Otherwise, and in other users' sessions, macOS Dictation
+keeps it. F20 keycaps draw as `mic`.
+
 ## Recorder
 
 The settings recorder (`Features/HotKeys/UI/ShortcutRecorder.swift`) is deliberately **not** a focusable
