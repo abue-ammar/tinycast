@@ -21,8 +21,12 @@ published extensions also work.
 `showHUD`, `confirmAlert`, `closeMainWindow`, `popToRoot`, `clearSearchBar`, `open`, `trash`,
 `showInFinder`, `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `updateCommandMetadata`,
-`openExtensionPreferences`, `useNavigation`, `Icon`, `Color`, `Image.Mask`,
+`openExtensionPreferences`, `OAuth`, `useNavigation`, `Icon`, `Color`, `Image.Mask`,
 `Keyboard.Shortcut.Common`, `LaunchType`.
+
+**Sign-in with OAuth.** Extensions like GitHub sign you in through your browser, and the palette
+comes back when you finish. Sign in from one of the extension's commands first: a background
+refresh or menu bar item can't start a sign-in on its own.
 
 **Node built-ins.** `path`, `fs` and `fs/promises`, `os`, `child_process`, `crypto`, `zlib`,
 `http` and `https`, `stream`, `util`, `events`, `buffer`, `url`, `querystring`, `punycode`,

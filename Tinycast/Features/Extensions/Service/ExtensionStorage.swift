@@ -9,9 +9,11 @@ final class ExtensionStorage {
         var preferences: [String: StoredValue] = [:]
         /// A search-bar dropdown's `storeValue` pick — host UI state, so not `LocalStorage`.
         var accessoryValues: [String: String] = [:]
+        /// Each OAuth provider's token set, as the JSON the runtime wrote.
+        var oauthTokens: [String: String] = [:]
 
         enum CodingKeys: String, CodingKey {
-            case localStorage, caches, preferences, accessoryValues
+            case localStorage, caches, preferences, accessoryValues, oauthTokens
         }
 
         init() {}
@@ -28,6 +30,8 @@ final class ExtensionStorage {
                 try store.decodeIfPresent([String: StoredValue].self, forKey: .preferences) ?? [:]
             accessoryValues =
                 try store.decodeIfPresent([String: String].self, forKey: .accessoryValues) ?? [:]
+            oauthTokens =
+                try store.decodeIfPresent([String: String].self, forKey: .oauthTokens) ?? [:]
         }
     }
 
@@ -136,6 +140,17 @@ final class ExtensionStorage {
 
     func clearCache(extension name: String, namespace: String) {
         mutate(name) { $0.caches[namespace] = [:] }
+    }
+
+    // MARK: - OAuth tokens
+
+    func oauthTokens(extension name: String, provider: String) -> String? {
+        store(for: name).oauthTokens[provider]
+    }
+
+    /// `nil` signs the provider out.
+    func setOAuthTokens(extension name: String, provider: String, tokens: String?) {
+        mutate(name) { $0.oauthTokens[provider] = tokens }
     }
 
     // MARK: - Preferences

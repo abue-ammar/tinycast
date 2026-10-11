@@ -64,7 +64,7 @@ function collectEnums(source) {
 const publicPath = (path) => path.replace(/_\d+(\.|$)/g, "$1");
 
 const { enums: rawEnums, aliases } = collectEnums(dts);
-const supportedNamespaces = new Set(["Alert", "Image", "Toast", "WindowManagement"]);
+const supportedNamespaces = new Set(["Alert", "Image", "OAuth", "Toast", "WindowManagement"]);
 const enums = new Map();
 for (const [path, members] of rawEnums) {
   if (!members.length) continue;

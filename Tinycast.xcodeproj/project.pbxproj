@@ -806,6 +806,7 @@
 		FAD4B4B7A3B39591C73C3BAD /* MenuSearchSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = C42ACB4D70CA089A6E948069 /* MenuSearchSession.swift */; };
 		FB1D83A8BE027AC4F328D601 /* QuicklinkListScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0935D49C0A0175E54E69682B /* QuicklinkListScreen.swift */; };
 		FB223F8BBD51465FD64BC1D2 /* SymbolPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9F256977D955CC53C1D914E /* SymbolPicker.swift */; };
+		FB61E1BD69B390D26C9996DB /* ExtensionSignInSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6BBB22DFC9F53CCCCD8010C /* ExtensionSignInSession.swift */; };
 		FBB826DD73104A76AF114114 /* AppPickerPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F84CC7876A495616C52D5C5 /* AppPickerPopover.swift */; };
 		FC2F9731834BAD596116441A /* ExtensionStorePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92C3FC7FD77C74762B72637B /* ExtensionStorePanel.swift */; };
 		FC310EE49D4CBB8F3D7E7BDD /* QuickLookSurface.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98784BF77E97C75859888301 /* QuickLookSurface.swift */; };
@@ -1616,6 +1617,7 @@
 		E5C7F0C39D24F068A8F84864 /* CurrencyData.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyData.generated.swift; sourceTree = "<group>"; };
 		E5CBCCE63360E4590CF5884A /* IconCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconCache.swift; sourceTree = "<group>"; };
 		E5D1A8D93DEC49E4EA11C449 /* ExtensionFormMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionFormMetrics.swift; sourceTree = "<group>"; };
+		E6BBB22DFC9F53CCCCD8010C /* ExtensionSignInSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionSignInSession.swift; sourceTree = "<group>"; };
 		E6F27259003BDECA2054FC67 /* WindowLayoutEntryPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowLayoutEntryPicker.swift; sourceTree = "<group>"; };
 		E73397884822CD8D0D79B760 /* CustomCommandEditorSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCommandEditorSession.swift; sourceTree = "<group>"; };
 		E78E5BC0038D020DE9507305 /* AIChatCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatCoordinator.swift; sourceTree = "<group>"; };
@@ -3394,6 +3396,7 @@
 				C40D65C644389618DF5F5E26 /* ExtensionNameResolver.swift */,
 				9F9A0A3867D1B8E1D3284471 /* ExtensionNodeShims.swift */,
 				C54C4540AD6F188A2455473F /* ExtensionRuntime.swift */,
+				E6BBB22DFC9F53CCCCD8010C /* ExtensionSignInSession.swift */,
 				46CECB81C669337C8E6CF7FF /* ExtensionStorage.swift */,
 				410684C9DEB3754962C20C9C /* ExtensionStoreClient.swift */,
 				357431B54BF1A72C7E9FD24A /* ExtensionVersionStore.swift */,
@@ -4193,6 +4196,7 @@
 				D1F02A377FF12C14CE73B1CB /* ExtensionSearchState.swift in Sources */,
 				9B8C1C35BA7DFC41F1A070CD /* ExtensionSelectionForwarder.swift in Sources */,
 				BFA502E8D404DCC231DAF29B /* ExtensionSettingsEditor.swift in Sources */,
+				FB61E1BD69B390D26C9996DB /* ExtensionSignInSession.swift in Sources */,
 				606809BC14D6613B847036D0 /* ExtensionStorage.swift in Sources */,
 				9608AFDEDC3B330E64F53437 /* ExtensionStoreClient.swift in Sources */,
 				FC2F9731834BAD596116441A /* ExtensionStorePanel.swift in Sources */,

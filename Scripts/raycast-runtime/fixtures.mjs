@@ -381,6 +381,38 @@ export default async function Command() {
 
 // gaxios reaches for `FormData` on every request, so it has to exist; and a form that exists but
 // serialises to nothing would be worse than one that is absent, so the body has to be real too.
+const oauthSource = `
+import { OAuth } from "@raycast/api";
+import { createHash } from "node:crypto";
+
+export default async function Command() {
+  const client = new OAuth.PKCEClient({ redirectMethod: OAuth.RedirectMethod.Web, providerName: "GitHub" });
+  const before = await client.getTokens();
+  const request = await client.authorizationRequest({ endpoint: "https://auth.example.test/authorize?prompt=consent", clientId: "id-1", scope: "repo user" });
+  const url = new URL(request.toURL());
+  const { authorizationCode } = await client.authorize(request);
+  await client.setTokens({ access_token: "token-1", refresh_token: "refresh-1", expires_in: 3600, scope: ["repo", "user"] });
+  const stored = await client.getTokens();
+  const shortLived = new OAuth.PKCEClient({ redirectMethod: OAuth.RedirectMethod.AppURI, providerName: "Other", providerId: "other" });
+  await shortLived.setTokens({ accessToken: "token-2", expiresIn: 5 });
+  const denied = await shortLived.authorize({ url: "https://auth.example.test/deny" }).then(() => "resolved", (error) => error.message);
+  await client.removeTokens();
+  globalThis.__oauth = {
+    before: before === undefined,
+    query: Object.fromEntries(url.searchParams),
+    challengeMatches: url.searchParams.get("code_challenge") === createHash("sha256").update(request.codeVerifier).digest("base64url"),
+    authorizationCode,
+    accessToken: stored.accessToken,
+    scope: stored.scope,
+    updatedAtIsDate: stored.updatedAt instanceof Date,
+    fresh: stored.isExpired(),
+    expired: (await shortLived.getTokens()).isExpired(),
+    denied,
+    removed: (await client.getTokens()) === undefined,
+  };
+}
+`;
+
 const formDataSource = `
 export default async function Command() {
   const form = new FormData();
@@ -1065,6 +1097,50 @@ export async function runFixtures() {
         "fetch.request": (args) => {
           sentTypes.push(args[0].headers["content-type"]);
           return { status: 200, statusText: "OK", headers: {}, url: "https://example.test/token", bodyBase64: "" };
+        },
+      },
+    },
+  );
+
+  const oauthTokens = new Map();
+  const signIns = [];
+  await run(
+    "OAuth.PKCEClient signs in and keeps a token set",
+    oauthSource,
+    "no-view",
+    async (harness) => {
+      const result = harness.call("globalThis.__oauth");
+      const query = result?.query ?? {};
+      check("starts signed out", result?.before === true);
+      check("keeps the endpoint's own query", query.prompt === "consent", JSON.stringify(query));
+      check("asks for an S256 code", query.response_type === "code" && query.code_challenge_method === "S256", JSON.stringify(query));
+      check("uses Raycast's web redirect", query.redirect_uri === "https://raycast.com/redirect?packageName=Extension", String(query.redirect_uri));
+      check("the challenge hashes the verifier", result?.challengeMatches === true);
+      check("waits for the raycast scheme on a web redirect", signIns[0]?.[1] === "raycast", JSON.stringify(signIns[0]));
+      check("waits for com.raycast on an app URI", signIns[1]?.[1] === "com.raycast", JSON.stringify(signIns[1]));
+      check("returns the redirect's code", result?.authorizationCode === "code-1", String(result?.authorizationCode));
+      check("stores a token response as a token set", result?.accessToken === "token-1", String(result?.accessToken));
+      check("joins an array scope", result?.scope === "repo user", String(result?.scope));
+      check("revives updatedAt as a Date", result?.updatedAtIsDate === true);
+      check("a fresh token is not expired", result?.fresh === false);
+      check("a token inside the margin is expired", result?.expired === true);
+      check("a provider error rejects with its description", result?.denied === "The user denied access.", String(result?.denied));
+      check("removeTokens signs out", result?.removed === true);
+      check("each provider keeps its own tokens", oauthTokens.has("other") && !oauthTokens.has("GitHub"), JSON.stringify([...oauthTokens.keys()]));
+    },
+    {
+      stubs: {
+        "oauth.authorize": ([url, scheme]) => {
+          signIns.push([url, scheme]);
+          return url.includes("deny")
+            ? "com.raycast:/oauth?error=access_denied&error_description=The%20user%20denied%20access."
+            : "raycast://oauth?code=code-1&package_name=Extension";
+        },
+        "oauth.getTokens": ([provider]) => oauthTokens.get(provider) ?? null,
+        "oauth.setTokens": ([provider, tokens]) => {
+          if (tokens === null) oauthTokens.delete(provider);
+          else oauthTokens.set(provider, tokens);
+          return null;
         },
       },
     },
