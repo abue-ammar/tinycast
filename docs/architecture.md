@@ -37,7 +37,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
                                    │ consumed by
 ┌─ EFFECT ─────────────────────────▼─────────────────────────────────────────┐
 │ All platform I/O, one folder per feature.                                  │
-│ AppIndex · FileSearchService · SettingsPaneScanner ·                       │
+│ AppIndex · FileIndexer · SettingsPaneScanner ·                             │
 │ AXWindowAccess · AXScreens · WindowInventory · WindowLayoutRunner ·        │
 │ RoomWindowSweep · RoomRunner ·                                             │
 │ IconCache · WindowMover · UninstallScanner · UninstallRunner ·             │

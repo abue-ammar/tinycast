@@ -59,7 +59,8 @@ final class AppCore {
     let pinnedEmoji = PinnedEmojiStore()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
-    let fileSearch = FileSearchSession()
+    let fileIndexer = FileIndexer()
+    @ObservationIgnored private(set) lazy var fileSearch = FileSearchSession(index: fileIndexer.index)
     let dictionary = DictionarySession()
     let menuSearch = MenuSearchSession()
     let windowSwitch = WindowSwitchSession()
@@ -201,8 +202,9 @@ final class AppCore {
         store: calendarStore, clock: meetingClock, appIndex: appIndex, settings: settings,
         paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var fileSearchCoordinator = FileSearchCoordinator(
-        settings: settings, appIndex: appIndex, session: fileSearch, palette: palette,
-        paletteCoordinator: paletteCoordinator, windowController: windowController, core: self)
+        settings: settings, appIndex: appIndex, session: fileSearch, indexer: fileIndexer,
+        palette: palette, paletteCoordinator: paletteCoordinator,
+        windowController: windowController, core: self)
     @ObservationIgnored private(set) lazy var menuSearchCoordinator = MenuSearchCoordinator(
         settings: settings, appIndex: appIndex, session: menuSearch, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)

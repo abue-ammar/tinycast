@@ -56,6 +56,8 @@ extension SettingsAnchor {
     static let dictationOutput = Self(tab: .dictation, title: "Output")
 
     static let fileSearchFileSearch = Self(tab: .fileSearch, title: "File Search")
+    static let fileSearchFullDiskAccess = Self(tab: .fileSearch, title: "Full Disk Access")
+    static let fileSearchIndex = Self(tab: .fileSearch, title: "Index")
     static let fileSearchCommands = Self(tab: .fileSearch, title: "Commands")
     static let fileSearchSearchScopes = Self(tab: .fileSearch, title: "Search Scopes")
     static let fileSearchIgnorePatterns = Self(tab: .fileSearch, title: "Ignore Patterns")

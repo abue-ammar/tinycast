@@ -17,94 +17,82 @@ struct FileSearchTests {
         FileSearchResult(url: home.appending(path: path), isDirectory: folder, homeDirectory: home)
     }
 
+    static func score(_ query: String, _ name: String, prior: Int8 = 2) -> Int? {
+        guard let prepared = FileSearchQuery.prepare(query) else { return nil }
+        var name = name
+        return name.withUTF8 { bytes in
+            FileSearchQuery.score(
+                prepared, name: bytes, mask: FileSearchQuery.nameMask(bytes), prior: prior)
+        }
+    }
+
     static func main() {
-        queryGrammar()
-        recents()
-        typeFilter()
-        scopePolicy()
-        pathPolicy()
-        ignoreRules()
-        policyResolution()
-        resultModel()
+        queryMatching()
         ranking()
+        typeFilter()
+        ignoreRules()
+        policy()
+        scopes()
+        resultModel()
         previewKind()
 
         print(failures == 0 ? "File search tests passed" : "\(failures) file search tests failed")
         exit(failures == 0 ? 0 : 1)
     }
 
-    static func queryGrammar() {
+    static func queryMatching() {
         expect(
             FileSearchQuery.terms(in: "  annual\treport  ") == ["annual", "report"],
             "terms split on whitespace")
-        expect(FileSearchQuery.expression(for: " \n ") == nil, "empty input creates no query")
+        expect(FileSearchQuery.prepare(" \n ") == nil, "empty input prepares no query")
         expect(
-            FileSearchQuery.expression(for: "annual report")
-                == "kMDItemFSName == \"*annual*\"cd && kMDItemFSName == \"*report*\"cd",
-            "every term must occur in the filename")
-        let escaped = FileSearchQuery.expression(for: #"a\b\"c*d?e"#)
-        let expected =
-            "kMDItemFSName == \"*a" + String(repeating: "\\", count: 2) + "b"
-            + String(repeating: "\\", count: 3) + "\"c\\*d\\?e*\"cd"
+            FileSearchQuery.prepare("Annual  Report")?.whole == Array("annual report".utf8),
+            "the whole query is folded with single spaces")
+        expect(score("annual report", "My Annual Report.pdf") != nil, "every term in any position")
+        expect(score("annual report", "Annual Notes.pdf") == nil, "every term is required")
+        expect(score("readme", "README.md") != nil, "matching ignores case")
+        expect(score("resume final", "Résumé Final.pdf") != nil, "matching ignores diacritics")
+        expect(score("RÉSUMÉ", "resume.txt") != nil, "a folded query matches a plain name")
+        expect(score("report", "rep-ort.txt") == nil, "a term is a substring, not a subsequence")
+
+        var accented = "Résumé"
+        let mask = accented.withUTF8(FileSearchQuery.nameMask)
+        let query = FileSearchQuery.prepare("resume")!
+        expect(mask & query.mask == query.mask, "a name's mask covers its folded spelling")
         expect(
-            escaped == expected,
-            "query metacharacters are escaped: \(String(reflecting: escaped)) != \(String(reflecting: expected))"
-        )
+            mask & FileSearchQuery.nonASCIIBit != 0, "a non-ASCII name is flagged for the slow path")
+
+        var haystack = "xxABCabc"
         expect(
-            FileSearchQuery.expression(for: "report", excluding: ["*.tmp", "*.log"])
-                == "kMDItemFSName == \"*report*\"cd && kMDItemFSName != \"*.tmp\"cd"
-                + " && kMDItemFSName != \"*.log\"cd",
-            "ignored name globs keep their wildcards and join the expression as exclusions")
-        expect(FileSearchQuery.candidateLimit == 1_000, "the Spotlight candidate cap is fixed")
-        expect(FileSearchQuery.resultLimit == 200, "the displayed result cap is fixed")
-        expect(
-            FileSearchQuery.matches(filename: "Résumé Final.pdf", query: "resume final"),
-            "home-root matching mirrors case- and diacritic-insensitive Spotlight terms")
-        expect(
-            !FileSearchQuery.matches(filename: "Annual Notes.pdf", query: "annual report"),
-            "every term is required for a home-root match")
+            haystack.withUTF8 { FileSearchQuery.find(Array("abc".utf8), in: $0) } == 2,
+            "find returns the first case-insensitive occurrence")
     }
 
-    static func recents() {
+    static func ranking() {
+        let exact = score("report", "report")!
+        let prefix = score("report", "report.pdf")!
+        let boundary = score("report", "Annual report.pdf")!
+        let inner = score("report", "misreported.txt")!
+        expect(exact > prefix && prefix > boundary && boundary > inner, "exact, prefix, word, inner")
         expect(
-            FileSearchQuery.recentExpression(stamp: .changed, excluding: ["*.tmp"], filter: .images)
-                == "kMDItemFSContentChangeDate > $time.now(-259200)"
-                + " && kMDItemContentTypeTree == \"public.image\""
-                + " && kMDItemFSName != \"*.tmp\"cd",
-            "a recents query is one stamp, narrowed by the filter and the ignore list")
+            score("report", "report.pdf")! > score("report", "reporting.pdf")!,
+            "a whole word beats a longer one that starts the same")
         expect(
-            FileSearchQuery.recentExpression(stamp: .used)
-                == "kMDItemLastUsedDate > $time.now(-2592000)",
-            "an unfiltered recents query is the one date clause alone")
+            score("index", "fileIndex.swift")! > score("index", "reindexer.swift")!,
+            "a camel-case step is a word boundary")
         expect(
-            FileSearchQuery.RecentStamp.allCases.map(\.rawValue)
-                == ["kMDItemFSContentChangeDate", "kMDItemLastUsedDate"],
-            "both stamps are asked about: macOS records a last-used date for very few opens")
+            score("annual report", "Annual Report 2024.pdf")!
+                > score("annual report", "Report Annual.pdf")!,
+            "terms typed in order rank above the same terms reversed")
         expect(
-            FileSearchQuery.RecentStamp.changed.window != FileSearchQuery.RecentStamp.used.window,
-            "editing is constant, so the changed window is not the used one")
-        expect(FileSearchQuery.recentLimit == 20, "the blank screen's row count is fixed")
+            score("notes", "notes.txt", prior: 2)! - score("notes", "notes.txt", prior: 0)! == 3_000,
+            "where a file lives weighs as much as how well its name matches")
+        expect(
+            score("notes", "notes.txt", prior: 0)! > score("notes", "my notes.txt", prior: 0)!,
+            "within one location, the better match wins")
     }
 
     static func typeFilter() {
-        expect(
-            FileSearchQuery.expression(for: "report", filter: .all)
-                == FileSearchQuery.expression(for: "report"),
-            "an unfiltered search asks Spotlight exactly what it always has")
-        expect(
-            FileSearchQuery.expression(for: "report", filter: .images)
-                == "kMDItemFSName == \"*report*\"cd && kMDItemContentTypeTree == \"public.image\"",
-            "a single-type filter joins the expression as one clause")
-        expect(
-            FileSearchQuery.expression(for: "report", excluding: ["*.tmp"], filter: .folders)
-                == "kMDItemFSName == \"*report*\"cd && kMDItemContentTypeTree == \"public.folder\""
-                + " && kMDItemFSName != \"*.tmp\"cd",
-            "the type clause sits between the name terms and the ignored names")
-        expect(
-            FileSearchFilter.documents.spotlightClause?.hasPrefix("(") == true,
-            "a filter naming several types parenthesizes them, so the OR cannot leak")
-        expect(FileSearchFilter.all.spotlightClause == nil, "All Types constrains nothing")
-
         expect(
             FileSearchFilter.all.accepts(contentType: nil, isDirectory: false),
             "All Types admits a file whose type never resolved")
@@ -122,137 +110,111 @@ struct FileSearchTests {
         expect(
             FileSearchFilter.documents.accepts(contentType: .swiftSource, isDirectory: false),
             "source files conform to public.text, so Documents keeps them")
-        expect(
-            !FileSearchFilter.images.accepts(contentType: nil, isDirectory: false),
-            "an unresolved type is a folder or nothing, never a guessed image")
-    }
 
-    static func scopePolicy() {
-        func candidate(
-            _ name: String, directory: Bool, hidden: Bool = false, package: Bool = false,
-            type: UTType? = nil
-        ) -> FileSearchScope.Candidate {
-            FileSearchScope.Candidate(
-                url: home.appending(path: name), isDirectory: directory, isHidden: hidden,
-                isPackage: package, contentType: type)
-        }
-        let selection = FileSearchScope.select([
-            candidate("Documents", directory: true),
-            candidate("Developer", directory: true),
-            candidate("Library", directory: true),
-            candidate(".cache", directory: true, hidden: true),
-            candidate("Project.xcodeproj", directory: true, package: true),
-            candidate("Local.app", directory: true, package: true, type: .application),
-            candidate("Notes.txt", directory: false)
-        ])
+        let png = FileSearchFilter.contentType(extension: "png", isDirectory: false)
+        expect(png?.conforms(to: .image) == true, "a file's type comes from its extension")
         expect(
-            selection.directories.map(\.lastPathComponent) == ["Documents", "Developer"],
-            "only visible non-package directories become recursive Spotlight scopes")
+            FileSearchFilter.contentType(extension: "", isDirectory: true) == .folder,
+            "a plain folder is a folder")
         expect(
-            selection.rootItems.map(\.url.lastPathComponent)
-                == ["Documents", "Developer", "Project.xcodeproj", "Notes.txt"],
-            "visible root folders, files and document packages remain direct candidates")
-    }
-
-    static func pathPolicy() {
-        let shipped = FileSearchIgnoreList(patterns: FileSearchIgnoreList.defaults)
-        for directory in FileSearchIgnoreList.defaults {
-            expect(
-                FileSearchQuery.isExcludedPath(
-                    "/Users/test/Documents/App/\(directory)/file.txt", ignoring: shipped),
-                "\(directory) descendants are excluded")
-        }
+            FileSearchFilter.contentType(extension: "v2", isDirectory: true) == .folder,
+            "a dotted folder name is still a folder")
+        let rtfd = FileSearchFilter.contentType(extension: "rtfd", isDirectory: true)
         expect(
-            FileSearchQuery.isExcludedPath(
-                "/Users/test/Documents/App/.git/config", ignoring: shipped),
-            "hidden ancestor paths are excluded")
-        expect(
-            FileSearchQuery.isExcludedPath(
-                "/Users/test/Applications/Example.app/Contents/Info.plist", ignoring: shipped),
-            "application-bundle contents are excluded")
-        expect(
-            !FileSearchQuery.isExcludedPath(
-                "/Users/test/Documents/Building Plans/target-notes.txt", ignoring: shipped),
-            "partial directory-name matches remain searchable")
-        expect(
-            !FileSearchQuery.isExcludedPath("/Users/test/Documents/Pods.txt", ignoring: shipped),
-            "an excluded directory spelling is still valid as a filename")
-        expect(
-            !FileSearchQuery.isExcludedPath(
-                "/Users/test/Documents/Notes.txt", ignoring: FileSearchIgnoreList(patterns: [])),
-            "an empty list still leaves the structural rules in place")
-        expect(
-            FileSearchQuery.isExcludedPath(
-                "/Users/test/.hidden/Notes.txt", ignoring: FileSearchIgnoreList(patterns: [])),
-            "hidden paths are structural, not a pattern the user can drop")
+            FileSearchFilter.documents.accepts(contentType: rtfd, isDirectory: true)
+                && !FileSearchFilter.folders.accepts(contentType: rtfd, isDirectory: true),
+            "a document package files under Documents, not Folders")
     }
 
     static func ignoreRules() {
-        let list = FileSearchIgnoreList(patterns: [
-            "*.tmp", "**/[Cc]ache/**", "**/build-output/**", "Archive", "  ", "with\0nul"
-        ])
-        expect(list.excludes(path: "/Users/test/Documents/notes.TMP"), "a name glob folds case")
+        let list = FileSearchIgnoreList(
+            patterns: [
+                "*.tmp", "**/[Cc]ache/**", "Archive", "~/Movies", "  ", "with\0nul"
+            ], homeDirectory: home)
+        expect(list.excludes(name: "notes.TMP", path: "/Users/test/notes.TMP"), "a name glob folds case")
+        expect(list.excludes(name: "archive", path: "/x/archive"), "a literal name folds case")
+        expect(!list.excludes(name: "Archived", path: "/x/Archived"), "a literal is the whole name")
+        expect(!list.excludes(name: "tmp-notes.txt", path: "/x/tmp-notes.txt"), "a glob is anchored")
         expect(
-            list.excludes(path: "/Users/test/Documents/scratch.tmp/keep.txt"),
-            "a name glob matches at any depth, not only the last component")
-        expect(
-            list.excludes(path: "/Users/test/Developer/Cache/blob"),
+            list.excludes(name: "blob", path: "/Users/test/Developer/Cache/blob"),
             "a path glob matches a bracketed alternative")
         expect(
-            list.excludes(path: "/Users/test/Developer/cache/blob"),
-            "a path glob folds case too")
+            list.excludes(name: "Movies", path: "/Users/test/Movies"),
+            "a tilde path names that one folder")
         expect(
-            list.excludes(path: "/Users/test/Developer/app/build-output/index.js"),
-            "a path glob matches an interior segment")
-        expect(list.excludes(path: "/Users/test/archive/old.txt"), "a literal name folds case")
-        expect(
-            !list.excludes(path: "/Users/test/Documents/tmp-notes.txt"),
-            "a name glob is anchored to the whole component, not a substring")
-        expect(
-            !list.excludes(path: "/Users/test/Documents/Archived/old.txt"),
-            "a literal name never matches a longer component")
-        expect(
-            !FileSearchIgnoreList(patterns: []).excludes(path: "/Users/test/Documents/node_modules/a"),
-            "the shipped rules are supplied by the policy, not baked into the matcher")
+            !list.excludes(name: "Movies", path: "/Users/test/Documents/Movies"),
+            "a tilde path is not a name pattern")
 
+        let shipped = FileSearchIgnoreList(
+            patterns: FileSearchIgnoreList.defaults, homeDirectory: home)
+        for name in FileSearchIgnoreList.defaults {
+            expect(shipped.excludes(name: name, path: "/x/\(name)"), "\(name) is skipped")
+        }
         expect(
-            list.spotlightNameExclusions == ["*.tmp"],
-            "only bare `*` name globs are pushed into the Spotlight expression")
-        expect(
-            FileSearchIgnoreList(patterns: ["?.log", "a[bc].txt", "say\"hi\"", "back\\slash"])
-                .spotlightNameExclusions.isEmpty,
-            "Spotlight reads `?`, brackets and quotes literally, so those stay local")
+            !shipped.excludes(name: ".git", path: "/x/.git"),
+            "hidden folders are indexed unless a pattern says otherwise")
     }
 
-    static func policyResolution() {
+    static func policy() {
         let policy = FileSearchPolicy(
-            scopes: ["~", "~/Developer", "/Volumes/Work", "~/Developer"],
+            scopes: ["~/Developer", "~", "/Volumes/Work", "~/Developer"],
             ignorePatterns: ["*.log"], homeDirectory: home)
-        expect(policy.includesHome, "a configured home root is held apart for expansion")
         expect(
-            policy.directRoots.map(\.path) == ["/Users/test/Developer", "/Volumes/Work"],
-            "every other root passes through verbatim, deduplicated in order")
+            policy.roots == ["/Users/test", "/Volumes/Work"],
+            "roots are deduplicated, and a scope inside another folds into it")
         expect(
-            policy.ignore.excludes(path: "/Volumes/Work/run.log"),
-            "a user pattern applies outside home as well")
+            FileSearchPolicy(scopes: ["/", "~"], ignorePatterns: [], homeDirectory: home).roots
+                == ["/"],
+            "the whole disk covers home")
         expect(
-            policy.ignore.excludes(path: "/Volumes/Work/node_modules/a.js"),
-            "the shipped rules always apply on top of the user's")
-
-        let away = FileSearchPolicy(
-            scopes: ["~/Developer"], ignorePatterns: [], homeDirectory: home)
-        expect(!away.includesHome, "dropping home drops the expansion with it")
-        expect(
-            FileSearchPolicy(scopes: [], ignorePatterns: [], homeDirectory: home).directRoots.isEmpty,
+            FileSearchPolicy(scopes: [], ignorePatterns: [], homeDirectory: home).roots.isEmpty,
             "a cleared list resolves to no roots at all")
         expect(
+            policy.ignore.excludes(name: "run.log", path: "/Volumes/Work/run.log")
+                && policy.ignore.excludes(name: "node_modules", path: "/Volumes/Work/node_modules"),
+            "the user's patterns and the shipped ones both apply")
+
+        let same = FileSearchPolicy(
+            scopes: ["~/Developer", "~", "/Volumes/Work", "~/Developer"],
+            ignorePatterns: ["*.log"], homeDirectory: home)
+        expect(policy == same && policy.fingerprint == same.fingerprint, "the fingerprint is stable")
+        let other = FileSearchPolicy(
+            scopes: ["~"], ignorePatterns: ["*.txt"], homeDirectory: home)
+        expect(policy.fingerprint != other.fingerprint, "changing the settings changes the fingerprint")
+
+        let priors: [(String, Int8)] = [
+            ("/Users/test", 2),
+            ("/Users/test/Documents/Work", 2),
+            ("/Users/test/.config", 0),
+            ("/Users/test/Library/Caches", 0),
+            ("/Users/test/Library/CloudStorage/Dropbox/Team", 2),
+            ("/Users/test/Library/Mobile Documents/com~apple~CloudDocs/Notes", 2),
+            ("/Users/test/Developer/Tool.app/Contents", 0),
+            ("/Applications", 1),
+            ("/Applications/Xcode.app", 0),
+            ("/Users/Shared", 1),
+            ("/System/Library", 0),
+            ("/private/var", 0)
+        ]
+        for (path, expected) in priors {
+            expect(policy.prior(of: path) == expected, "\(path) ranks \(expected)")
+        }
+    }
+
+    static func scopes() {
+        expect(
             FileSearchScope.normalize(
-                ["/Users/test/Developer", "~/Developer", "/etc"],
-                homeDirectory: home) == ["~/Developer", "/etc"],
+                ["/Users/test/Developer", "~/Developer", "/etc"], homeDirectory: home)
+                == ["~/Developer", "/etc"],
             "normalizing abbreviates home and drops the duplicate it creates")
+        expect(
+            FileSearchScope.normalize(["~/a", "/", "~"], homeDirectory: home) == ["/"],
+            "adding the whole disk absorbs every other scope")
         expect(
             FileSearchScope.expand("~", homeDirectory: home).path == "/Users/test",
             "a bare tilde expands to home itself")
+        expect(FileSearchScope.contains("/", "/Users"), "the disk root contains everything")
+        expect(!FileSearchScope.contains("/Users/a", "/Users/ab"), "containment is per component")
     }
 
     static func resultModel() {
@@ -264,43 +226,6 @@ struct FileSearchTests {
         expect(
             nested.parentName == "Documents" && result("Notes.txt").parentName == "test",
             "the parent's own name is what a folder row prefixes itself with")
-    }
-
-    static func ranking() {
-        let shipped = FileSearchIgnoreList(patterns: FileSearchIgnoreList.defaults)
-        let candidates = [
-            result("Archive/Report Annual.txt"),
-            result("Archive/My Annual Report.txt"),
-            result("Archive/Annual Report", folder: true),
-            result("Archive/Annual Reporting Notes.txt")
-        ]
-        let ranked = FileSearchQuery.rank(candidates, for: "annual report", ignoring: shipped)
-            .map(\.name)
-        expect(ranked.first == "Annual Report", "an exact filename ranks first")
-        expect(
-            ranked.firstIndex(of: "Annual Reporting Notes.txt")!
-                < ranked.firstIndex(of: "My Annual Report.txt")!,
-            "a prefix beats a later word-start match")
-        expect(ranked.last == "Report Annual.txt", "reversed terms remain present but rank last")
-
-        let ties = FileSearchQuery.rank(
-            [result("zeta/report.txt"), result("alpha/Report.txt")], for: "report",
-            ignoring: shipped)
-        expect(
-            ties.map(\.parentPath) == ["~/alpha", "~/zeta"],
-            "equal names have a deterministic path tie-break")
-
-        let capped = (0..<205).map { result("Archive/Report \($0).txt") }
-        expect(
-            FileSearchQuery.rank(capped, for: "report", ignoring: shipped).count == 200,
-            "ranking publishes no more than the display cap")
-
-        expect(
-            FileSearchQuery.rank(
-                [result("Archive/report.txt")], for: "report",
-                ignoring: FileSearchIgnoreList(patterns: ["Archive"])
-            ).isEmpty,
-            "ranking drops what the user's own patterns exclude")
     }
 
     static func previewKind() {

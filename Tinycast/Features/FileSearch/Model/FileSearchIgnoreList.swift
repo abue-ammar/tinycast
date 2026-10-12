@@ -1,29 +1,32 @@
 import Darwin
 import Foundation
 
-/// gitignore-flavoured: a bare pattern matches any component, one with `/` the path.
+/// gitignore-flavoured: a bare pattern matches a name anywhere, one with `/` the whole path.
 struct FileSearchIgnoreList: Sendable, Equatable {
     /// Compiled in, not stored, so changing the shipped rules reaches existing installs.
     static let defaults = ["node_modules", "DerivedData", "build", "dist", "target", "Pods"]
 
-    private let literalNames: Set<String>
+    private let literalNames: [Glob]
     private let nameGlobs: [Glob]
     private let pathGlobs: [Glob]
 
-    init(patterns: [String]) {
-        var literalNames: Set<String> = []
+    init(patterns: [String], homeDirectory: URL) {
+        var literalNames: [Glob] = []
         var nameGlobs: [Glob] = []
         var pathGlobs: [Glob] = []
+        let home = homeDirectory.path
         for pattern in patterns {
             let trimmed = pattern.trimmingCharacters(in: .whitespaces)
             // An interior NUL would silently truncate the pattern once it reaches `fnmatch`.
             guard !trimmed.isEmpty, !trimmed.contains("\0") else { continue }
-            if trimmed.contains("/") {
+            if trimmed.hasPrefix("~/") {
+                pathGlobs.append(Glob(home + trimmed.dropFirst()))
+            } else if trimmed.contains("/") {
                 pathGlobs.append(Glob(trimmed))
             } else if trimmed.contains(where: Glob.isMetacharacter) {
                 nameGlobs.append(Glob(trimmed))
             } else {
-                literalNames.insert(trimmed.lowercased())
+                literalNames.append(Glob(trimmed))
             }
         }
         self.literalNames = literalNames
@@ -31,43 +34,40 @@ struct FileSearchIgnoreList: Sendable, Equatable {
         self.pathGlobs = pathGlobs
     }
 
-    func excludes(path: String) -> Bool {
-        for component in path.split(separator: "/") {
-            let name = String(component)
-            if literalNames.contains(name.lowercased()) { return true }
-            if nameGlobs.contains(where: { $0.matches(name) }) { return true }
+    func excludes(name: UnsafePointer<CChar>, length: Int, path: () -> String) -> Bool {
+        for literal in literalNames where literal.length == length {
+            if literal.equals(name) { return true }
         }
-        return pathGlobs.contains { $0.matches(path) }
+        for glob in nameGlobs where glob.matches(name) { return true }
+        guard !pathGlobs.isEmpty else { return false }
+        let path = path()
+        return path.withCString { path in pathGlobs.contains { $0.matches(path) } }
     }
 
-    /// Name globs Spotlight can evaluate itself, so ignored files never fill the candidate cap.
-    var spotlightNameExclusions: [String] {
-        nameGlobs.filter(\.isSpotlightExpressible).map(\.pattern)
+    func excludes(name: String, path: String) -> Bool {
+        name.withCString { excludes(name: $0, length: name.utf8.count, path: { path }) }
     }
 }
 
 /// One compiled pattern; `fnmatch` runs without `FNM_PATHNAME`, so `*` spans `/`.
 private struct Glob: Sendable, Equatable {
-    let pattern: String
     private let terminated: ContiguousArray<CChar>
+    let length: Int
 
     init(_ pattern: String) {
-        self.pattern = pattern
         terminated = pattern.utf8CString
+        length = terminated.count - 1
     }
 
     static func isMetacharacter(_ character: Character) -> Bool {
         character == "*" || character == "?" || character == "["
     }
 
-    /// Spotlight reads `?` and `[` as literals and knows only `*`, so anything else stays local.
-    var isSpotlightExpressible: Bool {
-        !pattern.contains(where: { $0 == "?" || $0 == "[" || $0 == "\"" || $0 == "\\" })
+    func equals(_ name: UnsafePointer<CChar>) -> Bool {
+        terminated.withUnsafeBufferPointer { strcasecmp($0.baseAddress!, name) == 0 }
     }
 
-    func matches(_ candidate: String) -> Bool {
-        terminated.withUnsafeBufferPointer { pattern in
-            candidate.withCString { fnmatch(pattern.baseAddress!, $0, FNM_CASEFOLD) == 0 }
-        }
+    func matches(_ candidate: UnsafePointer<CChar>) -> Bool {
+        terminated.withUnsafeBufferPointer { fnmatch($0.baseAddress!, candidate, FNM_CASEFOLD) == 0 }
     }
 }

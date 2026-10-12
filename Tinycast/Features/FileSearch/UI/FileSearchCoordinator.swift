@@ -5,6 +5,7 @@ final class FileSearchCoordinator {
     private let settings: AppSettings
     private let appIndex: AppIndex
     private let session: FileSearchSession
+    private let indexer: FileIndexer
     private let palette: PaletteState
     private let paletteCoordinator: PaletteCoordinator
     private let windowController: PaletteWindowController
@@ -13,33 +14,49 @@ final class FileSearchCoordinator {
 
     init(
         settings: AppSettings, appIndex: AppIndex, session: FileSearchSession,
-        palette: PaletteState, paletteCoordinator: PaletteCoordinator,
+        indexer: FileIndexer, palette: PaletteState, paletteCoordinator: PaletteCoordinator,
         windowController: PaletteWindowController, core: AppCore
     ) {
         self.settings = settings
         self.appIndex = appIndex
         self.session = session
+        self.indexer = indexer
         self.palette = palette
         self.paletteCoordinator = paletteCoordinator
         self.windowController = windowController
         self.core = core
+        indexer.onIndexChanged = { [weak session] in session?.refresh() }
     }
 
     func applyEnabled() {
         appIndex.setCommandsVisible([.searchFiles], settings.fileSearchEnabled)
+        indexer.setEnabled(settings.fileSearchEnabled)
         guard !settings.fileSearchEnabled else { return }
         session.cancel()
         if palette.mode == .fileSearch { palette.prepare(mode: .launcher) }
     }
 
     func applyPolicy() {
-        session.apply(
-            scopes: settings.fileSearchScopes, ignorePatterns: settings.fileSearchIgnorePatterns)
+        indexer.apply(
+            FileSearchPolicy(
+                scopes: settings.fileSearchScopes,
+                ignorePatterns: settings.fileSearchIgnorePatterns,
+                homeDirectory: FileManager.default.homeDirectoryForCurrentUser))
+    }
+
+    func rebuildIndex() {
+        indexer.rebuild()
+    }
+
+    func openFullDiskAccessSettings() {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        Permissions.openFullDiskAccessSettings()
     }
 
     /// `query` is the fallback row's: the screen opens already narrowed to what was typed.
     func show(query: String = "") {
         guard settings.fileSearchEnabled else { return }
+        indexer.refreshAccess()
         paletteCoordinator.togglePalette(mode: .fileSearch, seeding: query.isEmpty ? nil : query)
     }
 

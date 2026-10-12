@@ -1,62 +1,60 @@
 import Foundation
 
+/// The default roots never raise a privacy prompt; any others are given as arguments.
 @main
 struct FileSearchPerformance {
     static func main() throws {
-        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
         let arguments = Array(CommandLine.arguments.dropFirst())
-        let queries = arguments.isEmpty ? ["a", "e", "swift", "pdf", "project"] : arguments
-        // The second list is deliberately heavy, so the run prices pattern matching.
-        let policies = [
-            (
-                "shipped",
-                FileSearchPolicy(
-                    scopes: FileSearchScope.defaultScopes, ignorePatterns: [],
-                    homeDirectory: homeDirectory)
-            ),
-            (
-                "+patterns",
-                FileSearchPolicy(
-                    scopes: FileSearchScope.defaultScopes,
-                    ignorePatterns: ["*.tmp", "*.log", "**/[Cc]ache/**", "**/Logs/**", "vendor"],
-                    homeDirectory: homeDirectory)
-            )
-        ]
+        let scopes = arguments.isEmpty ? ["/System", "/Applications", "/Library", "/usr"] : arguments
+        let policy = FileSearchPolicy(
+            scopes: scopes, ignorePatterns: [],
+            homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
+        let url = FileManager.default.temporaryDirectory.appending(path: "file-search-performance.bin")
+        defer { try? FileManager.default.removeItem(at: url) }
 
-        print("File search service latency; the palette adds a 120 ms debounce")
-        print("Home: \(homeDirectory.path)")
-        for (label, policy) in policies {
-            // The empty query is the blank screen's own list, and its latency is the one felt most.
-            for query in [""] + queries {
-                try measure(query: query, policy: policy, label: label)
-            }
+        let roots = FileIndexCrawler.roots(of: policy)
+        var start = ContinuousClock.now
+        let listings = FileIndexCrawler.Crawl(roots: roots, policy: policy)
+            .run(workers: min(ProcessInfo.processInfo.activeProcessorCount, 8))
+        let crawled = milliseconds(start.duration(to: .now))
+        start = .now
+        try FileIndexSnapshot.write(
+            listings, roots: roots, eventID: 0, fingerprint: policy.fingerprint, to: url)
+        let written = milliseconds(start.duration(to: .now))
+        guard let snapshot = FileIndexSnapshot(contentsOf: url) else { fatalError("unreadable index") }
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+        let index = FileIndex()
+        index.replace(with: snapshot, policy: policy)
+
+        print("Roots: \(roots.map(\.path).joined(separator: " "))")
+        print(
+            String(
+                format: "%d entries  crawl %.0f ms  write %.0f ms  index %.1f MB",
+                index.itemCount, crawled, written, Double(size) / 1_048_576))
+        measure("(recent)") { index.recent(filter: .all).count }
+        for query in ["a", "e", "swift", "pdf", "project", "main.rs", "info plist", "résumé"] {
+            let prepared = FileSearchQuery.prepare(query)!
+            measure(query) { index.search(prepared, filter: .all).count }
         }
+        let images = FileSearchQuery.prepare("icon")!
+        measure("icon [Images]") { index.search(images, filter: .images).count }
     }
 
-    private static func measure(
-        query: String, policy: FileSearchPolicy, label: String
-    ) throws {
+    private static func measure(_ label: String, _ run: () -> Int) {
         var samples: [Double] = []
-        var first = 0.0
-        var resultCount = 0
-        for run in 0..<6 {
+        var count = 0
+        for _ in 0..<10 {
             let start = ContinuousClock.now
-            let results = try FileSearchService.search(query: query, policy: policy)
-            let elapsed = milliseconds(start.duration(to: .now))
-            if run == 0 {
-                first = elapsed
-            } else {
-                samples.append(elapsed)
-            }
-            resultCount = results.count
+            count = run()
+            samples.append(milliseconds(start.duration(to: .now)))
         }
-        let ordered = samples.sorted()
-        let name = "\(label) \(query.isEmpty ? "(recents)" : query)"
-            .padding(toLength: 22, withPad: " ", startingAt: 0)
-        let metrics = String(
-            format: "first %7.2f ms  repeat median %7.2f ms  max %7.2f ms  %3d results",
-            first, ordered[ordered.count / 2], ordered.last ?? 0, resultCount)
-        print("\(name) \(metrics)")
+        let first = samples.removeFirst()
+        samples.sort()
+        print(
+            label.padding(toLength: 16, withPad: " ", startingAt: 0)
+                + String(
+                    format: "first %6.2f ms  median %6.2f ms  max %6.2f ms  %3d results",
+                    first, samples[samples.count / 2], samples.last ?? 0, count))
     }
 
     private static func milliseconds(_ duration: Duration) -> Double {

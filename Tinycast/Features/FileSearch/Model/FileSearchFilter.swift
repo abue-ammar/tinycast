@@ -62,19 +62,19 @@ enum FileSearchFilter: CaseIterable, Sendable {
         }
     }
 
-    /// Filtering in the predicate keeps the rejected types from consuming the candidate cap.
-    var spotlightClause: String? {
-        let clauses = contentTypes.map { "kMDItemContentTypeTree == \"\($0.identifier)\"" }
-        guard let first = clauses.first else { return nil }
-        guard clauses.count > 1 else { return first }
-        return "(" + clauses.joined(separator: " || ") + ")"
-    }
-
-    /// The home-root branch never reaches Spotlight, so it answers the same question locally.
     func accepts(contentType: UTType?, isDirectory: Bool) -> Bool {
         guard self != .all else { return true }
         // An unresolved type is only ever a plain directory: everything else carries one.
         guard let contentType else { return self == .folders && isDirectory }
         return contentTypes.contains { contentType.conforms(to: $0) }
+    }
+
+    /// The index records no type, and a stat per row would cost more than the extension.
+    static func contentType(extension pathExtension: String, isDirectory: Bool) -> UTType? {
+        guard !pathExtension.isEmpty else { return isDirectory ? .folder : nil }
+        guard isDirectory else { return UTType(filenameExtension: pathExtension) }
+        // A folder named `v1.2` is still a folder; only a declared package is a document.
+        let package = UTType(filenameExtension: pathExtension, conformingTo: .package)
+        return package.flatMap { $0.isDeclared ? $0 : nil } ?? .folder
     }
 }

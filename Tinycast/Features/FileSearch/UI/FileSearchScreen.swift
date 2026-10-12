@@ -14,7 +14,15 @@ struct FileSearchScreen: PaletteScreen {
         vm.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    private var indexer: FileIndexer { core.fileIndexer }
+
+    private var needsAccess: Bool { indexer.status == .needsAccess }
+
+    /// ↵ on the access hint opens the one pane that can fix it.
+    var actsWithoutRows: Bool { needsAccess }
+
     var primaryActionTitle: String {
+        if needsAccess { return "Open Privacy Settings" }
         guard let result = result(at: vm.selection) else { return "Open File" }
         return result.isDirectory ? "Open Folder" : "Open File"
     }
@@ -23,6 +31,8 @@ struct FileSearchScreen: PaletteScreen {
         rows.indices.contains(selection) ? rows[selection] : nil
     }
 
+    func hasActions(at selection: Int) -> Bool { result(at: selection) != nil }
+
     func actions(at selection: Int) -> PopoverMenuContent? {
         guard let result = result(at: selection) else { return nil }
         return FileSearchActionsMenu.content(
@@ -30,6 +40,10 @@ struct FileSearchScreen: PaletteScreen {
     }
 
     func activate(at selection: Int) {
+        if needsAccess {
+            core.fileSearchCoordinator.openFullDiskAccessSettings()
+            return
+        }
         guard let result = result(at: selection) else { return }
         core.fileSearchCoordinator.open(result)
     }
@@ -86,15 +100,13 @@ struct FileSearchScreen: PaletteScreen {
 
     @ViewBuilder
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
-        if session.state == .failed {
-            EmptyResults(text: "File search is unavailable")
-        } else if rows.isEmpty {
+        if rows.isEmpty {
             emptyState
         } else {
             let selected = result(at: selection)
             HStack(spacing: 0) {
                 FileSearchList(
-                    title: isShowingRecents ? "Recently Used" : "Results",
+                    title: isShowingRecents ? "Recent" : "Results",
                     results: rows,
                     selectedID: selected?.id,
                     scroll: scroll,
@@ -123,7 +135,23 @@ struct FileSearchScreen: PaletteScreen {
     /// Nothing is said while a query runs: the rows it replaces would only flash a message.
     @ViewBuilder
     private var emptyState: some View {
-        if session.state != .ready {
+        if needsAccess {
+            EmptyResults(
+                text: "Full Disk Access required",
+                detail: "File Search indexes your whole disk. Press ↵ to open Privacy & Security, "
+                    + "then turn on Tinycast under Full Disk Access.",
+                systemImage: "lock.shield")
+        } else if !indexer.hasIndex, case .building(let items) = indexer.status {
+            EmptyResults(
+                text: "Indexing your disk…",
+                detail: "\(items.formatted()) items so far. Results appear when it finishes.",
+                systemImage: "externaldrive")
+        } else if !indexer.hasIndex, indexer.status == .failed {
+            EmptyResults(
+                text: "Couldn’t build the file index",
+                detail: "Try Rebuild Index in Settings ▸ File Search.",
+                systemImage: "exclamationmark.triangle")
+        } else if session.state != .ready {
             Color.clear
         } else if isShowingRecents {
             EmptyResults(text: "Type to search files and folders")

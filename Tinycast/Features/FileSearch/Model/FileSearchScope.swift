@@ -1,40 +1,9 @@
 import Foundation
-import UniformTypeIdentifiers
 
+/// The configured scopes are the crawl roots: only what lies under one is indexed or searched.
 enum FileSearchScope {
-    /// Stored tilde-abbreviated, so a settings backup stays portable between machines.
-    static let defaultScopes = ["~"]
-
-    struct Candidate: Sendable {
-        let url: URL
-        let isDirectory: Bool
-        let isHidden: Bool
-        let isPackage: Bool
-        /// Resolved from disk, so the home-root branch classifies exactly as Spotlight does.
-        let contentType: UTType?
-
-        var isApplication: Bool { contentType?.conforms(to: .application) == true }
-    }
-
-    struct Selection: Sendable {
-        let directories: [URL]
-        let rootItems: [Candidate]
-    }
-
-    static func select(_ candidates: [Candidate]) -> Selection {
-        var directories: [URL] = []
-        var rootItems: [Candidate] = []
-        for candidate in candidates
-        where !candidate.isHidden && !candidate.isApplication
-            && candidate.url.lastPathComponent.caseInsensitiveCompare("Library") != .orderedSame
-        {
-            rootItems.append(candidate)
-            if candidate.isDirectory && !candidate.isPackage {
-                directories.append(candidate.url)
-            }
-        }
-        return Selection(directories: directories, rootItems: rootItems)
-    }
+    /// The whole disk; stored tilde-abbreviated otherwise, so a backup stays portable.
+    static let defaultScopes = ["/"]
 
     static func expand(_ scope: String, homeDirectory: URL) -> URL {
         guard scope.hasPrefix("~") else {
@@ -53,17 +22,21 @@ enum FileSearchScope {
         return "~" + path.dropFirst(home.count)
     }
 
-    /// Abbreviated and deduplicated, keeping the order the user added them in.
     static func normalize(_ scopes: [String], homeDirectory: URL) -> [String] {
-        var seen = Set<String>()
-        let abbreviated = roots(for: scopes, homeDirectory: homeDirectory)
-            .map { abbreviate($0.path, homeDirectory: homeDirectory) }
-        return abbreviated.filter { seen.insert($0).inserted }
+        roots(for: scopes, homeDirectory: homeDirectory)
+            .map { abbreviate($0, homeDirectory: homeDirectory) }
     }
 
-    static func roots(for scopes: [String], homeDirectory: URL) -> [URL] {
+    static func roots(for scopes: [String], homeDirectory: URL) -> [String] {
         var seen = Set<String>()
-        let expanded = scopes.map { expand($0, homeDirectory: homeDirectory) }
-        return expanded.filter { seen.insert($0.path).inserted }
+        let paths = scopes.map { expand($0, homeDirectory: homeDirectory).path }
+            .filter { seen.insert($0).inserted }
+        return paths.filter { path in
+            !paths.contains { $0 != path && contains($0, path) }
+        }
+    }
+
+    static func contains(_ root: String, _ path: String) -> Bool {
+        path == root || path.hasPrefix(root == "/" ? "/" : root + "/")
     }
 }

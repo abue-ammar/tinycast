@@ -13,9 +13,7 @@ actor FileSearchProbe {
         pauseEnabled = query != nil
     }
 
-    func search(
-        query: String, filter: FileSearchFilter, policy: FileSearchPolicy
-    ) async -> [FileSearchResult] {
+    func search(query: String, filter: FileSearchFilter) async -> [FileSearchResult] {
         active += 1
         calls.append(filter == .all ? query : "\(query) [\(filter.title)]")
         maximumActive = max(maximumActive, active)
@@ -27,11 +25,8 @@ actor FileSearchProbe {
             try? await Task.sleep(for: .milliseconds(80))
         }
         active -= 1
-        return [
-            FileSearchResult(
-                url: policy.homeDirectory.appending(path: query), isDirectory: false,
-                homeDirectory: policy.homeDirectory)
-        ]
+        let home = URL(fileURLWithPath: "/Users/test")
+        return [FileSearchResult(url: home.appending(path: query), isDirectory: false, homeDirectory: home)]
     }
 
     func snapshot() -> (calls: [String], maximumActive: Int) {
@@ -61,8 +56,6 @@ actor FileSearchProbe {
 @MainActor
 struct FileSearchSessionTests {
     nonisolated(unsafe) static var failures = 0
-    static let home = URL(fileURLWithPath: "/Users/test")
-
     static func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
         if !condition() {
             failures += 1
@@ -71,11 +64,10 @@ struct FileSearchSessionTests {
     }
 
     static func main() async {
-        await coalescesDebouncingQueries()
+        await coalescesQueuedQueries()
         await serializesRunningQueries()
         await cancellationPreventsPendingWork()
-        await policyChangeDiscardsStaleResults()
-        await unchangedPolicyKeepsResults()
+        await refreshRerunsThePublishedQuery()
         await blankQueryLoadsRecents()
         await filterChangeRerunsTheQuery()
 
@@ -83,21 +75,23 @@ struct FileSearchSessionTests {
         exit(failures == 0 ? 0 : 1)
     }
 
-    static func coalescesDebouncingQueries() async {
-        let probe = FileSearchProbe()
-        let session = makeSession(probe: probe, debounce: .milliseconds(30))
+    static func coalescesQueuedQueries() async {
+        let probe = FileSearchProbe(pausing: "a")
+        let session = makeSession(probe: probe)
+        session.search("a")
+        guard await probe.waitUntilPaused() else { return expect(false, "the first query starts") }
+        session.search("an")
         session.search("annual")
-        session.search("annual report")
-        await waitUntil { session.state == .ready }
+        await probe.resumePausedSearch()
+        await waitUntil { session.state == .ready && session.results.first?.name == "annual" }
 
         let snapshot = await probe.snapshot()
-        expect(snapshot.calls == ["annual report"], "the debounce runs only the newest query")
-        expect(session.results.first?.name == "annual report", "the newest query publishes")
+        expect(snapshot.calls == ["a", "annual"], "keystrokes queued behind a search collapse")
     }
 
     static func serializesRunningQueries() async {
         let probe = FileSearchProbe(pausing: "first")
-        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        let session = makeSession(probe: probe)
         session.search("first")
         let firstStarted = await probe.waitUntilPaused()
         expect(firstStarted, "the first query starts")
@@ -108,55 +102,43 @@ struct FileSearchSessionTests {
 
         let snapshot = await probe.snapshot()
         expect(snapshot.calls == ["first", "second"], "the superseding query still runs")
-        expect(snapshot.maximumActive == 1, "Spotlight operations never overlap")
+        expect(snapshot.maximumActive == 1, "searches never overlap")
     }
 
     static func cancellationPreventsPendingWork() async {
-        let probe = FileSearchProbe()
-        let session = makeSession(probe: probe, debounce: .milliseconds(30))
-        session.search("cancelled")
+        let probe = FileSearchProbe(pausing: "running")
+        let session = makeSession(probe: probe)
+        session.search("running")
+        guard await probe.waitUntilPaused() else { return expect(false, "the query starts") }
+        session.search("queued")
         session.cancel()
+        await probe.resumePausedSearch()
         try? await Task.sleep(for: .milliseconds(60))
 
         let snapshot = await probe.snapshot()
-        expect(snapshot.calls.isEmpty, "cancelling during the debounce prevents the search")
+        expect(snapshot.calls == ["running"], "cancelling drops the queued search")
         expect(session.state == .idle && session.results.isEmpty, "cancellation clears the session")
     }
 
-    static func policyChangeDiscardsStaleResults() async {
-        let probe = FileSearchProbe(pausing: "report")
-        let session = makeSession(probe: probe, debounce: .milliseconds(10))
-        session.search("report")
-        let oldSearchStarted = await probe.waitUntilPaused()
-        expect(oldSearchStarted, "the old-policy query starts")
-        guard oldSearchStarted else { return }
-        session.apply(scopes: FileSearchScope.defaultScopes, ignorePatterns: ["*.log"])
-
-        expect(
-            session.state == .idle && session.results.isEmpty,
-            "a result found under the old rules never publishes")
-        session.search("report")
-        await probe.resumePausedSearch()
-        await waitUntil { session.state == .ready && session.results.first?.name == "report" }
-        let snapshot = await probe.snapshot()
-        expect(snapshot.calls == ["report", "report"], "the same query re-runs under the new rules")
-    }
-
-    static func unchangedPolicyKeepsResults() async {
+    static func refreshRerunsThePublishedQuery() async {
         let probe = FileSearchProbe()
-        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        let session = makeSession(probe: probe)
+        session.refresh()
         session.search("report")
         await waitUntil { session.state == .ready }
-        session.apply(scopes: FileSearchScope.defaultScopes, ignorePatterns: [])
+        session.refresh()
+        await waitUntil { session.state == .ready }
+        try? await Task.sleep(for: .milliseconds(20))
 
+        let snapshot = await probe.snapshot()
         expect(
-            session.state == .ready && session.results.first?.name == "report",
-            "re-applying identical settings leaves the published results alone")
+            snapshot.calls == ["report", "report"],
+            "a new index re-asks the open query, and an idle session asks nothing")
     }
 
     static func blankQueryLoadsRecents() async {
         let probe = FileSearchProbe()
-        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        let session = makeSession(probe: probe)
         session.search("")
         await waitUntil { session.state == .ready }
         session.search("report")
@@ -170,7 +152,7 @@ struct FileSearchSessionTests {
 
     static func filterChangeRerunsTheQuery() async {
         let probe = FileSearchProbe()
-        let session = makeSession(probe: probe, debounce: .milliseconds(10))
+        let session = makeSession(probe: probe)
         session.search("report")
         await waitUntil { session.state == .ready }
         session.search("report", filter: .images)
@@ -184,11 +166,9 @@ struct FileSearchSessionTests {
             "narrowing the filter re-runs the same words, and re-stating it runs nothing")
     }
 
-    static func makeSession(probe: FileSearchProbe, debounce: Duration) -> FileSearchSession {
-        let policy = FileSearchPolicy(
-            scopes: FileSearchScope.defaultScopes, ignorePatterns: [], homeDirectory: home)
-        return FileSearchSession(policy: policy, debounce: debounce) { query, filter, policy in
-            await probe.search(query: query, filter: filter, policy: policy)
+    static func makeSession(probe: FileSearchProbe) -> FileSearchSession {
+        FileSearchSession { query, filter in
+            await probe.search(query: query, filter: filter)
         }
     }
 

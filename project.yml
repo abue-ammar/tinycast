@@ -44,6 +44,7 @@ targets:
           - Features/Clipboard/Service/ClipboardTextExtractor.swift
           - Features/Clipboard/Service/ClipboardTextHelper.swift
           - Features/Dictation/Helper
+          - Features/FileSearch/Helper
           - Resources/EmojiKeywords
       # A folder reference keeps the packs in their own directory, which `EmojiIndex` lists.
       - path: Tinycast/Resources/EmojiKeywords
@@ -64,6 +65,14 @@ targets:
           destination: wrapper
           subpath: Contents/Helpers
       - target: ClipboardTextHelper
+        link: false
+        embed: true
+        codeSign: true
+        copy:
+          destination: wrapper
+          subpath: Contents/Helpers
+      # The crawl runs out of process, so its memory is returned when the helper exits.
+      - target: FileIndexHelper
         link: false
         embed: true
         codeSign: true
@@ -101,6 +110,25 @@ targets:
         EXECUTABLE_NAME: ClipboardTextHelper
         PRODUCT_MODULE_NAME: ClipboardTextHelper
         SKIP_INSTALL: YES
+
+  FileIndexHelper:
+    type: tool
+    platform: macOS
+    sources:
+      - Tinycast/Features/FileSearch/Helper/FileIndexHelper.swift
+      - Tinycast/Features/FileSearch/Model/FileSearchIgnoreList.swift
+      - Tinycast/Features/FileSearch/Model/FileSearchPolicy.swift
+      - Tinycast/Features/FileSearch/Model/FileSearchQuery.swift
+      - Tinycast/Features/FileSearch/Model/FileSearchScope.swift
+      - Tinycast/Features/FileSearch/Service/FileIndexCrawler.swift
+      - Tinycast/Features/FileSearch/Service/FileIndexSnapshot.swift
+    settings:
+      base:
+        # Pinned like ClipboardTextHelper's: release.yml's PRODUCT_NAME would otherwise rename it.
+        EXECUTABLE_NAME: FileIndexHelper
+        PRODUCT_MODULE_NAME: FileIndexHelper
+        SKIP_INSTALL: YES
+        SWIFT_OPTIMIZATION_LEVEL: -O
 
   DictationHelper:
     type: application
