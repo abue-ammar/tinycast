@@ -1,6 +1,5 @@
 import Foundation
 
-/// The app and the index helper derive the same policy from one `Request`.
 struct FileSearchPolicy: Sendable, Equatable {
     struct Request: Codable, Sendable, Equatable {
         let scopes: [String]

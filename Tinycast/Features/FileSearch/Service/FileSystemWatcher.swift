@@ -43,7 +43,7 @@ final class FileSystemWatcher {
                     }
                     Unmanaged<Handler>.fromOpaque(info).takeUnretainedValue().handle(events)
                 },
-                &context, paths as CFArray, eventID, 0.3, FSEventStreamCreateFlags(flags))
+                &context, paths as CFArray, eventID, 0.01, FSEventStreamCreateFlags(flags))
         else {
             box.release()
             return nil

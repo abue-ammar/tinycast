@@ -2,7 +2,6 @@ import Foundation
 import Synchronization
 import UniformTypeIdentifiers
 
-/// A search copies the state under the lock and scans without it.
 final class FileIndex: Sendable {
     /// Past this many changes since the snapshot, a rebuild is cheaper than carrying them.
     static let rebuildThreshold = 100_000
@@ -27,7 +26,6 @@ final class FileIndex: Sendable {
 
         func isDead(_ index: Int) -> Bool { dead[index >> 6] & (1 << UInt64(index & 63)) != 0 }
 
-        /// A folder takes its whole subtree with it, which block order makes one range.
         mutating func kill(_ index: Int, in snapshot: FileIndexSnapshot) {
             markDead(index)
             guard snapshot.isDirectory(index) else { return }
@@ -87,19 +85,27 @@ final class FileIndex: Sendable {
         let state = state.withLock { $0 }
         guard let snapshot = state.snapshot, let policy = state.policy else { return [] }
         let limit = FileSearchQuery.resultLimit
-        let base = Self.collect(snapshot, limit: limit) { range, top in
-            var types = TypeFilter(filter: filter)
-            for index in range where snapshot.mask[index] & query.mask == query.mask {
-                guard !state.isDead(index) else { continue }
-                let name = snapshot.name(index)
-                guard
-                    let score = FileSearchQuery.score(
-                        query, name: name, mask: snapshot.mask[index], prior: snapshot.prior[index]),
-                    types.accepts(name: name, isDirectory: snapshot.isDirectory(index))
-                else { continue }
-                top.insert(score, index)
+        let names = NameScores(count: snapshot.nameCount)
+        Self.chunked(0..<snapshot.nameCount, alignment: 64) { range in
+            for id in range where snapshot.nameMask[id] & query.mask == query.mask {
+                let score = FileSearchQuery.score(
+                    query, name: snapshot.name(id: id), mask: snapshot.nameMask[id], prior: 0)
+                if let score { names.set(id, score) }
             }
         }
+        let base =
+            names.isEmpty
+            ? []
+            : Self.collect(snapshot, limit: limit) { range, top in
+                var types = TypeFilter(filter: filter)
+                for index in range {
+                    let id = Int(snapshot.nameID[index])
+                    guard let score = names.score(id), !state.isDead(index),
+                        types.accepts(name: snapshot.name(id: id), isDirectory: snapshot.isDirectory(index))
+                    else { continue }
+                    top.insert(score + FileSearchQuery.priorWeight * Int(snapshot.prior[index]), index)
+                }
+            }
         var ranked = base.map { hit in
             Ranked(
                 score: hit.score, path: snapshot.path(of: hit.index),
@@ -172,22 +178,31 @@ final class FileIndex: Sendable {
     /// Only the overall best come back, so no more paths are built than can be shown.
     private static func collect(
         _ snapshot: FileIndexSnapshot, limit: Int,
-        _ scan: @escaping @Sendable (Range<Int>, inout TopHits) -> Void
+        _ scan: @Sendable (Range<Int>, inout TopHits) -> Void
     ) -> [TopHits.Hit] {
-        let range = snapshot.rootCount..<snapshot.entryCount
-        let chunks = max(1, min(ProcessInfo.processInfo.activeProcessorCount, range.count / 32_768))
         let gathered = Gathered()
-        DispatchQueue.concurrentPerform(iterations: chunks) { chunk in
-            let lower = range.lowerBound + range.count * chunk / chunks
-            let upper = range.lowerBound + range.count * (chunk + 1) / chunks
+        chunked(snapshot.rootCount..<snapshot.entryCount) { range in
             var top = TopHits(limit: limit)
-            scan(lower..<upper, &top)
+            scan(range, &top)
             gathered.append(top.best)
         }
         let hits = gathered.hits.sorted { left, right in
             left.score != right.score ? left.score > right.score : left.index < right.index
         }
         return Array(hits.prefix(limit))
+    }
+
+    /// Splits `range` across the cores; `alignment` keeps chunks off each other's bitset words.
+    private static func chunked(
+        _ range: Range<Int>, alignment: Int = 1, _ body: @Sendable (Range<Int>) -> Void
+    ) {
+        let chunks = max(1, min(ProcessInfo.processInfo.activeProcessorCount, range.count / 32_768))
+        let size = ((range.count + chunks - 1) / chunks + alignment - 1) / alignment * alignment
+        DispatchQueue.concurrentPerform(iterations: chunks) { chunk in
+            let lower = range.lowerBound + chunk * size
+            let upper = min(range.upperBound, lower + size)
+            if lower < upper { body(lower..<upper) }
+        }
     }
 
     /// Idempotent, so a replayed or duplicate event is harmless; true asks for a rebuild.
@@ -302,6 +317,34 @@ private struct TopHits {
     var best: [Hit] { Array(hits.sorted { $0.score > $1.score }.prefix(limit)) }
 }
 
+/// Unchecked: each chunk writes only its own 64-aligned range of names.
+private final class NameScores: @unchecked Sendable {
+    private let matched: UnsafeMutableBufferPointer<UInt64>
+    private let scores: UnsafeMutableBufferPointer<Int32>
+
+    init(count: Int) {
+        matched = .allocate(capacity: (count + 63) / 64)
+        matched.initialize(repeating: 0)
+        scores = .allocate(capacity: max(count, 1))
+    }
+
+    deinit {
+        matched.deallocate()
+        scores.deallocate()
+    }
+
+    var isEmpty: Bool { !matched.contains { $0 != 0 } }
+
+    func set(_ id: Int, _ score: Int) {
+        scores[id] = Int32(clamping: score)
+        matched[id >> 6] |= 1 << UInt64(id & 63)
+    }
+
+    func score(_ id: Int) -> Int? {
+        matched[id >> 6] & (1 << UInt64(id & 63)) != 0 ? Int(scores[id]) : nil
+    }
+}
+
 private final class Gathered: Sendable {
     private let storage = Mutex<[TopHits.Hit]>([])
 
@@ -310,7 +353,6 @@ private final class Gathered: Sendable {
     var hits: [TopHits.Hit] { storage.withLock { $0 } }
 }
 
-/// The extension is resolved once per search, not once per row.
 private struct TypeFilter {
     let filter: FileSearchFilter
     private var cache: [String: Bool] = [:]

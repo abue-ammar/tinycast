@@ -1,10 +1,10 @@
 import Foundation
 
-/// Filename matching on raw UTF-8: a character mask rejects most names before they are read.
 enum FileSearchQuery {
     static let resultLimit = 200
     /// A blank screen is a shortlist, not a browser: enough rows to reach, never to scroll far.
     static let recentLimit = 20
+    static let priorWeight = 1_500
     static let nonASCIIBit: UInt64 = 1 << 40
 
     struct Prepared: Sendable {
@@ -58,7 +58,6 @@ enum FileSearchQuery {
         }
     }
 
-    /// `prior` is where the file lives: 0, 1 or 2.
     static func score(
         _ query: Prepared, name: UnsafeBufferPointer<UInt8>, mask: UInt64, prior: Int8
     ) -> Int? {
@@ -77,7 +76,7 @@ enum FileSearchQuery {
         }
         let lead = query.terms[0]
         let wholeAt = query.terms.count == 1 ? first : find(query.whole, in: name)
-        var score = Int(prior) * 1_500 - 4 * name.count
+        var score = Int(prior) * priorWeight - 4 * name.count
         if wholeAt == 0, name.count == query.whole.count {
             score += 4_000
         } else if query.terms.count > 1, wholeAt != nil {

@@ -20,7 +20,8 @@ struct FileIndexTests {
         for file in [
             "Documents/Annual Report.pdf", "Documents/notes.txt", "Documents/Résumé.pdf",
             "Developer/app/src/main.swift", "Developer/app/node_modules/pkg/index.js",
-            "Developer/app/.git/config", "Movies/clip.mov", "Pictures/beach.png"
+            "Developer/app/.git/config", "Movies/clip.mov", "Pictures/beach.png",
+            "Documents/Archive/todo.md", "Pictures/todo.md"
         ] {
             try write(root.appending(path: file))
         }
@@ -65,12 +66,19 @@ struct FileIndexTests {
         if let developer = snapshot.lookup(root + "/Developer"), let main {
             expect(snapshot.subtree(of: developer).contains(main), "a subtree is one range")
         }
-        expect(snapshot.entryCount - snapshot.rootCount == 12, "every kept entry is written once")
+        expect(snapshot.entryCount - snapshot.rootCount == 15, "every kept entry is written once")
+        expect(snapshot.nameCount == snapshot.entryCount - 1, "a repeated name is stored once")
+        let todo = snapshot.lookup(root + "/Pictures/todo.md")
+        expect(todo.map(snapshot.path(of:)) == root + "/Pictures/todo.md", "a shared name keeps its path")
+        expect(
+            snapshot.children(of: snapshot.lookup(root + "/Documents/notes.txt")!).isEmpty,
+            "a file has no children")
     }
 
     static func search(_ index: FileIndex, root: String) {
         expect(names(index, "main").first == "main.swift", "a name search finds the file")
         expect(names(index, "resume") == ["Résumé.pdf"], "accents fold")
+        expect(names(index, "todo") == ["todo.md", "todo.md"], "every entry with a shared name is found")
         expect(names(index, "annual report") == ["Annual Report.pdf"], "terms combine")
         expect(names(index, "report", filter: .images).isEmpty, "the filter narrows")
         expect(names(index, "beach", filter: .images) == ["beach.png"], "an image is an image")
@@ -78,7 +86,7 @@ struct FileIndexTests {
         let recent = index.recent(filter: .all).map(\.name)
         expect(recent.contains("notes.txt"), "recent lists files under home")
         expect(!recent.contains("config"), "recent leaves hidden files out")
-        expect(index.itemCount == 12, "the count matches the snapshot")
+        expect(index.itemCount == 15, "the count matches the snapshot")
     }
 
     static func live(_ index: FileIndex, root: URL, policy: FileSearchPolicy) throws {
@@ -87,7 +95,7 @@ struct FileIndexTests {
         index.apply(folder: documents.path)
         expect(names(index, "new-plan") == ["new-plan.md"], "a new file appears")
         index.apply(folder: documents.path)
-        expect(index.itemCount == 13, "applying twice changes nothing")
+        expect(index.itemCount == 16, "applying twice changes nothing")
 
         try FileManager.default.removeItem(at: documents.appending(path: "notes.txt"))
         index.apply(folder: documents.path)

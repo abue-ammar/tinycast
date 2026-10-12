@@ -53,18 +53,30 @@ and stored in the index, so the first replay covers everything that changed whil
 
 `FileIndexSnapshot` writes the result in **block order**: the roots first, then each folder's children as
 one run sorted by name bytes, blocks depth first. A lookup is a binary search per path component, and a
-folder's whole subtree is the single range `childStart..<subtreeEnd`. Each entry stores its name, parent,
-a 64-bit character mask, flags, mtime, prior and those three ranges in flat, 8-byte-aligned arrays.
-The file is written beside its final name and renamed into place.
+folder's whole subtree is the single range `childStart..<subtreeEnd`.
+
+The layout follows fsearch's to stay small, about 9 bytes per entry plus each distinct name once:
+
+- **Interned names.** An entry holds a name id; each distinct name is stored once with its 64-bit
+  character mask. Shared names (`index.js`, `Info.plist`) cost 4 bytes per extra entry.
+- **Folder-only fields.** A bitset marks directories, and a rank per 64 entries turns an entry into its
+  folder number, so the child range and subtree end exist only for folders.
+- **No parent column.** Children are contiguous, so a parent is the owner of the block holding the entry:
+  a binary search over the block starts, needed only to build the ~200 paths a search shows.
+
+Per entry that leaves the name id, mtime and prior. The sections are 8-byte aligned, the header bounds
+every count before the layout is computed, and the file is written beside its final name and renamed
+into place.
 
 ## Searching
 
 `FileSearchQuery.prepare` folds the query (lowercase, no diacritics) into terms and ORs their character
-masks. `FileIndex.search` splits the entries across the cores with `concurrentPerform`; each chunk skips
-an entry whose mask lacks a query character, then requires every term as a case-insensitive substring.
-ASCII names are compared as bytes; a name with non-ASCII bytes is folded through Foundation first. The
-type filter resolves each extension once per search. Each chunk keeps its best 200, only the overall best
-200 have their paths built, and the overlay of live additions is scored the same way.
+masks. `FileIndex.search` runs in two passes, each split across the cores with `concurrentPerform`. The
+first scores every **distinct name** once: it skips a name whose mask lacks a query character, then
+requires every term as a case-insensitive substring. ASCII names are compared as bytes; a name with
+non-ASCII bytes is folded through Foundation first. The second walks the entries and keeps those whose
+name matched, adding the entry's prior and applying the type filter. Each chunk keeps its best 200, only
+the overall best 200 have their paths built, and the overlay of live additions is scored the same way.
 
 One score orders the results: exact name +4000, name starts with the first term +2000, first term at a
 word or camel-case boundary +1000, terms typed in order +1500, first term ending a word +500, the prior
@@ -77,12 +89,16 @@ word or camel-case boundary +1000, terms typed in order +1500, first term ending
 An empty query lists **Recent**: the 20 newest files with prior 2, by modification date.
 
 The 2026-10-13 benchmark (`Tests/file-search-performance.swift`, `/System /Applications /Library /usr`,
-844,906 entries) crawled in 4.9 s with a 107 MB helper peak and wrote a 40 MB index. With whole-module
-optimization, queries took 1–2.7 ms and single letters 3.6–3.9 ms.
+844,911 entries) crawled in 5.2 s with a 103 MB helper peak and wrote a 16.6 MB index, down from 40 MB
+before names were interned and the per-entry folder and parent columns dropped. With whole-module
+optimization, queries took 0.3–2.7 ms and single letters 3.4 ms.
 
 ## Live updates
 
-`FileSystemWatcher` streams folder-level FSEvents for the roots from the snapshot's event id. For each
+`FileSystemWatcher` streams folder-level FSEvents for the roots from the snapshot's event id, with fsearch's
+10 ms latency on a user-initiated queue, so a rename shows within a few tens of milliseconds and the
+stream never falls behind. A batch that changes the item count asks the main actor to redraw it at most
+once a second; any other batch never leaves the events queue. For each
 event `FileIndex.apply(folder:)` acts only if the path is an indexed folder; any other event is in an
 ignored subtree, or it belongs to a new folder that its parent's event will find. The folder is relisted
 and diffed: a removed entry is marked dead (a folder's whole subtree range at once), a new one joins the

@@ -112,7 +112,6 @@ nonisolated enum FileIndexCrawler {
         return request
     }()
 
-    /// A folder's own prior is its caller's to work out.
     private static func list(
         _ path: String, prior: Int8, policy: FileSearchPolicy,
         buffer: UnsafeMutableRawBufferPointer, into listing: inout Listing
@@ -182,7 +181,6 @@ nonisolated enum FileIndexCrawler {
         listing.names.append(contentsOf: UnsafeRawBufferPointer(start: name, count: length))
     }
 
-    /// Workers stop once the shared stack is empty and none of them can add to it.
     final class Crawl: @unchecked Sendable {
         private let policy: FileSearchPolicy
         private let condition = NSCondition()

@@ -22,10 +22,11 @@ final class FileIndexer {
     @ObservationIgnored private var isEnabled = false
     @ObservationIgnored private var watcher: FileSystemWatcher?
     @ObservationIgnored private var buildTask: Task<Void, Never>?
+    @ObservationIgnored private var countRefresh: Task<Void, Never>?
     @ObservationIgnored private let directory = AppPaths.applicationSupport()
         .appending(path: "FileIndex", directoryHint: .isDirectory)
     @ObservationIgnored private let events = DispatchQueue(
-        label: "com.tinycast.file-index.events", qos: .utility)
+        label: "com.tinycast.file-index.events", qos: .userInitiated)
 
     private var indexURL: URL { directory.appending(path: FileIndexSnapshot.fileName) }
 
@@ -93,6 +94,8 @@ final class FileIndexer {
     private func deactivate() {
         buildTask?.cancel()
         buildTask = nil
+        countRefresh?.cancel()
+        countRefresh = nil
         watcher = nil
         index.replace(with: nil, policy: nil)
         hasIndex = false
@@ -114,9 +117,12 @@ final class FileIndexer {
         let index = index
         let roots = snapshot.roots
         let apply: @Sendable ([FileSystemWatcher.Event]) -> Void = { [weak self] batch in
+            let before = index.itemCount
             let needsRebuild = Self.handle(batch, roots: roots, index: index)
+            // Most batches change nothing countable, and those need no trip to the main actor.
+            guard needsRebuild || index.itemCount != before else { return }
             Task { @MainActor in
-                if needsRebuild { self?.requestRebuild() } else { self?.refreshCount() }
+                if needsRebuild { self?.requestRebuild() } else { self?.scheduleCountRefresh() }
             }
         }
         watcher = FileSystemWatcher(
@@ -153,10 +159,17 @@ final class FileIndexer {
         build(after: .zero)
     }
 
-    private func refreshCount() {
-        guard case .ready(let items, let builtAt) = status else { return }
-        let count = index.itemCount
-        if count != items { status = .ready(items: count, builtAt: builtAt) }
+    /// At most once a second, so a burst of disk activity redraws the count once.
+    private func scheduleCountRefresh() {
+        guard countRefresh == nil else { return }
+        countRefresh = Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            guard let self, !Task.isCancelled else { return }
+            countRefresh = nil
+            guard case .ready(let items, let builtAt) = status else { return }
+            let count = index.itemCount
+            if count != items { status = .ready(items: count, builtAt: builtAt) }
+        }
     }
 
     /// A newer request cancels this one, which terminates its helper.
