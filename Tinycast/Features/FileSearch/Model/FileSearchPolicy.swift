@@ -37,7 +37,7 @@ struct FileSearchPolicy: Sendable, Equatable {
 
     init(_ request: Request) {
         self.request = request
-        homeDirectory = URL(fileURLWithPath: request.homeDirectory, isDirectory: true)
+        homeDirectory = URL(filePath: request.homeDirectory, directoryHint: .isDirectory)
         // Not standardized: that drops a leading `/private`, and the crawl compares real paths.
         homePath = homeDirectory.path
         roots = FileSearchScope.roots(for: request.scopes, homeDirectory: homeDirectory)

@@ -189,7 +189,7 @@ private struct FileSearchScopesSection: View {
     /// The disk root reads as its volume name, the way Finder shows it.
     private func title(for scope: String) -> String {
         guard scope == "/" else { return scope }
-        let name = try? URL(fileURLWithPath: "/").resourceValues(forKeys: [.volumeLocalizedNameKey])
+        let name = try? URL(filePath: "/").resourceValues(forKeys: [.volumeLocalizedNameKey])
             .volumeLocalizedName
         return name ?? "Macintosh HD"
     }

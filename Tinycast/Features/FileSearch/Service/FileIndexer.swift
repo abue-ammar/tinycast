@@ -29,8 +29,6 @@ final class FileIndexer {
 
     private var indexURL: URL { directory.appending(path: FileIndexSnapshot.fileName) }
 
-    var isBuilding: Bool { buildTask != nil }
-
     func setEnabled(_ enabled: Bool) {
         guard enabled != isEnabled else { return }
         isEnabled = enabled

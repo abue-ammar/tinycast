@@ -7,7 +7,7 @@ enum FileSearchScope {
 
     static func expand(_ scope: String, homeDirectory: URL) -> URL {
         guard scope.hasPrefix("~") else {
-            return URL(fileURLWithPath: scope, isDirectory: true).standardizedFileURL
+            return URL(filePath: scope, directoryHint: .isDirectory).standardizedFileURL
         }
         let relative = String(scope.dropFirst()).trimmingPrefix("/")
         guard !relative.isEmpty else { return homeDirectory.standardizedFileURL }

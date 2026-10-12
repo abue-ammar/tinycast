@@ -26,7 +26,7 @@ nonisolated enum FileIndexHelper {
         do {
             try FileIndexSnapshot.write(
                 listings, roots: roots, eventID: eventID, fingerprint: policy.fingerprint,
-                to: URL(fileURLWithPath: arguments[1]))
+                to: URL(filePath: arguments[1]))
         } catch {
             exit(1)
         }

@@ -164,7 +164,7 @@ final class FileIndex: Sendable {
         .prefix(limit)
         .map { hit in
             FileSearchResult(
-                url: URL(fileURLWithPath: hit.path, isDirectory: hit.isDirectory),
+                url: URL(filePath: hit.path, directoryHint: hit.isDirectory ? .isDirectory : .notDirectory),
                 isDirectory: hit.isDirectory, homeDirectory: policy.homeDirectory)
         }
     }

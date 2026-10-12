@@ -100,7 +100,7 @@ enum FuzzyMatch {
         match(query, candidate: candidate).map(rawScore)
     }
 
-    /// FileSearch ranks one field and wants a single ordering, not a role-aware one.
+    /// For callers that rank one field and want a single ordering, not a role-aware one.
     fileprivate static func rawScore(_ match: Match) -> Int {
         switch match.tier {
         case .exact: 100_000
