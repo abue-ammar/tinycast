@@ -55,11 +55,17 @@ final class FileIndexSnapshot: @unchecked Sendable {
             Int(bitPattern: base) != -1
         else { return nil }
         let header = base.loadUnaligned(as: Header.self)
+        // Checked before any count is used: a stale or damaged file must not trap on every launch.
+        guard header.magic == Header.magic, header.version == Header.version,
+            header.rootCount > 0, UInt64(header.rootCount) <= header.entryCount,
+            header.entryCount <= UInt64(UInt32.max), header.namesLength <= UInt64(size)
+        else {
+            munmap(base, size)
+            return nil
+        }
         let layout = Self.layout(
             entries: Int(header.entryCount), namesLength: Int(header.namesLength))
-        guard header.magic == Header.magic, header.version == Header.version,
-            layout.size == size, header.rootCount > 0
-        else {
+        guard layout.size == size else {
             munmap(base, size)
             return nil
         }

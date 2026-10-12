@@ -277,7 +277,7 @@ private func chooseFolders(message: String) -> [URL]? {
     panel.prompt = "Add"
     panel.message = message
     // Tinycast is an accessory app, so the panel opens behind the frontmost app without this.
-    NSApp.activate(ignoringOtherApps: true)
+    NSApp.activate()
     guard panel.runModal() == .OK else { return nil }
     return panel.urls
 }

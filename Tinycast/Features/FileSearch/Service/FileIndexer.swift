@@ -1,5 +1,5 @@
-import AppKit
 import CoreServices
+import Foundation
 
 /// The crawl runs in `FileIndexHelper`, so its memory leaves when that process exits.
 @MainActor
@@ -22,7 +22,6 @@ final class FileIndexer {
     @ObservationIgnored private var isEnabled = false
     @ObservationIgnored private var watcher: FileSystemWatcher?
     @ObservationIgnored private var buildTask: Task<Void, Never>?
-    @ObservationIgnored private var activation: NotificationToken?
     @ObservationIgnored private let directory = AppPaths.applicationSupport()
         .appending(path: "FileIndex", directoryHint: .isDirectory)
     @ObservationIgnored private let events = DispatchQueue(
@@ -36,10 +35,8 @@ final class FileIndexer {
         guard enabled != isEnabled else { return }
         isEnabled = enabled
         if enabled {
-            observeActivation()
             activate()
         } else {
-            activation = nil
             deactivate()
             // An index of every filename is not something to leave behind once it is unused.
             try? FileManager.default.removeItem(at: directory)
@@ -66,18 +63,6 @@ final class FileIndexer {
             deactivate()
             status = .needsAccess
         }
-    }
-
-    /// Returning from System Settings activates Tinycast, which is when a fresh grant shows.
-    private func observeActivation() {
-        let center = NotificationCenter.default
-        activation = NotificationToken(
-            center.addObserver(
-                forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main
-            ) { [weak self] _ in
-                MainActor.assumeIsolated { self?.refreshAccess() }
-            },
-            center: center)
     }
 
     func rebuild() {
@@ -184,10 +169,9 @@ final class FileIndexer {
         let fingerprint = policy.fingerprint
         let output = indexURL
         buildTask = Task { [weak self] in
-            if delay > .zero {
-                try? await Task.sleep(for: delay)
-                guard !Task.isCancelled else { return }
-            }
+            if delay > .zero { try? await Task.sleep(for: delay) }
+            // Checked even with no delay: a deactivate before this ran has already set the status.
+            guard !Task.isCancelled else { return }
             self?.status = .building(items: 0)
             let report: @Sendable (Int) -> Void = { [weak self] count in
                 Task { @MainActor in self?.progress(count) }
