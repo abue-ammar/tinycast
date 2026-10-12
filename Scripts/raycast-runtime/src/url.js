@@ -80,6 +80,10 @@ export class URLSearchParams {
   get size() {
     return this._pairs.length;
   }
+  // axios sends an untagged instance as an object.
+  get [Symbol.toStringTag]() {
+    return "URLSearchParams";
+  }
   forEach(fn, thisArg) {
     for (const [key, value] of this._pairs.slice()) fn.call(thisArg, value, key, this);
   }
