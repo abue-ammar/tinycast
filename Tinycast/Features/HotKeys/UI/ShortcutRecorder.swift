@@ -94,7 +94,7 @@ struct ShortcutRecorder: View {
                 }
             }
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel(binding.keycaps.joined(separator: " "))
+            .accessibilityLabel(KeyCapChip.inlineText(binding.keycaps, separator: " "))
         }
         .frame(maxWidth: .infinity)
         // Overlaid, not a row member, so it costs the caps no width.
