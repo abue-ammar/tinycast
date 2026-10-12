@@ -114,8 +114,9 @@ final class AIChatCoordinator {
 
     /// The sidebar's filter is the view's own state, so ⌃Tab walks every saved chat.
     func openAdjacentChat(step: Int) {
-        guard let target = history.conversations.pinnedFirst.adjacent(
-            to: chats.window.session.id, step: step)
+        guard
+            let target = history.conversations.pinnedFirst.adjacent(
+                to: chats.window.session.id, step: step)
         else { return }
         openChat(id: target.id)
     }
