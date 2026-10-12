@@ -35,7 +35,20 @@ no appcast: the release feed the website already reads is the feed the app reads
 - **Nothing is installed unless every check passes.** Bundle id, version and signature are all checked
   on the expanded copy before `replaceItemAt` runs, and the running app survives any failure untouched.
 - **Relaunching goes through `NSApp.terminate`, never `exit`.** That is what flushes a pending note
-  draft and hands back the Hyper Key's HID-level caps remap, which outlives the process.
+  draft and hands back the Hyper Key's HID-level caps remap, which outlives the process. It is
+  performed from a run-loop timer, never inside a main-actor task: `applicationShouldTerminate`
+  answers `.terminateLater` and replies from a main-actor task, which could never run while the
+  calling job still held the main queue.
+- **A copy swapped in under the running app relaunches it.** Homebrew quits a cask's app before an
+  upgrade and reopens it afterwards — unless `brew` is running *inside* that app, as it is from the
+  Homebrew extension or a custom command, in which case it neither quits nor reopens it. Tinycast
+  would then keep running old code out of a deleted bundle. `BundleReplacementMonitor` watches the
+  folder holding the bundle, and when a different build of the same bundle id lands there,
+  `UpdateCoordinator` relaunches into it once three things hold: no Homebrew process is still running
+  beneath Tinycast (quitting would close the pipes of the `brew` finishing the upgrade),
+  `UpdateReadiness` reports nothing in progress, and the new bundle's seal validates through
+  `BundleSignature`, so a half-copied bundle is never launched. Our own install is excluded — it
+  already offers Relaunch — and so is `.development`, which never updates.
 - **An automatic prompt defers to whatever the user is doing, and is never spent unshown.**
   `UpdateReadiness` withholds it while a snippet is expanding, an extension command is running, an
   uninstall is trashing, a shortcut is being recorded, a prompt or dialog is up, or the palette is

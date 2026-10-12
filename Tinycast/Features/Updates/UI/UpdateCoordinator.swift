@@ -27,6 +27,11 @@ final class UpdateCoordinator {
         title: "Software Update", contentSize: UpdateWindowView.initialSize,
         activation: core.activationPolicy)
     @ObservationIgnored private var installTask: Task<Void, Never>?
+    @ObservationIgnored private var replacementTask: Task<Void, Never>?
+
+    private static let replacementPollInterval = Duration.seconds(1)
+    /// A copy still being written fails its seal; one that never passes is not ours to launch.
+    private static let sealAttempts = 30
 
     init(store: UpdateCheckStore, core: AppCore) {
         self.store = store
@@ -154,10 +159,72 @@ final class UpdateCoordinator {
     /// `NSApp.terminate`, never `exit`: it flushes a note draft and returns the HID remap.
     func relaunch() {
         RelaunchRunner.relaunchAfterExit(Bundle.main.bundleURL)
-        NSApp.terminate(nil)
+        // From a timer, not a main-actor job: `.terminateLater` replies through a main-actor task.
+        NSApp.perform(#selector(NSApplication.terminate(_:)), with: nil, afterDelay: 0)
+    }
+
+    /// Homebrew run from inside Tinycast never quits its host, so it never reopens it either.
+    func installedCopyChanged() {
+        guard replacementTask == nil else { return }
+        replacementTask = Task { [weak self] in
+            await self?.relaunchOnceReplacementSettles()
+            self?.replacementTask = nil
+        }
     }
 
     // MARK: - Private
+
+    private func relaunchOnceReplacementSettles() async {
+        var failedSeals = 0
+        while !Task.isCancelled {
+            switch replacementDecision() {
+            case .keepRunning:
+                return
+            case .wait:
+                break
+            case .relaunch:
+                guard await Self.isSealed(Bundle.main.bundleURL) else {
+                    failedSeals += 1
+                    if failedSeals >= Self.sealAttempts { return }
+                    break
+                }
+                // Re-asked: the palette may have opened while the seal was being checked.
+                guard !Task.isCancelled, replacementDecision() == .relaunch else { break }
+                relaunch()
+                return
+            }
+            do {
+                try await Task.sleep(for: Self.replacementPollInterval)
+            } catch {
+                return
+            }
+        }
+    }
+
+    private func replacementDecision() -> BundleReplacementPolicy.Decision {
+        guard let running = BundleReplacementPolicy.Identity(info: Bundle.main.infoDictionary)
+        else { return .keepRunning }
+        let installed = BundleReplacementPolicy.Identity(
+            info: UpdateInstaller.info(at: Bundle.main.bundleURL))
+        return BundleReplacementPolicy.decide(
+            running: running, installed: installed, isInstallingItself: isInstallingItself,
+            isHostingHomebrew: DescendantProcessScanner.executablePaths().contains(
+                where: BundleReplacementPolicy.isHomebrew),
+            blocker: UpdateReadiness.evaluate(core.currentActivity))
+    }
+
+    /// Our own install already offers Relaunch, and must not be pre-empted by its own swap.
+    private var isInstallingItself: Bool {
+        switch stage {
+        case .installing, .readyToRelaunch: return true
+        case .checking, .upToDate, .localBuild, .available, .blocked, .failed: return false
+        }
+    }
+
+    @concurrent
+    private nonisolated static func isSealed(_ bundleURL: URL) async -> Bool {
+        BundleSignature.isTrusted(bundleURL)
+    }
 
     private func report(_ phase: UpdateInstaller.Phase, for release: AvailableRelease) {
         guard case .installing = stage else { return }

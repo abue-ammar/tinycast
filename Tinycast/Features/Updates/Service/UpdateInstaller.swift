@@ -99,7 +99,7 @@ struct UpdateInstaller: Sendable {
     }
 
     /// Off disk, not through `Bundle`, whose cache would answer for the old copy.
-    private static func info(at bundleURL: URL) -> [String: Any]? {
+    static func info(at bundleURL: URL) -> [String: Any]? {
         let url = bundleURL.appending(components: "Contents", "Info.plist")
         guard let data = try? Data(contentsOf: url),
             let plist = try? PropertyListSerialization.propertyList(from: data, format: nil)

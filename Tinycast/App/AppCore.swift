@@ -52,6 +52,7 @@ final class AppCore {
     let calendarStore = CalendarStore()
     let meetingClock = MeetingClock()
     let updateChecker = UpdateCheckStore()
+    let bundleReplacement = BundleReplacementMonitor(bundleURL: Bundle.main.bundleURL)
     let supportReminders: SupportReminderStore
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
@@ -345,6 +346,12 @@ final class AppCore {
                 self?.updateCoordinator.presentIfAvailable(release) ?? true
             }
             updateCoordinator.applyAutomaticChecking()
+            if updateChecker.channel.updatesItself {
+                bundleReplacement.onChange = { [weak self] in
+                    self?.updateCoordinator.installedCopyChanged()
+                }
+                bundleReplacement.start()
+            }
             supportReminders.onDue = { [weak self] in self?.supportCoordinator.presentIfDue() }
             supportReminders.start()
 

@@ -30,6 +30,9 @@ struct UpdatesTests {
         laysOutTheChangelog()
         linksMentionsAndPullRequests()
         blocksWhileBusy()
+        relaunchesIntoAReplacedCopy()
+        recognisesHomebrew()
+        findsDescendantProcesses()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -454,5 +457,78 @@ struct UpdatesTests {
         expect(
             UpdateReadiness.Blocker.expandingSnippet.message.hasSuffix("."),
             "every blocker reads as a sentence the window can show")
+    }
+
+    // MARK: - BundleReplacementPolicy
+
+    static func relaunchesIntoAReplacedCopy() {
+        typealias Policy = BundleReplacementPolicy
+        let running = Policy.Identity(bundleID: "com.tinycast.app", version: "0.11.12", build: "111")
+        let newer = Policy.Identity(bundleID: "com.tinycast.app", version: "0.11.19", build: "118")
+        func decide(
+            _ installed: Policy.Identity?, installing: Bool = false, homebrew: Bool = false,
+            blocker: UpdateReadiness.Blocker? = nil
+        ) -> Policy.Decision {
+            Policy.decide(
+                running: running, installed: installed, isInstallingItself: installing,
+                isHostingHomebrew: homebrew, blocker: blocker)
+        }
+
+        expect(decide(newer) == .relaunch, "a different build on disk relaunches an idle app")
+        expect(decide(running) == .keepRunning, "the same build back in place changes nothing")
+        expect(decide(nil) == .keepRunning, "a missing copy waits for the folder to change again")
+        expect(
+            decide(Policy.Identity(bundleID: "com.tinycast.app", version: "0.11.12", build: "112"))
+                == .relaunch,
+            "a rebuild of the same version still relaunches")
+        expect(
+            decide(Policy.Identity(bundleID: "com.example.other", version: "1.0.0", build: "1"))
+                == .keepRunning,
+            "another app moved into the path is never launched as us")
+        expect(decide(newer, installing: true) == .keepRunning, "our own install keeps its Relaunch")
+        expect(decide(newer, homebrew: true) == .wait, "a brew still running under us is waited for")
+        expect(decide(newer, blocker: .paletteOpen) == .wait, "an open palette holds the relaunch")
+        expect(
+            decide(newer, installing: true, homebrew: true) == .keepRunning,
+            "our own install wins over a coincidental brew")
+
+        let info: [String: Any] = [
+            "CFBundleIdentifier": "com.tinycast.app", "CFBundleShortVersionString": "0.11.19",
+            "CFBundleVersion": "118"
+        ]
+        expect(Policy.Identity(info: info) == newer, "reads an identity from Info.plist keys")
+        expect(Policy.Identity(info: nil) == nil, "no Info.plist is no identity")
+        expect(
+            Policy.Identity(info: ["CFBundleIdentifier": "com.tinycast.app"]) == nil,
+            "a half-written Info.plist is no identity")
+    }
+
+    static func recognisesHomebrew() {
+        let isHomebrew = BundleReplacementPolicy.isHomebrew(executablePath:)
+        expect(
+            isHomebrew("/opt/homebrew/Library/Homebrew/vendor/portable-ruby/4.0.7/bin/ruby"),
+            "Apple silicon's portable Ruby is brew")
+        expect(
+            isHomebrew("/usr/local/Homebrew/Library/Homebrew/vendor/portable-ruby/4.0.7/bin/ruby"),
+            "Intel's portable Ruby is brew")
+        expect(!isHomebrew("/opt/homebrew/bin/node"), "a formula's own binary is not brew")
+        expect(!isHomebrew("/bin/sh"), "the shell that started brew is not brew")
+    }
+
+    static func findsDescendantProcesses() {
+        let child = Process()
+        child.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        child.arguments = ["5"]
+        guard (try? child.run()) != nil else {
+            expect(false, "could not start a child process")
+            return
+        }
+        defer { child.terminate() }
+        expect(
+            DescendantProcessScanner.executablePaths().contains("/bin/sleep"),
+            "a running child is found by its executable path")
+        expect(
+            DescendantProcessScanner.executablePaths(under: child.processIdentifier).isEmpty,
+            "a leaf process has no descendants")
     }
 }
