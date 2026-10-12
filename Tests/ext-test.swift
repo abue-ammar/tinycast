@@ -1572,7 +1572,10 @@ struct ExtensionTests {
                 () => "none", (error) => error.code), "EEXIST");
               fs.mkdirSync(listing + "/folder", { recursive: true });
               fs.utimesSync(listing, new Date(1000000), new Date(2000005));
-              assert.equal(fs.statSync(listing).mtime.getTime(), 2000005);
+              const stamped = fs.statSync(listing);
+              assert.equal(stamped.atime.getTime(), 1000000);
+              assert.equal(stamped.mtime.getTime(), 2000005);
+              assert.equal(stamped.mode & 0o170000, 0o040000);
               await call("utimes", listing, 3000, 4000.25);
               assert.equal(fs.statSync(listing).mtime.getTime(), 4000250);
               await fs.promises.utimes(listing, "5000", "6000.125");
