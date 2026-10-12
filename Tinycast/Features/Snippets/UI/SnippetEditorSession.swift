@@ -4,7 +4,7 @@ import SwiftUI
 @Observable
 final class SnippetEditorSession {
     enum Field: CaseIterable, Hashable {
-        case template, name, keyword, enabled, confirmation
+        case template, name, keyword, tags, enabled, confirmation
     }
 
     let record: StoredSnippet?
@@ -13,6 +13,9 @@ final class SnippetEditorSession {
     var text: String
     var isEnabled: Bool
     var showsConfirmation: Bool
+    var tags: [SnippetTag]
+    var tagQuery = ""
+    var tagSuggestionsDismissed = false
     var selection: TextSelection?
     var focusedField: Field = .template
     var errorMessage: String?
@@ -26,6 +29,7 @@ final class SnippetEditorSession {
         text = snippet?.text ?? ""
         isEnabled = snippet?.isEnabled ?? true
         showsConfirmation = snippet?.showsConfirmation ?? false
+        tags = snippet?.tags ?? []
     }
 
     var canSave: Bool {
@@ -37,7 +41,40 @@ final class SnippetEditorSession {
         return Snippet(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines), text: text,
             keyword: keyword.isEmpty ? nil : keyword, isEnabled: isEnabled,
-            showsConfirmation: showsConfirmation)
+            showsConfirmation: showsConfirmation, tags: tags)
+    }
+
+    func tagSuggestions(in catalog: [SnippetTag]) -> [SnippetTag] {
+        let query = tagQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        var matches = catalog.filter { tag in
+            !tags.contains(where: { $0.id == tag.id })
+                && (query.isEmpty || tag.name.localizedStandardContains(query))
+        }
+        if let proposed = SnippetTag.proposed(name: query, among: catalog + tags),
+            !catalog.contains(where: { $0.id == proposed.id }),
+            !tags.contains(where: { $0.id == proposed.id })
+        {
+            matches.append(proposed)
+        }
+        return matches
+    }
+
+    func addTag(_ tag: SnippetTag) {
+        tags = SnippetTag.unique(tags + [tag])
+        tagQuery = ""
+    }
+
+    func commitTag(in catalog: [SnippetTag]) {
+        guard let tag = SnippetTag.proposed(name: tagQuery, among: catalog + tags) else { return }
+        addTag(tag)
+    }
+
+    func dismissTagSuggestions(in catalog: [SnippetTag]) -> Bool {
+        guard focusedField == .tags, !tagSuggestionsDismissed, !tagSuggestions(in: catalog).isEmpty else {
+            return false
+        }
+        tagSuggestionsDismissed = true
+        return true
     }
 
     func advanceFocus(backwards: Bool) {

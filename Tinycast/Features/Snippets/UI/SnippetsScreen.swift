@@ -11,7 +11,10 @@ struct SnippetsScreen: PaletteScreen {
 
     /// A disabled snippet is off everywhere, so the browser lists exactly what the launcher does.
     var rows: [StoredSnippet] {
-        let enabled = store.snippets.filter { $0.snippet.isEnabled }
+        let filter = core.snippetCoordinator.tagFilter
+        let enabled = store.snippets.filter { record in
+            record.snippet.isEnabled && filter.matches(record.snippet.tags)
+        }
         let query = vm.query.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return enabled }
         return enabled.filter { record in

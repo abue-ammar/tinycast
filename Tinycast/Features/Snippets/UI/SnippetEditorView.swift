@@ -10,6 +10,7 @@ struct SnippetEditorView: View {
     @State private var focusedField: SnippetEditorSession.Field?
     @FocusState private var focusedControl: SnippetEditorSession.Field?
     @State private var placeholderMenuFrame: CGRect = .zero
+    @State private var viewport: CGRect = .zero
 
     var body: some View {
         ScrollView {
@@ -20,6 +21,7 @@ struct SnippetEditorView: View {
             .padding(.horizontal, metrics.spacing.xxxl * 2)
             .padding(.vertical, metrics.spacing.md)
         }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { viewport = $0 }
         .scrollClipDisabled()
         .edgeDissolve()
         .disabled(editor.isSaving)
@@ -124,6 +126,13 @@ struct SnippetEditorView: View {
             field(
                 "Keyword", placeholder: "Optional, for example !notes", text: $editor.keyword,
                 focus: .keyword, hint: "Optional. Type this to expand the snippet.")
+            VStack(alignment: .leading, spacing: metrics.spacing.md) {
+                fieldTitle("Tags")
+                SnippetTagsField(
+                    editor: editor, focused: focusBinding(.tags), catalog: coordinator.tags,
+                    viewport: viewport)
+            }
+            .zIndex(1)
             option(
                 "Enabled", detail: "Disabled snippets cannot be expanded.",
                 value: $editor.isEnabled, focus: .enabled)

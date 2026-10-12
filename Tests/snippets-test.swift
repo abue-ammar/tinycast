@@ -15,6 +15,7 @@ struct SnippetsTests {
         _ = NSApplication.shared
         testIdentityAndRevision()
         testEditorSession()
+        testTags()
         testRaycastImport()
         try testMarkdownCodec()
         try testRepositoryStorage()
@@ -22,6 +23,7 @@ struct SnippetsTests {
         try await testDeliveryQueueAndPasteboard()
         await testCopySelectionFallback()
         try await testStoreWatcher()
+        try await testTagLifecycle()
         testTemplateExpansion()
         testDynamicPlaceholders()
         testTemplateEncodingAndSelectionAlias()
@@ -111,6 +113,101 @@ struct SnippetsTests {
         check("form focus wraps through the existing options", editing.focusedField == .confirmation)
     }
 
+    private static func testTags() {
+        let work = SnippetTag(name: " Work ", color: .blue)
+        check("tag names are trimmed", work.name == "Work")
+        check(
+            "tags dedupe without regard to case",
+            SnippetTag.unique([
+                work, SnippetTag(name: "work", color: .red), SnippetTag(name: "  ", color: .gray)
+            ]) == [work])
+        check(
+            "Unicode-equivalent tags have one identity",
+            SnippetTag(name: "Café", color: .red).id == SnippetTag(name: "Cafe\u{301}", color: .blue).id)
+        check(
+            "existing tags retain their name and color",
+            SnippetTag.proposed(name: "WORK", among: [work]) == work)
+        check("blank tag names are not proposed", SnippetTag.proposed(name: "  ", among: []) == nil)
+        var tags: [SnippetTag] = []
+        for index in 0..<SnippetTag.Color.allCases.count {
+            let tag = SnippetTag.proposed(name: "Tag \(index)", among: tags)!
+            check("a free macOS tag color wins before reuse", !tags.contains { $0.color == tag.color })
+            tags.append(tag)
+        }
+        check(
+            "a full palette can still create another tag",
+            SnippetTag.proposed(name: "More", among: tags) != nil)
+        check(
+            "typed names have deterministic color previews",
+            SnippetTag.proposed(name: "Typed", among: []) == SnippetTag.proposed(name: "Typed", among: []))
+        let editor = SnippetEditorSession(record: nil)
+        editor.tagQuery = "wor"
+        check("tag suggestions reuse matching names", editor.tagSuggestions(in: [work]).first == work)
+        editor.addTag(work)
+        editor.tagQuery = "work"
+        check("the selected tag is not offered twice", editor.tagSuggestions(in: [work]).isEmpty)
+        editor.commitTag(in: [work])
+        check(
+            "committing a duplicate clears input without duplication",
+            editor.tags == [work] && editor.tagQuery.isEmpty)
+        editor.tagQuery = "Personal"
+        editor.commitTag(in: [work])
+        check(
+            "draft tags receive an unused color",
+            editor.tags.count == 2 && editor.tags.last?.color != work.color)
+        check("tags enter the saved snippet", editor.snippet.tags == editor.tags)
+        editor.focusedField = .keyword
+        editor.advanceFocus(backwards: false)
+        check("Tab includes the tags field", editor.focusedField == .tags)
+        editor.tagQuery = "New"
+        check(
+            "Escape dismisses suggestions before leaving the form", editor.dismissTagSuggestions(in: [work]))
+        check("a dismissed list no longer consumes Escape", !editor.dismissTagSuggestions(in: [work]))
+        editor.tagSuggestionsDismissed = false
+        editor.focusedField = .name
+        check("other fields do not consume Escape for tags", !editor.dismissTagSuggestions(in: [work]))
+        let personal = SnippetTag(name: "Personal", color: .red)
+        var filter = SnippetTag.Filter()
+        check("All Tags includes untagged snippets", filter.matches([]))
+        filter.toggle(work.id)
+        check("one selected tag narrows the list", filter.matches([work]) && !filter.matches([personal]))
+        filter.toggle(personal.id)
+        check("multiple selections include either tag", filter.matches([work]) && filter.matches([personal]))
+        check("selected tags exclude untagged snippets", !filter.matches([]))
+        filter.toggle(work.id)
+        check("clicking a checked tag removes only that selection", filter.selectedIDs == [personal.id])
+        filter.toggle(work.id)
+        filter.retain([personal])
+        check("a removed tag preserves other selections", filter.selectedIDs == [personal.id])
+        filter.retain([])
+        check("removing the last selected tag returns to All Tags", filter.matches([]))
+        filter.toggle(work.id)
+        filter.toggle(nil)
+        check("All Tags clears every selection", filter.selectedIDs.isEmpty)
+    }
+
+    private static func testTagLifecycle() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("snippet-tags-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = SnippetRepository(bundleIdentifier: "test.tags", applicationSupportRoot: root)
+        let store = SnippetsStore(repository: repository)
+        await store.start()
+        defer { store.stop() }
+        let tag = SnippetTag(name: "Shared", color: .green)
+        let first = try await store.create(Snippet(name: "First", text: "Body", tags: [tag]))
+        let second = try await store.create(
+            Snippet(name: "Second", text: "Body", isEnabled: false, tags: [tag]))
+        check("a shared tag is listed once, including disabled snippets", store.tags == [tag])
+        let loaded = try repository.load()
+        check("reload preserves tag names and colors", loaded.records.allSatisfy { $0.snippet.tags == [tag] })
+        try await store.delete(id: first.id)
+        check("a tag survives another snippet's deletion", store.tags == [tag])
+        var edited = second
+        edited.snippet.tags = []
+        try await store.save(edited)
+        check("removing the last use removes the tag catalog entry", store.tags.isEmpty)
+    }
+
     private static func testRaycastImport() {
         let imported = RaycastSnippetImport.parse([
             ["title": "Email", "text": "person@example.com", "keyword": "  !email  "],
@@ -194,6 +291,22 @@ struct SnippetsTests {
             content: "---\nname: \"No HUD\"\n---\nBody",
             fileURL: fileURL)
         check("missing show_confirmation defaults false", !missingHUD.showsConfirmation)
+        check("untagged Markdown still loads without tags", missingHUD.tags.isEmpty)
+        let tagged = Snippet(
+            name: "Tagged", text: "Body\n---\n",
+            tags: [
+                SnippetTag(name: "Work \"docs\" \\\n雪", color: .purple),
+                SnippetTag(name: "Personal", color: .orange)
+            ])
+        let parsedTags = try SnippetMarkdownSerializer.parse(
+            content: SnippetMarkdownSerializer.serialize(tagged), fileURL: fileURL)
+        check("tags and colors round-trip through editable Markdown", parsedTags == tagged)
+        expectParseError(
+            "invalid tag colors are rejected",
+            content: "---\ntags: [{\"name\":\"Work\",\"color\":\"pink\"}]\n---\n", fileURL: fileURL)
+        expectParseError(
+            "blank tag names are rejected",
+            content: "---\ntags: [{\"name\":\" \t\",\"color\":\"blue\"}]\n---\n", fileURL: fileURL)
         expectParseError(
             "show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n",
             fileURL: fileURL)

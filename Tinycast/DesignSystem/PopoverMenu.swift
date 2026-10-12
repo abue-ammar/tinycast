@@ -30,6 +30,8 @@ struct PopoverMenuItem {
     var detail: String?
     /// Destructive rows (delete) tint their icon + label red, matching the native menu convention.
     var isDestructive: Bool = false
+    var iconTint: Color?
+    var accessory: AnyView?
     let action: () -> Void
 
     /// What the keyboard and pointer may land on; a loading or disabled row only states itself.
@@ -38,7 +40,9 @@ struct PopoverMenuItem {
     init(
         title: String, icon: PopoverMenuIcon, isLoading: Bool = false, isEnabled: Bool = true,
         sectionTitle: String? = nil, startsSection: Bool = false, shortcut: String? = nil,
-        detail: String? = nil, isDestructive: Bool = false, action: @escaping () -> Void
+        detail: String? = nil, isDestructive: Bool = false, iconTint: Color? = nil,
+        accessory: AnyView? = nil,
+        action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
@@ -49,6 +53,8 @@ struct PopoverMenuItem {
         self.shortcut = shortcut
         self.detail = detail
         self.isDestructive = isDestructive
+        self.iconTint = iconTint
+        self.accessory = accessory
         self.action = action
     }
 
@@ -343,7 +349,7 @@ struct PopoverMenu: View {
 }
 
 /// One menu row; highlight is selection-driven, so only one row is ever active.
-private struct PopoverMenuRow: View {
+struct PopoverMenuRow: View {
     let item: PopoverMenuItem
     let selected: Bool
     let onActivate: () -> Void
@@ -369,7 +375,7 @@ private struct PopoverMenuRow: View {
                             )
                             .symbolRenderingMode(.monochrome)
                             .foregroundStyle(
-                                item.isDestructive ? Color.red : Theme.Colors.menuSymbol
+                                item.isDestructive ? Color.red : item.iconTint ?? Theme.Colors.menuSymbol
                             )
                             .frame(width: metrics.size.menuIcon, height: metrics.size.menuIcon)
                     case .asset(let name):
@@ -390,6 +396,7 @@ private struct PopoverMenuRow: View {
                     .foregroundStyle(item.isDestructive ? Color.red : Color.primary)
                     .lineLimit(1)
                 Spacer(minLength: metrics.spacing.sm)
+                if let accessory = item.accessory { accessory }
                 if let detail = item.detail {
                     Text(detail)
                         // Smaller than the title it trails: a stated value, not a second label.

@@ -86,6 +86,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var actionMenuWidth: CGFloat { scaledPoints(Theme.Size.actionMenuWidth, scale) }
         var clipboardFilterMenuWidth: CGFloat { scaledPoints(Theme.Size.clipboardFilterMenuWidth, scale) }
         var fileSearchFilterMenuWidth: CGFloat { scaledPoints(Theme.Size.fileSearchFilterMenuWidth, scale) }
+        var snippetTagMenuWidth: CGFloat { scaledPoints(Theme.Size.snippetTagMenuWidth, scale) }
         var emojiCategoryMenuWidth: CGFloat { scaledPoints(Theme.Size.emojiCategoryMenuWidth, scale) }
         var menuIcon: CGFloat { scaledPoints(Theme.Size.menuIcon, scale) }
         var menuBrandIcon: CGFloat { scaledPoints(Theme.Size.menuBrandIcon, scale) }

@@ -57,6 +57,10 @@ struct BackupArchiveTest {
             title: "Café — notes/with:separators", extension: "md", contents: "héllo\nwörld",
             in: bundle.notesDirectory)
         try? bundle.write(Data(), to: bundle.snippetsDirectory.appendingPathComponent("empty.md"))
+        let snippet = Snippet(
+            name: "Tagged", text: "Template", tags: [SnippetTag(name: "Work", color: .blue)])
+        let snippetURL = bundle.snippetsDirectory.appendingPathComponent("tagged.md")
+        try? bundle.write(Data(SnippetMarkdownSerializer.serialize(snippet).utf8), to: snippetURL)
         let manifest = BackupManifest(
             appVersion: "1.2.3", createdAt: Date(timeIntervalSince1970: 1_700_000_000),
             counts: ["clipboard": 1, "notes": 1])
@@ -87,7 +91,12 @@ struct BackupArchiveTest {
             "a zero-byte file survives",
             reopened.documents(
                 in: reopened.snippetsDirectory, extension: "md"
-            ).first?.contents == "")
+            ).contains { $0.contents.isEmpty })
+        let restored = reopened.snippetsDirectory.appendingPathComponent("tagged.md")
+        let content = (try? String(contentsOf: restored, encoding: .utf8)) ?? ""
+        check(
+            "snippet tags and colors survive a backup export and import",
+            (try? SnippetMarkdownSerializer.parse(content: content, fileURL: restored)) == snippet)
         let decoded = try? reopened.readManifest()
         check("the manifest round trips", decoded == manifest)
         check("an absent category reads as absent", decoded?.categories == [.clipboard, .notes])

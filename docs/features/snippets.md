@@ -92,6 +92,7 @@ name: "Meeting Notes"
 keyword: "!notes"
 enabled: true
 show_confirmation: false
+tags: [{"color":"blue","name":"Work"}]
 ---
 
 Template body
@@ -99,6 +100,9 @@ Template body
 
 `name` is optional when reading and defaults from the filename, and `keyword` is optional. `enabled`
 defaults to `true`; `show_confirmation` defaults to `false`.
+`tags` is optional and defaults to an empty list. It is a JSON array (valid inline YAML), with a
+`name` and `color` per tag. Colors are `red`, `orange`, `yellow`, `green`, `blue`, `purple` and `gray`.
+Invalid arrays, empty names and unknown colors are reported as frontmatter errors.
 
 String values must use double quotes. The codec escapes and decodes `\\`, `\"`, `\n`, `\r`, and
 `\t`; unsupported escapes, unquoted strings, duplicate or unknown keys, non-exact delimiters, and
@@ -107,6 +111,27 @@ there are no aliases, so a key Tinycast does not know names itself in the error.
 
 Everything after the closing delimiter's line terminator is the body. Leading and trailing blank
 lines, CR/LF choices, Unicode, and later lines containing `---` are preserved exactly when parsing.
+
+## Tags
+
+Tags live in each snippet's Markdown, not in a separate catalog. Their names are trimmed and
+deduplicated case-insensitively, including canonically equivalent Unicode. The library derives its
+available tags from all snippets, including disabled ones: removing a tag's last use removes it from
+the catalog. Cancelling a new draft creates neither a snippet nor a tag.
+
+The editor's **Tags** field offers existing matches or **Create: …** while typing. Return adds the
+highlighted choice; arrow keys change it, the cross removes a tag, and Delete in an empty field
+removes the last one. Tab and Save commit any pending name. New names preview a deterministic color,
+prioritizing unused colors; an existing name keeps its color. Chips stay fixed while the pending name
+scrolls horizontally in the remaining space. Validated chips wrap when needed; typing never adds a row.
+Escape dismisses suggestions before the usual form cancellation.
+Suggestions fit the visible form, scrolling below the field or opening above it when needed.
+Filled dots in the suggestions and filter use AppKit's native Finder label colors, with names beside them
+so color is never the only identifier. The preview uses colored text on tinted badges, without dots.
+
+Backups copy the Markdown verbatim, so names and colors survive export and import without another
+payload or setting. Import deduplication includes tags as well as name and body; different tag
+metadata imports a new snippet rather than silently discarding it or overwriting an existing file.
 
 ## Template tokens
 
@@ -227,11 +252,15 @@ preview.
 The list is every **enabled** snippet — a disabled one is absent here exactly as it is absent from the
 launcher — filtered by name *or* keyword. Substring matching, not the launcher's fuzzy scorer: this is
 a library being browsed rather than a query racing apps and commands for a rank.
+The header's **All Tags** menu (⌘P) filters by any of the checked tags, independently of the text
+query. It stays open for multiple selections and remains available when there are no matches.
+All Tags clears the selections. Editing preserves the filter; a tag's last use disappearing removes
+only its selection, returning to All Tags when none remain.
 
 The preview shows the **raw template**, never an expansion. Expanding per selection would capture the
 clipboard, read the target's selected text and burn a `{uuid}` on every arrow key, and a snippet
 carrying `{argument}` would raise its prompt just to draw a pane. Beside it sits the name, keyword,
-shortcut, file name and character count.
+shortcut, tags, file name and character count.
 
 ↵ and the ⌘K menu's **Paste Snippet** both go through `SnippetCoordinator.expandSnippetFromPalette`,
 which reads `previousApp` before hiding the panel and then calls the same `expandSnippet` funnel a
@@ -254,7 +283,7 @@ second editor. The fields stay inside `Features/Snippets/UI/`, not in the palett
 
 The template is on the left, with its own **Insert…** placeholder menu, separate from Actions.
 It uses the palette's searchable popup, keeping its existing placeholder groups.
-**Name**, **Keyword**, **Enabled** and **Show confirmation** are on the right. The draft keeps the
+**Name**, **Keyword**, **Tags**, **Enabled** and **Show confirmation** are on the right. The draft keeps the
 loaded record and its source revision; no file is created or changed before **Save Snippet**.
 The template grows with its text; only the whole form scrolls, never an individual field or column.
 A blank name disables Save.
@@ -434,6 +463,14 @@ a given app takes is a manual check.
 - Enter a multiline template, tab through its existing options and insert a placeholder: plain Return
   stays in the template, while **⌘↵** saves only after a name is entered.
 - Edit from a filtered snippet list, then save or cancel: its search and selection are restored.
+- Create and reuse tags, type a new name, add several with Return and remove them with the cross or
+  Delete. Confirm only the pending name scrolls, chips stay fixed and the larger text inset returns
+  after removing all chips. New colors prefer unused Finder colors; preview badges have no dots.
+- Filter tags with the header and ⌘P, combine with a text query and edit a matching snippet. Cancel
+  preserves multiple selections; removing a selected tag's last use preserves the other selections.
+  Confirm checkmarks animate without closing the menu. Disabled snippets keep their tags.
+- Restart and export/import a tagged snippet: its names and colors survive, and snippets stays off
+  when imported into a channel that has not enabled the feature.
 - Cancel a new draft: no file appears. Change an edited file externally: Save reports a conflict and
   keeps the draft, without overwriting the external edit.
 - Type a keyword in the **ChatGPT composer inside a Chromium browser**: it expands. This is rule 1 and

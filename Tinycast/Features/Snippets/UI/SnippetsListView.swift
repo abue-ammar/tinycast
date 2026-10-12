@@ -119,6 +119,7 @@ struct SnippetPreview: View {
 private struct SnippetInfoSection: View {
     @Environment(\.metrics) private var metrics
     @Environment(HotKeyManager.self) private var hotKeys
+    @Environment(SnippetsStore.self) private var store
     let record: StoredSnippet
 
     private struct InfoRow: Identifiable {
@@ -139,6 +140,7 @@ private struct SnippetInfoSection: View {
 
     private var rows: [InfoRow] {
         var rows = [InfoRow(label: "Name", value: record.snippet.name)]
+        if !record.snippet.tags.isEmpty { rows.append(InfoRow(label: "Tags", value: "")) }
         if let keyword = record.snippet.keyword, !keyword.isEmpty {
             rows.append(InfoRow(label: "Keyword", value: keyword))
         }
@@ -163,7 +165,21 @@ private struct SnippetInfoSection: View {
                     HStack(spacing: metrics.spacing.sm) {
                         Text(row.label).foregroundStyle(.secondary)
                         Spacer(minLength: metrics.spacing.lg)
-                        row.value.lineLimit(1).truncationMode(.middle)
+                        if row.label == "Tags" {
+                            let catalog = store.tags
+                            SnippetTagLayout(
+                                spacing: metrics.spacing.xs,
+                                lineHeight: metrics.size.keyCap + metrics.spacing.xxs, trailing: true
+                            ) {
+                                ForEach(record.snippet.tags) { tag in
+                                    SnippetTagChip(
+                                        tag: catalog.first { $0.id == tag.id } ?? tag, isBadge: true)
+                                }
+                            }
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        } else {
+                            row.value.lineLimit(1).truncationMode(.middle)
+                        }
                     }
                     .font(metrics.typography.keyCap)
                     .padding(.vertical, metrics.spacing.xs)

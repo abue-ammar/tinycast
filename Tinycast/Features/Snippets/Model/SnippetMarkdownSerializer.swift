@@ -26,6 +26,7 @@ struct SnippetMarkdownSerializer {
         var keyword: String?
         var isEnabled = true
         var showsConfirmation = false
+        var tags: [SnippetTag] = []
         var seenKeys = Set<String>()
 
         for lineIndex in 1..<closingIndex {
@@ -57,6 +58,14 @@ struct SnippetMarkdownSerializer {
                 isEnabled = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
             case "show_confirmation":
                 showsConfirmation = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
+            case "tags":
+                do {
+                    tags = try JSONDecoder().decode([SnippetTag].self, from: Data(rawValue.utf8))
+                } catch {
+                    throw parseError(fileURL, line: lineNumber, "Expected tags with a name and macOS color")
+                }
+                guard tags.allSatisfy({ !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+                else { throw parseError(fileURL, line: lineNumber, "Tag names must not be empty") }
             default:
                 preconditionFailure("Canonical keys are exhaustively handled")
             }
@@ -68,7 +77,8 @@ struct SnippetMarkdownSerializer {
             text: String(content[bodyStart...]),
             keyword: keyword,
             isEnabled: isEnabled,
-            showsConfirmation: showsConfirmation
+            showsConfirmation: showsConfirmation,
+            tags: tags
         )
     }
 
@@ -82,6 +92,19 @@ struct SnippetMarkdownSerializer {
         }
         lines.append("enabled: \(snippet.isEnabled)")
         lines.append("show_confirmation: \(snippet.showsConfirmation)")
+        if !snippet.tags.isEmpty {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+            do {
+                let data = try encoder.encode(snippet.tags)
+                guard let json = String(bytes: data, encoding: .utf8) else {
+                    preconditionFailure("JSON tag data is UTF-8")
+                }
+                lines.append("tags: \(json)")
+            } catch {
+                preconditionFailure("Snippet tags contain only JSON-encodable values")
+            }
+        }
         lines.append("---")
         return lines.joined(separator: "\n") + "\n" + snippet.text
     }
@@ -131,7 +154,7 @@ struct SnippetMarkdownSerializer {
     private static func canonicalKey(for rawKey: String) -> String? {
         let key = rawKey.lowercased()
         switch key {
-        case "name", "keyword", "enabled", "show_confirmation":
+        case "name", "keyword", "enabled", "show_confirmation", "tags":
             return key
         default:
             return nil

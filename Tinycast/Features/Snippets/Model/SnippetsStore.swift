@@ -16,6 +16,11 @@ final class SnippetsStore {
     private(set) var issues: [SnippetRepository.Issue] = []
     private(set) var operationError: String?
 
+    var tags: [SnippetTag] {
+        SnippetTag.unique(snippets.flatMap { $0.snippet.tags })
+            .sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
     private(set) var snippetsDirectory: URL
     var onSnapshot: ((SnippetRepository.Snapshot) -> Void)?
 

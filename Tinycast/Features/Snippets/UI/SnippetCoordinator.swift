@@ -5,6 +5,10 @@ import AppKit
 @Observable
 final class SnippetCoordinator {
     private(set) var editor: SnippetEditorSession?
+    private(set) var tagFilter = SnippetTag.Filter()
+
+    var tags: [SnippetTag] { store.tags }
+    var selectedTags: [SnippetTag] { tags.filter { tagFilter.selectedIDs.contains($0.id) } }
     private let store: SnippetsStore
     private let listener: SnippetKeywordListener
     private let injector: TextInjector
@@ -122,7 +126,16 @@ final class SnippetCoordinator {
     /// The switch gates the browser, the way Search Files re-checks its own before opening.
     func showSnippets() {
         guard settings.snippetsEnabled else { return }
+        tagFilter.toggle(nil)
         paletteCoordinator.togglePalette(mode: .snippets)
+    }
+
+    func toggleTag(_ id: SnippetTag.ID?) {
+        tagFilter.toggle(id)
+    }
+
+    func validateTagFilter() {
+        tagFilter.retain(tags)
     }
 
     func editSnippet(_ record: StoredSnippet?) {
@@ -133,6 +146,9 @@ final class SnippetCoordinator {
 
     func requestSnippetSave() {
         guard settings.snippetsEnabled, let editor, editor.canSave else { return }
+        let catalog = tags
+        editor.commitTag(in: catalog)
+        editor.tags = editor.tags.map { tag in catalog.first { $0.id == tag.id } ?? tag }
         editor.isSaving = true
     }
 
@@ -154,6 +170,8 @@ final class SnippetCoordinator {
             editor.errorMessage = error.localizedDescription
         }
     }
+
+    func dismissTagSuggestions() -> Bool { editor?.dismissTagSuggestions(in: tags) ?? false }
 
     func cancelSnippetEditing() {
         guard palette.mode == .snippetEditor else { return }

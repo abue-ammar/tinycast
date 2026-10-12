@@ -35,6 +35,7 @@ struct PaletteFilterTests {
         expect(
             resolve(mode: .emoji), .emojiCategory,
             "the emoji picker exposes its category selector through ⌘P")
+        expect(resolve(mode: .snippets), .snippetTags, "Search Snippets filters tags through ⌘P")
         expect(
             resolve(mode: .ai), .aiModel,
             "Quick AI opens its model selector through ⌘P")
@@ -61,7 +62,7 @@ struct PaletteFilterTests {
         // Every other mode was untouched by ⌘P before and has to stay that way.
         for mode in [
             PaletteMode.launcher, .aiHistory, .calculatorHistory,
-            .quicklinks, .snippets, .schedule, .uninstall
+            .quicklinks, .schedule, .uninstall
         ] {
             expect(
                 resolve(mode: mode), .ignored,

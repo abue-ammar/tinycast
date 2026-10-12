@@ -165,6 +165,7 @@ panel, the shortcut-recorder callout and the Notes switcher, and `menuRow` is de
 `clipboardListWidth 290` ·
 `menuWidth 276` · `clipboardFilterMenuWidth 200` · `fileSearchFilterMenuWidth 200` ·
 `emojiCategoryMenuWidth 220` · `menuIcon 20` ·
+`snippetTagMenuWidth 200` ·
 `emojiGridInset 16` ·
 `settingsSidebar 215` · `settingsRowIcon 20` · `dialogCompactWidth 290` ·
 `dialogWidth 420` · `dialogButtonHeight 34` · `dialogSymbol 28` · `dialogSymbolContainer 52` ·
@@ -450,7 +451,9 @@ Glass is normally for floating controls. The dialog root is the one modal-surfac
 - **`PopoverMenu`** uses `glassEffect(.regular)` with `menuPanel 16` corners and **no hand-tuned shadow** — Tahoe glass carries its own elevation; adding a drop shadow reads heavy and non-native. A footer menu raises only its attached bottom corner to the controls' 18-point radius, so the two silhouettes meet exactly.
 - Its native search field is a row-height sibling of the scroller, above header menus or below footer menus. It uses an 18pt horizontal inset to align with the visible row glyphs. The top field stays vertically symmetric; the bottom field keeps its 1pt optical lift. Menus omit the adjacent edge dissolve and centre **No Results** in one row when their filtered rows are empty. The 8pt resting list inset belongs to the scroll content, so rows can reach the surface edges without shifting their initial position; hover fills keep the dedicated `menuRow 10` corner.
 - `PopoverMenuRow`: leading glyph, label, trailing shortcut glyph and `menuHover` fill on hover. Menus animate in with opacity and scale from the anchored corner, stretching briefly to 1.003 before settling; `Theme.MenuMotion` owns the entry, settle and exit timings.
-- The glyph is a `PopoverMenuIcon`: `.symbol` (SF Symbol, `monochrome`, `menuSymbol` — or **red** when `isDestructive`) `.file` (a real app icon via `IconCache`, used by the paste rows to show the paste target) or `.thumbnail` (a picture's own preview, cropped to the slot, used by the chat's staged-file rows). `PopoverMenuItem` keeps a `systemImage:` convenience init, so symbol rows read exactly as before.
+- The glyph is a `PopoverMenuIcon`: `.symbol` (SF Symbol, `monochrome`, `menuSymbol` — or **red** when `isDestructive`) `.file` (a real app icon via `IconCache`, used by the paste rows to show the paste target) or `.thumbnail` (a picture's own preview, cropped to the slot, used by the chat's staged-file rows). `PopoverMenuItem` keeps a `systemImage:` convenience init, so symbol rows read exactly as before. A symbol's optional `iconTint` carries a snippet tag's Finder color without changing other menus.
+- A row's optional `accessory` is an opaque trailing view. Snippets owns its animated tag checkboxes;
+  the menu provides only the slot, and other menus and extension renderers remain unchanged.
 - **Every glyph kind shares one square `menuIcon` (20) slot**, which pins one row height. A native SF Symbol uses the dedicated 14pt Medium `menuSymbol` font; file and brand icons keep their own artwork sizing inside the same slot, and a thumbnail fills it.
 - Menu rows use the `md` icon→label gap; the fixed slot adds the remaining optical slack.
 - **A menu's rows are a `LazyVStack`**, so opening one builds only the rows in view: the model menu runs to hundreds, and laying all of them out took seconds. The viewport's height is worked out from the row count, never measured, so nothing needs the rest. The rows hold no AppKit control, which is what keeps a lazy stack safe here (see Settings lists below).

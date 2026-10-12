@@ -410,6 +410,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 return true
             }
             if core.palette.mode == .snippetEditor, !core.palette.isComposing {
+                if core.snippetCoordinator.dismissTagSuggestions() { return true }
                 core.snippetCoordinator.cancelSnippetEditing()
                 return true
             }

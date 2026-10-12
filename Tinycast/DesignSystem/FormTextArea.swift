@@ -11,13 +11,16 @@ struct FormTextArea: NSViewRepresentable {
     /// False for a value that wraps on screen but must stay one line, such as a link.
     var allowsLineBreaks = true
     var moveFocus: (Bool) -> Void
+    var insets: NSSize?
+    var onCommand: ((Selector) -> Bool)?
+    var scrollsHorizontally = false
 
     @Environment(\.metrics) private var metrics
     @Environment(\.isEnabled) private var isEnabled
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    func makeNSView(context: Context) -> InputView {
+    func makeNSView(context: Context) -> NSView {
         let view = InputView(usingTextLayoutManager: true)
         view.delegate = context.coordinator
         view.textStorage?.delegate = context.coordinator
@@ -42,11 +45,23 @@ struct FormTextArea: NSViewRepresentable {
             guard let coordinator, coordinator.input.focused != focused else { return }
             coordinator.input.focused = focused
         }
-        return view
+        guard scrollsHorizontally else { return view }
+        view.isHorizontallyResizable = true
+        view.isVerticallyResizable = false
+        view.textContainer?.widthTracksTextView = false
+        view.textContainer?.size = NSSize(
+            width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
+        let scroll = NSScrollView()
+        scroll.drawsBackground = false
+        scroll.contentView.drawsBackground = false
+        scroll.contentView.clipsToBounds = true
+        scroll.documentView = view
+        return scroll
     }
 
-    func updateNSView(_ view: InputView, context: Context) {
+    func updateNSView(_ nsView: NSView, context: Context) {
         context.coordinator.input = self
+        guard let view = context.coordinator.view, !context.coordinator.isUpdating else { return }
         context.coordinator.isUpdating = true
         defer { context.coordinator.isUpdating = false }
         let bodyFont = metrics.typography.textNSFont(.body)
@@ -57,7 +72,7 @@ struct FormTextArea: NSViewRepresentable {
         let color = NSColor(Theme.Colors.textPrimary)
         if view.textColor != color { view.textColor = color }
         if view.insertionPointColor != color { view.insertionPointColor = color }
-        let inset = NSSize(width: metrics.spacing.xl, height: metrics.spacing.md)
+        let inset = insets ?? NSSize(width: metrics.spacing.xl, height: metrics.spacing.md)
         if view.textContainerInset != inset { view.textContainerInset = inset }
         if view.isEditable != isEnabled { view.isEditable = isEnabled }
         if view.isSelectable != isEnabled { view.isSelectable = isEnabled }
@@ -80,10 +95,16 @@ struct FormTextArea: NSViewRepresentable {
         }
         view.wantsFocus = focused
         view.updateFocus()
+        if let scroll = nsView as? NSScrollView { fitSingleLine(view, in: scroll) }
     }
 
-    func sizeThatFits(_ proposal: ProposedViewSize, nsView view: InputView, context: Context) -> CGSize? {
-        guard let width = proposal.width, width > 0 else { return nil }
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSView, context: Context) -> CGSize? {
+        guard let view = context.coordinator.view, let width = proposal.width, width > 0 else { return nil }
+        if let scroll = nsView as? NSScrollView {
+            scroll.setFrameSize(NSSize(width: width, height: minimumHeight))
+            fitSingleLine(view, in: scroll)
+            return CGSize(width: width, height: minimumHeight)
+        }
         view.setFrameSize(NSSize(width: width, height: max(view.frame.height, minimumHeight)))
         var height = view.font.map { $0.ascender - $0.descender + $0.leading } ?? 0
         if let layout = view.textLayoutManager {
@@ -96,6 +117,20 @@ struct FormTextArea: NSViewRepresentable {
         }
         return CGSize(
             width: width, height: max(minimumHeight, ceil(height + view.textContainerInset.height * 2)))
+    }
+
+    private func fitSingleLine(_ view: InputView, in scroll: NSScrollView) {
+        let width = (view.string as NSString).size(withAttributes: [
+            .font: view.font ?? metrics.typography.textNSFont(.body)
+        ]).width
+        view.minSize = NSSize(width: scroll.contentSize.width, height: minimumHeight)
+        view.setFrameSize(
+            NSSize(
+                width: max(scroll.contentSize.width, ceil(width + view.textContainerInset.width * 2)),
+                height: minimumHeight))
+        if view.window?.firstResponder === view, view.textStorage?.editedMask.isEmpty == true {
+            view.scrollRangeToVisible(view.selectedRange())
+        }
     }
 
     final class InputView: NSTextView {
@@ -164,6 +199,8 @@ struct FormTextArea: NSViewRepresentable {
             range editedRange: NSRange, changeInLength delta: Int
         ) {
             guard !isUpdating, editedMask.contains(.editedCharacters) else { return }
+            isUpdating = true
+            defer { isUpdating = false }
             input.text = textStorage.string
             view?.invalidateIntrinsicContentSize()
         }
@@ -180,6 +217,7 @@ struct FormTextArea: NSViewRepresentable {
         }
 
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if input.onCommand?(commandSelector) == true { return true }
             switch commandSelector {
             case #selector(NSResponder.insertTab(_:)):
                 input.moveFocus(false)

@@ -163,7 +163,7 @@ run launcher-settings-file-test \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/SystemActions/Model/SystemAction.swift \
                            Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
-                           Tinycast/Features/Snippets/Model/Snippet.swift
+                           Tinycast/Features/Snippets/Model/Snippet{,Tag}.swift
 run apple-shortcut-test    Tinycast/Features/AppleShortcuts/Model/*.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift
 run index calc-performance Tinycast/Features/Calculator/Model/*.swift
@@ -245,7 +245,8 @@ run form-input-test        Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
                            Tinycast/DesignSystem/FormTextInput.swift \
-                           Tinycast/DesignSystem/FormTextArea.swift
+                           Tinycast/DesignSystem/FormTextArea.swift \
+                           Tinycast/Features/Snippets/UI/SnippetTagLayout.swift
 run scroll-reveal-test     Tinycast/DesignSystem/Scrolling/SelectionReveal.swift
 run redaction-test         Tinycast/DesignSystem/RedactedPlaceholder.swift
 run keyboard-focus-test    Tinycast/DesignSystem/Interaction/KeyboardFocus.swift
@@ -294,7 +295,7 @@ run fallback-test          Tinycast/Features/Launcher/Model/Fallback.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/SystemActions/Model/SystemAction.swift \
                            Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
-                           Tinycast/Features/Snippets/Model/Snippet.swift
+                           Tinycast/Features/Snippets/Model/Snippet{,Tag}.swift
 run dictionary-test        Tinycast/Features/Dictionary/Model/DictionaryEntry.swift \
                            Tinycast/Features/Dictionary/Model/DictionaryMarkup.swift
 run dictation-test         Tinycast/Features/Dictation/Model/DictationModel.swift Tinycast/Features/Dictation/Model/DictationIdleRelease.swift Tinycast/Features/Dictation/Model/DictationTextFormatter.swift
@@ -346,7 +347,7 @@ run hotkey-test            Tinycast/Features/HotKeys/Model/DoubleTapModifier.swi
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/SystemActions/Model/SystemAction.swift \
                            Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
-                           Tinycast/Features/Snippets/Model/Snippet.swift
+                           Tinycast/Features/Snippets/Model/Snippet{,Tag}.swift
 run callout-test          Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
@@ -470,7 +471,7 @@ run quicklink-coordinator-test Tinycast/Features/Quicklinks/Model/Quicklink.swif
                            Tinycast/Features/Quicklinks/UI/QuicklinkCoordinator.swift \
                            Tinycast/Features/Quicklinks/UI/QuicklinkEditorSession.swift \
                            Tinycast/Features/Quicklinks/UI/QuicklinkArgumentsAccessory.swift \
-                           Tinycast/Features/Snippets/Model/Snippet.swift \
+                           Tinycast/Features/Snippets/Model/Snippet{,Tag}.swift \
                            Tinycast/Features/Snippets/Model/SnippetTemplateEngine.swift
 run slow snippets-test     Tinycast/Platform/NotificationToken.swift \
                            Tinycast/Platform/HealthTicker.swift \
@@ -571,6 +572,8 @@ run backup-archive-test    Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/Backup/Model/BackupCategory.swift \
                            Tinycast/Features/Backup/Model/BackupClipboardItem.swift \
                            Tinycast/Features/Backup/Model/BackupManifest.swift \
+                           Tinycast/Features/Snippets/Model/Snippet{,Tag}.swift \
+                           Tinycast/Features/Snippets/Model/SnippetMarkdownSerializer.swift \
                            Tinycast/Features/Backup/Service/BackupStaging.swift
 E=Tinycast/Features/Extensions
 run symbols-test           $E/Service/SymbolCatalog.swift

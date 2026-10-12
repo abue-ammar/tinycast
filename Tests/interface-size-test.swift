@@ -113,6 +113,7 @@ struct InterfaceSizeTests {
         expect(
             m.size.fileSearchFilterMenuWidth, Theme.Size.fileSearchFilterMenuWidth,
             "size.fileSearchFilterMenuWidth")
+        expect(m.size.snippetTagMenuWidth, Theme.Size.snippetTagMenuWidth, "size.snippetTagMenuWidth")
         expect(
             m.size.emojiCategoryMenuWidth, Theme.Size.emojiCategoryMenuWidth,
             "size.emojiCategoryMenuWidth")
@@ -326,6 +327,7 @@ struct InterfaceSizeTests {
             ("size.formFieldFocusStroke", m.size.formFieldFocusStroke),
             ("size.clipboardFilterMenuWidth", m.size.clipboardFilterMenuWidth),
             ("size.fileSearchFilterMenuWidth", m.size.fileSearchFilterMenuWidth),
+            ("size.snippetTagMenuWidth", m.size.snippetTagMenuWidth),
             ("size.emojiCategoryMenuWidth", m.size.emojiCategoryMenuWidth),
             ("size.menuIcon", m.size.menuIcon), ("size.menuBrandIcon", m.size.menuBrandIcon),
             ("size.barBrandIcon", m.size.barBrandIcon),

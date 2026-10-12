@@ -76,10 +76,11 @@ struct HeaderMenuButton: View {
     let action: () -> Void
     @Environment(\.metrics) private var metrics
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let iconTint: Color?
 
     init(
         title: String, icon: PopoverMenuIcon, symbolSize: CGFloat = Theme.Typography.menuSymbolSize,
-        isOpen: Bool, help: String, action: @escaping () -> Void
+        isOpen: Bool, help: String, iconTint: Color? = nil, action: @escaping () -> Void
     ) {
         self.title = title
         self.icon = icon
@@ -87,15 +88,16 @@ struct HeaderMenuButton: View {
         self.isOpen = isOpen
         self.help = help
         self.action = action
+        self.iconTint = iconTint
     }
 
     init(
         title: String, systemImage: String, symbolSize: CGFloat = Theme.Typography.menuSymbolSize,
-        isOpen: Bool, help: String, action: @escaping () -> Void
+        isOpen: Bool, help: String, iconTint: Color? = nil, action: @escaping () -> Void
     ) {
         self.init(
             title: title, icon: .symbol(systemImage), symbolSize: symbolSize, isOpen: isOpen,
-            help: help, action: action)
+            help: help, iconTint: iconTint, action: action)
     }
 
     var body: some View {
@@ -106,6 +108,7 @@ struct HeaderMenuButton: View {
                     EmptyView()
                 case .symbol(let name):
                     HeaderMenuSymbol(name: name, size: metrics.scaled(symbolSize))
+                        .foregroundStyle(iconTint ?? Theme.Colors.textSecondary)
                 case .asset(let name):
                     Image(name)
                         .resizable()

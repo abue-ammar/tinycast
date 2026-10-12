@@ -168,6 +168,7 @@ enum Theme {
         /// The clipboard type filter's menu; `menuWidth` is far too wide for six short rows.
         static let clipboardFilterMenuWidth: CGFloat = 200
         static let fileSearchFilterMenuWidth: CGFloat = 200
+        static let snippetTagMenuWidth: CGFloat = 200
         /// Fits "Shapes & Punctuation", the longest category title.
         static let emojiCategoryMenuWidth: CGFloat = 220
         /// Stated, not padded: the cap below counts rows, so a capped menu would land mid-row.
@@ -409,6 +410,7 @@ enum Theme {
         static let menuShortcut = Font.callout
         static let menuIcon = Font.body
         static let menuSymbolSize: CGFloat = 14
+        static let checkboxSymbolSize: CGFloat = 18
         static let menuSymbolWeight = Font.Weight.medium
         static let noteTitle = Font.headline
         /// The composer row's glyphs; Send's arrow is bolder, and Stop's square smaller to match it.
@@ -418,6 +420,7 @@ enum Theme {
     }
 
     enum Colors {
+        static let tagFillOpacity = 0.2
         /// Resolves against the window's `effectiveAppearance`, so a token repaints on its own.
         static func adaptive(dark: NSColor, light: NSColor) -> Color {
             Color(nsColor: NSColor(name: nil) { $0.isDark ? dark : light })

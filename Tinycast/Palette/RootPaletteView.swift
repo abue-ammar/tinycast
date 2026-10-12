@@ -260,6 +260,10 @@ struct RootPaletteView: View {
                 clipboardFilterContent, width: metrics.size.clipboardFilterMenuWidth)
         case .fileSearchFilter:
             return headerMenu(fileSearchFilterContent, width: metrics.size.fileSearchFilterMenuWidth)
+        case .snippetTags:
+            return headerMenu(
+                SnippetTagMenu.content(coordinator: core.snippetCoordinator),
+                width: metrics.size.snippetTagMenuWidth)
         case .emojiCategory:
             return headerMenu(emojiCategoryContent, width: metrics.size.emojiCategoryMenuWidth)
         case .aiModel:
@@ -414,6 +418,15 @@ struct RootPaletteView: View {
             .modifier(ExtensionSelectionForwarder(screen: extensionScreen, selection: vm.selection))
             // A narrower list means the old index points at a different row, or at none.
             .onChange(of: vm.clipboardFilter) { land() }
+            .onChange(of: core.snippetCoordinator.tagFilter) {
+                guard vm.mode == .snippets else { return }
+                land()
+                if openMenu == .snippetTags { syncMenuPanel(presenting: false) }
+            }
+            .onChange(of: snippets.tags) {
+                core.snippetCoordinator.validateTagFilter()
+                if openMenu == .snippetTags { menuQueryChanged() }
+            }
             // The filter is part of the query, so narrowing re-runs it rather than thinning rows.
             .onChange(of: vm.fileSearchFilter) {
                 land()
@@ -724,6 +737,16 @@ struct RootPaletteView: View {
                     help: "Filter by category  ⌘P",
                     action: toggleEmojiCategory)
             }
+            if !isCollapsed, vm.mode == .snippets {
+                headerGutter(width: metrics.spacing.md)
+                let tags = core.snippetCoordinator.selectedTags
+                let tag = tags.count == 1 ? tags.first : nil
+                HeaderMenuButton(
+                    title: tag?.name ?? (tags.isEmpty ? "All Tags" : "\(tags.count) Tags"),
+                    systemImage: tag == nil ? "tag" : "circle.fill",
+                    isOpen: openMenu == .snippetTags, help: "Filter by tag  ⌘P",
+                    iconTint: tag?.color.tint, action: toggleSnippetTags)
+            }
             if !isCollapsed, vm.mode == .ai {
                 headerGutter(width: metrics.spacing.md)
                 AIModelButton(
@@ -1023,11 +1046,22 @@ struct RootPaletteView: View {
         case .extensionAccessory: toggleExtensionSearchAccessory()
         case .clipboardFilter: toggleClipboardFilter()
         case .fileSearchFilter: toggleFileSearchFilter()
+        case .snippetTags: toggleSnippetTags()
         case .emojiCategory: toggleEmojiCategory()
         case .aiModel: toggleAIModel()
         case .ignored: return false
         }
         return true
+    }
+
+    private func toggleSnippetTags() {
+        if openMenu == .snippetTags {
+            closeMenus()
+            return
+        }
+        let coordinator = core.snippetCoordinator
+        let active = coordinator.tags.firstIndex { coordinator.tagFilter.selectedIDs.contains($0.id) }
+        open(.snippetTags, highlighting: active.map { $0 + 1 } ?? 0)
     }
 
     private func toggleEmojiCategory() {
@@ -1270,7 +1304,7 @@ struct RootPaletteView: View {
         case .actions: .bottomTrailing
         case .argumentOptions: .belowHeaderTrailing
         case .inputOptions(let corner): corner
-        case .clipboardFilter, .fileSearchFilter, .emojiCategory, .aiModel, .aiReasoning,
+        case .clipboardFilter, .fileSearchFilter, .snippetTags, .emojiCategory, .aiModel, .aiReasoning,
             .aiAttachments, .extensionAccessory:
             .belowHeaderTrailing
         case nil: nil
@@ -1350,10 +1384,13 @@ struct RootPaletteView: View {
         }
     }
 
-    /// The one activation path for a menu row: run its action, then close.
     private func activateMenuItem(_ index: Int) {
         guard let content = menuContent, (0..<content.rowCount).contains(index) else { return }
         guard content.isSelectable(index) else { return }
+        if openMenu == .snippetTags {
+            content.activate(index)
+            return
+        }
         // Before the action: one opening a window must find the palette key again, or nothing hides it.
         closeMenus()
         // A mouse click on a row takes the caret with it; menus close back into the field.
@@ -1504,6 +1541,7 @@ private enum OpenMenu: Equatable {
     case app
     case clipboardFilter
     case fileSearchFilter
+    case snippetTags
     case emojiCategory
     case aiModel
     case aiReasoning
