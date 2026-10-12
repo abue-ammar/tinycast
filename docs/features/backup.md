@@ -129,10 +129,10 @@ Per category:
   UI. A row is deduped on its text, or on the path its image takes; the blob keeps the name the bundle
   gave it, so importing one file twice lands on the same path and adds nothing. Only a file inside
   `imagesDir` is one retention can ever reclaim, which is why the blob moves there before the row lands.
-- **Snippets** merge through `importSnippets`, deduped on name, body and tags so importing the same file
-  twice doesn't leave a second copy of everything. Importing snippets does not enable snippets.
-  Tag names and colors travel in the Markdown files; different tags import as a separate snippet,
-  without replacing existing content.
+- **Snippets** merge through `importSnippets`, deduped on name, body and normalized tag names so importing
+  the same file twice doesn't leave a second copy of everything. Importing snippets does not enable snippets.
+  Tag names and colors travel in the Markdown files; different tag sets import as a separate snippet.
+  Color or casing differences alone keep the existing snippet, without replacing its content or tags.
 - **Notes** land as new files through `NotesRepository.importNotes`, which suffixes a title that is
   already taken rather than overwriting it.
 - **Learning** replaces. Merging two Macs' frecency tables produces a table describing neither.

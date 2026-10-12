@@ -1,6 +1,18 @@
 import Foundation
 
 struct Snippet: Sendable, Hashable {
+    struct ImportIdentity: Hashable {
+        let name: String
+        let text: String
+        let tags: Set<SnippetTag.ID>
+
+        init(_ snippet: Snippet) {
+            name = snippet.name
+            text = snippet.text
+            tags = Set(snippet.tags.map(\.id))
+        }
+    }
+
     var name: String
     var text: String
     var keyword: String?

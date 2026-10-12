@@ -30,6 +30,7 @@ struct BackupArchiveTest {
         defer { try? FileManager.default.removeItem(at: root) }
 
         roundTrip(in: root)
+        snippetDeduplication()
         clipboardLines(in: root)
         noAbsolutePathsEscape(in: root)
         formatGuard(in: root)
@@ -109,6 +110,48 @@ struct BackupArchiveTest {
         check(
             "the extracted file is owned by the current user",
             (attributes?[.ownerAccountID] as? NSNumber)?.uint32Value == getuid())
+    }
+
+    static func snippetDeduplication() {
+        let work = SnippetTag(name: "Work", color: .blue)
+        let cafe = SnippetTag(name: "Café", color: .orange)
+        let original = Snippet(name: "Template", text: "Body", tags: [work, cafe])
+        let existing = Set([Snippet.ImportIdentity(original)])
+        let cases: [(String, [SnippetTag], Bool)] = [
+            ("identical tags", [work, cafe], true),
+            ("changed color", [SnippetTag(name: "Work", color: .red), cafe], true),
+            ("changed casing", [SnippetTag(name: "work", color: .blue), cafe], true),
+            ("canonical Unicode", [work, SnippetTag(name: "Cafe\u{301}", color: .orange)], true),
+            ("reordered tags", [cafe, work], true),
+            ("duplicate tags", [work, cafe, work], true),
+            ("removed tag", [work], false),
+            ("different tag", [work, SnippetTag(name: "Personal", color: .orange)], false),
+            ("added tag", [work, cafe, SnippetTag(name: "Personal", color: .gray)], false),
+            ("no tags", [], false)
+        ]
+        for (description, tags, duplicate) in cases {
+            let incoming = Snippet(name: original.name, text: original.text, tags: tags)
+            check(
+                "snippet import deduplication: \(description)",
+                existing.contains(Snippet.ImportIdentity(incoming)) == duplicate)
+        }
+        var changed = original
+        changed.name = "Another template"
+        check("a changed name is imported", !existing.contains(Snippet.ImportIdentity(changed)))
+        changed = original
+        changed.text += "\n"
+        check("a changed body is imported", !existing.contains(Snippet.ImportIdentity(changed)))
+        changed = original
+        changed.keyword = "!template"
+        changed.isEnabled = false
+        changed.showsConfirmation = true
+        check(
+            "keyword and switches do not change import identity",
+            existing.contains(Snippet.ImportIdentity(changed)))
+        let untagged = Snippet(name: original.name, text: original.text)
+        check(
+            "untagged snippets still deduplicate",
+            Set([Snippet.ImportIdentity(untagged)]).contains(Snippet.ImportIdentity(untagged)))
     }
 
     // MARK: - Clipboard

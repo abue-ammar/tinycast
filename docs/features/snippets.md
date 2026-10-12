@@ -130,8 +130,8 @@ Filled dots in the suggestions and filter use AppKit's native Finder label color
 so color is never the only identifier. The preview uses colored text on tinted badges, without dots.
 
 Backups copy the Markdown verbatim, so names and colors survive export and import without another
-payload or setting. Import deduplication includes tags as well as name and body; different tag
-metadata imports a new snippet rather than silently discarding it or overwriting an existing file.
+payload or setting. Import deduplication includes normalized tag names as well as name and body;
+different tag sets import a new snippet. Color or casing differences alone keep the existing file.
 
 ## Template tokens
 

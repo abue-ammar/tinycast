@@ -90,14 +90,14 @@ enum BackupApplier {
         guard !documents.isEmpty else { return 0 }
         // Started first, so imported snippets reach the launcher at once rather than on relaunch.
         if core.settings.snippetsEnabled { await core.snippetsStore.start() }
-        let existing = Set(core.snippetsStore.snippets.map { SnippetIdentity($0.snippet) })
+        let existing = Set(core.snippetsStore.snippets.map { Snippet.ImportIdentity($0.snippet) })
         let incoming = documents.compactMap { document in
             try? SnippetMarkdownSerializer.parse(
                 content: document.contents,
                 fileURL: bundle.snippetsDirectory.appendingPathComponent(document.name))
         }
         // Deduped, so importing the same backup twice doesn't leave a second copy of everything.
-        let fresh = incoming.filter { !existing.contains(SnippetIdentity($0)) }
+        let fresh = incoming.filter { !existing.contains(Snippet.ImportIdentity($0)) }
         guard !fresh.isEmpty else { return 0 }
         return try await core.snippetsStore.importSnippets(fresh).count
     }
@@ -127,17 +127,5 @@ enum BackupApplier {
             applied += entries.count
         }
         return applied
-    }
-
-    private struct SnippetIdentity: Hashable {
-        let name: String
-        let text: String
-        let tags: Set<SnippetTag>
-
-        init(_ snippet: Snippet) {
-            name = snippet.name
-            text = snippet.text
-            tags = Set(snippet.tags)
-        }
     }
 }
