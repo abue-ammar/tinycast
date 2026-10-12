@@ -218,6 +218,9 @@ struct QuickActionTests {
         expect(
             BuiltInQuickAction.summarize.showsDiff == false,
             "a summary is not the input edited, so a diff would be noise")
+        expect(
+            QuickAction.allBuiltIn.filter(\.rendersMarkdown) == [.summarize],
+            "an edit or translation is shown as the literal text it would paste")
     }
 
     static func promptsForbidCommentaryAndInjection() {
@@ -327,6 +330,7 @@ struct QuickActionTests {
         expect(action.progressTitle == "Make Snarky…", "the pill names the action the reader pressed")
         expect(!action.alwaysPreviews, "nothing forces a custom action into a panel")
         expect(!action.showsDiff, "an arbitrary prompt is not the input edited, so no diff")
+        expect(action.rendersMarkdown, "a custom prompt's Markdown reply renders like Summarize's")
         expect(
             !action.usesTranslationFramework,
             "only the shipped Translate reaches Apple's translator")
