@@ -86,7 +86,9 @@ word or camel-case boundary +1000, terms typed in order +1500, first term ending
 1 elsewhere in plain sight (`/Applications`, `/Users/Shared`), 0 for hidden paths, system folders,
 `~/Library` and anything inside a bundle.
 
-An empty query lists **Recent**: the 20 newest files with prior 2, by modification date.
+An empty query lists **Recent**: the 20 newest files with prior 2, by modification date. The session
+keeps those rows across closes and computes them whenever the index is swapped in, so the screen opens
+on them at once and refreshes them in the background.
 
 The 2026-10-13 benchmark (`Tests/file-search-performance.swift`, `/System /Applications /Library /usr`,
 844,911 entries) crawled in 5.2 s with a 103 MB helper peak and wrote a 16.6 MB index, down from 40 MB
@@ -101,8 +103,13 @@ stream never falls behind. A batch that changes the item count asks the main act
 once a second; any other batch never leaves the events queue. For each
 event `FileIndex.apply(folder:)` acts only if the path is an indexed folder; any other event is in an
 ignored subtree, or it belongs to a new folder that its parent's event will find. The folder is relisted
-and diffed: a removed entry is marked dead (a folder's whole subtree range at once), a new one joins the
-overlay (a new folder is walked whole), and a changed file mtime replaces the base row from the overlay.
+through one reused `FileIndexCrawler.Lister` and merged against its block: both sides are sorted by name
+bytes, so an unchanged row costs a `memcmp` and allocates nothing. Only a real difference builds a
+String: a removed entry is marked dead (a folder's whole subtree range at once), a new one joins the
+overlay (a new folder is walked whole), and a new mtime replaces the base row from the overlay. Dates
+are compared only for files Recent can list, so cache and log churn elsewhere costs nothing. This
+matters on macOS 27, where malloc keeps freed small blocks dirty: replaying a launch's backlog through
+per-row Strings left about 30 MB behind, and the merge keeps a cold start level with Spotlight's.
 `MustScanSubDirs` rescans a folder recursively. History loss at or above a root, a moved root or more
 than 100,000 changes since the snapshot trigger a background rebuild.
 

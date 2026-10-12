@@ -19,8 +19,12 @@ final class FileSearchSession {
     @ObservationIgnored private var pending: (request: Request, revision: Int)?
     @ObservationIgnored private var workerTask: Task<Void, Never>?
     @ObservationIgnored private let searchOperation: SearchOperation
+    /// Kept across closes, so the blank screen opens on its rows instead of on nothing.
+    @ObservationIgnored private var recent: [FileSearchResult]?
 
     private struct Request: Equatable {
+        static let recent = Request(query: "", filter: .all)
+
         let query: String
         let filter: FileSearchFilter
     }
@@ -47,11 +51,21 @@ final class FileSearchSession {
         let request = Request(query: query, filter: filter)
         guard request != self.request else { return }
         enqueue(request)
+        guard request == .recent, let recent else { return }
+        results = recent
+        state = .ready
     }
 
+    /// With no request open, the blank screen's rows are prepared for the next open instead.
     func refresh() {
-        guard let request else { return }
-        enqueue(request)
+        if let request {
+            enqueue(request)
+        } else {
+            Task { [weak self, searchOperation] in
+                let found = await searchOperation(Request.recent.query, Request.recent.filter)
+                self?.recent = found
+            }
+        }
     }
 
     func cancel() {
@@ -65,6 +79,7 @@ final class FileSearchSession {
     /// A trashed row names a file that is gone, so it leaves the published results with it.
     func remove(_ result: FileSearchResult) {
         results.removeAll { $0.id == result.id }
+        recent?.removeAll { $0.id == result.id }
     }
 
     private func enqueue(_ request: Request) {
@@ -82,8 +97,9 @@ final class FileSearchSession {
         while let next = pending {
             pending = nil
             let found = await searchOperation(next.request.query, next.request.filter)
+            if next.request == .recent { recent = found }
             guard revision == next.revision, request == next.request else { continue }
-            results = found
+            if results != found { results = found }
             state = .ready
         }
         workerTask = nil

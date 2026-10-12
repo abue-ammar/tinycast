@@ -196,21 +196,12 @@ final class FileIndexSnapshot: @unchecked Sendable {
             var high = range.upperBound
             while low < high {
                 let middle = (low + high) / 2
-                let order = Self.compare(name(middle), key)
+                let order = FileIndexCrawler.compare(name(middle), key)
                 if order == 0 { return middle }
                 if order < 0 { low = middle + 1 } else { high = middle }
             }
             return nil
         }
-    }
-
-    private static func compare(_ a: UnsafeBufferPointer<UInt8>, _ b: UnsafeBufferPointer<UInt8>) -> Int {
-        let shared = min(a.count, b.count)
-        if shared > 0 {
-            let order = memcmp(a.baseAddress!, b.baseAddress!, shared)
-            if order != 0 { return Int(order) }
-        }
-        return a.count - b.count
     }
 
     private static func offsets(of sections: [(size: Int, count: Int)]) -> [Int] {
@@ -307,7 +298,7 @@ final class FileIndexSnapshot: @unchecked Sendable {
                         return UnsafeBufferPointer(rebasing: bytes[start..<start + Int(entry.nameLength)])
                     }
                     let order = listing.entries.indices.sorted {
-                        compare(name(listing.entries[$0]), name(listing.entries[$1])) < 0
+                        FileIndexCrawler.compare(name(listing.entries[$0]), name(listing.entries[$1])) < 0
                     }
                     for entry in order.lazy.map({ listing.entries[$0] }) {
                         append(

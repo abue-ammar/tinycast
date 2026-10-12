@@ -29,6 +29,14 @@ nonisolated enum FileIndexCrawler {
         let isDirectory: Bool
         let mtime: UInt32
         let prior: Int8
+
+        /// A folder's prior comes from its path; a file's was set by its listing.
+        init(_ entry: Entry, name: String, parent: String, policy: FileSearchPolicy) {
+            self.name = name
+            isDirectory = entry.isDirectory
+            mtime = entry.mtime
+            prior = entry.isDirectory ? policy.prior(of: FileIndexCrawler.path(parent, name)) : entry.prior
+        }
     }
 
     private static let bufferSize = 256 * 1024
@@ -47,41 +55,74 @@ nonisolated enum FileIndexCrawler {
         parent == "/" ? "/" + name : parent + "/" + name
     }
 
-    static func children(of path: String, prior: Int8, policy: FileSearchPolicy) -> [Child]? {
-        withBuffer { buffer in
-            var listing = Listing()
-            guard list(path, prior: prior, policy: policy, buffer: buffer, into: &listing) else {
-                return nil
-            }
-            return listing.entries.map { child($0, in: listing, parent: path, policy: policy) }
+    static func compare(_ a: UnsafeBufferPointer<UInt8>, _ b: UnsafeBufferPointer<UInt8>) -> Int {
+        let shared = min(a.count, b.count)
+        if shared > 0 {
+            let order = memcmp(a.baseAddress!, b.baseAddress!, shared)
+            if order != 0 { return Int(order) }
         }
+        return a.count - b.count
     }
 
-    static func walk(_ root: String, prior: Int8, policy: FileSearchPolicy) -> [(String, Child)] {
-        withBuffer { buffer in
+    /// Kept across live updates, so relisting a folder that did not change allocates nothing.
+    final class Lister {
+        private let buffer = UnsafeMutableRawBufferPointer.allocate(byteCount: 64 * 1024, alignment: 8)
+        private var listing = Listing()
+        private var order: [Int] = []
+
+        deinit {
+            buffer.deallocate()
+        }
+
+        /// Hands `body` the entries sorted by name bytes, or returns nil when the folder won't open.
+        func list<T>(
+            _ path: String, prior: Int8, policy: FileSearchPolicy,
+            _ body: (_ entries: [Entry], _ order: [Int], _ name: (Entry) -> UnsafeBufferPointer<UInt8>) -> T
+        ) -> T? {
+            listing.names.removeAll(keepingCapacity: true)
+            listing.entries.removeAll(keepingCapacity: true)
+            let listed = FileIndexCrawler.withoutMaterializing {
+                FileIndexCrawler.list(path, prior: prior, policy: policy, buffer: buffer, into: &listing)
+            }
+            guard listed else { return nil }
+            // A huge folder's storage is not kept for the small ones that follow.
+            defer {
+                if listing.entries.capacity > 4_096 {
+                    listing = Listing()
+                    order = []
+                }
+            }
+            return listing.names.withUnsafeBufferPointer { bytes in
+                func name(_ entry: Entry) -> UnsafeBufferPointer<UInt8> {
+                    let start = Int(entry.nameStart)
+                    return UnsafeBufferPointer(rebasing: bytes[start..<start + Int(entry.nameLength)])
+                }
+                order.removeAll(keepingCapacity: true)
+                order.append(contentsOf: listing.entries.indices)
+                order.sort {
+                    FileIndexCrawler.compare(name(listing.entries[$0]), name(listing.entries[$1])) < 0
+                }
+                return body(listing.entries, order, name)
+            }
+        }
+
+        func walk(_ root: String, prior: Int8, policy: FileSearchPolicy) -> [(String, Child)] {
             var found: [(String, Child)] = []
             var pending = [(root, prior)]
             while let (folder, prior) = pending.popLast() {
-                var listing = Listing()
-                guard list(folder, prior: prior, policy: policy, buffer: buffer, into: &listing)
-                else { continue }
-                for entry in listing.entries {
-                    let child = child(entry, in: listing, parent: folder, policy: policy)
-                    let path = path(folder, child.name)
-                    found.append((path, child))
-                    if child.isDirectory { pending.append((path, child.prior)) }
+                list(folder, prior: prior, policy: policy) { entries, _, name in
+                    for entry in entries {
+                        let child = Child(
+                            entry, name: String(decoding: name(entry), as: UTF8.self), parent: folder,
+                            policy: policy)
+                        let childPath = FileIndexCrawler.path(folder, child.name)
+                        found.append((childPath, child))
+                        if child.isDirectory { pending.append((childPath, child.prior)) }
+                    }
                 }
             }
             return found
         }
-    }
-
-    private static func child(
-        _ entry: Entry, in listing: Listing, parent: String, policy: FileSearchPolicy
-    ) -> Child {
-        let name = listing.name(of: entry)
-        let prior = entry.isDirectory ? policy.prior(of: path(parent, name)) : entry.prior
-        return Child(name: name, isDirectory: entry.isDirectory, mtime: entry.mtime, prior: prior)
     }
 
     private static func withBuffer<T>(_ body: (UnsafeMutableRawBufferPointer) -> T) -> T {

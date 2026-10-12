@@ -116,6 +116,15 @@ struct FileIndexTests {
         index.apply(folder: documents.path)
         expect(index.recent(filter: .all).first?.name == "Annual Report.pdf", "an edit dates a file")
 
+        let git = root.appending(path: "Developer/application/.git")
+        try FileManager.default.setAttributes(
+            [.modificationDate: Date().addingTimeInterval(7_200)],
+            ofItemAtPath: git.appending(path: "config").path)
+        let churn = index.itemCount
+        expect(
+            !index.apply(folder: git.path) && index.itemCount == churn,
+            "a new date outside Recent's reach changes nothing")
+
         try write(documents.appending(path: "Trip/Photos/sunset.jpg"))
         index.apply(folder: documents.path)
         expect(names(index, "sunset") == ["sunset.jpg"], "a new folder is crawled whole")
