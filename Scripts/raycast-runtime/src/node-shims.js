@@ -1702,6 +1702,31 @@ const TLSSocket = class TLSSocket extends Duplex {
   _handle = { _parentWrap: { constructor: TLSSocket } };
 };
 
+// ─── net address checks ─────────────────────────────────────────────
+
+const ipv4Segment = "(?:25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]\\d|\\d)";
+const ipv4Address = `(?:${ipv4Segment}\\.){3}${ipv4Segment}`;
+const ipv4Pattern = new RegExp(`^${ipv4Address}$`);
+const ipv6Segment = "(?:[0-9a-fA-F]{1,4})";
+const ipv6Pattern = new RegExp(
+  "^(?:" +
+    `(?:${ipv6Segment}:){7}(?:${ipv6Segment}|:)|` +
+    `(?:${ipv6Segment}:){6}(?:${ipv4Address}|:${ipv6Segment}|:)|` +
+    `(?:${ipv6Segment}:){5}(?::${ipv4Address}|(?::${ipv6Segment}){1,2}|:)|` +
+    `(?:${ipv6Segment}:){4}(?:(?::${ipv6Segment}){0,1}:${ipv4Address}|(?::${ipv6Segment}){1,3}|:)|` +
+    `(?:${ipv6Segment}:){3}(?:(?::${ipv6Segment}){0,2}:${ipv4Address}|(?::${ipv6Segment}){1,4}|:)|` +
+    `(?:${ipv6Segment}:){2}(?:(?::${ipv6Segment}){0,3}:${ipv4Address}|(?::${ipv6Segment}){1,5}|:)|` +
+    `(?:${ipv6Segment}:){1}(?:(?::${ipv6Segment}){0,4}:${ipv4Address}|(?::${ipv6Segment}){1,6}|:)|` +
+    `(?::(?:(?::${ipv6Segment}){0,5}:${ipv4Address}|(?::${ipv6Segment}){1,7}|:))` +
+    ")(?:%[0-9a-zA-Z-.:]{1,})?$",
+);
+
+/// The address checks are string tests that open nothing, so extensions validating an IP
+/// preference get real answers while every socket-shaped member of `net` still refuses.
+const isIPv4 = (input) => ipv4Pattern.test(`${input}`);
+const isIPv6 = (input) => ipv6Pattern.test(`${input}`);
+const isIP = (input) => (isIPv4(input) ? 4 : isIPv6(input) ? 6 : 0);
+
 class AsyncLocalStorage {
   run(_store, fn) {
     return fn();
@@ -1813,7 +1838,7 @@ export const nodeModules = {
   http: httpLike("http"),
   https: httpLike("https"),
   dgram,
-  net: unsupportedModule("net"),
+  net: unsupportedModule("net", { isIP, isIPv4, isIPv6 }),
   tls: unsupportedModule("tls", { TLSSocket }),
   dns: unsupportedModule("dns"),
   stream: streamModule,

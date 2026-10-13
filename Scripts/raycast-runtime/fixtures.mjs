@@ -715,6 +715,18 @@ export default async function Command() {
     kinds: [typeof net.Socket, typeof Socket, typeof vm.Script, typeof AsyncResource],
     keys: Object.keys(net).filter((key) => key !== "default"),
     refusals: [refusal(() => new net.Socket()), refusal(() => vm.runInNewContext("1"))],
+    addresses: [
+      net.isIP("192.168.0.11"),
+      net.isIP("fe80::1%en0"),
+      net.isIP("::ffff:10.0.0.1"),
+      net.isIP("256.1.1.1"),
+      net.isIP("01.1.1.1"),
+      net.isIP("hue.local"),
+      net.isIPv4("10.0.0.1"),
+      net.isIPv4("::1"),
+      net.isIPv6("::1"),
+      net.isIPv6("1:2:3"),
+    ],
     scope: [tracked.record("a"), tracked.record("b"), tracked.seen.join("")],
     type: tracked.type,
   };
@@ -1322,6 +1334,7 @@ export async function runFixtures() {
     check("every member survives the own-key snapshot", kinds === JSON.stringify(["function", "function", "function", "function"]), kinds);
     check("net enumerates its exports", result?.keys?.includes("Socket") && result.keys.includes("createConnection"), JSON.stringify(result?.keys));
     check("an unsupported member still refuses by name", result?.refusals?.[0]?.startsWith("net.Socket is not supported"), JSON.stringify(result?.refusals));
+    check("net's address checks answer instead of refusing", JSON.stringify(result?.addresses) === JSON.stringify([4, 6, 6, 0, 0, 0, true, false, true, false]), JSON.stringify(result?.addresses));
     check("a refusal names the member that was called", result?.refusals?.[1]?.startsWith("vm.runInNewContext is not supported"), JSON.stringify(result?.refusals));
     check("AsyncResource runs the callback in place", JSON.stringify(result?.scope) === JSON.stringify([1, 2, "ab"]), JSON.stringify(result?.scope));
     check("AsyncResource keeps its type", result?.type === "tracked", String(result?.type));
