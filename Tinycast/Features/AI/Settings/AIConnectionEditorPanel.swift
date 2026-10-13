@@ -194,44 +194,48 @@ struct AIConnectionEditorPanel: View {
     private func modelSearchResults(_ models: [AIModelDiscovery.Model]) -> some View {
         let query = modelQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         let matches = matchingModels(in: models)
+        let isQueryAdded = connection.models.contains {
+            $0.caseInsensitiveCompare(query) == .orderedSame
+        }
+        // A gateway can list dated builds but accept a short alias that a listed ID contains.
+        let offersTypedID =
+            !query.isEmpty && !isQueryAdded
+            && AIModelDiscovery.exactMatch(models, query: query) == nil
         if query.isEmpty {
             Text("Type a model or company name. \(models.count) models available.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        } else if matches.isEmpty && isQueryAdded {
+            Label("This model is already added.", systemImage: "checkmark.circle")
+                .foregroundStyle(.secondary)
         } else if matches.isEmpty {
-            if connection.models.contains(where: { $0.caseInsensitiveCompare(query) == .orderedSame }) {
-                Label("This model is already added.", systemImage: "checkmark.circle")
-                    .foregroundStyle(.secondary)
-            } else {
-                Label("No available model matches this key.", systemImage: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                if connection.provider == .openAICompatible {
-                    Button("Use “\(query)” anyway") { addModel(query) }
-                }
-            }
-        } else {
-            ForEach(matches) { model in
-                Button {
-                    addModel(model)
-                } label: {
-                    HStack(spacing: Theme.Spacing.md) {
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                            Text(model.name)
-                            if model.name != model.id {
-                                Text(model.id)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
+            Label("No available model matches this key.", systemImage: "magnifyingglass")
+                .foregroundStyle(.secondary)
+        }
+        ForEach(matches) { model in
+            Button {
+                addModel(model)
+            } label: {
+                HStack(spacing: Theme.Spacing.md) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                        Text(model.name)
+                        if model.name != model.id {
+                            Text(model.id)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
-                        Spacer()
-                        Image(systemName: "plus.circle")
-                            .foregroundStyle(.secondary)
                     }
-                    .contentShape(Rectangle())
+                    Spacer()
+                    Image(systemName: "plus.circle")
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Add \(model.name)")
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Add \(model.name)")
+        }
+        if offersTypedID {
+            Button("Use “\(query)” anyway") { addModel(query) }
         }
     }
 
@@ -294,13 +298,7 @@ struct AIConnectionEditorPanel: View {
     }
 
     private func addExactMatch(from models: [AIModelDiscovery.Model]) {
-        let query = modelQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard
-            let match = models.first(where: {
-                $0.id.caseInsensitiveCompare(query) == .orderedSame
-                    || $0.name.caseInsensitiveCompare(query) == .orderedSame
-            })
-        else { return }
+        guard let match = AIModelDiscovery.exactMatch(models, query: modelQuery) else { return }
         addModel(match)
     }
 

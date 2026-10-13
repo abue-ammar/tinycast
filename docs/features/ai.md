@@ -320,8 +320,11 @@ for search-as-you-type completion and validation. It never renders the whole pro
 selected models stay visible and search shows at most twelve additions. Discovery is debounced,
 cacheless and never persists the typed key. A
 custom gateway may not implement a model-list endpoint, so exact identifiers can always be entered
-manually. Tinycast does not ship or guess an API catalog that can become stale. Codex gets its models
-and reasoning efforts from `model/list`; OpenCode gets identifiers and model-specific variants from
+manually. A gateway can also list an incomplete catalog under any preset, so search offers the typed
+identifier whenever no loaded model is named by it exactly, even beside partial matches; Return still
+adds only an exact catalog match, so a typed prefix never becomes a stored identifier. Tinycast does
+not ship or guess an API catalog that can become stale. Codex gets its models and reasoning efforts
+from `model/list`; OpenCode gets identifiers and model-specific variants from
 `opencode models --pure --verbose`. Claude answers an `initialize` control request — written to a
 stream-json `-p` run that then gets no prompt, so no model is called — with its own `/model` list;
 `InstalledAIModel.claudeCatalog` keeps one row per resolved model (dropping `default`, which restates

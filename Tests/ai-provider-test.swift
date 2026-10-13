@@ -100,6 +100,7 @@ struct AIProviderTests {
         modelCatalogBuildsProviderRequests()
         modelCatalogDecodesProviderResponses()
         modelCatalogSearchesWithoutRenderingEverything()
+        exactMatchNamesOnlyAWholeModel()
         endpointPolicyRejectsUnsafeRemoteURLs()
         storedKeysDoNotFollowARetargetedConnection()
         savingAConnectionDecidesItsKey()
@@ -560,6 +561,26 @@ struct AIProviderTests {
                 models, query: "gpt", excluding: ["openai/gpt-small"], limit: 1
             ).map(\.id) == ["openai/gpt-large"],
             "search excludes selected models and caps visible results")
+    }
+
+    static func exactMatchNamesOnlyAWholeModel() {
+        let models = [
+            AIModelDiscovery.Model(id: "gpt-5.4-mini", name: "GPT-5.4 Mini"),
+            AIModelDiscovery.Model(id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4")
+        ]
+        expect(
+            AIModelDiscovery.exactMatch(models, query: " GPT-5.4-MINI ")?.id == "gpt-5.4-mini",
+            "an exact ID matches regardless of case and surrounding spaces")
+        expect(
+            AIModelDiscovery.exactMatch(models, query: "claude sonnet 4")?.id
+                == "claude-sonnet-4-20250514",
+            "a display name resolves to its model ID")
+        expect(
+            AIModelDiscovery.exactMatch(models, query: "gpt-5") == nil,
+            "a short ID that a listed ID contains is not an exact match")
+        expect(
+            AIModelDiscovery.exactMatch(models, query: "  ") == nil,
+            "a blank query matches nothing")
     }
 
     static func endpointPolicyRejectsUnsafeRemoteURLs() {
