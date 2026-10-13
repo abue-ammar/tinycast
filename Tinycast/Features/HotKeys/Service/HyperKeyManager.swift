@@ -93,19 +93,24 @@ final class HyperKeyManager: HealthCheckable {
         guard pauseReasons.isEmpty else { return stop(.paused) }
         if route.remap != nil, remapper.mapping == nil { tap.unlatchCapsLock() }
         guard remapper.apply(route.remap) else { return stop(.remapUnavailable) }
-        tap.route = route
+        setRoute(route)
         healthTicker?.subscribe(self)
         status = tap.install() ? .active : .needsAccessibility
         syncSecureInputHotKeys()
     }
 
     private func stop(_ status: Status) {
-        tap.route = nil
+        setRoute(nil)
         tap.tearDown()
         remapper.apply(nil)
         healthTicker?.unsubscribe(self)
         self.status = status
         syncSecureInputHotKeys()
+    }
+
+    private func setRoute(_ route: HyperKeyRoute?) {
+        tap.route = route
+        hotKeys.capture.hyperRoute = route
     }
 
     /// That press latched Caps Lock on a keyboard that lost the remap, so undo it once repaired.

@@ -218,6 +218,8 @@ final class HyperKeyTap {
     }
 
     private func fireQuickPress(_ action: HyperKeyQuickPress, for key: HyperKeyPhysicalKey) {
+        // Secure Input hides the key that made this press a chord, so a short hold proves nothing.
+        guard !IsSecureEventInputEnabled() else { return }
         switch action {
         case .none:
             break

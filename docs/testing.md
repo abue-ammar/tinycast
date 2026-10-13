@@ -493,6 +493,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Remap Caps Lock in Keyboard ▸ Modifier Keys: Diagnostics… reports it with the keyboard's name
 - In a password field, Hyper with Caps Lock shows the Secure Input HUD. Turn on Secure Input
   Compatibility: a Hyper shortcut now fires there, and Diagnostics… names the Secure Input holder
+- With Secure Input held, record Hyper+J with and without Secure Input Compatibility: both save ✦J,
+  never F18 or ⌃J, and a quick Hyper+J leaves Caps Lock off
 - Quit Tinycast: Caps Lock types capitals again on every keyboard, the built-in one included
 - 🎤 records in a recorder and fires its binding; unbound, it starts macOS Dictation again
 - With Karabiner-Elements running and Caps Lock left alone there, Hyper with Caps Lock still works;
