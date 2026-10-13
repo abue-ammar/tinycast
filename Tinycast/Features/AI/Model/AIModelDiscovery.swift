@@ -219,6 +219,16 @@ enum AIModelDiscovery {
                 case id, name, architecture, reasoning
                 case displayName = "display_name"
             }
+
+            // A shape we cannot read is dropped, never the entry.
+            init(from decoder: Decoder) throws {
+                let container = try decoder.container(keyedBy: CodingKeys.self)
+                id = try container.decode(String.self, forKey: .id)
+                name = try? container.decodeIfPresent(String.self, forKey: .name)
+                displayName = try? container.decodeIfPresent(String.self, forKey: .displayName)
+                architecture = try? container.decodeIfPresent(Architecture.self, forKey: .architecture)
+                reasoning = try? container.decodeIfPresent(Reasoning.self, forKey: .reasoning)
+            }
         }
 
         let data: [Model]

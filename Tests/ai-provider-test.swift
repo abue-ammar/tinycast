@@ -509,6 +509,26 @@ struct AIProviderTests {
             openAIModels?.last?.reasoningOptions?.resolvedEffort(nil) == "medium",
             "OpenRouter reasoning metadata keeps the model's advertised default")
 
+        let gateway = Data(
+            """
+            {"data":[
+                {"id":"model-c","name":"Model C","reasoning":true,
+                 "architecture":{"input_modalities":["text","image"]}},
+                {"id":"model-d","reasoning":"high"},
+                {"id":"model-e","reasoning":{"supported_efforts":["low"],"default_effort":"low"}}
+            ]}
+            """.utf8)
+        let gatewayModels = try? AIModelDiscovery.decode(gateway, shape: .openAI)
+        expect(
+            gatewayModels == [
+                .init(id: "model-c", name: "Model C", inputModalities: ["text", "image"]),
+                .init(id: "model-d", name: "model-d"),
+                .init(
+                    id: "model-e", name: "model-e",
+                    reasoningOptions: .init(efforts: ["low"], defaultEffort: "low"))
+            ],
+            "a reasoning field that is not an object is ignored, and the catalog still loads")
+
         let router = AIConnection(
             provider: .openRouter, models: ["model-a", "model-b"], visionModels: ["model-b"])
         expect(
