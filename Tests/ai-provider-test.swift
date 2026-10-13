@@ -581,6 +581,13 @@ struct AIProviderTests {
         expect(
             AIModelDiscovery.exactMatch(models, query: "  ") == nil,
             "a blank query matches nothing")
+        let aliased = [
+            AIModelDiscovery.Model(id: "gateway-default", name: "gpt-5"),
+            AIModelDiscovery.Model(id: "gpt-5", name: "GPT-5")
+        ]
+        expect(
+            AIModelDiscovery.exactMatch(aliased, query: "gpt-5")?.id == "gpt-5",
+            "an exact ID wins over an earlier model whose display name matches")
     }
 
     static func endpointPolicyRejectsUnsafeRemoteURLs() {
