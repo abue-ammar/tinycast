@@ -707,7 +707,7 @@ run chat-markdown-test     Tinycast/Platform/Appearance.swift \
                            Tinycast/Features/AI/Model/MathSymbolCatalog.swift \
                            Tinycast/Features/AI/Model/SyntaxGrammar.swift \
                            Tinycast/Features/AI/Model/SyntaxHighlighter.swift \
-                           Tinycast/Features/AI/Model/SyntaxStructuredScanners.swift \
+                           Tinycast/Features/AI/Model/SyntaxStructuredLexers.swift \
                            Tinycast/Features/AI/UI/ChatTextHighlight.swift \
                            Tinycast/Features/AI/UI/ChatMarkdownRenderer.swift \
                            Tinycast/Features/AI/UI/MathAttachmentCell.swift \
@@ -716,7 +716,7 @@ run chat-markdown-test     Tinycast/Platform/Appearance.swift \
                            Tinycast/Features/AI/UI/MathLayoutEngine.swift
 run syntax-highlight-test  Tinycast/Features/AI/Model/SyntaxGrammar.swift \
                            Tinycast/Features/AI/Model/SyntaxHighlighter.swift \
-                           Tinycast/Features/AI/Model/SyntaxStructuredScanners.swift
+                           Tinycast/Features/AI/Model/SyntaxStructuredLexers.swift
 run mcp-test               Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AppleIntelligence.swift \

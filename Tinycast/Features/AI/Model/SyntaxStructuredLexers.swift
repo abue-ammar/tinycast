@@ -1,11 +1,19 @@
 import Foundation
 
-struct SyntaxMarkupScanner {
+struct SyntaxMarkupLexer {
     private typealias Unit = SyntaxUnit
 
     private let chars: [UInt16]
     private(set) var tokens: [SyntaxToken] = []
     private var index = 0
+
+    private static let commentOpen = Array("<!--".utf16)
+    private static let commentClose = Array("-->".utf16)
+    private static let cdataOpen = Array("<![CDATA[".utf16)
+    private static let cdataClose = Array("]]>".utf16)
+    private static let declarationOpen = Array("<!".utf16)
+    private static let instructionOpen = Array("<?".utf16)
+    private static let angleClose = Array(">".utf16)
 
     init(_ chars: [UInt16]) {
         self.chars = chars
@@ -13,14 +21,8 @@ struct SyntaxMarkupScanner {
 
     mutating func run() {
         while index < chars.count {
-            if matches("<!--") {
-                scan(until: "-->", .comment)
-            } else if matches("<![CDATA[") {
-                scan(until: "]]>", .string)
-            } else if matches("<!") || matches("<?") {
-                scan(until: ">", .attribute)
-            } else if chars[index] == Unit.lessThan, startsTag() {
-                scanTag()
+            if chars[index] == Unit.lessThan {
+                scanAngle()
             } else if chars[index] == Unit.ampersand {
                 scanEntity()
             } else {
@@ -29,8 +31,22 @@ struct SyntaxMarkupScanner {
         }
     }
 
-    private func matches(_ pattern: String) -> Bool {
-        Unit.matches(Array(pattern.utf16), in: chars, at: index)
+    private mutating func scanAngle() {
+        if matches(Self.commentOpen) {
+            scan(until: Self.commentClose, .comment)
+        } else if matches(Self.cdataOpen) {
+            scan(until: Self.cdataClose, .string)
+        } else if matches(Self.declarationOpen) || matches(Self.instructionOpen) {
+            scan(until: Self.angleClose, .attribute)
+        } else if startsTag() {
+            scanTag()
+        } else {
+            index += 1
+        }
+    }
+
+    private func matches(_ pattern: [UInt16]) -> Bool {
+        Unit.matches(pattern, in: chars, at: index)
     }
 
     private func unit(at position: Int) -> UInt16? {
@@ -42,11 +58,10 @@ struct SyntaxMarkupScanner {
         tokens.append(SyntaxToken(range: NSRange(location: start, length: index - start), kind: kind))
     }
 
-    private mutating func scan(until terminator: String, _ kind: SyntaxKind) {
+    private mutating func scan(until terminator: [UInt16], _ kind: SyntaxKind) {
         let start = index
-        let end = Array(terminator.utf16)
-        while index < chars.count, !Unit.matches(end, in: chars, at: index) { index += 1 }
-        index = min(index + end.count, chars.count)
+        while index < chars.count, !matches(terminator) { index += 1 }
+        index = min(index + terminator.count, chars.count)
         emit(from: start, kind)
     }
 
@@ -150,7 +165,7 @@ struct SyntaxMarkupScanner {
     }
 }
 
-struct SyntaxStylesheetScanner {
+struct SyntaxStylesheetLexer {
     private typealias Unit = SyntaxUnit
 
     private let chars: [UInt16]
@@ -317,7 +332,7 @@ struct SyntaxStylesheetScanner {
     }
 }
 
-enum SyntaxDiffScanner {
+enum SyntaxDiffLexer {
     static func tokens(in chars: [UInt16]) -> [SyntaxToken] {
         var tokens: [SyntaxToken] = []
         var start = 0

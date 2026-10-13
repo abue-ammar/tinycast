@@ -237,7 +237,7 @@ private final class ChatCodeHeader: NSView {
     override var isFlipped: Bool { true }
 
     override func resetCursorRects() {
-        addCursorRect(bounds, cursor: .arrow)
+        addCursorRect(visibleRect, cursor: .arrow)
     }
 
     func show(code: String, language: String?, metrics: InterfaceMetrics) {

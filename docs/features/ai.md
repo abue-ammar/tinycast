@@ -469,13 +469,13 @@ and the Actions menu's own chords, and dies with the window.
   flashes as source nor jumps from the left to the centre. Only the last segment of a streaming reply
   is mid-stream, an opener the stream has passed stays visible, and a lone `$` is never held back,
   since it may be a price.
-- **Code is coloured by a small scanner, not a dependency.** `SyntaxHighlighter.tokens(in:language:)`
+- **Code is coloured by a small lexer, not a dependency.** `SyntaxHighlighter.tokens(in:language:)`
   (`Features/AI/Model/Syntax*.swift`, Foundation-only) walks a fenced block's UTF-16 once and returns
   non-overlapping `SyntaxToken`s, which `ChatMarkdownRenderer` paints from `Theme.Colors.Syntax`.
   `SyntaxLanguage(named:)` maps the fence's name and its usual aliases: Swift, JavaScript,
   TypeScript, Python, Java, Kotlin, C, C++, Objective-C, C#, Go, Rust, Ruby, PHP, Lua, SQL, shell,
   Dockerfile, JSON, YAML, TOML and INI through one table-driven `SyntaxGrammar`, and markup,
-  stylesheets and diffs through their own scanners. An unknown language, a fence without one, a
+  stylesheets and diffs through their own lexers. An unknown language, a fence without one, a
   block over `SyntaxHighlighter.sizeLimit` (40,000 UTF-16 units) or a failed reply's note stays
   plain. A streaming block is re-scanned as it grows, so an unclosed string or comment colours to
   the end of what has arrived. It is a lexer, not a parser: it never rejects input, so what it

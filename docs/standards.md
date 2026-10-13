@@ -84,6 +84,7 @@ fit the table.
 | `Catalog`     | Pure static namespace over a built-in list                                    |
 | `Index`       | A searchable collection, rebuilt as its inputs change                         |
 | `Engine`      | A pure evaluator: input → output                                              |
+| `Lexer`       | Splits text into classified token ranges in one pass; never rejects input     |
 | `Policy`      | A pure decision — no state, no effects                                        |
 | `Remapper`    | Keeps one HID key mapping on every matching device, including later arrivals  |
 

@@ -14,19 +14,19 @@ enum SyntaxHighlighter {
     static func tokens(in units: [UInt16], language: SyntaxLanguage) -> [SyntaxToken] {
         switch language {
         case .code(let grammar):
-            var scanner = SyntaxScanner(units, grammar: grammar)
+            var scanner = SyntaxLexer(units, grammar: grammar)
             scanner.run()
             return scanner.tokens
         case .markup:
-            var scanner = SyntaxMarkupScanner(units)
+            var scanner = SyntaxMarkupLexer(units)
             scanner.run()
             return scanner.tokens
         case .stylesheet:
-            var scanner = SyntaxStylesheetScanner(units)
+            var scanner = SyntaxStylesheetLexer(units)
             scanner.run()
             return scanner.tokens
         case .diff:
-            return SyntaxDiffScanner.tokens(in: units)
+            return SyntaxDiffLexer.tokens(in: units)
         }
     }
 }
@@ -89,7 +89,7 @@ enum SyntaxUnit {
     }
 }
 
-struct SyntaxScanner {
+struct SyntaxLexer {
     private typealias Unit = SyntaxUnit
 
     private let chars: [UInt16]
