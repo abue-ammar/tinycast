@@ -9,7 +9,6 @@ final class InputSourceSwitcher {
         let title: String
     }
 
-    /// Posted by TIS when a keyboard source is added or removed in System Settings.
     static let sourcesDidChange = Notification.Name(
         kTISNotifyEnabledKeyboardInputSourcesChanged as String)
 

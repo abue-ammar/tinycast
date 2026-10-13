@@ -12,8 +12,7 @@ struct MenuBarSummary: Sendable {
 
     /// Long enough to recognise a meeting, short enough to leave the menu bar usable.
     static let titleCap = 24
-    /// A midnight meeting is useful when it is about to start, but should not keep today's menu bar
-    /// occupied for hours.
+    /// A midnight meeting shows as it nears, but must not hold today's menu bar for hours.
     static let nextDayGrace: TimeInterval = 30 * 60
 
     init(

@@ -92,7 +92,6 @@ struct PaletteRowIndexTests {
         }
     }
 
-    /// Every index resolves, and resolving then inverting returns the index it started from.
     static func expectRoundTrip(_ index: PaletteRowIndex, _ label: String) {
         for flat in 0..<index.count {
             guard let row = index.row(at: flat) else {
@@ -124,7 +123,6 @@ struct PaletteRowIndexTests {
         expect(allEmptySections.count == 0, "empty sections contribute no rows")
         expect(allEmptySections.row(at: 0), nil, "empty sections resolve no index")
 
-        // Single section, no calculator card: the flat index is the section offset.
         let single = PaletteRowIndex(sectionCounts: [3])
         expect(single.count == 3, "one section of 3 is 3 rows")
         expect(single.row(at: 0), .element(section: 0, offset: 0), "index 0 is the first result")
@@ -150,7 +148,6 @@ struct PaletteRowIndexTests {
             "a card present shifts the first result's index to 1")
         expectRoundTrip(withCalc, "single section with calculator")
 
-        // A calculator card with no results is selectable on its own.
         let calcOnly = PaletteRowIndex(hasCalculator: true, sectionCounts: [])
         expect(calcOnly.count == 1, "a lone calculator card is one row")
         expect(calcOnly.row(at: 0), .calculator, "a lone calculator card is the whole list")
@@ -397,7 +394,6 @@ struct PaletteRowIndexTests {
             }
         }
 
-        // Exhaustive: over a spread of shapes, every flat index maps 1:1 onto visible row order.
         for hasCalculator in [false, true] {
             for a in 0...3 {
                 for b in 0...3 {

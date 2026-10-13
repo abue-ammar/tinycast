@@ -16,7 +16,6 @@ final class PseudoTerminal: @unchecked Sendable {
         executable: String, arguments: [String], environment: [String: String],
         workingDirectory: String
     ) -> PseudoTerminal? {
-        // POSIX names these the master and slave ends; these are the same two descriptors.
         var parentEnd: Int32 = 0
         var childEnd: Int32 = 0
         var settings = terminalSettings()

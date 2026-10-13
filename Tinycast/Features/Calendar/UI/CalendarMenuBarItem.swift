@@ -80,7 +80,6 @@ struct CalendarMenuBarMenu: View {
     }
 }
 
-/// The span's remaining meetings by day; a click joins, or opens a linkless one in Calendar.
 private struct MenuBarAgenda: View {
     var body: some View {
         let now = AppCore.shared.meetingClock.now

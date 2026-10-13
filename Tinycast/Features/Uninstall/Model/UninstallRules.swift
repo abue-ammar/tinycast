@@ -45,7 +45,7 @@ enum UninstallRules {
     private static func owns(_ folded: String, id: String, allowingPrefix: Bool) -> Bool {
         if folded == id { return true }
         guard allowingPrefix, folded.count > id.count, folded.hasPrefix(id) else { return false }
-        // The separator stops `com.apple.SafariTechnologyPreview` reading as Safari's child.
+        // The separator stops an ID that merely shares a prefix reading as this one's child.
         return namespaceSeparators.contains(folded[folded.index(folded.startIndex, offsetBy: id.count)])
     }
 
@@ -80,7 +80,7 @@ enum UninstallRules {
         matchesBundleID(groupContainerBase(component), identity: identity)
     }
 
-    /// Exact folded equality: no prefix, no substring, so "Books" can't claim "Books Reader".
+    /// Exact folded equality: no prefix, no substring, so "Foo" can't claim "Foo Bar".
     static func matchesDisplayName(_ component: String, identity: UninstallIdentity) -> Bool {
         guard !identity.names.isEmpty else { return false }
         return matchableForms(component).contains { form in
@@ -111,7 +111,6 @@ enum UninstallRules {
         }
     }
 
-    /// Belt and braces on every produced path, whatever matched it.
     static func isAcceptableCandidate(
         path: String, rootPath: String, home: String, bundlePath: String
     ) -> Bool {

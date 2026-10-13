@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Past calculations, led by the live answer for whatever is typed into the search field.
 struct CalculatorHistoryScreen: PaletteScreen {
     let history: CalculatorHistoryStore
     let currencyRates: CurrencyRateStore
@@ -68,7 +67,6 @@ struct CalculatorHistoryScreen: PaletteScreen {
 
     func activate(at selection: Int) {
         switch row(at: selection) {
-        // A fresh calculation: copy + record like the launcher card; error cards no-op.
         case .calc(let result): core.calculatorCoordinator.copyCalculatorResult(result)
         case .entry(let entry): core.calculatorCoordinator.copyHistoryEntry(entry)
         case nil: break
@@ -152,7 +150,6 @@ struct CalculatorHistoryScreen: PaletteScreen {
     }
 }
 
-/// Actions menu content for a calculator-history entry, shown bottom-right like the other modes.
 @MainActor
 enum CalcHistoryActionsMenu {
     static func content(

@@ -33,7 +33,6 @@ struct RoomsSection: View {
     }
 }
 
-/// One room's alias, shortcut, launcher checkbox and actions, shaped like the layout row.
 private struct RoomSettingsRow: View {
     let room: Room
     let showsInLauncher: Bool

@@ -62,12 +62,10 @@ struct ExtensionFormView: View {
         if index != selection { onSelect(index) }
     }
 
-    /// Scroll id of the focused field, or nil when the form has nothing to land on.
     private var focusedRowID: String? {
         screen.items.indices.contains(selection) ? screen.items[selection].id : nil
     }
 
-    /// One drawn field, wired into the focus order `ExtensionScreen` decided.
     @ViewBuilder
     private func row(_ field: RenderNode) -> some View {
         if let item = screen.focusItem(for: field) {
@@ -189,7 +187,6 @@ struct ExtensionFormView: View {
                     .font(metrics.typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textSecondary)
                     .multilineTextAlignment(.trailing)
-                // The info marker Raycast draws beside a label that carries one.
                 if let info = field.string("info"), !info.isEmpty {
                     Image(systemName: "info.circle")
                         .font(metrics.typography.disclosure)

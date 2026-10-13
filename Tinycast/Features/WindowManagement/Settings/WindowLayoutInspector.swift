@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The editor's right column. Stacks the field groups; holds no geometry of its own.
 struct WindowLayoutInspector: View {
     let draft: WindowLayoutDraft
     let displays: [WindowLayoutDisplay]

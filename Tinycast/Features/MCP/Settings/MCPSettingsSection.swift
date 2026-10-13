@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Settings → AI's MCP half: the switch, the servers, and what each one is doing right now.
 struct MCPSettingsSection: View {
     @Environment(MCPCoordinator.self) private var coordinator
     @Environment(AppSettings.self) private var appSettings

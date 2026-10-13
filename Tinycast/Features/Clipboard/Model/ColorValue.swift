@@ -45,7 +45,6 @@ extension ColorValue {
         self.init(red: red + base, green: green + base, blue: blue + base, alpha: alpha)
     }
 
-    /// Hue, saturation and lightness, the inverse of the HSL initialiser.
     var hsl: (hue: Double, saturation: Double, lightness: Double) {
         let maximum = max(red, green, blue)
         let minimum = min(red, green, blue)
@@ -71,7 +70,6 @@ extension ColorValue {
     /// How much untrimmed text is worth trimming first; past this nothing can be a colour anyway.
     private static let scanLimit = 2048
 
-    /// Parse a whole trimmed token, or nil when it is not a colour.
     static func parse(_ text: String) -> ColorValue? {
         // Every visible row runs this per render, so the shape is rejected before allocating.
         guard text.utf8.count <= scanLimit, couldBeColor(text.utf8) else { return nil }

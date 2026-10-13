@@ -53,7 +53,7 @@ enum PaletteShortcut: Equatable {
     /// ⌘1…⌘0, matched by key code in the panel and handed over as a slot.
     case favoriteSlot(Int)
 
-    /// `matches` compares the pressed key through the active layout, so the letters stay positional.
+    /// `matches` compares through the active layout, so the letters stay positional.
     static func resolve(
         command: Bool, shift: Bool, option: Bool, control: Bool, isDeleteKey: Bool,
         matches: (Character) -> Bool
@@ -82,7 +82,7 @@ enum PaletteShortcut: Equatable {
         return nil
     }
 
-    /// The compact bar shows no selection, so a chord aimed at a highlighted row waits for the list.
+    /// The compact bar shows no selection, so a chord aimed at a row waits for the list.
     var requiresExpanded: Bool {
         switch self {
         case .copyFile, .copyName, .copyPath, .copyText, .pasteFile, .quickLook, .openInApp,

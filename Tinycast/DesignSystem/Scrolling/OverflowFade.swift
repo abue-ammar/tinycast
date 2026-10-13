@@ -1,12 +1,10 @@
 import SwiftUI
 
-/// Edge fade for bounded lists: marks hidden content and clears once the list reaches that edge.
 struct OverflowFadeMask: ViewModifier {
     /// Short enough to read as an edge treatment rather than as a dimmed final row.
     var band: CGFloat = 24
     var includesTop = false
 
-    /// Content hidden beyond each visible edge, 0 while the list rests against it.
     @State private var overflow = Overflow()
 
     private struct Overflow: Equatable {

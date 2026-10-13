@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The join preview: your camera over the meeting it is about to open.
 struct CameraPreviewView: View {
     let meeting: MeetingEvent
     let now: Date

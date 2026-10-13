@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A reply's choices as the next thing to say: glass capsules that send themselves.
 struct ChatSuggestionChips: View {
     @Environment(\.metrics) private var metrics
     let choices: [String]
@@ -64,7 +63,6 @@ extension View {
     }
 }
 
-/// Chips left to right, wrapping when the row is full.
 struct ChatFlowLayout: Layout {
     let spacing: CGFloat
     var centersRows = false

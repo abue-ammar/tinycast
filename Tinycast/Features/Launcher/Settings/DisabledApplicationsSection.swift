@@ -24,7 +24,6 @@ struct DisabledApplicationsList: View {
     }
 }
 
-/// A whole section of them, for a pane whose exclusions are a subject of their own.
 struct DisabledApplicationsSection: View {
     @Binding var bundleIDs: [String]
     let anchor: SettingsAnchor

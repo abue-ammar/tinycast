@@ -11,7 +11,7 @@ enum CalcDateFormatters {
         let layout: Layout
         let zone: String
         let locale: String
-        /// Not part of `locale.identifier`, so the 24-hour switch would otherwise hit a stale formatter.
+        /// Not in `locale.identifier`, so a 24-hour switch would otherwise hit a stale formatter.
         let hourCycle: Locale.HourCycle
         let calendar: Calendar.Identifier
     }

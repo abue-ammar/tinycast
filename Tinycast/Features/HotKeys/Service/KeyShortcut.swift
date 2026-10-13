@@ -75,7 +75,6 @@ struct KeyShortcut: Hashable, Sendable {
             carbonKeyCode: carbonKeyCode, carbonModifiers: Self.carbonModifiers(from: reduced))
     }
 
-    /// `modifierSymbols` with the Hyper chord collapsed to "✦", when one is configured at all.
     static func collapsedModifierSymbols(
         from flags: NSEvent.ModifierFlags, hyperChord: NSEvent.ModifierFlags?
     ) -> [String] {

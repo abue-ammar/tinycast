@@ -1,6 +1,5 @@
 import AppKit
 
-/// Owns the snippet flow: listener, browser, editor handoff, delivery, presence.
 @MainActor
 @Observable
 final class SnippetCoordinator {

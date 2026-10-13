@@ -49,7 +49,6 @@ struct ExtensionDetailBody: View {
         .thinScrollbar()
     }
 
-    /// A `Detail.Metadata` sidebar's fixed width; the markdown pane takes what's left.
     private static let metadataWidth: CGFloat = 240
 
     private func metadataPane(_ metadata: RenderNode) -> some View {
@@ -457,7 +456,6 @@ struct ExtensionMarkdownView: View {
 }
 
 extension String {
-    /// `1. text` → `text`, for ordered-list detection.
     fileprivate func firstMatch(ofNumberedList: Void) -> String? {
         let digits = prefix(while: \.isNumber)
         guard !digits.isEmpty else { return nil }

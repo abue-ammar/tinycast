@@ -1,6 +1,5 @@
 import Foundation
 
-/// The LaTeX names this renderer knows, each with the character it draws and how TeX spaces it.
 enum MathSymbolCatalog {
     typealias Symbol = (character: String, kind: MathNode.Kind)
 

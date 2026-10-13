@@ -1,6 +1,5 @@
 import Foundation
 
-/// The JSON interchange format for Import/Export Quicklinks.
 enum QuicklinkArchive {
     static let version = 1
 

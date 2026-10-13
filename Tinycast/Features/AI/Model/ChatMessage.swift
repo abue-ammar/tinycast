@@ -60,7 +60,6 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     /// The next search or call's place among the reply's: with no text between, offsets tie.
     var nextSequence: Int { searches.count + toolUses.count }
 
-    /// Every block joined, for find and for a transcript copied out whole.
     var reasoningText: String {
         reasoning.map(\.text).joined(separator: "\n\n")
     }

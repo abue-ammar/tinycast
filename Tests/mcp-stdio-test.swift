@@ -1,5 +1,3 @@
-// A local server end to end: handshake, listing, calling, and every way one can go away.
-
 import Foundation
 
 @main

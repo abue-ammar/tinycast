@@ -183,7 +183,6 @@ private struct ExtensionToolchainFields: View {
             : "Found at \(resolved.url.path)."
     }
 
-    /// Splits on `:`, the same separator PATH itself uses, dropping anything blank in between.
     private static func parseSearchPaths(_ text: String) -> [String] {
         text.split(separator: ":", omittingEmptySubsequences: true)
             .map { $0.trimmingCharacters(in: .whitespaces) }

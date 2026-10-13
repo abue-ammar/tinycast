@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Both flavours in one pane: the built-ins, then the user's own shell commands.
 struct CommandsSettingsView: View {
     @Environment(CustomCommandStore.self) private var store
     @Environment(CustomCommandCoordinator.self) private var coordinator

@@ -128,7 +128,6 @@ struct QuickActionsSettingsView: View {
             if !action.usesTranslationFramework {
                 editButton(title: action.title) { editingAction = action }
             }
-            // The four left the Commands pane with their kind, and its alias field with it.
             if let entry { AliasField(entry: entry) }
             ShortcutRecorder(action: .command(CommandID(action)), isQuiet: true)
             resultPicker(title: action.title, selection: previewBinding(action))

@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Reports the `NSWindow` hosting a SwiftUI tree, for the AppKit surfaces that hang off its frame.
 struct WindowReader: NSViewRepresentable {
     let onResolve: (NSWindow?) -> Void
 

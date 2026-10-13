@@ -36,7 +36,6 @@ extension NSWindow {
         }
     }
 
-    /// Snaps back to full opacity, replacing any running fade on the same key path.
     func cancelFade() {
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0

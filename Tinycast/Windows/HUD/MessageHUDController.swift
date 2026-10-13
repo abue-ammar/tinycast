@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The message pill, shared by every feature that reports a transient confirmation.
 @MainActor
 final class MessageHUDController {
     private let presenter: HUDPresenter

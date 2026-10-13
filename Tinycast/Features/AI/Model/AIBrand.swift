@@ -1,6 +1,5 @@
 import Foundation
 
-/// The vendor behind a model, for the picker's row glyph: a template asset tinted like a symbol.
 enum AIBrand: String, CaseIterable, Sendable {
     case openAI, claude, gemini, openRouter, x, deepSeek, qwen, mistral, meta, kimi, miniMax
     case perplexity, zai

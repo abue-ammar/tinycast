@@ -2,7 +2,6 @@ import Foundation
 
 /// The one place an entry's searchable names are decided, for every kind alike.
 enum EntryNaming {
-    /// Everything a producer knows about what its entry is called.
     struct Sources: Sendable, Hashable {
         var name: String
         /// Ranked like the title: a translation, a renamed file, a snippet keyword.

@@ -5,9 +5,7 @@ import Observation
 @MainActor
 @Observable
 final class AIChatSurfacesState {
-    /// The palette's conversation.
     private(set) var quickAI: AIChatState
-    /// The AI Chat window's conversation.
     private(set) var window: AIChatState
     /// Window conversations left mid-reply; each saves itself when its reply ends.
     private var answeringElsewhere: [UUID: AIChatState] = [:]

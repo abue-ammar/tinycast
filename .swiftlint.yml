@@ -1,7 +1,3 @@
-# SwiftLint is the only code-quality tool here — there is no formatter, deliberately.
-# So this config sticks to rules that catch defects, and stays quiet
-# about style a formatter would otherwise own. See docs/standards.md.
-
 included:
   - Tinycast
   - Tests
@@ -12,7 +8,6 @@ excluded:
   - Tinycast/Features/Emoji/Model/EmojiData.generated.swift
   - Tinycast/Features/Calculator/Model/CurrencyData.generated.swift
 
-# Noisy here, or actively wrong for this codebase.
 disabled_rules:
   - todo                                      # tracked in issues, not by the linter
   - trailing_whitespace                       # cosmetic, and nothing auto-fixes it on save
@@ -31,7 +26,6 @@ disabled_rules:
   # This rule rewrites `count == 0` to `isEmpty` on both, which does not compile.
   - empty_count
 
-# Each one prevents a real class of defect, not a style preference.
 opt_in_rules:
   - first_where
   - last_where
@@ -53,7 +47,6 @@ force_cast: warning
 type_name:
   min_length: 2     # `ID` is the correct name for an Identifiable's ID
 
-# Warning-only: length is a judgement call, and a harness header comment is not a defect.
 line_length:
   warning: 130
   ignores_urls: true

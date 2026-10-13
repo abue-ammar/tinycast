@@ -69,7 +69,6 @@ struct ExtensionGitHubSource: Hashable, Sendable {
 
     // MARK: - Trees
 
-    /// A Git tree: what a directory holds, by sha rather than by path.
     struct Tree: Decodable, Sendable {
         let tree: [Entry]
         /// Set when GitHub gave up listing: what came back is a prefix, not the whole directory.
@@ -91,7 +90,6 @@ struct ExtensionGitHubSource: Hashable, Sendable {
         }
     }
 
-    /// A tree listing, or a thrown message when GitHub answered with an error instead.
     static func parseTree(_ data: Data) throws -> Tree {
         if let tree = try? JSONDecoder().decode(Tree.self, from: data) { return tree }
         struct Message: Decodable { let message: String }

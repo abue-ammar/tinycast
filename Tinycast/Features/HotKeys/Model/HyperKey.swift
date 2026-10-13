@@ -1,7 +1,6 @@
 import Carbon.HIToolbox
 import CoreGraphics
 
-/// The physical key remapped to the Hyper chord. See docs/features/hotkeys.md#the-hyper-key.
 enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
     case none
     case capsLock
@@ -10,7 +9,6 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    /// The single glyph Hyper shortcuts collapse to.
     static let hyperGlyph = "✦"
 
     var title: String {
@@ -61,7 +59,6 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Quick Press label for triggering the key's original function.
     var quickPressOriginalTitle: String? {
         self == .capsLock ? "Trigger Caps Lock (⇪)" : nil
     }
@@ -71,7 +68,7 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
         guard self == .capsLock else {
             return HyperKeyRoute(key: self, tapKeyCode: keyCode, modifier: modifierKey, remap: nil)
         }
-        // Secure Input still delivers modifiers, so this variant sends Right Control instead of F18.
+        // Secure Input still delivers modifiers, so this variant sends Right Control, not F18.
         if secureInputCompatible {
             return HyperKeyRoute(
                 key: self, tapKeyCode: kVK_RightControl, modifier: .rightControl,

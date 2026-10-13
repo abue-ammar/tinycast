@@ -3,13 +3,12 @@ import Foundation
 
 /// Window management's lists as settings.json spells them, each record with its shortcut and alias.
 enum WindowManagementFileFormat {
-    /// Every command's chord or alias, nil for none; one of the wrong type has no entry and keeps its own.
+    /// Each command's text, nil for `null`; a wrong-typed one has no entry and keeps its own.
     typealias CommandTexts = (texts: [WindowCommand.ID: String?], problems: [String])
 
-    /// A list read back from the file: the records it could use, and what it had to skip.
     struct Decoded<Record> {
         var records: [Record] = []
-        /// By record, nil for `null`; a field left out or of the wrong type has none, and keeps its value.
+        /// By record, nil for `null`; a missing or wrong-typed field has none and keeps its value.
         var shortcuts: [UUID: String?] = [:]
         var aliases: [UUID: String?] = [:]
         var problems: [String] = []

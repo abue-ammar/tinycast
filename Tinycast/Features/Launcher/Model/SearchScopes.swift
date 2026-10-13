@@ -1,6 +1,5 @@
 import Foundation
 
-/// The folders and bundles `AppIndex` scans for applications.
 enum SearchScopes {
     /// Seeded on a fresh install; order matters, the scan deduping by bundle ID.
     static let defaults: [String] = [

@@ -1,7 +1,6 @@
 import SwiftUI
 
 extension View {
-    /// A dialog's text field: plain, on the control surface, at a chip's height.
     func dialogTextField() -> some View {
         modifier(DialogTextField())
     }

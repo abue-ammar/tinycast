@@ -83,7 +83,6 @@ private struct EmojiGridRow: Identifiable {
     }
 }
 
-/// Flat render order for one query: section headers and grid rows interleaved.
 private enum EmojiGridItem: Identifiable {
     case header(id: String, title: String, count: Int)
     case row(EmojiGridRow)
@@ -265,7 +264,6 @@ private struct EmojiGridRowView: View {
         .onRightClick { point in
             if let column = column(at: point) { onActions(row.start + column) }
         }
-        // Column hover, gated on real pointer movement like `armedHover`.
         .onContinuousHover(coordinateSpace: .local) { phase in
             switch phase {
             case .active(let point):

@@ -53,7 +53,6 @@ struct LauncherItemsSection: View {
     }
 }
 
-/// The rows under a filter field, or what to say when there are none; shared by item panes.
 struct LauncherItemsList: View {
     let entries: [AppEntry]
     let query: String

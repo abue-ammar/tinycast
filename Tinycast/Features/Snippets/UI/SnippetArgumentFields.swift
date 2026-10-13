@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The `{argument}` values a snippet still needs; reference semantics let the caller read them back.
+/// A class, so the caller can read the `{argument}` values back after the dialog.
 @MainActor
 @Observable
 final class SnippetArgumentsState {
@@ -16,7 +16,6 @@ final class SnippetArgumentsState {
     }
 }
 
-/// The snippet argument dialog's controls: a field per free argument, chips per options list.
 struct SnippetArgumentFields: View {
     @Environment(\.metrics) private var metrics
     let state: SnippetArgumentsState

@@ -1,6 +1,5 @@
 #!/bin/bash
-# Compose a release body from GitHub's generated notes. Usage: ./Scripts/release-notes.sh <body.md> <discord.md>
-# The changelog goes above the install marker; the app shows only that half. See docs/release.md.
+# Compose a release body from GitHub's generated notes. See docs/release.md.
 set -euo pipefail
 
 BODY_OUT="${1:?usage: release-notes.sh <body.md> <discord.md>}"
@@ -21,8 +20,7 @@ MARKER="<!-- tinycast:install -->"
 DISCORD_BUDGET=1200
 DISCORD_BULLETS=15
 
-# Beta and stable tags interleave on main — the same commit carries both — so "the previous release"
-# is only ever right per channel.
+# Beta and stable tags share commits on main, so "the previous release" is only right per channel.
 if [ "$CHANNEL" = "stable" ]; then
     CHANNEL_FILTER='test("-beta\\.") | not'
 else
@@ -40,7 +38,7 @@ GENERATED="$(gh api "repos/${REPO}/releases/generate-notes" "${NOTES_ARGS[@]}" -
 
 COMPARE_URL="$(printf '%s\n' "$GENERATED" | sed -n 's|^\*\*Full Changelog\*\*: \(.*\)$|\1|p' | tail -n1)"
 
-# A bare `#304` still autolinks on the web and fits the 460pt update window; the full URL does neither.
+# A bare `#304` autolinks on the web and fits the 460pt update window; the full URL does neither.
 CHANGELOG="$(printf '%s\n' "$GENERATED" | sed -E \
     -e '/^\*\*Full Changelog\*\*:/d' \
     -e "s|https://github\.com/${REPO}/pull/([0-9]+)|#\1|g")"

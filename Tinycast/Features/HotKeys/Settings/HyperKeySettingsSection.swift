@@ -7,7 +7,6 @@ struct HyperKeySettingsSection: View {
 
     private var manager: HyperKeyManager { core.hyperKey }
 
-    /// The Hyper modifier chord as prose glyphs, tracking the Include Shift toggle.
     private var hyperGlyphs: String { settings.hyperKeyIncludesShift ? "⌃⌥⇧⌘" : "⌃⌥⌘" }
 
     /// Only a choice made here resets Quick Press: settings.json may set both keys at once.

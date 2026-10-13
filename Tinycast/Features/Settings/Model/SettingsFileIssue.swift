@@ -8,7 +8,6 @@ enum SettingsFileIssue: Error, Equatable, Sendable {
     case notAnObject(String?)
     case unknownSetting(String)
     case invalidValue(SettingsFileKey)
-    /// One record or entry inside a list or map, described for the person who wrote it.
     case invalidEntry(SettingsFileKey, String)
     case unreadable
     case unwritable
@@ -26,7 +25,6 @@ enum SettingsFileIssue: Error, Equatable, Sendable {
         }
     }
 
-    /// The HUD's line: the first issue, and how many more there are.
     static func summary(_ issues: [SettingsFileIssue]) -> String? {
         guard let first = issues.first else { return nil }
         let more = issues.count > 1 ? " (+\(issues.count - 1) more)" : ""

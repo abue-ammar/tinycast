@@ -38,7 +38,6 @@ private final class BackgroundDragView: NSView {
     }
 }
 
-/// Drags a text field that has nothing to select; the moment it has text, editing owns every press.
 struct EmptyFieldDragHandle: NSViewRepresentable {
     var isEmpty: Bool
     var onBegan: () -> Void

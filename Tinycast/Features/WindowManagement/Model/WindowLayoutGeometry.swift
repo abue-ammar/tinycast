@@ -30,7 +30,6 @@ enum WindowLayoutGeometry {
         return WindowPlacementEngine.rounded(WindowPlacementEngine.clamped(placed, into: box))
     }
 
-    /// What `resolve` needs to reproduce an observed frame.
     struct Capture: Equatable, Sendable {
         var widthFraction: CGFloat
         var heightFraction: CGFloat
@@ -57,15 +56,13 @@ enum WindowLayoutGeometry {
         let anchor = WindowLayoutAnchor.named(horizontal: horizontal, vertical: vertical)
         let origin = anchor.placement.place(size, in: box).origin
 
-        // The residual stays exact: a centred anchor on an odd free space lands on a half point,
-        // and rounding here would move the window by one. `resolve` rounds the composed frame.
+        // Kept exact: rounding a centred half-point origin here would shift the window by one.
         return Capture(
             widthFraction: size.width / box.width, heightFraction: size.height / box.height,
             anchor: anchor,
             offset: CGPoint(x: frame.minX - origin.x, y: frame.minY - origin.y))
     }
 
-    /// The entry a captured window becomes, on the display it was found on.
     static func entry(
         bundleID: String, display: WindowLayoutDisplay, frame: CGRect,
         on screen: WindowPlacementEngine.Screen

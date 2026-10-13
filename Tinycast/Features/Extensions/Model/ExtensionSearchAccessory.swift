@@ -1,7 +1,6 @@
 import Foundation
 
-/// The `List.Dropdown`/`Grid.Dropdown` an extension put in the search bar. The runtime keeps the
-/// component hook-free, so Swift holds the selection and reports every change through `onChange`.
+/// The runtime keeps this dropdown hook-free, so Swift holds the selection and reports changes.
 struct ExtensionSearchAccessory: Equatable {
     /// The render node's id, which is what the session keys the held selection by.
     let nodeID: Int
@@ -31,8 +30,7 @@ struct ExtensionSearchAccessory: Equatable {
         tooltip = node.string("tooltip")
     }
 
-    /// Raycast's order: the stored pick while it still names a choice, else `defaultValue`, else
-    /// the first choice — a dropdown always shows one.
+    /// A stored pick counts only while it still names a choice; a dropdown always shows one.
     func initialValue(stored: String?) -> String? {
         if let stored, items.contains(where: { $0.value == stored }) { return stored }
         return defaultValue ?? items.first?.value

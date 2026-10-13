@@ -1,6 +1,5 @@
 import Foundation
 
-/// Everything in Tinycast a global shortcut can be bound to.
 enum HotKeyAction: Hashable, Sendable {
     /// Fixed actions with no command row of their own.
     case togglePalette
@@ -45,7 +44,6 @@ enum HotKeyAction: Hashable, Sendable {
         }
     }
 
-    /// The fixed actions every install can bind; the per-item catalogs extend them at launch.
     static let builtInActions: [HotKeyAction] =
         [.togglePalette, .dictation] + CommandID.allCases.compactMap(\.hotKeyAction)
 }

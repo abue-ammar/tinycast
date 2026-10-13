@@ -152,7 +152,6 @@ globalThis.__tinycast = {
     return "ok";
   },
 
-  /// Route a UI event back to the callback it came from.
   dispatch(sessionId, handlerId, argsJson, completesSession = false) {
     const session = sessions.get(sessionId);
     if (!session?.surface) return "0";

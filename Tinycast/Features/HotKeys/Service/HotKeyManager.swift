@@ -59,7 +59,6 @@ final class HotKeyManager {
     }
 
     let modifierTapMonitor = ModifierTapMonitor()
-    /// Live state of the open recorder, read by its callout.
     let capture = ShortcutCaptureSession()
 
     private let defaults: UserDefaults
@@ -72,7 +71,6 @@ final class HotKeyManager {
     private var secureInputPressedActions: [String: HotKeyAction] = [:]
     private var secureInputHint: KeyShortcut?
     private static let secureInputHintID = "secureInputHint"
-    /// Every binding, loaded once in `start()` and written through on change.
     private var bindings: [HotKeyAction: HotKeyBinding] = [:]
     /// Part of `AppIndex`'s cache key: a bound entry leaves the launcher's Suggestions.
     private(set) var revision = 0
@@ -137,7 +135,6 @@ final class HotKeyManager {
         defaults.stringArray(forKey: boundKey) ?? []
     }
 
-    /// Settings-pane bundle IDs with a hotkey — same role as `boundBundleIDs`, own namespace.
     var boundPaneBundleIDs: [String] {
         defaults.stringArray(forKey: boundPaneKey) ?? []
     }
@@ -145,7 +142,6 @@ final class HotKeyManager {
     /// Custom-command UUIDs with a binding, indexed separately so startup can re-register them.
     var boundCustomCommandIDs: [UUID] { boundIDs(key: boundCustomCommandKey) }
 
-    /// Quicklink UUIDs with a binding — the same index, its own namespace.
     var boundQuicklinkIDs: [UUID] { boundIDs(key: boundQuicklinkKey) }
 
     /// Window-layout UUIDs with a binding; authored records, so they need an index of their own.
@@ -186,7 +182,6 @@ final class HotKeyManager {
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
 
     private func storedBinding(for action: HotKeyAction) -> HotKeyBinding? {
-        // The stored value is a JSON string; anything else reads as unbound.
         guard
             let json = defaults.string(forKey: action.defaultsKey),
             let data = json.data(using: .utf8)
@@ -194,7 +189,6 @@ final class HotKeyManager {
         return try? decoder.decode(HotKeyBinding.self, from: data)
     }
 
-    /// Persists or clears the binding and swaps live registration.
     func setBinding(_ binding: HotKeyBinding?, for action: HotKeyAction) {
         if action == .dictation, binding != self.binding(for: action) { onDictationCancelled?() }
         let previous = bindings[action]

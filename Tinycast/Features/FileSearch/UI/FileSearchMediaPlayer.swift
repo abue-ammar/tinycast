@@ -1,7 +1,6 @@
 import AVKit
 import SwiftUI
 
-/// A movie or a recording, played by AVKit.
 struct FileSearchMediaPlayer: View {
 
     @Environment(PaletteState.self) private var palette

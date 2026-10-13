@@ -1,7 +1,6 @@
 import Foundation
 import Observation
 
-/// Find in the open chat: what the toolbar's field holds, and which match of it is current.
 @MainActor
 @Observable
 final class ChatFindState {

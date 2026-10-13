@@ -117,7 +117,6 @@ extension SettingsAnchor {
     static let aboutLinks = Self(tab: .about, title: "Links")
 }
 
-/// Where a search result lands: a whole section, or one row inside it.
 enum SettingsTarget: Hashable, Sendable {
     case section(SettingsAnchor)
     /// The row's visible title, which is also the catalog entry's — they are the same string.

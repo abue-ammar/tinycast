@@ -16,7 +16,6 @@ struct ExtensionFieldHint: ViewModifier {
 }
 
 extension View {
-    /// The field's own explanation, spoken as well as shown.
     func extensionFieldHint(_ info: String?, error: String? = nil) -> some View {
         modifier(ExtensionFieldHint(info: info, error: error))
     }

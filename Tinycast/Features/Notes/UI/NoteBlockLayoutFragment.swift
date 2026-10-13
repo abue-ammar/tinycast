@@ -1,6 +1,5 @@
 import AppKit
 
-/// Draws one line's block chrome (code bands, quote bars, rules, list markers) around its text.
 final class NoteBlockLayoutFragment: NSTextLayoutFragment {
     let decoration: NoteBlockDecoration
 

@@ -35,7 +35,6 @@ final class AliasStore {
         defaults.set(aliases, forKey: defaultsKey)
     }
 
-    /// Replace the whole table at once (used when importing a settings backup).
     func replace(_ new: [String: String]) {
         // An import obeys the same rule as typing: blank means none, or it lands unclearable.
         aliases = new.filter { !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }

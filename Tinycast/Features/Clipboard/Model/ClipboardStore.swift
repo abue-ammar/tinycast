@@ -167,7 +167,6 @@ enum ClipboardChord: CaseIterable, Sendable {
     }
 }
 
-/// SQLite-backed clipboard history. See docs/features/clipboard.md#store.
 @MainActor
 @Observable
 final class ClipboardStore {
@@ -340,7 +339,6 @@ final class ClipboardStore {
         enforceLimits()
     }
 
-    /// Called on load and when the retention setting changes.
     func enforceLimits() {
         prune()
     }
@@ -394,7 +392,6 @@ final class ClipboardStore {
         return inserted
     }
 
-    /// Move an item to the top; pasting or copying it from the palette re-recencies it.
     func promote(_ item: ClipboardItem) {
         // A pinned row holds its place, so re-recencying it would rewrite for no change.
         guard !item.isPinned, items.first?.id != item.id else { return }
@@ -951,8 +948,7 @@ final class ClipboardStore {
         db = nil
     }
 
-    /// Streams an import into the file off-main; a staged blob moves into `imagesDirectory`,
-    /// which is what makes `owns` true and lets retention reclaim it later.
+    /// A staged blob moves into `imagesDirectory`, making `owns` true so retention reclaims it.
     nonisolated static func importStoredItems(
         inDatabaseAt url: URL, adoptingImagesInto imagesDirectory: URL? = nil,
         _ items: some Sequence<ClipboardItem>
@@ -1000,8 +996,7 @@ final class ClipboardStore {
         return hasher.finalize()
     }
 
-    /// Keeps the staged blob's name, so importing one backup twice lands on the same path — and
-    /// the row dedupes on it rather than minting a second copy of every image.
+    /// Keeps the staged name, so a backup imported twice dedupes rather than copying every image.
     nonisolated private static func adoptionTarget(
         _ item: ClipboardItem, in directory: URL?
     ) -> ClipboardItem {

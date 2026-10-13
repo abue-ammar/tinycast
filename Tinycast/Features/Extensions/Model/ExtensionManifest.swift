@@ -6,7 +6,6 @@ enum ExtensionCommandMode: String, Sendable, Codable {
     case menuBar = "menu-bar"
 }
 
-/// One entry from a manifest's `preferences` array.
 struct ExtensionPreferenceSchema: Sendable, Hashable {
     enum Kind: String, Sendable {
         case textfield
@@ -38,7 +37,6 @@ struct ExtensionPreferenceSchema: Sendable, Hashable {
     /// Already resolved for macOS: a manifest default can be platform-keyed.
     let defaultValue: ExtensionPreferenceValue?
 
-    /// The value to use when the user hasn't set one — falls back to a type-appropriate empty.
     var effectiveDefault: ExtensionPreferenceValue {
         defaultValue ?? (kind == .checkbox ? .bool(false) : .string(""))
     }
@@ -70,7 +68,6 @@ struct ExtensionPreferenceSchema: Sendable, Hashable {
     }
 }
 
-/// A preference value as it round-trips between the manifest, `UserDefaults` and JS.
 enum ExtensionPreferenceValue: Sendable, Hashable {
     case string(String)
     case bool(Bool)
@@ -207,7 +204,6 @@ struct ExtensionManifest: Sendable, Hashable {
     let commands: [ExtensionCommand]
     let preferences: [ExtensionPreferenceSchema]
 
-    /// The handle the store lists it under: its organisation's when it has one.
     var storeHandle: String { owner ?? author }
 
     /// `platforms` is absent on older manifests, which predate Windows support and are macOS-only.

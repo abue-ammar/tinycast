@@ -1,13 +1,11 @@
 import SwiftUI
 
-/// Maps Raycast's `Icon` / `Color` / `Image.ImageLike` values onto what the palette can draw.
 extension EnvironmentValues {
     /// Derived, not stored, so a `{light, dark}` icon follows the surface it is drawn on.
     var isDarkAppearance: Bool { colorScheme == .dark }
 }
 
 enum ExtensionImage {
-    /// A resolved icon: a symbol, an image file, a Finder icon, a URL, or a bare glyph.
     enum Source: Equatable {
         case symbol(String)
         case file(String)
@@ -121,7 +119,6 @@ enum ExtensionImage {
         if let assetsPath, text.contains(".") {
             return .file((assetsPath as NSString).appendingPathComponent(text))
         }
-        // Anything else short enough to be an emoji or a couple of initials is drawn as a glyph.
         return text.count <= 4 ? .glyph(text) : nil
     }
 
@@ -260,7 +257,6 @@ enum ExtensionImage {
         "window": "macwindow", "wrench-screwdriver": "wrench.and.screwdriver", "xmark": "xmark",
         "xmark-circle": "xmark.circle", "xmark-circle-filled": "xmark.circle.fill",
         "xmark-top-right-square": "xmark.square",
-        // Every value was checked: an unknown name draws a placeholder.
         "airplane-filled": "airplane", "airplane-landing": "airplane.arrival",
         "airplane-takeoff": "airplane.departure",
         "alarm-ringing": "bell.and.waves.left.and.right.fill", "align-centre": "text.aligncenter",

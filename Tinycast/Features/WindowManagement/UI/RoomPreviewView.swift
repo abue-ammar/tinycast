@@ -2,7 +2,6 @@
 import AppKit
 import SwiftUI
 
-/// One display's share of the preview: the desk blurred and dimmed, the room's cards on top.
 struct RoomPreviewView: View {
     let model: RoomPreviewModel
     /// This display's top-left in AX space. AX and SwiftUI both grow down, so no flip is needed.
@@ -39,7 +38,6 @@ struct RoomPreviewView: View {
     }
 }
 
-/// A window-to-be: a title bar naming the app and window, the app's icon in its body.
 private struct RoomPreviewCardView: View {
     let card: RoomPreviewCard
     /// The palette's frame in this card's coordinates, which the icon stays out from under.
@@ -119,7 +117,6 @@ private struct RoomPreviewCardView: View {
     }
 }
 
-/// Behind-window blur for the whole display, the way Mission Control softens the desk.
 private struct DeskBlur: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let view = NSVisualEffectView()

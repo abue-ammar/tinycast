@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The calendar-colour bar between a meeting row's icon and its title.
 struct CalendarBar: View {
     @Environment(\.metrics) private var metrics
     let color: MeetingEvent.CalendarColor?

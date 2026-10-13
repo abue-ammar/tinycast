@@ -879,7 +879,6 @@ export async function runFixtures() {
     check("hoists actions into a prop", dump.includes("actions=<ActionPanel>"));
     check("defaults filtering to true", dump.includes("filtering=true"));
 
-    // Bump the counter through the action's handler and confirm the re-render.
     const item = findNode(tree, "List.Item");
     const panel = item.props.actions;
     const bump = panel.children.find((child) => child.type === "Action");

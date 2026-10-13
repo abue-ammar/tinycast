@@ -26,7 +26,6 @@ struct ComposerChip: View {
     }
 }
 
-/// The window composer's staged file: an image shows itself, a document its name, both an ✕.
 struct AttachmentChip: View {
     @Environment(\.metrics) private var metrics
     let attachment: ChatAttachment

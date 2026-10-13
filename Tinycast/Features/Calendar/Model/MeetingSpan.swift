@@ -24,7 +24,6 @@ enum MeetingSpan: Int, CaseIterable, Identifiable, Sendable {
         return DateInterval(start: start, end: end)
     }
 
-    /// "today's and tomorrow's", for a sentence naming the events that are read.
     var possessivePhrase: String {
         switch self {
         case .today: return "today's"

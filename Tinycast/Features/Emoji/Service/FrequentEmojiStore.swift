@@ -49,7 +49,6 @@ final class FrequentEmojiStore {
         persist()
     }
 
-    /// Replaces the tallies wholesale from a backup, under the same cap `record` enforces.
     func replace(_ imported: [FrequentEmoji]) {
         revision &+= 1
         records = Self.history(imported)

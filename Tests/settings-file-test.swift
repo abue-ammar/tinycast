@@ -1,5 +1,3 @@
-// Contract tests for settings.json: its layout, its values, its text, and the repository behind it.
-
 import Foundation
 import Observation
 

@@ -11,7 +11,6 @@ struct ChatMarkdownSource: Equatable {
     let metrics: InterfaceMetrics
 }
 
-/// What the renderer made: the text, where each code block sits, and the current find match.
 struct ChatRenderedText {
     let string: NSAttributedString
     let codeBlocks: [CodeBlock]
@@ -196,7 +195,6 @@ struct ChatMarkdownRenderer {
         return style
     }
 
-    /// One drawn text, as one paragraph: its inline Markdown, find's marks, then citations.
     private func inline(
         _ text: String, font: NSFont, leaf: [Int], in context: Context, into output: Output,
         marker: String? = nil, extraBlocks: [NSTextBlock] = [], alignment: NSTextAlignment = .natural,
@@ -222,7 +220,6 @@ struct ChatMarkdownRenderer {
         output.string.append(line)
     }
 
-    /// Emphasis, strong, code, strikethrough and links, from Foundation's inline parse.
     private func attributed(
         _ parsed: AttributedString, font: NSFont, color: NSColor
     ) -> NSMutableAttributedString {
@@ -367,7 +364,6 @@ struct ChatMarkdownRenderer {
         box.setWidth(Theme.Size.hairline, type: .absoluteValueType, for: .border)
         box.setWidth(spacing.xl, type: .absoluteValueType, for: .padding, edge: .minX)
         box.setWidth(spacing.xl, type: .absoluteValueType, for: .padding, edge: .maxX)
-        // The header strip above the code holds the language and the Copy button.
         box.setWidth(
             spacing.md + Self.codeHeaderHeight + spacing.sm, type: .absoluteValueType, for: .padding,
             edge: .minY)

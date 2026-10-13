@@ -7,7 +7,6 @@ struct CustomWindowSizeEditRequest: Identifiable {
     var size: CustomWindowSize?
 }
 
-/// Add / edit panel for one custom size, presented from the Window Management pane.
 struct CustomWindowSizeEditorPanel: View {
     private let isNew: Bool
     /// What a unit switch converts against; a run measures the window's own display.

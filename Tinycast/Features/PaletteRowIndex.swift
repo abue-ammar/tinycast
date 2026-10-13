@@ -18,7 +18,6 @@ struct PaletteRowIndex: Equatable {
 
     var count: Int { (hasCalculator ? 1 : 0) + sectionCounts.reduce(0, +) }
 
-    /// The selection the screen actually highlights: out-of-range values clamp into the results.
     func clamped(_ selection: Int) -> Int {
         count == 0 ? 0 : min(max(selection, 0), count - 1)
     }

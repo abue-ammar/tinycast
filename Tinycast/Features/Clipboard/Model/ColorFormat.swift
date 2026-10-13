@@ -9,7 +9,6 @@ enum ColorFormat: CaseIterable, Hashable, Sendable {
     case hslWithAlpha
     case oklch
 
-    /// The menu row's label; the rendered value is its trailing text.
     var title: String {
         switch self {
         case .hex: return "Hex"
@@ -21,7 +20,6 @@ enum ColorFormat: CaseIterable, Hashable, Sendable {
         }
     }
 
-    /// What the colour reads as in this notation.
     func string(for color: ColorValue) -> String {
         switch self {
         case .hex: return ColorDigits.hex(color, includingAlpha: false)
@@ -63,13 +61,11 @@ enum ColorFormat: CaseIterable, Hashable, Sendable {
 
 /// The digits a notation is spelled in — private, because writing a colour is this file's business.
 private enum ColorDigits {
-    /// Uppercase, the spelling a hex colour is conventionally written in.
     static func hex(_ color: ColorValue, includingAlpha: Bool) -> String {
         let channels = [color.red, color.green, color.blue] + (includingAlpha ? [color.alpha] : [])
         return "#" + channels.map { String(format: "%02X", channel($0)) }.joined()
     }
 
-    /// One 0…255 channel, rounded the way every 8-bit notation states it.
     static func channel(_ value: Double) -> Int { integer(value * 255) }
 
     /// Trailing zeros dropped, so an exact channel reads `1` rather than `1.000`.
@@ -86,7 +82,6 @@ private enum ColorDigits {
     /// An angle carries its unit, the way CSS Color 4 writes every hue.
     static func angle(_ value: Double) -> String { number(value) + "deg" }
 
-    /// `oklch()` states alpha behind a slash, and says nothing where a colour is opaque.
     static func slashAlpha(_ color: ColorValue) -> String {
         color.hasAlpha ? " / " + decimal(color.alpha) : ""
     }

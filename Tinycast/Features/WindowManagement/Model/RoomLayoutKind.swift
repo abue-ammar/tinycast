@@ -10,7 +10,6 @@ enum RoomLayoutKind: String, Codable, CaseIterable, Sendable {
     case columns
     case grid
     case custom
-    /// Exactly where the windows were when the arrangement was remembered.
     case saved
 
     var title: String {

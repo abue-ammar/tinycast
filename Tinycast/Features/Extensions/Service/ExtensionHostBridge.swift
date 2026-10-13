@@ -35,7 +35,6 @@ protocol ExtensionHostContext: AnyObject {
     func launch(_ link: ExtensionDeepLink) throws
 }
 
-/// A toast as the palette shows it.
 struct ExtensionToast: Sendable, Equatable, Identifiable {
     enum Style: String, Sendable {
         case success = "SUCCESS"

@@ -23,7 +23,6 @@ struct SelectionRevealTests {
         }
     }
 
-    /// A row `rowHeight` tall whose top sits at `top`, the way a list row reports itself.
     static func edge(rowTop top: CGFloat, height: CGFloat = rowHeight) -> SelectionReveal.Edge? {
         SelectionReveal.edge(rowTop: top, rowBottom: top + height, band: band)
     }

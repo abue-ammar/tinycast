@@ -4,7 +4,6 @@ import SwiftUI
 /// What both HUDs agree on: one at a time, replace, fade, dwell, fade away.
 @MainActor
 final class HUDPresenter {
-    /// Where the panel sits above the bottom of the visible frame.
     enum Anchor {
         case edgeInset(CGFloat)
         case heightFraction(CGFloat)

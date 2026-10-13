@@ -35,20 +35,17 @@ struct ExtensionPickerField: View {
 
     private var isFocused: Bool { focus == index }
 
-    /// What a screen reader hears: the query while searching, else the value held.
     private var announcedValue: String {
         guard open, !query.isEmpty else { return chosen.isEmpty ? placeholder : label }
         return chosen.isEmpty ? query : "\(label), searching \(query)"
     }
 
-    /// What the control does, then whatever the extension explains about the field.
     private var hint: String {
         let state = open ? "Showing choices" : "Opens a list of choices"
         let parts = [error, info].compactMap { $0 }.filter { !$0.isEmpty }
         return ([state] + parts).joined(separator: ". ")
     }
 
-    /// What the closed control reads as: the chosen titles, or the placeholder.
     private var label: String {
         let titles = chosen.compactMap { value in items.first { $0.value == value }?.title }
         return titles.isEmpty ? placeholder : titles.joined(separator: ", ")
@@ -132,7 +129,6 @@ struct ExtensionPickerField: View {
             .onChange(of: palette.controlListDismissToken) { close() }
             .onDisappear { if open { palette.noteControlListOpen(false) } }
             .onChange(of: focus) { _, focus in
-                // Focus leaving the field takes its list with it.
                 if focus != index { close() }
             }
     }
@@ -142,7 +138,6 @@ struct ExtensionPickerField: View {
             if let leadingIcon, query.isEmpty {
                 ExtensionIconView(resolved: leadingIcon, size: 14)
             }
-            // While the list is open the control is the search field, caret and all.
             if open {
                 // A multi-select keeps its chosen values in view while the query is typed.
                 if allowsMultipleSelection, !chosen.isEmpty {

@@ -1,6 +1,5 @@
 import Foundation
 
-/// The size a Detail markdown image asks for through its URL's query.
 @main
 @MainActor
 struct ExtensionImageSizeTests {

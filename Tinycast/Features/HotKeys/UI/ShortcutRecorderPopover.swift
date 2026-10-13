@@ -9,7 +9,6 @@ struct ShortcutRecorderAnchorKey: PreferenceKey {
     }
 }
 
-/// The callout above the field: what to press, what is held, or what is in the way.
 struct ShortcutRecorderPopover: View {
     let placement: CalloutPlacement
 
@@ -68,7 +67,6 @@ struct ShortcutRecorderPopover: View {
                     Theme.Spacing.sm
                         + (placement.caretEdge == .top ? Theme.Size.calloutCaretHeight : 0))
         }
-        // Stock glass owns its elevation, as in `PopoverMenu` — no hand-tuned shadow.
         .glassEffect(
             .regular, in: CalloutShape(caretEdge: placement.caretEdge, caretX: placement.caretX))
     }
@@ -188,7 +186,6 @@ private struct ShortcutRecorderPopoverLayer: View {
 }
 
 extension View {
-    /// Hosts the shortcut recorder's callout for every recorder inside this view.
     func shortcutRecorderPopoverHost() -> some View {
         modifier(ShortcutRecorderPopoverHost())
     }

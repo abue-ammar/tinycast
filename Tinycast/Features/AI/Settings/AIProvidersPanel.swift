@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// One entry of the Providers list: the on-device model, an installed command, or an API connection.
 enum AIProviderRoute: Hashable {
     case appleIntelligence
     case installed(InstalledAIKind)
@@ -41,7 +40,6 @@ enum AIProviderTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// Settings → AI → Providers: every route in a list, the selected one's pages beside it.
 struct AIProvidersPanel: View {
     @Environment(AppCore.self) private var core
     @Environment(AISettingsStore.self) private var settings
@@ -166,7 +164,6 @@ struct AIProvidersPanel: View {
         .tag(route)
     }
 
-    /// Mail's Accounts list: add below the list, and remove whatever it has selected.
     private var listActions: some View {
         HStack(spacing: Theme.Spacing.xs) {
             Menu {
@@ -849,13 +846,11 @@ struct AIProvidersPanel: View {
     }
 }
 
-/// A model row's content, whichever of the three catalogue shapes it came from.
 private struct ProviderModel: Identifiable {
     let id: String
     let name: String
 }
 
-/// The list and header glyph: a brand mark or symbol on the tile `SettingsTabIcon` draws.
 private struct AIProviderTile: View {
     let icon: PopoverMenuIcon
     var size = Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2

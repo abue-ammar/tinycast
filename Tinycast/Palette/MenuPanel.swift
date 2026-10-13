@@ -264,7 +264,6 @@ final class MenuPanelController {
         return panel
     }
 
-    /// Sizes to the hosted menu, then seats it against the palette's frame in screen space.
     private func layout(
         corner: MenuPanelCorner, parent: NSWindow, metrics: InterfaceMetrics, resetMotion: Bool
     ) {

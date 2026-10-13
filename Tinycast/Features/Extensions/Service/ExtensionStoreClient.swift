@@ -1,6 +1,5 @@
 import Foundation
 
-/// The store's search, and the two places an install's bytes come from.
 struct ExtensionStoreClient: Sendable {
     /// Cacheless, never `URLSession.shared`, so a search or a download leaves no second copy on disk.
     private static let defaultSession: URLSession = {

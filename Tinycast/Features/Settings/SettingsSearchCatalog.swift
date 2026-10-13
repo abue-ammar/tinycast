@@ -1,12 +1,10 @@
 import Foundation
 
-/// One searchable place in Settings: a pane, or a row inside one of its `Form` sections.
 struct SettingsSearchEntry: Identifiable, Hashable, Sendable {
     let tab: SettingsTab
     /// Where picking this result lands; nil for the pane itself, which is its own result.
     let target: SettingsTarget?
     let title: String
-    /// Words a user might type that the visible title doesn't contain.
     let keywords: [String]
 
     /// Taking the pane from the target is what makes a row filed under the wrong pane unwritable.
@@ -38,7 +36,6 @@ struct SettingsSearchEntry: Identifiable, Hashable, Sendable {
 
     var id: String { "\(tab.title)/\(anchor?.title ?? "")/\(title)" }
 
-    /// The result row's second line — "General", or "General › Hyper Key".
     var breadcrumb: String {
         guard let anchor, anchor.title != tab.title else { return tab.title }
         return "\(tab.title) › \(anchor.title)"

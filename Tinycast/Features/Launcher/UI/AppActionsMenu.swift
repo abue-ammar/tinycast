@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Actions menu for a launcher app, from right-click or the Actions pill.
 @MainActor
 enum AppActionsMenu {
     /// Resolved by the screen that owns the visible order; every row runs its chord's call.

@@ -34,32 +34,22 @@ struct SymbolCatalog: Sendable {
     /// What the picker opens on: scrolling eight thousand icons is not a way to choose one.
     static let suggested =
         bundledGlyphs + [
-            // Status & power
             "bolt.fill", "cup.and.saucer.fill", "moon.fill", "sun.max.fill", "power", "battery.100",
             "eye.fill", "bell.fill", "sparkles", "wand.and.stars",
-            // Time
             "calendar", "clock.fill", "timer", "hourglass", "alarm.fill",
-            // Text & documents
             "doc.text.fill", "text.alignleft", "checklist", "list.bullet", "note.text",
             "folder.fill", "tray.full.fill", "archivebox.fill", "book.fill", "bookmark.fill",
-            // Communication
             "envelope.fill", "message.fill", "paperplane.fill", "phone.fill", "video.fill",
             "person.2.fill", "bubble.left.and.bubble.right.fill",
-            // Media
             "music.note", "speaker.wave.2.fill", "headphones", "photo.fill", "camera.fill",
             "play.fill", "pause.fill", "paintbrush.fill", "theatermasks.fill",
-            // Developer
             "terminal.fill", "chevron.left.forwardslash.chevron.right", "hammer.fill",
             "wrench.and.screwdriver.fill", "ant.fill", "cpu", "memorychip", "externaldrive.fill",
             "server.rack", "shippingbox.fill",
-            // System & network
             "gearshape.fill", "slider.horizontal.3", "network", "globe", "link", "wifi",
             "display", "keyboard", "cursorarrow.rays", "square.grid.2x2.fill",
-            // Security & money
             "lock.fill", "key.fill", "shield.fill", "creditcard.fill", "cart.fill", "banknote.fill",
-            // Data
             "chart.bar.fill", "chart.pie.fill", "function", "number", "brain",
-            // Places & things
             "star.fill", "heart.fill", "flag.fill", "tag.fill", "map.fill", "location.fill",
             "airplane", "car.fill", "leaf.fill", "flame.fill", "drop.fill", "snowflake",
             "cloud.fill", "gift.fill", "trash.fill", "arrow.triangle.2.circlepath"

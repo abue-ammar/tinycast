@@ -51,7 +51,6 @@ final class PaletteCoordinator {
     /// The own window the palette covered, for anything acting on it after the palette hides.
     var previousOwnWindow: NSWindow? { windowController.previousOwnWindow }
 
-    /// Up and pointed at `mode`, which is the state a mode command's second invocation closes.
     func isShowing(_ mode: PaletteMode) -> Bool {
         windowController.isVisible && palette.mode == mode
     }
@@ -73,7 +72,7 @@ final class PaletteCoordinator {
         }
     }
 
-    /// Navigating keeps the screen under as the back step; the launcher is the root and never has one.
+    /// The screen under becomes the back step; the launcher is the root and never has one.
     func navigate(to mode: PaletteMode) {
         if windowController.isVisible, palette.mode != mode, mode != .launcher {
             palette.push(mode: mode)
@@ -108,7 +107,7 @@ final class PaletteCoordinator {
         }
     }
 
-    /// Root search onto `entry` alone, as Raycast opens a command whose shortcut lacks values.
+    /// Root search onto `entry` alone, for a command whose shortcut lacks values.
     func showArguments(of entry: AppEntry, values: [String: String]) {
         showPalette(mode: .launcher, seeding: entry.name)
         // After the show: `prepare` runs inside it and would clear everything set beforehand.
@@ -131,12 +130,10 @@ final class PaletteCoordinator {
         hidePalette(restoreFocus: false)
     }
 
-    /// Reset to the root search now rather than after the Pop to Root Search delay.
     func popToRootNow() {
         windowController.popToRootNow()
     }
 
-    /// True for the slim compact bar: compact on, launcher root, empty, not overflowed.
     var paletteIsCollapsed: Bool {
         settings.compactMode
             && !palette.forceExpanded
@@ -144,19 +141,16 @@ final class PaletteCoordinator {
             && palette.query.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
-    /// The compact bar's overflow: expand into the full launcher without typing.
     func expandFromCompact() {
         palette.forceExpanded = true
     }
 
-    /// Resize the panel to the current collapsed state, when it flips while open.
     func syncPaletteSize() {
         windowController.applyCollapsed(paletteIsCollapsed)
     }
 
     // MARK: - Dragging
 
-    /// Bracket one drag gesture; the handle tracks it from mouse-down to mouse-up itself.
     func beginPaletteDrag() {
         windowController.beginDrag()
     }

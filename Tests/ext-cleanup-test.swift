@@ -100,7 +100,6 @@ struct ExtensionCleanupTests {
         expect(exists(roots.support, "scope-thing"), "the scoped scratch dir survives")
     }
 
-    /// What the button promises is what pressing it does.
     static func reclaimableMatchesClean() {
         let (roots, base) = makeRoots()
         defer { try? FileManager.default.removeItem(at: base) }

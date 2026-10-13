@@ -1,6 +1,5 @@
 import Foundation
 
-/// Every row chord resolves to exactly the shortcut the old per-chord handlers answered.
 @main
 @MainActor
 struct PaletteShortcutTests {

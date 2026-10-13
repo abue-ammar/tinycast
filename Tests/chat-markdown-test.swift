@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The chat's selectable text: one attributed string whose find marks land where the index says.
 @main
 @MainActor
 struct ChatMarkdownTests {
@@ -92,7 +91,6 @@ struct ChatMarkdownTests {
         expect(plain.string == note.string, "the colouring never changes the text")
     }
 
-    /// The paths the index hands out are the ones the renderer builds, leaf by leaf.
     static func everyMatchLandsOnItsWord() {
         let message = ChatMessage(role: .assistant, text: reply)
         let found = ChatFindIndex.occurrences(of: "apple", in: [message])
@@ -154,7 +152,6 @@ struct ChatMarkdownTests {
         return found
     }
 
-    /// Each formula is one attachment character carrying the source a copy puts back.
     static func formulasAreOneCharacterEach() {
         let text = "Roots \\(x^2\\) and $y$.\n\n$$\\frac{a}{b}$$\n\nAt $5 or $10, $\\foo$."
         let rendered = render(ChatMessage(role: .assistant, text: text), current: nil).string

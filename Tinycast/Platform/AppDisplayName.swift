@@ -18,7 +18,6 @@ enum AppDisplayName {
 }
 
 extension Bundle {
-    /// The channel-aware display name, from the generated Info.plist.
     var appDisplayName: String {
         infoName("CFBundleDisplayName") ?? infoName("CFBundleName") ?? "Tinycast"
     }

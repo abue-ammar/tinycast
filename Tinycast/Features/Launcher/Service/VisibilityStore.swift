@@ -19,7 +19,6 @@ final class VisibilityStore {
         disabledKinds = Set(defaults.stringArray(forKey: kindsKey) ?? [])
     }
 
-    /// Replace both exclusion sets at once (used when importing a settings backup).
     func replace(hiddenItems: [String], disabledKinds newKinds: [String]) {
         hiddenItemKeys = Set(hiddenItems)
         disabledKinds = Set(newKinds)

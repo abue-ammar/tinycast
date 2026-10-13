@@ -78,7 +78,6 @@ final class ExtensionListPanelController {
     }
 }
 
-/// Where a list lands on screen, and which way it opened for the chevron that reports it.
 struct ExtensionListPlacement: Equatable {
     let frame: NSRect
     let flipped: Bool

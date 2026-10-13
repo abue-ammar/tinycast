@@ -1,5 +1,3 @@
-// Window management's lists as settings.json spells them: round trips, hand edits, bad records.
-
 import CoreGraphics
 import Foundation
 

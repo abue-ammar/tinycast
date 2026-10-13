@@ -15,7 +15,6 @@ final class HUDPanel: NSPanel {
         level = .palette
         ignoresMouseEvents = !acceptsMouseEvents
         hidesOnDeactivate = false
-        // Suppresses AppKit's own window animation; `fadeIn`/`fadeOut` replace it.
         animationBehavior = .none
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false

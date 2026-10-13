@@ -28,7 +28,6 @@ struct ExtensionPreferenceSchema {
     }
 }
 
-/// The search-bar dropdown's pure rules: how its choices are read, and which one it starts on.
 @main
 @MainActor
 struct ExtensionSearchAccessoryTests {

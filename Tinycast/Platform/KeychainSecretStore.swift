@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-/// Login-Keychain generic passwords, one item per account inside a caller-named scope.
 struct KeychainSecretStore: Sendable {
     enum StoreError: Error {
         case invalidEncoding

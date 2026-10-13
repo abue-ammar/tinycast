@@ -440,7 +440,6 @@ struct ExtensionTests {
             picked?["bundleId"] as? String == "com.apple.Terminal", String(describing: picked))
         check("an unset app picker is absent", prefs["browser"]?.runtimeValue(nil) == nil)
 
-        // A manifest with no commands isn't an extension Tinycast can run.
         check("rejects a manifest with no commands", ExtensionManifest(json: ["name": "x"]) == nil)
         check(
             "rejects a Windows-only manifest",
@@ -1127,7 +1126,6 @@ struct ExtensionTests {
             return
         }
 
-        // A synthetic command exercising React state, the node shims, timers and host calls.
         let command = """
             "use strict";
             const { List, ActionPanel, Action, Icon, showToast, Toast } = require("@raycast/api");
@@ -1284,7 +1282,6 @@ struct ExtensionTests {
                 == "function,false,undefined,red,n=2,true,function",
             String(describing: screen.items.first?.node.array("accessories").last))
 
-        // Dispatch the row's action and confirm the re-render.
         let actions = ExtensionScreen.actions(in: screen.actionPanel(forItemAt: 0))
         check("action is dispatchable", actions.first?.handler != nil)
         if let handler = actions.first?.handler {
@@ -1389,7 +1386,6 @@ struct ExtensionTests {
         await runtime.stop(session: "s1b")
         runtime.setDelegate(recorder)
 
-        // A no-view command runs headless and reports completion.
         let (headless, headlessHost, headlessRecorder) = makeRuntime()
         try? await headless.boot(
             config: .current(supportDirectory: FileManager.default.temporaryDirectory))

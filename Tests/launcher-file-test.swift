@@ -1,5 +1,3 @@
-// Launcher items as settings.json spells them: round trips, missing fields, bad records.
-
 import Foundation
 
 @main

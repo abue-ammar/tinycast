@@ -1,4 +1,3 @@
-// Standalone contract tests for the pure Space-switch gesture tables and IOHID payload bytes.
 import Foundation
 
 @main

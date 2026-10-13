@@ -1,6 +1,5 @@
 import Foundation
 
-/// How a run ended, once it has.
 struct CommandOutcome: Sendable {
     let summary: String
     /// The nudge for a failure the reader can fix, when the exit status names one.
@@ -9,7 +8,6 @@ struct CommandOutcome: Sendable {
     let finishedAt: Date
 }
 
-/// One run of one command, from the moment it starts.
 struct CommandRun: Identifiable, Sendable {
     let id = UUID()
     /// Which custom command this was, so the window can run it again.

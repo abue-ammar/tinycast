@@ -27,7 +27,6 @@ struct VolumeLevelTests {
         expect(VolumeLevel.clamped(1.5), 1, "above one clamps to one")
         expect(VolumeLevel.clamped(0.42), 0.42, "an in-range level passes through")
 
-        // On-grid levels move exactly one step, in both directions.
         for line in 0...VolumeLevel.steps {
             let level = Double(line) * VolumeLevel.step
             if line < VolumeLevel.steps {

@@ -102,25 +102,20 @@ enum CalcUnits {
 
     /// Keyword-less counterpart per unit; only `m→ft` is compound.
     static let autoTargets: [String: (to: String, compound: Bool)] = [
-        // Length
         "mm": ("in", false), "cm": ("in", false), "m": ("ft", true), "km": ("mi", false),
         "dm": ("cm", false), "in": ("cm", false), "ft": ("m", false), "yd": ("m", false), "mi": ("km", false),
-        // Weight
         "mg": ("g", false), "g": ("oz", false), "kg": ("lb", false), "oz": ("g", false),
         "lb": ("kg", false),
         // Temperature (bare form requires a spelled/°-prefixed alias — see parseBareConversion)
         "°C": ("f", false), "°F": ("c", false), "K": ("c", false),
-        // Time
         "ms": ("s", false), "s": ("ms", false), "min": ("s", false), "hr": ("min", false),
         "day": ("hr", false), "week": ("day", false),
         "mo": ("day", false), "yr": ("day", false),
         "workdays": ("hr", false),
-        // Area
         "mm²": ("in2", false), "cm²": ("in2", false), "m²": ("ft2", false), "km²": ("mi2", false),
         "in²": ("cm2", false), "ft²": ("m2", false), "yd²": ("m2", false), "mi²": ("km2", false),
         "acre": ("m2", false), "ha": ("acre", false),
         "dm²": ("cm2", false),
-        // Volume
         "mL": ("floz", false), "L": ("gal", false), "cup": ("ml", false), "tbsp": ("ml", false),
         "tsp": ("ml", false), "gal": ("l", false), "qt": ("l", false), "pt": ("ml", false),
         "fl oz": ("ml", false),
@@ -129,23 +124,17 @@ enum CalcUnits {
         "in³": ("ml", false), "ft³": ("l", false), "yd³": ("l", false),
         "L/s": ("l/min", false), "L/min": ("l/h", false), "L/h": ("l/min", false),
         "m³/s": ("l/s", false), "m³/h": ("l/min", false), "gal/min": ("l/min", false),
-        // Fuel economy
         "mpg": ("km/l", false), "km/L": ("mpg", false),
-        // Digital storage
         "bit": ("b", false), "B": ("bit", false), "kB": ("kib", false), "MB": ("mib", false),
         "GB": ("gib", false), "TB": ("tib", false), "PB": ("tb", false), "KiB": ("kb", false),
         "MiB": ("mb", false), "GiB": ("gb", false), "TiB": ("tb", false),
-        // Angle
         "deg": ("rad", false), "rad": ("deg", false), "grad": ("deg", false),
         "turn": ("deg", false), "arcmin": ("deg", false), "arcsec": ("deg", false),
-        // Speed
         "km/h": ("mph", false), "mph": ("kmh", false), "m/s": ("kmh", false),
         "kn": ("kmh", false), "ft/s": ("mph", false),
-        // Pressure
         "bar": ("psi", false), "psi": ("bar", false), "atm": ("psi", false),
         "mbar": ("psi", false), "kPa": ("psi", false), "hPa": ("psi", false),
         "mmHg": ("psi", false), "Torr": ("psi", false),
-        // Data transfer rate
         "Mbps": ("kbps", false), "Gbps": ("mbps", false), "Kbps": ("bps", false),
         "bps": ("kbps", false), "Tbps": ("gbps", false),
         "Bps": ("bps", false), "kBps": ("kbps", false), "MBps": ("mbps", false),

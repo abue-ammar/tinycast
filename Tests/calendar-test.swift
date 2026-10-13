@@ -1,4 +1,3 @@
-// Meeting links, the join and menu-bar windows, auto-join, drafts, day groups and span.
 import Foundation
 
 @main

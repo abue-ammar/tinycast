@@ -11,7 +11,6 @@ struct ExtensionPickerList: View {
     private var menuListInset: CGFloat { metrics.spacing.md }
     let items: [ExtensionPickerItem]
     let selection: Int
-    /// Values already chosen; a single-select picker passes the one it holds.
     let chosen: Set<String>
     let assetsPath: String?
     /// Fixed, never intrinsic, so the list cannot jitter as its rows change. A form's picker

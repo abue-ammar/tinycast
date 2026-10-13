@@ -41,7 +41,6 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
 
     /// What the mover has to do, so its dispatch stays exhaustive over the catalog.
     enum Kind: String, Sendable {
-        /// Resolve a target frame from the screen and write it.
         case geometry
         /// Geometry too, but sourced from the recorded pre-action frame rather than computed.
         case restore
@@ -81,7 +80,6 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
     let sfSymbol: String
     let kind: Kind
     let group: Group
-    /// Only the four halves honour `WindowCycle`; the rest ignore the step they are handed.
     let cyclesOnRepeat: Bool
     /// False for the nudges, so the mover never writes `kAXSizeAttribute` for them.
     let resizes: Bool
@@ -116,7 +114,6 @@ enum WindowCommandCatalog {
         .leftHalf, .rightHalf, .topHalf, .bottomHalf, .centerHalf
     ]
 
-    /// Nudges reposition without ever touching the size.
     static let movesOnly: Set<WindowCommand.ID> = [.moveLeft, .moveRight, .moveUp, .moveDown]
 
     private static func name(for id: WindowCommand.ID) -> String {

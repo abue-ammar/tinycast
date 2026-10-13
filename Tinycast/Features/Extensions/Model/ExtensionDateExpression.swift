@@ -2,7 +2,6 @@ import Foundation
 
 /// Presets and typed dates ("tomorrow at 10am"); the clock and calendar are injected.
 enum ExtensionDateExpression {
-    /// One row of the picker: a name, the date it means, and how that date reads.
     struct Suggestion: Equatable, Identifiable {
         let title: String
         /// nil clears the field, which is what "No Date" means.
@@ -13,7 +12,6 @@ enum ExtensionDateExpression {
         var id: String { title }
     }
 
-    /// What the picker opens with, before anything is typed.
     static func presets(now: Date, calendar: Calendar, includesTime: Bool) -> [Suggestion] {
         var rows: [Suggestion] = [Suggestion(title: "No Date", date: nil, detail: nil)]
         let today = calendar.startOfDay(for: now)
@@ -34,7 +32,6 @@ enum ExtensionDateExpression {
         return rows
     }
 
-    /// Rows for what has been typed: the parse of it first, then the presets it matches.
     static func suggestions(
         query: String, now: Date, calendar: Calendar, includesTime: Bool
     ) -> [Suggestion] {
@@ -62,7 +59,6 @@ enum ExtensionDateExpression {
         let lowered = expression.lowercased().trimmingCharacters(in: .whitespaces)
         guard !lowered.isEmpty else { return nil }
 
-        // The time rides on whatever day the rest of the phrase resolves to.
         let (dayPhrase, time) = splitTime(lowered, calendar: calendar)
         guard let day = parseDay(dayPhrase, now: now, calendar: calendar) else { return nil }
         guard let time else { return day }
@@ -163,7 +159,6 @@ enum ExtensionDateExpression {
             let rest = String(phrase[range.upperBound...])
             return (day, parseTime(rest))
         }
-        // A phrase ending in a time, with no "at" — "tomorrow 10am".
         let words = phrase.split(separator: " ").map(String.init)
         if let last = words.last, let time = parseTime(last), words.count > 1 {
             return (words.dropLast().joined(separator: " "), time)
@@ -226,7 +221,6 @@ enum ExtensionDateExpression {
         return nil
     }
 
-    /// How a resolved date reads in the picker's trailing column.
     static func detail(
         for date: Date, calendar: Calendar, includesTime: Bool = false
     ) -> String {

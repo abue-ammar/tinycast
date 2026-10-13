@@ -2,7 +2,7 @@
 import AppKit
 @preconcurrency import ApplicationServices
 
-/// Walks into a room: its windows land on one display, everything else steps back. See window-rooms.md.
+/// Walks into a room: its windows land on one display, everything else steps back.
 @MainActor
 enum RoomRunner {
     /// Long enough for a cold app to draw, short enough a stuck one cannot hold the room.

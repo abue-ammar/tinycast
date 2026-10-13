@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The title bar capsule's recipe along the bottom, one button per Markdown edit.
 struct NoteFormattingBar: View {
     @Environment(NotesCoordinator.self) private var notes
 
@@ -94,7 +93,6 @@ struct NoteFormattingBar: View {
     }
 }
 
-/// The bar's handle: one round button that shows and hides every other control.
 private struct NoteFormattingToggle: View {
     let isExpanded: Bool
     let action: () -> Void

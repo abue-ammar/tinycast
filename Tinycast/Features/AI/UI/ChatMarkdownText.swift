@@ -94,7 +94,6 @@ final class ChatSelectableTextView: NSTextView {
         linkTextAttributes = [.foregroundColor: NSColor.linkColor, .cursor: NSCursor.pointingHand]
     }
 
-    /// AppKit's own designated initializer; `NSTextView(frame:)` routes through it.
     override init(frame frameRect: NSRect, textContainer container: NSTextContainer?) {
         super.init(frame: frameRect, textContainer: container)
     }
@@ -267,7 +266,6 @@ final class ChatSelectableTextView: NSTextView {
     }
 }
 
-/// A code block's language and its own Copy, in the strip its text block leaves above the code.
 private final class ChatCodeHeader: NSView {
     static var height: CGFloat { ChatMarkdownRenderer.codeHeaderHeight }
 

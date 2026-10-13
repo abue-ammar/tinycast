@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The Search Quicklinks screen: the whole library, pinned entries first.
 struct QuicklinkList: View {
     @Environment(\.metrics) private var metrics
     let results: [Quicklink]
@@ -138,7 +137,6 @@ private struct QuicklinkRow: View {
     }
 }
 
-/// The detail pane beside the list, the way Search Snippets previews the snippet it highlights.
 struct QuicklinkPreview: View {
     @Environment(\.metrics) private var metrics
     let quicklink: Quicklink?

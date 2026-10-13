@@ -1,4 +1,3 @@
-// Standalone test for the emoji catalog and grid geometry, compiling the real sources.
 import Foundation
 
 @main
@@ -14,7 +13,6 @@ struct EmojiTests {
     }
 
     static func main() {
-        // Dataset + parser
         let entries = EmojiCatalog.parse(EmojiData.raw)
         expect(entries.count > 1900, "dataset has \(entries.count) records (want > 1900)")
         expect(Set(entries.map(\.glyph)).count == entries.count, "glyphs are unique")
@@ -105,7 +103,6 @@ struct EmojiTests {
                 "\(preferred) reads the \(expected) packs")
         }
 
-        // Skin tone application
         expect(EmojiCatalog.applyTone(.dark, to: "👋") == "👋🏿", "modifier appended")
         let victory = entries.first { $0.name == "victory hand" }!
         expect(victory.glyph.unicodeScalars.contains { $0.value == 0xFE0F }, "✌️ base carries VS16")
@@ -119,7 +116,6 @@ struct EmojiTests {
             holdingHands!.display(tone: .dark) == holdingHands!.glyph,
             "tone ignored on non-capable entries")
 
-        // Grid geometry (8 columns): sections of 16, 10, 3 cells
         let g = EmojiGridGeometry(counts: [16, 10, 3], columns: 8)
         expect(g.down(from: 0) == 8, "down within a full section keeps the column")
         expect(g.up(from: 8) == 0, "up within a full section keeps the column")

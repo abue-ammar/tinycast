@@ -1,7 +1,6 @@
 // Node's `events`. Its own module because the stream core builds on it and `node-shims` builds on
 // the stream core, so leaving it there would close an import cycle.
 
-// State is created lazily, like in the Node implementation.
 export class EventEmitter {
   constructor() {
     this._events = new Map();

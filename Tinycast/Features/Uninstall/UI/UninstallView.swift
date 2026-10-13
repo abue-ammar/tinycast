@@ -69,7 +69,6 @@ private struct UninstallRow: View {
     let onToggle: () -> Void
     @State private var hovered = false
 
-    /// Selection wins over hover when a row is both.
     private var fill: Color {
         if selected { return Theme.Colors.selection }
         if hovered { return Theme.Colors.rowHover }

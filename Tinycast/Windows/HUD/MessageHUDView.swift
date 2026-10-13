@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The message pill, led by its tone's mark or a spinner. See docs/ui.md#dialogs--hud.
 struct MessageHUDView: View {
     enum Accessory {
         case tone(DialogTone)

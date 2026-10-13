@@ -69,7 +69,6 @@ struct CalcExpressionParser {
         return name
     }
 
-    /// An operator, its binding power, its right operand's minimum, and whether it consumes.
     struct BinaryOp {
         let op: CalcOperator
         let bindingPower: Int

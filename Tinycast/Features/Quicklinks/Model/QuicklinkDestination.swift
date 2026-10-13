@@ -5,7 +5,7 @@ enum QuicklinkDestination: Hashable, Sendable {
     case web(URL)
     /// A mountable share: `smb://`, `afp://`, `nfs://`, `ftp://`, `sftp://`, `ftps://`.
     case network(URL)
-    /// Any other registered scheme — `spotify://`, `slack://`, `shortcuts://`, `mailto:`.
+    /// Any other registered scheme, such as `mailto:`.
     case deeplink(URL)
     /// An absolute local path, tilde already expanded.
     case path(String)
@@ -19,7 +19,6 @@ enum QuicklinkDestination: Hashable, Sendable {
         }
     }
 
-    /// What the row and the editor preview show under the name.
     var displayText: String {
         switch self {
         case .web(let url), .network(let url), .deeplink(let url): return url.absoluteString
@@ -72,7 +71,6 @@ enum QuicklinkDestination: Hashable, Sendable {
         return home + String(value.dropFirst(1))
     }
 
-    /// The lowercased scheme when the value starts with an RFC 3986 `scheme:`.
     private static func scheme(of value: String) -> String? {
         guard let colon = value.firstIndex(of: ":") else { return nil }
         let candidate = value[value.startIndex..<colon]

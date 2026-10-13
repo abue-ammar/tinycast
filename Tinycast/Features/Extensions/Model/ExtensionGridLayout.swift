@@ -2,7 +2,7 @@ import Foundation
 
 /// A `Grid`'s layout props: the tile shape and how an item's content sits inside it.
 struct ExtensionGridLayout: Equatable, Sendable {
-    /// Space between a tile's border and its content. Raycast scales it with the tile, so this does.
+    /// Space between a tile's border and its content; it scales with the tile.
     enum Inset: String, Sendable {
         case zero
         case small = "sm"
@@ -22,9 +22,7 @@ struct ExtensionGridLayout: Equatable, Sendable {
     /// The tile's own corner, owned here rather than in `Theme`: no launcher surface is this size.
     static let tileRadius: Double = 12
 
-    /// Raycast clamps to 1…8.
     var columns: Int
-    /// Tile width ÷ height.
     var aspectRatio: Double
     /// `Grid.Fit.Fill` crops content to the tile; `.Contain` fits it inside.
     var fills: Bool

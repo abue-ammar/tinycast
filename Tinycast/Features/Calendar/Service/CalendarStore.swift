@@ -1,7 +1,6 @@
 import AppKit
 import EventKit
 
-/// The span's meetings, read from EventKit. See docs/features/calendar.md.
 @MainActor
 @Observable
 final class CalendarStore {

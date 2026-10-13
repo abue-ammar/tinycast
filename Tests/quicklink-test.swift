@@ -1,4 +1,3 @@
-// Standalone test for the quicklink model, destination detection, store and archive.
 import Foundation
 import SwiftUI
 
@@ -432,7 +431,7 @@ struct QuicklinkTests {
         let incoming = [
             link("github", "https://elsewhere.com"),  // same name
             link("Repos", "https://github.com"),  // same destination
-            link("Jira", "https://jira.example.com"),  // new
+            link("Jira", "https://jira.example.com"),
             link("Jira Two", "https://jira.example.com")  // duplicate of the one above, in-batch
         ]
 

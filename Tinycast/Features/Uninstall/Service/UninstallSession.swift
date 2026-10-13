@@ -1,6 +1,5 @@
 import Foundation
 
-/// One scan, its plan and the checked set; the checked-set invariant lives elsewhere.
 @MainActor
 @Observable
 final class UninstallSession {

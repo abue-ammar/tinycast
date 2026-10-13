@@ -37,7 +37,6 @@ struct ShortcutRecorder: View {
             .contentShape(shape)
             .onTapGesture { hotKeys.recordingAction = isRecording ? nil : action }
             .onHover { hovered = $0 }
-            // Hand the callout this field's bounds while it's the open one.
             .anchorPreference(key: ShortcutRecorderAnchorKey.self, value: .bounds) {
                 isRecording ? $0 : nil
             }

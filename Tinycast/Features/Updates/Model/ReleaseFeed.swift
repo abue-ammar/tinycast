@@ -1,6 +1,5 @@
 import Foundation
 
-/// One published release this build could install, reduced to the fields the updater needs.
 struct AvailableRelease: Codable, Hashable, Sendable {
     let version: AppVersion
     let tag: String

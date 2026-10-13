@@ -1,6 +1,5 @@
 import Foundation
 
-/// What an update check concludes from the version an install was recorded at.
 @main
 @MainActor
 struct ExtensionVersionStoreTests {

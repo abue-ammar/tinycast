@@ -29,7 +29,6 @@ final class CalculatorCoordinator {
     /// History records the canonical answer; only what reaches the pasteboard is localized.
     private var format: CalcNumberFormat { core.calcNumberFormat }
 
-    /// Enter on the inline calculator card: copy the answer, remember the calculation, dismiss.
     func copyCalculatorResult(_ result: CalcResult) {
         guard case .value(let display, let copyText) = result.payload else { return }
         calcHistory.record(expression: result.expression, result: display)
@@ -48,7 +47,6 @@ final class CalculatorCoordinator {
         return true
     }
 
-    /// `⇧⌘↵` on the card: the whole calculation, for pasting into a note or a message.
     func copyCalculationWithExpression(_ result: CalcResult) {
         guard case .value(let display, let copyText) = result.payload else { return }
         calcHistory.record(expression: result.expression, result: display)
@@ -58,7 +56,6 @@ final class CalculatorCoordinator {
             "\(format.localizedExpression(result.expression)) = \(format.localized(copyText))")
     }
 
-    /// Enter on a Calculator History row: re-copy the stored answer (no re-record).
     func copyHistoryEntry(_ entry: CalcHistoryEntry) {
         paletteCoordinator.hidePalette(restoreFocus: false)
         Paster.copyPlainText(format.localized(entry.copyText))

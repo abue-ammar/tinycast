@@ -3,7 +3,6 @@ struct ExtensionGridGeometry {
     /// Selectable cells per section, in visible order. An empty section is never included.
     let counts: [Int]
     let columns: Int
-    /// Flat index each section begins at.
     private let starts: [Int]
 
     init(counts: [Int], columns: Int) {

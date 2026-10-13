@@ -99,7 +99,6 @@ struct ExtensionListView: View {
         }
     }
 
-    /// Scroll id of the selected item, or nil when the selection is out of range.
     private var selectedRowID: String? {
         screen.items.indices.contains(selection) ? screen.items[selection].id : nil
     }
@@ -166,7 +165,6 @@ struct ExtensionListView: View {
     }
 }
 
-/// One `List.Item`: icon, title, subtitle, then its accessories right-aligned.
 private struct ExtensionItemRow: View {
     @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark
@@ -300,7 +298,6 @@ struct ExtensionAccessoriesView: View {
     }
 }
 
-/// One `Grid.Item`: content sized to the tile the `Grid`'s props ask for, title underneath.
 private struct ExtensionGridCell: View {
     @Environment(\.metrics) private var metrics
     @Environment(\.isDarkAppearance) private var isDark

@@ -1,7 +1,6 @@
 import Foundation
 
-/// Raycast's background refresh, reduced to decisions. No state, no clock reads: every moment arrives
-/// as a parameter, so the harness drives it.
+/// Pure: every moment arrives as a parameter, so the harness drives it.
 enum ExtensionRefreshPolicy {
     /// What a manifest may ask for; tighter would burn battery re-rendering a subtitle.
     static let minimumInterval: TimeInterval = 60
@@ -14,7 +13,7 @@ enum ExtensionRefreshPolicy {
     /// Idle wakeups stay this rare; date math is cheap but a wakeup never is.
     static let idleHeartbeat: TimeInterval = 300
 
-    /// `"90s"`, `"1m"`, `"12h"`, `"1d"` → seconds, clamped to the floor. Anything else is no schedule.
+    /// `"90s"`, `"1m"`, `"12h"`, `"1d"` → seconds, clamped to the floor; anything else is nil.
     static func parse(_ raw: String?, floor: TimeInterval = minimumInterval) -> TimeInterval? {
         guard let raw else { return nil }
         let text = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -74,13 +73,11 @@ enum ExtensionRefreshPolicy {
         min(max(interval, 15), 120)
     }
 
-    /// Launcher dot for a scheduled command: an active refresh, its dimmed twin when switched
-    /// off, or the last background error. Anything unschedulable shows nothing at all.
     static func indicator(
         schedulable: Bool, backgroundEnabled: Bool, lastError: String?
     ) -> ExtensionRefreshState? {
         guard schedulable else { return nil }
-        // Failures arrive with a JS stack; the row hashes and diffs this, so keep the headline only.
+        // Failures carry a JS stack; the row hashes and diffs this, so keep the headline only.
         if let lastError { return .failed(headline(lastError)) }
         return backgroundEnabled ? .active : .idle
     }
@@ -89,8 +86,7 @@ enum ExtensionRefreshPolicy {
         String(message.split(separator: "\n").first ?? "Background refresh failed.")
     }
 
-    /// `subtitle: null` clears back to the manifest; the stored override otherwise wins. A subtitle
-    /// restating the owning extension is dropped — the row already carries it on the right.
+    /// A subtitle restating the owning extension is dropped: the row already carries it.
     static func displaySubtitle(manifest: String?, override: String?, ownerTitle: String) -> String? {
         let resolved = (override ?? manifest)?.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let resolved, !resolved.isEmpty else { return nil }

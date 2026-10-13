@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The whole update surface: prompt, release notes, progress and report, in one window.
 struct UpdateWindowView: View {
     @Environment(UpdateCoordinator.self) private var updates
 

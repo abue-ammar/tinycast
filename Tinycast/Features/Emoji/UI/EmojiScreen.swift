@@ -176,7 +176,6 @@ struct EmojiScreen: PaletteScreen {
     }
 }
 
-/// Actions menu for a cell, shown bottom-right on right-click like `ClipboardActionsMenu`.
 @MainActor
 enum EmojiActionsMenu {
     static func content(

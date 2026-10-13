@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The pane column: whichever pane the history currently points at.
 struct SettingsDetailView: View {
     @Environment(SettingsNavigationState.self) private var navigation
 

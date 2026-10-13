@@ -1,6 +1,5 @@
 import Foundation
 
-/// Everything an update can fail at, phrased for the window that reports it.
 enum UpdateFailure: LocalizedError, Equatable {
     case downloadFailed(String)
     case extractFailed(String)

@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The support surface: the ask, the one button, and the reminder switch.
 struct SupportWindowView: View {
     /// Held directly, not injected: it publishes nothing, so `@Observable` would buy nothing.
     let support: SupportCoordinator
@@ -88,7 +87,6 @@ struct SupportWindowView: View {
     }
 }
 
-/// The window's one call to action. Local to Support, like every other view this feature owns.
 private struct SupportActionButton: View {
     let title: String
     let icon: String

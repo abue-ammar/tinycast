@@ -1,6 +1,5 @@
 import Foundation
 
-/// Oklab and its polar form, the space behind the one perceptual notation a colour copies as.
 extension ColorValue {
     /// Oklab is defined on light, not on the gamma-encoded numbers a hex triplet carries.
     private static func linear(_ channel: Double) -> Double {

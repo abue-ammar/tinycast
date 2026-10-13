@@ -1,7 +1,6 @@
 import AppKit
 import Foundation
 
-/// What the palette is showing for the running command.
 enum ExtensionSessionState: Equatable {
     case idle
     case launching
@@ -21,7 +20,6 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     private(set) var updating: Set<String> = []
     private(set) var menuBars: ExtensionMenuBarManager?
     private(set) var state: ExtensionSessionState = .idle
-    /// The command whose session is live, if any.
     private(set) var running: ExtensionCommandRef?
     /// The command waits on a browser sign-in; resetting the palette now would end it.
     var isSigningIn: Bool { bridge.isSigningIn }
@@ -198,7 +196,6 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         publishLauncherEntries()
     }
 
-    /// An appearance wins, else the shipped artwork; the launcher gets the answer.
     private func icon(
         for command: ExtensionCommand, in owner: InstalledExtension,
         appearance: ExtensionAppearance?
@@ -359,7 +356,6 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
 
     // MARK: - Running a command
 
-    /// Resolve a launcher row to a command, or nil when the row isn't an extension command.
     func resolve(_ entry: AppEntry) -> (InstalledExtension, ExtensionCommand)? {
         guard let reference = ExtensionCommandRef(entryID: entry.id),
             let owner = extensionNamed(reference.extensionName),
@@ -541,7 +537,6 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         menuBars?.run(owner, command: command)
     }
 
-    /// Whether the Actions menu can offer refresh controls for this row.
     func isBackgroundSchedulable(for entry: AppEntry) -> Bool {
         guard let (_, command) = resolve(entry) else { return false }
         return ExtensionRefreshPolicy.isSchedulable(mode: command.mode, interval: command.interval)
@@ -592,7 +587,6 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         backgroundTask = Task { [weak self] in await self?.backgroundLoop() }
     }
 
-    /// Whether any installed command currently wants background ticks.
     private var hasEnabledBackgroundCommands: Bool {
         schedulableCommands().contains { owner, command in
             commandMetadata.metadata(extension: owner.manifest.name, command: command.name)

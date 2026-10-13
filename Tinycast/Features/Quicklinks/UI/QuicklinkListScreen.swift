@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Search Quicklinks: the library filtered by the search field, pinned entries first.
 struct QuicklinkListScreen: PaletteScreen {
     let store: QuicklinkStore
     let core: AppCore
@@ -8,7 +7,6 @@ struct QuicklinkListScreen: PaletteScreen {
 
     private var metrics: InterfaceMetrics { core.settings.interfaceSize.metrics }
     let openActions: () -> Void
-    /// Opens the palette's own menu for an `options=` field, keyed by argument name.
     let openArgumentOptions: (String) -> Void
 
     var rows: [Quicklink] {
@@ -44,7 +42,6 @@ struct QuicklinkListScreen: PaletteScreen {
             values: QuicklinkArgumentsAccessory.values(for: quicklink, vm: vm))
     }
 
-    /// The header's argument fields, which is where a templated link collects its values.
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
     ) -> PaletteHeaderAccessory? {
@@ -115,7 +112,6 @@ struct QuicklinkListScreen: PaletteScreen {
     }
 }
 
-/// The ⌘K menu for a quicklink row.
 @MainActor
 enum QuicklinkActionsMenu {
     /// `values` are the header's argument fields, so a menu row opens with what ↵ would have used.

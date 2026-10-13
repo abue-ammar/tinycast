@@ -9,7 +9,6 @@ enum Permissions {
         AXIsProcessTrusted()
     }
 
-    /// Returns current trust state and prompts the user to grant it if needed.
     @discardableResult
     static func ensureAccessibility() -> Bool {
         let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String

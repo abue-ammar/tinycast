@@ -15,7 +15,6 @@ enum FavoriteSlots {
         numberRowKeyCodes.firstIndex(of: keyCode)
     }
 
-    /// The digit shown on the row at `index`, or nil past the last slot.
     static func digit(at index: Int) -> Character? {
         digits.indices.contains(index) ? digits[index] : nil
     }

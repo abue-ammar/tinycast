@@ -1,10 +1,7 @@
 import AppKit
 import SwiftUI
 
-/// The system segmented control at one size for life, each segment as wide as its label.
-///
-/// Left to size itself, the control opens tight around its labels and widens the first time the
-/// selection changes, under the pointer; stating each segment's width opens it already settled.
+/// Each segment's width is stated: left to size itself, the control widens on its first switch.
 struct SteadySegmentedPicker<Value: Hashable>: NSViewRepresentable {
     struct Option {
         let value: Value

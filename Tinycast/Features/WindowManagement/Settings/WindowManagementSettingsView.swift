@@ -130,7 +130,6 @@ struct WindowManagementSettingsView: View {
     }
 }
 
-/// One command's alias, shortcut recorder and visibility checkbox, shaped like the shortcuts row.
 private struct WindowCommandSettingsRow: View {
     let command: WindowCommand
     let showsInLauncher: Bool

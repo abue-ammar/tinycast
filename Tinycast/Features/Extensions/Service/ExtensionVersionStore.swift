@@ -46,7 +46,6 @@ final class ExtensionVersionStore {
         return behind
     }
 
-    /// One write per change, and none for a change that changed nothing.
     private func update(_ body: (inout [String: Entry]) -> Void) {
         var next = entries
         body(&next)

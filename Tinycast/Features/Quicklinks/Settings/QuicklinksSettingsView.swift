@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The quicklink library plus the behaviour that applies to all of them.
 struct QuicklinksSettingsView: View {
     @Environment(QuicklinkStore.self) private var store
     @Environment(QuicklinkCoordinator.self) private var coordinator

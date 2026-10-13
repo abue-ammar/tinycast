@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The clipboard browser: a filtered list beside a preview of whichever entry is selected.
 struct ClipboardScreen: PaletteScreen {
     let store: ClipboardStore
     let core: AppCore
@@ -54,7 +53,6 @@ struct ClipboardScreen: PaletteScreen {
         }
     }
 
-    /// ⌘1…⌘0 — the Nth visible pinned entry (Pinned section order), like ↵.
     private func activatePinned(at index: Int) -> Bool {
         guard let item = store.pinnedItem(at: index, in: vm.query, filter: vm.clipboardFilter) else {
             return false
@@ -82,7 +80,6 @@ struct ClipboardScreen: PaletteScreen {
         return true
     }
 
-    /// ⌘. — mirrors the Actions menu row; pinning lifts the row into the Pinned section.
     private func pin(at selection: Int) -> Bool {
         guard let item = item(at: selection) else { return false }
         core.clipboardCoordinator.togglePinnedClip(item)
@@ -162,7 +159,6 @@ private struct ClipFollowKey: Equatable {
     let token: UUID
 }
 
-/// Actions menu for an entry, shown bottom-right on right-click like `AppActionsMenu`.
 @MainActor
 enum ClipboardActionsMenu {
     static func content(
@@ -271,7 +267,6 @@ enum ClipboardActionsMenu {
 }
 
 extension ClipboardDefaultAction {
-    /// A paste names the app it lands in, in the footer pill and the ⌘K menu alike.
     func title(pastingInto target: PasteTarget?) -> String {
         guard let target, self != .copy else { return title }
         return "\(title) to \(target.name)"

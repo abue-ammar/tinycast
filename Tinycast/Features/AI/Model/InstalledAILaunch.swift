@@ -1,6 +1,5 @@
 import Foundation
 
-/// What the reader set for one installed tool: where its command is and what it is launched with.
 struct InstalledAIOverride: Codable, Equatable, Sendable {
     /// Empty leaves finding the command to `ExecutableLocator`.
     var commandPath = ""
@@ -22,7 +21,6 @@ struct InstalledAIEnvironmentStore: Sendable {
     var values: @Sendable (InstalledAIKind) throws -> [String: String]
     var save: @Sendable ([String: String], InstalledAIKind) throws -> Void
 
-    /// Holds nothing and keeps nothing, for a store built without one.
     static let none = InstalledAIEnvironmentStore(values: { _ in [:] }, save: { _, _ in })
 }
 

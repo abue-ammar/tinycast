@@ -196,7 +196,7 @@ struct InterfaceMetrics: Equatable, Sendable {
             return .systemFont(ofSize: base.pointSize, weight: weight)
         }
 
-        /// Composed like `Theme`'s own: the style carries the face, an explicit weight overrides it.
+        /// Like `Theme`'s own: the style carries the face, an explicit weight overrides it.
         private func font(
             _ base: Font, _ style: NSFont.TextStyle, _ weight: Font.Weight? = nil
         )
@@ -207,7 +207,7 @@ struct InterfaceMetrics: Equatable, Sendable {
             return weight.map(scaled.weight) ?? scaled
         }
 
-        /// Its own descriptor, so `.headline` stays Bold and `.caption2` Medium rather than lightening.
+        /// Its own descriptor, so `.headline` stays Bold and `.caption2` Medium, not lighter.
         private func nsFont(_ style: NSFont.TextStyle) -> NSFont {
             let base = NSFont.preferredFont(forTextStyle: style)
             guard scale != 1 else { return base }

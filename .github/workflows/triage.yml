@@ -1,8 +1,6 @@
 name: Triage
 
-# First-touch on every issue and PR, plus the approved-issue gate on PRs.
-# pull_request_target (not pull_request) so forked PRs are gated too — no checkout and API calls
-# only, so there's no untrusted-code-execution risk from using the _target event.
+# pull_request_target so forked PRs are gated too; safe, as it is API calls only with no checkout.
 on:
   issues:
     types: [opened, labeled]

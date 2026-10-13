@@ -150,7 +150,6 @@ final class WindowMover {
         let key: WindowKey
     }
 
-    /// Turns the observed frame, the displays and the memory's verdict into a target.
     private typealias Resolver = (
         _ current: CGRect, _ screens: [WindowPlacementEngine.Screen],
         _ decision: WindowActionMemory<WindowKey>.Decision

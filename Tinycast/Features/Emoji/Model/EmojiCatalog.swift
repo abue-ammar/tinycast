@@ -156,7 +156,6 @@ enum EmojiSkinTone: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Picker swatch: a waving hand rendered in this tone.
     var sample: String { EmojiCatalog.applyTone(self, to: "👋") }
 }
 

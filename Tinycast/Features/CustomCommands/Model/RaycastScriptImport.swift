@@ -1,10 +1,8 @@
 import Foundation
 
-/// Reads a folder of Raycast script commands into drafts. See docs/features/custom-commands.md.
 enum RaycastScriptImport {
     private static let headSize = 8 * 1024
     private static let directivePrefix = "@raycast."
-    /// `#` for the shell templates, `//` for JavaScript and Swift, `--` for AppleScript.
     private static let commentMarkers = ["#", "//", "--"]
 
     /// Non-recursive, like Raycast's own script directories; a non-command file is skipped.
@@ -77,7 +75,6 @@ enum RaycastScriptImport {
         return line.dropFirst(marker.count).trimmingCharacters(in: .whitespaces)
     }
 
-    /// `silent` and `inline` have nothing to show; the two output modes open the window.
     private static func showsOutput(mode: String?) -> Bool {
         mode == "compact" || mode == "fullOutput"
     }

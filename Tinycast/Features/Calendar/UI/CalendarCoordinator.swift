@@ -13,7 +13,6 @@ final class CalendarCoordinator {
     /// Dialogs and the HUD, so both stay owned by `AppCore`.
     private unowned let core: AppCore
 
-    /// Its own surface, the way `NotesCoordinator` owns the notes window.
     @ObservationIgnored private lazy var cameraPreview = CameraPreviewController()
 
     @ObservationIgnored private var paletteVisible = false
@@ -22,7 +21,7 @@ final class CalendarCoordinator {
     /// Auto joined this launch, so a meeting opens itself at most once.
     @ObservationIgnored private var autoJoined: Set<MeetingEvent.ID> = []
 
-    /// Stored and written only on a flip: the menu-bar scene reads it, and must not re-run per tick.
+    /// Written only on a flip: the menu-bar scene reads it, and must not re-run per tick.
     private(set) var hasMenuBarEvent = false
     /// Dismissed from the menu bar this launch, the way `autoJoined` remembers what it opened.
     private var dismissedFromMenuBar: Set<MeetingEvent.ID> = []
@@ -55,8 +54,7 @@ final class CalendarCoordinator {
     /// Live rather than clock-driven: a chord reads this with nothing ticking.
     var agenda: [MeetingEvent] { UpcomingWindow.agenda(from: store.events, now: Date()) }
 
-    /// The calendar label keeps its plain icon until today's events are exhausted, with a small
-    /// grace across midnight for a meeting that starts imminently.
+    /// The label keeps its plain icon until today's events run out, plus a grace past midnight.
     var hasUpcomingMenuBarEvent: Bool {
         MenuBarSummary.hasUpcomingEvent(from: store.events, now: clock.now)
     }
@@ -120,7 +118,6 @@ final class CalendarCoordinator {
         }
     }
 
-    /// Publishes or withdraws everything the feature contributes to the launcher.
     func applyEnabled() {
         let enabled = settings.calendarEnabled
         appIndex.setCommandsVisible(
@@ -331,7 +328,6 @@ final class CalendarCoordinator {
 
     // MARK: - Row actions
 
-    /// ↵ on a meeting row: join it, or hand a linkless one to Calendar.
     func activateMeeting(id: String) {
         guard let meeting = store.event(id: id) else { return }
         join(meeting)

@@ -23,7 +23,6 @@ enum ClipboardFileKind: Sendable {
         return .other
     }
 
-    /// Whether the preview pane plays it rather than drawing a still.
     var isPlayable: Bool { self == .movie || self == .audio }
 
     var title: String {

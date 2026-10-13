@@ -1,4 +1,3 @@
-// Standalone test for emoji search, compiling the real index and frequency store.
 import Foundation
 
 @main

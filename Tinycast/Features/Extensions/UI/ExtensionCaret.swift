@@ -27,7 +27,6 @@ struct ExtensionCaret: View {
     }
 }
 
-/// The text a control-with-list is searched by; the caret overlays the insertion point.
 struct ExtensionQueryText: View {
     private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
     @Environment(\.metrics) private var metrics

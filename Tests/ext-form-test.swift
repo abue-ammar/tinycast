@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 
-/// The form's two pure rules: where a picker's list opens, and what a typed date means.
 @main
 @MainActor
 struct ExtensionFormTests {

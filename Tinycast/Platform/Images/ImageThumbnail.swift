@@ -1,7 +1,6 @@
 import AppKit
 import ImageIO
 
-/// Downsampled, memory-capped image loading: ImageIO decodes to exactly the size needed.
 enum ImageThumbnail {
     private static let cache = ThumbnailCache(
         rowBytes: 8 * 1024 * 1024, previewBytes: 48 * 1024 * 1024)
@@ -27,7 +26,6 @@ enum ImageThumbnail {
         }.value.image
     }
 
-    /// A thumbnail capped at `maxPixel`, cached per path and size; decodes synchronously.
     static func load(_ url: URL, maxPixel: CGFloat) -> NSImage? {
         if let cached = cached(url, maxPixel: maxPixel) { return cached }
 

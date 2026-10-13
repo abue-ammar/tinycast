@@ -13,7 +13,6 @@ struct LauncherScreen: PaletteScreen {
     let meeting: MeetingEvent?
     let now: Date
     let openActions: () -> Void
-    /// Opens the palette's own menu for an `options=` field, keyed by argument name.
     let openArgumentOptions: (String) -> Void
     /// Called when an action reorders the list, so the highlight scrolls back into view.
     let scrollToFollow: () -> Void
@@ -21,7 +20,6 @@ struct LauncherScreen: PaletteScreen {
     /// The one ordered result list; an empty query pins favorites above the ranked matches.
     private let results: [AppEntry]
     private let calc: CalcResult?
-    /// The colour the query itself spells, if it spells one; nil for every other query.
     private let color: ColorValue?
     /// Only the empty query pins favorites — a category shows its sections without one of its own.
     private let pinsFavorites: Bool
@@ -55,7 +53,7 @@ struct LauncherScreen: PaletteScreen {
         self.openArgumentOptions = openArgumentOptions
         self.scrollToFollow = scrollToFollow
 
-        // Listed even when hidden from search: the shortcut that opened it still has to be answered.
+        // Listed even when hidden from search: the shortcut that opened it must still be answered.
         let pinned = vm.argumentEntryID.flatMap(core.customCommands.command(entryID:))
             .map(AppEntry.init).flatMap { $0.name == vm.query ? $0 : nil }
         let ordered =
@@ -177,7 +175,6 @@ struct LauncherScreen: PaletteScreen {
         return Binding(get: { vm.commandArguments[key] ?? "" }, set: { vm.commandArguments[key] = $0 })
     }
 
-    /// The typed values for one row, stripped of blanks — what gets handed to the command.
     private func argumentValues(for entry: AppEntry) -> [String: String] {
         if entry.kind == .quicklink {
             guard let quicklink = quicklink(for: entry) else { return [:] }
@@ -211,7 +208,6 @@ struct LauncherScreen: PaletteScreen {
         }
     }
 
-    /// Whichever card leads, in the terms the list draws it in.
     private var leadCard: LauncherList.LeadCard? {
         if let calc { return .calc(calc) }
         if let color { return .color(color) }
@@ -289,7 +285,6 @@ struct LauncherScreen: PaletteScreen {
         return true
     }
 
-    /// Offered only for an `.application` entry `RunningAppsMonitor` reports running.
     private func runningApplication(at selection: Int) -> AppEntry? {
         guard let app = entry(at: selection), app.kind == .application,
             core.runningApps.isRunning(app)
@@ -407,7 +402,6 @@ struct LauncherScreen: PaletteScreen {
             move: { _ = moveFavorite($0, at: selection) })
     }
 
-    /// Position inside the Favorites section, or nil when the entry isn't reorderable there.
     private func favoriteIndex(of app: AppEntry) -> Int? {
         guard let index = results.firstIndex(of: app), index < favoriteCount else { return nil }
         return index
@@ -438,7 +432,6 @@ struct LauncherScreen: PaletteScreen {
         select(row: index)
     }
 
-    /// Highlight a row of the Favorites section, clamped into what the section now holds.
     private func selectFavorite(at index: Int) {
         let count = reorderedResults().favoriteCount
         select(row: min(max(index, 0), max(count - 1, 0)))
@@ -464,7 +457,6 @@ struct LauncherScreen: PaletteScreen {
     /// The compact bar's icons: the first five favorites. The "…" that follows them is not one.
     var compactFavorites: [AppEntry] { Array(pinnedFavorites.prefix(5)) }
 
-    /// Whether the compact bar's "…" has anything to reveal.
     var hasUnshownFavorites: Bool { favoriteCount > compactFavorites.count }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {

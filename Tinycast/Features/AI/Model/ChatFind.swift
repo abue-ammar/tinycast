@@ -1,6 +1,5 @@
 import Foundation
 
-/// One match of find: the message, the drawn text it sits in, and which match within that text.
 struct ChatFindOccurrence: Equatable, Hashable, Sendable {
     let messageID: UUID
     /// Where the drawn text sits, not what it says: two identical table cells are two places.

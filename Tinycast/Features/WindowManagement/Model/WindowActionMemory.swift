@@ -22,7 +22,6 @@ struct WindowActionMemory<Key: Hashable> {
         var step: Int
         /// The display the chain started on, which the display cycle counts `step` from.
         var originScreenID: Int
-        /// The frame `commit` should persist as this window's restore point.
         var restoreFrame: CGRect
         /// False on first sight: there is nothing to go back to, so Restore must do nothing.
         var canRestore: Bool

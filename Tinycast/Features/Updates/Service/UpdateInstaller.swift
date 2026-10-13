@@ -1,6 +1,5 @@
 import Foundation
 
-/// Fetches a release archive, proves it is ours, and swaps it in. docs/features/updates.md
 struct UpdateInstaller: Sendable {
     enum Phase: Sendable, Equatable {
         case downloading(received: Int64, expected: Int64)

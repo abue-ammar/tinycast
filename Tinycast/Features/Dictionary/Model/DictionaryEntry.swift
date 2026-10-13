@@ -1,6 +1,5 @@
 import Foundation
 
-/// One looked-up term, laid out as the blocks a dictionary page is read in.
 struct DictionaryEntry: Equatable, Identifiable, Sendable {
     let term: String
     let blocks: [Block]
@@ -11,7 +10,6 @@ struct DictionaryEntry: Equatable, Identifiable, Sendable {
         case headword(String, homograph: String?, pronunciation: String?)
         /// The part of speech and its inflections: `noun (plural mangoes)`.
         case partOfSpeech([Run])
-        /// A numbered sense, or an unnumbered one when the word has a single meaning.
         case sense(number: String?, [Run])
         /// A `•` refinement of the sense above it.
         case subsense([Run])
@@ -19,7 +17,6 @@ struct DictionaryEntry: Equatable, Identifiable, Sendable {
         case note([Run])
         /// A titled part after the senses: `ORIGIN`, `PHRASES`, `DERIVATIVES`.
         case section(String)
-        /// A phrase or derivative heading inside a section.
         case phrase([Run])
         case paragraph([Run])
     }

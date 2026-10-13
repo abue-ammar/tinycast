@@ -128,7 +128,6 @@ struct ChatSession: Equatable, Sendable {
         return true
     }
 
-    /// What Copy Chat puts on the pasteboard: each turn under its speaker, attachments by name.
     func markdownTranscript(title: String) -> String {
         var parts = ["# \(title)"]
         for message in messages

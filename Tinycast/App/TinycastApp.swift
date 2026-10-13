@@ -4,7 +4,6 @@ import SwiftUI
 struct TinycastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 
-    // Channel-aware: "Tinycast", "Tinycast Dev", or "Tinycast Beta".
     private let appName = Bundle.main.appDisplayName
 
     /// Two independent items: one preference each, no state either can read off the other.
@@ -46,7 +45,7 @@ struct TinycastApp: App {
                     guard settings.calendarMenuBarDisplay == .disabled else { return }
                     settings.calendarMenuBarDisplay = .meetingIcon
                 } else {
-                    // SwiftUI echoes our own removal back here; only a drag-out means "turn it off".
+                    // SwiftUI echoes our own removal back; only a drag-out means "turn it off".
                     guard !isCalendarMenuBarHiddenWhenEmpty, settings.calendarMenuBarDisplay != .disabled
                     else { return }
                     settings.calendarMenuBarDisplay = .disabled

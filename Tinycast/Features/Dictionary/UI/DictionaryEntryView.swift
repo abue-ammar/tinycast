@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A dictionary page: headword, then numbered senses hung off a shared gutter, then its sections.
 struct DictionaryEntryView: View {
     @Environment(\.metrics) private var metrics
     let entry: DictionaryEntry

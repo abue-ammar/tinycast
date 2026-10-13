@@ -20,7 +20,6 @@ final class WindowCommandCoordinator {
         self.customSizes = customSizes
     }
 
-    /// The one funnel for palette and hotkey alike. See docs/features/window-management.md#wiring.
     func runWindowCommand(id: WindowCommand.ID) {
         guard settings.windowManagementEnabled else { return }
         if let direction = SpaceDirection(id) {

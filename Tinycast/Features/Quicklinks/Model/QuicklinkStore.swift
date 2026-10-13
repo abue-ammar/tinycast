@@ -67,7 +67,7 @@ final class QuicklinkStore {
         quicklinks = loaded.sorted(by: Quicklink.precedes)
     }
 
-    /// A disabled quicklink is offered nowhere, so every surface lists this rather than `quicklinks`.
+    /// A disabled quicklink is offered nowhere, so every surface lists this, not `quicklinks`.
     var enabled: [Quicklink] { quicklinks.filter(\.isEnabled) }
 
     func quicklink(id: UUID) -> Quicklink? {
@@ -131,7 +131,6 @@ final class QuicklinkStore {
                 showsInRootSearch: source.showsInRootSearch))
     }
 
-    /// Adds a batch, skipping anything invalid — the import and backup path. Returns what landed.
     @discardableResult
     func append(_ incoming: [Quicklink]) -> [Quicklink] {
         var added: [Quicklink] = []
@@ -141,7 +140,6 @@ final class QuicklinkStore {
         return added
     }
 
-    /// Replaces the whole set on backup import, dropping invalid and duplicate records.
     @discardableResult
     func replace(with incoming: [Quicklink]) -> Int {
         guard isAvailable, sqlite3_exec(db, "DELETE FROM quicklinks", nil, nil, nil) == SQLITE_OK
@@ -265,7 +263,7 @@ final class QuicklinkStore {
               in_root_search = excluded.in_root_search, pinned_at = excluded.pinned_at
             """
         )
-        // Both statements name columns in the struct's order, which `is_enabled` was appended after.
+        // Both statements name columns in struct order, which `is_enabled` was appended after.
         loadStmt = prepare(
             """
             SELECT id, name, link, open_with, icon, is_enabled, in_root_search, pinned_at, created_at

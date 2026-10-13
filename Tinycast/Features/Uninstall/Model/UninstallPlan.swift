@@ -14,7 +14,6 @@ struct MeasuredSize: Hashable, Sendable {
     }
 }
 
-/// One item an uninstall would trash: the bundle itself, or a leftover attributed to it.
 struct UninstallCandidate: Identifiable, Hashable, Sendable {
     /// Standardized, and what `UninstallSelection` stores.
     let path: String

@@ -6,7 +6,6 @@ extension UTType {
     static let tinycastBackup = UTType(exportedAs: "com.tinycast.backup")
 }
 
-/// The backup flows' entry points, shared by the Settings pane and the commands.
 @MainActor
 enum BackupActions {
     struct RaycastOutcome {
@@ -201,7 +200,6 @@ enum BackupActions {
         }
     }
 
-    /// Shared `.rayconfig` file picker used by the Backup pane and onboarding.
     static func pickRaycastFile() -> URL? {
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = false
@@ -260,7 +258,6 @@ enum BackupActions {
     /// Not everything an import applies settles in the running app, so say to relaunch.
     private static let restartAfterImportText = "Quit and reopen Tinycast to finish."
 
-    /// One sentence per Raycast category that actually moved, shared by the pane and onboarding.
     static func raycastText(_ outcome: RaycastOutcome) -> String {
         var parts: [String] = []
         if let applied = appliedText(outcome.summary) { parts.append(applied) }
@@ -312,7 +309,6 @@ enum BackupActions {
 
     // MARK: - Settings file
 
-    /// Where settings.json lives for this channel, as the pane and its dialog spell it.
     static var settingsFilePath: String {
         (AppPaths.settingsFile().path as NSString).abbreviatingWithTildeInPath
     }

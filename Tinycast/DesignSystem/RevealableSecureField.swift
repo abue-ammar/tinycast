@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// A secret field with a show/hide button beside it; the caller's field style reaches inside.
 struct RevealableSecureField: View {
     let title: String
     @Binding var text: String

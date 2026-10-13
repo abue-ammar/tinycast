@@ -1,10 +1,8 @@
 name: Release
 
-# Shown in the Actions list instead of a bare "Release" — carries the version + channel.
 run-name: "Tinycast ${{ inputs.version }} · ${{ inputs.channel }} #${{ github.run_number }}"
 
-# Manually triggered from the Actions tab. Pick a channel and a base version;
-# beta builds get an auto-incrementing suffix so re-running never collides.
+# Beta builds get an auto-incrementing suffix so re-running never collides.
 on:
   workflow_dispatch:
     inputs:
@@ -50,8 +48,7 @@ jobs:
         run: |
           CHANNEL="${{ github.event.inputs.channel }}"
           BASE_VERSION="${{ github.event.inputs.version }}"
-          # Each channel is a distinct, side-by-side app: its own display name + bundle id,
-          # and its own Homebrew cask in the abue-ammar/homebrew-tinycast tap.
+          # Each channel is a distinct side-by-side app with its own name, bundle id and cask.
           case "$CHANNEL" in
             beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.tinycast.app.beta";  CASK="tinycast@beta";  PRERELEASE=true ;;
             stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.tinycast.app";       CASK="tinycast";       PRERELEASE=false ;;
@@ -67,9 +64,7 @@ jobs:
             echo "prerelease=${PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
 
-      # Import the stable self-signed identity into a temp keychain so every release is signed with
-      # the SAME cert — that constant signature is what keeps users' Accessibility (TCC) grant alive
-      # across updates. Generate/rotate the secrets per docs/signing.md.
+      # The SAME cert on every release is what keeps users' Accessibility grant across updates.
       - name: Import signing certificate
         env:
           P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
@@ -88,8 +83,6 @@ jobs:
           security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed 's/"//g')
           rm -f "$RUNNER_TEMP/cert.p12"
 
-      # Build the signed .app into an ephemeral DerivedData dir. Channel identity (name, bundle id,
-      # version) comes from build-setting overrides so beta/stable ship side-by-side.
       - name: Build app
         env:
           VERSION: ${{ steps.meta.outputs.full_version }}
@@ -97,8 +90,7 @@ jobs:
           BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
           BUILD_NUMBER: ${{ github.run_number }}
         run: |
-          # ARCHS pinned to what this channel has always shipped: trusting ARCHS_STANDARD is what
-          # let a thin arm64 build reach Intel users once already (compat/README.md).
+          # ARCHS pinned: trusting ARCHS_STANDARD once let a thin arm64 build reach Intel users.
           xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
@@ -108,8 +100,7 @@ jobs:
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
 
-      # Apple silicon users pay for no Intel slice: assert the download stays thin. Both binaries —
-      # a bundled helper is shipped code too, and nothing else would catch a stray slice in it.
+      # Apple silicon users pay for no Intel slice, and a bundled helper is shipped code too.
       - name: Assert the build is arm64-only
         env:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
@@ -123,15 +114,13 @@ jobs:
             fi
           done
 
-      # Notarization rejects a nested binary without the hardened runtime, and the helper is signed
-      # by a separate embed phase — so assert the flag reached it rather than trusting Xcode.
+      # Notarization rejects a nested binary without the hardened runtime; don't trust Xcode.
       - name: Assert the signature is notarizable
         env:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
         run: ./Scripts/verify-signature.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
 
-      # Two artifacts from one build: the DMG people download and the cask installs, and the zip
-      # the in-app updater installs — it expands with `ditto` instead of mounting a volume.
+      # The zip is for the in-app updater, which expands it with `ditto` instead of mounting.
       - name: Package DMG and ZIP
         env:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
@@ -144,8 +133,7 @@ jobs:
           ln -s /Applications "$STAGE/Applications"
           mkdir -p dist
           diskutil image create from "$STAGE" --format UDZO --volumeName "$DISPLAY_NAME" "dist/${DMG_FILE}"
-          # `ditto -c -k --keepParent --sequesterRsrc` is the only zip that leaves the code
-          # signature verifiable; plain `zip` drops symlinks and breaks the seal.
+          # Only `ditto` keeps the signature verifiable; plain `zip` drops symlinks and the seal.
           ditto -c -k --keepParent --sequesterRsrc "$APP" "dist/${ZIP_FILE}"
 
       - uses: actions/upload-artifact@v7
@@ -153,8 +141,6 @@ jobs:
           name: Tinycast-${{ steps.meta.outputs.full_version }}
           path: dist/
 
-      # The changelog GitHub derives from the merged PRs, with the install text below a marker the
-      # update window cuts at. Nothing is committed anywhere — see docs/release.md.
       - name: Compose release notes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -177,8 +163,7 @@ jobs:
           if [ "${{ steps.meta.outputs.prerelease }}" = "true" ]; then
             PRERELEASE_FLAG="--prerelease"
           fi
-          # --notes-file, never --generate-notes: gh prepends --notes to generated notes, which would
-          # put the install boilerplate back above the changelog.
+          # --notes-file, never --generate-notes: gh would put the install text above the changelog.
           gh release create "$TAG" \
             "dist/${{ steps.meta.outputs.dmg_file }}" \
             "dist/${{ steps.meta.outputs.zip_file }}" \
@@ -217,17 +202,13 @@ jobs:
             git push
           fi
 
-      # The site bakes the latest version and the changelog in at build time, so a stable release
-      # rebuilds it. A dispatch is the one event GITHUB_TOKEN may start another workflow with.
+      # A dispatch is the one event GITHUB_TOKEN may start another workflow with.
       - name: Rebuild the website
         if: github.event.inputs.channel == 'stable'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run website.yml --repo "$GITHUB_REPOSITORY" --ref main
 
-      # Announce the release in the Discord release channel. A Components V2 (flags 32768) card:
-      # channel-tinted container, title + right-aligned Download button, changelog, Homebrew block.
-      # No-ops with a warning if the webhook secret isn't set.
       - name: Announce on Discord
         if: success()
         env:
@@ -245,10 +226,7 @@ jobs:
           if [ "${CHANNEL}" = "stable" ]; then COLOR=3066993; else COLOR=15844367; fi
           RELEASE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
           INSTALL="brew install --cask abue-ammar/tinycast/${CASK}"
-          # Build with jq so backticks stay literal (printf in single quotes escaped them,
-          # which Discord rendered as verbatim backticks instead of a code block).
-          # Components V2 forbids a top-level `content`, so @everyone is a text component, and
-          # without allowed_mentions Discord renders the ping as inert text.
+          # jq keeps backticks literal; Components V2 forbids top-level `content`, hence @everyone.
           jq -n \
             --argjson color "${COLOR}" \
             --arg heading "## 🚀 ${DISPLAY_NAME} ${VERSION}" \
@@ -276,9 +254,7 @@ jobs:
           curl -fsS -X POST -H "Content-Type: application/json" -d @payload.json \
             "${DISCORD_WEBHOOK_URL}?with_components=true"
 
-  # macOS 26 is the last release to boot on Intel, so stable also ships a universal build under its
-  # own cask. Same tag, version, bundle id and signature — only the slices and filenames differ, so
-  # nothing here can change what the Apple silicon job above publishes.
+  # macOS 26 is the last release to boot on Intel, so stable also ships a universal build.
   universal:
     needs: build
     if: github.event.inputs.channel == 'stable'
@@ -302,8 +278,7 @@ jobs:
           echo "Using $XCODE_PATH"
           echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
 
-      # The SAME identity as the thin build, and a hard failure if it is missing: the in-app updater
-      # compares the staged bundle's leaf certificate against the running app's before installing.
+      # The SAME identity, or fail: the updater compares the staged bundle's leaf certificate.
       - name: Import signing certificate
         env:
           P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
@@ -337,9 +312,7 @@ jobs:
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
 
-      # A silently-dropped ARCHS override would publish a thin build under the universal name, which
-      # is the one mistake this whole channel exists to prevent. A thin bundled helper is the quiet
-      # version of it: the app still boots on Intel and only its OCR stops working.
+      # A silently-dropped ARCHS override, app or helper, would ship a thin build as universal.
       - name: Assert both slices on the shipping binaries
         run: |
           APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
@@ -384,8 +357,7 @@ jobs:
           name: Tinycast-Universal-${{ needs.build.outputs.full_version }}
           path: dist/
 
-      # Upload, never create: the build job owns the release. Uploading second also keeps the thin
-      # zip first in the asset list, so clients predating architecture-aware selection still take it.
+      # Uploaded second, so clients predating arch-aware selection still take the thin zip first.
       - name: Attach to the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

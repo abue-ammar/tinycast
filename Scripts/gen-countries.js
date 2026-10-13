@@ -69,7 +69,6 @@ function swiftString(value) {
   return `"${value}"`;
 }
 
-/// Country code -> zones, in zone.tab's own order.
 function zonesByCountry(text) {
   const zones = new Map();
   for (const line of text.split("\n")) {

@@ -5,7 +5,6 @@ import Carbon.HIToolbox
 @MainActor
 @Observable
 final class ShortcutCaptureSession {
-    /// A rejected binding and whoever already holds it.
     struct Conflict: Equatable {
         let binding: HotKeyBinding
         let owner: String

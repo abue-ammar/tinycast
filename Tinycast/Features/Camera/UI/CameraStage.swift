@@ -1,7 +1,6 @@
 import AVFoundation
 import SwiftUI
 
-/// What every camera surface puts above its footer: live video, or why there is none.
 struct CameraStage: View {
     let feed: CameraSession.Feed
     var mirrored = true
@@ -30,7 +29,6 @@ struct CameraStage: View {
     }
 }
 
-/// The one place `AVCaptureVideoPreviewLayer` is hosted; everything around it is Tinycast's own.
 private struct CameraFeed: NSViewRepresentable {
     let session: AVCaptureSession
     let mirrored: Bool

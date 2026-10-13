@@ -9,7 +9,6 @@ struct WindowLayoutEditRequest: Identifiable {
     var isCapture = false
 }
 
-/// Add / edit panel for one layout, presented from the Window Management pane.
 struct WindowLayoutEditorPanel: View {
     let request: WindowLayoutEditRequest
 

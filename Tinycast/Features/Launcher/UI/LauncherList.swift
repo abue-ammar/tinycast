@@ -75,7 +75,6 @@ struct LauncherList: View {
         }
     }
 
-    /// Whether the selection sits on flat index 0: the card, else the first result.
     private var firstRowSelected: Bool {
         card != nil ? cardSelected : selectedRowID != nil && selectedRowID == results.first?.id
     }
@@ -249,7 +248,6 @@ private struct AppRow: View {
         return .clear
     }
 
-    /// Keycaps for this entry's hotkey, or `nil` if none is bound.
     private var shortcutCaps: [String]? {
         guard let action = app.hotKeyAction else { return nil }
         return hotKeys.binding(for: action)?.keycaps
@@ -304,7 +302,6 @@ private struct AppRow: View {
                 ExtensionRefreshIndicator(state: refresh)
                     .font(metrics.typography.rowTrailing)
             }
-            // Holding ⌘ turns the trailing label into the chord that launches this row.
             if let slot, palette.commandHeld {
                 HStack(spacing: metrics.spacing.xxs) {
                     KeyCapChip(text: "⌘", style: .outline)

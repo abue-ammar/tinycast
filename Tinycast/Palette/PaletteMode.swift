@@ -25,7 +25,6 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case snippets
     case snippetEditor
     case dictionary
-    /// A Raycast extension command rendering into the palette.
     case extensionCommand
 
     var id: String { rawValue }

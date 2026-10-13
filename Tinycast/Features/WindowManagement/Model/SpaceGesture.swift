@@ -1,6 +1,5 @@
 import Foundation
 
-/// Which adjacent Space a switch command moves to.
 enum SpaceDirection: Sendable {
     case previous
     case next

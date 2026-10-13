@@ -7,7 +7,6 @@ enum AppLauncher {
         NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
     }
 
-    /// Hands the URL to whatever the system registers for its scheme — the default browser, for web.
     @MainActor
     static func open(_ url: URL) {
         NSWorkspace.shared.open(url)
@@ -50,7 +49,6 @@ enum AppLauncher {
         }.value
     }
 
-    /// Opens System Settings at the pane backed by the given extension bundle ID.
     @MainActor
     static func openSettingsPane(bundleID: String) {
         guard let url = URL(string: "x-apple.systempreferences:" + bundleID) else { return }

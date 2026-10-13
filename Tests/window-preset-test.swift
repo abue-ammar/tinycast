@@ -1,4 +1,3 @@
-// Standalone contract tests for the window shortcut presets and what applying one changes.
 import Carbon.HIToolbox
 import Foundation
 

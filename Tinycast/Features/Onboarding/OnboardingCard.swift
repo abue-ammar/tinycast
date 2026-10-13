@@ -2,7 +2,6 @@ import SwiftUI
 
 // Onboarding's own card look: the Settings panes are stock `Form` sections, this window is not.
 
-/// A rounded, hairline-bordered group of onboarding rows.
 struct OnboardingCard<Content: View>: View {
     @ViewBuilder var content: Content
 

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The My Schedule list, bucketed by day.
 struct ScheduleList: View {
     @Environment(\.metrics) private var metrics
     let results: [MeetingEvent]

@@ -1,6 +1,5 @@
 import AppKit
 
-/// Tracks running apps for the launcher's indicator, live from NSWorkspace.
 @MainActor
 @Observable
 final class RunningAppsMonitor {
@@ -21,7 +20,6 @@ final class RunningAppsMonitor {
         }
     }
 
-    /// True while the entry's bundle runs; drives the running dot and the Quit action.
     func isRunning(_ app: AppEntry) -> Bool {
         guard let bundleID = app.bundleID else { return false }
         return runningBundleIDs.contains(bundleID)

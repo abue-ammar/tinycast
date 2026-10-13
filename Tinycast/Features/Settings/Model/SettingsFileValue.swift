@@ -6,7 +6,6 @@ protocol SettingsFileValue: Equatable {
     var settingsJSON: SettingsFileJSON { get }
 }
 
-/// An enum the file spells as its raw value.
 protocol SettingsFileRawValue: SettingsFileValue, RawRepresentable
 where RawValue: SettingsFileValue {}
 

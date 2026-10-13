@@ -74,7 +74,6 @@ struct AIChatTests {
         if failures > 0 { exit(1) }
     }
 
-    /// A reply that searched and called tools has to render them in the order they happened.
     static func segmentsInterleaveSearchesAndTools() {
         let message = ChatMessage(
             role: .assistant, text: "abcdef",
@@ -162,7 +161,6 @@ struct AIChatTests {
             "at one offset a call, a search and a call keep the order they came in")
     }
 
-    /// Created live, stored and reloaded: the order has to come through all three.
     static func arrivalOrderSurvivesTheReplyAndReload() async {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("tinycast-ai-order-\(UUID().uuidString)", isDirectory: true)
@@ -1152,7 +1150,6 @@ struct AIChatTests {
             "a search at the start or past the end never produces an empty text segment")
     }
 
-    /// Leaving a conversation drops its staged images and disowns a decode in flight.
     static func leavingAConversationDropsItsStagedImages() {
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("tinycast-ai-staging-\(UUID().uuidString)", isDirectory: true)
@@ -1560,7 +1557,6 @@ extension AIChatTests {
         expect(shown("") == "", "an empty block stays empty")
     }
 
-    /// Coming back to a chat has to come back to the model it was talking to.
     static func chatsKeepTheirOwnModel() {
         let (store, directory) = temporaryStore("model")
         defer { try? FileManager.default.removeItem(at: directory) }

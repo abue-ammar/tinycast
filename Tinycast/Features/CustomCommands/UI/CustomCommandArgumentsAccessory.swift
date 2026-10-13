@@ -3,7 +3,6 @@ import SwiftUI
 /// A custom command's inline fields in root search, keyed by `$n` rather than by name.
 @MainActor
 enum CustomCommandArgumentsAccessory {
-    /// Nil for a command that takes no arguments.
     static func make(
         command: CustomCommand?,
         vm: PaletteState,

@@ -1,6 +1,5 @@
 import Foundation
 
-/// A user-authored URL, search, file, folder or deeplink, surfaced as a launcher command.
 struct Quicklink: Codable, Hashable, Identifiable, Sendable {
     static let entryIDPrefix = "quicklink:"
     /// Fallback glyph when there is no icon and the destination can't be detected.
@@ -39,7 +38,6 @@ struct Quicklink: Codable, Hashable, Identifiable, Sendable {
 
     var isPinned: Bool { pinnedAt != nil }
 
-    /// The one glyph rule: the override, else what the detected destination suggests.
     var symbol: String {
         iconSymbol ?? QuicklinkDestination.detect(link)?.defaultSymbol ?? Self.sfSymbol
     }

@@ -28,7 +28,6 @@ final class CameraPanel: NSPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        // Suppresses AppKit's own window animation; `fadeIn`/`fadeOut` replace it.
         animationBehavior = .none
         isReleasedWhenClosed = false
         isRestorable = false

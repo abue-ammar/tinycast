@@ -1,5 +1,3 @@
-// The fallback list's pure half: identity, stored order, and the section header's elision.
-
 import Foundation
 
 @main

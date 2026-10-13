@@ -1,9 +1,5 @@
 #!/bin/bash
-# The test suite. There is no XCTest target: each harness compiles the shipped sources it guards,
-# so a harness that stops compiling means a decision leaked out of a pure layer. See docs/testing.md.
-#
-# Never join a compile and its run with `&&`: `set -e` ignores a failure in a non-final AND-OR list
-# member, which is how CI reported success over a harness that had not compiled since phase 10.
+# The test suite: each harness compiles the shipped sources it guards. See docs/testing.md.
 
 set -uo pipefail
 
@@ -32,7 +28,7 @@ if [ "${1:-}" = "--exec" ]; then
     fi
     { time "$BIN/$name" > "$BIN/$name.log" 2>&1; } 2> "$BIN/$name.time" &
     pid=$!
-    # macOS ships no `timeout`, so the worker polls; a wedged harness must fail, not stall the suite.
+    # macOS ships no `timeout`, so the worker polls; a wedged harness must fail, not stall.
     ticks=0
     while kill -0 "$pid" 2>/dev/null; do
         if [ "$ticks" -ge $((TINYCAST_TEST_TIMEOUT * 5)) ]; then
@@ -60,9 +56,7 @@ failed=()
 ran=0
 only="${1:-}"
 
-# `--index` merges each harness's compile command into .compile instead of running anything.
-# xcodebuild never compiles the harnesses, so without this nothing in Tests/ resolves in an editor.
-# The source lists below are the only copy, which is why this lives here rather than in its own script.
+# `--index` feeds harness compile commands to .compile, as xcodebuild never compiles Tests/.
 emit_db=0
 DB="${TMPDIR:-/tmp}/tinycast-compile-db.json"
 if [ "$only" = "--index" ]; then
@@ -71,8 +65,7 @@ if [ "$only" = "--index" ]; then
     printf '[' > "$DB"
 fi
 
-# run [slow] [-O] [index] <name> <source...> — queue the harness. `slow` dispatches it in the first
-# wave; `index` claims editor flags for a harness that is compiled by hand rather than by the suite.
+# `slow` dispatches in the first wave; `index` only claims editor flags for a hand-run harness.
 run() {
     local opt=-Onone pri=1 index_only=0
     while :; do
@@ -89,8 +82,7 @@ run() {
     if [ "$index_only" -eq 1 ] && [ "$emit_db" -eq 0 ]; then return 0; fi
     ran=$((ran + 1))
 
-    # Absolute paths throughout: sourcekit-lsp resolves the command itself and does not apply
-    # `directory` to relative arguments, so a relative path there silently yields no index.
+    # Absolute paths: sourcekit-lsp ignores `directory` for relative arguments and indexes nothing.
     if [ "$emit_db" -eq 1 ]; then
         local sources=()
         for source in "$@" "Tests/$name.swift"; do sources+=("$PWD/$source"); done
@@ -98,9 +90,7 @@ run() {
         printf '{"directory":"%s","command":"swiftc -swift-version 6 -sdk %s' \
             "$PWD" "$(xcrun --show-sdk-path --sdk macosx)" >> "$DB"
         printf ' %s' "${sources[@]}" >> "$DB"
-        # Claim every file under `Tests/`: the harness and any helper compiled beside it. A shipped
-        # source stays unclaimed, because it would get this short command instead of the app's full
-        # one and `.compile` is last-wins — but the app never compiles anything in `Tests/`.
+        # Only `Tests/` files: `.compile` is last-wins, so a shipped source keeps the app's command.
         local claimed=""
         for source in "${sources[@]}"; do
             case "$source" in *"/Tests/"*) claimed="$claimed${claimed:+,}\"$source\"";; esac

@@ -132,7 +132,6 @@ enum RenderValue: Sendable, Hashable {
     }
 }
 
-/// One node of the tree an extension's React render produced.
 struct RenderNode: Sendable, Hashable, Identifiable {
     let id: Int
     let type: String
@@ -185,7 +184,6 @@ struct RenderNode: Sendable, Hashable, Identifiable {
     func array(_ key: String) -> [RenderValue] { props[key]?.arrayValue ?? [] }
     func object(_ key: String) -> [String: RenderValue]? { props[key]?.objectValue }
 
-    /// How `Form.Description`-style content and stray JSX strings arrive.
     var textContent: String {
         children.compactMap { $0.isText ? $0.text : nil }.joined()
     }

@@ -1,6 +1,5 @@
 import AppKit
 
-/// Owns the uninstall flow: the scan hand-off, the one confirmation funnel, the reference cleanup.
 @MainActor
 final class UninstallCoordinator {
     private let session: UninstallSession

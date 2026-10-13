@@ -40,7 +40,6 @@ final class ClipboardManager {
         startPolling()
     }
 
-    /// Turning the feature off: the poller, the observers and the drain all go with it.
     func stop() {
         isCapturing = false
         sessionTokens = []

@@ -50,7 +50,6 @@ enum WindowPlacementEngine {
         var gap: CGFloat
         /// Cycle position, supplied by `WindowActionMemory` so the geometry itself stays stateless.
         var step: Int
-        /// What the step means: the mode the user picked for a repeat press.
         var cycle: WindowCycle
         /// The display the chain started on; `nil`, or one since unplugged, means the host.
         var originScreenID: Int?
@@ -291,7 +290,6 @@ enum WindowPlacementEngine {
     private static let oneThird: CGFloat = 1.0 / 3.0
     private static let twoThirds: CGFloat = 2.0 / 3.0
 
-    /// One of the four halves: the axis it splits, and the edge of that axis it hugs.
     private struct Half {
         enum Axis { case horizontal, vertical }
         enum Edge { case leading, trailing }
@@ -327,7 +325,6 @@ enum WindowPlacementEngine {
         }
     }
 
-    /// The sizes a half steps through when size cycling is on.
     private static let sizeCycle: [CGFloat] = [0.5, oneThird, twoThirds]
 
     /// Presses before the chain wraps; 1 means this command doesn't cycle at all.
@@ -351,7 +348,7 @@ enum WindowPlacementEngine {
             return tilePlacement(half.fractions(sizeCycle[step]), on: host, gap: input.gap)
         }
         let strip = ordered(input.screens)
-        // Mid-chain the window already sits on another display, so counting from it would overshoot.
+        // Mid-chain the window sits on another display, so counting from it would overshoot.
         guard strip.count > 1,
             let originIndex = strip.firstIndex(where: { $0.id == input.originScreenID })
                 ?? strip.firstIndex(where: { $0.id == host.id })
@@ -377,7 +374,6 @@ enum WindowPlacementEngine {
             frame: frame, screenID: screen.id, anchor: fractions.anchor, resizes: true)
     }
 
-    /// `width` of the screen at full height, centred: Center Half's shape at every cycle step.
     private static func centeredFractions(_ width: CGFloat) -> Fractions {
         Fractions(
             x0: (1 - width) / 2, x1: (1 + width) / 2, y0: 0, y1: 1,

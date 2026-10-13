@@ -60,7 +60,6 @@ enum NoteMarkdownParser {
 
     private static let maximumLevel = 6
 
-    /// The ASCII code units the grammar is written in; every delimiter is one UTF-16 unit.
     enum Unit {
         static let tab: UInt16 = 0x09
         static let newline: UInt16 = 0x0A

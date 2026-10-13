@@ -1,6 +1,5 @@
 import Foundation
 
-/// A single evaluated calculator answer for the launcher's inline card.
 struct CalcResult: Equatable, Sendable {
     enum Payload: Equatable, Sendable {
         /// `display` is grouped ("1,234,567"); `copyText` is the same answer, ungrouped.
@@ -50,7 +49,6 @@ struct CalcResult: Equatable, Sendable {
     }
 }
 
-/// Raw query to answer, or nil when it isn't calculator input. See docs/features/calculator.md.
 enum CalcEngine {
     /// Every environment fact is injected; the answer is canonical, for `format` to localize.
     static func evaluate(
@@ -153,7 +151,6 @@ enum CalcEngine {
             }
         }
 
-        // Keyword-less conversion: `1m` → feet+inches, `1hr` → 60 min.
         if let bare = CalcUnits.parseBareConversion(tokens) {
             let payload: CalcResult.Payload
             if bare.compound {
@@ -169,7 +166,6 @@ enum CalcEngine {
                 payload: payload)
         }
 
-        // Natural-language percent: `20% off 500`, `50 as % of 200`.
         if let percent = CalcPercent.evaluate(tokens, query: query) { return percent }
 
         return nil
@@ -225,7 +221,6 @@ enum CalcEngine {
         }
     }
 
-    /// Rebuilds a token stream into equivalent calculator input for evaluating its complete prefix.
     private static func tokenQuery(_ tokens: [CalcToken]) -> String {
         tokens.map { token in
             switch token {

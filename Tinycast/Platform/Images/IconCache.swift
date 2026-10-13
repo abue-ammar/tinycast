@@ -249,7 +249,6 @@ enum IconCache {
         return (image, rep.bytesPerRow * rep.pixelsHigh)
     }
 
-    /// A symbol on an app-icon-shaped tile; a tint fills it and brightens the glyph to white.
     static func symbolIcon(named name: String, tint: SymbolTint? = nil) -> NSImage {
         let key = symbolKey(name, tint)
         if let cached = cache.object(forKey: key) { return cached }
@@ -279,7 +278,6 @@ enum IconCache {
         return icon
     }
 
-    /// Symbols where they exist; the names SF Symbols lacks fall back to template assets.
     private static func glyph(named name: String, tint: NSColor) -> NSImage? {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
             .applying(.init(paletteColors: [tint]))
@@ -437,7 +435,6 @@ enum IconCache {
         return Decoded(image: icon, cost: cost)
     }
 
-    /// Paints the share an app icon does, leaving a real app icon untouched.
     private static func fittedToArtwork(_ source: NSImage) -> (NSImage, Int) {
         fitted(source, to: appIconExtent)
     }
@@ -478,13 +475,11 @@ enum IconCache {
         return CGFloat(side) / CGFloat(pixels)
     }
 
-    /// Rasterize the multi-rep icon into one square bitmap, with its decoded byte cost.
     private static func downsampled(_ source: NSImage) -> (NSImage, Int) {
         rasterized(
             source, into: NSRect(origin: .zero, size: NSSize(width: displayPixel, height: displayPixel)))
     }
 
-    /// Draws `source` into `frame` on a `displayPixel`-square canvas.
     private static func rasterized(_ source: NSImage, into frame: NSRect) -> (NSImage, Int) {
         // Fixed 2×, `NSScreen.main` being main-thread-only, so a detached decode works.
         let pixels = Int(displayPixel * 2)

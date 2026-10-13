@@ -33,7 +33,6 @@ final class HotKeyCenter {
         var ref: EventHotKeyRef?
     }
 
-    /// Live registrations by stable id, plus the reverse lookup the Carbon callback needs.
     private var entries: [String: Entry] = [:]
     private var idToKey: [UInt32: String] = [:]
     private var nextCarbonID: UInt32 = 0

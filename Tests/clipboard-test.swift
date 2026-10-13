@@ -364,7 +364,6 @@ struct ClipboardTests {
             "HSL round-trips back to the same sRGB components")
     }
 
-    /// What each notation reads as, and which of them an opaque colour is offered.
     static func colorFormatting() {
         guard let color = ColorValue.parse("#FF5733") else {
             expect(false, "the fixture parses")

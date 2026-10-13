@@ -3,7 +3,6 @@ import CoreGraphics
 
 /// Every frame a room layout produces, in AX space. See docs/features/window-rooms.md#layouts.
 enum RoomLayoutEngine {
-    /// Below this a tiled window stops being pleasant to work in.
     static let comfortable = CGSize(width: 480, height: 360)
     /// The least a tidy layout gives a window, so an unknown minimum is never squeezed to nothing.
     static let usable = CGSize(width: 320, height: 240)

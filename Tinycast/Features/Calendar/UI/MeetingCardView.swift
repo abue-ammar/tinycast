@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The join card above the launcher results; selectable like a row, Enter joins.
 struct MeetingCard: View {
     @Environment(\.metrics) private var metrics
     let meeting: MeetingEvent

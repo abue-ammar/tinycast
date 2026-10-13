@@ -1,13 +1,11 @@
 import SwiftUI
 
-/// The leftover files found for one app, each selectable for the Trash.
 struct UninstallScreen: PaletteScreen {
     let session: UninstallSession
     let core: AppCore
     let vm: PaletteState
     let openActions: () -> Void
 
-    /// The search field filters files by name or location on this screen.
     var rows: [UninstallCandidate] {
         let query = vm.query.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { return session.candidates }
@@ -85,7 +83,6 @@ struct UninstallScreen: PaletteScreen {
     }
 }
 
-/// Actions menu for a row on the Uninstall screen.
 @MainActor
 enum UninstallActionsMenu {
     static func content(

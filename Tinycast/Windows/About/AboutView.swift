@@ -129,7 +129,6 @@ struct AboutView: View {
     }
 }
 
-/// One external destination in the About "Links" card.
 private struct AboutLink: Identifiable {
     enum Glyph {
         case symbol(String)
@@ -165,7 +164,6 @@ private struct AboutLink: Identifiable {
     ]
 }
 
-/// A row in the About "Links" card: glyph, title, destination and the arrow.
 private struct AboutLinkRow: View {
     let link: AboutLink
 

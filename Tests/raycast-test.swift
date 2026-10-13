@@ -1,7 +1,6 @@
 import CryptoKit
 import Foundation
 
-// The RAYCFG3 container and clipboard mapping, including import-time retention.
 @main
 @MainActor
 enum RaycastTests {

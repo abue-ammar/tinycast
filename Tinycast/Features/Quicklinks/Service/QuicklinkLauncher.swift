@@ -1,6 +1,5 @@
 import AppKit
 
-/// Opens a resolved destination; every platform effect the feature has lives here.
 @MainActor
 enum QuicklinkLauncher {
     enum Failure: LocalizedError, Equatable {
@@ -29,10 +28,9 @@ enum QuicklinkLauncher {
         }
     }
 
-    /// Chromium and Firefox accept this, Safari ignores it, so passing it always is safe.
+    /// Browsers that don't support it ignore it, so passing it always is safe.
     private static let newWindowArgument = "--new-window"
 
-    /// `openWithBundleID` nil means the system default handler.
     static func open(
         _ link: String, openWithBundleID: String?, inNewWindow: Bool
     ) async throws(Failure) {

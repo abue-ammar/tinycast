@@ -1,7 +1,6 @@
 import Foundation
 import UniformTypeIdentifiers
 
-/// Which surface draws a file in the preview. See docs/features/file-search.md#palette-and-actions.
 enum FileSearchPreviewKind: Equatable, Sendable {
     case quickLook
     /// QuickLook draws a PDF out of process, and that remote view never scrolls in the palette.

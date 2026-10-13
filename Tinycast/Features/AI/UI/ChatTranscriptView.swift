@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Find in chat's matches and the one to show; the transcript marks them and scrolls to it.
 struct ChatFindHighlight: Equatable {
     let query: String
     let matches: Set<UUID>
@@ -343,7 +342,6 @@ extension ChatMessageView {
     }
 }
 
-/// The pages a reply linked to, gathered under it the way a cited answer lists its sources.
 private struct ChatSourcesView: View {
     @Environment(\.metrics) private var metrics
     let references: [ChatReference]
@@ -594,7 +592,6 @@ private struct ChatToolRun: View {
     }
 }
 
-/// A tool call inside a reply; the same row grammar the search one uses, with its own glyph.
 private struct ChatToolRow: View {
     @Environment(\.metrics) private var metrics
     let use: ChatToolUse
@@ -626,7 +623,6 @@ private struct ChatToolRow: View {
     }
 }
 
-/// A web search inside a reply: live while it runs, a record of what it looked up once done.
 private struct ChatSearchRow: View {
     @Environment(\.metrics) private var metrics
     let search: ChatSearch

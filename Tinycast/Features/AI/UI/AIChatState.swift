@@ -199,12 +199,10 @@ final class AIChatState {
         session.messages.last { $0.role == .assistant && $0.usage != nil }?.usage
     }
 
-    /// True when this state is the one showing `id`; an empty chat holds nothing yet.
     func holds(_ id: UUID) -> Bool {
         session.id == id && !session.messages.isEmpty
     }
 
-    /// The line shown in the empty streaming bubble while nothing has arrived yet.
     var liveStatus: String? { isThinking ? "Thinking…" : nil }
 
     var lastAssistantText: String? {

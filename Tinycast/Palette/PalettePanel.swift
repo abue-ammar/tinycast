@@ -2,7 +2,6 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
-/// Borderless floating panel that hosts the SwiftUI command palette.
 final class PalettePanel: NSPanel {
     enum HeaderFieldBoundary {
         case leading

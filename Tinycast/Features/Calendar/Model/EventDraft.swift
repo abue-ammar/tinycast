@@ -3,7 +3,6 @@ import Foundation
 /// What the Create Event prompt collects, before anything touches the calendar.
 struct EventDraft: Sendable, Equatable {
     var title: String = ""
-    /// How long from now the event starts; 0 is "Now".
     var startOffsetMinutes: Int = 0
     var durationMinutes: Int = 30
 

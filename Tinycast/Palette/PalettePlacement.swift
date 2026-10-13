@@ -85,7 +85,6 @@ enum PalettePlacement {
     }
 }
 
-/// The anchors a menu window can follow.
 enum MenuPanelCorner: Equatable {
     case bottomLeading
     case bottomTrailing

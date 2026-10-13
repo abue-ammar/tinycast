@@ -51,7 +51,6 @@ final class ModifierTapMonitor: HealthCheckable {
     }
 
     private var bound: Set<HotKeyBinding> = []
-    /// Advanced by the tap callback on every modifier transition; released by teardown.
     @ObservationIgnored private var doubleTapDetector = DoubleTapDetector()
     @ObservationIgnored private var modifierDetector = ModifierKeyDetector()
     @ObservationIgnored private var pendingSingle: Task<Void, Never>?

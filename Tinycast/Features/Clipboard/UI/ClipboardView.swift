@@ -95,7 +95,6 @@ struct ClipboardList: View {
     }
 }
 
-/// Coarse date buckets for sectioning, ordered newest-first by raw value.
 enum DateBucket: Int {
     case today, yesterday, thisWeek, thisMonth, earlier
 
@@ -407,7 +406,6 @@ private struct ClipboardInfoSection: View {
         }
         switch item.kind {
         case .text:
-            // What the entry *is*, which is what the type filter files it under.
             let isColor = item.colorValue != nil
             rows.append(InfoRow(label: "Type", value: isColor ? "Color" : "Text"))
             // A colour's own notations are the pane above; its length is not what you came for.
@@ -448,7 +446,6 @@ private struct ClipboardInfoSection: View {
         return rows
     }
 
-    /// Name and icon from the recorded bundle ID, via Launch Services and `IconCache`.
     private var source: (name: String, icon: NSImage)? {
         IconCache.observeStyle()
         guard let bundleID = item.sourceBundleID,

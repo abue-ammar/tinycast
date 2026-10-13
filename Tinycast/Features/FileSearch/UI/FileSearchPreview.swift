@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The pane beside the results: the file itself over what the filesystem says about it.
 struct FileSearchPreview: View {
 
     @Environment(\.metrics) private var metrics

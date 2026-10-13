@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Settings ▸ Fallbacks: which commands a typed query is offered to, and in what order.
 struct FallbacksSettingsView: View {
     @Environment(AppCore.self) private var core
     /// Observed so a reorder or a checkbox redraws the list under the button that moved it.

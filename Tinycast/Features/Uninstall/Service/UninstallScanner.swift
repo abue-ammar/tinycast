@@ -216,7 +216,7 @@ enum UninstallScanner {
     /// Logical bytes, like Finder; an unreadable subtree is skipped, not abandoned.
     private static func directorySize(of path: String, budget: SizeBudget) throws -> MeasuredSize {
         let url = URL(fileURLWithPath: path)
-        // Not the allocated keys: Xcode ships decmpfs-compressed, and blocks read 4.19 GB of 9.45.
+        // Not the allocated keys: blocks badly undercount a decmpfs-compressed bundle.
         let keys: [URLResourceKey] = [.totalFileSizeKey, .fileSizeKey]
         guard
             let enumerator = FileManager.default.enumerator(
@@ -224,7 +224,7 @@ enum UninstallScanner {
                 errorHandler: { _, _ in true })
         else { return .zero }
 
-        // Hoisted: the loop runs up to `maxEntries` times, and this allocated a `Set` on each one.
+        // Hoisted: the loop runs up to `maxEntries` times.
         let keySet = Set(keys)
         var size = MeasuredSize()
         var entries = 0

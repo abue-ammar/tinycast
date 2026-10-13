@@ -1,4 +1,3 @@
-// Standalone test for uninstall attribution, search roots, rules, protection and planning.
 import Foundation
 
 @main

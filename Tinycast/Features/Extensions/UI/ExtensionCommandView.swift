@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The palette's extension screen: whichever root component the running command rendered.
 struct ExtensionCommandView: View {
     let screen: ExtensionScreen
     let state: ExtensionSessionState
@@ -226,7 +225,6 @@ struct ExtensionToastPill: View {
     }
 }
 
-/// The ⌘K panel's content for the running command's current selection.
 @MainActor
 enum ExtensionActionsMenu {
     /// What the panel belongs to: the selected row, or the screen when the selection has outrun it.

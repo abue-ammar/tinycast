@@ -57,7 +57,6 @@ struct ExtensionScreen: Equatable {
     let showsDetail: Bool
     /// Actions attached to the screen itself (`Detail`/`Form`/`List` level).
     let screenActions: RenderNode?
-    /// An `EmptyView` to show when there are no rows.
     let emptyView: RenderNode?
 
     /// Selectable rows per section: what grid navigation needs to keep a column across a heading.
@@ -227,7 +226,6 @@ struct ExtensionScreen: Equatable {
         items.first { $0.node.id == field.id }
     }
 
-    /// The field a form opens on: the one that asked for it, else the first one there is.
     var autoFocusedField: Int {
         items.first { $0.node.bool("autoFocus") == true }?.index ?? 0
     }
@@ -263,7 +261,6 @@ struct ExtensionScreen: Equatable {
     }
 }
 
-/// One activatable action from an `ActionPanel`.
 struct ExtensionAction: Equatable, Identifiable {
     let node: RenderNode
     /// True for the first action after a section boundary, so the menu draws a separator above it.
@@ -322,7 +319,6 @@ struct ExtensionAction: Equatable, Identifiable {
         return ExtensionAction.keyEquivalent(declared) == key
     }
 
-    /// Raycast's `KeyEquivalent` names → SwiftUI's.
     private static func keyEquivalent(_ key: String) -> KeyEquivalent {
         switch key {
         case "return", "enter": return .return

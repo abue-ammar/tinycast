@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The chat header's model, reasoning and staged-file menus, and the row each one opens on.
 @MainActor
 enum AIModelMenu {
     /// Every model configured for chat; selecting one moves this chat and the default with it.

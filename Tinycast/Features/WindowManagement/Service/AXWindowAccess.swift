@@ -3,8 +3,7 @@ import AppKit
 // `@preconcurrency` downgrades AX diagnostics: `kAX…` are mutable C globals, but constant.
 @preconcurrency import ApplicationServices
 
-/// Every `AXUIElement` call in the feature. Shared, so the mover and the layout runner cannot
-/// disagree about what a window is or how one is written.
+/// Every `AXUIElement` call in the feature, so no two callers disagree on what a window is.
 @MainActor
 enum AXWindowAccess {
     /// A hung target must not stall main for the AX default. Per element, never inherited.
@@ -23,7 +22,6 @@ enum AXWindowAccess {
         return application
     }
 
-    /// The window a command acts on: focused, else main, else the first eligible one.
     static func targetWindow(in application: AXUIElement) -> AXUIElement? {
         for attribute in [kAXFocusedWindowAttribute, kAXMainWindowAttribute] {
             if let window = element(application, attribute), isEligible(window) { return window }
@@ -64,7 +62,6 @@ enum AXWindowAccess {
             == .success
     }
 
-    /// Raises the window inside its app, then brings the app itself forward.
     static func focus(
         _ window: AXUIElement, in application: AXUIElement, of app: NSRunningApplication
     ) {
@@ -116,13 +113,11 @@ enum AXWindowAccess {
     // MARK: - Writing a frame
 
     /// The one write sequence, so a stubborn app lands the same way from any caller.
-    /// See docs/features/window-management.md#applying-a-placement.
     static func write(
         _ target: CGRect, anchor: WindowPlacementEngine.Anchor, to window: AXUIElement,
         current: CGRect, canResize: Bool, canvas: CGRect?
     ) -> CGRect? {
         guard canResize else {
-            // It refuses to resize, so place the size it has inside the slot and stop.
             var slot = anchor.place(current.size, in: target)
             if let canvas { slot = WindowPlacementEngine.clamped(slot, into: canvas) }
             guard setPosition(WindowPlacementEngine.rounded(slot).origin, on: window) else {

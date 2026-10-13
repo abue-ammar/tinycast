@@ -14,7 +14,6 @@ enum ExtensionStoreResponse {
         return components?.url
     }
 
-    /// One extension by the handle and name its manifest carries.
     static func lookupURL(handle: String, name: String) -> URL? {
         guard !handle.isEmpty, !name.isEmpty else { return nil }
         return URL(string: "https://www.raycast.com/api/v1/extensions")?

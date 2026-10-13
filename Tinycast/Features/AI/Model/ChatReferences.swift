@@ -1,6 +1,5 @@
 import Foundation
 
-/// A page a reply pointed at, shown under it as a source the reader can open.
 struct ChatReference: Equatable, Hashable, Sendable {
     let title: String
     let url: URL

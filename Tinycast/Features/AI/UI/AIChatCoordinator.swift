@@ -149,7 +149,6 @@ final class AIChatCoordinator {
         core.chatHistory.rename(id: id, to: title)
     }
 
-    /// The title the window and the sidebar show, a rename included.
     func title(of chat: AIChatState) -> String {
         core.chatHistory.conversation(id: chat.session.id)?.displayTitle ?? chat.session.title
     }
@@ -160,7 +159,6 @@ final class AIChatCoordinator {
         core.showMessage("Chat copied")
     }
 
-    /// The same Markdown Copy Chat makes, written where the reader chooses.
     func exportChat(id: UUID) {
         guard let markdown = markdownTranscript(of: id) else { return }
         let panel = NSSavePanel()
@@ -360,7 +358,6 @@ final class AIChatCoordinator {
         }
     }
 
-    /// The servers a chat's tools menu offers; empty when MCP is off or nothing is set up.
     var mcpServers: [MCPServer] { core.mcpCoordinator.servers }
 
     func setToolsEnabled(_ enabled: Bool, in chat: AIChatState) {
@@ -641,7 +638,6 @@ final class AIChatCoordinator {
         }
     }
 
-    /// What entering chat costs once: the model list resolved, and the servers connected.
     func prepareForChat() {
         warmUpModelList()
         core.mcpCoordinator.warmUp()

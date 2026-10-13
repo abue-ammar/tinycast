@@ -1,6 +1,5 @@
 name: Co-authors
 
-# Fails a PR whose commits credit an AI tool as a co-author, and says how to remove the trailer.
 # pull_request_target so forked PRs can be commented on — no checkout, API calls only.
 on:
   pull_request_target:

@@ -74,7 +74,6 @@ enum RaycastDecoder {
 }
 
 extension Data {
-    /// Parses an even-length hex string; returns nil on any non-hex character.
     fileprivate init?(hex: String) {
         let chars = Array(hex.utf8)
         guard chars.count % 2 == 0 else { return nil }

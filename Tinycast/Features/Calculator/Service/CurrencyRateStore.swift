@@ -15,7 +15,6 @@ final class CurrencyRateStore {
     /// Shorter retry, so a machine offline at launch picks rates up soon after it reconnects.
     private static let retryInterval: TimeInterval = 30 * 60
 
-    /// The newest snapshot, nil until the first one lands.
     private(set) var rates: CurrencyRates?
 
     private let fileURL: URL

@@ -63,7 +63,6 @@ enum Paster {
         }
     }
 
-    /// A file, pasted into `previousApp`; the receiver takes the file or its path, as it reads.
     @MainActor
     static func pasteFile(_ url: URL, previousApp: NSRunningApplication?) {
         PasteboardFiles.write(url, to: .general)
@@ -73,7 +72,6 @@ enum Paster {
         }
     }
 
-    /// String counterpart of `copy(_:store:)`.
     @MainActor
     static func copyString(_ text: String) {
         writeString(text)
@@ -146,7 +144,6 @@ enum Paster {
         return true
     }
 
-    /// Synthesize ⌘V, to `pid` alone when given, else through the system tap.
     @MainActor
     static func postCommandV(toPid pid: pid_t? = nil) {
         postCommand(key: CGKeyCode(kVK_ANSI_V), toPid: pid)

@@ -74,7 +74,6 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
         self.iconSymbol = iconSymbol
     }
 
-    /// The glyph every surface draws for this command.
     var symbol: String { iconSymbol ?? Self.sfSymbol }
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }

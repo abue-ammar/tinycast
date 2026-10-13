@@ -1,7 +1,6 @@
 import Carbon.HIToolbox
 import Foundation
 
-/// A binding as a person types it into settings.json. See docs/features/settings-file.md.
 struct HotKeySpelling: Sendable {
     /// The Hyper chord in Carbon bits while a Hyper key is set, so it spells as `hyper` again.
     let hyperModifiers: Int?

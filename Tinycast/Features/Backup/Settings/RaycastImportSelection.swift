@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The category picker shared by the Backup pane and onboarding.
 struct RaycastImportSelection: View {
     @Binding var selection: RaycastImportOptions
 

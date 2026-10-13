@@ -130,7 +130,6 @@ struct AppleIntelligenceTests {
             "a decoding failure is the shared malformed-response case")
     }
 
-    /// The real thing, end to end, when this Mac can run it.
     static func onDeviceModelAnswers() async {
         let status = AppleIntelligenceProvider.status()
         guard status.isAvailable else {

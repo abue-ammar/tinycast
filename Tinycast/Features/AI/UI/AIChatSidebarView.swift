@@ -163,7 +163,6 @@ struct AIChatSidebarView: View {
 
 }
 
-/// A chat's title, then a spinner while it answers or a pin; hover is a fainter selection.
 private struct ChatSidebarRow: View {
     let conversation: ChatConversation
     let isAnswering: Bool

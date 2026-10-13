@@ -8,7 +8,6 @@ enum ASCIIKeyboardLayout {
         withCurrentLayout { character(for: keyCode, modifiers: modifiers, in: $0) }
     }
 
-    /// Every key's base character, translated against one lookup of the layout.
     @MainActor static func baseCharacters(for keyCodes: Range<Int>) -> [Int: String] {
         withCurrentLayout { layout in
             keyCodes.reduce(into: [:]) { characters, keyCode in
@@ -74,7 +73,6 @@ enum ASCIIKeyboardLayout {
         return recovered(key, layoutCharacter: character(for: event)?.lowercased().first)
     }
 
-    /// The recovery itself, over a layout character the caller already translated.
     static func recovered(_ key: KeyEquivalent, layoutCharacter: Character?) -> KeyEquivalent {
         guard !isNamedKey(key), let layoutCharacter,
             layoutCharacter.unicodeScalars.allSatisfy(\.isASCII)

@@ -16,7 +16,6 @@ struct AIScreen: PaletteScreen {
 
     let rows = [Row()]
 
-    /// One footer pill for Return's two jobs: Send, or Stop while a response streams.
     var primaryActionTitle: String { chat.isStreaming ? "Stop" : "Send" }
 
     func actions(at selection: Int) -> PopoverMenuContent? {
@@ -80,7 +79,6 @@ struct AIScreen: PaletteScreen {
         return PopoverMenuContent(header: chatCoordinator.title(of: chat), items: items)
     }
 
-    /// Return and the pill are the same action; an empty composer sends nothing.
     func activate(at selection: Int) {
         if chat.isStreaming {
             coordinator.stopResponse()
@@ -177,7 +175,6 @@ private struct AIChatView: View {
     }
 }
 
-/// Every staged file in one pill: the newest's glyph, a count of the rest, all names on hover.
 private struct AttachmentsPill: View {
     @Environment(\.metrics) private var metrics
     let attachments: [ChatAttachment]
@@ -238,7 +235,6 @@ private struct AttachmentGlyph: View {
 }
 
 extension ChatAttachment {
-    /// One glyph per kind: the pill's, and a menu row's when there is no picture to show.
     var glyph: String {
         switch kind {
         case .image: return "photo"
@@ -253,7 +249,6 @@ extension ChatAttachment {
     }
 }
 
-/// The chat header's model control, sharing the clipboard filter's menu-button chrome.
 struct AIModelButton: View {
     let title: String
     let icon: PopoverMenuIcon

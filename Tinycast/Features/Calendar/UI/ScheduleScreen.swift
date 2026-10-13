@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// My Schedule: the store's span, filtered by the query. Enter joins, ⌘K carries the rest.
 struct ScheduleScreen: PaletteScreen {
     let store: CalendarStore
     let clock: MeetingClock

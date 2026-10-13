@@ -1,6 +1,5 @@
 import Foundation
 
-/// A chat's name as its model or harness gives it, once the first answer exists to name it by.
 enum ChatTitle {
     static let maxLength = 60
     /// Enough of the first exchange to name it, never a whole pasted document.

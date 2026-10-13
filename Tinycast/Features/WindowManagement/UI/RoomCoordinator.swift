@@ -207,7 +207,6 @@ final class RoomCoordinator {
 
     // MARK: - Entering
 
-    /// The one funnel for a Rooms row, a launcher entry, a shortcut and the pane alike.
     func enterRoom(id: UUID) {
         guard settings.windowManagementEnabled, let room = store.room(id: id) else { return }
         // The preview holds while the windows move in under it, then fades.

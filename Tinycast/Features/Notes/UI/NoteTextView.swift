@@ -44,7 +44,6 @@ final class NoteTextView: NSTextView, InjectableTextView {
                 selection: NSRange(location: range.location + (text as NSString).length, length: 0)))
     }
 
-    /// The formatting bar's way in: the same plan, gate and undo step as the matching chord.
     func format(_ action: NoteEditAction) {
         perform(action)
     }

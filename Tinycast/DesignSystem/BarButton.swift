@@ -58,14 +58,12 @@ struct BarButton<Label: View>: View {
         .onHover { hovered = $0 }
     }
 
-    /// Selection beats hover, the rule every row follows.
     private var fill: Color {
         if isSelected { return Theme.Colors.selection }
         return hovered ? Theme.Colors.rowHover : Color.clear
     }
 }
 
-/// A header control that states the active choice and opens an in-window menu.
 struct HeaderMenuButton: View {
     let title: String
     let icon: PopoverMenuIcon
@@ -120,7 +118,7 @@ struct HeaderMenuButton: View {
                     .font(metrics.typography.bar)
                     .lineLimit(1)
                     .truncationMode(.middle)
-                // One glyph rotates rather than swapping, so opening the menu cannot shift the layout.
+                // One glyph rotates rather than swapping, so opening the menu can't shift layout.
                 Image(systemName: "chevron.down")
                     .font(metrics.typography.disclosure)
                     .rotationEffect(.degrees(isOpen ? 180 : 0))

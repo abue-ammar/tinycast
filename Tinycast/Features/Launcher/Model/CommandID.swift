@@ -1,6 +1,5 @@
 import Foundation
 
-/// Built-in launcher actions, surfaced alongside the user-authored ones.
 enum CommandID: String, CaseIterable, Sendable {
     /// The palette's chat keeps the id it shipped with, so its hotkeys and fallback still reach it.
     case quickAI = "command:ai-chat"

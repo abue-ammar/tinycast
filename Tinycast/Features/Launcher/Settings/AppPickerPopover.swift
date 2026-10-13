@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// Searchable list of installed apps, drawn from the launcher's own index.
 struct AppPickerPopover: View {
     /// Bundle IDs to leave out — the ones already chosen.
     var excluded: Set<String> = []

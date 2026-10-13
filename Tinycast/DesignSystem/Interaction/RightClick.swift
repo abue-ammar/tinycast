@@ -31,7 +31,6 @@ struct RightClickCatcher: NSViewRepresentable {
     }
 }
 
-/// Location-reporting variant: one catcher serves every cell in a grid.
 struct RightClickLocationCatcher: NSViewRepresentable {
     let action: (CGPoint) -> Void
 

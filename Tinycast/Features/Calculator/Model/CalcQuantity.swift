@@ -1,6 +1,5 @@
 import Foundation
 
-/// Typed arithmetic for measurements and currencies.
 enum CalcQuantity {
     static func evaluate(
         _ tokens: [CalcToken], query: String, rates: CurrencyRates?, region: String? = nil,

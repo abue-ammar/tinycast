@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Search Snippets: the enabled library filtered by the search field, previewed before it pastes.
 struct SnippetsScreen: PaletteScreen {
     let store: SnippetsStore
     let core: AppCore

@@ -1,6 +1,5 @@
 import Foundation
 
-/// The clipboard list's type filter. See docs/features/clipboard.md#type-filter.
 enum ClipboardFilter: CaseIterable, Sendable {
     case all
     case text
@@ -76,7 +75,6 @@ extension ClipboardItem {
         case email
     }
 
-    /// The parsed colour a `.color` entry states, or nil for every other entry.
     var colorValue: ColorValue? {
         guard kind == .text, let text else { return nil }
         return ColorValue.parse(text)

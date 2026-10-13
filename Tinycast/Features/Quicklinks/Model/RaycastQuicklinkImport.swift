@@ -1,6 +1,5 @@
 import Foundation
 
-/// Maps Raycast's `quicklinks` blob onto `Quicklink`. See docs/features/raycast-import.md.
 enum RaycastQuicklinkImport {
     /// `openWith` is an app path or a platform id; both resolve through the injected lookup.
     static func parse(

@@ -1,6 +1,5 @@
 import Foundation
 
-/// A native-looking stand-in for an extension's icon: a curated symbol on a tinted tile.
 struct ExtensionAppearance: Codable, Equatable, Hashable, Sendable {
     var symbol: String
     var tint: ExtensionTint

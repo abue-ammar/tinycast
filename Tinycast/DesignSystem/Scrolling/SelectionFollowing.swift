@@ -41,7 +41,6 @@ private struct SelectionFollowing: ViewModifier {
     /// Where the selection is still owed a place; nil once it has one, and the pointer owns it.
     @State private var target: Target?
 
-    /// The geometry the rule reads: the band's height, and the inset whose settling moves the rest.
     private struct Band: Equatable {
         var insetTop: CGFloat
         var height: CGFloat

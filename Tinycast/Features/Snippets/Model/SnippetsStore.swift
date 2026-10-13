@@ -56,7 +56,6 @@ final class SnippetsStore {
         stopWatchers()
     }
 
-    /// Moves to another folder; a running store stops, swaps, and loads the new one.
     func relocate(to repository: SnippetRepository) async {
         guard repository.snippetsDirectory != snippetsDirectory else { return }
         let wasStarted = isStarted

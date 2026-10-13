@@ -43,7 +43,6 @@ enum Fallback: Hashable, Sendable {
         }
     }
 
-    /// The footer pill's verb: what ↵ does, in the destination's own words.
     var openVerb: String {
         switch self {
         case .builtin(.quickAI): return "Ask Quick AI"

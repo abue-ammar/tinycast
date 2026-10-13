@@ -1,7 +1,6 @@
 import QuickLookUI
 import SwiftUI
 
-/// A live QuickLook view of one file: the document itself, scrollable and playable as it comes.
 struct QuickLookSurface: NSViewRepresentable {
     let url: URL
 

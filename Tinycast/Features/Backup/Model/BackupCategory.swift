@@ -1,6 +1,5 @@
 import Foundation
 
-/// One selectable slice of a backup; `descriptor` is exhaustive, as `AppEntry.Kind`'s is.
 enum BackupCategory: String, CaseIterable, Identifiable, Sendable {
     case configuration
     case clipboard

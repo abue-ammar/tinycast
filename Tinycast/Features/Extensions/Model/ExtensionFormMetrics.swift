@@ -23,15 +23,12 @@ struct ExtensionFormMetrics {
         max(0, ((panelWidth - controlWidth) / 2 - gap).rounded())
     }
 
-    /// A text area is a control that grew: same width and chrome, several lines tall.
     var textAreaHeight: CGFloat { scaled(78) }
-    /// Inset of a control's own text from its rounded edge.
     var textInset: CGFloat { scaled(12) }
     /// One top inset everywhere, so a field and a text area start their text on one line.
     var verticalInset: CGFloat { scaled(8) }
     /// `NSTextView`'s line-fragment padding, taken off so its text aligns with a field's.
     var textViewGutter: CGFloat { scaled(5) }
-    /// The box a checkbox draws, and the gap to the label beside it.
     var checkboxSize: CGFloat { scaled(14) }
     /// The gap between one labelled row and the next, tuned by eye rather than derived.
     var rowSpacing: CGFloat { scaled(18) }
@@ -39,17 +36,14 @@ struct ExtensionFormMetrics {
     var separatorSpacing: CGFloat { scaled(4) }
     /// Room above the first row and below the last, so neither touches the bars.
     var formVerticalPadding: CGFloat { scaled(16) }
-    /// The gap between a control and the popover it opens, on whichever side it opens.
     var popoverGap: CGFloat { scaled(6) }
     /// The ⌘K panel's pitch, restated: a launcher change must never move a form.
     var popoverRowHeight: CGFloat { scaled(36) }
     var popoverRowSpacing: CGFloat { 1 }
     var popoverFadeBand: CGFloat { scaled(30) }
-    /// A section heading inside a picker's list; shorter than a row, since it is a label.
     var popoverSectionHeaderHeight: CGFloat { scaled(24) }
     /// Six rows and half of the seventh, so a long list reads as scrollable rather than clipped.
     var popoverVisibleRows: CGFloat { 6.5 }
-    /// The search or expression row a popover opens with, where it has one.
     var popoverSearchHeight: CGFloat { scaled(30) }
     /// The drawn caret that stands in for a field editor the control never gets.
     var caretWidth: CGFloat { 1 }
@@ -77,7 +71,6 @@ struct ExtensionFormMetrics {
         min(popoverListContentHeight(rows: rows, headers: headers), popoverRowsMaxHeight)
     }
 
-    /// The whole popover, list plus whatever chrome sits above it.
     func popoverHeight(rows: Int, hasSearchField: Bool, headers: Int = 0) -> CGFloat {
         // The panel is sized to this, so an empty list must still measure the row it draws.
         let list = rows > 0 ? popoverListHeight(rows: rows, headers: headers) : popoverRowHeight
@@ -85,11 +78,9 @@ struct ExtensionFormMetrics {
         return list + search + popoverPadding * 2
     }
 
-    /// Where a popover sits, given the control it belongs to and the room around it.
     struct Placement: Equatable {
         /// Top edge of the popover, in the same space the anchor was measured in.
         let y: CGFloat
-        /// True when there was no room below and the popover opened upwards instead.
         let flipped: Bool
     }
 
@@ -99,7 +90,6 @@ struct ExtensionFormMetrics {
     ) -> Placement {
         let below = anchor.maxY + popoverGap
         let above = anchor.minY - popoverGap - popoverHeight
-        // Preferred, exactly as a menu does: open downward unless the bottom would cut it off.
         if below + popoverHeight <= containerHeight {
             return Placement(y: below, flipped: false)
         }

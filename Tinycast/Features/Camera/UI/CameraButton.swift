@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The camera's action row, in the same button language a dialog's footer speaks.
 struct CameraButton: View {
     /// Secondary also reads as "off": the mirror toggle dims rather than growing a second style.
     enum Emphasis {

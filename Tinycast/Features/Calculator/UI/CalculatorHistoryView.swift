@@ -31,12 +31,10 @@ struct CalculatorHistoryList: View {
         }
     }
 
-    /// Scroll target for the current selection.
     private var selectedRowID: String? {
         calcSelected ? Self.calcRowID : selectedID?.uuidString
     }
 
-    /// Whether the selection sits on flat index 0: the calc card, else the first entry.
     private var firstRowSelected: Bool {
         calc != nil ? calcSelected : selectedID != nil && selectedID == results.first?.id
     }

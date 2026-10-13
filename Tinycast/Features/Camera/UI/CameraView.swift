@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The standalone camera: a live stage, a mirror switch, and a photo straight to the clipboard.
 struct CameraView: View {
     let coordinator: CameraCoordinator
 

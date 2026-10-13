@@ -32,7 +32,6 @@ struct ShellCommandResult: Sendable, Equatable {
 
     var succeeded: Bool { termination.succeeded }
 
-    /// What a command said about itself, for a report with room for one line.
     var lastOutputLine: String? {
         standardOutput?
             .split(whereSeparator: \.isNewline).last

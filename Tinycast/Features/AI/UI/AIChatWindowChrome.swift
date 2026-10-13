@@ -126,7 +126,6 @@ final class AIChatWindowChrome: NSObject, WindowChrome, NSToolbarDelegate, NSSea
         find.query = searchItem.searchField.stringValue
     }
 
-    /// Return walks the matches, ⇧↩ walks back, as Find does in every Mac app.
     func control(
         _ control: NSControl, textView: NSTextView, doCommandBy selector: Selector
     ) -> Bool {

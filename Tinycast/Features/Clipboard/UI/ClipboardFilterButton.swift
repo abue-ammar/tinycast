@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The clipboard header's type filter control: it states the active filter and toggles its menu.
 struct ClipboardFilterButton: View {
     let filter: ClipboardFilter
     let isOpen: Bool

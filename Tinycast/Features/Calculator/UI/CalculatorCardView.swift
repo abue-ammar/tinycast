@@ -33,7 +33,6 @@ enum CalcMemo {
     }
 }
 
-/// The inline answer card above the app results; selectable like a row, Enter copies.
 struct CalculatorCard: View {
     @Environment(\.metrics) private var metrics
     @Environment(AppCore.self) private var core

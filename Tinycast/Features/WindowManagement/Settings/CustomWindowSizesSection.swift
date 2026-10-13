@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The custom-size library, inside the Window Management pane beside the commands it extends.
 struct CustomWindowSizesSection: View {
     let onEdit: (CustomWindowSize?) -> Void
 
@@ -32,7 +31,6 @@ struct CustomWindowSizesSection: View {
     }
 }
 
-/// One size's alias, shortcut, launcher checkbox and actions, shaped like the window-command row.
 private struct CustomWindowSizeRow: View {
     let size: CustomWindowSize
     let showsInLauncher: Bool

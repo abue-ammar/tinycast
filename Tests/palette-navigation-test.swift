@@ -17,7 +17,6 @@ struct PaletteNavigationTests {
         }
     }
 
-    /// A launcher with a search typed into it, which is what a back step has to bring back.
     static func searchingLauncher() -> PaletteState {
         let vm = PaletteState()
         vm.prepare(mode: .launcher)
@@ -244,7 +243,6 @@ struct PaletteNavigationTests {
         return state
     }
 
-    /// Moves the pointer far enough to count, which is how every armed case below gets armed.
     static func armed() -> PaletteState {
         let state = shown()
         state.notePointerMoved(to: CGPoint(x: rest.x + 40, y: rest.y))

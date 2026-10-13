@@ -1,7 +1,5 @@
 import Foundation
 
-/// One choice offered by a picker's list, from a `Form.Dropdown`/`Form.TagPicker` or from the
-/// search-bar dropdown an extension handed the screen in `searchBarAccessory`.
 struct ExtensionPickerItem: Identifiable, Equatable {
     let value: String
     let title: String

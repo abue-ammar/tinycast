@@ -40,7 +40,6 @@ final class NoteMarkdownRenderer: NSObject, @MainActor NSTextStorageDelegate {
         textView.typingAttributes = NoteMarkdownStyler.literal
     }
 
-    /// Picks up any edit, however it arrived, then re-hides and reveals lines for the selection.
     func sourceDidChange() {
         syncSource()
         selectionDidChange()

@@ -381,7 +381,6 @@ struct DoubleTapDetectorTests {
 
     // MARK: - The Hyper chord
 
-    /// A combo on the G key, spelled in Carbon like the on-disk shape.
     private static func combo(_ flags: NSEvent.ModifierFlags) -> KeyShortcut {
         KeyShortcut(
             carbonKeyCode: kVK_ANSI_G, carbonModifiers: KeyShortcut.carbonModifiers(from: flags))

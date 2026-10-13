@@ -1,7 +1,6 @@
 import Foundation
 import UniformTypeIdentifiers
 
-/// The Search Files header filter. See docs/features/file-search.md#type-filter.
 enum FileSearchFilter: CaseIterable, Sendable {
     case all
     case folders

@@ -53,10 +53,8 @@ final class SupportReminderStore {
 
     // MARK: - Private
 
-    /// The last ask, or first run when there has been none.
     private var anchor: Date { state.lastAskedAt ?? state.firstSeenAt }
 
-    /// One turn of the pump: offer the ask if it is due, and answer how long to wait.
     private func advance() -> TimeInterval {
         let wait = SupportReminderSchedule.wait(since: anchor, now: Date())
         guard settings.supportRemindersEnabled else { return max(wait, Self.idleInterval) }

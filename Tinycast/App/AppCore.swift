@@ -238,7 +238,6 @@ final class AppCore {
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
     private(set) var isShowingDialog = false
     var isDimmingPaletteForDialog: Bool { isShowingDialog && windowController.isVisible }
-    /// Every confirmation, report and prompt; it also stops a held hotkey stacking them.
     @ObservationIgnored private lazy var dialogs = DialogController(
         settings: settings,
         onPresentationChanged: { [weak self] isPresenting in
@@ -458,7 +457,6 @@ final class AppCore {
         }
     }
 
-    /// Clicking the Dock icon: raise whichever window is already open, else summon the launcher.
     func handleReopen() {
         if settingsCoordinator.focusExisting() { return }
         if aiChatCoordinator.focusExisting() { return }
@@ -858,7 +856,6 @@ final class AppCore {
 
     // MARK: - Interruption
 
-    /// What the app is in the middle of; the update prompt and the support reminder both ask first.
     var currentActivity: UpdateActivity {
         UpdateActivity(
             isExpandingSnippet: textInjector.isDelivering,
@@ -869,7 +866,6 @@ final class AppCore {
             isPaletteVisible: paletteCoordinator.isVisible)
     }
 
-    /// Whether a window may take focus without interrupting something the user started.
     var canInterruptUser: Bool { UpdateReadiness.evaluate(currentActivity) == nil }
 
     // MARK: - Dialogs, routed here so `dialogs` stays the single owner
@@ -923,12 +919,10 @@ final class AppCore {
         messageHUD.dismiss()
     }
 
-    /// The volume slider, so `dialogs` stays the single owner of every prompt in the app.
     func pickVolume(current: Float32) async -> Float32? {
         await dialogs.pickVolume(current: current)
     }
 
-    /// The snippet argument prompt, for the same reason.
     func fillSnippetArguments(
         snippetName: String, arguments: [SnippetTemplateEngine.MissingArgument]
     ) async -> [String: String]? {

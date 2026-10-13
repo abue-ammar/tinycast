@@ -242,7 +242,6 @@ DetailMetadata.TagList = Section("Detail.Metadata.TagList");
 DetailMetadata.TagList.Item = Section("Detail.Metadata.TagList.Item");
 
 Detail.Metadata = DetailMetadata;
-// List.Item.Detail shares Detail's metadata components.
 ListItemDetail.Metadata = DetailMetadata;
 
 // ─── Form ───────────────────────────────────────────────────────────

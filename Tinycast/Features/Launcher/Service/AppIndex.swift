@@ -106,7 +106,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         /// Only an application: a pane or a shortcut dropped on another app opens nothing there.
         let canDragOut: Bool
         let isSymbolIcon: Bool
-        /// Breaks a full tie, apps first: Calculator over Calculator History.
+        /// Breaks a full tie, apps first.
         let rankPriority: Int
     }
 
@@ -141,7 +141,6 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// Stable identity for learned ranking, favorites, and other per-entry preferences.
     var preferenceKey: String { bundleID ?? id }
 
-    /// What this entry is called, in the shape `EntryNaming` reads.
     var naming: EntryNaming.Sources {
         var sources = EntryNaming.Sources(name: name)
         sources.alternateTitles = alternateTitles
@@ -167,7 +166,6 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     var kindLabel: String { ownerName ?? kind.descriptor.label }
 
-    /// The hotkey action for this entry, or nil when the entry has no addressable action.
     var hotKeyAction: HotKeyAction? {
         switch kind {
         case .command:
@@ -213,7 +211,6 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     /// What this row draws, and the only thing any icon path needs to ask.
     var iconSource: EntryIcon { iconOverride ?? defaultIcon }
 
-    /// Derived from the kind alone: synthetic entries get a symbol tile, everything else its file.
     private var defaultIcon: EntryIcon {
         guard kind.descriptor.isSymbolIcon else { return .file(stamp: iconStamp) }
         return .symbol(symbolName ?? kindSymbol)
@@ -249,7 +246,6 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 }
 
 extension AppEntry {
-    /// The one row a layout draws, wherever it is offered from.
     init(_ layout: WindowLayout) {
         self.init(
             id: layout.entryID, name: layout.name,
@@ -279,7 +275,6 @@ extension AppEntry {
             bundleID: nil, kind: .windowCommand)
     }
 
-    /// The one row a custom Quick Action draws, wherever it is offered from.
     init(_ action: CustomQuickAction) {
         self.init(
             id: action.entryID, name: action.name,
@@ -287,7 +282,6 @@ extension AppEntry {
             bundleID: nil, kind: .quickAction, symbolName: action.iconSymbol)
     }
 
-    /// The one row a custom command draws, wherever it is offered from.
     init(_ command: CustomCommand) {
         self.init(
             id: command.entryID, name: command.name,
@@ -295,7 +289,6 @@ extension AppEntry {
             bundleID: nil, kind: .customCommand, symbolName: command.iconSymbol)
     }
 
-    /// The one row a quicklink draws, wherever it is offered from.
     init(_ quicklink: Quicklink) {
         self.init(
             id: quicklink.entryID, name: quicklink.name,
@@ -413,7 +406,7 @@ final class AppIndex {
     private let ranking: LauncherRankingStore
     private let aliases: AliasStore
     private var settings: AppSettings?
-    /// Fired after every scan, even an unchanged one: LaunchServices can trail a deletion by seconds.
+    /// Fires after every scan, even unchanged: LaunchServices can trail a deletion by seconds.
     @ObservationIgnored var onScan: (() -> Void)?
 
     init(ranking: LauncherRankingStore, aliases: AliasStore) {
@@ -421,7 +414,6 @@ final class AppIndex {
         self.aliases = aliases
     }
 
-    /// The always-relevant built-ins, plus whatever a disabled feature has not hidden.
     private var commandEntries: [AppEntry] {
         visibleCatalogEntries.filter { $0.kind == .command }
     }
@@ -437,12 +429,10 @@ final class AppIndex {
         }
     }
 
-    /// Whether the feature behind a command is on, which is what its shortcut has to obey too.
     func isCommandEnabled(_ command: CommandID) -> Bool {
         !hiddenCommands.contains(command)
     }
 
-    /// A feature's commands leave the Commands slice when it is off; `visible` restores them.
     func setCommandsVisible(_ commands: Set<CommandID>, _ visible: Bool) {
         let updated = visible ? hiddenCommands.subtracting(commands) : hiddenCommands.union(commands)
         guard updated != hiddenCommands else { return }
@@ -501,14 +491,12 @@ final class AppIndex {
         publishEntries()
     }
 
-    /// Called by `ExtensionManager` when the installed set or a chosen appearance changes.
     func setExtensionCommands(_ entries: [AppEntry]) {
         guard entries != extensionEntries else { return }
         extensionEntries = entries
         publishEntries()
     }
 
-    /// Shows or hides the window-command slice; the catalog itself is static.
     func setWindowCommandsVisible(_ visible: Bool) {
         let entries = visible ? Self.allWindowCommandEntries : []
         guard entries != windowCommandEntries else { return }
@@ -632,9 +620,9 @@ final class AppIndex {
                 // Finder's rule: LaunchServices ignores a display name the file name contradicts.
                 let names = cache.names(
                     for: url, base: fileName, developmentRegion: bundle?.developmentLocalization)
-                // Raw: Calendar's strings file swaps its `iCal` array for a name.
+                // Raw: a localized strings file can swap this array for a plain name.
                 let alternates = bundle?.infoDictionary?["CFBundleAlternateNames"] as? [String] ?? []
-                // Still searchable, never the label: `code` must keep finding Visual Studio Code.
+                // Still searchable, never the label.
                 let declared = [bundle?.installedAppName].compactMap { $0 }
                 var entry = AppEntry(
                     id: url.path, name: names.first ?? fileName, url: url, bundleID: bundleID,
@@ -657,7 +645,6 @@ final class AppIndex {
         }
     }
 
-    /// The searchable form of every name an entry carries. `scan` names the app slice itself.
     nonisolated private static func named(_ entries: [AppEntry]) -> [AppEntry] {
         entries.map { entry in
             var entry = entry
@@ -717,7 +704,6 @@ final class AppIndex {
         return byUsage(listed, usage: ranking.snapshot())
     }
 
-    /// The launcher's rows: ranked matches, or favorites, suggestions and each kind by usage.
     func orderedResults(
         query: String, visibility: VisibilityStore, favorites: FavoritesStore, hotKeys: HotKeyManager
     ) -> Results {
@@ -785,7 +771,7 @@ final class AppIndex {
         return ordered
     }
 
-    /// Meetings keep their own card, AI is never pushed, and Tinycast opening Tinycast goes nowhere.
+    /// Meetings keep their own card, AI is never pushed, and Tinycast opening itself goes nowhere.
     private func suggestions(
         from entries: [AppEntry], usage: LauncherRankingStore.Snapshot, hotKeys: HotKeyManager
     ) -> [AppEntry] {

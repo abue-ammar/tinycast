@@ -368,7 +368,6 @@ struct CustomCommandTests {
 
         // MARK: Streaming output
 
-        /// Drains a streamed run, returning everything it printed and how it ended.
         func collect(_ session: ShellCommandSession) async -> (log: String, result: ShellCommandResult?) {
             var log = ""
             var result: ShellCommandResult?

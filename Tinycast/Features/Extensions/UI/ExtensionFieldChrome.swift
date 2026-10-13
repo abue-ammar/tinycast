@@ -48,7 +48,6 @@ extension View {
     }
 }
 
-/// The chevron a control that opens a popover carries, pointing the way it will open.
 struct ExtensionDisclosureChevron: View {
     @Environment(\.metrics) private var metrics
     let open: Bool
@@ -64,14 +63,12 @@ struct ExtensionDisclosureChevron: View {
     private var pointsUp: Bool { open && !flipped }
 }
 
-/// One row of a picker popover: an optional icon, a title, and a trailing detail.
 struct ExtensionPickerRow: View {
     private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
     @Environment(\.metrics) private var metrics
     let title: String
     var detail: String?
     var icon: ExtensionImage.Resolved?
-    /// A multi-select picker marks what is already chosen.
     var checked = false
     let selected: Bool
     let onActivate: () -> Void

@@ -50,7 +50,6 @@ final class WindowLayoutCoordinator {
 
     // MARK: - Running
 
-    /// The one funnel for a palette row, a global shortcut and the pane's Apply alike.
     func runWindowLayout(id: UUID) {
         guard settings.windowManagementEnabled, let layout = store.layout(id: id) else { return }
         // Never restoreFocus: an opened app activates itself, and handing focus back races that.
@@ -151,7 +150,6 @@ final class WindowLayoutCoordinator {
         core.showMessage("\(layout.name) — \(detail)", tone: .neutral)
     }
 
-    /// What went wrong, or nil when everything the layout asked for happened.
     private func detail(for outcome: WindowLayoutRunner.Outcome) -> String? {
         var parts: [String] = []
         if let skipped = WindowLayoutPlan(placements: [], skipped: outcome.skipped).skippedSummary {

@@ -10,7 +10,6 @@ struct InlineArgument: Equatable {
     var isOptional = false
 }
 
-/// The inline argument fields beside the search field, one per argument the row declares.
 struct InlineArgumentFields: View {
     @Environment(\.metrics) private var metrics
     let arguments: [InlineArgument]
@@ -21,7 +20,6 @@ struct InlineArgumentFields: View {
     @FocusState.Binding var focused: String?
     /// A field with options is chosen, not typed, so it hands the palette its menu instead.
     let openOptions: (String) -> Void
-    /// ↵ from inside a field acts like ↵ on the row itself.
     let onSubmit: () -> Void
     /// Fields the caret has left behind. Nothing is owed until one was visited and not answered.
     @State private var visited: Set<String> = []

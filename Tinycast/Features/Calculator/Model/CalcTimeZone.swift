@@ -1,6 +1,5 @@
 import Foundation
 
-/// Clock time in another city. See docs/features/calculator.md.
 enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
         guard raw.count <= 128, raw.contains(where: \.isWhitespace) else { return nil }
@@ -431,7 +430,6 @@ enum CalcTimeZone {
         "America/Edmonton": ["calgary"]
     ]
 
-    /// Flattened once from the grouping above, which is the form that gets edited.
     private static let aliases: [String: String] = {
         var table: [String: String] = [:]
         table.reserveCapacity(aliasGroups.values.reduce(0) { $0 + $1.count })

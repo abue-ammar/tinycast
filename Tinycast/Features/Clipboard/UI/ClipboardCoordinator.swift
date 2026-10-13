@@ -1,6 +1,5 @@
 import AppKit
 
-/// Owns clipboard-history actions: paste, copy, reveal, pin — and the selection that follows.
 @MainActor
 final class ClipboardCoordinator {
     private let clipboardStore: ClipboardStore
@@ -65,7 +64,6 @@ final class ClipboardCoordinator {
         }
     }
 
-    /// The setting names an age, the store enforces it; a shortened window culls straight away.
     func applyRetention(_ retention: ClipboardRetention) {
         clipboardStore.maxAge = retention.maxAge
         clipboardStore.enforceLimits()
@@ -210,7 +208,6 @@ final class ClipboardCoordinator {
         core.showMessage("Copied path")
     }
 
-    /// ⇧⌘T / “Copy Text” — OCRs the image in the bundled helper and copies what it reads.
     func copyImageText(_ item: ClipboardItem) {
         guard let path = item.imagePath ?? item.filePath else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)
@@ -219,7 +216,7 @@ final class ClipboardCoordinator {
         textTask?.cancel()
         textTask = Task {
             do {
-                // A stat on an unmounted or network volume can stall, so it stays off the main actor.
+                // A stat on an unmounted or network volume can stall, so it stays off-main.
                 let exists = await Task.detached { FileManager.default.fileExists(atPath: path) }.value
                 try Task.checkCancellation()
                 guard exists else {

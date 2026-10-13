@@ -1,7 +1,6 @@
 import AppKit
 import SwiftUI
 
-/// The Layout row: an add button beside the dropdown naming the entry every field below edits.
 struct WindowLayoutEntryPicker: View {
     let draft: WindowLayoutDraft
     let displays: [WindowLayoutDisplay]

@@ -38,7 +38,7 @@ enum QuicklinkArgumentsAccessory {
                 return menu(for: argument, value: value(id))
             },
             placement: placement,
-            // Identity per row, so "which fields were left unanswered" starts clean on the next one.
+            // Identity per row, so which fields were left unanswered resets on the next one.
             view: AnyView(
                 InlineArgumentFields(
                     arguments: arguments, symbol: symbol, value: value, focused: focus,
@@ -48,7 +48,6 @@ enum QuicklinkArgumentsAccessory {
         )
     }
 
-    /// The typed values for one quicklink, stripped of blanks — what the open funnel is handed.
     static func values(for quicklink: Quicklink, vm: PaletteState) -> [String: String] {
         var values: [String: String] = [:]
         for argument in SnippetTemplateEngine.declaredArguments(in: quicklink.link) {

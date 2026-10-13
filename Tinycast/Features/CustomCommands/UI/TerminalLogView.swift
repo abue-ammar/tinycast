@@ -57,7 +57,6 @@ struct TerminalLogView: NSViewRepresentable {
         if following { textView.scrollToEndOfDocument(nil) }
     }
 
-    /// A reader who scrolled up is left alone; arriving back at the end resumes the follow.
     private func isAtBottom(_ scrollView: NSScrollView) -> Bool {
         guard let documentView = scrollView.documentView else { return true }
         let visible = scrollView.contentView.bounds

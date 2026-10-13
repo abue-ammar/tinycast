@@ -45,7 +45,6 @@ struct CommandOutputView: View {
         .padding(.bottom, Theme.Spacing.lg)
     }
 
-    /// One control for one job: Stop while it runs, Run Again once it has.
     private func actions(_ run: CommandRun) -> some View {
         HStack(spacing: Theme.Spacing.xs) {
             CopyLogButton(log: run.log)
@@ -133,7 +132,6 @@ struct CommandOutputView: View {
     }
 }
 
-/// Copies the whole log, then shows a checkmark long enough to be believed.
 private struct CopyLogButton: View {
     let log: String
     @State private var copiedAt: Date?
@@ -156,7 +154,6 @@ private struct CopyLogButton: View {
     }
 }
 
-/// Elapsed time, in the one place a duration becomes text.
 enum CommandDuration {
     static func text(from start: Date, to end: Date) -> String {
         let seconds = max(0, end.timeIntervalSince(start))

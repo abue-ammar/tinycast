@@ -48,7 +48,6 @@ private struct CheckerboardPattern: View {
 }
 
 extension ColorValue {
-    /// sRGB in, sRGB out: the components are already in the space SwiftUI's initialiser expects.
     var swiftUIColor: Color {
         Color(.sRGB, red: red, green: green, blue: blue, opacity: alpha)
     }

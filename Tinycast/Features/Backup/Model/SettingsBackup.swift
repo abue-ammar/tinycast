@@ -93,7 +93,6 @@ struct SettingsBackup: Codable {
         var supportReminders: Bool?
     }
 
-    /// One entry per bindable action. docs/features/hotkeys.md#persistence
     struct HotkeyBackup: Codable {
         /// Named apart from `commands`: the launcher toggle is the one action with no command row.
         var togglePalette: HotKeyBinding?
@@ -109,7 +108,6 @@ struct SettingsBackup: Codable {
         var customWindowSizes: [String: HotKeyBinding]?
     }
 
-    /// A tally of what an import touched, for user-facing confirmation.
     struct ApplySummary {
         var settingsFields = 0
         var hotkeys = 0

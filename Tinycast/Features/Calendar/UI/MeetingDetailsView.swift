@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One meeting's page: its header, where it is, who is coming, then the invite's own text.
 struct MeetingDetailsView: View {
     @Environment(\.metrics) private var metrics
     let meeting: MeetingEvent

@@ -43,7 +43,6 @@ enum CalcTokenizer {
                         text.unicodeScalars.append(c)
                     } else if c == "," && functionDepth == nil && i + 1 < chars.count && isDigit(chars[i + 1])
                     {
-                        // grouping separator between digits — skip
                     } else if c == "." && !seenDot {
                         seenDot = true
                         text.unicodeScalars.append(c)
@@ -134,7 +133,6 @@ enum CalcTokenizer {
                 continue
             }
 
-            // "**" is the Python/JS/shell spelling of power, same operator as "^".
             if ch == "*", i + 1 < chars.count, chars[i + 1] == "*" {
                 tokens.append(.op(.power))
                 i += 2

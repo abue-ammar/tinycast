@@ -46,7 +46,7 @@ final class HotKeySettingsFile {
             })
     }
 
-    /// Clears changed bindings now and leaves setting them to `commit`, so a moved chord never collides.
+    /// Clears changed bindings now and sets them in `commit`, so a moved chord never collides.
     func apply(_ wanted: [Wanted], key: SettingsFileKey) -> [SettingsFileIssue] {
         let spelling = self.spelling
         var issues: [SettingsFileIssue] = []

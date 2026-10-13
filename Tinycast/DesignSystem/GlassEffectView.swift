@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Native Liquid Glass backdrop for Tinycast's borderless panels.
 struct GlassEffectView: NSViewRepresentable {
     func makeNSView(context: Context) -> NSGlassEffectView {
         NSGlassEffectView()

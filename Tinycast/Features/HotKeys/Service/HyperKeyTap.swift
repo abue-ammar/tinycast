@@ -43,7 +43,6 @@ private func hyperKeyEventTapCallback(
     }
 }
 
-/// The modifying tap behind the Hyper Key. See docs/features/hotkeys.md#the-hyper-key.
 @MainActor
 final class HyperKeyTap {
     /// What the callback should do, decided on the actor; `asFlagsChanged` converts in place.
@@ -79,7 +78,6 @@ final class HyperKeyTap {
     private var runLoopSource: CFRunLoopSource?
     private var hidConnect: io_connect_t = IO_OBJECT_NULL
 
-    // Hold state machine, written from the tap callback on every keystroke.
     private var hyperActive = false
     private var hyperDownAt: ContinuousClock.Instant?
     private var otherKeyPressed = false
@@ -130,7 +128,7 @@ final class HyperKeyTap {
         }
     }
 
-    /// F18 carries fn like any function key, and a `flagsChanged` saying so reads as a real fn press.
+    /// F18 carries fn like any function key; a `flagsChanged` saying so reads as a real fn press.
     private static let functionKeyFlagRaw = CGEventFlags.maskSecondaryFn.rawValue
 
     private func hyperized(_ flagsRaw: UInt64) -> UInt64 {
@@ -289,7 +287,7 @@ final class HyperKeyTap {
         let down = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true)
         let up = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
         for event in [down, up] {
-            // The session source still carries the chord we injected, and a modified Escape is eaten.
+            // The session source still carries our injected chord, and a modified Escape is eaten.
             event?.flags = []
             event?.setIntegerValueField(.eventSourceUserData, value: Self.syntheticTag)
             event?.post(tap: .cghidEventTap)

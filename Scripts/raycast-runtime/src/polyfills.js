@@ -60,7 +60,6 @@ g.setTimeout = (cb, delay, ...args) => schedule(cb, delay, false, args);
 g.setInterval = (cb, delay, ...args) => schedule(cb, delay, true, args);
 g.clearTimeout = unschedule;
 g.clearInterval = unschedule;
-// Node's immediate/tick APIs, used by bundled deps.
 g.setImmediate = (cb, ...args) => schedule(cb, 0, false, args);
 g.clearImmediate = unschedule;
 

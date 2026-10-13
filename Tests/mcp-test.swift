@@ -1,5 +1,3 @@
-// MCP's pure half: the wire framing, the names that route a call, trust, and what a chat addresses.
-
 import Foundation
 
 @main
@@ -240,7 +238,6 @@ struct MCPTests {
         expect(store.servers.count == 1, "removal takes exactly one")
     }
 
-    /// The same servers, shaped for the routes whose own client runs them.
     static func serversBecomeWhatACLICanRunItself() {
         var remote = MCPServer(
             name: "Linear", slug: "linear",

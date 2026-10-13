@@ -32,7 +32,6 @@ extension ExtensionTint {
         return Color(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue)
     }
 
-    /// What `IconCache` actually draws with — the same values, as AppKit sees them.
     var nsColor: NSColor {
         let rgb = components
         return NSColor(srgbRed: rgb.red, green: rgb.green, blue: rgb.blue, alpha: 1)
