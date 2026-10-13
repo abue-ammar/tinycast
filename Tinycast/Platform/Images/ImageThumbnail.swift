@@ -1,5 +1,6 @@
 import AppKit
 import ImageIO
+import Synchronization
 
 enum ImageThumbnail {
     private static let cache = ThumbnailCache(
@@ -21,17 +22,27 @@ enum ImageThumbnail {
     /// Returns the decode directly, so an eviction mid-decode can't strand a placeholder.
     static func loadAsync(_ url: URL, maxPixel: CGFloat, derived: Bool = false) async -> NSImage? {
         if let cached = cached(url, maxPixel: maxPixel) { return cached }
-        return await Task.detached(priority: .userInitiated) {
-            Decoded(image: load(url, maxPixel: maxPixel, derived: derived))
+        var decodable = url
+        // Without a copy, from a failed helper or a size past the largest edge, the original is read.
+        if derived, let copy = ImageDerivative.covering(url, maxPixel: Int(maxPixel.rounded(.up))),
+            await makeCopy(copy, of: url)
+        {
+            decodable = copy.url
+        }
+        // A tile scrolled away mid-copy must not fall back to the full-size decode it was avoiding.
+        guard !Task.isCancelled else { return nil }
+        return await Task.detached(priority: .userInitiated) { [decodable] in
+            Decoded(image: decode(decodable, cachingAs: url, maxPixel: maxPixel))
         }.value.image
     }
 
-    static func load(_ url: URL, maxPixel: CGFloat, derived: Bool = false) -> NSImage? {
+    static func load(_ url: URL, maxPixel: CGFloat) -> NSImage? {
         if let cached = cached(url, maxPixel: maxPixel) { return cached }
+        return decode(url, cachingAs: url, maxPixel: maxPixel)
+    }
 
-        let decodable = derived ? derivative(of: url, maxPixel: maxPixel) ?? url : url
-        guard let cgImage = downsample(decodable, maxPixel: maxPixel) else { return nil }
-
+    private static func decode(_ file: URL, cachingAs url: URL, maxPixel: CGFloat) -> NSImage? {
+        guard let cgImage = downsample(file, maxPixel: maxPixel) else { return nil }
         let image = NSImage(
             cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
         cache.store(
@@ -50,32 +61,60 @@ enum ImageThumbnail {
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 
-    /// One helper at a time, so a first open never fans out a dozen full-size decodes at once.
-    private static let derivation = NSLock()
-
-    /// A PNG never decodes partially, so a 6K screenshot costs its full bitmap for a 64px tile.
-    private static func derivative(of url: URL, maxPixel: CGFloat) -> URL? {
-        guard let copy = ImageDerivative.covering(url, maxPixel: Int(maxPixel.rounded(.up)))
-        else { return nil }
-        if exists(copy) { return copy.url }
-        derivation.lock()
-        defer { derivation.unlock() }
-        if exists(copy) { return copy.url }
-        // Only the copy asked for: a row never pays for a 1080px decode it does not show.
-        guard let size = pixelSize(of: url), Int(max(size.width, size.height)) > copy.edge
-        else { return nil }
-        let helper = Process()
-        helper.executableURL = Bundle.main.bundleURL
-            .appending(path: "Contents/Helpers/ClipboardTextHelper", directoryHint: .notDirectory)
-        helper.arguments = ["thumbnail", url.path, copy.url.path, String(copy.edge)]
-        guard let exit = try? helper.runObservingExit() else { return nil }
-        exit.wait()
-        // The blob may have been deleted mid-run, after its cleanup already looked for this copy.
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            try? FileManager.default.removeItem(at: copy.url)
-            return nil
+    /// Waits on `ImageDerivative.queue`, off the cooperative pool, so a delete of the blob waits it out.
+    static func makeCopy(
+        _ copy: ImageDerivative, of url: URL,
+        helper: URL = Bundle.main.bundleURL.appending(path: "Contents/Helpers/ClipboardTextHelper"),
+        timeout: DispatchTimeInterval = .seconds(10)
+    ) async -> Bool {
+        if exists(copy) { return true }
+        let process = Process()
+        process.executableURL = helper
+        process.arguments = ["thumbnail", url.path, copy.url.path, String(copy.edge)]
+        process.standardInput = FileHandle.nullDevice
+        process.standardOutput = FileHandle.nullDevice
+        process.standardError = FileHandle.nullDevice
+        let cancelled = Cancellation()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                ImageDerivative.queue.async {
+                    let made = run(process, making: copy, of: url, timeout: timeout, cancelled: cancelled)
+                    continuation.resume(returning: made)
+                }
+            }
+        } onCancel: {
+            cancelled.flag.withLock { $0 = true }
+            terminate(process)
         }
-        return exists(copy) ? copy.url : nil
+    }
+
+    /// A PNG never decodes partially, so the helper takes the full bitmap and the app only the copy.
+    private static func run(
+        _ process: Process, making copy: ImageDerivative, of url: URL,
+        timeout: DispatchTimeInterval, cancelled: Cancellation
+    ) -> Bool {
+        if exists(copy) { return true }
+        // Only the copy asked for: a row never pays for a 1080px decode it does not show.
+        guard !cancelled.flag.withLock({ $0 }), let size = pixelSize(of: url),
+            Int(max(size.width, size.height)) > copy.edge,
+            let exit = try? process.runObservingExit()
+        else { return false }
+        // A cancel between the check and the launch found nothing running to terminate.
+        if cancelled.flag.withLock({ $0 }) { terminate(process) }
+        let deadline = DispatchWorkItem { terminate(process) }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + timeout, execute: deadline)
+        exit.wait()
+        deadline.cancel()
+        return process.terminationStatus == 0 && exists(copy)
+    }
+
+    private final class Cancellation: Sendable {
+        let flag = Mutex(false)
+    }
+
+    /// `terminate()` traps on a process that never launched, so the state has to be asked first.
+    private static func terminate(_ process: Process) {
+        if process.isRunning { process.terminate() }
     }
 
     private static func exists(_ copy: ImageDerivative) -> Bool {

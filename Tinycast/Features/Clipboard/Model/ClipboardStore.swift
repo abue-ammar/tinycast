@@ -887,9 +887,7 @@ final class ClipboardStore {
     }
 
     nonisolated private static func removeBlob(atPath path: String) {
-        let url = URL(fileURLWithPath: path)
-        try? FileManager.default.removeItem(at: url)
-        for copy in ImageDerivative.all(of: url) { try? FileManager.default.removeItem(at: copy.url) }
+        ImageDerivative.removeBlob(URL(fileURLWithPath: path))
     }
 
     private func openDatabase() -> Bool {

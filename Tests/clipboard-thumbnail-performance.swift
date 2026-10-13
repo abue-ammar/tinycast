@@ -80,15 +80,36 @@ enum ClipboardThumbnailBenchmark {
 
         // Opening history: every visible row asks for its tile at once, as the list does.
         let rowsStart = ContinuousClock.now
-        await withTaskGroup(of: Void.self) { group in
+        let rowsLoaded = await withTaskGroup(of: Bool.self) { group in
             for url in urls {
-                group.addTask { _ = await ImageThumbnail.loadAsync(url, maxPixel: rowPixel, derived: derived) }
+                group.addTask {
+                    await ImageThumbnail.loadAsync(url, maxPixel: rowPixel, derived: derived) != nil
+                }
             }
+            var all = true
+            for await loaded in group { all = all && loaded }
+            return all
         }
         let rows = milliseconds(rowsStart)
         let previewsStart = ContinuousClock.now
-        for url in urls { _ = await ImageThumbnail.loadAsync(url, maxPixel: previewPixel, derived: derived) }
+        var previewsLoaded = true
+        for url in urls {
+            let image = await ImageThumbnail.loadAsync(url, maxPixel: previewPixel, derived: derived)
+            previewsLoaded = previewsLoaded && image != nil
+        }
         let previews = milliseconds(previewsStart)
+        // A silent fall back to the original would time the old path under the new name.
+        let copiesMade = urls.allSatisfy { url in
+            [rowPixel, previewPixel].allSatisfy { pixel in
+                ImageDerivative.covering(url, maxPixel: Int(pixel)).map {
+                    FileManager.default.fileExists(atPath: $0.url.path)
+                } ?? false
+            }
+        }
+        guard rowsLoaded, previewsLoaded, !derived || copiesMade else {
+            print("FAIL: a load returned nil or a copy is missing; the helper must sit at Contents/Helpers")
+            exit(1)
+        }
         ImageThumbnail.purgePreviews()
 
         var output: [String: Any] = megabytes()

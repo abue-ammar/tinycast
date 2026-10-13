@@ -5,6 +5,9 @@ struct ImageDerivative: Sendable {
     /// Longest edges a copy is written at; a request decodes the smallest one that covers it.
     static let edges = [256, 1080]
 
+    /// Serial for making and deleting copies: a delete waits out the copy in flight, never the reverse.
+    static let queue = DispatchQueue(label: "com.tinycast.image-derivative", qos: .userInitiated)
+
     let url: URL
     let edge: Int
 
@@ -16,6 +19,14 @@ struct ImageDerivative: Sendable {
     /// Every copy a blob may have, so deleting the blob leaves none behind.
     static func all(of original: URL) -> [ImageDerivative] {
         edges.map { ImageDerivative(original, edge: $0) }
+    }
+
+    /// Queued, so it runs after any copy of this blob being written and off the caller's thread.
+    static func removeBlob(_ original: URL) {
+        queue.async {
+            try? FileManager.default.removeItem(at: original)
+            for copy in all(of: original) { try? FileManager.default.removeItem(at: copy.url) }
+        }
     }
 
     static func folder(beside original: URL) -> URL {

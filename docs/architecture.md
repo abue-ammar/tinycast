@@ -118,7 +118,7 @@ the stateless `ClipboardTextWorker` runs one bundled `ClipboardTextHelper` per i
 `Contents/Helpers`, and reaps it before returning. Vision's and PDFKit's allocations therefore belong
 to a process that exits, and the helper — which has no database, clipboard or settings access — is
 handed an input path and answers with bounded text down a pipe. Its `thumbnail` mode writes the
-clipboard's downscaled image copies, so a full-size decode never lands in the app either.
+clipboard's downscaled image copies, so a full-size decode stays out of the app unless that fails.
 
 Dictation similarly runs its model adapters in a bundled helper, with bounded in-memory audio and
 text over pipes. The coordinator keeps microphone capture, UI and insertion in Tinycast; the model
