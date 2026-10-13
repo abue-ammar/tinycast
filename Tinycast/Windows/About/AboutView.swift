@@ -59,6 +59,7 @@ struct AboutView: View {
                 Text(Self.version)
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
                     .padding(.horizontal, Theme.Spacing.md)
                     .padding(.vertical, Theme.Spacing.xs / 2)
                     .background(
