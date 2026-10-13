@@ -447,9 +447,11 @@ and the Actions menu's own chords, and dies with the window.
   `ChatMarkdownRenderer` builds its single attributed string: lists with hanging indents, quotes,
   code as `NSTextBlock`s, tables as an `NSTextTable`, with find's marks and the citation numbers
   in it. Its leaf paths are `ChatFindIndex.leaves`'s, which `chat-markdown-test` pins. A code
-  block is a `RoundedTextBlock`, a continuous rounded rectangle (`Theme.Radius.codeBlock`) in place
-  of the rectangle `NSTextBlock` draws, and its language and Copy sit in a strip its block leaves
-  above the code. Thinking folds, search
+  block's `NSTextBlock` only lays it out: `ChatSelectableTextView.drawBackground(in:)` draws its box,
+  a continuous rounded rectangle (`Theme.Radius.codeBlock`) over the block's bounds less its margin
+  (the list or quote indent), because a text block paints only around the glyphs being redrawn and
+  a scroll that redraws just its header strip left that strip bare. The language and Copy sit in
+  that strip, above the code. Thinking folds, search
   and tool rows stay separate views, so a drag spans one segment's text. A fold holding a match
   opens. A glass counter at the transcript's top edge says "3 of 17" with the same steps as
   Return / ⇧↩ in the field and ⌘G / ⇧⌘G anywhere. The sidebar's own filter is still there, by click.
@@ -654,6 +656,12 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Code blocks have rounded corners, in Dark and Light, and are coloured: ask for a snippet each in
   Swift, Python, shell, JSON, SQL, a diff and HTML; a `diff` shows additions green and removals red,
   and an unlabelled block stays plain. Switching appearance recolours them without a relaunch.
+- Scroll up until only a code block's top edge shows, then a little more: its rounded top and the
+  strip holding its language and Copy draw whole. A code block inside a list starts at the list's
+  indent, with its header over the code.
+- Full screen and a narrow window: a reply, its code blocks, the chips and the composer share the
+  same left and right edges, the user's bubble ends on the right one, and the column grows to
+  `aiChatReadingWidth` before the gutters widen.
 - Move the pointer across a code block's header and its text: an arrow over the header, an I-beam
   over the text, with no flicker between them.
 - Collapse the sidebar with the toolbar button or ⌘B; ⌘N and ⌘Q (Close Window) still work, and ⌘Q with

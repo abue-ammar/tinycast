@@ -222,7 +222,7 @@ enum Theme {
         static let aiChatSearchField: CGFloat = 28
         static let aiChatDetailMinimum: CGFloat = 440
         /// The transcript and composer column; past this a line of prose stops being readable.
-        static let aiChatReadingWidth: CGFloat = 760
+        static let aiChatReadingWidth: CGFloat = 960
         static let aiChatComposerMaxLines: CGFloat = 15
         static let aiChatComposerHeightFraction: CGFloat = 0.30
         /// Every control on the composer's row, Send included, so the row reads as one line.

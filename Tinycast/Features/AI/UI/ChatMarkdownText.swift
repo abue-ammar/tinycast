@@ -63,6 +63,7 @@ final class ChatSelectableTextView: NSTextView {
     private var source: ChatMarkdownSource?
     private var rendered: ChatRenderedText?
     private var headers: [ChatCodeHeader] = []
+    private var codeBoxes: [CGRect] = []
     private var reportedMatch: CGRect?
     /// A second layout of the same storage, so SwiftUI's size probes never re-wrap the drawn one.
     private let measurer = NSLayoutManager()
@@ -168,13 +169,38 @@ final class ChatSelectableTextView: NSTextView {
         layoutOverlays()
     }
 
-    /// The code headers and find's anchor sit on the drawn layout, which tracks the frame.
+    /// A text block paints only around drawn glyphs, so a redraw of its header strip skipped it.
+    override func drawBackground(in rect: NSRect) {
+        super.drawBackground(in: rect)
+        guard let metrics = source?.metrics, let context = NSGraphicsContext.current?.cgContext else {
+            return
+        }
+        let line = Theme.Size.hairline
+        for box in codeBoxes where box.intersects(rect) {
+            let path = RoundedRectangle(cornerRadius: metrics.radius.codeBlock, style: .continuous)
+                .path(in: box.insetBy(dx: line / 2, dy: line / 2)).cgPath
+            context.addPath(path)
+            context.setFillColor(NSColor(Theme.Colors.cardFill).cgColor)
+            context.fillPath()
+            context.addPath(path)
+            context.setStrokeColor(NSColor(Theme.Colors.cardStroke).cgColor)
+            context.setLineWidth(line)
+            context.strokePath()
+        }
+    }
+
+    /// Code boxes, headers and find's anchor sit on the drawn layout, which tracks the frame.
     private func layoutOverlays() {
         guard frame.width > 0, let layout = layoutManager, let container = textContainer else {
             return
         }
         layout.ensureLayout(for: container)
-        placeHeaders(in: layout)
+        let boxes = (rendered?.codeBlocks ?? []).map { Self.box(of: $0, in: layout) }
+        if boxes != codeBoxes {
+            codeBoxes = boxes
+            needsDisplay = true
+        }
+        placeHeaders()
         let match = rendered?.current.map { range in
             layout.boundingRect(
                 forGlyphRange: layout.glyphRange(forCharacterRange: range, actualCharacterRange: nil),
@@ -187,7 +213,18 @@ final class ChatSelectableTextView: NSTextView {
         Task { @MainActor in report?(match) }
     }
 
-    private func placeHeaders(in layout: NSLayoutManager) {
+    /// A block's bounds take in its margin, which is the indent of the list or quote it sits in.
+    private static func box(of code: ChatRenderedText.CodeBlock, in layout: NSLayoutManager) -> CGRect {
+        let glyphs = layout.glyphRange(forCharacterRange: code.range, actualCharacterRange: nil)
+        let bounds = layout.boundsRect(for: code.block, glyphRange: glyphs)
+        let margin = { code.block.width(for: .margin, edge: $0) }
+        return CGRect(
+            x: bounds.minX + margin(.minX), y: bounds.minY + margin(.minY),
+            width: bounds.width - margin(.minX) - margin(.maxX),
+            height: bounds.height - margin(.minY) - margin(.maxY))
+    }
+
+    private func placeHeaders() {
         let blocks = rendered?.codeBlocks ?? []
         while headers.count > blocks.count { headers.removeLast().removeFromSuperview() }
         while headers.count < blocks.count {
@@ -196,10 +233,8 @@ final class ChatSelectableTextView: NSTextView {
             headers.append(header)
         }
         guard let metrics = source?.metrics else { return }
-        for (header, block) in zip(headers, blocks) {
+        for (header, (block, box)) in zip(headers, zip(blocks, codeBoxes)) {
             header.show(code: block.code, language: block.language, metrics: metrics)
-            let glyphs = layout.glyphRange(forCharacterRange: block.range, actualCharacterRange: nil)
-            let box = layout.boundsRect(for: block.block, glyphRange: glyphs)
             let inset = metrics.spacing.xl
             header.frame = CGRect(
                 x: box.minX + inset, y: box.minY + metrics.spacing.md,
