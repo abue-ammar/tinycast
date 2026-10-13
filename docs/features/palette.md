@@ -626,6 +626,12 @@ app:
 
 Both require the Accessibility permission (`Permissions.ensureAccessibility()`).
 
+Ordering the palette out makes AppKit pass key to the next of our panels that accepts it, and a
+non-activating panel holds the keyboard even while another app is active. So `hide` sets
+`NotesPanel.refusesInheritedKey` around the order-out unless `previousOwnWindow` is still visible:
+over another app the keyboard returns to that app, and a paste or the next keystroke cannot land in an
+open note. Summoned from a note, the note takes key back, so a paste lands there.
+
 The same show also mirrors that app into `PaletteState.pasteTarget` (a `PasteTarget`: localized
 name + bundle path), so Clipboard and Emoji can name it — the footer pill reads "Paste to Notes" and
 the ⌘K paste rows carry the app's icon. Resolved once per summon, never per render, and deliberately
