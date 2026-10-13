@@ -143,7 +143,8 @@ struct AISettingsView: View {
             Picker(selection: $settings.opensTo) {
                 ForEach(AIOpensTo.allCases) { Text($0.title).tag($0) }
             } label: {
-                SettingsRowTitle(.aiConversations, "Quick AI opens to")
+                SettingsRowTitle(.aiConversations, "Opens to")
+                Text("What Quick AI and the AI Chat window show when you open them.")
             }
             if settings.opensTo == .recent {
                 Picker(selection: $settings.newChatAfter) {

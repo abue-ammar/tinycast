@@ -46,6 +46,7 @@ struct ChatMarkdownTests {
 
     static func main() {
         everyMatchLandsOnItsWord()
+        failedRepliesColourOnlyTheirNote()
         textReadsAsTheReplyDoes()
         onlyWebAndMailLinksOpen()
         formulasAreOneCharacterEach()
@@ -65,8 +66,30 @@ struct ChatMarkdownTests {
             ChatMarkdownSource(
                 blocks: MarkdownBlock.parse(text, midStream: message.isArriving(segmentAt: 0, of: 1)),
                 highlight: ChatTextHighlight(query: "apple", current: current),
-                citations: citations, prefix: [0], failed: false, metrics: .standard)
+                citations: citations, prefix: [0], failedFrom: nil, metrics: .standard)
         ).render()
+    }
+
+    static func failedRepliesColourOnlyTheirNote() {
+        let blocks = MarkdownBlock.parse("The partial answer.\n\nCancelled", midStream: false)
+        func rendered(failedFrom: Int?) -> NSAttributedString {
+            ChatMarkdownRenderer(
+                ChatMarkdownSource(
+                    blocks: blocks, highlight: nil, citations: [:], prefix: [0],
+                    failedFrom: failedFrom, metrics: .standard)
+            ).render().string
+        }
+        let error = NSColor(Theme.Colors.destructive)
+        func colour(_ text: NSAttributedString, at index: Int) -> NSColor? {
+            text.attribute(.foregroundColor, at: index, effectiveRange: nil) as? NSColor
+        }
+        let note = rendered(failedFrom: 1)
+        expect(colour(note, at: 0) == NSColor.labelColor, "what the model wrote keeps its colour")
+        expect(colour(note, at: note.length - 1) == error, "the note saying why is the error")
+        let plain = rendered(failedFrom: nil)
+        expect(
+            colour(plain, at: plain.length - 1) == NSColor.labelColor, "a reply that did not fail is plain")
+        expect(plain.string == note.string, "the colouring never changes the text")
     }
 
     /// The paths the index hands out are the ones the renderer builds, leaf by leaf.

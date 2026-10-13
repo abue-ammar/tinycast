@@ -65,10 +65,14 @@ final class AIChatCoordinator {
     // MARK: - The window
 
     /// Reopens on whatever it last showed: the conversation is `AppCore`'s, not the window's.
-    func showWindow() {
+    func showWindow(applyingOpenPolicy: Bool = false) {
         guard settings.aiEnabled else { return }
         prepareForChat()
         guard !window.focus() else { return }
+        if applyingOpenPolicy {
+            chats.applyWindowOpenPolicy(
+                opensTo: core.aiSettings.opensTo, newAfter: core.aiSettings.newChatAfter)
+        }
         // One find per window: the chrome's search field writes it, the transcript reads it.
         let find = ChatFindState()
         window.show(chrome: AIChatWindowChrome(coordinator: self, chats: chats, find: find)) {
@@ -80,7 +84,7 @@ final class AIChatCoordinator {
 
     func toggleWindow() {
         guard !closeWindowIfKey() else { return }
-        showWindow()
+        showWindow(applyingOpenPolicy: true)
     }
 
     /// The window's views read these through the coordinator, never through `AppCore`.

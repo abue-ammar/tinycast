@@ -35,6 +35,7 @@ struct ChatTranscriptView: View {
     /// Where the reader sits and whether that is the end; a growing reply moves the end on its own.
     private struct ScrollMark: Equatable {
         var offset: CGFloat
+        var container: CGFloat
         var atEnd: Bool
     }
 
@@ -84,6 +85,7 @@ struct ChatTranscriptView: View {
             .onScrollGeometryChange(for: ScrollMark.self) { geometry in
                 ScrollMark(
                     offset: geometry.contentOffset.y,
+                    container: geometry.containerSize.height,
                     // The offset rests at `-insetTop`, so the end is that far past offset plus band
                     atEnd: geometry.contentOffset.y + geometry.containerSize.height
                         + geometry.contentInsets.top
@@ -92,11 +94,17 @@ struct ChatTranscriptView: View {
                 // The offset is the only signal every device gives; the end wins, tested first
                 if new.atEnd {
                     followsTail = true
+                } else if new.container != old.container || new.offset >= old.offset {
+                    // A scroll asked inside this geometry pass is lost, so the re-pin waits a turn
+                    if followsTail { Task { follow(proxy, always: false) } }
                 } else if new.offset < old.offset - Self.deliberateScroll {
                     followsTail = false
                 }
             }
-            .onChange(of: messages.count) { follow(proxy, always: true) }
+            .onChange(of: messages.count) {
+                followsTail = true
+                follow(proxy, always: true)
+            }
             .onChange(of: find?.current) { _, current in
                 guard current != nil else { return }
                 followsTail = false
@@ -241,7 +249,7 @@ private struct ChatMessageView: View, @MainActor Equatable {
         } else {
             bubbleContent
                 .font(metrics.typography.rowTitle)
-                .foregroundStyle(message.state == .failed ? Theme.Colors.destructive : .primary)
+                .foregroundStyle(.primary)
                 .textSelection(.enabled)
                 // The user bubble is inset because it carries a fill; a reply clears the chevron
                 .padding(.horizontal, message.role == .user ? metrics.spacing.xl : metrics.spacing.sm)
@@ -288,11 +296,13 @@ private struct ChatMessageView: View, @MainActor Equatable {
                     Group {
                         switch segment {
                         case .text(let text):
+                            let blocks = MarkdownBlock.parse(
+                                ChatChoices.split(text).text,
+                                midStream: message.isArriving(segmentAt: offset, of: segments.count))
                             ChatMarkdownText(
-                                blocks: MarkdownBlock.parse(
-                                    ChatChoices.split(text).text,
-                                    midStream: message.isArriving(segmentAt: offset, of: segments.count)),
-                                failed: message.state == .failed)
+                                blocks: blocks,
+                                failedFrom: message.state == .failed && offset == segments.count - 1
+                                    ? max(blocks.count - 1, 0) : nil)
                         case .search(let search):
                             ChatSearchRow(search: search)
                         case .tools(let uses):
@@ -355,11 +365,14 @@ private struct ChatSourceChip: View {
         Button {
             NSWorkspace.shared.open(reference.url)
         } label: {
-            HStack(spacing: metrics.spacing.xs) {
+            HStack(spacing: metrics.spacing.md) {
                 Text("\(index)")
                     .font(metrics.typography.keyCap)
                     .monospacedDigit()
-                    .foregroundStyle(Theme.Colors.textTertiary)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .frame(minWidth: metrics.size.chatSourceBadge)
+                    .frame(height: metrics.size.chatSourceBadge)
+                    .background(Circle().fill(Theme.Colors.controlSurface))
                 Text(reference.title)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -372,9 +385,9 @@ private struct ChatSourceChip: View {
                 }
             }
             .font(metrics.typography.rowTrailing)
-            .padding(.horizontal, metrics.spacing.xs)
+            .chatChip(leadsWithBadge: true)
         }
-        .buttonStyle(.glass)
+        .buttonStyle(.plain)
         .help(reference.url.absoluteString)
         .accessibilityLabel("Source \(index): \(reference.title), \(reference.host)")
     }
@@ -446,7 +459,8 @@ private struct ChatReasoningBlock: View {
             .buttonStyle(.plain)
             .accessibilityLabel(isOpen ? "Hide reasoning" : "Show reasoning")
             if isOpen {
-                Text(highlight?.attributed(block.text, leaf: path) ?? AttributedString(block.text))
+                let text = block.displayText
+                Text(highlight?.attributed(text, leaf: path) ?? AttributedString(text))
                     .findAnchor(highlight, leaf: path)
                     .font(metrics.typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textSecondary)

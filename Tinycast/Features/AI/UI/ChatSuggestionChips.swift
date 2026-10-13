@@ -7,27 +7,9 @@ struct ChatSuggestionChips: View {
     let onChoose: (String) -> Void
 
     var body: some View {
-        ChatFlowLayout(spacing: metrics.spacing.sm) {
+        ChatFlowLayout(spacing: metrics.spacing.sm, centersRows: true) {
             ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
-                Button {
-                    onChoose(choice)
-                } label: {
-                    HStack(spacing: metrics.spacing.sm) {
-                        Image(systemName: "arrow.turn.down.right")
-                            .font(metrics.typography.keyCap)
-                            .foregroundStyle(Theme.Colors.textTertiary)
-                        Text(choice)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-                    .font(metrics.typography.rowTrailing)
-                    .padding(.horizontal, metrics.spacing.xs)
-                    .padding(.vertical, metrics.spacing.xxs)
-                }
-                .buttonStyle(.glass)
-                .buttonBorderShape(.capsule)
-                .help("Reply “\(choice)”")
-                .accessibilityLabel("Reply: \(choice)")
+                ChatSuggestionChip(choice: choice, onChoose: onChoose)
             }
         }
         .accessibilityElement(children: .contain)
@@ -35,16 +17,65 @@ struct ChatSuggestionChips: View {
     }
 }
 
+private struct ChatSuggestionChip: View {
+    @Environment(\.metrics) private var metrics
+    let choice: String
+    let onChoose: (String) -> Void
+
+    var body: some View {
+        Button {
+            onChoose(choice)
+        } label: {
+            HStack(spacing: metrics.spacing.sm) {
+                Image(systemName: "arrow.turn.down.right")
+                    .font(metrics.typography.keyCap)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+                Text(choice)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .font(metrics.typography.rowTrailing)
+            .chatChip()
+        }
+        .buttonStyle(.plain)
+        .help("Reply “\(choice)”")
+        .accessibilityLabel("Reply: \(choice)")
+    }
+}
+
+private struct ChatChipSurface: ViewModifier {
+    @Environment(\.metrics) private var metrics
+    let leadsWithBadge: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .foregroundStyle(Theme.Colors.textPrimary)
+            .padding(.leading, leadsWithBadge ? metrics.spacing.sm : metrics.spacing.xl)
+            .padding(.trailing, metrics.spacing.xl)
+            .padding(.vertical, metrics.spacing.sm)
+            .background { Capsule().fill(Color.clear).frosted(in: Capsule()) }
+            .contentShape(Capsule())
+    }
+}
+
+extension View {
+    func chatChip(leadsWithBadge: Bool = false) -> some View {
+        modifier(ChatChipSurface(leadsWithBadge: leadsWithBadge))
+    }
+}
+
 /// Chips left to right, wrapping when the row is full.
 struct ChatFlowLayout: Layout {
     let spacing: CGFloat
+    var centersRows = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
         let rows = arrange(subviews, width: width)
         let widest = rows.map(\.width).max() ?? 0
         let height = rows.reduce(0) { $0 + $1.height } + spacing * CGFloat(max(rows.count - 1, 0))
-        return CGSize(width: min(widest, width), height: height)
+        let claimed = centersRows && width.isFinite ? width : min(widest, width)
+        return CGSize(width: claimed, height: height)
     }
 
     func placeSubviews(
@@ -52,7 +83,7 @@ struct ChatFlowLayout: Layout {
     ) {
         var y = bounds.minY
         for row in arrange(subviews, width: bounds.width) {
-            var x = bounds.minX
+            var x = centersRows ? bounds.minX + (bounds.width - row.width) / 2 : bounds.minX
             for index in row.indices {
                 let size = fitted(subviews[index], width: bounds.width)
                 subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))

@@ -7,7 +7,7 @@ struct ChatMarkdownSource: Equatable {
     let highlight: ChatTextHighlight?
     let citations: [String: Int]
     let prefix: [Int]
-    let failed: Bool
+    let failedFrom: Int?
     let metrics: InterfaceMetrics
 }
 
@@ -22,6 +22,34 @@ struct ChatRenderedText {
         let range: NSRange
         let code: String
         let language: String?
+    }
+}
+
+/// `NSTextBlock` can only fill and stroke a rectangle, so a code block draws its own rounded box.
+private final class RoundedTextBlock: NSTextBlock {
+    var cornerRadius: CGFloat = 0
+
+    override func drawBackground(
+        withFrame frameRect: NSRect, in controlView: NSView?, characterRange charRange: NSRange,
+        layoutManager: NSLayoutManager
+    ) {
+        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        let line = width(for: .border, edge: .minX)
+        let box = frameRect.insetBy(dx: line / 2, dy: line / 2)
+        let path = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).path(in: box).cgPath
+        context.saveGState()
+        if let fill = backgroundColor {
+            context.setFillColor(fill.cgColor)
+            context.addPath(path)
+            context.fillPath()
+        }
+        if let stroke = borderColor(for: .minX), line > 0 {
+            context.setStrokeColor(stroke.cgColor)
+            context.setLineWidth(line)
+            context.addPath(path)
+            context.strokePath()
+        }
+        context.restoreGState()
     }
 }
 
@@ -62,11 +90,16 @@ struct ChatMarkdownRenderer {
         var textBlocks: [NSTextBlock] = []
         var indent: CGFloat = 0
         var secondary = false
+        var failed = false
     }
 
     func render() -> ChatRenderedText {
         let output = Output()
-        render(source.blocks, at: source.prefix, in: Context(), into: output)
+        let split = min(source.failedFrom ?? source.blocks.count, source.blocks.count)
+        render(Array(source.blocks[..<split]), at: source.prefix, in: Context(), into: output)
+        render(
+            Array(source.blocks[split...]), at: source.prefix, in: Context(failed: true),
+            into: output, first: split)
         // The last paragraph's own break would draw an empty line under the reply.
         if output.string.string.hasSuffix("\n") {
             output.string.deleteCharacters(in: NSRange(location: output.string.length - 1, length: 1))
@@ -85,7 +118,7 @@ struct ChatMarkdownRenderer {
     private var bodyFont: NSFont { typography.textNSFont(.body) }
 
     private func textColor(_ context: Context) -> NSColor {
-        if source.failed { return NSColor(Theme.Colors.destructive) }
+        if context.failed { return NSColor(Theme.Colors.destructive) }
         return context.secondary ? NSColor(Theme.Colors.textSecondary) : .labelColor
     }
 
@@ -357,7 +390,9 @@ struct ChatMarkdownRenderer {
         language: String?, text: String, leaf: [Int], in context: Context, into output: Output,
         after: CGFloat
     ) {
-        let box = Self.fullWidthBlock()
+        let box = RoundedTextBlock()
+        box.setValue(100, type: .percentageValueType, for: .width)
+        box.cornerRadius = source.metrics.radius.codeBlock
         box.backgroundColor = NSColor(Theme.Colors.cardFill)
         box.setBorderColor(NSColor(Theme.Colors.cardStroke))
         box.setWidth(Theme.Size.hairline, type: .absoluteValueType, for: .border)
@@ -375,6 +410,7 @@ struct ChatMarkdownRenderer {
         style.headIndent = 0
         let body = NSMutableAttributedString(
             string: text, attributes: [.font: font, .foregroundColor: textColor(context)])
+        if !context.failed { colorSyntax(of: body, language: language) }
         mark(body, leaf: leaf)
         let start = output.string.length
         body.append(NSAttributedString(string: "\n", attributes: [.font: font]))
@@ -385,6 +421,31 @@ struct ChatMarkdownRenderer {
                 block: box, range: NSRange(location: start, length: body.length), code: text,
                 language: language))
         spacer(after, in: context, into: output)
+    }
+
+    private func colorSyntax(of body: NSMutableAttributedString, language: String?) {
+        var inks: [SyntaxKind: NSColor] = [:]
+        for token in SyntaxHighlighter.tokens(in: body.string, language: language) {
+            let ink = inks[token.kind] ?? NSColor(Self.syntaxColor(token.kind))
+            inks[token.kind] = ink
+            body.addAttribute(.foregroundColor, value: ink, range: token.range)
+        }
+    }
+
+    private static func syntaxColor(_ kind: SyntaxKind) -> Color {
+        switch kind {
+        case .keyword: Theme.Colors.Syntax.keyword
+        case .string: Theme.Colors.Syntax.string
+        case .number: Theme.Colors.Syntax.number
+        case .comment: Theme.Colors.Syntax.comment
+        case .type: Theme.Colors.Syntax.type
+        case .function: Theme.Colors.Syntax.function
+        case .constant: Theme.Colors.Syntax.constant
+        case .attribute: Theme.Colors.Syntax.attribute
+        case .property: Theme.Colors.Syntax.property
+        case .inserted: Theme.Colors.Syntax.inserted
+        case .deleted: Theme.Colors.Syntax.deleted
+        }
     }
 
     /// A block's bottom margin is painted with its fill, so the gap under a code block is a line.

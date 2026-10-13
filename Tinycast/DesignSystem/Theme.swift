@@ -52,6 +52,7 @@ enum Theme {
         /// A pill holding a square thumbnail; a full capsule fights the thumbnail's own corners.
         static let attachmentChip: CGFloat = 8
         static let card: CGFloat = 10
+        static let codeBlock: CGFloat = 14
         /// A window-to-be in the room preview, rounded like a real window rather than a row.
         static let roomCard: CGFloat = 16
         static let keyCap: CGFloat = 6
@@ -231,6 +232,7 @@ enum Theme {
         static let chatContextGauge: CGFloat = 14
         /// A source chip's title before it middle-truncates, so three chips share a row.
         static let chatSourceTitle: CGFloat = 200
+        static let chatSourceBadge: CGFloat = 18
         /// The context card's width: a label column and a value one, with room for a model name.
         static let chatContextCard: CGFloat = 300
         /// A grouped `Form` row's control height.
@@ -528,6 +530,30 @@ enum Theme {
         /// The command output window's page: a flat surface the log sits directly on.
         static let terminalSurface = adaptive(
             dark: .srgbInk(0.07, alpha: 1), light: .srgbInk(0.99, alpha: 1))
+
+        enum Syntax {
+            static let keyword = pair(dark: 0xFC5FA3, light: 0xAD3DA4)
+            static let string = pair(dark: 0xFC6A5D, light: 0xD12F1B)
+            static let number = pair(dark: 0xD0BF69, light: 0x272AD8)
+            static let comment = pair(dark: 0x7F8C98, light: 0x5D6C79)
+            static let type = pair(dark: 0x5DD8FF, light: 0x1F7A85)
+            static let function = pair(dark: 0x67B7A4, light: 0x2B6A72)
+            static let constant = pair(dark: 0xD0A8FF, light: 0x6C36A9)
+            static let attribute = pair(dark: 0xFD8F3F, light: 0x78492A)
+            static let property = pair(dark: 0x6BBCDD, light: 0x0F68A0)
+            static let inserted = pair(dark: 0x67D97E, light: 0x1F7F3A)
+            static let deleted = pair(dark: 0xFC6A5D, light: 0xC0301F)
+
+            private static func pair(dark: UInt32, light: UInt32) -> Color {
+                adaptive(dark: rgb(dark), light: rgb(light))
+            }
+
+            private static func rgb(_ hex: UInt32) -> NSColor {
+                NSColor(
+                    srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
+                    blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
+            }
+        }
     }
 }
 

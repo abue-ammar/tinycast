@@ -51,6 +51,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var glyph: CGFloat { scaledPoints(Theme.Radius.glyph, scale) }
         var attachmentChip: CGFloat { scaledPoints(Theme.Radius.attachmentChip, scale) }
         var card: CGFloat { scaledPoints(Theme.Radius.card, scale) }
+        var codeBlock: CGFloat { scaledPoints(Theme.Radius.codeBlock, scale) }
         var keyCap: CGFloat { scaledPoints(Theme.Radius.keyCap, scale) }
         var tooltip: CGFloat { scaledPoints(Theme.Radius.tooltip, scale) }
     }
@@ -106,6 +107,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var markdownListMarker: CGFloat { scaledPoints(Theme.Size.markdownListMarker, scale) }
         var markdownQuoteBar: CGFloat { scaledPoints(Theme.Size.markdownQuoteBar, scale) }
         var chatMessageAction: CGFloat { scaledPoints(Theme.Size.chatMessageAction, scale) }
+        var chatSourceBadge: CGFloat { scaledPoints(Theme.Size.chatSourceBadge, scale) }
         var chatImageThumb: CGFloat { scaledPoints(Theme.Size.chatImageThumb, scale) }
         var chatAttachmentGlyph: CGFloat { scaledPoints(Theme.Size.chatAttachmentGlyph, scale) }
         var chatAttachmentThumb: CGFloat { scaledPoints(Theme.Size.chatAttachmentThumb, scale) }

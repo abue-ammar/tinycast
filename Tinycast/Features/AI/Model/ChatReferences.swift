@@ -16,6 +16,8 @@ enum ChatReferences {
     static let limit = 8
 
     static func extract(from text: String) -> [ChatReference] {
+        // Every pattern below opens with `http`, so most replies skip five regex passes.
+        guard text.contains("http") else { return [] }
         let prose = withoutCode(text)
         var found: [(offset: Int, reference: ChatReference)] = []
         var linked = Set<String>()

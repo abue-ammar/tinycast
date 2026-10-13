@@ -289,8 +289,8 @@ enum SettingsSearchCatalog {
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
         .init(.aiChat, "Tool call rounds", keywords: ["mcp", "tools", "limit", "loop", "agent", "unlimited"]),
         .init(
-            .aiConversations, "Quick AI opens to",
-            keywords: ["new chat", "last", "summon", "resume"]),
+            .aiConversations, "Opens to",
+            keywords: ["new chat", "last", "summon", "resume", "window", "quick ai"]),
         .init(
             .aiConversations, "Start a new conversation after",
             keywords: ["idle", "timeout", "fresh"]),

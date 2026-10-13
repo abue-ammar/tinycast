@@ -8,7 +8,7 @@ struct ChatMarkdownText: View {
     @Environment(\.chatCitations) private var citations
     @Environment(\.chatFindPath) private var path
     let blocks: [MarkdownBlock]
-    var failed = false
+    var failedFrom: Int?
 
     /// Where the current find match sits in this text, so the transcript can scroll to it.
     @State private var currentMatch: CGRect?
@@ -22,7 +22,7 @@ struct ChatMarkdownText: View {
         ChatTextRepresentable(
             source: ChatMarkdownSource(
                 blocks: blocks, highlight: highlight, citations: citations, prefix: path,
-                failed: failed, metrics: metrics)
+                failedFrom: failedFrom, metrics: metrics)
         ) { rect in
             if rect != currentMatch { currentMatch = rect }
         }
@@ -235,6 +235,10 @@ private final class ChatCodeHeader: NSView {
     required init?(coder: NSCoder) { nil }
 
     override var isFlipped: Bool { true }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .arrow)
+    }
 
     func show(code: String, language: String?, metrics: InterfaceMetrics) {
         self.code = code
