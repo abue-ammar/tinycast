@@ -6,6 +6,12 @@ final class CodexTurnRunner {
         You are providing text generation inside Tinycast. Never execute commands, read local files, \
         inspect the environment, or modify files.
         """
+    /// The shell tool is off by flag, so this must not forbid what an armed MCP tool does.
+    private static let toolSafetyInstructions = """
+        You are providing text generation inside Tinycast. You may use the MCP tools supplied with \
+        this request for anything they offer. Never execute commands, read local files, inspect the \
+        environment, or modify files except through them.
+        """
     private static let webSearchInstructions = """
         You may use web search when the answer depends on current or external information. For a \
         follow-up, use the sources already in this conversation and search again when more detail \
@@ -398,7 +404,8 @@ final class CodexTurnRunner {
             ? "Never invoke tools or access external resources. Use only the request content supplied by Tinycast."
             : "The only tools you may use are \(allowedTools.joined(separator: " and "))."
         let search = request.webSearch ? Self.webSearchInstructions : Self.noWebSearchInstructions
-        return ([Self.safetyInstructions, tools, search] + requestInstructions).joined(separator: "\n\n")
+        let safety = hasTools ? Self.toolSafetyInstructions : Self.safetyInstructions
+        return ([safety, tools, search] + requestInstructions).joined(separator: "\n\n")
     }
 
     private func turnInput(for message: AIMessage) -> [[String: Any]] {

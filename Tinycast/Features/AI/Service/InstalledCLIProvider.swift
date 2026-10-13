@@ -25,11 +25,12 @@ private final class InstalledCLITurnRunner {
         environment, access external resources, or modify anything. Use only the conversation and \
         instructions in this request.
         """
-    /// The same boundary, for the one route that is handed tools: everything else stays off.
+    /// Built-ins are off by `--tools ""`, so this must not forbid what an armed MCP tool does.
     private static let toolSafetyInstructions = """
         You are generating text inside Tinycast. The only tools you may use are the MCP tools \
-        supplied with this request. Do not read files, inspect the environment, access external \
-        resources, or modify anything else.
+        supplied with this request, and you may use them for anything they offer. Do not run \
+        commands, read files, inspect the environment, access external resources, or modify \
+        anything except through them.
         """
 
     private static var maximumPartialLineBytes: Int {

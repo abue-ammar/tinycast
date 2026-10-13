@@ -895,7 +895,9 @@ disables the editor rather than hiding it, so what is being withheld stays reada
 deliberately cannot reach: every installed CLI route prepends its own instruction never to run
 commands or touch files, and never to invoke a tool beyond the MCP tools an armed Codex or Claude
 turn supplies. That is a sandbox boundary on a local CLI, not Tinycast describing itself, and a user
-switch must not be able to lift it.
+switch must not be able to lift it. An armed turn's instruction lets those MCP tools do anything they
+offer, commands and files included: the CLI's own tools are already off by flag and every call
+passes consent, so forbidding it there would only make the model refuse a server the user chose.
 
 `mcpEnabled` and `mcpServers` are excluded for the reasons in [mcp.md](mcp.md).
 `aiConnections`, `aiDefaultModel`, `aiSystemPrompt` and `aiSystemPromptEnabled` are deliberately
