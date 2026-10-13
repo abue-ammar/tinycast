@@ -109,6 +109,13 @@ Image capture (TIFF→PNG re-encode + blob write) runs off the main actor via de
 inserts, original-text search, and pruning stay on the main actor.
 Image copy uses Foundation’s `mappedIfSafe` hint before publishing the original PNG and marker.
 
+**Tiles and previews decode a copy, not the blob.** A PNG can't decode partially, so a 64px tile of a
+6K screenshot cost its full bitmap. The first draw of an owned image has `ClipboardTextHelper` write
+the `ImageDerivative` copy it needs, 256px for a row or 1080px for the preview, to
+`images/.thumbnails/` (excluded from backup), one at a time; later draws decode those. Blobs are
+immutable, so a copy never goes stale, and `removeBlob` deletes the copies with the blob. An image
+outside `images/`, such as a Raycast import, never gets copies.
+
 **A backup reads the whole table, not `items`.** `forEachStoredItem(inDatabaseAt:)` is `nonisolated`
 and opens a second connection, because the resident window stops at 1000 rows while the table is
 capped only by age — an export that read `items` would silently drop the rest of someone's history,

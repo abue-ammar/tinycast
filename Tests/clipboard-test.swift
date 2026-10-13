@@ -25,6 +25,7 @@ struct ClipboardTests {
         persistence()
         exportSeesPastTheMemoryWindow()
         importedImagesArriveOnce()
+        imageCopiesLeaveWithTheirBlob()
         multiFileCopyMakesOneRowEach()
         referencedFilesOutliveTheirRows()
         filePathsAreNeverATextForm()
@@ -562,6 +563,47 @@ struct ClipboardTests {
             }
             expect(streamed == total, "the export streams every row, not just the window")
             expect(seen.count == total, "every row arrives exactly once")
+        }
+    }
+
+    /// Removing an image, clearing history or a retention cut also deletes the copies beside its blob.
+    static func imageCopiesLeaveWithTheirBlob() {
+        for way in ["removing", "clearing history", "a retention cut"] {
+            withStore { store, dir in
+                let blob = dir.appendingPathComponent("blob.png")
+                try? Data("png".utf8).write(to: blob)
+                let staged = ClipboardItem(
+                    imagePath: blob.path, createdAt: Date().addingTimeInterval(-2 * 86_400),
+                    sourceBundleID: nil)
+                ClipboardStore.importStoredItems(
+                    inDatabaseAt: store.dbURL, adoptingImagesInto: store.imagesDir, [staged])
+                store.load()
+                guard let item = store.items.first, let url = store.imageURL(for: item) else {
+                    return expect(false, "the adopted image is listed")
+                }
+                expect(store.ownsImage(of: item), "an adopted blob is ours to derive from")
+                let copies = ImageDerivative.all(of: url).map(\.url)
+                try? FileManager.default.createDirectory(
+                    at: ImageDerivative.folder(beside: url), withIntermediateDirectories: true)
+                for copy in copies { try? Data("copy".utf8).write(to: copy) }
+
+                switch way {
+                case "removing": store.remove(item)
+                case "clearing history": store.clearAll()
+                default:
+                    store.maxAge = 86_400
+                    store.enforceLimits()
+                }
+                let deadline = Date().addingTimeInterval(2)
+                while copies.contains(where: { FileManager.default.fileExists(atPath: $0.path) }),
+                    Date() < deadline
+                {
+                    RunLoop.current.run(until: Date().addingTimeInterval(0.01))
+                }
+                expect(
+                    !copies.contains { FileManager.default.fileExists(atPath: $0.path) },
+                    "\(way) deletes the copies")
+            }
         }
     }
 
