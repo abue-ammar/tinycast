@@ -150,6 +150,11 @@ enum CalcUnitCatalog {
         m³/s|Cubic Meters per Second|1.0|m3/s,m3/sec
         m³/h|Cubic Meters per Hour|0.0002777777777777778|m3/h,m3/hr
         gal/min|Gallons per Minute|6.30901964e-05|gal/min,gpm
+        fuelEconomy
+        km/L|Kilometers per Liter|1000000.0|km/l
+        mpg|Miles per Gallon|425143.707430272|mpg
+        fuelConsumption
+        L/100km|Liters per 100 Kilometers|1e-08|l/100km
         digitalStorage
         bit|Bits|0.125|bit,bits
         B|Bytes|1.0|b,byte,bytes

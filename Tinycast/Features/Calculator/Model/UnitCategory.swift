@@ -4,6 +4,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
     case angle, speed, pressure, dataRate, acceleration, force, energy, power, frequency
     case electricCurrent, voltage, resistance, electricCharge, volumeFlow
+    case fuelEconomy, fuelConsumption
     case pixels, pixelArea, pixelDensity, compound
 
     var displayName: String {
@@ -29,6 +30,8 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .resistance: return "Resistance"
         case .electricCharge: return "Electric Charge"
         case .volumeFlow: return "Volume Flow Rate"
+        case .fuelEconomy: return "Fuel Economy"
+        case .fuelConsumption: return "Fuel Consumption"
         case .compound: return "Compound Units"
         case .pixels: return "Pixels"
         case .pixelArea: return "Pixel Area"
@@ -57,6 +60,8 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .resistance: return CalcDimension(length: 2, mass: 1, time: -3, electricCurrent: -2)
         case .electricCharge: return CalcDimension(time: 1, electricCurrent: 1)
         case .volumeFlow: return CalcDimension(length: 3, time: -1)
+        case .fuelEconomy: return CalcDimension(length: -2)
+        case .fuelConsumption: return CalcDimension(length: 2)
         case .pixels: return CalcDimension(pixels: 1)
         case .pixelArea: return CalcDimension(pixels: 2)
         case .pixelDensity: return CalcDimension(length: -1, pixels: 1)

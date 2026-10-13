@@ -466,6 +466,11 @@ struct CalcExpressionParser {
                 }
                 return nil
             }
+            if isAfterDivision, let unit = CalcUnits.byName[name] {
+                position += 1
+                dimensionCount += 1
+                return CalcValue(amount: 1, kind: .unit(unit))
+            }
             guard CalcUnits.byName[name] == nil,
                 let definition = CalcCurrency.byName[name],
                 let amount = number(at: position + 1)
@@ -559,6 +564,11 @@ struct CalcExpressionParser {
         }
         guard let value = parseExpression(minBindingPower: 0), position == end else { return nil }
         return value
+    }
+
+    /// `100 / s` is one second, as `(s)` is; only here, so `m s` keeps meaning a unit pair.
+    private var isAfterDivision: Bool {
+        position > 0 && tokens[position - 1] == .op(.divide)
     }
 
     private func matchingParenthesis() -> Int? {

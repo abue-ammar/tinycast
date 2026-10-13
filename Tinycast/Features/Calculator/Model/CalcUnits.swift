@@ -129,6 +129,8 @@ enum CalcUnits {
         "in³": ("ml", false), "ft³": ("l", false), "yd³": ("l", false),
         "L/s": ("l/min", false), "L/min": ("l/h", false), "L/h": ("l/min", false),
         "m³/s": ("l/s", false), "m³/h": ("l/min", false), "gal/min": ("l/min", false),
+        // Fuel economy
+        "mpg": ("km/l", false), "km/L": ("mpg", false),
         // Digital storage
         "bit": ("b", false), "B": ("bit", false), "kB": ("kib", false), "MB": ("mib", false),
         "GB": ("gib", false), "TB": ("tib", false), "PB": ("tb", false), "KiB": ("kb", false),

@@ -214,6 +214,9 @@ subtracts them, and powers multiply them. `CalcUnits.baseUnits` resolves support
 ordinary units, so conversions and addition need no second representation. Derived results use base
 units unless a trailing conversion names another: `5m * 4m` → `20 m²`,
 `100km / 2h to km/h` → `50 km/h`, `90km/h * 20min to km` → `30 km`.
+A bare unit after `/` is one of that unit, as `(s)` is: `100 / s` → `100 Hz`, `1000 / (3/s)` →
+`333.3333333 s`. Only `/` does this, so `m s` stays a unit pair. A function name still wins, so
+`100 / sec` (the secant) stays silent.
 Area, volume, volume flow, speed, acceleration, force, pressure, energy, power, frequency, data rates
 and electrical and pixel units compose through this same path. `CalcUnitExpression` composes other
 dimensions from existing units, retaining their factors and symbols: `2kg / 4m3` → `0.5 kg/m³`,
@@ -222,6 +225,9 @@ dimensions from existing units, retaining their factors and symbols: `2kg / 4m3`
 All factors share composable bases: cubic meters for volume and bytes per second for data rates.
 To add a dimension, declare its signature on `UnitCategory`, add records to `CalcUnitCatalog`, and register
 one output in `baseUnits`. A new unit within a category only needs a table entry.
+Fuel economy (`mpg`, `km/L`) and fuel consumption (`L/100km`) register no base unit, so
+`100 km / 7 l` keeps the units typed. No rule converts one into the other: `6.5 l/100km to mpg` is a
+category error, while `1 / 36 mpg to l/100km` works through ordinary division.
 `m²` / `m2` and `m³` / `m3` name units; `(2m)^2` squares the entire quantity.
 `CalcUnits.productUnit` selects Wh/kWh for power multiplied by a minutes-or-larger time unit,
 and Ah/mAh for current multiplied by one; other derived products retain their base unit.

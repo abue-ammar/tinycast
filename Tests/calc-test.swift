@@ -644,6 +644,11 @@ struct CalcTests {
         expectDisplay("10m/s / 2s", "5 m/s²")
         expectDisplay("2kg * 3m/s²", "6 N")
         expectDisplay("1 / 20ms to hz", "50 Hz")
+        expectDisplay("100 / s to hz", "100 Hz")
+        expectDisplay("1000 / (3/s)", "333.3333333 s")
+        expectDisplay("65535 / (100/s) to minutes", "10.9225 min")
+        expectDisplay("1000 / 3 / s", "333.3333333 Hz")
+        expectNil("100 / sec")  // the secant function claims `sec` first
         expectDisplay("(1hr + 30min) to timespan", "1 hr 30 min")
         expectDisplay("100km / 40km/h to duration", "2 hr 30 min")
         expectNil("1m / 0s")
@@ -728,6 +733,15 @@ struct CalcTests {
         expectDisplay("60 mph to kmh", "96.56064 km/h")
         expectDisplay("100 mbps to kbps", "100,000 Kbps")
         expectBadges("100 kmh to mph", source: "Kilometers per Hour", target: "Miles per Hour")
+
+        // Fuel economy and consumption: no reciprocal rule joins the two
+        expectDisplay("36 mpg", "15.30517347 km/L")
+        expectBadges("36 mpg", source: "Miles per Gallon", target: "Kilometers per Liter")
+        expectDisplay("15 km/l to mpg", "35.2821875 mpg")
+        expectDisplay("100 mi / 4 gal to mpg", "25 mpg")
+        expectDisplay("24.5 l / 350 km to l/100km", "7 L/100km")
+        expectDisplay("1 / 36 mpg to l/100km", "6.533738426 L/100km")
+        expectError("6.5 l/100km to mpg", "Cannot convert Fuel Consumption to Fuel Economy.")
 
         // Bare-unit auto-conversion gaps: same category, same treatment.
         expectDisplay("5 mbar", "0.07251886887 psi")
