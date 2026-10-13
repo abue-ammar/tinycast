@@ -32,7 +32,13 @@ enum ImageThumbnail {
         // A tile scrolled away mid-copy must not fall back to the full-size decode it was avoiding.
         guard !Task.isCancelled else { return nil }
         return await Task.detached(priority: .userInitiated) { [decodable] in
-            Decoded(image: decode(decodable, cachingAs: url, maxPixel: maxPixel))
+            if let image = decode(decodable, cachingAs: url, maxPixel: maxPixel) {
+                return Decoded(image: image)
+            }
+            guard decodable != url else { return Decoded(image: nil) }
+            // An unreadable copy is dropped, so the next draw remakes it, and the original shows now.
+            ImageDerivative.queue.async { try? FileManager.default.removeItem(at: decodable) }
+            return Decoded(image: decode(url, cachingAs: url, maxPixel: maxPixel))
         }.value.image
     }
 

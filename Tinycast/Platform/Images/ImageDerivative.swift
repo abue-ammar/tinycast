@@ -22,10 +22,22 @@ struct ImageDerivative: Sendable {
     }
 
     /// Queued, so it runs after any copy of this blob being written and off the caller's thread.
-    static func removeBlob(_ original: URL) {
+    static func removeCopies(of original: URL) {
         queue.async {
-            try? FileManager.default.removeItem(at: original)
             for copy in all(of: original) { try? FileManager.default.removeItem(at: copy.url) }
+        }
+    }
+
+    /// Copies whose blob is gone, which a quit before `removeCopies` ran leaves behind.
+    static func removeOrphans(in directory: URL) {
+        queue.async {
+            let folder = directory.appending(path: ".thumbnails", directoryHint: .isDirectory)
+            for name in (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? [] {
+                guard let edge = name.lastIndex(of: "-") else { continue }
+                let blob = directory.appending(path: String(name[..<edge]))
+                guard !FileManager.default.fileExists(atPath: blob.path) else { continue }
+                try? FileManager.default.removeItem(at: folder.appending(path: name))
+            }
         }
     }
 

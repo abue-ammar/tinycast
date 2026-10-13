@@ -16,6 +16,7 @@ struct ClipboardThumbnailTests {
         await timeoutReleasesTheQueue()
         await cancellationReleasesTheQueue()
         await fallbackReadsTheOriginalUnlessCancelled()
+        await unreadableCopyFallsBackAndIsDropped()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -46,6 +47,10 @@ struct ClipboardThumbnailTests {
         let making = Task { await ImageThumbnail.makeCopy(copy, of: url, helper: helper) }
         try? await Task.sleep(for: .milliseconds(200))
         delete(store, item)
+        if way == "removing" {
+            let gone = !FileManager.default.fileExists(atPath: url.path)
+            expect(gone, "the image is gone before any queued work")
+        }
         _ = await making.value
         ImageDerivative.queue.sync {}
         expect(!FileManager.default.fileExists(atPath: url.path), "\(way) mid-copy deletes the image")
@@ -127,6 +132,22 @@ struct ClipboardThumbnailTests {
             return await ImageThumbnail.loadAsync(scrolledAway, maxPixel: 64, derived: true) != nil
         }
         expect(!(await cancelled.value), "a cancelled load skips the full-size fallback")
+    }
+
+    /// A copy that exists but won't decode must not leave the tile blank.
+    static func unreadableCopyFallsBackAndIsDropped() async {
+        let dir = scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let url = image("a.png", color: .systemRed, in: dir)
+        guard let copy = ImageDerivative.covering(url, maxPixel: 64) else { return fail("a row copy is due") }
+        try? FileManager.default.createDirectory(
+            at: ImageDerivative.folder(beside: url), withIntermediateDirectories: true)
+        try? Data("not a png".utf8).write(to: copy.url)
+        let image = await ImageThumbnail.loadAsync(url, maxPixel: 64, derived: true)
+        ImageDerivative.queue.sync {}
+        expect(image != nil, "an unreadable copy falls back to the original")
+        let dropped = !FileManager.default.fileExists(atPath: copy.url.path)
+        expect(dropped, "and is dropped so the next draw remakes it")
     }
 
     // MARK: - Fixtures

@@ -335,6 +335,7 @@ final class ClipboardStore {
         sqlite3_reset(stmt)
         sqlite3_clear_bindings(stmt)
         items = loaded
+        ImageDerivative.removeOrphans(in: imagesDir)
         // Age passes while the app isn't running; insert-time pruning alone can't catch that.
         enforceLimits()
     }
@@ -887,7 +888,9 @@ final class ClipboardStore {
     }
 
     nonisolated private static func removeBlob(atPath path: String) {
-        ImageDerivative.removeBlob(URL(fileURLWithPath: path))
+        let url = URL(fileURLWithPath: path)
+        try? FileManager.default.removeItem(at: url)
+        ImageDerivative.removeCopies(of: url)
     }
 
     private func openDatabase() -> Bool {
