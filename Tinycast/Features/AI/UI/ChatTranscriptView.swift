@@ -163,15 +163,17 @@ private struct ResumeFollowingButton: View {
 
     var body: some View {
         Button(action: action) {
-            Label("Jump to Latest", systemImage: "arrow.down")
+            Image(systemName: "arrow.down")
                 .font(metrics.typography.rowTrailing)
                 .foregroundStyle(Theme.Colors.textSecondary)
-                .padding(.horizontal, metrics.spacing.lg)
-                .padding(.vertical, metrics.spacing.sm)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().strokeBorder(Theme.Colors.border))
+                .frame(width: metrics.size.chatJumpToLatest, height: metrics.size.chatJumpToLatest)
+                .background(.ultraThinMaterial, in: Circle())
+                .overlay(Circle().strokeBorder(Theme.Colors.border))
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .help("Jump to Latest")
+        .accessibilityLabel("Jump to Latest")
     }
 }
 

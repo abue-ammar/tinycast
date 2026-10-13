@@ -169,6 +169,30 @@ final class ChatSelectableTextView: NSTextView {
         layoutOverlays()
     }
 
+    override func mouseMoved(with event: NSEvent) {
+        guard ownsPointer() else {
+            NSCursor.arrow.set()
+            return
+        }
+        super.mouseMoved(with: event)
+    }
+
+    override func cursorUpdate(with event: NSEvent) {
+        guard ownsPointer() else {
+            NSCursor.arrow.set()
+            return
+        }
+        super.cursorUpdate(with: event)
+    }
+
+    /// The tracking area hears the pointer under a code header or anything floated over the text.
+    private func ownsPointer() -> Bool {
+        guard let window, let hit = window.contentView?.hitTest(window.mouseLocationOutsideOfEventStream)
+        else { return false }
+        return hit === self
+            || (hit.isDescendant(of: self) && !headers.contains { hit.isDescendant(of: $0) })
+    }
+
     /// A text block paints only around drawn glyphs, so a redraw of its header strip skipped it.
     override func drawBackground(in rect: NSRect) {
         super.drawBackground(in: rect)

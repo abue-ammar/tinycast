@@ -233,6 +233,7 @@ enum Theme {
         /// A source chip's title before it middle-truncates, so three chips share a row.
         static let chatSourceTitle: CGFloat = 200
         static let chatSourceBadge: CGFloat = 18
+        static let chatJumpToLatest: CGFloat = 30
         /// The context card's width: a label column and a value one, with room for a model name.
         static let chatContextCard: CGFloat = 300
         /// A grouped `Form` row's control height.

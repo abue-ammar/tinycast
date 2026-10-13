@@ -364,7 +364,8 @@ push it off screen. A reply's choices are frosted capsules, centred, that rise o
 top edge. Find marks words in `Colors.findMatch` / `findCurrent`, the system yellow, with
 `findCurrentInk` black on the solid one in both appearances. Transcript lines sit
 `spacing.chatLine 4` apart on both surfaces. A source chip is a frosted capsule like a choice, led
-by a `chatSourceBadge 18` number disc. The transcript itself is the palette's `ChatTranscriptView`
+by a `chatSourceBadge 18` number disc. Jump to Latest is a `chatJumpToLatest 30` arrow disc at the
+transcript's bottom edge. The transcript itself is the palette's `ChatTranscriptView`
 with `surface: .window`, which leaves out `edgeDissolve` and `thinScrollbar` — both are measured
 against the palette's bars — and caps the column at `aiChatReadingWidth`, centred. Its gutter sits
 outside that cap, as the composer's does, so a reply, its code blocks and the composer share both

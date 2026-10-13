@@ -451,7 +451,10 @@ and the Actions menu's own chords, and dies with the window.
   a continuous rounded rectangle (`Theme.Radius.codeBlock`) over the block's bounds less its margin
   (the list or quote indent), because a text block paints only around the glyphs being redrawn and
   a scroll that redraws just its header strip left that strip bare. The language and Copy sit in
-  that strip, above the code. Thinking folds, search
+  that strip, above the code. The text view's tracking area hears the pointer under that strip and
+  under anything floated over the transcript, such as Jump to Latest, and `NSTextView` would claim
+  an I-beam there; its `mouseMoved` and `cursorUpdate` set the arrow unless the window's hit test
+  lands on the text itself. Thinking folds, search
   and tool rows stay separate views, so a drag spans one segment's text. A fold holding a match
   opens. A glass counter at the transcript's top edge says "3 of 17" with the same steps as
   Return / ⇧↩ in the field and ⌘G / ⇧⌘G anywhere. The sidebar's own filter is still there, by click.
@@ -662,8 +665,9 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Full screen and a narrow window: a reply, its code blocks, the chips and the composer share the
   same left and right edges, the user's bubble ends on the right one, and the column grows to
   `aiChatReadingWidth` before the gutters widen.
-- Move the pointer across a code block's header and its text: an arrow over the header, an I-beam
-  over the text, with no flicker between them.
+- Move the pointer across a code block's header and its text: an arrow over the header and its Copy
+  button, an I-beam over the text, with no flicker between them. Jump to Latest, a round arrow
+  button, shows an arrow too while it sits over reply text.
 - Collapse the sidebar with the toolbar button or ⌘B; ⌘N and ⌘Q (Close Window) still work, and ⌘Q with
   Settings in front closes Settings instead.
 - Escape closes AI Chat with the composer focused, preserving its draft and any streaming reply.
