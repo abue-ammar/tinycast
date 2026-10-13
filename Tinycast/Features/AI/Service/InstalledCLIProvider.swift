@@ -1,4 +1,5 @@
 import Foundation
+import UniformTypeIdentifiers
 
 struct InstalledCLIProvider: AIProvider {
     private let runner: InstalledCLITurnRunner
@@ -58,11 +59,13 @@ private final class InstalledCLITurnRunner {
     private var outputBuffer = Data()
     private var errorBuffer = Data()
     private var turnSessionID: String?
-    private var promptFileURL: URL?
+    /// Every file is the turn's own and private: its prompt, its MCP secrets, its pictures.
+    private var privateFiles: [URL] = []
     private var activeExecutable: URL?
     /// What this turn armed, empty on every route and every turn that offers no server.
     private var activeServers: [AIToolServer] = []
-    private var mcpConfigURL: URL?
+    private var exitStatus: Int32?
+    private var outputClosed = false
     private var input: FileHandle?
     private var consents: [Task<Void, Never>] = []
     /// Chained rather than concurrent: two writes racing the same pipe would interleave a line.
@@ -154,12 +157,14 @@ private final class InstalledCLITurnRunner {
 
         activeServers = await resolvedToolServers()
         let prompt = prompt(for: request)
+        let images = request.messages.last { $0.role == .user }?.images ?? []
+        var files: [URL] = []
         var configURL: URL?
         if !activeServers.isEmpty {
             let url = workspace.appending(path: ClaudeMCPLaunch.configurationFileName())
             do {
                 try await Self.writePrivateFile(
-                    ClaudeMCPLaunch.configuration(servers: activeServers), to: url)
+                    Data(ClaudeMCPLaunch.configuration(servers: activeServers).utf8), to: url)
             } catch {
                 try? FileManager.default.removeItem(at: url)
                 activeServers = []
@@ -169,6 +174,34 @@ private final class InstalledCLITurnRunner {
                 return
             }
             configURL = url
+            files.append(url)
+        }
+        var grokPrompt: URL?
+        if kind == .grok {
+            let url = workspace.appending(path: "tinycast-prompt-\(UUID().uuidString).txt")
+            do {
+                try await Self.writePrivateFile(Data(prompt.utf8), to: url)
+            } catch {
+                try? FileManager.default.removeItem(at: url)
+                continuation.finish(
+                    throwing: AIProviderError.unavailable(
+                        "Tinycast could not write its private AI prompt."))
+                return
+            }
+            grokPrompt = url
+            files.append(url)
+        }
+        var attachments: [URL] = []
+        if kind == .openCode, !images.isEmpty {
+            do {
+                attachments = try await Self.writeAttachments(images, in: workspace)
+            } catch {
+                continuation.finish(
+                    throwing: AIProviderError.unavailable(
+                        "Tinycast could not write its private image attachments."))
+                return
+            }
+            files += attachments
         }
 
         let process = Process()
@@ -178,29 +211,18 @@ private final class InstalledCLITurnRunner {
         process.executableURL = executable
         process.currentDirectoryURL = workspace
         process.environment = environment(for: executable)
-        var grokPrompt: URL?
-        if kind == .grok {
-            let url = workspace.appending(path: "tinycast-prompt-\(UUID().uuidString).txt")
-            do {
-                try await Self.writePromptFile(prompt, to: url)
-            } catch {
-                try? FileManager.default.removeItem(at: url)
-                continuation.finish(
-                    throwing: AIProviderError.unavailable(
-                        "Tinycast could not write its private AI prompt."))
-                return
-            }
-            grokPrompt = url
-            process.standardInput = FileHandle.nullDevice
-        } else {
-            process.standardInput = stdin
-        }
-        process.arguments = arguments(promptFile: grokPrompt, mcpConfig: configURL)
+        process.standardInput = kind == .grok ? FileHandle.nullDevice : stdin
+        process.arguments = arguments(
+            promptFile: grokPrompt, mcpConfig: configURL, attachments: attachments)
         process.standardOutput = stdout
         process.standardError = stderr
         stdout.fileHandleForReading.readabilityHandler = { [weak self] handle in
             let data = handle.availableData
-            guard !data.isEmpty else { return }
+            guard !data.isEmpty else {
+                handle.readabilityHandler = nil
+                Task { @MainActor in self?.didCloseOutput(token: token) }
+                return
+            }
             Task { @MainActor in self?.consume(data, token: token) }
         }
         stderr.fileHandleForReading.readabilityHandler = { [weak self] handle in
@@ -217,8 +239,7 @@ private final class InstalledCLITurnRunner {
             stdout.fileHandleForReading.readabilityHandler = nil
             stderr.fileHandleForReading.readabilityHandler = nil
             process.terminationHandler = nil
-            if let grokPrompt { try? FileManager.default.removeItem(at: grokPrompt) }
-            if let configURL { try? FileManager.default.removeItem(at: configURL) }
+            Self.remove(files)
             continuation.finish(throwing: CancellationError())
             return
         }
@@ -228,18 +249,18 @@ private final class InstalledCLITurnRunner {
             stdout.fileHandleForReading.readabilityHandler = nil
             stderr.fileHandleForReading.readabilityHandler = nil
             process.terminationHandler = nil
-            if let grokPrompt { try? FileManager.default.removeItem(at: grokPrompt) }
-            if let configURL { try? FileManager.default.removeItem(at: configURL) }
+            Self.remove(files)
             continuation.finish(
                 throwing: AIProviderError.responseFailed(
                     kind.title + " could not start: " + error.localizedDescription))
             return
         }
-        promptFileURL = grokPrompt
-        mcpConfigURL = configURL
+        privateFiles = files
         self.process = process
         activeExecutable = executable
         self.token = token
+        exitStatus = nil
+        outputClosed = false
         self.continuation = continuation
         guard kind != .grok else { return }
         input = stdin.fileHandleForWriting
@@ -250,7 +271,6 @@ private final class InstalledCLITurnRunner {
             return
         }
         // Framed as JSON, so a picture rides beside the text as a content block.
-        let images = request.messages.last { $0.role == .user }?.images ?? []
         guard let line = ClaudeControlProtocol.userMessage(prompt, images: images) else {
             fail("Tinycast could not frame the request for " + kind.title + ".")
             return
@@ -271,21 +291,38 @@ private final class InstalledCLITurnRunner {
         }
     }
 
-    nonisolated private static func writePromptFile(_ prompt: String, to url: URL) async throws {
-        try await Task.detached {
-            try Data(prompt.utf8).write(to: url)
-        }.value
-    }
-
     /// Created `0600`: `createFile` writes a `0644` temporary first and restricts it after.
-    nonisolated private static func writePrivateFile(_ text: String, to url: URL) async throws {
+    nonisolated private static func writePrivateFile(_ data: Data, to url: URL) async throws {
         try await Task.detached {
             let descriptor = open(url.path, O_WRONLY | O_CREAT | O_EXCL, 0o600)
             guard descriptor >= 0 else { throw CocoaError(.fileWriteUnknown) }
             let file = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
-            try file.write(contentsOf: Data(text.utf8))
+            try file.write(contentsOf: data)
             try file.close()
         }.value
+    }
+
+    /// OpenCode reads an image's type from its file extension.
+    nonisolated private static func writeAttachments(
+        _ images: [AIImage], in workspace: URL
+    ) async throws -> [URL] {
+        var urls: [URL] = []
+        do {
+            for image in images {
+                let ext = UTType(mimeType: image.mimeType)?.preferredFilenameExtension ?? "png"
+                let url = workspace.appending(path: "tinycast-image-\(UUID().uuidString).\(ext)")
+                urls.append(url)
+                try await writePrivateFile(image.data, to: url)
+            }
+        } catch {
+            remove(urls)
+            throw error
+        }
+        return urls
+    }
+
+    nonisolated private static func remove(_ urls: [URL]) {
+        for url in urls { try? FileManager.default.removeItem(at: url) }
     }
 
     /// What this turn may offer: nothing at all unless the route is Claude and MCP armed it.
@@ -299,7 +336,7 @@ private final class InstalledCLITurnRunner {
     /// Nothing to call is one request; an armed turn takes the reader's cap, which may be none.
     private var roundCap: Int? { activeServers.isEmpty ? 1 : toolServers?.rounds }
 
-    private func arguments(promptFile: URL? = nil, mcpConfig: URL? = nil) -> [String] {
+    private func arguments(promptFile: URL?, mcpConfig: URL?, attachments: [URL]) -> [String] {
         switch kind {
         case .claude:
             var result = [
@@ -331,12 +368,15 @@ private final class InstalledCLITurnRunner {
             if let effort { result += ["--effort", effort] }
             return result
         case .openCode:
-            var result = [
-                "run", "--pure", "--format", "json", "--model", model,
-                "--dir", workspace.path, "--title", "Tinycast"
-            ]
-            if let effort { result += ["--variant", effort] }
-            return result
+            return [
+                "run", "--standalone",
+                "--format", "json",
+                "--thinking",
+                "--agent", InstalledAIKind.openCodeAgent,
+                "--model", effort.map { model + "#" + $0 } ?? model,
+                // A set title spares the turn a second model call to name its session.
+                "--title", "Tinycast"
+            ] + attachments.flatMap { ["--file", $0.path] }
         case .grok:
             var result = [
                 "--prompt-file", promptFile?.path ?? "",
@@ -374,9 +414,11 @@ private final class InstalledCLITurnRunner {
         }
     }
 
+    /// OpenCode takes its directory from `PWD` ahead of the real working directory.
     private func environment(for executable: URL) -> [String: String] {
         ExecutableLocator.environment(
-            running: executable, inherited: launch.inherited(for: kind)
+            running: executable, adding: ["PWD": workspace.path],
+            inherited: launch.inherited(for: kind)
         ).merging(kind.managedEnvironment) { _, managed in managed }
     }
 
@@ -445,12 +487,16 @@ private final class InstalledCLITurnRunner {
         } else if let error = frame.error {
             fail(error)
         } else if frame.completed {
-            continuation?.yield(.finished)
-            continuation?.finish()
-            continuation = nil
+            finish()
             // A stream-json turn is answered; closing stdin is what lets the child leave.
             write(Data(), closing: true)
         }
+    }
+
+    private func finish() {
+        continuation?.yield(.finished)
+        continuation?.finish()
+        continuation = nil
     }
 
     /// The reader's decision, through the same trust policy and dialog the BYOK loop asks with.
@@ -482,7 +528,22 @@ private final class InstalledCLITurnRunner {
 
     private func didExit(status: Int32, token: TurnToken) {
         guard self.token === token else { return }
-        if continuation != nil {
+        exitStatus = status
+        // Its last line can still be in the pipe, and that line may be the answer.
+        guard !kind.finishesAtExit || outputClosed else { return }
+        settle(status)
+    }
+
+    private func didCloseOutput(token: TurnToken) {
+        guard self.token === token else { return }
+        outputClosed = true
+        if let exitStatus { settle(exitStatus) }
+    }
+
+    private func settle(_ status: Int32) {
+        if status == 0, kind.finishesAtExit {
+            finish()
+        } else if continuation != nil {
             let detail = (String(bytes: errorBuffer, encoding: .utf8) ?? "")
                 .replacingOccurrences(
                     of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression
@@ -516,16 +577,9 @@ private final class InstalledCLITurnRunner {
         removePrivateFiles()
     }
 
-    /// Both are the turn's own: a prompt nobody else may read, and a configuration full of secrets.
     private func removePrivateFiles() {
-        if let promptFileURL {
-            try? FileManager.default.removeItem(at: promptFileURL)
-        }
-        promptFileURL = nil
-        if let mcpConfigURL {
-            try? FileManager.default.removeItem(at: mcpConfigURL)
-        }
-        mcpConfigURL = nil
+        Self.remove(privateFiles)
+        privateFiles = []
     }
 
     private func deleteTurnSession() {
@@ -536,7 +590,8 @@ private final class InstalledCLITurnRunner {
             guard let executable = activeExecutable else { return }
             let arguments =
                 kind == .grok
-                ? ["sessions", "delete", sessionID] : ["session", "delete", sessionID, "--pure"]
+                ? ["sessions", "delete", sessionID]
+                : ["session", "delete", sessionID, "--standalone"]
             let workspace = workspace
             let environment = environment(for: executable)
             Task.detached {
@@ -598,6 +653,8 @@ private final class InstalledCLITurnRunner {
         outputBuffer.removeAll(keepingCapacity: false)
         errorBuffer.removeAll(keepingCapacity: false)
         turnSessionID = nil
+        exitStatus = nil
+        outputClosed = false
         removePrivateFiles()
         activeExecutable = nil
         activeServers = []

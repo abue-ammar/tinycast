@@ -1681,13 +1681,58 @@ struct AIProviderTests {
             InstalledAIStreamDecoder.decode(openCodeText, kind: .openCode)
                 == InstalledAIStreamFrame(events: [.text("Hello")], sessionID: "ses_1"),
             "OpenCode text and its cleanup session decode together")
-        let openCodeFinish = Data(
-            #"{"type":"step_finish","part":{"tokens":{"input":12,"output":4}}}"#.utf8)
-        let openCodeFrame = InstalledAIStreamDecoder.decode(openCodeFinish, kind: .openCode)
+        let openCodeReasoning = Data(
+            #"{"type":"reasoning","sessionID":"ses_1","part":{"text":"Weighing it"}}"#.utf8)
         expect(
-            openCodeFrame.events == [.usage(AIUsage(inputTokens: 12, outputTokens: 4))]
-                && openCodeFrame.completed,
-            "OpenCode completion reports usage and finishes")
+            InstalledAIStreamDecoder.decode(openCodeReasoning, kind: .openCode).events
+                == [.reasoning("\n\nWeighing it")],
+            "OpenCode reasoning opens its own block")
+        let openCodeStep = Data(
+            #"""
+            {"type":"step_finish","sessionID":"ses_1","part":{"cost":0.25,"tokens":{"input":12,
+            "output":4,"reasoning":3,"cache":{"read":5,"write":1}}}}
+            """#.utf8)
+        let openCodeFrame = InstalledAIStreamDecoder.decode(openCodeStep, kind: .openCode)
+        expect(
+            openCodeFrame.events == [
+                .usage(
+                    AIUsage(
+                        inputTokens: 12, outputTokens: 7, cachedInputTokens: 6,
+                        reasoningTokens: 3, costUSD: 0.25))
+            ] && !openCodeFrame.completed,
+            "an OpenCode step reports usage and leaves the finish to the clean exit")
+        let openCodeError = Data(
+            #"{"type":"error","sessionID":"","error":{"type":"unknown","message":"No provider"}}"#.utf8)
+        let openCodeErrorFrame = InstalledAIStreamDecoder.decode(openCodeError, kind: .openCode)
+        expect(
+            openCodeErrorFrame.error == "No provider" && openCodeErrorFrame.sessionID == nil,
+            "an OpenCode error before any session fails the turn with nothing to delete")
+        let openCodeModels = #"""
+            {"location":{"directory":"/w"},"data":[
+            {"id":"gpt-5","providerID":"openai","name":"GPT-5",
+            "capabilities":{"tools":true,"input":["text","image"],"output":["text"]},
+            "variants":[{"id":"high"},{"id":"low"},{"id":"minimal"}]},
+            {"id":"glm-4.6","providerID":"zai","name":"GLM 4.6",
+            "capabilities":{"tools":true,"input":["text"],"output":["text"]},"variants":[]},
+            {"id":"claude-sonnet-4-5","providerID":"anthropic","name":"Claude Sonnet 4.5",
+            "capabilities":{"tools":true,"input":["text","image","pdf"],"output":["text"]},
+            "variants":[]}]}
+            """#
+        let openCodeCatalog = InstalledAIModel.openCodeCatalog(openCodeModels)
+        expect(
+            openCodeCatalog.map(\.id) == [
+                "anthropic/claude-sonnet-4-5", "openai/gpt-5", "zai/glm-4.6"
+            ],
+            "OpenCode models are listed by their provider-qualified reference")
+        expect(
+            openCodeCatalog[1].efforts.map(\.id) == ["minimal", "low", "high"],
+            "OpenCode variants become efforts in reasoning order")
+        expect(
+            openCodeCatalog.map(\.acceptsImages) == [true, true, false],
+            "OpenCode takes images only where the model's input does")
+        expect(
+            InstalledAIModel.openCodeCatalog("Error: server failed to start").isEmpty,
+            "an OpenCode answer that is not the model list yields no models")
 
         let claudeText = Data(
             #"{"type":"stream_event","event":{"delta":{"type":"text_delta","text":"Hi"}}}"#.utf8)

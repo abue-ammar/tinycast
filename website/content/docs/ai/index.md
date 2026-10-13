@@ -108,7 +108,8 @@ System Settings, Tinycast tells you. **It never switches you to a paid API witho
 
 If you already use the `codex`, `claude`, `grok`, `opencode` or `agent` (Cursor) command-line tools,
 Tinycast can use their existing setup. Codex also works with a configured API provider that doesn't
-require an OpenAI sign-in. **Tinycast never asks for or stores their keys.**
+require an OpenAI sign-in. OpenCode needs version 2 or later. **Tinycast never asks for or stores
+their keys.**
 
 Each tool has its own switch, and all five are off by default. The pane shows whether each one is
 ready, not installed, or needs you to sign in. It links to the install page and can copy the sign-in
@@ -180,7 +181,9 @@ explains why, so it never sends something the model can't read.
 | ------------------------------------------ | ------------------------ | ---- | ---------- |
 | Apple Intelligence                         | No                       | No   | Yes        |
 | Codex                                      | Yes                      | No   | Yes        |
-| Claude, Grok, OpenCode and Cursor commands | No                       | No   | Yes        |
+| Claude command                             | Yes                      | No   | Yes        |
+| OpenCode command                           | If the model supports it | No   | Yes        |
+| Grok and Cursor commands                   | No                       | No   | Yes        |
 | OpenAI API and Anthropic Claude            | Yes                      | Yes  | Yes        |
 | Google Gemini and OpenAI Compatible        | Yes                      | No   | Yes        |
 | OpenRouter                                 | If the model supports it | No   | Yes        |

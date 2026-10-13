@@ -201,8 +201,9 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   default mode from answering before Tinycast does.
   Grok runs with `--deny *`,
   `dontAsk` permissions and a workspace sandbox, and never `--always-approve`, so a user's always-approve
-  config cannot arm tools for this route. OpenCode runs `--pure` with deny-all permissions, disabled
-  sharing and a private working directory. Cursor runs `agent -p --mode ask` with `--trust` against
+  config cannot arm tools for this route. OpenCode 2 runs `--standalone`, so its private server
+  takes Tinycast's inline configuration, as a `tinycast` agent whose trailing deny-all rule drops
+  every tool from the request, with sharing and snapshots off and a private working directory. Cursor runs `agent -p --mode ask` with `--trust` against
   Tinycast's private workspace and never `--force` / `--yolo` / `--approve-mcps`; ask mode blocks edits.
   Each deletes the session or chat it created once the child exits, and Tinycast never reaches into the
   user's own config to do it. **Only Claude keeps the user's MCP servers out of the process**, through
@@ -211,12 +212,14 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   on that route the organization's decision; the Providers row says so.
   Grok, OpenCode and Cursor load the global config either way,
   because their configs merge with no opt-out; what refuses the call is `--deny *` for Grok,
-  `permission: deny` for OpenCode and withheld MCP approval for Cursor. Cursor's is the only one resting
+  the `tinycast` agent's deny-all rule for OpenCode and withheld MCP approval for Cursor. Cursor's is the only one resting
   on an approval prompt rather than an explicit deny, which is why its Providers row says so and the
   others do not. That is also why none of the three may be handed a server: there is no way to offer
-  one without offering the reader's own. None of these routes offer web search, and only Claude
-  takes images: every Claude turn is one `--input-format stream-json` user message, the newest
-  question's pictures as base64 `image` blocks beside the framed prompt. Claude also runs with
+  one without offering the reader's own. None of these routes offer web search, and only Claude and
+  OpenCode take images: every Claude turn is one `--input-format stream-json` user message, the newest
+  question's pictures as base64 `image` blocks beside the framed prompt. OpenCode gets the same
+  pictures as private `0600` files in the workspace, one `--file` each, and only for a model whose
+  catalog entry lists `image` input. Claude also runs with
   `--thinking-display summarized` — a hidden flag, and the only switch that works: a `-p` run forces
   its display to `omitted` unless one is named explicitly, and the `showThinkingSummaries` setting
   is read only by an interactive session. Without it Sonnet and Opus stream every thinking block
@@ -315,7 +318,7 @@ as `.codex`, so an existing selection survives the rename.
 | Codex | installed `codex app-server` | user's Codex account |
 | Claude | installed `claude -p` | user's Claude login |
 | Grok | installed `grok --prompt-file` | user's Grok login |
-| OpenCode | installed `opencode run` | providers already configured in OpenCode |
+| OpenCode | installed `opencode run --standalone` (OpenCode 2) | providers already configured in OpenCode |
 | Cursor | installed `agent -p --mode ask` | user's Cursor login |
 | OpenAI API | OpenAI Chat Completions | `https://api.openai.com/v1` |
 | Anthropic Claude | Anthropic Messages | `https://api.anthropic.com` |
@@ -338,8 +341,9 @@ manually. A gateway can also list an incomplete catalog under any preset, so sea
 identifier whenever no loaded model is named by it exactly, even beside partial matches; Return still
 adds only an exact catalog match, so a typed prefix never becomes a stored identifier. Tinycast does
 not ship or guess an API catalog that can become stale. Codex gets its models and reasoning efforts
-from `model/list`; OpenCode gets identifiers and model-specific variants from
-`opencode models --pure --verbose`. Claude answers an `initialize` control request — written to a
+from `model/list`; OpenCode gets identifiers, variants and input modalities from its server's
+`model.list`, through `opencode api GET /api/model --standalone`, and an OpenCode older than 2 fails
+the check with a message rather than reading as signed out. Claude answers an `initialize` control request — written to a
 stream-json `-p` run that then gets no prompt, so no model is called — with its own `/model` list;
 `InstalledAIModel.claudeCatalog` keeps one row per resolved model (dropping `default`, which restates
 another), names each by the version its alias points at today ("Claude Opus 5.5"), and takes each
@@ -771,12 +775,14 @@ Grok uses `streaming-messages-json` and `--effort`, with `--deny *` so tools can
 user's Grok config is always-approve; it captures the session id, then calls `grok sessions delete`.
 An error result omits `result` and carries the cause in `errors`; that text is the failure, not
 Claude's missing-`result` fallback.
-OpenCode runs pure with an inline deny-all configuration and passes the selected
-model variant through `--variant`; it captures the returned session identifier, then calls
-`opencode session delete` after the process exits. Cursor runs ask mode with `--trust`,
+OpenCode runs `--standalone` with the `tinycast` agent from its inline configuration, joins a
+variant to the model as `provider/model#variant`, and passes `--thinking` so reasoning reaches the
+fold. `PWD` is the workspace, because `run` takes its directory from it ahead of the real one. Its
+JSON stream has no closing line, so its turn finishes on a clean exit once stdout has closed; it
+captures the session identifier, then calls `opencode session delete --standalone`. Cursor runs ask mode with `--trust`,
 `stream-json` and `--stream-partial-output`, never `--force` / `--yolo` / `--approve-mcps`, then removes
 the local chat under `~/.cursor/chats/<workspace>/<session_id>` because the CLI has no delete-chat.
-A turn finishes on its own completion frame; both cleanups run detached after the child exits, so
+Every other turn finishes on its own completion frame; the cleanups run detached after the child exits, so
 housekeeping never holds the composer shut.
 Cancellation terminates the child process; only one installed-CLI turn can own a runner at a time.
 
@@ -795,7 +801,7 @@ transport code at all.
 | Codex | thread-scoped `web_search` config | `image` input part | never — the app-server takes no document part | Tinycast's servers, added as launch overrides; the reader's own are disabled by name |
 | Claude command | never | base64 `image` block in its stream-json user message | never | Tinycast's servers, through `--strict-mcp-config` and a private config file — an empty one when there are none, and neither flag under a managed MCP policy |
 | Grok command | never | never | never | the global config still loads — `--deny *` refuses the call |
-| OpenCode command | never | never | never | the global config still loads — `permission: deny` refuses the call |
+| OpenCode command | never | a private file per picture, through `--file`, only for models whose catalog lists `image` input | never | the global config still loads — the `tinycast` agent's deny-all rule drops every tool |
 | Cursor command | never | never | never | the global config still loads — ask mode and withheld approval refuse the call |
 | OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | never yet — its catalog publishes a `file` modality Tinycast does not read | `tools` + `role: "tool"` turns |
 | OpenAI | not offered | `image_url` part, assumed supported | `file` part with `filename` and a `file_data` data URL | `tools` + `role: "tool"` turns |

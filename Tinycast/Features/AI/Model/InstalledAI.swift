@@ -12,6 +12,9 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    /// OpenCode's JSON stream has no closing line, so a clean exit is its finish.
+    var finishesAtExit: Bool { self == .openCode }
+
     var title: String {
         switch self {
         case .codex: return "Codex"
@@ -37,7 +40,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         case .codex: return URL(string: "https://developers.openai.com/codex/cli")!
         case .claude: return URL(string: "https://code.claude.com/docs/en/setup")!
         case .grok: return URL(string: "https://x.ai/cli")!
-        case .openCode: return URL(string: "https://opencode.ai/docs")!
+        case .openCode: return URL(string: "https://opencode.ai/v2/docs")!
         case .cursor: return URL(string: "https://cursor.com/docs/cli/overview")!
         }
     }
@@ -101,11 +104,16 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
     let id: String
     let name: String
     let efforts: [ChatGPTSubscription.Effort]
+    let acceptsImages: Bool
 
-    init(id: String, name: String, efforts: [ChatGPTSubscription.Effort] = []) {
+    init(
+        id: String, name: String, efforts: [ChatGPTSubscription.Effort] = [],
+        acceptsImages: Bool = false
+    ) {
         self.id = id
         self.name = name
         self.efforts = efforts
+        self.acceptsImages = acceptsImages
     }
 
     func resolvedEffort(_ preferred: String?) -> String? {
@@ -237,37 +245,25 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
         return !clean.contains("not authenticated") && !clean.contains("not signed in")
     }
 
+    /// The server's `model.list` answer: only models whose provider OpenCode can already reach.
     static func openCodeCatalog(_ output: String) -> [InstalledAIModel] {
-        let clean = output.replacingOccurrences(
-            of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression)
-        var entries: [(String, [String])] = []
-        var id: String?
-        var objectLines: [String] = []
-
-        func appendEntry() {
-            guard let id else { return }
-            let data = Data(objectLines.joined(separator: "\n").utf8)
-            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-            let variants = object?["variants"] as? [String: Any] ?? [:]
-            entries.append((id, variants.keys.sorted(by: effortOrder)))
-        }
-
-        for raw in clean.components(separatedBy: .newlines) {
-            let line = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            if raw == line, line.contains("/"), !line.hasPrefix("{") {
-                appendEntry()
-                id = line
-                objectLines = []
-            } else if id != nil {
-                objectLines.append(raw)
-            }
-        }
-        appendEntry()
-        return entries.map { id, efforts in
-            InstalledAIModel(
+        guard let object = try? JSONSerialization.jsonObject(with: Data(output.utf8)) as? [String: Any],
+            let entries = object["data"] as? [[String: Any]]
+        else { return [] }
+        let models = entries.compactMap { entry -> InstalledAIModel? in
+            guard let provider = entry["providerID"] as? String, let model = entry["id"] as? String
+            else { return nil }
+            let id = provider + "/" + model
+            let variants = (entry["variants"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
+            let input = (entry["capabilities"] as? [String: Any])?["input"] as? [String] ?? []
+            return InstalledAIModel(
                 id: id, name: id,
-                efforts: efforts.map { ChatGPTSubscription.Effort(id: $0, detail: nil) })
+                efforts: variants.sorted(by: effortOrder).map {
+                    ChatGPTSubscription.Effort(id: $0, detail: nil)
+                },
+                acceptsImages: input.contains("image"))
         }
+        return models.sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending }
     }
 
     /// `agent --list-models` lines look like `composer-2.5 - Composer 2.5`.

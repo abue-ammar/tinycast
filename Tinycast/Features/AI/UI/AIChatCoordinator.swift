@@ -400,9 +400,13 @@ final class AIChatCoordinator {
         case .appleIntelligence?: return .appleIntelligence
         case .codex?: return .codex
         case .claude?: return .claudeCommand
-        case .grok?, .openCode?, .cursor?:
+        case .openCode(let model, _)?:
+            let images = core.installedAI.status(for: .openCode).models
+                .contains { $0.id == model && $0.acceptsImages }
             return AIModelCapabilities(
-                images: false, documents: false, webSearch: false, tools: false)
+                images: images, documents: false, webSearch: false, tools: false)
+        case .grok?, .cursor?:
+            return .none
         case .api(let connection, let model, _)?:
             return core.aiSettings.connection(id: connection)?.capabilities(for: model)
                 ?? AIModelCapabilities.none

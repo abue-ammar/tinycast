@@ -28,31 +28,47 @@ enum InstalledAIStreamDecoder {
         }
     }
 
+    /// No line closes the stream: the runner takes a clean exit as the finish.
     private static func openCode(
         _ object: [String: Any], type: String
     ) -> InstalledAIStreamFrame {
-        var frame = InstalledAIStreamFrame(sessionID: object["sessionID"] as? String)
+        var frame = InstalledAIStreamFrame()
+        if let sessionID = object["sessionID"] as? String, !sessionID.isEmpty {
+            frame.sessionID = sessionID
+        }
         let part = object["part"] as? [String: Any]
+        let text = part?["text"] as? String ?? ""
         switch type {
-        case "text":
-            if let text = part?["text"] as? String, !text.isEmpty { frame.events = [.text(text)] }
         case "step_start":
             frame.events = [.thinking]
+        case "reasoning":
+            if !text.isEmpty { frame.events = [.reasoning("\n\n" + text)] }
+        case "text":
+            if !text.isEmpty { frame.events = [.text(text)] }
         case "step_finish":
             if let tokens = part?["tokens"] as? [String: Any] {
-                frame.events.append(
-                    .usage(
-                        AIUsage(
-                            inputTokens: integer(tokens["input"]),
-                            outputTokens: integer(tokens["output"]))))
+                frame.events = [.usage(openCodeUsage(tokens, cost: part?["cost"]))]
             }
-            frame.completed = true
         case "error":
             frame.error = message(in: object) ?? "OpenCode could not finish the response."
         default:
             break
         }
         return frame
+    }
+
+    /// OpenCode counts reasoning beside `output`, where `AIUsage` counts it inside.
+    private static func openCodeUsage(_ tokens: [String: Any], cost: Any?) -> AIUsage {
+        let cache = tokens["cache"] as? [String: Any]
+        let cached = [cache?["read"], cache?["write"]].compactMap(integer).reduce(0, +)
+        let reasoning = integer(tokens["reasoning"]) ?? 0
+        let costUSD = (cost as? NSNumber)?.doubleValue ?? 0
+        return AIUsage(
+            inputTokens: integer(tokens["input"]),
+            outputTokens: integer(tokens["output"]).map { $0 + reasoning },
+            cachedInputTokens: cached > 0 ? cached : nil,
+            reasoningTokens: reasoning > 0 ? reasoning : nil,
+            costUSD: costUSD > 0 ? costUSD : nil)
     }
 
     private static func claude(
