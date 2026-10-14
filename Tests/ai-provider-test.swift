@@ -370,7 +370,7 @@ struct AIProviderTests {
     /// A body that named the default would 400 on every endpoint without a thinking mode.
     static func aGatewayOffersNoneAsItsReasoningEffort() {
         let gateway = AIConnection(
-            provider: .openAI, baseURL: "https://api.fusioncode.app/v1", models: ["m"])
+            provider: .openAI, baseURL: "https://gateway.example/v1", models: ["m"])
         expect(
             gateway.reasoningOptions(for: "m")?.efforts == ["default", "none"],
             "a preset pointed away from its own API offers the one effort a gateway can honour")
@@ -393,7 +393,7 @@ struct AIProviderTests {
             "a published catalog always wins over the synthesized switch")
 
         let turn = AIRequest(messages: [AIMessage(role: .user, text: "hi")])
-        let url = URL(string: "https://api.fusioncode.app/v1")!
+        let url = URL(string: "https://gateway.example/v1")!
         let on = AIRequestBody.make(
             turn,
             configuration: AIHTTPConfiguration(provider: .openAI, baseURL: url, model: "m"))
@@ -410,7 +410,7 @@ struct AIProviderTests {
         expect(off["reasoning_effort"] == nil, "None sends no effort field beside it")
 
         var declared = AIConnection(
-            provider: .openAI, baseURL: "https://api.fusioncode.app/v1", models: ["m"])
+            provider: .openAI, baseURL: "https://gateway.example/v1", models: ["m"])
         declared.declareLevels(["high", "low", "bogus"], for: "m")
         expect(
             declared.reasoningOptions(for: "m")?.efforts == ["default", "low", "high", "none"],
@@ -441,7 +441,7 @@ struct AIProviderTests {
 
     static func declaredLevelsNeverReachAVendorOrOutliveTheirDeclaration() {
         var gateway = AIConnection(
-            provider: .openAI, baseURL: "https://api.fusioncode.app/v1", models: ["m"])
+            provider: .openAI, baseURL: "https://gateway.example/v1", models: ["m"])
         gateway.declareLevels(["low", "high"], for: "m")
         expect(gateway.offeredEffort("high", for: "m") == "high", "a declared level is sent")
         expect(gateway.offeredEffort(nil, for: "m") == nil, "no saved effort sends none")
@@ -470,6 +470,17 @@ struct AIProviderTests {
         expect(
             AIConnection(provider: .openAI, models: ["m"]).offeredEffort("high", for: "m") == nil,
             "an old OpenRouter effort left on a vendor connection is not sent")
+
+        var retargeted = gateway
+        retargeted.dropDeclaredLevels()
+        expect(
+            retargeted.reasoningOptions == nil,
+            "levels declared for one gateway are dropped when the URL moves")
+        var movedOpenRouter = openRouter
+        movedOpenRouter.dropDeclaredLevels()
+        expect(
+            movedOpenRouter.reasoningOptions == openRouter.reasoningOptions,
+            "OpenRouter's catalog is no declaration, so a moved URL keeps it")
 
         expect(gateway.takesDeclaredLevels, "a gateway takes declared levels")
         expect(!vendor.takesDeclaredLevels, "a vendor URL does not")

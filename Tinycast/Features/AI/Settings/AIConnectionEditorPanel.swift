@@ -131,7 +131,10 @@ struct AIConnectionEditorPanel: View {
             await discoverModels()
         }
         .onChange(of: key) { discoveryRevision += 1 }
-        .onChange(of: connection.baseURL) { discoveryRevision += 1 }
+        .onChange(of: connection.baseURL) {
+            connection.dropDeclaredLevels()
+            discoveryRevision += 1
+        }
         .onChange(of: connection.provider) { oldProvider, newProvider in
             if connection.baseURL.isEmpty || connection.baseURL == oldProvider.defaultBaseURL {
                 connection.baseURL = newProvider.defaultBaseURL

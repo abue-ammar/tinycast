@@ -96,7 +96,6 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         takesThinkingField && provider != .openRouter
     }
 
-    /// A gateway publishes no catalog, so the only effort it is known to honour is the off switch.
     func reasoningOptions(for model: String) -> ReasoningOptions? {
         guard provider == .openRouter || takesThinkingField else { return nil }
         return reasoningOptions?[model] ?? (takesThinkingField ? .thinkingSwitch : nil)
@@ -108,6 +107,11 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
             return nil
         }
         return effort
+    }
+
+    mutating func dropDeclaredLevels() {
+        guard provider != .openRouter else { return }
+        reasoningOptions = nil
     }
 
     func declaredLevels(for model: String) -> Set<String> {
