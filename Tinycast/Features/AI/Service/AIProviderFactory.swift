@@ -50,7 +50,7 @@ enum AIProviderFactory {
                 throw AIProviderError.unavailable("Cursor is disabled in AI Settings.")
             }
             return try installedAI.provider(kind: .cursor, model: model, effort: effort)
-        case .api(let connectionID, let model, let effort):
+        case .api(let connectionID, let model, let savedEffort):
             guard let connection = settings.connection(id: connectionID) else {
                 throw AIProviderError.unavailable("Choose an API connection in Settings.")
             }
@@ -72,6 +72,7 @@ enum AIProviderFactory {
             guard AIEndpointPolicy.isLoopback(connection.baseURL) || !key.isEmpty else {
                 throw AIProviderError.unavailable("Add an API key in Settings.")
             }
+            let effort = connection.offeredEffort(savedEffort, for: model)
             return HTTPAIProvider(
                 configuration: AIHTTPConfiguration(
                     provider: connection.provider, baseURL: baseURL, model: model, effort: effort,

@@ -358,10 +358,17 @@ and `None`. `takesThinkingField` decides who gets that pair: an OpenAI-shaped pr
 not that preset's own, because a preset pointed away from its own API is a gateway, and a gateway is
 the only destination Tinycast can offer the switch to honestly. Picking `None` sends
 `"thinking": {"type": "disabled"}`, which is how DeepSeek and the endpoints that copied its contract
-answer without reasoning first. A vendor API is never offered the pair and so is never sent a field it
-does not define — which matters precisely because the preset alone says nothing about the destination
-when every base URL is editable. Only `None` is ever written, so every other body is the one it always
-was, and the choice rides in `AIModelSelection.effort` like every other route's.
+answer without reasoning first. A vendor API is never offered the pair, nor levels declared while its
+base URL pointed elsewhere, and so is never sent a field it does not define — which matters precisely
+because the preset alone says nothing about the destination when every base URL is editable. A
+gateway's model may also carry levels the reader declares in the connection editor (`minimal`, `low`,
+`medium`, `high`, never inferred), kept between `Default` and `None`; a picked level is sent as
+OpenAI's `reasoning_effort`. OpenRouter is left out at any URL (`takesDeclaredLevels`), because its
+catalog already names each model's levels. A chat and a Quick Action keep their own effort, so
+`AIProviderFactory` sends only one the model still offers (`offeredEffort`): an unticked level, or one
+left behind by a changed provider, is dropped rather than sent. With nothing declared the only field
+ever written is the `None` one, so every other body is the one it always was, and the choice rides in
+`AIModelSelection.effort` like every other route's.
 
 ## Provider interface
 

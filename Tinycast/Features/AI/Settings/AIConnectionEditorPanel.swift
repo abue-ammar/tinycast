@@ -255,13 +255,46 @@ struct AIConnectionEditorPanel: View {
 
     private func selectedModelRow(_ model: String) -> some View {
         LabeledContent(model) {
-            Button {
-                removeModel(model)
-            } label: {
-                Image(systemName: "minus.circle").foregroundStyle(.red)
+            HStack(spacing: Theme.Spacing.md) {
+                if connection.takesDeclaredLevels { reasoningLevelsMenu(model) }
+                Button {
+                    removeModel(model)
+                } label: {
+                    Image(systemName: "minus.circle").foregroundStyle(.red)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(model)")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(model)")
+        }
+    }
+
+    private func reasoningLevelsMenu(_ model: String) -> some View {
+        let declared = connection.declaredLevels(for: model)
+        return Menu {
+            ForEach(AIConnection.ReasoningOptions.ladder, id: \.self) { level in
+                Toggle(
+                    level.capitalized,
+                    isOn: Binding(
+                        get: { declared.contains(level) },
+                        set: { isOn in
+                            var levels = declared
+                            if isOn { levels.insert(level) } else { levels.remove(level) }
+                            connection.declareLevels(levels, for: model)
+                        }))
+            }
+        } label: {
+            Text(declaredLevelsTitle(declared)).font(.caption)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .accessibilityLabel("Reasoning levels for \(model)")
+    }
+
+    private func declaredLevelsTitle(_ declared: Set<String>) -> String {
+        switch declared.count {
+        case 0: return "Reasoning levels"
+        case 1: return "1 level"
+        default: return "\(declared.count) levels"
         }
     }
 
