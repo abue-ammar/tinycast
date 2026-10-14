@@ -10,7 +10,7 @@ final class CameraSession {
         case capture
     }
 
-    /// Settled before the panel opens, so it never swaps a stage out from under the user.
+    /// What `start` settles on; no surface shows a stage before it has one, so none opens black.
     enum Feed {
         case live(AVCaptureSession)
         case denied
@@ -48,6 +48,11 @@ final class CameraSession {
         guard !capture.isRunning else { return .live(capture) }
         let box = CaptureBox(session: capture)
         await Task.detached { box.session.startRunning() }.value
+        // A stop that landed mid-start found nothing running yet, so the light goes out here.
+        guard self.capture === capture else {
+            Task.detached { box.session.stopRunning() }
+            return .noCamera
+        }
         return .live(capture)
     }
 

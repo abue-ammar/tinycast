@@ -163,10 +163,10 @@ driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem
   height its content measured. Every route into it — the palette's menu circle, Settings → About, the
   menu bar, the launcher, and the 30-day reminder — lands on `showSupport()`, which is what moves the
   reminder's anchor. See [features/support.md](features/support.md).
-- **The camera surfaces** — a borderless, non-activating `CameraPanel` at `.floating`, in two
-  shapes over one `CameraSession`: `CameraPreviewController`, owned by `CalendarCoordinator`, gates a
-  join and doubles as auto join's confirmation; `CameraCoordinator`, owned by `AppCore`, is the
-  standalone `Open Camera` command. See [features/camera.md](features/camera.md) and
+- **The camera surfaces** — two over one kind of `CameraSession`: `CameraPreviewController`, owned by
+  `CalendarCoordinator`, puts a borderless, non-activating `CameraPanel` at `.floating` to gate a join
+  and confirm auto join; `CameraCoordinator`, owned by `AppCore`, backs the palette's own
+  `Open Camera` screen. See [features/camera.md](features/camera.md) and
   [features/calendar.md](features/calendar.md).
 - **HUDs** are separate, because a dialog asks and a HUD reports: `MessageHUDController` (the pill) and
   `VolumeHUDController` (the level box), both over a shared `HUDPresenter` that owns the

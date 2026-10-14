@@ -335,6 +335,7 @@ final class AppCore {
                 case .menuSearch: self?.menuSearchCoordinator.load()
                 case .switchWindows: self?.windowSwitchCoordinator.load()
                 case .rooms, .roomWindows: self?.roomCoordinator.load()
+                case .camera: self?.cameraCoordinator.load()
                 default: break
                 }
             }

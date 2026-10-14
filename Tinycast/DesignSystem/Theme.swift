@@ -264,8 +264,6 @@ enum Theme {
         static let dialogIcon: CGFloat = 32
         /// 16:9 at the dialog's own width, so the two surfaces read as siblings.
         static let cameraPreview = CGSize(width: 420, height: 236)
-        /// 16:9 again, wider: the standalone camera is the surface, not a confirmation on one.
-        static let cameraStage = CGSize(width: 560, height: 315)
         /// Wider than a dialog: a Quick Action's result is prose to read, not a sentence to answer.
         static let quickActionPanel: CGFloat = 520
         /// Matched to the title's cap height; a row-sized glyph beside it reads as an error.
@@ -322,6 +320,13 @@ enum Theme {
         static let roomCardEnter: TimeInterval = 0.2
         static let roomCardExit: TimeInterval = 0.18
         static let roomSettle: TimeInterval = 0.25
+        static let cameraReveal: TimeInterval = 0.35
+    }
+
+    enum CameraMotion {
+        /// The feed settles in from a touch larger, so the warm-up reads as focusing, not a cut.
+        static let reveal = Animation.smooth(duration: Theme.Duration.cameraReveal)
+        static let arrivalScale: CGFloat = 1.03
     }
 
     enum RoomMotion {

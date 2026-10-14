@@ -123,6 +123,8 @@ struct RootPaletteView: View {
                 vm: vm, openActions: openActions, metrics: metrics)
         case .dictionary:
             return DictionaryScreen(session: dictionary, core: core, vm: vm)
+        case .camera:
+            return CameraScreen(coordinator: core.cameraCoordinator)
         case .calculatorHistory:
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
@@ -390,6 +392,10 @@ struct RootPaletteView: View {
             // A preserved screen re-summons as it was left, so a menu must end with the palette.
             .modifier(PaletteHideObserver { if menuOpen { closeMenus() } })
             .onChange(of: vm.query) {
+                if !screen.drawsSearchField, !vm.query.isEmpty {
+                    vm.query = ""
+                    return
+                }
                 if vm.collapseQueryLineBreaks() { return }
                 land(restoringNavigation: true)
                 if vm.mode == .fileSearch { fileSearch.search(vm.query, filter: vm.fileSearchFilter) }
@@ -414,7 +420,7 @@ struct RootPaletteView: View {
                 land()
                 fileSearch.search(vm.query, filter: vm.fileSearchFilter)
             }
-            .onChange(of: vm.mode) {
+            .onChange(of: vm.mode) { previous, _ in
                 vm.clipboardFilter = .all
                 vm.fileSearchFilter = .all
                 vm.emojiCategoryFilter = .all
@@ -438,6 +444,7 @@ struct RootPaletteView: View {
                 if vm.mode != .menuSearch { menuSearch.reset() }
                 if vm.mode != .switchWindows { windowSwitch.reset() }
                 if vm.mode != .meetingDetails { calendarStore.clearDetails() }
+                if previous == .camera { core.cameraCoordinator.stop() }
                 if vm.mode != .rooms, vm.mode != .roomWindows { core.roomCoordinator.screensDidClose() }
                 // Leaving the screen any other way than Escape still ends the command's session.
                 if vm.mode != .extensionCommand, extensions.running != nil {
@@ -804,16 +811,19 @@ struct RootPaletteView: View {
 
     private var hidesSearchField: Bool { !isCollapsed && screen.hidesSearchField }
 
+    /// Hidden, or kept focused but undrawn; either way the field shows nothing and owns no pointer.
+    private var searchFieldInvisible: Bool { hidesSearchField || !screen.drawsSearchField }
+
     /// The field, kept mounted and hidden rather than swapped: a branch would tear its editor down.
     private var headerField: some View {
         searchField
             // A ceiling, not a size, so the row squeezes a long query before the strip overruns.
             .frame(minWidth: searchFieldFloor, maxWidth: searchFieldWidth)
-            .opacity(hidesSearchField ? 0 : 1)
-            .allowsHitTesting(!hidesSearchField)
-            .accessibilityHidden(hidesSearchField)
+            .opacity(searchFieldInvisible ? 0 : 1)
+            .allowsHitTesting(!searchFieldInvisible)
+            .accessibilityHidden(searchFieldInvisible)
             // The frame it publishes is where the panel puts an I-beam; hidden, it owns nowhere.
-            .onChange(of: hidesSearchField) { _, hidden in
+            .onChange(of: searchFieldInvisible) { _, hidden in
                 if hidden { vm.searchFieldFrame = .zero }
             }
     }
@@ -889,7 +899,7 @@ struct RootPaletteView: View {
                 $0.frame(in: .global)
             } action: {
                 // A hidden field takes no caret, so it claims no I-beam region either.
-                vm.searchFieldFrame = hidesSearchField ? .zero : $0
+                vm.searchFieldFrame = searchFieldInvisible ? .zero : $0
             }
     }
 

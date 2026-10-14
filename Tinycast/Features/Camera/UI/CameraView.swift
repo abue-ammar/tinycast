@@ -1,50 +1,42 @@
 import SwiftUI
 
+/// The palette's camera body: a warm-up that dissolves into the live stage once the camera settles.
 struct CameraView: View {
     let coordinator: CameraCoordinator
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 0) {
-            CameraStage(feed: coordinator.feed, mirrored: coordinator.mirrored)
-                .frame(
-                    width: Theme.Size.cameraStage.width,
-                    height: Theme.Size.cameraStage.height)
-            footer
-        }
-        .frame(width: Theme.Size.cameraStage.width)
-        .background(Theme.Colors.panelScrim)
-        .background(GlassEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
-        .panelEntrance()
-    }
-
-    private var isLive: Bool {
-        if case .live = coordinator.feed { return true }
-        return false
-    }
-
-    private var footer: some View {
-        HStack(spacing: Theme.Spacing.md) {
-            if isLive {
-                CameraButton(
-                    title: "Mirror", emphasis: coordinator.mirrored ? .primary : .secondary
-                ) {
-                    coordinator.mirrored.toggle()
-                }
-                if coordinator.canSwitchCamera {
-                    CameraButton(title: "Switch Camera", emphasis: .secondary) {
-                        coordinator.switchCamera()
-                    }
-                }
-            }
-            Spacer(minLength: Theme.Spacing.md)
-            CameraButton(title: "Close", keyCap: "esc", emphasis: .secondary) {
-                coordinator.close()
-            }
-            if isLive {
-                CameraButton(title: "Take Photo", keyCap: "↵") { coordinator.takePhoto() }
+        ZStack {
+            if let feed = coordinator.feed {
+                CameraStage(feed: feed, mirrored: coordinator.mirrored)
+                    .transition(
+                        .opacity.combined(with: .scale(scale: Theme.CameraMotion.arrivalScale)))
+            } else {
+                CameraWarmUp()
+                    .transition(.opacity)
             }
         }
-        .padding(Theme.Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Edge to edge under the header and the floating bar; the panel's own corners clip it.
+        .ignoresSafeArea()
+        .animation(reduceMotion ? nil : Theme.CameraMotion.reveal, value: coordinator.feed == nil)
+    }
+}
+
+/// What stands in for the stage while `startRunning` blocks, so the wait reads as progress.
+private struct CameraWarmUp: View {
+    @Environment(\.metrics) private var metrics
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        VStack(spacing: metrics.spacing.md) {
+            Image(systemName: "web.camera")
+                .font(.system(size: Theme.Size.dialogIcon, weight: .light))
+                .symbolEffect(.pulse, options: .repeating, isActive: !reduceMotion)
+            Text("Starting camera…")
+                .font(metrics.typography.rowTrailing)
+        }
+        .foregroundStyle(Theme.Colors.textSecondary)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

@@ -109,6 +109,8 @@ private extension MenuPanelCorner {
     var primaryActionTitle: String { get }
     /// True when the screen owns the keyboard, so the header's field is hidden and unfocused.
     var hidesSearchField: Bool { get }
+    /// False keeps the field focused so ↵, Esc and ⌘K still work, but undrawn and taking no text.
+    var drawsSearchField: Bool { get }
     /// True when the footer and ⌘K still act with no rows — a form's action belongs to the screen.
     var actsWithoutRows: Bool { get }
     /// Where an open, a new query or a new filter puts the highlight; past row 0 it is centred.
@@ -156,6 +158,7 @@ extension PaletteScreen {
     func isPrimaryActionEnabled(at selection: Int) -> Bool { true }
     func hasActions(at selection: Int) -> Bool { true }
     var hidesSearchField: Bool { false }
+    var drawsSearchField: Bool { true }
     var actsWithoutRows: Bool { false }
     var landingSelection: Int { 0 }
     func ownsVerticalKeys(at selection: Int) -> Bool { false }

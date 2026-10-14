@@ -25,6 +25,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     case snippets
     case snippetEditor
     case dictionary
+    case camera
     case extensionCommand
 
     var id: String { rawValue }
@@ -55,6 +56,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .quicklinks, .quicklinkEditor: return Quicklink.sfSymbol
         case .snippets, .snippetEditor: return "curlybraces"
         case .dictionary: return "book.closed"
+        case .camera: return "camera"
         case .extensionCommand: return "puzzlepiece.extension"
         }
     }
@@ -82,6 +84,7 @@ enum PaletteMode: String, CaseIterable, Identifiable {
         case .snippets: return "Search snippets…"
         case .snippetEditor: return "Snippet editor"
         case .dictionary: return "Look up a word…"
+        case .camera: return "Camera"
         // Replaced by the command's own `searchBarPlaceholder` whenever it declares one.
         case .extensionCommand: return "Search…"
         }

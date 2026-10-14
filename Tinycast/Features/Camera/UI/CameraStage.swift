@@ -36,7 +36,7 @@ private struct CameraFeed: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView {
         let preview = AVCaptureVideoPreviewLayer(session: session)
         preview.videoGravity = .resizeAspectFill
-        let view = NSView()
+        let view = ClickThroughView()
         // Layer-hosting, not layer-backed: set before `wantsLayer`, so AppKit never replaces it.
         view.layer = preview
         view.wantsLayer = true
@@ -58,4 +58,9 @@ private struct CameraFeed: NSViewRepresentable {
         connection.automaticallyAdjustsVideoMirroring = false
         connection.isVideoMirrored = mirrored
     }
+}
+
+/// An `NSView` sits above SwiftUI for hit-testing, so a full-bleed feed would eat the bar's clicks.
+private final class ClickThroughView: NSView {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }

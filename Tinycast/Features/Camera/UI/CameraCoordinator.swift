@@ -1,63 +1,72 @@
 import AppKit
 import SwiftUI
 
-/// Owns the standalone camera surface: one panel at a time, and the camera stops with it.
+/// Owns the palette's camera screen: the camera runs only while that screen is on screen.
 @MainActor
 @Observable
 final class CameraCoordinator {
-    private(set) var feed: CameraSession.Feed = .noCamera
+    /// Nil while the camera warms up, which the screen shows as its own transition.
+    private(set) var feed: CameraSession.Feed?
     private(set) var canSwitchCamera = false
     /// Remembered for the launch, so reopening the command keeps the framing you were happy with.
     var mirrored = true
 
     @ObservationIgnored private let session = CameraSession(.capture)
     @ObservationIgnored private unowned let core: AppCore
-    @ObservationIgnored private var panel: CameraPanel?
-    /// Held across the camera warm-up too, so a chord repeating into it cannot stack panels.
-    @ObservationIgnored private var opening = false
+    /// Bumped by every load and stop, so a start that settles late is dropped rather than shown.
+    @ObservationIgnored private var generation = 0
+    @ObservationIgnored private var requestingAccess = false
 
     init(core: AppCore) {
         self.core = core
     }
 
-    /// The camera settles first: a panel over a starting session shows a black stage.
-    func show() async {
-        // A panel system UI left without key takes it back, so ↵ and Esc reach it again.
-        if let panel {
-            panel.makeKey()
+    /// The TCC prompt takes key, which would dismiss a palette already up, so it is asked first.
+    func show() {
+        guard Permissions.cameraAccess() == .notDetermined else {
+            core.paletteCoordinator.togglePalette(mode: .camera)
             return
         }
-        guard !opening else { return }
-        opening = true
-        defer { opening = false }
-        feed = await session.start()
-        canSwitchCamera = session.hasMultipleDevices
-        present()
+        guard !requestingAccess else { return }
+        requestingAccess = true
+        core.paletteCoordinator.hidePalette()
+        Task {
+            _ = await Permissions.requestCameraAccess()
+            requestingAccess = false
+            core.paletteCoordinator.showPalette(mode: .camera)
+        }
     }
 
-    func close() {
-        guard let closing = panel else { return }
-        panel = nil
-        closing.onAction = nil
-        // The camera goes with the panel, not before it: tearing it down mid-fade blanks the feed.
-        closing.fadeOut(duration: Theme.Duration.exit) { [weak self] in
-            // Unless a panel raised inside the fade already owns the camera.
-            guard let self, !opening else { return }
-            session.stop()
+    /// Every open starts anew, a restored screen included: hiding stopped the last session.
+    func load() {
+        generation += 1
+        let current = generation
+        feed = nil
+        Task {
+            let settled = await session.start()
+            guard current == generation else { return }
+            canSwitchCamera = session.hasMultipleDevices
+            feed = settled
         }
+    }
+
+    func stop() {
+        generation += 1
+        feed = nil
+        session.stop()
     }
 
     func switchCamera() {
         Task { await session.switchToNextDevice() }
     }
 
-    /// The panel goes with the shot: the command is done, and the camera light goes out with it.
+    /// The palette goes with the shot: the command is done, and the camera light goes out with it.
     func takePhoto() {
         guard case .live = feed else { return }
         let mirrored = mirrored
         Task {
             let png = await session.capturePhoto(mirrored: mirrored)
-            close()
+            if core.paletteCoordinator.isShowing(.camera) { core.paletteCoordinator.hidePalette() }
             guard let png else {
                 core.showMessage("Couldn't take the photo", tone: .danger)
                 return
@@ -65,23 +74,6 @@ final class CameraCoordinator {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setData(png, forType: .png)
             core.showMessage("Photo copied")
-        }
-    }
-
-    private func present() {
-        let hosting = NSHostingView(rootView: CameraView(coordinator: self))
-        hosting.setFrameSize(hosting.fittingSize)
-        let panel = CameraPanel(content: hosting)
-        panel.onAction = { [weak self] action in
-            guard let self else { return }
-            if action == .primary { takePhoto() } else { close() }
-        }
-        self.panel = panel
-        panel.centerOnCursorScreen()
-        // Non-activating like the palette: key focus without pulling the user out of their app.
-        panel.fadeIn(duration: Theme.Duration.enter) {
-            panel.makeKeyAndOrderFront(nil)
-            panel.orderFrontRegardless()
         }
     }
 }

@@ -20,6 +20,9 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
 - **The search field is never mounted conditionally.** A screen that owns the keyboard itself hides it
   through `PaletteScreen.hidesSearchField` — opacity and hit testing, never an `if` — because
   flipping a branch around it tears its field editor down. The header is simply left empty.
+  A screen with no input of its own but no focusable view either — the camera — sets
+  `drawsSearchField` false instead: the field stays focused, so ↵, Esc and ⌘K reach the palette's
+  handlers, but it is undrawn and any text typed into it is cleared at once.
 - **Focus restoration is load-bearing.** Paste targets the recorded `previousApp` and requires the
   Accessibility permission (`Permissions.ensureAccessibility()`).
 - **Input-source switching is a palette session.** The source active at summon time is captured before
@@ -104,6 +107,7 @@ every screen but two: the clipboard lands past its pins
 | `.snippets`          | `SnippetsScreen`          | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets))        |
 | `.snippetEditor`     | `SnippetEditorScreen`     | `SnippetEditorView` (see [snippets.md](snippets.md#launcher-editor)) |
 | `.dictionary`        | `DictionaryScreen`        | `DictionaryEntryView` (see [dictionary.md](dictionary.md))                       |
+| `.camera`            | `CameraScreen`            | `CameraView` (see [camera.md](camera.md))                                        |
 | `.extensionCommand`  | `ExtensionCommandScreen`  | `ExtensionCommandView` (see [extensions.md](extensions.md))                      |
 
 **Tab rings the three surfaces a reader opens directly — launcher → AI chat → clipboard → launcher**
