@@ -90,8 +90,10 @@ word or camel-case boundary +1000, terms typed in order +1500, first term ending
 `~/Library` and anything inside a bundle.
 
 An empty query lists **Recent**: the 20 newest files with prior 2, by modification date. The session
-keeps those rows across closes and computes them whenever the index is swapped in, so the screen opens
-on them at once and refreshes them in the background.
+keeps those rows across closes and recomputes them in the background whenever the index is swapped in
+or a live update reaches a file Recent can list, so the screen opens on current rows at once. That
+recompute never touches the published results, so a list on screen holds still. Each run is stamped,
+and one that finishes after a newer one is dropped.
 
 Search results follow **Pop to Root Search**: closing with **Immediately** clears the session at once.
 With a delay, results stay with the preserved query until the reset fires; reopening before it fires
@@ -109,8 +111,9 @@ optimization, queries took 0.3–2.7 ms and single letters 3.4 ms.
 queue, with a one-second latency and `NoDefer`: a lone change lands at once, and a folder that keeps
 changing is relisted about once a second instead of once per event. fsearch's 10 ms latency relisted a
 5,000-entry folder written 100 times a second about 58 times a second, a sixth of a core (#1599). A batch
-that changes the item count asks the main actor to redraw it at most once a second; any other batch never
-leaves the events queue. For each
+that changes the item count, or adds, removes or re-dates a file Recent can list, asks the main actor to
+redraw the count and recompute Recent at most once a second; any other batch never leaves the events
+queue. `FileIndex.recentRevision` is how a batch tells: it moves only for those files. For each
 event `FileIndex.apply(folder:)` acts only if the path is an indexed folder; any other event is in an
 ignored subtree, or it belongs to a new folder that its parent's event will find. The folder is relisted
 through one reused `FileIndexCrawler.Lister` and merged against its block: both sides are sorted by name

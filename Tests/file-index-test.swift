@@ -91,11 +91,14 @@ struct FileIndexTests {
 
     static func live(_ index: FileIndex, root: URL, policy: FileSearchPolicy) throws {
         let documents = root.appending(path: "Documents")
+        let revision = index.recentRevision
         try write(documents.appending(path: "new-plan.md"))
         index.apply(folder: documents.path)
         expect(names(index, "new-plan") == ["new-plan.md"], "a new file appears")
+        let added = index.recentRevision
+        expect(added != revision, "a new home file moves Recent")
         index.apply(folder: documents.path)
-        expect(index.itemCount == 16, "applying twice changes nothing")
+        expect(index.itemCount == 16 && index.recentRevision == added, "applying twice changes nothing")
 
         try FileManager.default.removeItem(at: documents.appending(path: "notes.txt"))
         index.apply(folder: documents.path)
@@ -113,17 +116,25 @@ struct FileIndexTests {
         let report = documents.appending(path: "Annual Report.pdf")
         try FileManager.default.setAttributes(
             [.modificationDate: Date().addingTimeInterval(3_600)], ofItemAtPath: report.path)
+        let undated = index.recentRevision
         index.apply(folder: documents.path)
         expect(index.recent(filter: .all).first?.name == "Annual Report.pdf", "an edit dates a file")
+        expect(index.recentRevision != undated, "and moves Recent")
 
         let git = root.appending(path: "Developer/application/.git")
         try FileManager.default.setAttributes(
             [.modificationDate: Date().addingTimeInterval(7_200)],
             ofItemAtPath: git.appending(path: "config").path)
         let churn = index.itemCount
+        let dated = index.recentRevision
         expect(
-            !index.apply(folder: git.path) && index.itemCount == churn,
+            !index.apply(folder: git.path) && index.itemCount == churn && index.recentRevision == dated,
             "a new date outside Recent's reach changes nothing")
+        try write(git.appending(path: "HEAD"))
+        index.apply(folder: git.path)
+        expect(
+            index.itemCount == churn + 1 && index.recentRevision == dated,
+            "a hidden file counts but leaves Recent alone")
 
         try write(documents.appending(path: "Trip/Photos/sunset.jpg"))
         index.apply(folder: documents.path)

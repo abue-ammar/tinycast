@@ -12,6 +12,8 @@ final class FileIndex: Sendable {
         let mtime: UInt32
         let prior: Int8
         let mask: UInt64
+
+        var isRecent: Bool { prior == 2 && !isDirectory }
     }
 
     private struct State: Sendable {
@@ -21,41 +23,47 @@ final class FileIndex: Sendable {
         var deadCount = 0
         var added: [String: Added] = [:]
         var addedChildren: [String: Set<String>] = [:]
+        var recentRevision = 0
 
         var changeCount: Int { deadCount + added.count }
 
         func isDead(_ index: Int) -> Bool { dead[index >> 6] & (1 << UInt64(index & 63)) != 0 }
 
         mutating func kill(_ index: Int, in snapshot: FileIndexSnapshot) {
-            markDead(index)
+            markDead(index, in: snapshot)
             guard snapshot.isDirectory(index) else { return }
-            for descendant in snapshot.subtree(of: index) { markDead(descendant) }
+            for descendant in snapshot.subtree(of: index) { markDead(descendant, in: snapshot) }
         }
 
-        private mutating func markDead(_ index: Int) {
+        private mutating func markDead(_ index: Int, in snapshot: FileIndexSnapshot) {
             let bit: UInt64 = 1 << UInt64(index & 63)
             guard dead[index >> 6] & bit == 0 else { return }
             dead[index >> 6] |= bit
             deadCount += 1
+            if snapshot.prior[index] == 2, !snapshot.isDirectory(index) { recentRevision &+= 1 }
         }
 
         mutating func add(_ path: String, _ child: FileIndexCrawler.Child) {
             var name = child.name
             let mask = name.withUTF8(FileSearchQuery.nameMask)
-            added[path] = Added(
+            let entry = Added(
                 name: child.name, isDirectory: child.isDirectory, mtime: child.mtime,
                 prior: child.prior, mask: mask)
+            added[path] = entry
             addedChildren[parentPath(of: path), default: []].insert(child.name)
+            if entry.isRecent { recentRevision &+= 1 }
         }
 
         mutating func remove(_ path: String, isDirectory: Bool) {
             if let entry = added.removeValue(forKey: path) {
                 addedChildren[parentPath(of: path)]?.remove(entry.name)
+                if entry.isRecent { recentRevision &+= 1 }
             }
             guard isDirectory else { return }
             let prefix = path == "/" ? "/" : path + "/"
             for key in added.keys.filter({ $0.hasPrefix(prefix) }) {
-                added.removeValue(forKey: key)
+                let entry = added.removeValue(forKey: key)
+                if entry?.isRecent == true { recentRevision &+= 1 }
             }
             for key in addedChildren.keys.filter({ $0 == path || $0.hasPrefix(prefix) }) {
                 addedChildren.removeValue(forKey: key)
@@ -74,6 +82,9 @@ final class FileIndex: Sendable {
             return snapshot.entryCount - snapshot.rootCount - state.deadCount + state.added.count
         }
     }
+
+    /// Moves only when a file Recent can list comes, goes or is saved.
+    var recentRevision: Int { state.withLock { $0.recentRevision } }
 
     func replace(with snapshot: FileIndexSnapshot?, policy: FileSearchPolicy?) {
         let words = ((snapshot?.entryCount ?? 0) + 63) / 64
@@ -146,7 +157,7 @@ final class FileIndex: Sendable {
             Ranked(score: hit.score, path: snapshot.path(of: hit.index), isDirectory: false)
         }
         var types = TypeFilter(filter: filter)
-        for (path, entry) in state.added where entry.prior == 2 && !entry.isDirectory {
+        for (path, entry) in state.added where entry.isRecent {
             var name = entry.name
             guard name.withUTF8({ types.accepts(name: $0, isDirectory: false) }) else { continue }
             ranked.append(Ranked(score: Int(entry.mtime), path: path, isDirectory: false))

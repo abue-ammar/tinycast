@@ -26,6 +26,7 @@ final class FileSearchCoordinator {
         self.windowController = windowController
         self.core = core
         indexer.onIndexChanged = { [weak session] in session?.refresh() }
+        indexer.onRecentChanged = { [weak session] in session?.refreshRecent() }
     }
 
     func applyEnabled() {
