@@ -107,7 +107,9 @@ in-memory history).
 
 Image capture (TIFF→PNG re-encode + blob write) runs off the main actor via detached tasks; row
 inserts, original-text search, and pruning stay on the main actor.
-Image copy uses Foundation’s `mappedIfSafe` hint before publishing the original PNG and marker.
+Image copy uses Foundation’s `mappedIfSafe` hint before publishing the original PNG, its file URL
+and marker. The file URL is what a terminal pastes, as the path, since it ignores image data; there
+is deliberately no `.string`, which a rich text field would take over the image.
 
 **Tiles and previews decode a copy, not the blob.** A PNG can't decode partially, so a 64px tile of a
 6K screenshot cost its full bitmap. The first draw of an owned image has `ClipboardTextHelper` write

@@ -128,8 +128,10 @@ enum Paster {
                 return false
             }
             pb.clearContents()
-            pb.declareTypes([.png, ClipboardManager.internalType], owner: nil)
+            pb.declareTypes([.png, .fileURL, ClipboardManager.internalType], owner: nil)
             pb.setData(data, forType: .png)
+            // A text-only receiver ignores image data but pastes a file URL as its path.
+            pb.setData(url.dataRepresentation, forType: .fileURL)
         case .file:
             guard let url = store.fileURL(for: item),
                 FileManager.default.fileExists(atPath: url.path)
