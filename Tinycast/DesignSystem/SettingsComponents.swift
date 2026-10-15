@@ -7,10 +7,11 @@ struct SettingsTabIcon: View {
     let systemImage: String
     let tint: Color
     var size = Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let scale = size / (Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2)
-        Image(systemName: systemImage)
+        Image(systemName: SystemSymbolName.resolve(systemImage, isDark: colorScheme == .dark))
             .resizable()
             .scaledToFit()
             .frame(

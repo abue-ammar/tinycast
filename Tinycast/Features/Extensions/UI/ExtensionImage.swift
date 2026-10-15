@@ -393,7 +393,7 @@ struct ExtensionIconView: View {
     private var content: some View {
         switch resolved?.source {
         case .symbol(let name):
-            Image(systemName: name)
+            Image(systemName: SystemSymbolName.resolve(name, isDark: isDark))
                 .font(
                     .system(
                         size: usesMenuSymbolStyle

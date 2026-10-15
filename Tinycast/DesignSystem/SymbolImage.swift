@@ -5,6 +5,7 @@ struct SymbolImage: View {
     let name: String
     let size: CGFloat
     var monochrome = false
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         if NSImage(systemSymbolName: name, accessibilityDescription: nil) == nil {
@@ -21,7 +22,7 @@ struct SymbolImage: View {
                     .frame(width: size, height: size)
             }
         } else {
-            Image(systemName: name)
+            Image(systemName: SystemSymbolName.resolve(name, isDark: colorScheme == .dark))
                 .font(.system(size: size, weight: .regular))
                 .symbolRenderingMode(monochrome ? .monochrome : .hierarchical)
         }

@@ -4,11 +4,13 @@ import SwiftUI
 private struct HeaderMenuSymbol: View {
     let name: String
     let size: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         let configuration = NSImage.SymbolConfiguration(pointSize: size, weight: .medium)
         if let image = NSImage(
-            systemSymbolName: SystemSymbolName.resolve(name), accessibilityDescription: nil
+            systemSymbolName: SystemSymbolName.resolve(name, isDark: colorScheme == .dark),
+            accessibilityDescription: nil
         )?
         .withSymbolConfiguration(configuration) {
             Image(nsImage: image)

@@ -43,12 +43,9 @@ struct SymbolTint: Hashable, Sendable {
 }
 
 enum SystemSymbolName {
-    // This pair renders opposite to its name on the target SF Symbols runtime, in both appearances.
-    static func resolve(_ name: String) -> String {
-        switch name {
-        case "face.smiling": "face.smiling.inverse"
-        default: name
-        }
+    // This pair swaps glyphs in Dark, so there the outline is the inverse.
+    static func resolve(_ name: String, isDark: Bool) -> String {
+        name == "face.smiling" && isDark ? "face.smiling.inverse" : name
     }
 }
 
@@ -264,13 +261,15 @@ enum IconCache {
 
             // A tinted tile keeps white ink in both appearances; the tint carries the contrast.
             let ink = tint == nil ? NSColor.srgbInk(plainInk, alpha: 0.85) : .white
-            guard let symbol = glyph(named: name, tint: ink)
-            else { return true }
-            let size = symbol.size
-            symbol.draw(
-                in: NSRect(
-                    x: (side - size.width) / 2, y: (side - size.height) / 2,
-                    width: size.width, height: size.height))
+            // A symbol picks its glyph by the drawing appearance, which off-main isn't the surface's.
+            NSAppearance(named: isDark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+                guard let symbol = glyph(named: name, tint: ink, isDark: isDark) else { return }
+                let size = symbol.size
+                symbol.draw(
+                    in: NSRect(
+                        x: (side - size.width) / 2, y: (side - size.height) / 2,
+                        width: size.width, height: size.height))
+            }
             return true
         }
         let (icon, cost) = downsampled(image)
@@ -278,11 +277,12 @@ enum IconCache {
         return icon
     }
 
-    private static func glyph(named name: String, tint: NSColor) -> NSImage? {
+    private static func glyph(named name: String, tint: NSColor, isDark: Bool) -> NSImage? {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
             .applying(.init(paletteColors: [tint]))
         if let symbol = NSImage(
-            systemSymbolName: SystemSymbolName.resolve(name), accessibilityDescription: nil
+            systemSymbolName: SystemSymbolName.resolve(name, isDark: isDark),
+            accessibilityDescription: nil
         )?
         .withSymbolConfiguration(config) {
             return symbol
