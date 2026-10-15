@@ -148,8 +148,9 @@ They are the busiest folders on a disk — one browser's cache alone holds tens 
 rewritten on every page load — and never what a search is for.
 
 `fnmatch` runs with `FNM_CASEFOLD` and without `FNM_PATHNAME`, so `*` spans `/`. Name patterns read the
-NUL-terminated name straight out of the `getattrlistbulk` buffer; a path is only built when a path
-pattern exists. **Add Folder…** stores the chosen folder as a `~`-relative path pattern.
+NUL-terminated name straight out of the `getattrlistbulk` buffer. Literal path patterns first check the
+entry name, so an unrelated entry builds no path; wildcard and escaped paths keep the full-path match.
+**Add Folder…** stores the chosen folder as a `~`-relative path pattern.
 
 ## Palette and actions
 

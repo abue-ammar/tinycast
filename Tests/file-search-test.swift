@@ -31,6 +31,7 @@ struct FileSearchTests {
         ranking()
         typeFilter()
         ignoreRules()
+        ignorePathMatching()
         policy()
         scopes()
         resultModel()
@@ -161,6 +162,47 @@ struct FileSearchTests {
         expect(
             !shipped.excludes(name: ".git", path: "/x/.git"),
             "hidden folders are indexed unless a pattern says otherwise")
+    }
+
+    static func ignorePathMatching() {
+        func check(_ patterns: [String], name: String, path: String, excluded: Bool, builds: Int) {
+            let list = FileSearchIgnoreList(patterns: patterns, homeDirectory: home)
+            var pathBuilds = 0
+            let found = name.withCString { name in
+                list.excludes(name: name, length: strlen(name)) {
+                    pathBuilds += 1
+                    return path
+                }
+            }
+            expect(found == excluded, "\(patterns) preserve matching for \(path)")
+            expect(pathBuilds == builds, "\(patterns) build the path \(builds) times for \(name)")
+        }
+
+        check(
+            FileSearchIgnoreList.defaults, name: "notes.txt", path: "/Users/test/notes.txt",
+            excluded: false, builds: 0)
+        check(
+            FileSearchIgnoreList.defaults, name: "CACHES", path: "/users/TEST/library/CACHES",
+            excluded: true, builds: 1)
+        check(
+            FileSearchIgnoreList.defaults, name: "Caches", path: "/Users/test/Developer/Caches",
+            excluded: false, builds: 1)
+        check(
+            ["Archive", "/x/Caches"], name: "Archive", path: "/x/Archive",
+            excluded: true, builds: 0)
+        check(
+            ["*.tmp", "/x/Caches"], name: "scratch.tmp", path: "/x/scratch.tmp",
+            excluded: true, builds: 0)
+        check(
+            ["/Users/*/Library/Caches"], name: "Caches", path: "/Users/test/Library/Caches",
+            excluded: true, builds: 1)
+        check(
+            ["**/Cache/*.bin"], name: "blob.bin", path: "/x/Cache/nested/blob.bin",
+            excluded: true, builds: 1)
+        check(["/x/[a/b]"], name: "a", path: "/x/a", excluded: true, builds: 1)
+        check(["/x/cache\\?"], name: "cache?", path: "/x/cache?", excluded: true, builds: 1)
+        check(["/x/\\*/cache"], name: "cache", path: "/x/*/cache", excluded: true, builds: 1)
+        check(["/x/Reports/"], name: "Reports", path: "/x/Reports", excluded: false, builds: 1)
     }
 
     static func policy() {
