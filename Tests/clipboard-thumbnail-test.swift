@@ -1,4 +1,3 @@
-// Standalone test for clipboard image copies, with a stand-in helper a delete can race.
 import AppKit
 import ImageIO
 import UniformTypeIdentifiers
@@ -24,7 +23,6 @@ struct ClipboardThumbnailTests {
 
     // MARK: - Cases
 
-    /// The maintainer's repro: the helper writes its copy after the image was removed.
     static func removalDuringGenerationLeavesNoCopy() async {
         await deletingDuringGeneration("removing") { store, item in store.remove(item) }
     }
@@ -82,7 +80,6 @@ struct ClipboardThumbnailTests {
         expect(FileManager.default.fileExists(atPath: copies[1].path), "and keeps shot.png's")
     }
 
-    /// A helper that never exits is ended by the deadline, and the next copy still gets made.
     static func timeoutReleasesTheQueue() async {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -98,7 +95,6 @@ struct ClipboardThumbnailTests {
         expect(after, "the queue makes the next copy after a timeout")
     }
 
-    /// Cancelling the caller ends its helper, so the queue moves on.
     static func cancellationReleasesTheQueue() async {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -119,22 +115,21 @@ struct ClipboardThumbnailTests {
         expect(after, "the queue makes the next copy after a cancel")
     }
 
-    /// No helper sits beside the harness, so every copy fails and the load falls back to the original.
     static func fallbackReadsTheOriginalUnlessCancelled() async {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
         let shown = image("a.png", color: .systemRed, in: dir)
         let scrolledAway = image("b.png", color: .systemBlue, in: dir)
-        let fallback = await ImageThumbnail.loadAsync(shown, maxPixel: 64, derived: true)
+        let missing = dir.appendingPathComponent("missing-helper")
+        let fallback = await ImageThumbnail.loadAsync(shown, maxPixel: 64, copyingWith: missing)
         expect(fallback != nil, "a failed copy falls back to decoding the original")
         let cancelled = Task { () -> Bool in
             withUnsafeCurrentTask { $0?.cancel() }
-            return await ImageThumbnail.loadAsync(scrolledAway, maxPixel: 64, derived: true) != nil
+            return await ImageThumbnail.loadAsync(scrolledAway, maxPixel: 64, copyingWith: missing) != nil
         }
         expect(!(await cancelled.value), "a cancelled load skips the full-size fallback")
     }
 
-    /// A copy that exists but won't decode must not leave the tile blank.
     static func unreadableCopyFallsBackAndIsDropped() async {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -143,7 +138,8 @@ struct ClipboardThumbnailTests {
         try? FileManager.default.createDirectory(
             at: ImageDerivative.folder(beside: url), withIntermediateDirectories: true)
         try? Data("not a png".utf8).write(to: copy.url)
-        let image = await ImageThumbnail.loadAsync(url, maxPixel: 64, derived: true)
+        let image = await ImageThumbnail.loadAsync(
+            url, maxPixel: 64, copyingWith: dir.appendingPathComponent("missing-helper"))
         ImageDerivative.queue.sync {}
         expect(image != nil, "an unreadable copy falls back to the original")
         let dropped = !FileManager.default.fileExists(atPath: copy.url.path)
@@ -152,7 +148,7 @@ struct ClipboardThumbnailTests {
 
     // MARK: - Fixtures
 
-    /// The helper's stand-in: reads the source first and writes the copy last, as decode-then-encode does.
+    /// Stand-in helper: reads the source first and writes the copy last, as the real one does.
     static func script(in dir: URL, sleeping seconds: Double) -> URL {
         let url = dir.appendingPathComponent("helper-\(UUID().uuidString).sh")
         let body = """

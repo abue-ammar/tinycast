@@ -303,10 +303,10 @@ swiftc -O -swift-version 6 Tinycast/Platform/PasteboardFiles.swift \
 
 `Tests/clipboard-thumbnail-performance.swift` draws 10 image rows at once, then 10 previews one by one,
 as Clipboard History does, and prints the times with the footprint and its peak as JSON. `--fixtures`
-writes 10 seeded synthetic 6K Display P3 screenshots, so no real clipboard is needed. `--original`
-decodes the blobs as before the copies existed; `--copies` makes and reads the `ImageDerivative` copies,
-so its first run measures a first view and later runs every other one. The helper must sit at
-`Contents/Helpers` beside the benchmark, where `ImageThumbnail` looks for it:
+writes 10 seeded synthetic Display P3 screenshots up to 3456 × 2234, so no real clipboard is needed.
+`--original` decodes the blobs as before the copies existed; `--copies` makes and reads the
+`ImageDerivative` copies, so its first run measures a first view and later runs every other one. The
+helper must sit at `Contents/Helpers` beside the benchmark:
 
 ```sh
 D=/tmp/clipboard-thumbnail-performance; mkdir -p $D/Contents/Helpers

@@ -27,15 +27,18 @@ nonisolated enum ClipboardTextHelper {
         let copy = URL(fileURLWithPath: CommandLine.arguments[3])
         guard let edge = Int(CommandLine.arguments[4]),
             let image = CGImageSourceCreateWithURL(source as CFURL, nil),
-            let decoded = CGImageSourceCreateThumbnailAtIndex(image, 0, [
-                kCGImageSourceCreateThumbnailFromImageAlways: true,
-                kCGImageSourceCreateThumbnailWithTransform: true,
-                kCGImageSourceThumbnailMaxPixelSize: edge
-            ] as CFDictionary)
+            let decoded = CGImageSourceCreateThumbnailAtIndex(
+                image, 0,
+                [
+                    kCGImageSourceCreateThumbnailFromImageAlways: true,
+                    kCGImageSourceCreateThumbnailWithTransform: true,
+                    kCGImageSourceThumbnailMaxPixelSize: edge
+                ] as CFDictionary)
         else { return false }
         let data = NSMutableData()
-        guard let destination = CGImageDestinationCreateWithData(
-            data, UTType.png.identifier as CFString, 1, nil)
+        guard
+            let destination = CGImageDestinationCreateWithData(
+                data, UTType.png.identifier as CFString, 1, nil)
         else { return false }
         CGImageDestinationAddImage(destination, decoded, nil)
         guard CGImageDestinationFinalize(destination) else { return false }

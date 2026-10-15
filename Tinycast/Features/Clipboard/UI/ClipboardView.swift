@@ -247,7 +247,8 @@ private enum ThumbnailSource {
     func loadAsync(_ url: URL, maxPixel: CGFloat) async -> NSImage? {
         switch self {
         case .image(let derived):
-            return await ImageThumbnail.loadAsync(url, maxPixel: maxPixel, derived: derived)
+            return await ImageThumbnail.loadAsync(
+                url, maxPixel: maxPixel, copyingWith: derived ? ClipboardTextWorker.executable : nil)
         case .file: return await FilePreviewThumbnail.loadAsync(url, maxPixel: maxPixel)
         }
     }

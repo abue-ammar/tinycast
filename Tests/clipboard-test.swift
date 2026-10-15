@@ -567,7 +567,6 @@ struct ClipboardTests {
         }
     }
 
-    /// Removing an image, clearing history or a retention cut also deletes the copies beside its blob.
     static func imageCopiesLeaveWithTheirBlob() {
         for way in ["removing", "clearing history", "a retention cut"] {
             withStore { store, dir in
@@ -608,7 +607,7 @@ struct ClipboardTests {
         }
     }
 
-    /// A quit before the queued copy delete ran leaves copies with no blob; the next load sweeps them.
+    /// A quit before a queued copy delete runs leaves orphaned copies; the next load sweeps them.
     static func orphanedCopiesAreSweptOnLoad() {
         withStore { store, dir in
             let blob = dir.appendingPathComponent("kept.png")

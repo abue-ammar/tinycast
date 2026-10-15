@@ -20,12 +20,13 @@ enum ImageThumbnail {
     private struct Decoded: @unchecked Sendable { let image: NSImage? }
 
     /// Returns the decode directly, so an eviction mid-decode can't strand a placeholder.
-    static func loadAsync(_ url: URL, maxPixel: CGFloat, derived: Bool = false) async -> NSImage? {
+    static func loadAsync(
+        _ url: URL, maxPixel: CGFloat, copyingWith helper: URL? = nil
+    ) async -> NSImage? {
         if let cached = cached(url, maxPixel: maxPixel) { return cached }
         var decodable = url
-        // Without a copy, from a failed helper or a size past the largest edge, the original is read.
-        if derived, let copy = ImageDerivative.covering(url, maxPixel: Int(maxPixel.rounded(.up))),
-            await makeCopy(copy, of: url)
+        if let helper, let copy = ImageDerivative.covering(url, maxPixel: Int(maxPixel.rounded(.up))),
+            await makeCopy(copy, of: url, helper: helper)
         {
             decodable = copy.url
         }
@@ -36,7 +37,7 @@ enum ImageThumbnail {
                 return Decoded(image: image)
             }
             guard decodable != url else { return Decoded(image: nil) }
-            // An unreadable copy is dropped, so the next draw remakes it, and the original shows now.
+            // An unreadable copy is dropped so the next draw remakes it; the original shows now.
             ImageDerivative.queue.async { try? FileManager.default.removeItem(at: decodable) }
             return Decoded(image: decode(url, cachingAs: url, maxPixel: maxPixel))
         }.value.image
@@ -67,10 +68,9 @@ enum ImageThumbnail {
         return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
     }
 
-    /// Waits on `ImageDerivative.queue`, off the cooperative pool, so a delete of the blob waits it out.
+    /// Waits on `ImageDerivative.queue`, off the cooperative pool, so a blob's delete waits it out.
     static func makeCopy(
-        _ copy: ImageDerivative, of url: URL,
-        helper: URL = Bundle.main.bundleURL.appending(path: "Contents/Helpers/ClipboardTextHelper"),
+        _ copy: ImageDerivative, of url: URL, helper: URL,
         timeout: DispatchTimeInterval = .seconds(10)
     ) async -> Bool {
         if exists(copy) { return true }
@@ -94,13 +94,11 @@ enum ImageThumbnail {
         }
     }
 
-    /// A PNG never decodes partially, so the helper takes the full bitmap and the app only the copy.
     private static func run(
         _ process: Process, making copy: ImageDerivative, of url: URL,
         timeout: DispatchTimeInterval, cancelled: Cancellation
     ) -> Bool {
         if exists(copy) { return true }
-        // Only the copy asked for: a row never pays for a 1080px decode it does not show.
         guard !cancelled.flag.withLock({ $0 }), let size = pixelSize(of: url),
             Int(max(size.width, size.height)) > copy.edge,
             let exit = try? process.runObservingExit()

@@ -28,7 +28,7 @@ enum ClipboardThumbnailBenchmark {
         ]
     }
 
-    /// A seeded 6K Display P3 "screenshot": a gradient under fine grain, which PNG cannot compress away.
+    /// A seeded Display P3 "screenshot": a gradient under grain, which PNG can't compress away.
     static func writeFixture(_ index: Int, to url: URL) {
         let (width, height) = [(3456, 2234), (3248, 2122), (3024, 1964)][index % 3]
         var state = UInt64(index + 1) &* 0x9E37_79B9_7F4A_7C15
@@ -71,19 +71,24 @@ enum ClipboardThumbnailBenchmark {
             return
         }
         let derived = !arguments.contains("--original")
-        let urls = ((try? FileManager.default.contentsOfDirectory(
-            at: directory, includingPropertiesForKeys: nil)) ?? [])
+        let helper =
+            derived ? Bundle.main.bundleURL.appending(path: "Contents/Helpers/ClipboardTextHelper") : nil
+        let urls =
+            ((try? FileManager.default.contentsOfDirectory(
+                at: directory, includingPropertiesForKeys: nil)) ?? [])
             .filter { $0.pathExtension == "png" }.sorted { $0.path < $1.path }
         precondition(!urls.isEmpty, "run --fixtures first")
-        let copiesBefore = (try? FileManager.default.contentsOfDirectory(
-            atPath: directory.appendingPathComponent(".thumbnails").path).count) ?? 0
+        let copiesBefore =
+            (try? FileManager.default.contentsOfDirectory(
+                atPath: directory.appendingPathComponent(".thumbnails").path
+            ).count) ?? 0
 
         // Opening history: every visible row asks for its tile at once, as the list does.
         let rowsStart = ContinuousClock.now
         let rowsLoaded = await withTaskGroup(of: Bool.self) { group in
             for url in urls {
                 group.addTask {
-                    await ImageThumbnail.loadAsync(url, maxPixel: rowPixel, derived: derived) != nil
+                    await ImageThumbnail.loadAsync(url, maxPixel: rowPixel, copyingWith: helper) != nil
                 }
             }
             var all = true
@@ -94,7 +99,7 @@ enum ClipboardThumbnailBenchmark {
         let previewsStart = ContinuousClock.now
         var previewsLoaded = true
         for url in urls {
-            let image = await ImageThumbnail.loadAsync(url, maxPixel: previewPixel, derived: derived)
+            let image = await ImageThumbnail.loadAsync(url, maxPixel: previewPixel, copyingWith: helper)
             previewsLoaded = previewsLoaded && image != nil
         }
         let previews = milliseconds(previewsStart)

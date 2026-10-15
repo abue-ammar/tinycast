@@ -10,12 +10,13 @@ nonisolated enum ClipboardTextWorker {
     /// The read loop and the exit wait block, so they stay off the cooperative pool.
     private static let queue = DispatchQueue(
         label: "com.tinycast.clipboard-text", qos: .background, attributes: .concurrent)
+    static let executable = Bundle.main.bundleURL.appendingPathComponent(
+        "Contents/Helpers/ClipboardTextHelper")
 
     static func extract(_ item: ClipboardItem) async throws -> String {
         guard let path = item.imagePath ?? item.filePath else { return "" }
         let kind = item.kind == .image ? ClipboardFileKind.image : ClipboardFileKind.of(path: path)
         guard kind == .image || kind == .pdf else { return "" }
-        let executable = Bundle.main.bundleURL.appendingPathComponent("Contents/Helpers/ClipboardTextHelper")
         return try await extract(at: URL(fileURLWithPath: path), isPDF: kind == .pdf, executable: executable)
     }
 
