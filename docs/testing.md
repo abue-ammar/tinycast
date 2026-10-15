@@ -597,6 +597,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   fallbacks; two do not. ↵ opens, ⌘↵ reveals, ⌘K has no Quick Look, the copy, paste and ⌃X chords act
   on the row, and a row drags out as a copy
 - Choosing the Search Files fallback right after opens on the same results without a pause
+- With Pop to Root Search delayed, close and reopen before the timeout: the launcher keeps its query
+  and file results. Let the timeout expire, or use Immediately: reopening starts with an empty query
 
 ### Notes
 

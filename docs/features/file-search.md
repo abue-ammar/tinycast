@@ -93,6 +93,11 @@ An empty query lists **Recent**: the 20 newest files with prior 2, by modificati
 keeps those rows across closes and computes them whenever the index is swapped in, so the screen opens
 on them at once and refreshes them in the background.
 
+Search results follow **Pop to Root Search**: closing with **Immediately** clears the session at once.
+With a delay, results stay with the preserved query until the reset fires; reopening before it fires
+keeps them. Live updates never re-run a published query, so a file removed meanwhile still lists and
+reports the failure when opened. Icons and previews are still purged on close.
+
 The 2026-10-13 benchmark (`Tests/file-search-performance.swift`, `/System /Applications /Library /usr`,
 844,911 entries) crawled in 5.2 s with a 103 MB helper peak and wrote a 16.6 MB index, down from 40 MB
 before names were interned and the per-entry folder and parent columns dropped. With whole-module
@@ -248,8 +253,8 @@ a mail being written — through the same `onRowClick(drag:)` the clipboard uses
 explains. Copy matters more here than there: every result is the user's own file, and on the boot
 volume a plain file-URL drag would default to moving it. The image is the row's fitted tile, already
 warm by the time a pointer can reach it; a landed drop hides the palette through
-`PaletteCoordinator.dragLanded()`. There is no stat first: a result is seconds old, and its session is
-cleared whenever the palette hides.
+`PaletteCoordinator.dragLanded()`. There is no stat first: a result is at most the Pop to Root Search
+delay old, since the reset clears its session.
 
 ## In the launcher
 
