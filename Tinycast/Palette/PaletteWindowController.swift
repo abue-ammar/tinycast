@@ -393,7 +393,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             return true
         }
         installPasteMonitor()
-        // Handled at the panel: a focused preview answers Escape before the palette's own handler.
         panel.onEscape = { [weak self] in
             guard let self else { return false }
             if core.palette.mode == .customCommandEditor, !core.palette.isComposing {
@@ -412,9 +411,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 core.snippetCoordinator.cancelSnippetEditing()
                 return true
             }
-            guard core.palette.fileSearchQuickLook else { return false }
-            core.palette.fileSearchQuickLook = false
-            return true
+            return false
         }
         // Handled at the panel: the field editor or a missing main menu eats these first.
         panel.onCommandShortcut = { [weak self] event in

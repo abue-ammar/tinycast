@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// The file, by whichever surface suits it. Shared by the preview pane and the ⌘Y overlay.
 struct FileSearchSurface: View {
     let url: URL
-    var autoplays = false
     @State private var sniffed: Sniffed?
 
     /// The head of a file whose extension left its kind open, read once per selection.
@@ -25,7 +23,7 @@ struct FileSearchSurface: View {
         switch FileSearchPreviewKind(pathExtension: url.pathExtension) ?? sniffed?.kind {
         case .quickLook: QuickLookSurface(url: url)
         case .pdf: PDFSurface(url: url)
-        case .media: FileSearchMediaPlayer(url: url, autoplays: autoplays)
+        case .media: FileSearchMediaPlayer(url: url)
         case .text: PlainTextSurface(text: sniffed?.text ?? "")
         case nil: Color.clear
         }

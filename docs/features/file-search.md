@@ -194,9 +194,8 @@ The extension decides without touching the disk, except where it cannot: an unde
 off the main actor once per selection — no NUL and valid UTF-8 is text, anything else falls back to
 what the extension declares. `PlainTextSurface` copies QuickLook's own text preview (fixed-pitch 11pt,
 3pt inset, unselectable), so a `.jsx` reads like a `.swift`.
-**Only the ⌘Y overlay autoplays.** `autoplays` is the surface's one parameter and the pane leaves it
-off: arrow-keying a list must not start a movie, while opening Quick Look on one is the ask itself.
-The player view is `KeyboardFocusRefusing` either way, so clicking its transport leaves the caret in
+**Nothing autoplays**: arrow-keying a list must not start a movie.
+The player view is `KeyboardFocusRefusing`, so clicking its transport leaves the caret in
 the search field; see [palette.md](palette.md#the-keyboard-belongs-to-the-search-field).
 The player is File Search's own, deliberately: the clipboard's preview is a separate surface with its own
 sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade.
@@ -206,27 +205,18 @@ sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade.
 measured against the real machinery inside a panel shaped like the palette's — borderless, floating,
 non-activating — a swap paints in about 8 ms, and the first load in a process in about 130 ms. Nothing
 about that is worth debouncing, and the debounce that was there only made a click feel slow. The surface
-is torn down by not being mounted: when the palette is ordered out, when the ⌘Y overlay covers it, or on
+is torn down by not being mounted: when the palette is ordered out, or on
 a folder, whose preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
 in a detached task, never in `body`, and a folder shows no Size — its own record is a few bytes, which is
 never what the row means.
 
-Quick Look (⌘Y) draws **inside the panel**: the palette hides itself on `windowDidResignKey` and the panel
-is non-activating, so a system `QLPreviewPanel` would take key and close the palette under itself.
-`FileSearchQuickLook` hosts the same two surfaces the pane does, following the selection. **Escape is
-answered by `PalettePanel.onEscape`**, not by the palette's own key handler: a focused `AVPlayerView`
-takes the key window's Escape first, and `sendEvent` is the one place ahead of it. **Only the margin
-around the card dismisses on a click** — a tap over the preview belongs to the preview's own transport,
-and a dismissing gesture laid over the whole overlay swallowed the play button — so the Close button is
-the pointer's way out. Its corners are concentric, each radius the one outside it less its own inset, and
-the overlay is cleared whenever the palette is ordered out: the tree stays mounted, and a preview must
-not outlive the window.
+**There is no Quick Look action.** The pane already previews the selection, and ↵ opens the file in
+its default app. A system `QLPreviewPanel` would take key, and the palette hides on `windowDidResignKey`.
 
 | Row | Chord | What it does |
 | --- | --- | --- |
 | Open File / Open Folder | ↵ | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller |
 | Show in Finder | ⌘↵ | reveals and dismisses |
-| Quick Look | ⌘Y | the in-panel overlay above |
 | Share… | — | `NSSharingServicePicker`, anchored to the palette's trailing edge so the row it was opened from stays visible beside it. Escape or a click elsewhere dismisses it, and the palette is never hidden, so the flow returns to the same row. There is no chord: the destinations are the system's, and it is the only place a system popover is right |
 | Copy File | ⇧⌘C | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string` |
 | Copy Name | ⌥⌘C | through `Paster`, palette stays open |
@@ -276,9 +266,8 @@ A Files row is not an `AppEntry`: no `Kind`, no ranking, favorite, alias or Hide
 `LauncherScreen.Row.file`, id-prefixed `file-` because an application's entry id is its bundle path. It
 draws `FileSearchRow` with its location — name, dimmed parent path, then File or Folder — and answers
 the screen's own row actions: ↵ opens, ⌘↵ reveals, the copy, paste and trash chords run
-`FileSearchActionsMenu.perform`, and a row drags out as a copy. ⌘K omits Quick Look, whose overlay
-belongs to this screen. Row icons come from the same transient fitted cache, purged when the palette
-hides.
+`FileSearchActionsMenu.perform`, and a row drags out as a copy. Row icons come from the same transient
+fitted cache, purged when the palette hides.
 
 ## Invocation
 

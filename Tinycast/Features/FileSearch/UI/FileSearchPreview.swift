@@ -41,14 +41,14 @@ private struct FileSearchPreviewStage: View {
             .padding(.top, metrics.spacing.xl)
     }
 
-    /// Unmounting is the teardown: an ordered-out panel keeps its tree, and the overlay hides this.
+    /// Unmounting is the teardown: an ordered-out panel keeps its tree.
     @ViewBuilder private var stage: some View {
         if result.isDirectory {
             Image(systemName: "folder")
                 .font(.system(.largeTitle))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tertiary)
-        } else if palette.isVisible, !palette.fileSearchQuickLook {
+        } else if palette.isVisible {
             FileSearchSurface(url: result.url)
                 .clipShape(card)
                 .overlay(card.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))

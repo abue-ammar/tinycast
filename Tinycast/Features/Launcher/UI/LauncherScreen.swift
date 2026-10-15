@@ -253,9 +253,7 @@ struct LauncherScreen: PaletteScreen {
                 },
                 onHideFromSearch: { _ = hideFromSearch(at: selection) })
         case .file(let result):
-            // No Quick Look: its overlay belongs to the Search Files screen.
-            return FileSearchActionsMenu.content(
-                result: result, core: core, target: vm.pasteTarget, quickLook: nil)
+            return FileSearchActionsMenu.content(result: result, core: core, target: vm.pasteTarget)
         case .fallback(let fallback, let app):
             return FallbackActionsMenu.content(
                 fallback: fallback, entry: app, query: vm.query, core: core)

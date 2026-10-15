@@ -594,7 +594,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Export, clear both lists and the shortcut, re-import: all three return, defaults undo not duplicated
 - **Show in launcher** off (the default): a typed filename lists no Files section
 - **Show in launcher** on: three or more characters list up to five files between Results and the
-  fallbacks; two do not. ↵ opens, ⌘↵ reveals, ⌘K has no Quick Look, the copy, paste and ⌃X chords act
+  fallbacks; two do not. ↵ opens, ⌘↵ reveals, the copy, paste and ⌃X chords act
   on the row, and a row drags out as a copy
 - Choosing the Search Files fallback right after opens on the same results without a pause
 - With Pop to Root Search delayed, close and reopen before the timeout: the launcher keeps its query

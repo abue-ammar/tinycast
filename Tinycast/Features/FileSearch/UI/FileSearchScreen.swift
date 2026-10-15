@@ -35,9 +35,7 @@ struct FileSearchScreen: PaletteScreen {
 
     func actions(at selection: Int) -> PopoverMenuContent? {
         guard let result = result(at: selection) else { return nil }
-        return FileSearchActionsMenu.content(
-            result: result, core: core, target: vm.pasteTarget,
-            quickLook: { vm.fileSearchQuickLook = true })
+        return FileSearchActionsMenu.content(result: result, core: core, target: vm.pasteTarget)
     }
 
     func activate(at selection: Int) {
@@ -56,16 +54,8 @@ struct FileSearchScreen: PaletteScreen {
     }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
-        if shortcut == .quickLook { return toggleQuickLook(at: selection) }
         guard let result = result(at: selection) else { return false }
         return FileSearchActionsMenu.perform(shortcut, result: result, core: core)
-    }
-
-    /// ⌘Y — the overlay follows the selection, so toggling is all the state it needs.
-    private func toggleQuickLook(at selection: Int) -> Bool {
-        guard result(at: selection) != nil else { return false }
-        vm.fileSearchQuickLook.toggle()
-        return true
     }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
@@ -97,11 +87,6 @@ struct FileSearchScreen: PaletteScreen {
                     .fill(Theme.Colors.separator)
                     .frame(width: Theme.Size.hairline)
                 FileSearchPreview(result: selected)
-            }
-            .overlay {
-                if vm.fileSearchQuickLook, let selected {
-                    FileSearchQuickLook(result: selected) { vm.fileSearchQuickLook = false }
-                }
             }
         }
     }
@@ -138,25 +123,17 @@ struct FileSearchScreen: PaletteScreen {
 @MainActor
 enum FileSearchActionsMenu {
     static func content(
-        result: FileSearchResult, core: AppCore, target: PasteTarget?,
-        quickLook: (() -> Void)?
+        result: FileSearchResult, core: AppCore, target: PasteTarget?
     ) -> PopoverMenuContent {
         let coordinator = core.fileSearchCoordinator
-        var items = [
+        let items = [
             PopoverMenuItem(
                 title: result.isDirectory ? "Open Folder" : "Open File",
                 systemImage: result.isDirectory ? "folder" : "doc", shortcut: "↵"
             ) { coordinator.open(result) },
             PopoverMenuItem(
                 title: "Show in Finder", systemImage: "folder", shortcut: "⌘↵"
-            ) { coordinator.showInFinder(result) }
-        ]
-        if let quickLook {
-            items.append(
-                PopoverMenuItem(
-                    title: "Quick Look", systemImage: "eye", shortcut: "⌘Y", action: quickLook))
-        }
-        items += [
+            ) { coordinator.showInFinder(result) },
             PopoverMenuItem(title: "Share…", systemImage: "square.and.arrow.up") {
                 coordinator.share(result)
             },
