@@ -61,10 +61,13 @@ struct AIChatSidebarView: View {
                 ForEach(sections) { section in
                     Section(section.title) {
                         ForEach(section.conversations) { conversation in
-                            row(
-                                conversation, isAnswering: answering.contains(conversation.id),
+                            ChatSidebarRow(
+                                conversation: conversation,
+                                isAnswering: answering.contains(conversation.id),
                                 isSelected: conversation.id == openID
-                            )
+                            ) {
+                                title(of: conversation)
+                            }
                             .tag(conversation.id)
                         }
                     }
@@ -98,9 +101,7 @@ struct AIChatSidebarView: View {
         }
     }
 
-    @ViewBuilder private func row(
-        _ conversation: ChatConversation, isAnswering: Bool, isSelected: Bool
-    ) -> some View {
+    @ViewBuilder private func title(of conversation: ChatConversation) -> some View {
         if renaming == conversation.id {
             TextField("Chat name", text: $renameText, prompt: Text(conversation.title))
                 .textFieldStyle(.plain)
@@ -111,8 +112,9 @@ struct AIChatSidebarView: View {
                     if !focused { commitRename(conversation.id) }
                 }
         } else {
-            ChatSidebarRow(
-                conversation: conversation, isAnswering: isAnswering, isSelected: isSelected)
+            Text(conversation.displayTitle)
+                .lineLimit(1)
+                .truncationMode(.tail)
         }
     }
 
@@ -163,17 +165,16 @@ struct AIChatSidebarView: View {
 
 }
 
-private struct ChatSidebarRow: View {
+private struct ChatSidebarRow<Title: View>: View {
     let conversation: ChatConversation
     let isAnswering: Bool
     let isSelected: Bool
+    @ViewBuilder let title: Title
     @State private var isHovered = false
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            Text(conversation.displayTitle)
-                .lineLimit(1)
-                .truncationMode(.tail)
+            title
             Spacer(minLength: 0)
             if isAnswering {
                 ProgressView()

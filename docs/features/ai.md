@@ -514,7 +514,9 @@ and the Actions menu's own chords, and dies with the window.
   shape — never blinks off crossing between rows.
   The context menu pins, renames in place, copies or exports the chat as Markdown
   (`ChatSession.markdownTranscript`), and deletes one or all through `DialogController`; ⌫ deletes
-  the selected chat the same way.
+  the selected chat the same way. Renaming swaps only the row's title for a field: a `ForEach` row
+  that is itself an `if`/`else` makes the sidebar `List` diff in quadratic time, which held the main
+  thread for seconds on opening the window and on every selection with a few thousand chats.
 - **Transcript**: `ChatTranscriptView` with `surface: .window`, which drops the palette's edge
   dissolve and thin scrollbar (both are measured against the palette's bars) and centres the column
   at `aiChatReadingWidth`. The last finished reply offers Regenerate beside Copy: `AIChatState`
