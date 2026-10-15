@@ -32,11 +32,7 @@ final class WindowSwitchCoordinator {
     }
 
     func show() {
-        guard settings.navigationEnabled else { return }
-        guard Permissions.ensureAccessibility() else {
-            Task { await self.reportPermissionFailure() }
-            return
-        }
+        guard settings.navigationEnabled, hasAccessibility() else { return }
         if paletteCoordinator.isShowing(.switchWindows) { return step() }
         disarmSwitchOnRelease()
         paletteCoordinator.togglePalette(mode: .switchWindows)
@@ -78,20 +74,14 @@ final class WindowSwitchCoordinator {
 
     /// Every open sweeps anew, a restore included: hiding dropped the last snapshot.
     func load() {
-        guard Permissions.ensureAccessibility() else {
-            Task { await self.reportPermissionFailure() }
-            return
-        }
+        guard hasAccessibility() else { return }
         session.present(WindowSwitchSweep.snapshot(ranks: WindowZOrder.appRanks()))
     }
 
     func activate(_ entry: WindowSwitchEntry) {
-        guard Permissions.ensureAccessibility() else {
-            Task { await self.reportPermissionFailure() }
-            return
-        }
+        guard hasAccessibility() else { return }
         // Resolved before the hide: hiding resets the session, which drops the element table.
-        guard let element = session.element(for: entry.handle), !element.app.isTerminated else {
+        guard let element = liveElement(for: entry) else {
             Task { await self.reportGone(entry) }
             return
         }
@@ -99,6 +89,42 @@ final class WindowSwitchCoordinator {
         paletteCoordinator.hidePalette(restoreFocus: false)
         if entry.isMinimized { _ = AXWindowAccess.unminimize(element.window) }
         AXWindowAccess.focus(element.window, in: element.application, of: element.app)
+    }
+
+    /// A full-screen window can't minimize, so its row must not join the minimized ones.
+    func minimize(_ entry: WindowSwitchEntry) {
+        guard !entry.isMinimized, hasAccessibility(), let element = liveElement(for: entry),
+            !AXWindowAccess.isFullScreen(element.window), AXWindowAccess.minimize(element.window)
+        else { return }
+        session.markMinimized(entry.handle)
+    }
+
+    func hideApplication(_ entry: WindowSwitchEntry) {
+        guard hasAccessibility(), let element = liveElement(for: entry) else { return }
+        // Restoring focus would reactivate, and so unhide, an app hidden from in front.
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        if !element.app.hide() {
+            AXWindowAccess.setHidden(true, application: element.application)
+        }
+    }
+
+    /// Rows leave when the app exits, so a quit refused by a save sheet keeps them.
+    func quitApplication(_ entry: WindowSwitchEntry) {
+        liveElement(for: entry)?.app.terminate()
+    }
+
+    private func liveElement(for entry: WindowSwitchEntry) -> WindowSwitchSweep.Element? {
+        guard let element = session.element(for: entry.handle), !element.app.isTerminated
+        else { return nil }
+        return element
+    }
+
+    private func hasAccessibility() -> Bool {
+        guard Permissions.ensureAccessibility() else {
+            Task { await self.reportPermissionFailure() }
+            return false
+        }
+        return true
     }
 
     // MARK: - Reporting

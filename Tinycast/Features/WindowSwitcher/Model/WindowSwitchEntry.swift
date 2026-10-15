@@ -9,7 +9,7 @@ struct WindowSwitchEntry: Identifiable, Hashable, Sendable {
     let iconURL: URL?
     let iconStamp: Int
     let title: String
-    let isMinimized: Bool
+    var isMinimized: Bool
     /// Lower is nearer the front; `.max` when the app has no on-screen window to rank it by.
     let appRank: Int
 

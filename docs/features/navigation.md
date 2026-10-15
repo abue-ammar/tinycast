@@ -31,8 +31,9 @@ launcher and a still-recorded shortcut for either does nothing.
   `load()`, because a restore reaches `load()` alone.
 - **Activation hides with `restoreFocus: false`.** Restoring focus reactivates the displaced app,
   which races the raise and can land on the wrong window — the same reason a Space command does it.
-- **`AXWindowAccess` stays the one AX window layer.** `unminimize` and `focus` live there rather
-  than in a second AX shim, and Window Layouts brings its frontmost window forward through `focus`.
+- **`AXWindowAccess` stays the one AX window layer.** `minimize`, `unminimize` and `focus` live
+  there rather than in a second AX shim, and Window Layouts brings its frontmost window forward
+  through `focus`.
 
 ## How it is put together
 
@@ -43,9 +44,9 @@ launcher and a still-recorded shortcut for either does nothing.
 | `Model/WindowSwitchQuery.swift` | ranking over `SearchRelevance`, capped at 200 rows |
 | `Service/WindowZOrder.swift` | the one `CGWindowList` call: per-pid front rank |
 | `Service/WindowSwitchSweep.swift` | the AX sweep, and the live element table it hands back |
-| `Service/WindowSwitchSession.swift` | the observable state — snapshot, filtered rows, elements |
-| `UI/WindowSwitchCoordinator.swift` | show, activate, the switch, the failure reports |
-| `UI/WindowSwitchScreen.swift` | the `PaletteScreen` conformance and the two empty states |
+| `Service/WindowSwitchSession.swift` | the observable state — snapshot, filtered rows, elements, exits |
+| `UI/WindowSwitchCoordinator.swift` | show, activate, the ⌘K actions, the switch, the failure reports |
+| `UI/WindowSwitchScreen.swift` | the `PaletteScreen` conformance, the ⌘K menu, the two empty states |
 | `UI/WindowSwitchList.swift` | the list and its row: app icon, title, app name |
 
 ## Recency without a private symbol
@@ -102,6 +103,25 @@ so the switcher needs no Space handling of its own.
 Every step is allowed to fail quietly. What is reported is only the case the user can act on: the
 window's app quit between the sweep and the ↵.
 
+## The ⌘K menu
+
+| Row | Does | Palette |
+| --- | --- | --- |
+| Switch to Window (↵) | `activate`, as above | hides |
+| Minimize Window | sets `kAXMinimized`; absent on a minimized row | stays; the row joins the minimized run |
+| Hide Application | `NSRunningApplication.hide()`, then `kAXHidden` if refused | hides |
+| Quit Application (⌃⇧Q) | `NSRunningApplication.terminate()` | stays; the app's rows leave on exit |
+
+- **Minimize marks the row instead of sweeping again.** `kAXMinimized` can still read false while
+  the Dock animation runs, so a fresh sweep could leave the row where it was. A full-screen window cannot
+  minimize and is skipped, so its row never claims to be minimized.
+- **Quit removes rows on the app's exit, not on the request.** While rows are shown the session
+  observes `DidTerminateApplicationMessage` and drops that pid's rows; `reset()` removes the
+  observer. A quit refused by a save sheet therefore keeps its rows, and an app quit from anywhere
+  else leaves the list too.
+- **Hide closes the palette without restoring focus.** Restoring focus activates the app that was in
+  front, and activating a hidden app unhides it.
+
 ## Wiring
 
 - **`CommandID.switchWindows`** (`command:switch-windows`) and `CommandID.searchMenuItems` are both
@@ -146,3 +166,6 @@ coverage — the AX and `CGWindowList` paths need manual verification, particula
 2. A window on another Space is listed, and ↵ pulls that Space forward.
 3. An app with several windows lists them in its own front-to-back order, under one app rank.
 4. An app quit between the summon and the ↵ reports rather than failing silently.
+5. Minimize moves the row into the minimized run; on a full-screen window it does nothing.
+6. Hide hides the frontmost app as well as a background one, and Escape does not bring it back.
+7. ⌃⇧Q on an app with unsaved work keeps its rows until the save sheet lets it exit.

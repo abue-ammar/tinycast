@@ -62,6 +62,11 @@ enum AXWindowAccess {
             == .success
     }
 
+    static func minimize(_ window: AXUIElement) -> Bool {
+        AXUIElementSetAttributeValue(window, kAXMinimizedAttribute as CFString, kCFBooleanTrue)
+            == .success
+    }
+
     static func focus(
         _ window: AXUIElement, in application: AXUIElement, of app: NSRunningApplication
     ) {
