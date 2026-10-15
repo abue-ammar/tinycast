@@ -24,12 +24,17 @@ struct WindowSwitchScreen: PaletteScreen {
         ]
         if !entry.isMinimized {
             items.append(
-                PopoverMenuItem(title: "Minimize Window", systemImage: "minus.rectangle") {
+                PopoverMenuItem(
+                    title: "Minimize Window", systemImage: "minus.rectangle", shortcut: "⌃⇧M"
+                ) {
                     coordinator.minimize(entry)
                 })
         }
         items.append(
-            PopoverMenuItem(title: "Hide Application", systemImage: "eye.slash", startsSection: true) {
+            PopoverMenuItem(
+                title: "Hide Application", systemImage: "eye.slash", startsSection: true,
+                shortcut: "⌃⇧H"
+            ) {
                 coordinator.hideApplication(entry)
             })
         items.append(
@@ -47,8 +52,14 @@ struct WindowSwitchScreen: PaletteScreen {
     func secondary(at selection: Int) -> Bool { false }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
-        guard shortcut == .quit, let entry = entry(at: selection) else { return false }
-        core.windowSwitchCoordinator.quitApplication(entry)
+        guard let entry = entry(at: selection) else { return false }
+        let coordinator = core.windowSwitchCoordinator
+        switch shortcut {
+        case .minimizeWindow: coordinator.minimize(entry)
+        case .hideApp: coordinator.hideApplication(entry)
+        case .quit: coordinator.quitApplication(entry)
+        default: return false
+        }
         return true
     }
 

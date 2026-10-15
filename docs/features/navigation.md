@@ -108,8 +108,8 @@ window's app quit between the sweep and the ↵.
 | Row | Does | Palette |
 | --- | --- | --- |
 | Switch to Window (↵) | `activate`, as above | hides |
-| Minimize Window | sets `kAXMinimized`; absent on a minimized row | stays; the row joins the minimized run |
-| Hide Application | `NSRunningApplication.hide()`, then `kAXHidden` if refused | hides |
+| Minimize Window (⌃⇧M) | sets `kAXMinimized`; absent on a minimized row | stays; the row joins the minimized run |
+| Hide Application (⌃⇧H) | `NSRunningApplication.hide()`, then `kAXHidden` if refused | hides |
 | Quit Application (⌃⇧Q) | `NSRunningApplication.terminate()` | stays; the app's rows leave on exit |
 
 - **Minimize marks the row instead of sweeping again.** `kAXMinimized` can still read false while
@@ -119,6 +119,8 @@ window's app quit between the sweep and the ↵.
   observes `DidTerminateApplicationMessage` and drops that pid's rows; `reset()` removes the
   observer. A quit refused by a save sheet therefore keeps its rows, and an app quit from anywhere
   else leaves the list too.
+- **The chords are ⌃⇧, not ⌘M and ⌘H.** The app menu's Minimize and Hide take those before the
+  palette sees them.
 - **Hide closes the palette without restoring focus.** Restoring focus activates the app that was in
   front, and activating a hidden app unhides it.
 

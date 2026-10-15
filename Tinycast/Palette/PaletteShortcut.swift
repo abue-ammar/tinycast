@@ -34,6 +34,10 @@ enum PaletteShortcut: Equatable {
     case quit
     /// ⌃⌥⇧Q.
     case forceQuit
+    /// ⌃⇧M; ⌘M stays the app menu's Minimize.
+    case minimizeWindow
+    /// ⌃⇧H; ⌘H stays the app menu's Hide.
+    case hideApp
     /// ⌘R.
     case restart
     /// ⌘N, a new one of whatever the screen holds.
@@ -73,6 +77,8 @@ enum PaletteShortcut: Equatable {
         if command, matches("f") { return shift ? .toggleFavorite : .showInFinder }
         if command, shift, matches("h") { return .hideFromSearch }
         if control, shift, matches("q") { return option ? .forceQuit : .quit }
+        if control, shift, matches("m") { return .minimizeWindow }
+        if control, shift, matches("h") { return .hideApp }
         if command, matches("r") { return .restart }
         if command, !shift, matches("n") { return .newItem }
         if command, !shift, !option, !control, matches("e") { return .edit }
@@ -86,8 +92,8 @@ enum PaletteShortcut: Equatable {
     var requiresExpanded: Bool {
         switch self {
         case .copyFile, .copyName, .copyPath, .copyText, .pasteFile, .quickLook, .openInApp,
-            .showDetails, .toggleFavorite, .hideFromSearch, .quit, .forceQuit, .restart, .edit,
-            .duplicate, .showInFinder:
+            .showDetails, .toggleFavorite, .hideFromSearch, .quit, .forceQuit, .minimizeWindow,
+            .hideApp, .restart, .edit, .duplicate, .showInFinder:
             true
         case .commandDelete, .delete, .deleteAll, .pin, .favoriteSlot, .continueInChat, .newItem,
             .settings, .copyCalculation:
@@ -98,10 +104,10 @@ enum PaletteShortcut: Equatable {
     var closesMenu: Bool {
         switch self {
         case .delete, .deleteAll, .copyFile, .copyName, .copyPath, .copyText, .copyCalculation,
-            .quickLook, .openInApp, .showDetails, .toggleFavorite, .hideFromSearch, .newItem, .settings,
-            .edit, .duplicate, .showInFinder:
+            .quickLook, .openInApp, .showDetails, .toggleFavorite, .hideFromSearch, .minimizeWindow,
+            .newItem, .settings, .edit, .duplicate, .showInFinder:
             true
-        case .commandDelete, .pasteFile, .quit, .forceQuit, .restart, .pin, .favoriteSlot,
+        case .commandDelete, .pasteFile, .quit, .forceQuit, .hideApp, .restart, .pin, .favoriteSlot,
             .continueInChat:
             false
         }
