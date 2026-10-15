@@ -97,10 +97,12 @@ optimization, queries took 0.3–2.7 ms and single letters 3.4 ms.
 
 ## Live updates
 
-`FileSystemWatcher` streams folder-level FSEvents for the roots from the snapshot's event id, with fsearch's
-10 ms latency on a user-initiated queue, so a rename shows within a few tens of milliseconds and the
-stream never falls behind. A batch that changes the item count asks the main actor to redraw it at most
-once a second; any other batch never leaves the events queue. For each
+`FileSystemWatcher` streams folder-level FSEvents for the roots from the snapshot's event id on a utility
+queue, with a one-second latency and `NoDefer`: a lone change lands at once, and a folder that keeps
+changing is relisted about once a second instead of once per event. fsearch's 10 ms latency relisted a
+5,000-entry folder written 100 times a second about 58 times a second, a sixth of a core (#1599). A batch
+that changes the item count asks the main actor to redraw it at most once a second; any other batch never
+leaves the events queue. For each
 event `FileIndex.apply(folder:)` acts only if the path is an indexed folder; any other event is in an
 ignored subtree, or it belongs to a new folder that its parent's event will find. The folder is relisted
 through one reused `FileIndexCrawler.Lister` and merged against its block: both sides are sorted by name
@@ -110,6 +112,8 @@ overlay (a new folder is walked whole), and a new mtime replaces the base row fr
 are compared only for files Recent can list, so cache and log churn elsewhere costs nothing. This
 matters on macOS 27, where malloc keeps freed small blocks dirty: replaying a launch's backlog through
 per-row Strings left about 30 MB behind, and the merge keeps a cold start level with Spotlight's.
+The diff reads a copy of the state that is released before its result is written, so writing never
+copies the overlay: holding that copy across the write cost 1.7 ms per change at 30,000 overlay entries.
 `MustScanSubDirs` rescans a folder recursively. History loss at or above a root, a moved root or more
 than 100,000 changes since the snapshot trigger a background rebuild.
 
@@ -138,6 +142,10 @@ somewhere on another; `/` is shown as the startup volume's name. The helper reso
 | no `/`, no metacharacters | the entry name, case-insensitively | `node_modules` |
 | no `/`, has `*` `?` `[` | the entry name, via `fnmatch` | `*.tmp` |
 | contains `/`, or starts with `~/` | the whole absolute path, via `fnmatch` | `~/Movies`, `**/[Cc]ache/**` |
+
+The shipped rules also skip `.next`, `~/Library/Caches`, `/Library/Caches` and `/private/var/folders`.
+They are the busiest folders on a disk — one browser's cache alone holds tens of thousands of files
+rewritten on every page load — and never what a search is for.
 
 `fnmatch` runs with `FNM_CASEFOLD` and without `FNM_PATHNAME`, so `*` spans `/`. Name patterns read the
 NUL-terminated name straight out of the `getattrlistbulk` buffer; a path is only built when a path

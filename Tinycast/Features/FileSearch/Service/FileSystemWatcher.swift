@@ -15,6 +15,7 @@ final class FileSystemWatcher {
         init(_ handle: @escaping @Sendable ([Event]) -> Void) { self.handle = handle }
     }
 
+    private static let latency: CFTimeInterval = 1
     private let stream: FSEventStreamRef
 
     init?(
@@ -43,7 +44,7 @@ final class FileSystemWatcher {
                     }
                     Unmanaged<Handler>.fromOpaque(info).takeUnretainedValue().handle(events)
                 },
-                &context, paths as CFArray, eventID, 0.01, FSEventStreamCreateFlags(flags))
+                &context, paths as CFArray, eventID, Self.latency, FSEventStreamCreateFlags(flags))
         else {
             box.release()
             return nil

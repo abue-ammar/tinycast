@@ -147,9 +147,17 @@ struct FileSearchTests {
 
         let shipped = FileSearchIgnoreList(
             patterns: FileSearchIgnoreList.defaults, homeDirectory: home)
-        for name in FileSearchIgnoreList.defaults {
+        for name in FileSearchIgnoreList.defaults where !name.contains("/") {
             expect(shipped.excludes(name: name, path: "/x/\(name)"), "\(name) is skipped")
         }
+        for path in ["/Users/test/Library/Caches", "/Library/Caches", "/private/var/folders"] {
+            expect(
+                shipped.excludes(name: URL(filePath: path).lastPathComponent, path: path),
+                "\(path) is skipped")
+        }
+        expect(
+            !shipped.excludes(name: "Caches", path: "/Users/test/Developer/Caches"),
+            "a caches folder elsewhere is indexed")
         expect(
             !shipped.excludes(name: ".git", path: "/x/.git"),
             "hidden folders are indexed unless a pattern says otherwise")

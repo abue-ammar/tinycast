@@ -26,7 +26,7 @@ final class FileIndexer {
     @ObservationIgnored private let directory = AppPaths.applicationSupport()
         .appending(path: "FileIndex", directoryHint: .isDirectory)
     @ObservationIgnored private let events = DispatchQueue(
-        label: "com.tinycast.file-index.events", qos: .userInitiated)
+        label: "com.tinycast.file-index.events", qos: .utility)
 
     private var indexURL: URL { directory.appending(path: FileIndexSnapshot.fileName) }
 
@@ -147,11 +147,13 @@ final class FileIndexer {
             }
             folders[path] = (folders[path] ?? false) || recursive
         }
-        var needsRebuild = false
-        for (path, recursive) in folders where index.apply(folder: path, recursive: recursive) {
-            needsRebuild = true
+        return Signposts.interval("FileIndexer.update") {
+            var needsRebuild = false
+            for (path, recursive) in folders where index.apply(folder: path, recursive: recursive) {
+                needsRebuild = true
+            }
+            return needsRebuild
         }
-        return needsRebuild
     }
 
     private func requestRebuild() {

@@ -4,7 +4,10 @@ import Foundation
 /// gitignore-flavoured: a bare pattern matches a name anywhere, one with `/` the whole path.
 struct FileSearchIgnoreList: Sendable, Equatable {
     /// Compiled in, not stored, so changing the shipped rules reaches existing installs.
-    static let defaults = ["node_modules", "DerivedData", "build", "dist", "target", "Pods"]
+    static let defaults = [
+        "node_modules", "DerivedData", "build", "dist", "target", "Pods", ".next", "~/Library/Caches",
+        "/Library/Caches", "/private/var/folders"
+    ]
 
     private let literalNames: [Glob]
     private let nameGlobs: [Glob]

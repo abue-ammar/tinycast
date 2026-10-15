@@ -248,9 +248,9 @@ search result that navigates and then sits there.
 
 ## Performance measurement
 
-`Platform/Signposts.swift` emits seven intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
-`AppIndex.scan`, `AppIndex.rank`, `PaletteWindowController.show`, `UninstallScanner.discover` and
-`UninstallScanner.measure`, and `Notes.search`. Open the Time Profiler or
+`Platform/Signposts.swift` emits eight intervals on the `com.tinycast.perf` subsystem: `AppCore.start`,
+`AppIndex.scan`, `AppIndex.rank`, `PaletteWindowController.show`, `UninstallScanner.discover`,
+`UninstallScanner.measure`, `Notes.search` and `FileIndexer.update`. Open the Time Profiler or
 `os_signpost` instrument in Instruments and filter to that subsystem; nothing needs recompiling.
 
 None of the benchmarks below join the suite, so each is registered in `run-tests.sh` as `run index`
