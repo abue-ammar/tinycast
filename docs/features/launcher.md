@@ -652,8 +652,9 @@ value — so a command may be moved between owners without migrating anything.
 
 ## Navigation commands
 
-`CommandID.switchWindows` opens every running app's windows as a palette screen, and
-`CommandID.searchMenuItems` does the same for the front app's menu bar. Both are plain command
+`CommandID.switchWindows` opens every running app's windows as a palette screen,
+`CommandID.switchWindowsBackwards` opens the same screen and steps it the other way, and
+`CommandID.searchMenuItems` does the same for the front app's menu bar. All three are plain command
 entries — no new `AppEntry.Kind` and no `VisibilityStore` category — owned by Settings › Navigation
 through `SettingsTab.ownedCommands`, so `navigationEnabled` is their switch. Their invariants and
 internals live in [navigation.md](navigation.md) and [menu-search.md](menu-search.md).

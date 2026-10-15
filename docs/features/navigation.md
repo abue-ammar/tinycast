@@ -1,13 +1,13 @@
 # Navigation
 
-Two commands that move you somewhere rather than changing something, behind one switch:
-**Switch Windows** raises any open window of any running app, and **Search Menu Bar Items** presses
-any item in the front app's menu bar. The second has its own page —
+Commands that move you somewhere rather than changing something, behind one switch:
+**Switch Windows** raises any open window of any running app, **Switch Windows Backwards** walks the
+same list the other way, and **Search Menu Bar Items** presses any item in the front app's menu bar. The second has its own page —
 [menu-search.md](menu-search.md) — because its internals are a menu walk; this page owns the
 switcher and the pane the two share.
 
-Ships **off**. Settings › Navigation is the switch, and while it is off neither command is in the
-launcher and a still-recorded shortcut for either does nothing.
+Ships **off**. Settings › Navigation is the switch, and while it is off none of them is in the
+launcher and a still-recorded shortcut for any does nothing.
 
 ## Invariants
 
@@ -86,9 +86,11 @@ contributes.
 ## Stepping with the shortcut
 
 Pressed again while the switcher is open, its shortcut steps the selection down the list instead of
-closing the palette; the first step lands on the window behind the current one. A step made with
-the chord's modifiers still held arms one `flagsChanged` local monitor, and letting go switches to
-the selection, as ⌘Tab does. A single press never arms it, so pressing once and typing still
+closing the palette; the first step lands on the window behind the current one. Switch Windows
+Backwards opens the same list and steps up it, wrapping to the last window, so the two interleave
+like ⌘Tab and ⌘⇧Tab. A step made with the chord's modifiers still held arms one `flagsChanged`
+local monitor, and letting go switches to the selection, as ⌘Tab does. The first armed step's
+modifiers are the ones that count, so letting go of ⇧ alone mid-walk switches nothing. A single press never arms it, so pressing once and typing still
 searches; Escape hides the palette, and the next modifier change finds it gone and switches
 nothing.
 
@@ -126,16 +128,17 @@ window's app quit between the sweep and the ↵.
 
 ## Wiring
 
-- **`CommandID.switchWindows`** (`command:switch-windows`) and `CommandID.searchMenuItems` are both
-  named by `SettingsTab.navigation.ownedCommands`, which is the whole of what moves the second out of
+- **`CommandID.switchWindows`** (`command:switch-windows`), `CommandID.switchWindowsBackwards`
+  (`command:switch-windows-backwards`) and `CommandID.searchMenuItems` are all named by
+  `SettingsTab.navigation.ownedCommands`, which is the whole of what moves them out of
   Settings › Commands: `LauncherItemsSection` filters on `settingsOwner == nil`, and `VisibilityStore`
-  skips the `Enable Commands` category gate for a pane-owned command. Neither adds an
+  skips the `Enable Commands` category gate for a pane-owned command. None adds an
   `AppEntry.Kind`, a `HotKeyAction` case or a `VisibilityStore` category — they are plain `.command`
   entries.
 - **`navigationEnabled`** (off) is the switch. `AppCore.observeFeatureSwitches` tracks it once and
-  reprojects into both coordinators; each owns only its own command and its own palette mode, so
-  neither knows about the other. `AppIndex.isCommandEnabled` feeds `hotKeys.allowsAction`, so both
-  shortcuts go dead with the switch, and each `show()` re-guards the flag anyway.
+  reprojects into both coordinators; each owns only its own commands and its own palette mode, so
+  neither knows about the other. `AppIndex.isCommandEnabled` feeds `hotKeys.allowsAction`, so every
+  shortcut goes dead with the switch, and each `show()` re-guards the flag anyway.
 - **`menuSearchDisabledApps`** (empty) is the exclusion list. It ships with no seeded entries, unlike
   the clipboard's: a menu read only ever happens because the user asked for one.
 - **`menuSearchShowsAppleMenu`** (off) lists the Apple menu's own items. Off by default because that

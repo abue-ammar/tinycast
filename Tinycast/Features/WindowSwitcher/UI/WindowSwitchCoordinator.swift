@@ -25,24 +25,25 @@ final class WindowSwitchCoordinator {
     }
 
     func applyEnabled() {
-        appIndex.setCommandsVisible([.switchWindows], settings.navigationEnabled)
+        appIndex.setCommandsVisible(
+            [.switchWindows, .switchWindowsBackwards], settings.navigationEnabled)
         guard !settings.navigationEnabled else { return }
         session.reset()
         if palette.mode == .switchWindows { palette.prepare(mode: .launcher) }
     }
 
-    func show() {
+    func show(backwards: Bool = false) {
         guard settings.navigationEnabled, hasAccessibility() else { return }
-        if paletteCoordinator.isShowing(.switchWindows) { return step() }
+        if paletteCoordinator.isShowing(.switchWindows) { return step(by: backwards ? -1 : 1) }
         disarmSwitchOnRelease()
         paletteCoordinator.togglePalette(mode: .switchWindows)
     }
 
     /// The first step lands on the window behind the current one, which the list opens on.
-    private func step() {
+    private func step(by offset: Int) {
         let count = session.filtered.count
         guard count > 0 else { return }
-        palette.selection = (palette.selection + 1) % count
+        palette.selection = (palette.selection + offset + count) % count
         palette.followToken = UUID()
         armSwitchOnRelease()
     }
