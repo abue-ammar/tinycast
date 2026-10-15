@@ -32,6 +32,8 @@ appear around it:
   [calculation](/docs/features/calculator), like `12% of 80` or `time in Tokyo`.
 - **A color card** when you paste a color like `#FF5733`.
 - **Open in Browser** at the top when you type a web address or a bare domain, like `github.com`.
+- **Files** below the results, when [File Search](/docs/features/file-search#in-the-launcher) has
+  **Show in launcher** on and you type three or more characters.
 - **"Use … with"** rows at the bottom, which send your text somewhere else. See
   [Fallbacks](/docs/launcher/fallbacks).
 

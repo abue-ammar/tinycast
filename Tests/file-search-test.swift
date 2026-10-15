@@ -28,6 +28,7 @@ struct FileSearchTests {
 
     static func main() {
         queryMatching()
+        launcherQuery()
         ranking()
         typeFilter()
         ignoreRules()
@@ -39,6 +40,12 @@ struct FileSearchTests {
 
         print(failures == 0 ? "File search tests passed" : "\(failures) file search tests failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    static func launcherQuery() {
+        expect(!FileSearchQuery.answersLauncher("ab"), "two characters are too few for the launcher")
+        expect(FileSearchQuery.answersLauncher("abc"), "three characters reach the launcher")
+        expect(!FileSearchQuery.answersLauncher("  ab \n"), "surrounding whitespace does not count")
     }
 
     static func queryMatching() {

@@ -351,7 +351,7 @@ enum SettingsSearchCatalog {
             keywords: ["files", "folders", "find", "disk"]),
         .init(
             .fileSearchFileSearch, "Enable File Search",
-            keywords: ["index", "disk"]),
+            keywords: ["index", "disk", "show in launcher", "root search"]),
         .init(
             group: .fileSearchFullDiskAccess, "Full Disk Access",
             keywords: ["permission", "privacy", "grant", "fda"]),

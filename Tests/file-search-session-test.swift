@@ -67,6 +67,7 @@ struct FileSearchSessionTests {
         await coalescesQueuedQueries()
         await serializesRunningQueries()
         await cancellationPreventsPendingWork()
+        await idleCancellationKeepsTheSessionUsable()
         await refreshRerunsThePublishedQuery()
         await blankScreenOpensOnKeptRecents()
         await blankQueryLoadsRecents()
@@ -119,6 +120,23 @@ struct FileSearchSessionTests {
         let snapshot = await probe.snapshot()
         expect(snapshot.calls == ["running"], "cancelling drops the queued search")
         expect(session.state == .idle && session.results.isEmpty, "cancellation clears the session")
+    }
+
+    static func idleCancellationKeepsTheSessionUsable() async {
+        let probe = FileSearchProbe()
+        let session = makeSession(probe: probe)
+        session.cancel()
+        expect(session.state == .idle && session.results.isEmpty, "an idle cancel changes nothing")
+        session.search("report")
+        await waitUntil { session.state == .ready && session.results.first?.name == "report" }
+        session.cancel()
+        session.cancel()
+        expect(session.state == .idle && session.results.isEmpty, "a repeated cancel stays idle")
+        session.search("report")
+        await waitUntil { session.state == .ready && session.results.first?.name == "report" }
+
+        let snapshot = await probe.snapshot()
+        expect(snapshot.calls == ["report", "report"], "a cancelled query runs again when retyped")
     }
 
     static func refreshRerunsThePublishedQuery() async {

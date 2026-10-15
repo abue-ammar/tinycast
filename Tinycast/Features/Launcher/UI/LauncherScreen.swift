@@ -30,6 +30,7 @@ struct LauncherScreen: PaletteScreen {
     /// How many follow the meetings as Suggestions; zero unless the field is empty.
     private let suggestionCount: Int
     private let matchCount: Int
+    private let files: [FileSearchResult]
     /// The `Use "…" with` section, below every result; empty unless something is typed.
     private let fallbacks: [(fallback: Fallback, entry: AppEntry)]
     /// Resolved in `init`: the palette indexes this several times per event, so it can't recompute.
@@ -75,14 +76,18 @@ struct LauncherScreen: PaletteScreen {
             ? CalcMemo.evaluate(vm.query, rates: currencyRates.rates, format: core.calcNumberFormat) : nil
         // After the calculator: `#FF5733` is never arithmetic, so the two can't both answer.
         let color = calc == nil && pinned == nil ? ColorValue.parse(vm.query) : nil
+        let files = pinned == nil ? core.fileSearchCoordinator.launcherFiles(for: vm.query) : []
         let fallbacks = core.fallbackCoordinator.entries(for: vm.query)
-        let entries = results.map(Row.entry) + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
+        let entries =
+            results.map(Row.entry) + files.map(Row.file)
+            + fallbacks.map { Row.fallback($0.fallback, $0.entry) }
         let pinsFavorites = vm.query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         // At most one of them leads, so the flat index keeps a single-row offset.
         let meeting = pinsFavorites ? meeting : nil
         self.meeting = meeting
         self.results = results
         self.calc = calc
+        self.files = files
         self.fallbacks = fallbacks
         self.color = color
         self.pinsFavorites = pinsFavorites
@@ -107,6 +112,8 @@ struct LauncherScreen: PaletteScreen {
         case meeting(MeetingEvent)
         case color(ColorValue)
         case entry(AppEntry)
+        /// Prefixed, because an application's entry id is the same bundle path a file hit carries.
+        case file(FileSearchResult)
         /// Prefixed, because the same command can also be a ranked hit above its own fallback row.
         case fallback(Fallback, AppEntry)
 
@@ -116,6 +123,7 @@ struct LauncherScreen: PaletteScreen {
             case .meeting: return "meeting-card"
             case .color: return "color-card"
             case .entry(let app): return app.id
+            case .file(let result): return "file-" + result.id
             case .fallback(let fallback, _): return "fallback-" + fallback.id
             }
         }
@@ -134,6 +142,7 @@ struct LauncherScreen: PaletteScreen {
         case .meeting(let meeting):
             return meeting.link == nil ? "Open in Calendar" : "Join Meeting"
         case .entry(let app): return app.kind.descriptor.openVerb
+        case .file(let result): return result.isDirectory ? "Open Folder" : "Open File"
         case .fallback(let fallback, _): return fallback.openVerb
         case nil: return "Open Application"
         }
@@ -201,10 +210,15 @@ struct LauncherScreen: PaletteScreen {
         return app
     }
 
+    private func file(at selection: Int) -> FileSearchResult? {
+        guard case .file(let result) = row(at: selection) else { return nil }
+        return result
+    }
+
     private func isCardSelected(_ selection: Int) -> Bool {
         switch row(at: selection) {
         case .calc, .meeting, .color: return true
-        case .entry, .fallback, nil: return false
+        case .entry, .file, .fallback, nil: return false
         }
     }
 
@@ -238,6 +252,10 @@ struct LauncherScreen: PaletteScreen {
                     if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }
                 },
                 onHideFromSearch: { _ = hideFromSearch(at: selection) })
+        case .file(let result):
+            // No Quick Look: its overlay belongs to the Search Files screen.
+            return FileSearchActionsMenu.content(
+                result: result, core: core, target: vm.pasteTarget, quickLook: nil)
         case .fallback(let fallback, let app):
             return FallbackActionsMenu.content(
                 fallback: fallback, entry: app, query: vm.query, core: core)
@@ -256,6 +274,7 @@ struct LauncherScreen: PaletteScreen {
         case .entry(let app):
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: argumentValues(for: app))
+        case .file(let result): core.fileSearchCoordinator.open(result)
         case .fallback(let fallback, _):
             core.fallbackCoordinator.run(fallback, query: vm.query)
         case nil: break
@@ -280,6 +299,10 @@ struct LauncherScreen: PaletteScreen {
         if case .calc(let result) = row(at: selection) {
             return core.calculatorCoordinator.putAnswerInSearchBar(result)
         }
+        if let file = file(at: selection) {
+            core.fileSearchCoordinator.showInFinder(file)
+            return true
+        }
         guard let app = entry(at: selection), app.canRevealInFinder else { return false }
         core.launcherCoordinator.showInFinder(app)
         return true
@@ -293,6 +316,11 @@ struct LauncherScreen: PaletteScreen {
     }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
+        if let file = file(at: selection),
+            FileSearchActionsMenu.perform(shortcut, result: file, core: core)
+        {
+            return true
+        }
         switch shortcut {
         case .toggleFavorite: return toggleFavorite(at: selection)
         case .hideFromSearch: return hideFromSearch(at: selection)
@@ -493,9 +521,23 @@ struct LauncherScreen: PaletteScreen {
                 openActions()
             },
             onDropped: { core.paletteCoordinator.dragLanded() },
+            files: fileSection,
             fallbacks: fallbackSection
         )
     }
+
+    private var fileSection: LauncherList.FileSection? {
+        guard !files.isEmpty else { return nil }
+        return LauncherList.FileSection(
+            results: files,
+            onActivate: { activate(at: fileRow(at: $0)) },
+            onActions: {
+                vm.selection = fileRow(at: $0)
+                openActions()
+            })
+    }
+
+    private func fileRow(at index: Int) -> Int { rows.count - fallbacks.count - files.count + index }
 
     /// Nil when nothing is typed, which is the one state the section has no input for.
     private var fallbackSection: LauncherList.FallbackSection? {

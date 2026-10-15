@@ -68,7 +68,9 @@ final class FileSearchSession {
         }
     }
 
+    /// Idle already means no results and nothing that can publish, so it notifies no observer.
     func cancel() {
+        guard request != nil else { return }
         revision &+= 1
         pending = nil
         request = nil

@@ -3,7 +3,8 @@
 Search Files is a palette screen for opening any file or folder on the disk. It searches Tinycast's own
 filename index, built from a whole-disk crawl and kept current from FSEvents. Spotlight is not involved.
 It is reached from the built-in Search Files launcher command, or its own global shortcut, after the
-feature is enabled in Settings. The design follows [fsearch](https://github.com/noahdunnagan/fsearch).
+feature is enabled in Settings; with **Show in launcher** on, root search lists the top hits too. The
+design follows [fsearch](https://github.com/noahdunnagan/fsearch).
 
 ## Invariants
 
@@ -27,6 +28,8 @@ feature is enabled in Settings. The design follows [fsearch](https://github.com/
   any build and deletes `Application Support/<bundle id>/FileIndex/`.
 - **The shipped ignore rules are compiled in and never persisted.** `fileSearchIgnorePatterns` stores only
   what the user added, so changing `FileSearchIgnoreList.defaults` reaches installs that already ran.
+- **The launcher's Files section is off by default, and off costs nothing.** With it off a keystroke never
+  reaches the index, and `LauncherScreen` reads the switch before the session, so it observes nothing.
 - **A superseded query never publishes.** The session runs one search at a time, keeps only the newest
   pending request, and checks its revision before publishing.
 - **Share is the one system popover, and the palette stays up under it.** `AGENTS.md` keeps Tinycast's
@@ -248,10 +251,34 @@ warm by the time a pointer can reach it; a landed drop hides the palette through
 `PaletteCoordinator.dragLanded()`. There is no stat first: a result is seconds old, and its session is
 cleared whenever the palette hides.
 
+## In the launcher
+
+**Show in launcher** (`fileSearchShowInLauncher`, under the feature switch) adds a **Files** section to
+root search, between the ranked results and the `Use "…" with` fallbacks, so ↵ on a typed app name never
+opens a file. It lists the top five hits (`FileSearchQuery.launcherLimit`) once the trimmed query has
+three characters (`launcherMinimumLength`), the threshold category search uses. Shorter cancels the
+query and releases its rows.
+
+The launcher borrows this screen's `FileSearchSession` rather than keeping its own. Only one palette
+mode shows at a time, so nothing is held twice. An index swap or a trashed row updates both. And the
+Search Files fallback opens on the request the launcher just answered, with its rows already listed.
+`FileSearchCoordinator.searchFromLauncher` is the one entry point: `RootPaletteView` calls it per
+keystroke and when the launcher becomes the mode, and `applyLauncherFiles` re-runs it when the switch
+changes. `cancel()` returns early on an idle session, so with the section off a keystroke publishes
+nothing.
+
+A Files row is not an `AppEntry`: no `Kind`, no ranking, favorite, alias or Hide from Search. It is
+`LauncherScreen.Row.file`, id-prefixed `file-` because an application's entry id is its bundle path. It
+draws `FileSearchRow` with its location — name, dimmed parent path, then File or Folder — and answers
+the screen's own row actions: ↵ opens, ⌘↵ reveals, the copy, paste and trash chords run
+`FileSearchActionsMenu.perform`, and a row drags out as a copy. ⌘K omits Quick Look, whose overlay
+belongs to this screen. Row icons come from the same transient fitted cache, purged when the palette
+hides.
+
 ## Invocation
 
 Settings ▸ File Search owns the `fileSearchEnabled` switch, which is off when its preference is absent,
-along with the Full Disk Access status, the index status and **Rebuild Index**, the scope list, the
+the **Show in launcher** switch beneath it, along with the Full Disk Access status, the index status and **Rebuild Index**, the scope list, the
 ignore patterns and the Search Files command row. The lists are ordinary settings carried by Tinycast
 settings backups; importing them grants no permission.
 

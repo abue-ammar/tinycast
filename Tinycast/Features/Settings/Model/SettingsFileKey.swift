@@ -65,6 +65,7 @@ enum SettingsFileKey: String, CaseIterable, Sendable {
     case fileSearchEnabled = "fileSearch.enabled"
     case fileSearchScopes = "fileSearch.scopes"
     case fileSearchIgnorePatterns = "fileSearch.ignorePatterns"
+    case fileSearchShowInLauncher = "fileSearch.showInLauncher"
     case fileSearchCommands = "fileSearch.commands"
     case notesEnabled = "notes.enabled"
     case notesRendersMarkdown = "notes.rendersMarkdown"

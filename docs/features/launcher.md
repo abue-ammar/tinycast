@@ -298,6 +298,15 @@ would then carry.
 The row prints `AppEntry.subtitle` beside its name — the one field for an entry whose name alone
 can't say what it acts on.
 
+### Files
+
+With File Search on and its **Show in launcher** switch set, a query of three characters or more adds a
+**Files** section of up to five hits between the ranked results and the fallbacks. Like a fallback it is
+query-driven and not an `AppEntry`: `LauncherScreen.Row.file` carries the `FileSearchResult`, and
+`LauncherList.FileSection` draws it. Nothing about a file row is learned, pinned, aliased or hidden, and it
+adds no `Kind` or `VisibilityStore` category; the switch is its only gate. See
+[file-search.md](file-search.md#in-the-launcher).
+
 ### Fallbacks
 
 A **fallback** is the other half of the query-driven idea: a command the query is the input for,

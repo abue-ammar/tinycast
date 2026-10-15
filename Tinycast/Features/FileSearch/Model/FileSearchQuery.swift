@@ -4,6 +4,9 @@ enum FileSearchQuery {
     static let resultLimit = 200
     /// A blank screen is a shortlist, not a browser: enough rows to reach, never to scroll far.
     static let recentLimit = 20
+    static let launcherLimit = 5
+    /// Category search's threshold too: below it a query matches too many names to be useful.
+    static let launcherMinimumLength = 3
     static let priorWeight = 1_500
     static let nonASCIIBit: UInt64 = 1 << 40
 
@@ -11,6 +14,10 @@ enum FileSearchQuery {
         let terms: [[UInt8]]
         let whole: [UInt8]
         let mask: UInt64
+    }
+
+    static func answersLauncher(_ query: String) -> Bool {
+        query.trimmingCharacters(in: .whitespacesAndNewlines).count >= launcherMinimumLength
     }
 
     static func terms(in query: String) -> [String] {

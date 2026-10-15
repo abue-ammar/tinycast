@@ -27,7 +27,7 @@ struct FileSearchList: View {
                             .contentShape(Rectangle())
                             .onRowClick(
                                 select: { onSelect(result) }, activate: { onActivate(result) },
-                                drag: drag(for: result)
+                                drag: result.rowDrag(dropped: onDropped)
                             )
                             .onRightClick { onActions(result) }
                     }
@@ -45,26 +45,28 @@ struct FileSearchList: View {
         }
         .onDisappear { IconCache.purgeFitted() }
     }
+}
 
+extension FileSearchResult {
     /// The row's own fitted tile, which is warm by the time a pointer can reach it.
-    private func drag(for result: FileSearchResult) -> RowDrag {
-        RowDrag(
-            item: { .file(result.url, image: IconCache.cachedFitted(forFile: result.id)) },
-            dropped: onDropped)
+    func rowDrag(dropped: @escaping () -> Void) -> RowDrag {
+        RowDrag(item: { .file(url, image: IconCache.cachedFitted(forFile: id)) }, dropped: dropped)
     }
 }
 
-private struct FileSearchRow: View {
+struct FileSearchRow: View {
 
     @Environment(\.metrics) private var metrics
     let result: FileSearchResult
     let selected: Bool
+    let showsLocation: Bool
     @State private var image: NSImage?
     @State private var hovered = false
 
-    init(result: FileSearchResult, selected: Bool) {
+    init(result: FileSearchResult, selected: Bool, showsLocation: Bool = false) {
         self.result = result
         self.selected = selected
+        self.showsLocation = showsLocation
         _image = State(initialValue: IconCache.cachedFitted(forFile: result.id))
     }
 
@@ -76,7 +78,9 @@ private struct FileSearchRow: View {
 
     /// A folder is named by where it sits: half the hits are some `src` or `Tinycast`.
     private var label: Text {
-        guard result.isDirectory, !result.parentName.isEmpty else { return Text(result.name) }
+        guard !showsLocation, result.isDirectory, !result.parentName.isEmpty else {
+            return Text(result.name)
+        }
         let parent = Text("\(result.parentName)/").foregroundStyle(.secondary)
         return Text("\(parent)\(result.name)")
     }
@@ -92,12 +96,24 @@ private struct FileSearchRow: View {
                 }
             }
             .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-            // The column is too narrow for a path beside the name; the preview states it instead.
             label
                 .font(metrics.typography.rowTitle)
                 .lineLimit(1)
                 .truncationMode(.middle)
+                .layoutPriority(1)
+            if showsLocation {
+                Text(result.parentPath)
+                    .font(metrics.typography.rowTrailing)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
             Spacer(minLength: 0)
+            if showsLocation {
+                Text(result.isDirectory ? "Folder" : "File")
+                    .font(metrics.typography.rowTrailing)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.horizontal, metrics.spacing.md)
         .padding(.vertical, metrics.spacing.sm)

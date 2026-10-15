@@ -64,6 +64,18 @@ off by the result limit. It resets each time you open the palette.
 
 Copies made here appear in your [clipboard history](/docs/features/clipboard) like any other copy.
 
+## In the launcher
+
+Turn on **Show in launcher**, under the File Search switch, to see files in launcher searches too.
+It's **off** by default.
+
+When your search has three or more characters, a **Files** section lists up to five matches. It sits
+below the apps and commands, so <kbd>return</kbd> still opens the top result. Each row shows the
+name, the folder it's in, and whether it's a file or a folder.
+
+The rows have the same actions as this screen, except Quick Look. To see every match, choose the
+**Search Files** row under "Use … with".
+
 ## Search scopes
 
 Set these in **Settings → File Search → Search Scopes**. By default, Tinycast searches your home
