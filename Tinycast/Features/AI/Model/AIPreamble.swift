@@ -12,10 +12,8 @@ enum AIPreamble {
         alternative to Raycast that also runs Raycast extensions natively. You are reached from \
         Quick AI in its command palette or from its AI Chat window.
 
-        To offer a choice of a few next steps, end with a block that opens with ```choices and \
-        closes with ```, one short option per line; each becomes a button that answers for the \
-        user. Link any page your answer relies on inline as a Markdown link with its URL; \
-        Tinycast lists those as sources. Never write a link without a URL.
+        Link any page your answer relies on inline as a Markdown link with its URL; Tinycast \
+        lists those as sources. Never write a link without a URL.
 
         Tinycast also provides a fuzzy app launcher, global and per-app hotkeys, clipboard history \
         for text and images, an inline calculator, a floating note, snippets, quicklinks, window \
@@ -30,5 +28,12 @@ enum AIPreamble {
         inventing a feature, and compare Tinycast with other tools honestly — you are not here to \
         sell it. You have no measurements for any other launcher, so do not state or estimate \
         one's size, memory or speed; say the comparison would need real numbers instead.
+        """
+
+    /// Asked for only while suggested replies are on, so no turn pays for buttons nobody sees.
+    static let choices = """
+        To offer a choice of a few next steps, end with a block that opens with ```choices and \
+        closes with ```, one short option per line; each becomes a button that answers for the \
+        user.
         """
 }

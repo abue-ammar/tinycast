@@ -122,13 +122,15 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   sometimes wraps that label in a bare fence of its own and adds a stray one after the list, so the
   bare fence right on the label and any fence closing or trailing the list go with them, and no
   empty code box is left behind. A label inside a fence with a language, or any other open code
-  block, is code and stays. `ChatSuggestionChips` draws the options as glass capsules, each wrapped
-  row centred (`ChatFlowLayout(centersRows:)`): in the window they rise out of the
-  composer, sitting on its top edge until the reader starts typing; in Quick AI they close the
+  block, is code and stays. `ChatSuggestionChips` draws the options as glass capsules in a
+  leading-aligned `ChatFlowLayout`: in the window they rise out of the composer, sitting on its top edge until the reader starts typing; in Quick AI they close the
   transcript. A click sends the option as the reader's next message, through the same `send` a
   typed one takes. Older replies lose their chips, since only the last question is still open. It is text in, text out, so it
   works on every route — and not at all with the system prompt switched off, which drops the
-  preamble that describes it.
+  preamble that describes it. Settings → AI → Suggested replies (`aiChoices`, on by default) turns
+  them off on purpose: `AIInstructions.compose` leaves `AIPreamble.choices` out, so no turn asks for
+  them, and neither surface draws chips. A fence a model writes anyway is still lifted out of the
+  prose.
 - **Token usage belongs to the reply that reported it.** `AIUsage` carries input, output, cached
   prompt and thinking tokens, and the model's window and cost where a route says them — Claude's CLI
   reports all of it, the Anthropic API its cache, OpenAI-shaped routes their reasoning tokens and
@@ -666,8 +668,8 @@ window, and every chat action either surface sends — is the nineteenth feature
 - A long reply streams with the transcript pinned to its end, through a growing composer, a window
   resize and the chips arriving; scrolling up stops it at once, and Jump to Latest resumes it.
 - A reasoning fold ends on its last line of text, with no empty stretch under it, in both surfaces.
-- Suggested replies are centred glass capsules, and when they wrap each row is centred. Source chips
-  under a cited reply match them, the number first in its own disc.
+- Suggested replies are leading-aligned glass capsules, and wrapped rows start at the same edge.
+  Source chips under a cited reply match them, the number first in its own disc.
 - A failed reply keeps what was written in the normal colour; only the closing note is red.
 - Code blocks have rounded corners, in Dark and Light, and are coloured: ask for a snippet each in
   Swift, Python, shell, JSON, SQL, a diff and HTML; a `diff` shows additions green and removals red,

@@ -11,8 +11,8 @@ struct AIChatDetailView: View {
 
     /// The last reply's options, once it has finished; typing or sending moves past them.
     private var suggestions: [String] {
-        guard !chat.isStreaming, let last = chat.session.messages.last, last.role == .assistant,
-            last.state == .complete
+        guard coordinator.aiSettings.choicesEnabled, !chat.isStreaming,
+            let last = chat.session.messages.last, last.role == .assistant, last.state == .complete
         else { return [] }
         return ChatChoices.split(last.text).choices
     }

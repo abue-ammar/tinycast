@@ -18,19 +18,24 @@ struct AIProviderTests {
     static func instructionsFollowTheSetting() {
         for prompt in [nil, "", "   \n\t "] as [String?] {
             expect(
-                AIInstructions.compose(userPrompt: prompt, isEnabled: true) == AIPreamble.text,
-                "an absent or blank user prompt sends the preamble alone")
+                AIInstructions.compose(userPrompt: prompt, isEnabled: true, offersChoices: false)
+                    == AIPreamble.text,
+                "an absent or blank user prompt with choices off sends the preamble alone")
         }
         expect(
-            AIInstructions.compose(userPrompt: "  Answer only in haiku.  ", isEnabled: true)
-                == AIPreamble.text + "\n\nAnswer only in haiku.",
-            "instructions put the preamble before the trimmed user prompt with a blank line")
+            AIInstructions.compose(
+                userPrompt: "  Answer only in haiku.  ", isEnabled: true, offersChoices: true)
+                == AIPreamble.text + "\n\n" + AIPreamble.choices + "\n\nAnswer only in haiku.",
+            "instructions put the preamble and its choices before the trimmed user prompt")
         for prompt in [nil, "Answer only in haiku."] as [String?] {
             expect(
-                AIInstructions.compose(userPrompt: prompt, isEnabled: false) == nil,
-                "disabled instructions withhold both the preamble and the user prompt")
+                AIInstructions.compose(userPrompt: prompt, isEnabled: false, offersChoices: true)
+                    == nil,
+                "disabled instructions withhold the preamble, its choices and the user prompt")
         }
-        expect(AIPreamble.text.count < 1_800, "the preamble stays within its per-turn budget")
+        expect(
+            (AIPreamble.text + AIPreamble.choices).count < 1_800,
+            "the preamble stays within its per-turn budget")
     }
 
     /// A wrong document shape must fail here rather than mid-conversation.

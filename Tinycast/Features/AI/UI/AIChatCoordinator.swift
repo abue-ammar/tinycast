@@ -310,7 +310,8 @@ final class AIChatCoordinator {
     private var instructions: String? {
         AIInstructions.compose(
             userPrompt: core.aiSettings.systemPrompt,
-            isEnabled: core.aiSettings.systemPromptEnabled)
+            isEnabled: core.aiSettings.systemPromptEnabled,
+            offersChoices: core.aiSettings.choicesEnabled)
     }
 
     /// A turn's route and its tools: a CLI with its own client is handed servers, others the loop.
