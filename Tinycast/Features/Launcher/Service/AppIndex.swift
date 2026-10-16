@@ -97,9 +97,9 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     /// Fixed per kind: a new `Kind` case fails to build until it names every field.
     struct KindDescriptor: Sendable {
-        let label: String
-        let sectionTitle: String
-        let openVerb: String
+        let label: LocalizedStringResource
+        let sectionTitle: LocalizedStringResource
+        let openVerb: LocalizedStringResource
         /// Only where Settings lists a per-item checkbox to put it back: a hide is never one-way.
         let canHideFromSearch: Bool
         let canRevealInFinder: Bool
@@ -165,7 +165,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         alternateTitles.append(candidate)
     }
 
-    var kindLabel: String { ownerName ?? kind.descriptor.label }
+    var kindLabel: String { ownerName ?? String(localized: kind.descriptor.label) }
 
     var hotKeyAction: HotKeyAction? {
         switch kind {
@@ -265,7 +265,7 @@ extension AppEntry {
         self.init(
             id: command.entryID, name: command.name,
             url: URL(string: "tinycast://window-command/" + command.id.rawValue)!,
-            bundleID: nil, kind: .windowCommand)
+            bundleID: nil, kind: .windowCommand, alternateTitles: [command.englishName])
     }
 
     /// A custom size shares the window commands' kind and section, as custom Quick Actions do.
@@ -308,13 +308,26 @@ extension AppEntry {
 }
 
 extension AppEntry.Kind {
-    private static let byCategoryName: [String: AppEntry.Kind] = allCases.reduce(into: [:]) {
-        $0[FuzzyMatch.normalized($1.descriptor.sectionTitle)] = $1
-        $0[FuzzyMatch.normalized($1.descriptor.label)] = $1
-    }
+    private static let byCategoryName: [String: AppEntry.Kind] = {
+        func table(_ names: (AppEntry.Kind) -> [String]) -> [String: AppEntry.Kind] {
+            allCases.reduce(into: [:]) { table, kind in
+                for name in names(kind) { table[FuzzyMatch.normalized(name)] = kind }
+            }
+        }
+        // English wins a clash, so a translation never takes a word English already answers.
+        return table(\.localizedCategoryNames).merging(table(\.englishCategoryNames)) { $1 }
+    }()
 
     private static let categoryNames = allCases.map { kind in
-        (kind, [kind.descriptor.sectionTitle, kind.descriptor.label].map(FuzzyMatch.Candidate.init))
+        let english = kind.englishCategoryNames
+        let names = english + kind.localizedCategoryNames.filter { !english.contains($0) }
+        return (kind, names.map(FuzzyMatch.Candidate.init))
+    }
+
+    private var englishCategoryNames: [String] { [descriptor.sectionTitle.key, descriptor.label.key] }
+
+    private var localizedCategoryNames: [String] {
+        [descriptor.sectionTitle, descriptor.label].map { String(localized: $0) }
     }
 
     static func named(by query: LauncherOrder.CategoryQuery) -> AppEntry.Kind? {
@@ -376,7 +389,7 @@ final class AppIndex {
             AppEntry(
                 id: command.entryID, name: command.name,
                 url: URL(string: "tinycast://system-action/" + command.id.rawValue)!,
-                bundleID: nil, kind: .systemAction)
+                bundleID: nil, kind: .systemAction, alternateTitles: [command.englishName])
         }
         .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
@@ -579,7 +592,7 @@ final class AppIndex {
             refreshPending = false
             let scopes = settings?.searchScopes ?? SearchScopes.defaults
             let reusingPanes = paneCache
-            let languages = BundleLocalization.indexedLanguages(Locale.preferredLanguages)
+            let languages = BundleLocalization.indexedLanguages(SystemLanguages.preferred)
             let reusing = BundleNameCache(reusing: nameCache, languages: languages)
             let (found, cache, panes) = await Task.detached(priority: .utility) {
                 AppIndex.scan(
@@ -620,13 +633,13 @@ final class AppIndex {
                     for: url, base: fileName, developmentRegion: bundle?.developmentLocalization)
                 // Raw: a localized strings file can swap this array for a plain name.
                 let alternates = bundle?.infoDictionary?["CFBundleAlternateNames"] as? [String] ?? []
-                let declared = [bundle?.installedAppName].compactMap { $0 }
+                let declared = (bundle?.infoDictionary).flatMap(AppDisplayName.inInfo)
                 var entry = AppEntry(
                     id: path, name: names.first ?? fileName, url: url, bundleID: bundleID,
                     kind: .application,
                     subtitle: AppDisplayName.named(bundle?.infoDictionary?["CFBundleShortVersionString"]),
                     alternateTitles: Array(names.dropFirst()) + alternates,
-                    keywords: declared, iconStamp: FileIconStamp.value(for: url),
+                    keywords: declared.map { [$0] } ?? [], iconStamp: FileIconStamp.value(for: url),
                     installedAt: try? url.resourceValues(forKeys: [.addedToDirectoryDateKey])
                         .addedToDirectoryDate)
                 entry.addAlternateTitle(fileName)

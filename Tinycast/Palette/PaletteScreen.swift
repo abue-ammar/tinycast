@@ -171,7 +171,7 @@ extension PaletteScreen {
         return PaletteMenuContent(
             popover: filtered.content, selection: menuSelection,
             search: PopoverMenu.Search(
-                placeholder: "Search for actions…", placement: .bottom),
+                placeholder: String(localized: "Search for actions…"), placement: .bottom),
             onActivate: onActivate, preferredSelection: filtered.bestMatch)
     }
     func tertiary(at selection: Int) -> Bool { false }

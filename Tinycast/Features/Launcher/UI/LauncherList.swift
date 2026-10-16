@@ -48,9 +48,9 @@ struct LauncherList: View {
 
         var sectionTitle: String {
             switch self {
-            case .calc: return "Calculator"
-            case .meeting: return "Meeting"
-            case .color: return "Color"
+            case .calc: return String(localized: "Calculator")
+            case .meeting: return String(localized: "Meeting")
+            case .color: return String(localized: "Color")
             }
         }
 
@@ -90,7 +90,8 @@ struct LauncherList: View {
 
     private var fileRows: [Row] {
         guard let files else { return [] }
-        return [.header("Files")] + files.results.enumerated().map { Row.file($1, index: $0) }
+        return [.header(String(localized: "Files"))]
+            + files.results.enumerated().map { Row.file($1, index: $0) }
     }
 
     /// Every row the fallback section contributes, always after the results.
@@ -112,22 +113,22 @@ struct LauncherList: View {
         var grouped: [AppEntry.Kind: [AppEntry]] = [:]
         for app in rest { grouped[app.kind, default: []].append(app) }
         if !favorites.isEmpty {
-            rows.append(.header("Favorites"))
+            rows.append(.header(String(localized: "Favorites")))
             rows.append(
                 contentsOf: favorites.enumerated().map {
                     .app($1, slot: FavoriteSlots.digit(at: $0))
                 })
         }
         if !meetings.isEmpty {
-            rows.append(.header(AppEntry.Kind.meeting.descriptor.sectionTitle))
+            rows.append(.header(String(localized: AppEntry.Kind.meeting.descriptor.sectionTitle)))
             rows.append(contentsOf: meetings.map { .app($0, slot: nil) })
         }
         if !suggestions.isEmpty {
-            rows.append(.header("Suggestions"))
+            rows.append(.header(String(localized: "Suggestions")))
             rows.append(contentsOf: suggestions.map { .app($0, slot: nil) })
         }
         if !matches.isEmpty {
-            rows.append(.header("Results"))
+            rows.append(.header(String(localized: "Results")))
             rows.append(contentsOf: matches.map { .app($0, slot: nil) })
         }
         // Publication order, so rows match the flat index.
@@ -138,7 +139,7 @@ struct LauncherList: View {
         ]
         for kind in kinds {
             guard let group = grouped[kind], !group.isEmpty else { continue }
-            rows.append(.header(kind.descriptor.sectionTitle))
+            rows.append(.header(String(localized: kind.descriptor.sectionTitle)))
             rows.append(contentsOf: group.map { .app($0, slot: nil) })
         }
         // A missing kind would make every later row activate its neighbour: assert instead.
@@ -153,7 +154,7 @@ struct LauncherList: View {
         let rows = rows
         return Group {
             if results.isEmpty && card == nil && files == nil && fallbacks == nil {
-                EmptyResults(text: "No apps found")
+                EmptyResults(text: String(localized: "No apps found"))
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -166,7 +167,7 @@ struct LauncherList: View {
                                     SectionHeader(
                                         title: title, isFirst: row.id == rows.first?.id,
                                         configure: fallbacks?.onConfigure,
-                                        configureHelp: "Configure Fallbacks…")
+                                        configureHelp: String(localized: "Configure Fallbacks…"))
                                 case .card(let card):
                                     LeadCardView(card: card, selected: cardSelected)
                                         .contentShape(Rectangle())

@@ -6,7 +6,7 @@ struct WindowSwitchScreen: PaletteScreen {
 
     var rows: [WindowSwitchEntry] { session.filtered }
 
-    var primaryActionTitle: String { "Switch to Window" }
+    var primaryActionTitle: String { String(localized: "Switch to Window") }
 
     private func entry(at selection: Int) -> WindowSwitchEntry? {
         rows.indices.contains(selection) ? rows[selection] : nil
@@ -18,27 +18,32 @@ struct WindowSwitchScreen: PaletteScreen {
         guard let entry = entry(at: selection) else { return nil }
         let coordinator = core.windowSwitchCoordinator
         var items = [
-            PopoverMenuItem(title: "Switch to Window", systemImage: "macwindow", shortcut: "↵") {
+            PopoverMenuItem(
+                title: String(localized: "Switch to Window"), systemImage: "macwindow", shortcut: "↵"
+            ) {
                 coordinator.activate(entry)
             }
         ]
         if !entry.isMinimized {
             items.append(
                 PopoverMenuItem(
-                    title: "Minimize Window", systemImage: "minus.rectangle", shortcut: "⌃⇧M"
+                    title: String(localized: "Minimize Window"), systemImage: "minus.rectangle",
+                    shortcut: "⌃⇧M"
                 ) {
                     coordinator.minimize(entry)
                 })
         }
         items.append(
             PopoverMenuItem(
-                title: "Hide Application", systemImage: "eye.slash", startsSection: true,
+                title: String(localized: "Hide Application"), systemImage: "eye.slash", startsSection: true,
                 shortcut: "⌃⇧H"
             ) {
                 coordinator.hideApplication(entry)
             })
         items.append(
-            PopoverMenuItem(title: "Quit Application", systemImage: "power", shortcut: "⌃⇧Q") {
+            PopoverMenuItem(
+                title: String(localized: "Quit Application"), systemImage: "power", shortcut: "⌃⇧Q"
+            ) {
                 coordinator.quitApplication(entry)
             })
         return PopoverMenuContent(header: entry.displayTitle, items: items)
@@ -70,7 +75,9 @@ struct WindowSwitchScreen: PaletteScreen {
     @ViewBuilder
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         if rows.isEmpty {
-            EmptyResults(text: session.snapshot.isEmpty ? "No open windows" : "No windows found")
+            EmptyResults(
+                text: session.snapshot.isEmpty
+                    ? String(localized: "No open windows") : String(localized: "No windows found"))
         } else {
             WindowSwitchList(
                 entries: rows,

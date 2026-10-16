@@ -4,7 +4,8 @@ struct ApplicationsSettingsView: View {
     var body: some View {
         Form {
             LauncherCategorySwitchSection(
-                kind: .application, anchor: .applicationsApplications)
+                kind: .application, anchor: .applicationsApplications,
+                title: "Enable Applications")
 
             SearchScopesSection()
 

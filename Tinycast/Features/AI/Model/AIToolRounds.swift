@@ -10,7 +10,7 @@ enum AIToolRounds: Int, CaseIterable, Identifiable, Sendable {
 
     var id: Int { rawValue }
 
-    var title: String { limit.map { "\($0)" } ?? "Unlimited" }
+    var title: String { limit.map { "\($0)" } ?? String(localized: "Unlimited") }
 
     /// `nil` is no cap: the reply runs until the model stops asking or Stop is pressed.
     var limit: Int? { self == .unlimited ? nil : rawValue }

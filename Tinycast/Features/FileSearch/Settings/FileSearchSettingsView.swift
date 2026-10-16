@@ -64,10 +64,12 @@ private struct FileSearchAccessSection: View {
         } footer: {
             if !granted {
                 Text(
-                    "File Search reads your disk directly to build a private index on this Mac. "
-                        + "In System Settings › Privacy & Security › Full Disk Access, turn on "
-                        + "Tinycast. If it isn’t listed, click + and choose Tinycast from "
-                        + "Applications. If access still shows as required, quit and reopen Tinycast."
+                    """
+                    File Search reads your disk directly to build a private index on this Mac. \
+                    In System Settings › Privacy & Security › Full Disk Access, turn on \
+                    Tinycast. If it isn’t listed, click + and choose Tinycast from \
+                    Applications. If access still shows as required, quit and reopen Tinycast.
+                    """
                 )
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -107,8 +109,10 @@ private struct FileSearchIndexSection: View {
             SettingsSectionHeader(.fileSearchIndex)
         } footer: {
             Text(
-                "Built once, then kept current as files change. Indexing uses extra memory only "
-                    + "while it runs."
+                """
+                Built once, then kept current as files change. Indexing uses extra memory only \
+                while it runs.
+                """
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -202,7 +206,8 @@ private struct FileSearchScopesSection: View {
     }
 
     private func addScopes() {
-        guard let urls = chooseFolders(message: "Choose folders to index and search.") else { return }
+        guard let urls = chooseFolders(message: String(localized: "Choose folders to index and search."))
+        else { return }
         settings.fileSearchScopes = FileSearchScope.normalize(
             settings.fileSearchScopes + urls.map(\.path), homeDirectory: home)
     }
@@ -239,8 +244,10 @@ private struct FileSearchIgnoreSection: View {
             SettingsSectionHeader(.fileSearchIgnorePatterns)
         } footer: {
             Text(
-                "Matching folders are skipped while indexing. A name like node_modules or *.tmp "
-                    + "matches anywhere; a path like ~/Movies skips that folder."
+                """
+                Matching folders are skipped while indexing. A name like node_modules or *.tmp \
+                matches anywhere; a path like ~/Movies skips that folder.
+                """
             )
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -248,9 +255,10 @@ private struct FileSearchIgnoreSection: View {
     }
 
     private func addFolders() {
-        guard let urls = chooseFolders(message: "Choose folders to leave out of the index.") else {
-            return
-        }
+        guard
+            let urls = chooseFolders(
+                message: String(localized: "Choose folders to leave out of the index."))
+        else { return }
         for url in urls {
             add(FileSearchScope.abbreviate(url.standardizedFileURL.path, homeDirectory: home))
         }
@@ -273,7 +281,7 @@ private func chooseFolders(message: String) -> [URL]? {
     panel.canChooseDirectories = true
     panel.canChooseFiles = false
     panel.allowsMultipleSelection = true
-    panel.prompt = "Add"
+    panel.prompt = String(localized: "Add")
     panel.message = message
     // Tinycast is an accessory app, so the panel opens behind the frontmost app without this.
     NSApp.activate()

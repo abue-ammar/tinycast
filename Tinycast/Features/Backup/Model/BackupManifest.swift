@@ -26,12 +26,14 @@ enum BackupFormatError: LocalizedError, Equatable {
     var errorDescription: String? {
         switch self {
         case .unreadable:
-            return "This file isn't a Tinycast backup, or it's damaged."
+            return String(localized: "This file isn't a Tinycast backup, or it's damaged.")
         case .unsupportedFormat(let found):
-            return
-                "This backup was made by a different version of Tinycast (format \(found), "
-                + "expected \(BackupManifest.currentFormat)). Export again from the Mac that has "
-                + "your setup."
+            return String(
+                localized: """
+                    This backup was made by a different version of Tinycast (format \(found), \
+                    expected \(BackupManifest.currentFormat)). Export again from the Mac that has \
+                    your setup.
+                    """)
         }
     }
 }

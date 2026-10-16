@@ -71,7 +71,8 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
         self.snapshot = snapshot
         if previous?.title != snapshot.title { status.button?.title = snapshot.title ?? "" }
         if previous?.tooltip != snapshot.tooltip { status.button?.toolTip = snapshot.tooltip }
-        status.button?.setAccessibilityLabel(snapshot.tooltip ?? snapshot.title ?? "Extension menu")
+        status.button?.setAccessibilityLabel(
+            snapshot.tooltip ?? snapshot.title ?? String(localized: "Extension menu"))
         // A menu-bar extra with no rows has nothing to open, so it detaches rather than show one.
         if previous?.hasMenu != snapshot.hasMenu { status.menu = snapshot.hasMenu ? menu : nil }
         let iconChanged = previous?.iconJSON != snapshot.iconJSON || previous == nil
@@ -153,7 +154,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
                 RenderNode(
                     id: -1, type: "MenuBarExtra.Item",
                     props: [
-                        "title": .string("Could not refresh"), "tooltip": .string(message)
+                        "title": .string(String(localized: "Could not refresh")), "tooltip": .string(message)
                     ])
             ], session: nil)
     }
@@ -330,7 +331,7 @@ final class ExtensionMenuBarController: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         if menu.items.isEmpty {
-            let loading = NSMenuItem(title: "Loading…", action: nil, keyEquivalent: "")
+            let loading = NSMenuItem(title: String(localized: "Loading…"), action: nil, keyEquivalent: "")
             loading.isEnabled = false
             menu.addItem(loading)
         }

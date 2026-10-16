@@ -23,21 +23,29 @@ struct CustomCommandPreview: View {
 
     private func information(for command: CustomCommand) -> [InfoRow] {
         var rows = [
-            InfoRow(label: "Run In", value: command.workingDirectory ?? "Home folder"),
-            InfoRow(label: "Output", value: command.showsOutput ? "Show output" : "Silent")
+            InfoRow(
+                label: String(localized: "Run In"),
+                value: command.workingDirectory ?? String(localized: "Home folder")),
+            InfoRow(
+                label: String(localized: "Output"),
+                value: command.showsOutput ? String(localized: "Show output") : String(localized: "Silent"))
         ]
         if !command.arguments.isEmpty {
             let arguments = command.arguments.enumerated().map { index, argument in
                 let name = "\(CustomCommandArgument.fieldID(at: index)) · \(argument.name)"
-                return argument.isOptional ? name + " (optional)" : name
+                return argument.isOptional ? String(localized: "\(name) (optional)") : name
             }
-            rows.append(InfoRow(label: "Arguments", value: arguments.joined(separator: ", ")))
+            rows.append(
+                InfoRow(label: String(localized: "Arguments"), value: arguments.joined(separator: ", ")))
         }
         if command.requiresConfirmation {
-            rows.append(InfoRow(label: "Confirmation", value: "Required before running"))
+            rows.append(
+                InfoRow(
+                    label: String(localized: "Confirmation"),
+                    value: String(localized: "Required before running")))
         }
         if let keycaps = hotKeys.binding(for: .customCommand(id: command.id))?.keycaps {
-            rows.append(InfoRow(label: "Shortcut", keycaps: keycaps))
+            rows.append(InfoRow(label: String(localized: "Shortcut"), keycaps: keycaps))
         }
         return rows
     }

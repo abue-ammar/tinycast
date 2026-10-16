@@ -95,14 +95,15 @@ enum QuicklinkError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .emptyName: return "Enter a name for the quicklink."
-        case .emptyLink: return "Enter a link to open."
-        case .duplicateName: return "A quicklink with this name already exists."
+        case .emptyName: return String(localized: "Enter a name for the quicklink.")
+        case .emptyLink: return String(localized: "Enter a link to open.")
+        case .duplicateName: return String(localized: "A quicklink with this name already exists.")
         case .unresolvableLink:
-            return "This doesn't look like a URL, file path, or deeplink."
-        case .invalidCharacter: return "Names and links cannot contain null characters."
+            return String(localized: "This doesn't look like a URL, file path, or deeplink.")
+        case .invalidCharacter: return String(localized: "Names and links cannot contain null characters.")
         case .storageUnavailable:
-            return "The quicklinks database could not be opened, so changes can't be saved."
+            return String(
+                localized: "The quicklinks database could not be opened, so changes can't be saved.")
         }
     }
 }

@@ -12,17 +12,19 @@ extension SystemActionRunner {
         let deviceStatus = AudioObjectGetPropertyData(
             AudioObjectID(kAudioObjectSystemObject), &deviceAddress, 0, nil, &size, &device)
         guard deviceStatus == noErr, device != kAudioObjectUnknown else {
-            throw SystemActionFailure("No audio input device is available.")
+            throw SystemActionFailure(String(localized: "No audio input device is available."))
         }
 
         var address = microphoneMuteAddress
         guard AudioObjectHasProperty(device, &address) else {
-            throw SystemActionFailure("The current microphone does not support software mute.")
+            throw SystemActionFailure(
+                String(localized: "The current microphone does not support software mute."))
         }
         var settable = DarwinBoolean(false)
         let controlStatus = AudioObjectIsPropertySettable(device, &address, &settable)
         guard controlStatus == noErr, settable.boolValue else {
-            throw SystemActionFailure("The current microphone mute is controlled externally.")
+            throw SystemActionFailure(
+                String(localized: "The current microphone mute is controlled externally."))
         }
 
         let muted = try !microphoneMuted(on: device)
@@ -31,7 +33,8 @@ extension SystemActionRunner {
         let status = AudioObjectSetPropertyData(
             device, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
         guard status == noErr else {
-            throw SystemActionFailure("macOS could not change microphone mute (error \(status)).")
+            throw SystemActionFailure(
+                String(localized: "macOS could not change microphone mute (error \(String(status)))."))
         }
 
         // CoreAudio applies property writes asynchronously, so feedback waits for the device.
@@ -40,7 +43,8 @@ extension SystemActionRunner {
             try await Task.sleep(for: .milliseconds(50))
         }
         guard try microphoneMuted(on: device) == muted else {
-            throw SystemActionFailure("The microphone did not confirm the mute change. Try again.")
+            throw SystemActionFailure(
+                String(localized: "The microphone did not confirm the mute change. Try again."))
         }
         return muted
     }
@@ -58,7 +62,8 @@ extension SystemActionRunner {
         var size = UInt32(MemoryLayout<UInt32>.size)
         let status = AudioObjectGetPropertyData(device, &address, 0, nil, &size, &value)
         guard status == noErr else {
-            throw SystemActionFailure("macOS could not read microphone mute (error \(status)).")
+            throw SystemActionFailure(
+                String(localized: "macOS could not read microphone mute (error \(String(status)))."))
         }
         return value != 0
     }

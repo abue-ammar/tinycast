@@ -49,9 +49,9 @@ final class CustomWindowSizeCoordinator {
     func deleteCustomWindowSize(id: UUID) async {
         guard let size = store.size(id: id),
             await core.confirm(
-                title: "Delete “\(size.name)”?",
-                message: "Its shortcut and launcher references go with it.",
-                symbol: CustomWindowSize.sfSymbol, confirmTitle: "Delete"),
+                title: String(localized: "Delete “\(size.name)”?"),
+                message: String(localized: "Its shortcut and launcher references go with it."),
+                symbol: CustomWindowSize.sfSymbol, confirmTitle: String(localized: "Delete")),
             store.remove(id: id) != nil
         else { return }
         // Unwound only once the row is gone, so a kept record never loses its shortcut.

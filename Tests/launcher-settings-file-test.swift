@@ -229,6 +229,7 @@ struct AppEntry: Sendable {
     let kind: Kind
     var settingsOwner: SettingsTab?
     var subtitle: String?
+    var alternateTitles: [String] = []
     var preferenceKey: String { bundleID ?? id }
 }
 

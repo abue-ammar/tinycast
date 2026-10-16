@@ -20,7 +20,7 @@ struct HTTPAIProvider: AIProvider {
                     let (bytes, response) = try await session.bytes(for: urlRequest)
                     guard let response = response as? HTTPURLResponse else {
                         throw AIProviderError.responseFailed(
-                            "The provider returned an invalid HTTP response.")
+                            String(localized: "The provider returned an invalid HTTP response."))
                     }
                     guard response.statusCode == 200 else {
                         let body = await Self.body(of: bytes)
@@ -52,7 +52,7 @@ struct HTTPAIProvider: AIProvider {
                     }
                     guard decoder.isTerminal else {
                         throw AIProviderError.responseFailed(
-                            "The connection closed before the response completed.")
+                            String(localized: "The connection closed before the response completed."))
                     }
                     continuation.finish()
                 } catch is CancellationError {
@@ -138,12 +138,12 @@ struct HTTPAIProvider: AIProvider {
 
     private static func networkMessage(_ code: URLError.Code) -> String {
         switch code {
-        case .networkConnectionLost: return "The network connection was lost."
-        case .notConnectedToInternet: return "No internet connection."
-        case .timedOut: return "The provider took too long to respond."
+        case .networkConnectionLost: return String(localized: "The network connection was lost.")
+        case .notConnectedToInternet: return String(localized: "No internet connection.")
+        case .timedOut: return String(localized: "The provider took too long to respond.")
         case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-            return "The provider could not be reached."
-        default: return "The network request failed."
+            return String(localized: "The provider could not be reached.")
+        default: return String(localized: "The network request failed.")
         }
     }
 }

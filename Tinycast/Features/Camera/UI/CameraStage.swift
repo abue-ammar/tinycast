@@ -10,9 +10,9 @@ struct CameraStage: View {
         case .live(let capture):
             CameraFeed(session: capture, mirrored: mirrored)
         case .denied:
-            unavailable("Tinycast has no access to the camera.")
+            unavailable(String(localized: "Tinycast has no access to the camera."))
         case .noCamera:
-            unavailable("No camera on this Mac.")
+            unavailable(String(localized: "No camera on this Mac."))
         }
     }
 

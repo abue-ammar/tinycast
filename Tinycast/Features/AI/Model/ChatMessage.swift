@@ -124,8 +124,9 @@ struct ChatToolUse: Equatable, Hashable, Sendable {
     let sequence: Int
 
     var label: String {
-        let verb = state == .running ? "Calling" : "Called"
-        return origin.isEmpty ? "\(verb) \(title)" : "\(verb) \(origin) · \(title)"
+        let target = origin.isEmpty ? title : "\(origin) · \(title)"
+        return state == .running
+            ? String(localized: "Calling \(target)") : String(localized: "Called \(target)")
     }
 }
 
@@ -135,9 +136,10 @@ extension Array where Element == ChatToolUse {
     var failedCount: Int { count { $0.state == .failed } }
 
     var completedLabel: String {
-        let label = "Called \(count) tools"
+        let label = String(localized: "Called \(count) tools")
         let failures = failedCount
-        return failures == 0 ? label : "\(label) · \(failures) failed"
+        guard failures > 0 else { return label }
+        return "\(label) · " + String(localized: "\(failures) failed")
     }
 }
 

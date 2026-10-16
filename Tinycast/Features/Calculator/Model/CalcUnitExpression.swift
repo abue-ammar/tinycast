@@ -39,7 +39,7 @@ enum CalcUnitExpression {
             ? "(\(right.symbol))" : right.symbol
         return UnitDef(
             left.symbol + (dividing ? "/" : "·") + rightSymbol,
-            "Compound Units", .compound, factor, dimension: dimension,
+            String(localized: "Compound Units"), .compound, factor, dimension: dimension,
             currency: dimension.currency == 0 ? nil : left.currency ?? right.currency)
     }
 
@@ -52,7 +52,7 @@ enum CalcUnitExpression {
         let symbol = unit.symbol.contains("/") || unit.symbol.contains("·") ? "(\(unit.symbol))" : unit.symbol
         let suffix = exponent == 2 ? "²" : exponent == 3 ? "³" : "^" + CalcFormatter.copyText(exponent)
         return UnitDef(
-            symbol + suffix, "Compound Units", .compound, factor, dimension: raised,
+            symbol + suffix, String(localized: "Compound Units"), .compound, factor, dimension: raised,
             currency: raised.currency == 0 ? nil : unit.currency)
     }
 

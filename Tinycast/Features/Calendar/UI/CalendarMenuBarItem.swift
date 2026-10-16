@@ -22,18 +22,18 @@ struct CalendarMenuBarLabel: View {
             }
         case (.meetingTitle, nil)
         where !AppCore.shared.calendarCoordinator.hasUpcomingMenuBarEvent:
-            title("No upcoming events")
+            title(String(localized: "No upcoming events"))
         case (_, nil):
-            icon("calendar", describing: "no current meeting")
+            icon("calendar", describing: String(localized: "no current meeting"))
         }
     }
 
     private func icon(_ symbol: String, describing description: String) -> some View {
-        Image(systemName: symbol).accessibilityLabel("\(appName): \(description)")
+        Image(systemName: symbol).accessibilityLabel(Text(verbatim: "\(appName): \(description)"))
     }
 
     private func title(_ text: String) -> some View {
-        Text(text).accessibilityLabel("\(appName): \(text)")
+        Text(text).accessibilityLabel(Text(verbatim: "\(appName): \(text)"))
     }
 
     private func summary(for meeting: MeetingEvent) -> String {
@@ -90,7 +90,7 @@ private struct MenuBarAgenda: View {
                         AppCore.shared.calendarCoordinator.join(meeting)
                     } label: {
                         Label {
-                            Text("\(MeetingTimeFormat.range(of: meeting)) \(meeting.title)")
+                            Text(verbatim: "\(MeetingTimeFormat.range(of: meeting)) \(meeting.title)")
                         } icon: {
                             CalendarSymbol(
                                 name: meeting.isInProgress(now: now) ? "circle.fill" : "circle",

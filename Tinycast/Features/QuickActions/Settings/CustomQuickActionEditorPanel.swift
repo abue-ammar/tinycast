@@ -26,8 +26,8 @@ struct CustomQuickActionEditorPanel: View {
         "paintbrush", "hammer", "heart", "star"
     ]
 
-    private static let placeholder =
-        "Make the text more concise, keeping the writer's voice and meaning."
+    private static let placeholder = String(
+        localized: "Make the text more concise, keeping the writer's voice and meaning.")
 
     init(request: CustomQuickActionEditRequest, model: AIModelSelection?) {
         existing = request.action
@@ -133,8 +133,10 @@ struct CustomQuickActionEditorPanel: View {
                     }
                 }
             Text(
-                "Tinycast always tells the model to return only the transformed text, and to treat "
-                    + "your selection as material rather than as instructions."
+                """
+                Tinycast always tells the model to return only the transformed text, and to treat \
+                your selection as material rather than as instructions.
+                """
             )
             .font(.caption)
             .foregroundStyle(.secondary)

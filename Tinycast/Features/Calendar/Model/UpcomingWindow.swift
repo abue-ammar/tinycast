@@ -29,8 +29,8 @@ struct UpcomingWindow: Sendable {
 
     static func countdown(to start: Date, now: Date) -> String {
         let delta = start.timeIntervalSince(now)
-        if delta > 0 { return "in \(duration(delta, rounding: .up))" }
-        return "Now"
+        if delta > 0 { return String(localized: "in \(duration(delta, rounding: .up))") }
+        return String(localized: "Now")
     }
 
     struct RowPill: Equatable, Sendable {
@@ -40,7 +40,7 @@ struct UpcomingWindow: Sendable {
 
     /// A row's pill: a countdown until midnight, then the date, so tomorrow never passes for today.
     static func rowPill(for event: MeetingEvent, now: Date, calendar: Calendar) -> RowPill? {
-        if event.isInProgress(now: now) { return RowPill(text: "Now", isImminent: true) }
+        if event.isInProgress(now: now) { return RowPill(text: String(localized: "Now"), isImminent: true) }
         let delta = event.start.timeIntervalSince(now)
         guard delta > 0 else { return nil }
         let isImminent = delta <= 60 * 60
@@ -57,17 +57,21 @@ struct UpcomingWindow: Sendable {
     /// The menu bar names the time left once a meeting has been underway for five minutes.
     static func menuBarCountdown(for event: MeetingEvent, now: Date) -> String {
         if now < event.start { return countdown(to: event.start, now: now) }
-        if now < event.start.addingTimeInterval(5 * 60) { return "Now" }
-        if now < event.end { return "\(duration(event.end.timeIntervalSince(now), rounding: .down)) left" }
-        return "Now"
+        if now < event.start.addingTimeInterval(5 * 60) { return String(localized: "Now") }
+        if now < event.end {
+            return String(localized: "\(duration(event.end.timeIntervalSince(now), rounding: .down)) left")
+        }
+        return String(localized: "Now")
     }
 
     private static func duration(
         _ interval: TimeInterval, rounding: FloatingPointRoundingRule
     ) -> String {
         let minutes = max(1, Int((interval / 60).rounded(rounding)))
-        guard minutes > 60 else { return "\(minutes) min" }
+        guard minutes > 60 else {
+            return Duration.seconds(minutes * 60).formatted(.units(allowed: [.minutes], width: .abbreviated))
+        }
         let hours = max(1, Int((Double(minutes) / 60).rounded()))
-        return "\(hours) hr"
+        return Duration.seconds(hours * 3600).formatted(.units(allowed: [.hours], width: .abbreviated))
     }
 }

@@ -109,7 +109,7 @@ final class WindowLayoutStore {
     /// "Office" → "Office Copy" → "Office Copy 2", so a duplicate never fails validation.
     private static func uniqueName(from name: String, among existing: [WindowLayout]) -> String {
         let taken = Set(existing.map { $0.name.lowercased() })
-        let base = name + " Copy"
+        let base = String(localized: "\(name) Copy")
         guard taken.contains(base.lowercased()) else { return base }
         var index = 2
         while taken.contains("\(base) \(index)".lowercased()) { index += 1 }

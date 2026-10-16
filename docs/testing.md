@@ -10,7 +10,7 @@ The mechanical bar, in one place so it cannot drift. All five pass before a chan
 | Check | Command |
 | --- | --- |
 | The harnesses | `./Scripts/run-tests.sh` |
-| Lint | `./Scripts/lint.sh` |
+| Lint, settings search and translations | `./Scripts/lint.sh` |
 | Pure-layer purity | `grep -rln 'import AppKit\|import SwiftUI\|import Cocoa' Tinycast/Features/*/Model/` |
 | A clean build | `xcodebuild … -configuration Debug CODE_SIGNING_ALLOWED=NO`, zero **new** warnings |
 | Docs still true | any doc your change made wrong, fixed in the same commit |
@@ -108,6 +108,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
 | `scopes-test` | `Launcher/Model/SearchScopes.swift` |
 | `app-name-test` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
+| `language-test` | `AppLanguage` and both string catalogs — compile every language, load privacy prompts, and select plural forms and independent counts at runtime |
+| `relaunch-test` | The shipped app delegate and relaunch helper — asynchronous cleanup, repeated quit requests, and a responsive replacement process |
 | `calc-test` | all of `Calculator/Model/` |
 | `calendar-test` | all of `Calendar/Model/` plus `EventEditorSession` — links, join window, day buckets, draft and form focus |
 | `clipboard-search-test` | Ordinary and OCR result ordering, opt-in lifecycle, cancellation, pins and type filters |

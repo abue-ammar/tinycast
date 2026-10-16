@@ -37,7 +37,7 @@ enum CalcCurrency {
         case unavailable
     }
 
-    static let categoryName = "Currency"
+    static let categoryName = String(localized: "Currency")
 
     /// `expr currency (to|in|->) currency`, shaped like `CalcUnits.parseConversion`, run after it.
     static func parseConversion(_ tokens: [CalcToken], rates: CurrencyRates?) -> ConversionParse? {

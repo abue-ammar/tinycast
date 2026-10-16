@@ -167,9 +167,14 @@ private struct NoteSwitcherRow: View {
             }
             Spacer(minLength: Theme.Spacing.md)
             if !editing, selected || hovered {
-                rowButton(title: "Rename \(summary.displayTitle)", symbol: "pencil", action: onBeginRename)
-                rowButton(title: "Move \(summary.displayTitle) to Trash", symbol: "trash", action: onTrash)
-                    .foregroundStyle(Theme.Colors.destructive)
+                rowButton(
+                    title: String(localized: "Rename \(summary.displayTitle)"), symbol: "pencil",
+                    action: onBeginRename)
+                rowButton(
+                    title: String(localized: "Move \(summary.displayTitle) to Trash"), symbol: "trash",
+                    action: onTrash
+                )
+                .foregroundStyle(Theme.Colors.destructive)
             }
         }
         .padding(.horizontal, Theme.Spacing.md)

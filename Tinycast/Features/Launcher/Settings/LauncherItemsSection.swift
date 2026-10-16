@@ -4,6 +4,8 @@ import SwiftUI
 struct LauncherCategorySwitchSection: View {
     let kind: AppEntry.Kind
     let anchor: SettingsAnchor
+    /// Spelled out by the caller, so it is the very string its search entry carries.
+    let title: LocalizedStringResource
 
     @Environment(VisibilityStore.self) private var visibility
 
@@ -16,7 +18,7 @@ struct LauncherCategorySwitchSection: View {
                 )
             ) {
                 SettingsFeatureToggleLabel(
-                    anchor: anchor, title: "Enable \(anchor.title)",
+                    anchor: anchor, title: title,
                     subtitle: "Off hides all of them and stops their shortcuts.")
             }
         }
@@ -27,7 +29,7 @@ struct LauncherCategorySwitchSection: View {
 struct LauncherItemsSection: View {
     let kind: AppEntry.Kind
     let anchor: SettingsAnchor
-    let searchPrompt: String
+    let searchPrompt: LocalizedStringResource
 
     @Environment(AppIndex.self) private var appIndex
     @Environment(VisibilityStore.self) private var visibility

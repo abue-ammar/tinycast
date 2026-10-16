@@ -180,7 +180,7 @@ final class ChatHistoryStore {
     }
 
     private static let titleLimit = 120
-    private static let interruptedNote = "Response interrupted."
+    private static let interruptedNote = String(localized: "Response interrupted.")
 
     func session(id: UUID) -> ChatSession? {
         guard ensureDatabase(), let database else { return nil }

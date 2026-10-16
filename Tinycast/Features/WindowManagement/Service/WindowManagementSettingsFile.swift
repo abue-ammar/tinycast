@@ -78,13 +78,17 @@ struct WindowManagementSettingsFile {
                 }
                 let previous = Set(sizes.sizes.map(\.entryID))
                 let kept = sizes.replace(with: decoded.records)
-                let rule = "a name is empty or used twice"
-                return report(decoded, kept: kept, kind: "custom size", rule: rule, key: key)
+                return report(
+                    decoded, kept: kept, key: key,
+                    skippedMessage: {
+                        String(localized: "\($0) custom sizes were skipped: a name is empty or used twice")
+                    })
                     + follow(
                         decoded,
                         records: sizes.sizes.map { Record(id: $0.id, name: $0.name, entryID: $0.entryID) },
                         previous: previous, bound: hotKeys.boundCustomWindowSizeIDs,
-                        kind: "custom size", action: HotKeyAction.customWindowSize, key: key)
+                        label: { String(localized: "custom size “\($0)”") },
+                        action: HotKeyAction.customWindowSize, key: key)
             })
     }
 
@@ -107,14 +111,21 @@ struct WindowManagementSettingsFile {
                 }
                 let previous = Set(layouts.layouts.map(\.entryID))
                 let kept = layouts.replace(with: decoded.records)
-                let rule = "a name is empty or used twice, or it has no apps"
-                return report(decoded, kept: kept, kind: "layout", rule: rule, key: key)
+                return report(
+                    decoded, kept: kept, key: key,
+                    skippedMessage: {
+                        String(
+                            localized: """
+                                \($0) layouts were skipped: a name is empty or used twice, or it has no apps
+                                """)
+                    })
                     + follow(
                         decoded,
                         records: layouts.layouts.map {
                             Record(id: $0.id, name: $0.name, entryID: $0.entryID)
                         },
-                        previous: previous, bound: hotKeys.boundWindowLayoutIDs, kind: "layout",
+                        previous: previous, bound: hotKeys.boundWindowLayoutIDs,
+                        label: { String(localized: "layout “\($0)”") },
                         action: HotKeyAction.windowLayout, key: key)
             })
     }
@@ -140,12 +151,19 @@ struct WindowManagementSettingsFile {
                 let previous = Set(rooms.rooms.map(\.entryID))
                 let kept = rooms.replace(
                     with: decoded.records.map { room in learned[room.id].map(room.keepingRuntime) ?? room })
-                let rule = "a name is empty or used twice, or it has no windows"
-                return report(decoded, kept: kept, kind: "room", rule: rule, key: key)
+                return report(
+                    decoded, kept: kept, key: key,
+                    skippedMessage: {
+                        String(
+                            localized: """
+                                \($0) rooms were skipped: a name is empty or used twice, or it has no windows
+                                """)
+                    })
                     + follow(
                         decoded,
                         records: rooms.rooms.map { Record(id: $0.id, name: $0.name, entryID: $0.entryID) },
-                        previous: previous, bound: hotKeys.boundWindowRoomIDs, kind: "room",
+                        previous: previous, bound: hotKeys.boundWindowRoomIDs,
+                        label: { String(localized: "room “\($0)”") },
                         action: HotKeyAction.windowRoom, key: key)
             })
     }
@@ -159,14 +177,13 @@ struct WindowManagementSettingsFile {
     }
 
     private func report<Value>(
-        _ decoded: WindowManagementFileFormat.Decoded<Value>, kept: Int, kind: String,
-        rule: String, key: SettingsFileKey
+        _ decoded: WindowManagementFileFormat.Decoded<Value>, kept: Int, key: SettingsFileKey,
+        skippedMessage: (Int) -> String
     ) -> [SettingsFileIssue] {
         var issues = decoded.problems.map { SettingsFileIssue.invalidEntry(key, $0) }
         let skipped = decoded.records.count - kept
         if skipped > 0 {
-            let noun = skipped == 1 ? "1 \(kind) was" : "\(skipped) \(kind)s were"
-            issues.append(.invalidEntry(key, "\(noun) skipped: \(rule)"))
+            issues.append(.invalidEntry(key, skippedMessage(skipped)))
         }
         return issues
     }
@@ -174,8 +191,8 @@ struct WindowManagementSettingsFile {
     /// A record the file dropped takes its shortcut and alias with it; the rest take what it set.
     private func follow<Value>(
         _ decoded: WindowManagementFileFormat.Decoded<Value>, records: [Record],
-        previous: Set<String>, bound: [UUID], kind: String, action: (UUID) -> HotKeyAction,
-        key: SettingsFileKey
+        previous: Set<String>, bound: [UUID], label: (String) -> String,
+        action: (UUID) -> HotKeyAction, key: SettingsFileKey
     ) -> [SettingsFileIssue] {
         let live = Set(records.map(\.id))
         for id in bound where !live.contains(id) {
@@ -189,7 +206,7 @@ struct WindowManagementSettingsFile {
         let wanted = records.compactMap { record in
             decoded.shortcuts[record.id].map { text in
                 HotKeySettingsFile.Wanted(
-                    action: action(record.id), text: text, label: "\(kind) “\(record.name)”")
+                    action: action(record.id), text: text, label: label(record.name))
             }
         }
         return shortcuts.apply(wanted, key: key)

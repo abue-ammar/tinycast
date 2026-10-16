@@ -6,7 +6,7 @@ struct SectionHeader: View {
     /// The first header hugs the top; later ones get spacing above, reading as below.
     var isFirst = false
     var configure: (() -> Void)?
-    var configureHelp = "Configure…"
+    var configureHelp = String(localized: "Configure…")
 
     var body: some View {
         HStack(spacing: metrics.spacing.sm) {

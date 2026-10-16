@@ -20,7 +20,7 @@ enum VolumeLevel {
     }
 
     static func percentage(_ level: Double) -> String {
-        "\(Int((clamped(level) * 100).rounded()))%"
+        Int((clamped(level) * 100).rounded()).formatted(.percent)
     }
 
     /// Shared by the HUD and slider, so one level never draws two different icons.

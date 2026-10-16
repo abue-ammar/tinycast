@@ -16,8 +16,8 @@ struct MeetingDay: Hashable, Sendable {
     func title(calendar: Calendar) -> String {
         let date = calendar.formatStyle.month(.abbreviated).day()
         switch offset {
-        case 0: return "Today, \(start.formatted(date))"
-        case 1: return "Tomorrow, \(start.formatted(date))"
+        case 0: return String(localized: "Today, \(start.formatted(date))")
+        case 1: return String(localized: "Tomorrow, \(start.formatted(date))")
         default: return start.formatted(date.weekday(.wide))
         }
     }

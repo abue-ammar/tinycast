@@ -206,14 +206,17 @@ final class MCPCoordinator {
     private func ask(_ server: MCPServer, tool: String) async -> MCPTrustChoice {
         let choices: [MCPTrustChoice] = [.always, .thisChat, .refuse]
         let index = await core.choose(
-            title: "Let \(server.title) run its tools?",
-            message: "The model wants to call \u{201C}\(tool)\u{201D}. Tinycast did not write this "
-                + "server and cannot vouch for what it does.",
+            title: String(localized: "Let \(server.title) run its tools?"),
+            message: String(
+                localized: """
+                    The model wants to call \u{201C}\(tool)\u{201D}. Tinycast did not write this \
+                    server and cannot vouch for what it does.
+                    """),
             symbol: "wrench.and.screwdriver",
             options: [
-                DialogAction(title: "Always Allow"),
-                DialogAction(title: "Allow This Chat"),
-                DialogAction(title: "Don't Allow", role: .cancel)
+                DialogAction(title: String(localized: "Always Allow")),
+                DialogAction(title: String(localized: "Allow This Chat")),
+                DialogAction(title: String(localized: "Don't Allow"), role: .cancel)
             ],
             defaultIndex: 1)
         return choices.indices.contains(index) ? choices[index] : .refuse

@@ -96,13 +96,13 @@ enum ClipboardRetention: Int, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .day: return "1 Day"
-        case .week: return "1 Week"
-        case .month: return "1 Month"
-        case .threeMonths: return "3 Months"
-        case .sixMonths: return "6 Months"
-        case .year: return "1 Year"
-        case .forever: return "Forever"
+        case .day: return String(localized: "1 Day")
+        case .week: return String(localized: "1 Week")
+        case .month: return String(localized: "1 Month")
+        case .threeMonths: return String(localized: "3 Months")
+        case .sixMonths: return String(localized: "6 Months")
+        case .year: return String(localized: "1 Year")
+        case .forever: return String(localized: "Forever")
         }
     }
 
@@ -121,9 +121,9 @@ enum ClipboardDefaultAction: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .paste: return "Paste"
-        case .copy: return "Copy to Clipboard"
-        case .pastePlainText: return "Paste as Plain Text"
+        case .paste: return String(localized: "Paste")
+        case .copy: return String(localized: "Copy to Clipboard")
+        case .pastePlainText: return String(localized: "Paste as Plain Text")
         }
     }
 

@@ -18,8 +18,8 @@ enum UninstallEvidence: String, Hashable, Sendable, CaseIterable {
     /// Weak evidence names itself on the row; proof-grade matches stay silent.
     var label: String? {
         switch self {
-        case .displayName: return "matched by name"
-        case .binSymlink: return "command-line tool"
+        case .displayName: return String(localized: "matched by name")
+        case .binSymlink: return String(localized: "command-line tool")
         case .bundle, .bundleID, .groupContainer: return nil
         }
     }

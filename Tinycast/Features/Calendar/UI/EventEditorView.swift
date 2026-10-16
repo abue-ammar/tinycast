@@ -18,23 +18,26 @@ struct EventEditorView: View {
             VStack(spacing: metrics.spacing.xxl) {
                 FormRow("Title") {
                     FormTextInput(
-                        text: $editor.draft.title, focused: titleFocused, placeholder: "Event title",
-                        label: "Event title", moveFocus: editor.advanceFocus
+                        text: $editor.draft.title, focused: titleFocused,
+                        placeholder: String(localized: "Event title"),
+                        label: String(localized: "Event title"), moveFocus: editor.advanceFocus
                     )
                     .frame(height: metrics.size.dialogButtonHeight)
                     .formFieldChrome(focused: focusedField == .title)
                 }
                 FormRow("Start") {
                     choice(
-                        "Start", field: .start, selection: $editor.draft.startOffsetMinutes,
+                        String(localized: "Start"), field: .start,
+                        selection: $editor.draft.startOffsetMinutes,
                         values: EventDraft.startOffsets, label: EventDraft.label(startOffset:))
                 }
                 FormRow("Duration") {
                     choice(
-                        "Duration", field: .duration, selection: $editor.draft.durationMinutes,
+                        String(localized: "Duration"), field: .duration,
+                        selection: $editor.draft.durationMinutes,
                         values: EventDraft.durations, label: EventDraft.label(duration:))
                 }
-                FormRow("") {
+                FormRow {
                     Text("It goes on the calendar new events go to.")
                         .font(metrics.typography.rowTrailing)
                         .foregroundStyle(Theme.Colors.textSecondary)

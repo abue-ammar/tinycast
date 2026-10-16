@@ -465,12 +465,11 @@ enum CalcTimeZone {
             let to = dates.date(from: there.dateComponents([.era, .year, .month, .day], from: source.date)),
             let days = dates.dateComponents([.day], from: from, to: to).day
         else { return nil }
-        switch days {
-        case 0: return ""
-        case 1: return " (tomorrow)"
-        case -1: return " (yesterday)"
-        case ..<0: return " (\(-days) days ago)"
-        default: return " (in \(days) days)"
-        }
+        guard days != 0 else { return "" }
+        var relative = Date.AnchoredRelativeFormatStyle(
+            anchor: to, presentation: .named, locale: calendar.locale ?? Locale(identifier: "en_US"),
+            calendar: dates)
+        relative.allowedFields = [.day]
+        return " (\(from.formatted(relative)))"
     }
 }

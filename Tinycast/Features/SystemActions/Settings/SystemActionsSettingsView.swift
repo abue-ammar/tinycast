@@ -4,7 +4,8 @@ struct SystemActionsSettingsView: View {
     var body: some View {
         Form {
             LauncherCategorySwitchSection(
-                kind: .systemAction, anchor: .systemActionsSystemActions)
+                kind: .systemAction, anchor: .systemActionsSystemActions,
+                title: "Enable System Actions")
 
             LauncherItemsSection(
                 kind: .systemAction,

@@ -34,16 +34,16 @@ enum AIProviderFailure {
     static func statusLine(_ status: Int, retryAfter: String?) -> String {
         switch status {
         case 401, 403:
-            return "API key rejected — check it in Settings."
+            return String(localized: "API key rejected — check it in Settings.")
         case 429:
             guard let retryAfter, let seconds = Int(retryAfter), seconds >= 0 else {
-                return "Rate limit reached — try again later."
+                return String(localized: "Rate limit reached — try again later.")
             }
-            return "Rate limit reached — retry after \(seconds) seconds."
+            return String(localized: "Rate limit reached — retry after \(seconds) seconds.")
         case 500...599:
-            return "The provider is temporarily unavailable (HTTP \(status))."
+            return String(localized: "The provider is temporarily unavailable (HTTP \(status)).")
         default:
-            return "The provider rejected the model or request (HTTP \(status))."
+            return String(localized: "The provider rejected the model or request (HTTP \(status)).")
         }
     }
 

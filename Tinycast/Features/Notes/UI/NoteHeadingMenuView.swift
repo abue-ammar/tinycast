@@ -11,10 +11,10 @@ struct NoteHeadingMenuView: View {
     }
 
     private static let rows = [
-        Row(level: 1, title: "Heading 1", shortcut: "⌥⌘1"),
-        Row(level: 2, title: "Heading 2", shortcut: "⌥⌘2"),
-        Row(level: 3, title: "Heading 3", shortcut: "⌥⌘3"),
-        Row(level: 0, title: "Text", shortcut: "⌥⌘0")
+        Row(level: 1, title: String(localized: "Heading 1"), shortcut: "⌥⌘1"),
+        Row(level: 2, title: String(localized: "Heading 2"), shortcut: "⌥⌘2"),
+        Row(level: 3, title: String(localized: "Heading 3"), shortcut: "⌥⌘3"),
+        Row(level: 0, title: String(localized: "Text"), shortcut: "⌥⌘0")
     ]
 
     private var surface: RoundedRectangle {

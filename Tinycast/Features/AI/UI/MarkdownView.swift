@@ -90,7 +90,7 @@ private struct MarkdownListView: View {
                 .foregroundStyle(Theme.Colors.textSecondary)
                 .fixedSize(horizontal: true, vertical: false)
         } else {
-            Text("•").foregroundStyle(Theme.Colors.textSecondary)
+            Text(verbatim: "•").foregroundStyle(Theme.Colors.textSecondary)
         }
     }
 

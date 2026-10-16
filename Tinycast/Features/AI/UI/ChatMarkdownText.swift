@@ -311,14 +311,16 @@ private final class ChatCodeHeader: NSView {
     }
 
     private func showIdle() {
-        button.image = NSImage(systemSymbolName: "square.on.square", accessibilityDescription: "Copy Code")
-        button.setAccessibilityLabel("Copy Code")
+        let title = String(localized: "Copy Code")
+        button.image = NSImage(systemSymbolName: "square.on.square", accessibilityDescription: title)
+        button.setAccessibilityLabel(title)
     }
 
     @objc private func copyCode() {
         Paster.copyPlainText(code)
-        button.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: "Copied")
-        button.setAccessibilityLabel("Copied")
+        let title = String(localized: "Copied")
+        button.image = NSImage(systemSymbolName: "checkmark", accessibilityDescription: title)
+        button.setAccessibilityLabel(title)
         reset?.cancel()
         reset = Task { [weak self] in
             try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))

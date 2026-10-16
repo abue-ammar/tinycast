@@ -13,10 +13,10 @@ final class MCPOAuthManager {
 
         var label: String {
             switch self {
-            case .signedOut: return "Not signed in"
-            case .signingIn: return "Waiting for sign-in…"
-            case .signedIn: return "Signed in"
-            case .required: return "Sign-in required"
+            case .signedOut: return String(localized: "Not signed in")
+            case .signingIn: return String(localized: "Waiting for sign-in…")
+            case .signedIn: return String(localized: "Signed in")
+            case .required: return String(localized: "Sign-in required")
             case .failed(let message): return message
             }
         }

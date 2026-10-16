@@ -8,7 +8,8 @@ struct CommandsSettingsView: View {
     var body: some View {
         @Bindable var settings = settings
         return Form {
-            LauncherCategorySwitchSection(kind: .command, anchor: .commandsCommands)
+            LauncherCategorySwitchSection(
+                kind: .command, anchor: .commandsCommands, title: "Enable Commands")
 
             LauncherItemsSection(
                 kind: .command,
@@ -18,9 +19,10 @@ struct CommandsSettingsView: View {
             FeatureSwitchSection(
                 anchor: .commandsCustomCommands,
                 enableTitle: "Enable custom commands",
-                enableSubtitle:
-                    "Run as you in /bin/zsh, or the interpreter a #! line names. "
-                    + "Use full executable paths.",
+                enableSubtitle: """
+                    Run as you in /bin/zsh, or the interpreter a #! line names. \
+                    Use full executable paths.
+                    """,
                 isEnabled: $settings.customCommandsEnabled,
                 showsInLauncher: $settings.customCommandsShowInLauncher)
 

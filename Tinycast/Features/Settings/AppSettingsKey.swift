@@ -19,6 +19,7 @@ enum AppSettingsKey: String, CaseIterable {
     case popToRootTimeout = "popToRootTimeout"
     case escapeKeyBehavior = "escapeKeyBehavior"
     case appearance = "appearance"
+    case language = "AppleLanguages"
     case calcNumberStyle = "calculatorNumberStyle"
     case interfaceSize = "interfaceSize"
     case compactMode = "compactMode"

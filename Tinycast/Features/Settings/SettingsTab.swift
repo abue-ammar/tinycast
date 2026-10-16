@@ -7,29 +7,29 @@ enum SettingsTab: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "General"
-        case .applications: return "Applications"
-        case .systemSettings: return "System Settings"
-        case .systemActions: return "System Actions"
-        case .commands: return "Commands"
-        case .quicklinks: return "Quicklinks"
-        case .appleShortcuts: return "Apple Shortcuts"
-        case .fallbacks: return "Fallbacks"
-        case .ai: return "AI"
-        case .quickActions: return "Quick Actions"
-        case .dictation: return "Dictation"
-        case .fileSearch: return "File Search"
-        case .notes: return "Notes"
-        case .snippets: return "Snippets"
-        case .navigation: return "Navigation"
-        case .windowManagement: return "Window Management"
-        case .clipboard: return "Clipboard"
-        case .emoji: return "Emoji & Symbols"
-        case .calendar: return "Calendar"
-        case .extensions: return "Extensions"
-        case .permissions: return "Permissions"
-        case .backup: return "Backup"
-        case .about: return "About"
+        case .general: return String(localized: "General")
+        case .applications: return String(localized: "Applications")
+        case .systemSettings: return String(localized: "System Settings")
+        case .systemActions: return String(localized: "System Actions")
+        case .commands: return String(localized: "Commands")
+        case .quicklinks: return String(localized: "Quicklinks")
+        case .appleShortcuts: return String(localized: "Apple Shortcuts")
+        case .fallbacks: return String(localized: "Fallbacks")
+        case .ai: return String(localized: "AI")
+        case .quickActions: return String(localized: "Quick Actions")
+        case .dictation: return String(localized: "Dictation")
+        case .fileSearch: return String(localized: "File Search")
+        case .notes: return String(localized: "Notes")
+        case .snippets: return String(localized: "Snippets")
+        case .navigation: return String(localized: "Navigation")
+        case .windowManagement: return String(localized: "Window Management")
+        case .clipboard: return String(localized: "Clipboard")
+        case .emoji: return String(localized: "Emoji & Symbols")
+        case .calendar: return String(localized: "Calendar")
+        case .extensions: return String(localized: "Extensions")
+        case .permissions: return String(localized: "Permissions")
+        case .backup: return String(localized: "Backup")
+        case .about: return String(localized: "About")
         }
     }
 
@@ -70,10 +70,10 @@ enum SettingsSection: CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: return "General"
-        case .launcher: return "Launcher"
-        case .features: return "Features"
-        case .advanced: return "Advanced"
+        case .general: return String(localized: "General")
+        case .launcher: return String(localized: "Launcher")
+        case .features: return String(localized: "Features")
+        case .advanced: return String(localized: "Advanced")
         }
     }
 

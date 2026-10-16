@@ -182,7 +182,7 @@ final class RoomCoordinator {
                 after: room.layout(onDisplay: screen.display.uuid), in: choices,
                 backwards: backwards)
         else {
-            core.showMessage("Only one layout fits these windows here", tone: .neutral)
+            core.showMessage(String(localized: "Only one layout fits these windows here"), tone: .neutral)
             return
         }
         // The screen previews the selected room as it changes, so the cards glide from here.
@@ -375,7 +375,7 @@ final class RoomCoordinator {
     }
 
     func nameIsMissing() {
-        core.showMessage("Type a name for the room first", tone: .neutral)
+        core.showMessage(String(localized: "Type a name for the room first"), tone: .neutral)
     }
 
     /// ⌘↵ in the picker: the picked windows and apps become the room, in the order picked.
@@ -383,7 +383,8 @@ final class RoomCoordinator {
         guard let snapshot = session.snapshot else { return }
         let picks = session.picked
         guard !picks.isEmpty else {
-            core.showMessage("Pick at least one window or app for the room", tone: .neutral)
+            core.showMessage(
+                String(localized: "Pick at least one window or app for the room"), tone: .neutral)
             return
         }
         let name = session.roomName
@@ -411,7 +412,8 @@ final class RoomCoordinator {
         do {
             if session.editingID == nil { try store.add(room) } else { try store.update(room) }
         } catch {
-            core.showMessage(error.errorDescription ?? "Couldn't save the room", tone: .danger)
+            core.showMessage(
+                error.errorDescription ?? String(localized: "Couldn't save the room"), tone: .danger)
             return
         }
         enterRoom(id: room.id)
@@ -430,7 +432,7 @@ final class RoomCoordinator {
         // A member filled by title or by app has a new ID, so only the matcher knows it is here.
         let kept = room.windows.indices.filter { !arranged.contains($0) }.map { room.windows[$0] }
         guard !windows.isEmpty else {
-            core.showMessage("None of \(room.name)’s windows are open", tone: .neutral)
+            core.showMessage(String(localized: "None of \(room.name)’s windows are open"), tone: .neutral)
             return
         }
         guard
@@ -440,10 +442,12 @@ final class RoomCoordinator {
         do {
             try store.update(updated)
         } catch {
-            core.showMessage(error.errorDescription ?? "Couldn't save the room", tone: .danger)
+            core.showMessage(
+                error.errorDescription ?? String(localized: "Couldn't save the room"), tone: .danger)
             return
         }
-        core.showMessage("\(room.name) — remembered as \(reading.kind.title)", tone: .success)
+        core.showMessage(
+            String(localized: "\(room.name) — remembered as \(reading.kind.title)"), tone: .success)
     }
 
     /// Read on the display most of the windows share, which is where their arrangement is.
@@ -469,9 +473,9 @@ final class RoomCoordinator {
         Task { [weak self] in
             guard let self else { return }
             let confirmed = await self.core.confirm(
-                title: "Delete “\(room.name)”?",
-                message: "Its windows stay open. Its shortcut goes with it.",
-                symbol: Room.sfSymbol, confirmTitle: "Delete")
+                title: String(localized: "Delete “\(room.name)”?"),
+                message: String(localized: "Its windows stay open. Its shortcut goes with it."),
+                symbol: Room.sfSymbol, confirmTitle: String(localized: "Delete"))
             guard confirmed, let removed = self.store.remove(id: room.id) else { return }
             if self.currentRoomID == removed.id { self.currentRoomID = nil }
             self.removeReferences(ids: [removed.id], entryIDs: [removed.entryID])
@@ -520,22 +524,23 @@ final class RoomCoordinator {
         if outcome.isBlockedOnPermission { return await reportPermissionFailure() }
         guard outcome.placed > 0 else {
             await core.showNotice(
-                title: "Couldn't Enter “\(room.name)”",
-                message: "None of its windows are open. Open them, then choose them again.",
+                title: String(localized: "Couldn't Enter “\(room.name)”"),
+                message: String(
+                    localized: "None of its windows are open. Open them, then choose them again."),
                 symbol: Room.sfSymbol, tone: .danger)
             return
         }
         let missing = Set(outcome.missing).sorted()
         guard !missing.isEmpty else { return }
         core.showMessage(
-            "\(room.name) — \(missing.joined(separator: ", ")) not open", tone: .neutral)
+            String(localized: "\(room.name) — \(missing.joined(separator: ", ")) not open"), tone: .neutral)
     }
 
     private func reportPermissionFailure() async {
         let openSettings = await core.reportFailure(
-            title: "Tinycast Needs Accessibility Access",
-            message: "Rooms move and hide other apps' windows.",
-            symbol: Room.sfSymbol, recovery: "Open Settings")
+            title: String(localized: "Tinycast Needs Accessibility Access"),
+            message: String(localized: "Rooms move and hide other apps' windows."),
+            symbol: Room.sfSymbol, recovery: String(localized: "Open Settings"))
         if openSettings { Permissions.openAccessibilitySettings() }
     }
 }

@@ -236,6 +236,41 @@ Every custom control carries a label and the traits that describe it. The palett
 control surface, so nothing comes for free — a row, a keycap chip, a footer pill and a dialog button all
 need saying explicitly. Adding it as the view is written costs a line; retrofitting it costs a rewrite.
 
+## Localization
+
+Tinycast ships English plus German, Spanish, French, Japanese, Korean, Portuguese, Russian and
+Simplified Chinese. Every string lives in `Tinycast/Resources/Localizable.xcstrings`, keyed by its
+English source text; the compiler extracts the keys, and `./Scripts/sync-strings.sh` writes them into
+the catalog (Xcode's own build does the same in the IDE). The six privacy prompts live in
+`InfoPlist.xcstrings`, keyed by their `Info.plist` key.
+
+- **SwiftUI's own initializers localize literals already** — `Text("…")`, `Button("…")`, `.help("…")`
+  and the rest take a `LocalizedStringKey`. A `String` *variable* passed to them is shown verbatim, so
+  the place that wrote the English is the place that localizes it.
+- **A view that only ever labels takes `LocalizedStringResource`**, so its callers pass plain literals
+  and the compiler still extracts them: `SettingsRowTitle`, `SettingsAnchor`, `SettingsSearchEntry`,
+  `FormRow`, `FeatureSwitchSection`, `SettingsEditorHeader`, `SettingsFilterField`.
+- **Everything that also carries runtime text keeps `String`**, and its literal callers write
+  `String(localized: "…")` — dialogs, HUD messages, `PopoverMenuItem`, AppKit menus and windows,
+  `LocalizedError`, and every model `title`. `Model/` files use it too; it is Foundation.
+- **One sentence is one literal.** Never assemble one with `+` or from localized fragments: the
+  translation has to be free to reorder it. A long one is a `"""` literal with `\` continuations.
+  Interpolate data — a name, a count — never a phrase.
+- **A count is one interpolated string** (`"\(count) items"`) with plural variations in the catalog, never
+  a `== 1 ?` branch.
+- **Not language, not in the catalog**: glyphs, separators and samples are `Text(verbatim:)`.
+- **Never localized**: anything from macOS, the user or an extension — app and pane names, user
+  content, everything a Raycast extension supplies or receives — and persisted formats, identifiers,
+  log text, prompts sent to a model, and what the calculator parses.
+- **Tinycast's own command names are translated and stay findable in English**: `CommandID`,
+  `SystemAction` and `WindowCommand` keep their English source as `englishName`, which the launcher
+  indexes as an alternate title.
+
+System is the default. Settings › General › Language writes the same per-app `AppleLanguages` key as
+System Settings › Language & Region › Applications, and it applies on relaunch. Because that key also
+changes `Locale.preferredLanguages` for this process, anything that indexes what the user *types* —
+app names, emoji keywords — reads macOS's own list through `SystemLanguages.preferred` instead.
+
 ## What is actually checked
 
 Everything above is guidance. The mechanical bar — the harnesses, the purity grep, lint and a

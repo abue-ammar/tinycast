@@ -38,7 +38,7 @@ enum ColorActionsMenu {
     static func content(color: ColorValue, core: AppCore) -> PopoverMenuContent {
         let primary = ColorFormat.primary(for: color)
         return PopoverMenuContent(
-            header: "Copy Color as…",
+            header: String(localized: "Copy Color as…"),
             items: ColorFormat.offered(for: color).map { format in
                 PopoverMenuItem(
                     title: format.title, icon: .blank,

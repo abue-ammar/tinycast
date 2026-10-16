@@ -13,9 +13,12 @@ enum ExtensionDateExpression {
     }
 
     static func presets(now: Date, calendar: Calendar, includesTime: Bool) -> [Suggestion] {
-        var rows: [Suggestion] = [Suggestion(title: "No Date", date: nil, detail: nil)]
+        var rows: [Suggestion] = [Suggestion(title: String(localized: "No Date"), date: nil, detail: nil)]
         let today = calendar.startOfDay(for: now)
-        let offsets: [(String, Int)] = [("Today", 0), ("Tomorrow", 1), ("Yesterday", -1)]
+        let offsets: [(String, Int)] = [
+            (String(localized: "Today"), 0), (String(localized: "Tomorrow"), 1),
+            (String(localized: "Yesterday"), -1)
+        ]
         for (title, days) in offsets {
             guard let date = calendar.date(byAdding: .day, value: days, to: today) else { continue }
             rows.append(

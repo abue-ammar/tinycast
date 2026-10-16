@@ -5,9 +5,9 @@ nonisolated enum DictationWire {
         case notInstalled, busy, unavailable
         var errorDescription: String? {
             switch self {
-            case .notInstalled: "Download the selected dictation model first."
-            case .busy: "Wait for the current dictation to finish."
-            case .unavailable: "The dictation model couldn't process the recording."
+            case .notInstalled: String(localized: "Download the selected dictation model first.")
+            case .busy: String(localized: "Wait for the current dictation to finish.")
+            case .unavailable: String(localized: "The dictation model couldn't process the recording.")
             }
         }
     }

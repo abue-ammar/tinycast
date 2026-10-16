@@ -4,7 +4,8 @@ struct SystemSettingsSettingsView: View {
     var body: some View {
         Form {
             LauncherCategorySwitchSection(
-                kind: .systemSettings, anchor: .systemSettingsSystemSettings)
+                kind: .systemSettings, anchor: .systemSettingsSystemSettings,
+                title: "Enable System Settings")
 
             LauncherItemsSection(
                 kind: .systemSettings,

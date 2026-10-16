@@ -6,7 +6,7 @@ struct QuicklinkEditorScreen: PaletteScreen {
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
     var rows: [Quicklink] { [] }
-    let primaryActionTitle = "Save Quicklink"
+    let primaryActionTitle = String(localized: "Save Quicklink")
     let hidesSearchField = true
     let actsWithoutRows = true
 

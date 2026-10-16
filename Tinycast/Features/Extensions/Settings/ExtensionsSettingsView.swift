@@ -91,9 +91,12 @@ struct ExtensionsSettingsView: View {
     private var compatibility: some View {
         Section {
             SettingsRow(
-                title: "What works",
-                subtitle:
-                    "List, detail, form, grid, no-view and menu-bar commands, preferences, storage and OAuth.",
+                title: String(localized: "What works"),
+                subtitle: String(
+                    localized: """
+                        List, detail, form, grid, no-view and menu-bar commands, preferences, storage \
+                        and OAuth.
+                        """),
                 subtitleLineLimit: 2
             ) {
                 ExtensionSettingsIcon(systemName: "checkmark.circle")
@@ -101,8 +104,8 @@ struct ExtensionsSettingsView: View {
                 EmptyView()
             }
             SettingsRow(
-                title: "What doesn't, yet",
-                subtitle: "Raycast's AI, browser and window services.",
+                title: String(localized: "What doesn't, yet"),
+                subtitle: String(localized: "Raycast's AI, browser and window services."),
                 subtitleLineLimit: 2
             ) {
                 ExtensionSettingsIcon(systemName: "xmark.circle")
@@ -165,7 +168,7 @@ struct ExtensionsSettingsView: View {
     /// Above the list as well as on each row, so a batch is one press.
     private var updatesRow: some View {
         SettingsRow(
-            title: "Updates available",
+            title: String(localized: "Updates available"),
             subtitle: listed(core.extensions.updates.values.map(\.title)) + "."
         ) {
             ExtensionSettingsIcon(systemName: "arrow.down.circle")
@@ -182,7 +185,9 @@ struct ExtensionsSettingsView: View {
         updateError = nil
         Task {
             let failed = await core.extensions.update(names)
-            if !failed.isEmpty { updateError = "Couldn't update \(failed.joined(separator: ", "))." }
+            if !failed.isEmpty {
+                updateError = String(localized: "Couldn't update \(failed.joined(separator: ", ")).")
+            }
         }
     }
 
@@ -200,7 +205,8 @@ struct ExtensionsSettingsView: View {
     private var install: some View {
         Section {
             SettingsRow(
-                title: "Search extensions", subtitle: "Ready-built from the Raycast Store.",
+                title: "Search extensions",
+                subtitle: String(localized: "Ready-built from the Raycast Store."),
                 anchor: .extensionsInstall
             ) {
                 ExtensionSettingsIcon(systemName: "magnifyingglass")
@@ -209,7 +215,7 @@ struct ExtensionsSettingsView: View {
             }
             SettingsRow(
                 title: "Install from GitHub",
-                subtitle: "Builds from source with your package manager.",
+                subtitle: String(localized: "Builds from source with your package manager."),
                 anchor: .extensionsInstall
             ) {
                 ExtensionSettingsIcon(systemName: "hammer")
@@ -235,7 +241,7 @@ struct ExtensionsSettingsView: View {
             }
             SettingsRow(
                 title: "Add from folder",
-                subtitle: "A folder with package.json and built commands.",
+                subtitle: String(localized: "A folder with package.json and built commands."),
                 anchor: .extensionsInstall
             ) {
                 ExtensionSettingsIcon(systemName: "folder")
@@ -276,9 +282,9 @@ struct ExtensionsSettingsView: View {
     }
 
     private var reclaimableSubtitle: String {
-        guard !reclaimable.isEmpty else { return "Nothing to clean up." }
-        let items = reclaimable.items == 1 ? "1 item" : "\(reclaimable.items) items"
-        return "Reclaims \(ExtensionCleanup.formatted(bytes: reclaimable.bytes)) from \(items)."
+        guard !reclaimable.isEmpty else { return String(localized: "Nothing to clean up.") }
+        let size = ExtensionCleanup.formatted(bytes: reclaimable.bytes)
+        return String(localized: "Reclaims \(size) from \(reclaimable.items) items.")
     }
 
     /// Off-main: measuring walks a `node_modules`, which is tens of thousands of files.
@@ -292,16 +298,17 @@ struct ExtensionsSettingsView: View {
 
     private var importSubtitle: String {
         if let importProgress {
-            return "Importing \(importProgress.done) of \(importProgress.total)…"
+            return String(localized: "Importing \(importProgress.done) of \(importProgress.total)…")
         }
         if let importSummary { return importSummary }
         guard raycastAvailable else {
-            return "No Raycast install found in ~/.config."
+            return String(localized: "No Raycast install found in ~/.config.")
         }
         guard !pending.isEmpty else {
-            return "Copies what Raycast has already built."
+            return String(localized: "Copies what Raycast has already built.")
         }
-        return "\(pending.count) not here yet — \(listed(pending.map(\.installed.title)))."
+        let names = listed(pending.map(\.installed.title))
+        return String(localized: "\(pending.count) not here yet — \(names).")
     }
 
     /// The first three in list order, then a count, so a long batch still fits one subtitle.
@@ -310,7 +317,7 @@ struct ExtensionsSettingsView: View {
             $0.sortKey.localizedCaseInsensitiveCompare($1.sortKey) == .orderedAscending
         }
         let names = sorted.prefix(3).joined(separator: ", ")
-        return sorted.count > 3 ? "\(names) and \(sorted.count - 3) more" : names
+        return sorted.count > 3 ? String(localized: "\(names) and \(sorted.count - 3) more") : names
     }
 
     private var raycastAvailable: Bool {
@@ -331,7 +338,7 @@ struct ExtensionsSettingsView: View {
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.allowsMultipleSelection = true
-        panel.prompt = "Add"
+        panel.prompt = String(localized: "Add")
         guard panel.runModal() == .OK else { return }
         Task {
             error = nil
@@ -356,10 +363,10 @@ struct ExtensionsSettingsView: View {
         await findPending()
         let imported = chosen.count - failed.count
         if failed.isEmpty {
-            importSummary = "Imported \(imported) extension\(imported == 1 ? "" : "s")."
+            importSummary = String(localized: "Imported \(imported) extensions.")
         } else {
-            importSummary = "Imported \(imported); \(failed.count) failed."
-            error = "Couldn't import \(failed.joined(separator: ", "))."
+            importSummary = String(localized: "Imported \(imported); \(failed.count) failed.")
+            error = String(localized: "Couldn't import \(failed.joined(separator: ", ")).")
         }
     }
 
@@ -449,7 +456,7 @@ private struct ExtensionDisclosure: View {
 
             if !installed.manifest.preferences.isEmpty {
                 rule
-                heading("Preferences")
+                heading(String(localized: "Preferences"))
                 ForEach(
                     Array(installed.manifest.preferences.enumerated()), id: \.element.name
                 ) { index, schema in
@@ -460,7 +467,9 @@ private struct ExtensionDisclosure: View {
             }
 
             rule
-            heading(installed.manifest.commands.count == 1 ? "Command" : "Commands")
+            heading(
+                installed.manifest.commands.count == 1
+                    ? String(localized: "Command") : String(localized: "Commands"))
             ForEach(Array(installed.manifest.commands.enumerated()), id: \.element.id) {
                 index, command in
                 if index > 0 { rule }
@@ -492,7 +501,7 @@ private struct ExtensionDisclosure: View {
 
     private var subtitle: String {
         let count = installed.manifest.commands.count
-        let commands = "\(count) command\(count == 1 ? "" : "s")"
+        let commands = String(localized: "\(count) commands")
         let author = installed.manifest.author
         return author.isEmpty ? commands : "\(commands) · \(author)"
     }
@@ -553,7 +562,7 @@ private struct CommandRows: View {
     @Environment(VisibilityStore.self) private var visibility
 
     /// A fact about the command, so it sits by the name as a badge rather than a warning colour.
-    private var badge: String? { command.mode == .menuBar ? "Menu Bar" : nil }
+    private var badge: String? { command.mode == .menuBar ? String(localized: "Menu Bar") : nil }
 
     private var reference: ExtensionCommandRef {
         ExtensionCommandRef(extensionName: installed.manifest.name, commandName: command.name)
@@ -581,7 +590,7 @@ private struct CommandRows: View {
             }
         }
         if command.mode == .menuBar {
-            SettingsCardRow(title: "Show in menu bar", indent: Theme.Spacing.lg) {
+            SettingsCardRow(title: String(localized: "Show in menu bar"), indent: Theme.Spacing.lg) {
                 Toggle(
                     "Show in menu bar",
                     isOn: Binding(
@@ -623,7 +632,9 @@ private struct ExtensionRefreshRow: View {
 
     var body: some View {
         let info = core.extensions.backgroundInfo(extension: extensionName, command: command.name)
-        SettingsCardRow(title: "Background refresh", detail: detail(for: info), indent: indent) {
+        SettingsCardRow(
+            title: String(localized: "Background refresh"), detail: detail(for: info), indent: indent
+        ) {
             Toggle(
                 "",
                 isOn: Binding(
@@ -634,14 +645,15 @@ private struct ExtensionRefreshRow: View {
     }
 
     private func detail(for info: ExtensionCommandMetadata) -> String {
-        var detail = "Every \(schedule)."
+        var detail = String(localized: "Every \(schedule).")
         if let lastRun = info.lastRun {
-            detail += " Last refresh \(Self.relative.localizedString(for: lastRun, relativeTo: Date()))."
+            let when = Self.relative.localizedString(for: lastRun, relativeTo: Date())
+            detail += " " + String(localized: "Last refresh \(when).")
         } else {
-            detail += " Hasn't refreshed yet."
+            detail += " " + String(localized: "Hasn't refreshed yet.")
         }
         if let error = info.lastError {
-            detail += " Last error: \(ExtensionRefreshPolicy.headline(error))."
+            detail += " " + String(localized: "Last error: \(ExtensionRefreshPolicy.headline(error)).")
         }
         return detail
     }
@@ -659,7 +671,10 @@ private struct ExtensionLauncherRow: View {
     var body: some View {
         let entries = installed.manifest.commands.map(installed.launcherEntry)
         let visibleCount = entries.count(where: visibility.isItemVisible)
-        SettingsCardRow(title: "Show in launcher", detail: detail(visible: visibleCount, of: entries.count)) {
+        SettingsCardRow(
+            title: String(localized: "Show in launcher"),
+            detail: detail(visible: visibleCount, of: entries.count)
+        ) {
             // A closure, not `set: setVisible`: an actor-isolated method as a setter crashes IRGen.
             Toggle(
                 "",
@@ -673,9 +688,9 @@ private struct ExtensionLauncherRow: View {
 
     private func detail(visible: Int, of total: Int) -> String? {
         switch visible {
-        case 0: "Hidden. Shortcuts still work."
+        case 0: String(localized: "Hidden. Shortcuts still work.")
         case total: nil
-        default: "\(visible) of \(total) commands."
+        default: String(localized: "\(visible) of \(total) commands.")
         }
     }
 }
@@ -692,8 +707,8 @@ private struct ExtensionIconRow: View {
 
     var body: some View {
         SettingsCardRow(
-            title: "Launcher icon",
-            detail: appearance == nil ? nil : "Custom icon."
+            title: String(localized: "Launcher icon"),
+            detail: appearance == nil ? nil : String(localized: "Custom icon.")
         ) {
             HStack(spacing: Theme.Spacing.md) {
                 preview
@@ -744,7 +759,8 @@ private struct ExtensionPreferenceRow: View {
     private var detail: String? {
         let description = schema.description ?? ""
         guard schema.required else { return description }
-        return description.isEmpty ? "Required." : description + " Required."
+        let requirement = String(localized: "Required.")
+        return description.isEmpty ? requirement : description + " " + requirement
     }
 
     @ViewBuilder
@@ -773,7 +789,7 @@ private struct ExtensionPreferenceRow: View {
                 .onChange(of: text) { _, value in save(value) }
         case .file, .directory, .appPicker:
             HStack(spacing: Theme.Spacing.sm) {
-                Text(text.isEmpty ? "Not set" : (text as NSString).lastPathComponent)
+                Text(text.isEmpty ? String(localized: "Not set") : (text as NSString).lastPathComponent)
                     .foregroundStyle(text.isEmpty ? .secondary : .primary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -846,7 +862,8 @@ private struct ExtensionImportPanel: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            ExtensionSettingsEditorHeader(title: "Import from Raycast", subtitle: subtitle)
+            ExtensionSettingsEditorHeader(
+                title: String(localized: "Import from Raycast"), subtitle: subtitle)
 
             if candidates.count > 6 {
                 SettingsFilterField(prompt: "Filter…", query: $filter)
@@ -895,7 +912,7 @@ private struct ExtensionImportPanel: View {
                 Button("Cancel", action: onCancel)
                     .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .cancel))
                     .keyboardShortcut(.cancelAction)
-                Button("Import \(chosen.isEmpty ? "" : "(\(chosen.count))")") {
+                Button(chosen.isEmpty ? "Import" : "Import (\(chosen.count))") {
                     onImport(
                         candidates.map(\.installed).filter { chosen.contains($0.manifest.name) })
                 }
@@ -919,20 +936,26 @@ private struct ExtensionImportPanel: View {
 
     private var subtitle: String {
         guard !candidates.isEmpty else {
-            return "No built extensions found in ~/.config/raycast/extensions."
+            return String(localized: "No built extensions found in ~/.config/raycast/extensions.")
         }
         guard !fresh.isEmpty else {
-            return "Everything Raycast has built is already here. Import one again to update it."
+            return String(
+                localized: """
+                    Everything Raycast has built is already here. Import one again to update it.
+                    """)
         }
-        let count = fresh.count == 1 ? "one" : "\(fresh.count)"
-        return "The \(count) you don't have yet \(fresh.count == 1 ? "is" : "are") already ticked. "
-            + "Ticking one you have updates it."
+        return String(
+            localized: """
+                The \(fresh.count) you don't have yet are already ticked. Ticking one you have \
+                updates it.
+                """)
     }
 
     private func detail(for candidate: RaycastImportCandidate) -> String {
         let count = candidate.installed.manifest.commands.count
-        let commands = "\(count) command\(count == 1 ? "" : "s")"
-        return candidate.isInstalled ? "\(commands) · installed — tick to update" : commands
+        return candidate.isInstalled
+            ? String(localized: "\(count) commands · installed — tick to update")
+            : String(localized: "\(count) commands")
     }
 
     private func binding(for candidate: RaycastImportCandidate) -> Binding<Bool> {

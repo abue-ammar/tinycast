@@ -8,7 +8,9 @@ struct CustomCommandListScreen: PaletteScreen {
     let openActions: () -> Void
 
     let rows: [CustomCommand]
-    var primaryActionTitle: String { rows.isEmpty ? "Create Custom Command" : "Run Command" }
+    var primaryActionTitle: String {
+        rows.isEmpty ? String(localized: "Create Custom Command") : String(localized: "Run Command")
+    }
     let actsWithoutRows = true
 
     init(
@@ -41,14 +43,16 @@ struct CustomCommandListScreen: PaletteScreen {
                 }
             } ?? []
         items.append(
-            PopoverMenuItem(title: "Create Custom Command", systemImage: "plus", shortcut: "⌘N") {
+            PopoverMenuItem(
+                title: String(localized: "Create Custom Command"), systemImage: "plus", shortcut: "⌘N"
+            ) {
                 coordinator.editCustomCommand(nil)
             })
         if let command = selected {
             items.append(
                 PopoverMenuItem(
-                    title: "Delete Custom Command", systemImage: "trash", startsSection: true,
-                    shortcut: "⌃X", isDestructive: true
+                    title: String(localized: "Delete Custom Command"), systemImage: "trash",
+                    startsSection: true, shortcut: "⌃X", isDestructive: true
                 ) {
                     Task { await coordinator.deleteCustomCommand(id: command.id) }
                 })
@@ -102,7 +106,7 @@ struct CustomCommandListScreen: PaletteScreen {
         if rows.isEmpty {
             EmptyResults(
                 text: store.commands.contains(where: \.isEnabled)
-                    ? "No matching commands" : "No custom commands yet")
+                    ? String(localized: "No matching commands") : String(localized: "No custom commands yet"))
         } else {
             let selected = command(at: selection)
             HStack(spacing: 0) {
@@ -132,8 +136,12 @@ enum CustomCommandActionsMenu {
         run: @escaping () -> Void
     ) -> [PopoverMenuItem] {
         [
-            PopoverMenuItem(title: "Run Command", systemImage: command.symbol, shortcut: "↵", action: run),
-            PopoverMenuItem(title: "Edit Custom Command", systemImage: "pencil", shortcut: "⌘E") {
+            PopoverMenuItem(
+                title: String(localized: "Run Command"), systemImage: command.symbol, shortcut: "↵",
+                action: run),
+            PopoverMenuItem(
+                title: String(localized: "Edit Custom Command"), systemImage: "pencil", shortcut: "⌘E"
+            ) {
                 coordinator.editCustomCommand(command)
             }
         ]

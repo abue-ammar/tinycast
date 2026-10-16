@@ -269,7 +269,7 @@ struct ExtensionAction: Equatable, Identifiable {
     let enclosingSubmenuTitle: String?
 
     var id: Int { node.id }
-    var title: String { node.string("title") ?? "Action" }
+    var title: String { node.string("title") ?? String(localized: "Action") }
     var handler: String? { node.handler("onAction") }
     var isDestructive: Bool { node.string("style") == "destructive" }
     var iconValue: RenderValue? { node.props["icon"] }

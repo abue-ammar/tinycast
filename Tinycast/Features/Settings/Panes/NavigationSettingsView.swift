@@ -36,7 +36,7 @@ struct NavigationSettingsView: View {
 
                 SettingsRow(
                     title: "Disabled Applications",
-                    subtitle: "Their menus are never searched.",
+                    subtitle: String(localized: "Their menus are never searched."),
                     anchor: .navigationMenuSearch
                 ) {
                     EmptyView()

@@ -165,7 +165,7 @@ final class CalendarStore {
         let me = event.attendees?.first { $0.isCurrentUser }
         return MeetingEvent(
             id: occurrenceID(of: event, start: start),
-            title: event.title ?? "(No Title)",
+            title: event.title ?? String(localized: "(No Title)"),
             start: start,
             end: end,
             isAllDay: event.isAllDay,

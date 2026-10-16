@@ -102,7 +102,8 @@ private final class InstalledCLITurnRunner {
     ) async {
         guard kind != .codex else {
             continuation.finish(
-                throwing: AIProviderError.unavailable("Codex requires its app-server adapter."))
+                throwing: AIProviderError.unavailable(
+                    String(localized: "Codex requires its app-server adapter.")))
             return
         }
         guard
@@ -113,7 +114,8 @@ private final class InstalledCLITurnRunner {
             })
         else {
             continuation.finish(
-                throwing: AIProviderError.unavailable("There is no user message to send."))
+                throwing: AIProviderError.unavailable(
+                    String(localized: "There is no user message to send.")))
             return
         }
         let resolvedExecutable: URL?
@@ -136,7 +138,7 @@ private final class InstalledCLITurnRunner {
         guard let executable = resolvedExecutable else {
             continuation.finish(
                 throwing: AIProviderError.unavailable(
-                    "Install " + kind.title + " before using this model."))
+                    String(localized: "Install \(kind.title) before using this model.")))
             return
         }
         if Task.isCancelled {
@@ -151,7 +153,7 @@ private final class InstalledCLITurnRunner {
         } catch {
             continuation.finish(
                 throwing: AIProviderError.unavailable(
-                    "Tinycast could not prepare its private AI workspace."))
+                    String(localized: "Tinycast could not prepare its private AI workspace.")))
             return
         }
 
@@ -170,7 +172,7 @@ private final class InstalledCLITurnRunner {
                 activeServers = []
                 continuation.finish(
                     throwing: AIProviderError.unavailable(
-                        "Tinycast could not write its private MCP configuration."))
+                        String(localized: "Tinycast could not write its private MCP configuration.")))
                 return
             }
             configURL = url
@@ -185,7 +187,7 @@ private final class InstalledCLITurnRunner {
                 try? FileManager.default.removeItem(at: url)
                 continuation.finish(
                     throwing: AIProviderError.unavailable(
-                        "Tinycast could not write its private AI prompt."))
+                        String(localized: "Tinycast could not write its private AI prompt.")))
                 return
             }
             grokPrompt = url
@@ -198,7 +200,7 @@ private final class InstalledCLITurnRunner {
             } catch {
                 continuation.finish(
                     throwing: AIProviderError.unavailable(
-                        "Tinycast could not write its private image attachments."))
+                        String(localized: "Tinycast could not write its private image attachments.")))
                 return
             }
             files += attachments
@@ -252,7 +254,7 @@ private final class InstalledCLITurnRunner {
             Self.remove(files)
             continuation.finish(
                 throwing: AIProviderError.responseFailed(
-                    kind.title + " could not start: " + error.localizedDescription))
+                    String(localized: "\(kind.title) could not start: \(error.localizedDescription)")))
             return
         }
         privateFiles = files
@@ -272,7 +274,7 @@ private final class InstalledCLITurnRunner {
         }
         // Framed as JSON, so a picture rides beside the text as a content block.
         guard let line = ClaudeControlProtocol.userMessage(prompt, images: images) else {
-            fail("Tinycast could not frame the request for " + kind.title + ".")
+            fail(String(localized: "Tinycast could not frame the request for \(kind.title)."))
             return
         }
         // A tool loop answers on the same pipe, so an armed turn keeps stdin open for it.
@@ -452,7 +454,7 @@ private final class InstalledCLITurnRunner {
         while let newline = outputBuffer.firstIndex(of: 0x0A) {
             let line = outputBuffer[..<newline]
             if line.count > Self.maximumPartialLineBytes {
-                fail(kind.title + " returned an oversized response.")
+                fail(String(localized: "\(kind.title) returned an oversized response."))
                 return
             }
             outputBuffer.removeSubrange(...newline)
@@ -462,7 +464,7 @@ private final class InstalledCLITurnRunner {
                     Data(line), kind: kind, servers: activeServers), token: token)
         }
         if outputBuffer.count > Self.maximumPartialLineBytes {
-            fail(kind.title + " returned an oversized response.")
+            fail(String(localized: "\(kind.title) returned an oversized response."))
         }
     }
 
@@ -482,8 +484,8 @@ private final class InstalledCLITurnRunner {
         for event in frame.events { continuation?.yield(event) }
         if frame.stoppedAtRoundCap {
             fail(
-                roundCap.map { "Stopped after \($0) rounds of tool calls." }
-                    ?? kind.title + " could not finish the response.")
+                roundCap.map { String(localized: "Stopped after \($0) rounds of tool calls.") }
+                    ?? String(localized: "\(kind.title) could not finish the response."))
         } else if let error = frame.error {
             fail(error)
         } else if frame.completed {
@@ -549,7 +551,7 @@ private final class InstalledCLITurnRunner {
                     of: "\u{001B}\\[[0-9;]*[A-Za-z]", with: "", options: .regularExpression
                 )
                 .trimmingCharacters(in: .whitespacesAndNewlines)
-            let fallback = kind.title + " exited with status " + String(status) + "."
+            let fallback = String(localized: "\(kind.title) exited with status \(status).")
             fail(detail.isEmpty ? fallback : detail)
         }
         deleteTurnSession()

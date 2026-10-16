@@ -19,20 +19,20 @@ enum EmojiCategory: String, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .smileysAndPeople: return "Smileys & People"
-        case .animalsAndNature: return "Animals & Nature"
-        case .foodAndDrink: return "Food & Drink"
-        case .activity: return "Activity"
-        case .travelAndPlaces: return "Travel & Places"
-        case .objects: return "Objects"
-        case .symbols: return "Symbols"
-        case .flags: return "Flags"
-        case .arrows: return "Arrows"
-        case .currency: return "Currency"
-        case .math: return "Math"
-        case .shapesAndPunctuation: return "Shapes & Punctuation"
-        case .cjk: return "CJK Symbols"
-        case .keysAndTechnical: return "Keys & Technical"
+        case .smileysAndPeople: return String(localized: "Smileys & People")
+        case .animalsAndNature: return String(localized: "Animals & Nature")
+        case .foodAndDrink: return String(localized: "Food & Drink")
+        case .activity: return String(localized: "Activity")
+        case .travelAndPlaces: return String(localized: "Travel & Places")
+        case .objects: return String(localized: "Objects")
+        case .symbols: return String(localized: "Symbols")
+        case .flags: return String(localized: "Flags")
+        case .arrows: return String(localized: "Arrows")
+        case .currency: return String(localized: "Currency")
+        case .math: return String(localized: "Math")
+        case .shapesAndPunctuation: return String(localized: "Shapes & Punctuation")
+        case .cjk: return String(localized: "CJK Symbols")
+        case .keysAndTechnical: return String(localized: "Keys & Technical")
         }
     }
 
@@ -60,9 +60,9 @@ enum EmojiCategory: String, CaseIterable, Sendable {
         switch self {
         case .symbols, .arrows, .currency, .math, .shapesAndPunctuation, .cjk,
             .keysAndTechnical:
-            "Symbol"
+            String(localized: "Symbol")
         default:
-            "Emoji"
+            String(localized: "Emoji")
         }
     }
 }
@@ -79,9 +79,9 @@ enum EmojiCategoryFilter: Hashable, Sendable {
 
     var title: String {
         switch self {
-        case .all: "All Categories"
-        case .pinned: "Pinned"
-        case .frequentlyUsed: "Frequently Used"
+        case .all: String(localized: "All Categories")
+        case .pinned: String(localized: "Pinned")
+        case .frequentlyUsed: String(localized: "Frequently Used")
         case .category(let category): category.title
         }
     }
@@ -114,7 +114,6 @@ enum EmojiGridColumns: Int, CaseIterable, Identifiable, Sendable {
     static let `default`: Self = .eight
 
     var id: Int { rawValue }
-    var title: String { "\(rawValue) columns" }
 
     /// Nil when the zoom would change nothing: already at the default, or at six or ten columns.
     func applying(_ zoom: EmojiGridZoom, default defaultColumns: Self) -> Self? {
@@ -147,12 +146,12 @@ enum EmojiSkinTone: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .none: return "Default"
-        case .light: return "Light"
-        case .mediumLight: return "Medium Light"
-        case .medium: return "Medium"
-        case .mediumDark: return "Medium Dark"
-        case .dark: return "Dark"
+        case .none: return String(localized: "Default")
+        case .light: return String(localized: "Light")
+        case .mediumLight: return String(localized: "Medium Light")
+        case .medium: return String(localized: "Medium")
+        case .mediumDark: return String(localized: "Medium Dark")
+        case .dark: return String(localized: "Dark")
         }
     }
 

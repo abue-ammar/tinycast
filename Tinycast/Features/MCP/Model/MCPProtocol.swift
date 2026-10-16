@@ -53,7 +53,8 @@ enum MCPProtocol {
         }
         guard let id = numericID else { return .invalid }
         if let error = object["error"] as? [String: Any] {
-            return .failure(id: id, message: error["message"] as? String ?? "The server failed.")
+            return .failure(
+                id: id, message: error["message"] as? String ?? String(localized: "The server failed."))
         }
         guard let result = object["result"] else { return .invalid }
         return .response(id: id, result: JSONValue(result))

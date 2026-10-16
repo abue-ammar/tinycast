@@ -58,7 +58,9 @@ final class HotKeySettingsFile {
             }
             guard let binding = spelling.binding(from: text) else {
                 issues.append(
-                    .invalidEntry(key, "\(item.label): “\(text)” isn't a shortcut Tinycast can bind"))
+                    .invalidEntry(
+                        key,
+                        String(localized: "\(item.label): “\(text)” isn't a shortcut Tinycast can bind")))
                 continue
             }
             guard binding != current else { continue }
@@ -82,7 +84,9 @@ final class HotKeySettingsFile {
                 continue
             }
             issues.append(
-                .invalidEntry(change.key, "\(change.label): “\(change.text)” already runs \(owner)"))
+                .invalidEntry(
+                    change.key,
+                    String(localized: "\(change.label): “\(change.text)” already runs \(owner)")))
             if let previous = change.previous,
                 hotKeys.conflictOwner(of: previous, excluding: change.action) == nil
             {

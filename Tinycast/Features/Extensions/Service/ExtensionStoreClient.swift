@@ -46,7 +46,8 @@ struct ExtensionStoreClient: Sendable {
         }
         let tree = try ExtensionGitHubSource.parseTree(try await get(url))
         guard tree.truncated != true else {
-            throw ExtensionStoreError.downloadFailed("\(source.summary) is too large to download.")
+            throw ExtensionStoreError.downloadFailed(
+                String(localized: "\(source.summary) is too large to download."))
         }
 
         let fileManager = FileManager.default
@@ -78,7 +79,11 @@ struct ExtensionStoreClient: Sendable {
                     .directorySHA(named: segment)
             else {
                 throw ExtensionStoreError.rejected(
-                    "\(source.owner)/\(source.repository) has no \(source.path) folder at \(source.ref).")
+                    String(
+                        localized: """
+                            \(source.owner)/\(source.repository) has no \(source.path) folder at \
+                            \(source.ref).
+                            """))
             }
             sha = next
         }
@@ -101,7 +106,10 @@ struct ExtensionStoreClient: Sendable {
             // Anonymous, so a private repository answers exactly like a missing one.
             if isGitHubAPI, http.statusCode == 404 {
                 throw ExtensionStoreError.rejected(
-                    "That repository or branch wasn't found. A private repository can't be read.")
+                    String(
+                        localized: """
+                            That repository or branch wasn't found. A private repository can't be read.
+                            """))
             }
             // GitHub explains a rate limit in the body; surfacing that beats a bare "403".
             struct Message: Decodable { let message: String }

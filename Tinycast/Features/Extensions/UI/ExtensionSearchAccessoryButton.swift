@@ -33,7 +33,10 @@ struct ExtensionSearchAccessoryButton: View {
             }
             .foregroundStyle(Theme.Colors.textSecondary)
         }
-        .help("\(accessory.tooltip ?? accessory.placeholder ?? "Filter")  ⌘P")
+        .help(
+            Text(
+                verbatim:
+                    "\(accessory.tooltip ?? accessory.placeholder ?? String(localized: "Filter"))  ⌘P"))
     }
 
     private var icon: ExtensionImage.Resolved? {

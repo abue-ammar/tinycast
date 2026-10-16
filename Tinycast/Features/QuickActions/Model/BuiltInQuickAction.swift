@@ -8,7 +8,10 @@ enum BuiltInQuickAction: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    var title: String {
+    var title: String { String(localized: titleResource) }
+
+    /// A resource, so a launcher command named after it keeps the English name searchable.
+    var titleResource: LocalizedStringResource {
         switch self {
         case .fixGrammar: return "Fix Grammar"
         case .rewrite: return "Rewrite"
@@ -28,10 +31,10 @@ enum BuiltInQuickAction: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var progressTitle: String {
         switch self {
-        case .fixGrammar: return "Fixing Grammar…"
-        case .rewrite: return "Rewriting…"
-        case .translate: return "Translating…"
-        case .summarize: return "Summarizing…"
+        case .fixGrammar: return String(localized: "Fixing Grammar…")
+        case .rewrite: return String(localized: "Rewriting…")
+        case .translate: return String(localized: "Translating…")
+        case .summarize: return String(localized: "Summarizing…")
         }
     }
 

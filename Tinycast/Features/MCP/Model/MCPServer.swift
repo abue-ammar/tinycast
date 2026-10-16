@@ -26,9 +26,9 @@ enum MCPTrust: String, CaseIterable, Codable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .ask: return "Ask Each Chat"
-        case .always: return "Always Allow"
-        case .never: return "Never Allow"
+        case .ask: return String(localized: "Ask Each Chat")
+        case .always: return String(localized: "Always Allow")
+        case .never: return String(localized: "Never Allow")
         }
     }
 }

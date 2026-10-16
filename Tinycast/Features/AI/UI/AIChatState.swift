@@ -105,7 +105,8 @@ final class AIChatState {
                 guard let self, !Task.isCancelled, self.replyGeneration == generation,
                     self.isStreaming
                 else { return }
-                self.finishLast(state: .failed, fallback: "The response ended unexpectedly.")
+                self.finishLast(
+                    state: .failed, fallback: String(localized: "The response ended unexpectedly."))
             } catch {
                 guard let self, !Task.isCancelled, self.replyGeneration == generation,
                     self.isStreaming
@@ -162,7 +163,7 @@ final class AIChatState {
             discardPendingText()
             return
         }
-        finishLast(state: .failed, fallback: "Cancelled")
+        finishLast(state: .failed, fallback: String(localized: "Cancelled"))
     }
 
     func startNewChat() {
@@ -203,7 +204,7 @@ final class AIChatState {
         session.id == id && !session.messages.isEmpty
     }
 
-    var liveStatus: String? { isThinking ? "Thinking…" : nil }
+    var liveStatus: String? { isThinking ? String(localized: "Thinking…") : nil }
 
     var lastAssistantText: String? {
         session.messages.last(where: { $0.role == .assistant && !$0.text.isEmpty })?.text
@@ -263,7 +264,7 @@ final class AIChatState {
             message.usage = usage
             session.replaceLast(with: message)
         case .finished:
-            finishLast(state: .complete, fallback: "No response")
+            finishLast(state: .complete, fallback: String(localized: "No response"))
         }
     }
 
@@ -387,18 +388,20 @@ enum ChatAttachmentRefusal: Equatable, Sendable {
     var message: String {
         switch self {
         case .count:
-            return "\(AIAttachmentBudget.maxCount) attachments is all one message can carry."
-        case .size: return "That file is too big for this message — send these first."
+            return String(
+                localized: "\(AIAttachmentBudget.maxCount) attachments is all one message can carry.")
+        case .size: return String(localized: "That file is too big for this message — send these first.")
         case .textTooLong:
             let limit = AIAttachmentBudget.maxInlinedTextBytes / 1_024
-            return "That text file is too big to attach — \(limit) KB is the limit."
-        case .undecodable: return "That file isn't text Tinycast can read."
-        case .unreadable: return "That file could not be read."
+            return String(localized: "That text file is too big to attach — \(limit) KB is the limit.")
+        case .undecodable: return String(localized: "That file isn't text Tinycast can read.")
+        case .unreadable: return String(localized: "That file could not be read.")
         case .unsupported(let ext):
-            return "Can't attach .\(ext) files — only images, PDFs and text."
-        case .imagesUnsupported: return "This model can't read images. Switch model to attach one."
+            return String(localized: "Can't attach .\(ext) files — only images, PDFs and text.")
+        case .imagesUnsupported:
+            return String(localized: "This model can't read images. Switch model to attach one.")
         case .documentsUnsupported:
-            return "This model can't read PDFs. Switch model or paste the text."
+            return String(localized: "This model can't read PDFs. Switch model or paste the text.")
         }
     }
 }

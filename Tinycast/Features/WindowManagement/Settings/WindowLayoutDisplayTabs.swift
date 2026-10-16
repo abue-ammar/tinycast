@@ -20,7 +20,7 @@ struct WindowLayoutDisplayTabs: View {
         return Button {
             draft.select(displayUUID: display.uuid)
         } label: {
-            Text("\(ordinal)")
+            Text(ordinal, format: .number)
                 .font(Theme.Typography.keyCap)
                 .monospacedDigit()
                 .foregroundStyle(isSelected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)

@@ -19,6 +19,14 @@ struct GeneralSettingsView: View {
             }
 
             Section {
+                Picker(selection: $settings.language) {
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(verbatim: language.title).tag(language)
+                        if language == .system { Divider() }
+                    }
+                } label: {
+                    SettingsRowTitle(.generalGeneral, "Language")
+                }
                 Toggle(isOn: $settings.launchAtLogin) {
                     SettingsRowTitle(.generalGeneral, "Launch at login")
                 }
@@ -94,7 +102,7 @@ struct GeneralSettingsView: View {
                 Picker(selection: $settings.calcNumberStyle) {
                     ForEach(CalcNumberStyle.allCases) { style in
                         let sample = core.regionNumberFormat.format(for: style).localized("1,234,567.89")
-                        Text("\(style.title) (\(sample))").tag(style)
+                        Text(verbatim: "\(style.title) (\(sample))").tag(style)
                     }
                 } label: {
                     SettingsRowTitle(.generalCalculator, "Number format")
@@ -165,12 +173,13 @@ private struct WindowModeRow: View {
 
     var body: some View {
         SettingsRow(
-            title: "Window mode", subtitle: "Choose how the launcher opens.",
+            title: "Window mode",
+            subtitle: String(localized: "Choose how the launcher opens."),
             subtitleLineLimit: 2, alignment: .top, anchor: .generalAppearance
         ) {
             HStack(spacing: Theme.Spacing.md) {
-                option("Compact", image: "WindowModeCompact", compact: true)
-                option("Expanded", image: "WindowModeExpanded", compact: false)
+                option(String(localized: "Compact"), image: "WindowModeCompact", compact: true)
+                option(String(localized: "Expanded"), image: "WindowModeExpanded", compact: false)
             }
         }
     }
@@ -238,7 +247,7 @@ private struct InterfaceSizeRow: View {
     var body: some View {
         SettingsRow(
             title: "Interface size",
-            subtitle: "Scales the launcher and its panels, not Settings.",
+            subtitle: String(localized: "Scales the launcher and its panels, not Settings."),
             anchor: .generalAppearance
         ) {
             HStack(spacing: Theme.Spacing.xs) {
@@ -254,7 +263,7 @@ private struct InterfaceSizeRow: View {
         return Button {
             settings.interfaceSize = size
         } label: {
-            Text("Aa")
+            Text(verbatim: "Aa")
                 .font(.system(size: Self.glyph[size] ?? 13, weight: .medium))
                 .foregroundStyle(selected ? Color.primary : Color.secondary)
                 .settingsOptionSegment(isSelected: selected)

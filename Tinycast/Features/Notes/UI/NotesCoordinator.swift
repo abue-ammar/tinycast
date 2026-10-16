@@ -69,7 +69,7 @@ final class NotesCoordinator {
     var hasActiveNote: Bool { store.activeID != nil }
     /// UTF-16 units, straight off the text storage: the only length TextKit hands back in O(1).
     var characterCountLabel: String {
-        characterCount == 1 ? "1 character" : "\(characterCount) characters"
+        String(localized: "\(characterCount) characters")
     }
 
     var searchQueryBinding: Binding<String> {
@@ -277,10 +277,10 @@ final class NotesCoordinator {
         runOperation { [weak self] generation in
             guard let self else { return }
             let confirmed = await core.confirm(
-                title: "Move “\(title)” to Trash?",
-                message: "You can recover it from the Trash in Finder.",
+                title: String(localized: "Move “\(title)” to Trash?"),
+                message: String(localized: "You can recover it from the Trash in Finder."),
                 symbol: nil,
-                confirmTitle: "Move to Trash")
+                confirmTitle: String(localized: "Move to Trash"))
             guard confirmed, settings.notesEnabled, !Task.isCancelled else { return }
             let switcherOrder = visibleNotes.map(\.id)
             let removed = await store.trash(id)
@@ -303,7 +303,7 @@ final class NotesCoordinator {
     func chooseNotesFolder() {
         guard
             let url = FolderPicker.choose(
-                message: "Choose the folder your notes are kept in.",
+                message: String(localized: "Choose the folder your notes are kept in."),
                 startingAt: store.notesDirectory)
         else { return }
         settings.notesFolder = AppPaths.contentFolderSetting(for: url, named: "Notes")
@@ -465,21 +465,21 @@ final class NotesCoordinator {
             switch issue {
             case .load(let failure):
                 let retry = await core.reportFailure(
-                    title: "Couldn't Open Note",
+                    title: String(localized: "Couldn't Open Note"),
                     message: failure.localizedDescription,
                     symbol: "text.page",
-                    recovery: "Retry")
+                    recovery: String(localized: "Retry"))
                 if retry { _ = await store.reload() }
             case .save(let failure):
                 let retry = await core.reportFailure(
-                    title: "Couldn't Save Note",
+                    title: String(localized: "Couldn't Save Note"),
                     message: failure.localizedDescription,
                     symbol: "text.page",
-                    recovery: "Retry")
+                    recovery: String(localized: "Retry"))
                 if retry { await store.retrySave() }
             case .operation(let failure):
                 _ = await core.reportFailure(
-                    title: "Couldn't Update Note",
+                    title: String(localized: "Couldn't Update Note"),
                     message: failure.localizedDescription,
                     symbol: "text.page",
                     recovery: nil)

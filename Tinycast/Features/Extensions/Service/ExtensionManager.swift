@@ -688,7 +688,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             if extensionNamed(reference.extensionName) != nil {
                 commandMetadata.recordBackgroundResult(
                     extension: reference.extensionName, command: reference.commandName,
-                    success: succeeded, error: succeeded ? nil : (backgroundFailure ?? "Timed out."),
+                    success: succeeded,
+                    error: succeeded ? nil : (backgroundFailure ?? String(localized: "Timed out.")),
                     now: Date())
             }
             backgroundSessionID = nil
@@ -969,12 +970,12 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             return
         }
         let panel = NSAlert()
-        panel.messageText = "Open With"
+        panel.messageText = String(localized: "Open With")
         panel.informativeText = target.lastPathComponent
         for candidate in candidates.prefix(4) {
             panel.addButton(withTitle: candidate.deletingPathExtension().lastPathComponent)
         }
-        panel.addButton(withTitle: "Cancel")
+        panel.addButton(withTitle: String(localized: "Cancel"))
         let response = panel.runModal().rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
         guard response >= 0, response < min(candidates.count, 4) else { return }
         NSWorkspace.shared.open(

@@ -27,12 +27,12 @@ enum ClipboardFileKind: Sendable {
 
     var title: String {
         switch self {
-        case .image: return "Image"
-        case .movie: return "Movie"
-        case .audio: return "Audio"
+        case .image: return String(localized: "Image")
+        case .movie: return String(localized: "Movie")
+        case .audio: return String(localized: "Audio")
         case .pdf: return "PDF"
-        case .folder: return "Folder"
-        case .other: return "File"
+        case .folder: return String(localized: "Folder")
+        case .other: return String(localized: "File")
         }
     }
 

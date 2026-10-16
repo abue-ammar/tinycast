@@ -33,7 +33,8 @@ enum BackupApplier {
                 summary.snippetsNeedEnabling =
                     summary.snippets > 0 && !core.settings.snippetsEnabled
             } catch {
-                summary.problems.append("Couldn't import snippets: \(error.localizedDescription)")
+                summary.problems.append(
+                    String(localized: "Couldn't import snippets: \(error.localizedDescription)"))
             }
         }
         if categories.contains(.notes) {

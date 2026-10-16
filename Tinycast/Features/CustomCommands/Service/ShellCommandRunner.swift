@@ -156,7 +156,7 @@ enum ShellCommandRunner {
                 workingDirectory: launch.directory)
         else {
             launch.removeScript()
-            return failedSession("The shell could not be started.")
+            return failedSession(String(localized: "The shell could not be started."))
         }
 
         let stopped = StopFlag()
@@ -310,7 +310,8 @@ enum ShellCommandRunner {
         workingDirectory: String?
     ) throws(LaunchFailure) -> Launch {
         guard let directory = resolvedWorkingDirectory(workingDirectory) else {
-            throw LaunchFailure(reason: "The folder “\(workingDirectory ?? "")” no longer exists.")
+            throw LaunchFailure(
+                reason: String(localized: "The folder “\(workingDirectory ?? "")” no longer exists."))
         }
         // zsh reads `.zshrc` only for interactive shells, so `-l` alone sees no aliases.
         let flag = loadingShellEnvironment ? "-ilc" : "-lc"
@@ -326,7 +327,7 @@ enum ShellCommandRunner {
             FileManager.default.createFile(
                 atPath: script.path, contents: Data(command.utf8),
                 attributes: [.posixPermissions: 0o700])
-        else { throw LaunchFailure(reason: "The script could not be written.") }
+        else { throw LaunchFailure(reason: String(localized: "The script could not be written.")) }
         return Launch(
             arguments: [flag, #"exec "$0" "$@""#, script.path] + arguments, directory: directory,
             script: script)

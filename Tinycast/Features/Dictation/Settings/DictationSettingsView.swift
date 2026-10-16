@@ -65,8 +65,12 @@ struct DictationSettingsView: View {
                     if settings.dictationMode == .pushToTalk {
                         let issue = coordinator.holdShortcutIssue
                         Text(
-                            issue ?? "Hold a key combination or a single modifier; release it to transcribe. "
-                                + "Double taps work in toggle mode."
+                            issue
+                                ?? String(
+                                    localized: """
+                                        Hold a key combination or a single modifier; release it to \
+                                        transcribe. Double taps work in toggle mode.
+                                        """)
                         )
                         .font(.caption)
                         .foregroundStyle(issue == nil ? Color.secondary : Color.orange)
@@ -122,7 +126,7 @@ struct DictationSettingsView: View {
                             Text("Auto").tag("")
                             Divider()
                             ForEach(DictationLanguage.allCases) { language in
-                                Text(language.rawValue).tag(language.rawValue)
+                                Text(language.displayName).tag(language.rawValue)
                             }
                         } label: {
                             SettingsRowTitle(.dictationModel, "Language")
@@ -236,8 +240,10 @@ struct DictationSettingsView: View {
     }
 
     private var modelDescription: String {
-        modelSize.map { "\(ByteCountFormatter.string(fromByteCount: $0, countStyle: .file)) on disk" }
-            ?? "About \(settings.dictationModel.approximateInstalledMegabytes) MB on disk"
+        let approximate = Int64(settings.dictationModel.approximateInstalledMegabytes) * 1_000_000
+        return modelSize.map {
+            String(localized: "\(ByteCountFormatter.string(fromByteCount: $0, countStyle: .file)) on disk")
+        } ?? String(localized: "About \(approximate.formatted(.byteCount(style: .file))) on disk")
     }
 
     private struct DownloadProgressView: View {
@@ -276,9 +282,11 @@ struct DictationSettingsView: View {
         }
 
         private var title: String {
-            guard let progress = models.downloadProgress else { return "Preparing download…" }
+            guard let progress = models.downloadProgress else {
+                return String(localized: "Preparing download…")
+            }
             return progress.total > 0 && progress.received >= progress.total
-                ? "Finishing download…" : "Downloading model…"
+                ? String(localized: "Finishing download…") : String(localized: "Downloading model…")
         }
     }
 

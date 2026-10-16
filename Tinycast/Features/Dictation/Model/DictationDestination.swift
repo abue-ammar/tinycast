@@ -8,9 +8,9 @@ enum DictationDestination: String, CaseIterable, Identifiable, Sendable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .paste: "Paste in active app"
-        case .copy: "Copy to clipboard"
-        case .both: "Paste and copy"
+        case .paste: String(localized: "Paste in active app")
+        case .copy: String(localized: "Copy to clipboard")
+        case .both: String(localized: "Paste and copy")
         }
     }
 

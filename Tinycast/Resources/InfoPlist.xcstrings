@@ -1,0 +1,360 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSAppleEventsUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast verwendet Automation nur für Systemaktionen, die du ausdrücklich ausführst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast uses automation to perform system actions you explicitly run."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast usa la automatización para realizar las acciones del sistema que ejecutas expresamente."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast utilise l’automatisation pour effectuer les actions système que vous lancez explicitement."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycastは、あなたが明示的に実行するシステムアクションにオートメーションを使用します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast는 사용자가 직접 실행하는 시스템 동작을 수행할 때 자동화를 사용합니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Tinycast usa automação para realizar as ações do sistema que você executa explicitamente."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast использует автоматизацию для выполнения системных действий, которые вы запускаете явно."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast 使用自动化来执行你主动运行的系统操作。"
+          }
+        }
+      }
+    },
+    "NSBluetoothAlwaysUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast greift nur auf Bluetooth zu, wenn du die Aktion „Bluetooth umschalten“ ausführst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast uses Bluetooth access only when you run the Toggle Bluetooth action."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast solo accede a Bluetooth cuando ejecutas la acción de activar o desactivar Bluetooth."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast accède au Bluetooth uniquement lorsque vous lancez l’action d’activation ou de désactivation du Bluetooth."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycastは、Bluetoothの切り替えアクションを実行したときのみBluetoothにアクセスします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast는 Bluetooth 전환 동작을 실행할 때에만 Bluetooth에 접근합니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Tinycast acessa o Bluetooth apenas quando você executa a ação de ativar ou desativar o Bluetooth."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast обращается к Bluetooth только при запуске действия переключения Bluetooth."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast 仅在你运行切换蓝牙操作时访问蓝牙。"
+          }
+        }
+      }
+    },
+    "NSCalendarsFullAccessUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast liest die Termine von heute und morgen, damit du direkt aus dem Launcher an Besprechungen teilnehmen kannst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast reads today's and tomorrow's events so you can join a meeting from the palette."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast lee los eventos de hoy y mañana para que puedas unirte a una reunión desde el lanzador."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast lit les événements d’aujourd’hui et de demain pour vous permettre de rejoindre une réunion depuis le lanceur."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycastは今日と明日のイベントを読み取り、ランチャーから会議に参加できるようにします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast는 런처에서 회의에 참여할 수 있도록 오늘과 내일의 이벤트를 읽습니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Tinycast lê os eventos de hoje e de amanhã para você entrar em uma reunião pelo iniciador."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast читает события на сегодня и завтра, чтобы вы могли присоединиться к встрече из лаунчера."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast 读取今天和明天的日程，方便你从启动器加入会议。"
+          }
+        }
+      }
+    },
+    "NSCameraUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast zeigt eine Kameravorschau, damit du dein Bild prüfen und ein Foto in die Zwischenablage kopieren kannst."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast shows a camera preview so you can check yourself, and take a photo to the clipboard."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast muestra una vista previa de la cámara para que puedas verte y copiar una foto al portapapeles."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast affiche un aperçu de la caméra pour vous permettre de vous voir et de copier une photo dans le presse-papiers."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycastはカメラのプレビューで身だしなみを確認したり、写真を撮ってクリップボードにコピーしたりできます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast는 자신의 모습을 확인하고 사진을 찍어 클립보드에 복사할 수 있도록 카메라 미리보기를 표시합니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Tinycast mostra uma prévia da câmera para você conferir sua imagem e tirar uma foto para a área de transferência."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast показывает изображение с камеры, чтобы вы могли проверить свой вид и скопировать снимок в буфер обмена."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast 显示相机预览，方便你查看自己的形象，并将拍摄的照片拷贝到剪贴板。"
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast nimmt Audio nur auf, während du das Diktat verwendest, und wandelt es auf deinem Mac in Text um."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast records audio only while you use Dictation, to transcribe it on your Mac."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast solo graba audio mientras usas Dictado para transcribirlo en tu Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast enregistre l’audio uniquement lorsque vous utilisez la dictée, pour le transcrire sur votre Mac."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycastは音声入力の使用中のみ音声を録音し、Mac上で文字に起こします。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast는 받아쓰기를 사용하는 동안에만 오디오를 녹음하여 Mac에서 텍스트로 변환합니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Tinycast grava áudio apenas enquanto você usa o Ditado, para transcrevê-lo no seu Mac."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast записывает звук только во время диктовки и преобразует его в текст на вашем Mac."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast 仅在你使用听写时录制音频，并在你的 Mac 上将其转为文字。"
+          }
+        }
+      }
+    },
+    "NSRemindersFullAccessUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast erlaubt Erweiterungen, die du ausführst, deine Erinnerungen zu lesen und zu bearbeiten."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast lets extensions you run read and edit your reminders."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast permite que las extensiones que ejecutas lean y editen tus recordatorios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast permet aux extensions que vous lancez de lire et de modifier vos rappels."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycastは、あなたが実行する拡張機能にリマインダーの読み取りと編集を許可します。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast는 사용자가 실행하는 확장 프로그램이 미리 알림을 읽고 편집할 수 있게 합니다."
+          }
+        },
+        "pt": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "O Tinycast permite que as extensões que você executa leiam e editem seus lembretes."
+          }
+        },
+        "ru": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast позволяет запускаемым вами расширениям читать и редактировать ваши напоминания."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tinycast 允许你运行的扩展读取和编辑你的提醒事项。"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

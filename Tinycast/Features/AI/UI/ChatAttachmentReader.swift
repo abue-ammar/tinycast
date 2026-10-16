@@ -21,7 +21,8 @@ nonisolated enum ChatAttachmentReader {
         guard let png = boundedPNG(data) else { return .failed(.size) }
         return .staged(
             Staged(
-                payload: .image(AIImage(data: png, mimeType: "image/png")), name: "Image",
+                payload: .image(AIImage(data: png, mimeType: "image/png")),
+                name: String(localized: "Image"),
                 preview: preview(png)))
     }
 

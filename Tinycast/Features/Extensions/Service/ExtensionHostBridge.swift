@@ -95,11 +95,12 @@ struct ExtensionAlert: Sendable {
     var isDestructive: Bool
 
     init(payload: [String: RenderValue]) {
-        title = payload["title"]?.stringValue ?? "Are you sure?"
+        title = payload["title"]?.stringValue ?? String(localized: "Are you sure?")
         message = payload["message"]?.stringValue
         let primary = payload["primaryAction"]?.objectValue
-        primaryTitle = primary?["title"]?.stringValue ?? "Confirm"
-        dismissTitle = payload["dismissAction"]?.objectValue?["title"]?.stringValue ?? "Cancel"
+        primaryTitle = primary?["title"]?.stringValue ?? String(localized: "Confirm")
+        dismissTitle =
+            payload["dismissAction"]?.objectValue?["title"]?.stringValue ?? String(localized: "Cancel")
         isDestructive = primary?["style"]?.stringValue == "destructive"
     }
 }
@@ -183,8 +184,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             {
                 _ = context.present(
                     toast: ExtensionToast(
-                        style: .failure, title: "Connection failed",
-                        message: "Start the local service or check its socket path: \(path)"))
+                        style: .failure, title: String(localized: "Connection failed"),
+                        message: String(
+                            localized: "Start the local service or check its socket path: \(path)")))
             }
             throw error
         }

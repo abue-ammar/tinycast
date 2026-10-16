@@ -5,8 +5,8 @@ struct SymbolCategory: Identifiable, Hashable, Sendable {
     let id: String
     let title: String
 
-    static let suggested = SymbolCategory(id: "tinycast.suggested", title: "Suggested")
-    static let all = SymbolCategory(id: "tinycast.all", title: "All Symbols")
+    static let suggested = SymbolCategory(id: "tinycast.suggested", title: String(localized: "Suggested"))
+    static let all = SymbolCategory(id: "tinycast.all", title: String(localized: "All Symbols"))
     static let bundled = SymbolCategory(id: "tinycast.bundled", title: "Tinycast")
 }
 
@@ -146,15 +146,19 @@ struct SymbolCatalog: Sendable {
 
     /// Anything absent is a rendering-mode bucket, not a browsable subject.
     private nonisolated static let categoryTitles: [String: String] = [
-        "communication": "Communication", "weather": "Weather", "maps": "Maps",
-        "objectsandtools": "Objects & Tools", "devices": "Devices",
-        "cameraandphotos": "Camera & Photos", "gaming": "Gaming",
-        "connectivity": "Connectivity", "transportation": "Transportation",
-        "automotive": "Automotive", "accessibility": "Accessibility",
-        "privacyandsecurity": "Privacy & Security", "human": "People", "home": "Home",
-        "fitness": "Fitness", "nature": "Nature", "editing": "Editing",
-        "textformatting": "Text Formatting", "media": "Media", "keyboard": "Keyboard",
-        "commerce": "Commerce", "time": "Time", "health": "Health", "shapes": "Shapes",
-        "arrows": "Arrows", "indices": "Indices", "math": "Math"
+        "communication": String(localized: "Communication"), "weather": String(localized: "Weather"),
+        "maps": String(localized: "Maps"), "objectsandtools": String(localized: "Objects & Tools"),
+        "devices": String(localized: "Devices"), "cameraandphotos": String(localized: "Camera & Photos"),
+        "gaming": String(localized: "Gaming"), "connectivity": String(localized: "Connectivity"),
+        "transportation": String(localized: "Transportation"),
+        "automotive": String(localized: "Automotive"), "accessibility": String(localized: "Accessibility"),
+        "privacyandsecurity": String(localized: "Privacy & Security"), "human": String(localized: "People"),
+        "home": String(localized: "Home"), "fitness": String(localized: "Fitness"),
+        "nature": String(localized: "Nature"), "editing": String(localized: "Editing"),
+        "textformatting": String(localized: "Text Formatting"), "media": String(localized: "Media"),
+        "keyboard": String(localized: "Keyboard"), "commerce": String(localized: "Commerce"),
+        "time": String(localized: "Time"), "health": String(localized: "Health"),
+        "shapes": String(localized: "Shapes"), "arrows": String(localized: "Arrows"),
+        "indices": String(localized: "Indices"), "math": String(localized: "Math")
     ]
 }

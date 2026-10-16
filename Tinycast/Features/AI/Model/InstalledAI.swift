@@ -67,10 +67,10 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
     /// What the Providers row says: Cursor keeps the reader's MCP; a managed policy owns Claude's.
     func isolationCaveat(hasManagedMCPPolicy: Bool) -> String? {
         switch self {
-        case .cursor: return "Ask mode · your Cursor MCP servers still apply"
+        case .cursor: return String(localized: "Ask mode · your Cursor MCP servers still apply")
         case .claude:
             return hasManagedMCPPolicy
-                ? "MCP on this route is managed by your organization" : nil
+                ? String(localized: "MCP on this route is managed by your organization") : nil
         case .codex, .grok, .openCode: return nil
         }
     }

@@ -86,7 +86,7 @@ final class HIDEventSystem {
         return Keyboard(
             service: object,
             registryID: registryID.uint64Value,
-            name: property(Property.product, of: object) as? String ?? "Keyboard",
+            name: property(Property.product, of: object) as? String ?? String(localized: "Keyboard"),
             vendorID: (property(Property.vendorID, of: object) as? NSNumber)?.intValue ?? 0,
             productID: (property(Property.productID, of: object) as? NSNumber)?.intValue ?? 0)
     }

@@ -27,11 +27,16 @@ struct AppInstallationTest {
             .appendingPathComponent("tinycast-installations-\(UUID())").resolvingSymlinksInPath()
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
-        try await testIndex(root)
-        if ProcessInfo.processInfo.environment["TINYCAST_TEST_APP_LAUNCH"] == "1"
-            || CommandLine.arguments.contains("--launch")
-        {
-            try await testLaunch(root)
+        if let argument = CommandLine.arguments.firstIndex(of: "--localized-index") {
+            try await testLocalizedIndex(root, language: CommandLine.arguments[argument + 1])
+        } else {
+            try await testIndex(root)
+            try await testLanguageOverride(root)
+            if ProcessInfo.processInfo.environment["TINYCAST_TEST_APP_LAUNCH"] == "1"
+                || CommandLine.arguments.contains("--launch")
+            {
+                try await testLaunch(root)
+            }
         }
         print(failures == 0 ? "ALL PASSED" : "\(failures) FAILED")
     }
@@ -153,6 +158,94 @@ struct AppInstallationTest {
         check(
             "the last installation regains single-app actions",
             index.apps.first { $0.bundleID == id }?.primaryInstallationID == nil)
+        await ranking.flush()
+    }
+
+    private static func testLanguageOverride(_ root: URL) async throws {
+        let system = Set(
+            SystemLanguages.preferred.compactMap { $0.split(separator: "-").first.map(String.init) })
+        guard
+            let language = ["ru", "ja", "ko", "de", "fr", "es", "pt", "it", "nl", "sv"]
+                .first(where: { !system.contains($0) }),
+            let executable = Bundle.main.executableURL
+        else { throw CocoaError(.fileReadCorruptFile) }
+        let app = root.appendingPathComponent("LanguageProbe.app", isDirectory: true)
+        try makeApp(app, id: "com.tinycast.language-probe.\(UUID())", version: "1.0")
+        let infoURL = app.appendingPathComponent("Contents/Info.plist")
+        guard
+            var info = try PropertyListSerialization.propertyList(
+                from: Data(contentsOf: infoURL), format: nil) as? [String: Any]
+        else { throw CocoaError(.fileReadCorruptFile) }
+        info["CFBundleDevelopmentRegion"] = "en"
+        info["CFBundleLocalizations"] = ["en", language]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(
+            to: infoURL)
+        let macOS = app.appendingPathComponent("Contents/MacOS", isDirectory: true)
+        try FileManager.default.createDirectory(at: macOS, withIntermediateDirectories: true)
+        let probe = macOS.appendingPathComponent("Fixture")
+        try FileManager.default.copyItem(at: executable, to: probe)
+        check(
+            "app language does not change installed-app names or search terms",
+            try await runProgram(
+                probe.path, ["--localized-index", language, "-AppleLanguages", "(\(language))"]) == 0)
+    }
+
+    private static func testLocalizedIndex(_ root: URL, language: String) async throws {
+        check(
+            "the probe runs in its requested language", Bundle.main.preferredLocalizations.first == language)
+        let app = root.appendingPathComponent("Localized.app", isDirectory: true)
+        let id = "com.tinycast.localized-fixture.\(UUID())"
+        try makeApp(app, id: id, version: "1.0")
+        let infoURL = app.appendingPathComponent("Contents/Info.plist")
+        guard
+            var info = try PropertyListSerialization.propertyList(
+                from: Data(contentsOf: infoURL), format: nil) as? [String: Any]
+        else { throw CocoaError(.fileReadCorruptFile) }
+        info["CFBundleDevelopmentRegion"] = "en"
+        info["CFBundleDisplayName"] = "DeclaredFixtureName"
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0).write(
+            to: infoURL)
+        for (code, name) in [("en", "SystemLanguageFixture"), (language, "InterfaceOnlyFixture")] {
+            let folder = app.appendingPathComponent("Contents/Resources/\(code).lproj", isDirectory: true)
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            try PropertyListSerialization.data(
+                fromPropertyList: ["CFBundleDisplayName": name], format: .xml, options: 0
+            )
+            .write(to: folder.appendingPathComponent("InfoPlist.strings"))
+        }
+        check(
+            "the fixture exposes an interface-localized declaration",
+            Bundle(url: app)?.installedAppName == "InterfaceOnlyFixture")
+        let domain = "tinycast.language-index-test.\(UUID())"
+        let defaults = UserDefaults(suiteName: domain)!
+        defer { defaults.removePersistentDomain(forName: domain) }
+        let aliases = AliasStore(defaults: defaults)
+        let visibility = VisibilityStore(defaults: defaults)
+        let ranking = LauncherRankingStore(fileURL: root.appendingPathComponent("ranking.json"))
+        let settings = AppSettings()
+        settings.searchScopes = [app.path]
+        let index = AppIndex(ranking: ranking, aliases: aliases)
+        index.start(settings: settings)
+        await index.refresh()
+        check("app names follow macOS languages", index.apps.first?.name == "SystemLanguageFixture")
+        check(
+            "the original declaration remains indexed", index.apps.first?.keywords == ["DeclaredFixtureName"])
+        let favorites = FavoritesStore()
+        let hotKeys = HotKeyManager()
+        func results(_ query: String) -> [AppEntry] {
+            index.orderedResults(
+                query: query, visibility: visibility, favorites: favorites, hotKeys: hotKeys
+            ).entries
+        }
+        check(
+            "the original declaration remains searchable",
+            results("DeclaredFixtureName").contains { $0.bundleID == id })
+        check(
+            "system-language names remain searchable",
+            results("SystemLanguageFixture").contains { $0.bundleID == id })
+        check(
+            "interface-only names stay out of search",
+            !results("InterfaceOnlyFixture").contains { $0.bundleID == id })
         await ranking.flush()
     }
 
@@ -397,6 +490,7 @@ struct SystemAction: Sendable {
     var id = ID.fixture
     var entryID = ""
     var name = ""
+    var englishName = ""
     var sfSymbol = ""
 }
 enum SystemActionCatalog {
@@ -408,6 +502,7 @@ struct WindowCommand: Sendable {
     var id = ID.fixture
     var entryID = ""
     var name = ""
+    var englishName = ""
     var sfSymbol = ""
 }
 enum WindowCommandCatalog {

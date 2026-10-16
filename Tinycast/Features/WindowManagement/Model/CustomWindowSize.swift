@@ -106,7 +106,7 @@ struct CustomWindowSize: Codable, Hashable, Identifiable, Sendable {
 
     var summary: String {
         let base = "\(width.label) × \(height.label) · \(anchor.title)"
-        return offset == .zero ? base : "\(base) · Offset \(offset.x), \(offset.y) pt"
+        return offset == .zero ? base : String(localized: "\(base) · Offset \(offset.x), \(offset.y) pt")
     }
 
     static func id(fromEntryID entryID: String) -> UUID? {
@@ -164,9 +164,9 @@ enum CustomWindowSizeValidationError: LocalizedError, Equatable {
 
     var errorDescription: String? {
         switch self {
-        case .emptyName: return "Enter a name for the size."
-        case .duplicateName: return "A custom size with this name already exists."
-        case .invalidCharacter: return "Names cannot contain null characters."
+        case .emptyName: return String(localized: "Enter a name for the size.")
+        case .duplicateName: return String(localized: "A custom size with this name already exists.")
+        case .invalidCharacter: return String(localized: "Names cannot contain null characters.")
         }
     }
 }

@@ -9,10 +9,33 @@ final class LauncherSettingsFile {
         case app, pane
 
         var kind: AppEntry.Kind { self == .app ? .application : .systemSettings }
-        var noun: String { self == .app ? "app" : "settings pane" }
+        var noun: Noun { self == .app ? .app : .settingsPane }
 
         func action(_ bundleID: String) -> HotKeyAction {
             self == .app ? .app(bundleID: bundleID) : .settingsPane(bundleID: bundleID)
+        }
+    }
+
+    /// What a section's records are, so every message naming one is a whole sentence.
+    private enum Noun {
+        case app, settingsPane, systemAction, command
+
+        func label(_ name: String) -> String {
+            switch self {
+            case .app: String(localized: "app “\(name)”")
+            case .settingsPane: String(localized: "settings pane “\(name)”")
+            case .systemAction: String(localized: "system action “\(name)”")
+            case .command: String(localized: "command “\(name)”")
+            }
+        }
+
+        func unknown(_ name: String) -> String {
+            switch self {
+            case .app: String(localized: "no app in this section is called “\(name)”")
+            case .settingsPane: String(localized: "no settings pane in this section is called “\(name)”")
+            case .systemAction: String(localized: "no system action in this section is called “\(name)”")
+            case .command: String(localized: "no command in this section is called “\(name)”")
+            }
         }
     }
 
@@ -58,7 +81,7 @@ final class LauncherSettingsFile {
                 name: action.id.rawValue, preferenceKey: action.entryID,
                 action: .systemAction(id: action.id))
         }
-        return catalogBinding(for: key, items: items, noun: "system action")
+        return catalogBinding(for: key, items: items, noun: .systemAction)
     }
 
     /// The built-in commands `owner` lists; nil is the Commands pane's own.
@@ -68,7 +91,7 @@ final class LauncherSettingsFile {
                 name: String(id.rawValue.drop { $0 != ":" }.dropFirst()), preferenceKey: id.rawValue,
                 action: id.hotKeyAction)
         }
-        return catalogBinding(for: key, items: items, noun: "command")
+        return catalogBinding(for: key, items: items, noun: .command)
     }
 
     func kindBinding(for key: SettingsFileKey, kind: AppEntry.Kind) -> SettingsFileBinding {
@@ -101,7 +124,7 @@ final class LauncherSettingsFile {
     // MARK: - Bindings
 
     private func catalogBinding(
-        for key: SettingsFileKey, items: [Item], noun: String
+        for key: SettingsFileKey, items: [Item], noun: Noun
     ) -> SettingsFileBinding {
         let byName = Dictionary(uniqueKeysWithValues: items.map { ($0.name, $0) })
         return SettingsFileBinding(
@@ -114,7 +137,7 @@ final class LauncherSettingsFile {
                 }
                 guard let decoded = read else { return [.invalidValue(key)] }
                 let unknown = decoded.records.keys.filter { byName[$0] == nil }.sorted().map {
-                    SettingsFileIssue.invalidEntry(key, "no \(noun) in this section is called “\($0)”")
+                    SettingsFileIssue.invalidEntry(key, noun.unknown($0))
                 }
                 return decoded.problems.map { .invalidEntry(key, $0) } + unknown
                     + apply(decoded.records, to: items, noun: noun, key: key)
@@ -185,7 +208,7 @@ final class LauncherSettingsFile {
 
     /// An item the records leave out gets the empty one, so a line the file drops clears its row.
     private func apply(
-        _ records: [String: Record], to items: [Item], noun: String, key: SettingsFileKey
+        _ records: [String: Record], to items: [Item], noun: Noun, key: SettingsFileKey
     ) -> [SettingsFileIssue] {
         var issues: [SettingsFileIssue] = []
         var wanted: [HotKeySettingsFile.Wanted] = []
@@ -193,11 +216,11 @@ final class LauncherSettingsFile {
             let record = records[item.name] ?? Record()
             aliases.setAlias(record.alias ?? "", for: item.preferenceKey)
             visibility.setItemVisible(record.showInLauncher, forKey: item.preferenceKey)
-            let label = "\(noun) “\(item.name)”"
+            let label = noun.label(item.name)
             if let action = item.action {
                 wanted.append(HotKeySettingsFile.Wanted(action: action, text: record.shortcut, label: label))
             } else if record.shortcut != nil {
-                issues.append(.invalidEntry(key, "\(label) can't have a shortcut"))
+                issues.append(.invalidEntry(key, String(localized: "\(label) can't have a shortcut")))
             }
         }
         return issues + shortcuts.apply(wanted, key: key)

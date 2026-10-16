@@ -12,13 +12,13 @@ enum FileSearchFilter: CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .all: return "All Types"
-        case .folders: return "Folders"
-        case .documents: return "Documents"
-        case .images: return "Images"
-        case .audio: return "Audio"
-        case .video: return "Videos"
-        case .archives: return "Archives"
+        case .all: return String(localized: "All Types")
+        case .folders: return String(localized: "Folders")
+        case .documents: return String(localized: "Documents")
+        case .images: return String(localized: "Images")
+        case .audio: return String(localized: "Audio")
+        case .video: return String(localized: "Videos")
+        case .archives: return String(localized: "Archives")
         }
     }
 
@@ -38,13 +38,13 @@ enum FileSearchFilter: CaseIterable, Sendable {
     /// What an empty list says, so a filter hiding every match explains itself.
     var emptyMessage: String {
         switch self {
-        case .all: return "No files found"
-        case .folders: return "No folders found"
-        case .documents: return "No documents found"
-        case .images: return "No images found"
-        case .audio: return "No audio found"
-        case .video: return "No videos found"
-        case .archives: return "No archives found"
+        case .all: return String(localized: "No files found")
+        case .folders: return String(localized: "No folders found")
+        case .documents: return String(localized: "No documents found")
+        case .images: return String(localized: "No images found")
+        case .audio: return String(localized: "No audio found")
+        case .video: return String(localized: "No videos found")
+        case .archives: return String(localized: "No archives found")
         }
     }
 

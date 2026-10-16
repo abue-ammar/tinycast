@@ -118,7 +118,7 @@ private final class ChecklistCellView: NSTableCellView {
     static let reuseID = NSUserInterfaceItemIdentifier("modelChecklistRow")
     var onToggle: (String, Bool) -> Void = { _, _ in }
     private let checkbox = NSButton(checkboxWithTitle: "", target: nil, action: nil)
-    private let defaultTag = NSTextField(labelWithString: "Default")
+    private let defaultTag = NSTextField(labelWithString: String(localized: "Default"))
     private let divider = NSBox()
     private var itemID = ""
 

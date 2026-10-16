@@ -92,19 +92,20 @@ struct SnippetsSettingsView: View {
     private var libraryNotices: some View {
         if case .failed(let message) = snippetsStore.state {
             noticeSection(
-                "Couldn’t load the snippet library", message, tint: .orange,
-                retryHint: "Tries to load the snippet library again.")
+                String(localized: "Couldn’t load the snippet library"), message, tint: .orange,
+                retryHint: String(localized: "Tries to load the snippet library again."))
         }
 
         if !snippetsStore.issues.isEmpty {
             noticeSection(
                 snippetIssueTitle, snippetIssueMessage, tint: .orange,
-                retryHint: "Reloads snippet files after you fix them on disk.")
+                retryHint: String(localized: "Reloads snippet files after you fix them on disk."))
         }
 
         if let operationError = snippetsStore.operationError {
             noticeSection(
-                "The snippet operation failed", operationError, tint: .red, retryHint: nil)
+                String(localized: "The snippet operation failed"), operationError, tint: .red,
+                retryHint: nil)
         }
     }
 
@@ -133,9 +134,7 @@ struct SnippetsSettingsView: View {
     }
 
     private var snippetIssueTitle: String {
-        let count = snippetsStore.issues.count
-        return count == 1
-            ? "1 snippet file couldn’t be loaded" : "\(count) snippet files couldn’t be loaded"
+        String(localized: "\(snippetsStore.issues.count) snippet files couldn’t be loaded")
     }
 
     private var snippetIssueMessage: String {
@@ -143,8 +142,9 @@ struct SnippetsSettingsView: View {
         if snippetsStore.issues.count == 1 {
             return "\(first.fileURL.lastPathComponent): \(first.message)"
         }
-        return
-            "\(first.fileURL.lastPathComponent): \(first.message) Plus \(snippetsStore.issues.count - 1) more."
+        let remaining = snippetsStore.issues.count - 1
+        return String(
+            localized: "\(first.fileURL.lastPathComponent): \(first.message) Plus \(remaining) more.")
     }
 }
 

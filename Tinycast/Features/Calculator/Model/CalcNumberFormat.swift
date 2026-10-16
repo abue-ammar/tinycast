@@ -9,8 +9,8 @@ enum CalcNumberStyle: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .system: "System"
-        case .english: "English"
+        case .system: String(localized: "System")
+        case .english: String(localized: "English")
         }
     }
 }

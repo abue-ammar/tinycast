@@ -33,8 +33,10 @@ struct CameraPreviewView: View {
                     .foregroundStyle(Theme.Colors.textSecondary)
             }
             Spacer(minLength: Theme.Spacing.md)
-            CameraButton(title: "Cancel", keyCap: "esc", emphasis: .secondary, onActivate: onCancel)
-            CameraButton(title: "Join", keyCap: "↵", onActivate: onJoin)
+            CameraButton(
+                title: String(localized: "Cancel"), keyCap: "esc", emphasis: .secondary,
+                onActivate: onCancel)
+            CameraButton(title: String(localized: "Join"), keyCap: "↵", onActivate: onJoin)
         }
         .padding(Theme.Spacing.xl)
     }

@@ -135,8 +135,9 @@ struct ExtensionAppearancePicker: View {
     }
 
     private func footnote(_ count: Int) -> String {
-        let noun = count == 1 ? "symbol" : "symbols"
-        return query.isEmpty ? "\(count) \(noun) in \(category.title)" : "\(count) \(noun) matching"
+        query.isEmpty
+            ? String(localized: "\(count) symbols in \(category.title)")
+            : String(localized: "\(count) symbols matching")
     }
 }
 

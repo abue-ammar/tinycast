@@ -60,30 +60,31 @@ enum PaletteMode: String, CaseIterable, Identifiable {
     }
     var placeholder: String {
         switch self {
-        case .launcher: return "Search for apps and commands…"
-        case .clipboard: return "Type to filter entries…"
-        case .ai: return "Ask anything…"
-        case .aiHistory: return "Search chats…"
-        case .calculatorHistory: return "Do math, convert units, or search your past calculations…"
-        case .emoji: return "Search emoji and symbols…"
-        case .fileSearch: return "Search files and folders…"
-        case .menuSearch: return "Search menu bar items…"
-        case .switchWindows: return "Search open windows…"
-        case .rooms: return "Search rooms, or name a new one…"
-        case .roomWindows: return "Search windows, or type an app to add…"
-        case .schedule: return "Search your schedule…"
-        case .eventEditor: return "Event editor"
-        case .customCommandEditor: return "Command editor"
-        case .customCommands: return "Search custom commands…"
-        case .meetingDetails: return "Meeting details"
-        case .uninstall: return "Filter files and folders by name…"
-        case .quicklinks: return "Search quicklinks…"
-        case .quicklinkEditor: return "Quicklink editor"
-        case .snippets: return "Search snippets…"
-        case .snippetEditor: return "Snippet editor"
-        case .dictionary: return "Look up a word…"
+        case .launcher: return String(localized: "Search for apps and commands…")
+        case .clipboard: return String(localized: "Type to filter entries…")
+        case .ai: return String(localized: "Ask anything…")
+        case .aiHistory: return String(localized: "Search chats…")
+        case .calculatorHistory:
+            return String(localized: "Do math, convert units, or search your past calculations…")
+        case .emoji: return String(localized: "Search emoji and symbols…")
+        case .fileSearch: return String(localized: "Search files and folders…")
+        case .menuSearch: return String(localized: "Search menu bar items…")
+        case .switchWindows: return String(localized: "Search open windows…")
+        case .rooms: return String(localized: "Search rooms, or name a new one…")
+        case .roomWindows: return String(localized: "Search windows, or type an app to add…")
+        case .schedule: return String(localized: "Search your schedule…")
+        case .eventEditor: return String(localized: "Event editor")
+        case .customCommandEditor: return String(localized: "Command editor")
+        case .customCommands: return String(localized: "Search custom commands…")
+        case .meetingDetails: return String(localized: "Meeting details")
+        case .uninstall: return String(localized: "Filter files and folders by name…")
+        case .quicklinks: return String(localized: "Search quicklinks…")
+        case .quicklinkEditor: return String(localized: "Quicklink editor")
+        case .snippets: return String(localized: "Search snippets…")
+        case .snippetEditor: return String(localized: "Snippet editor")
+        case .dictionary: return String(localized: "Look up a word…")
         // Replaced by the command's own `searchBarPlaceholder` whenever it declares one.
-        case .extensionCommand: return "Search…"
+        case .extensionCommand: return String(localized: "Search…")
         }
     }
 }
@@ -100,5 +101,5 @@ struct PasteTarget: Equatable {
         iconPath = app.bundleURL?.path
     }
 
-    var pasteTitle: String { "Paste to \(name)" }
+    var pasteTitle: String { String(localized: "Paste to \(name)") }
 }

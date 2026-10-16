@@ -107,14 +107,15 @@ final class MCPHTTPTransport: MCPTransport {
         switch response.statusCode {
         case 200...299: return
         case 401, 403:
-            throw MCPTransportError.requestFailed("The server rejected Tinycast's credentials.")
+            throw MCPTransportError.requestFailed(
+                String(localized: "The server rejected Tinycast's credentials."))
         // A dropped session is the server's to end; the next request opens a fresh one.
         case 404 where sessionID != nil:
             sessionID = nil
-            throw MCPTransportError.requestFailed("The server ended the session.")
+            throw MCPTransportError.requestFailed(String(localized: "The server ended the session."))
         default:
             throw MCPTransportError.requestFailed(
-                "The server answered HTTP \(response.statusCode).")
+                String(localized: "The server answered HTTP \(response.statusCode)."))
         }
     }
 
@@ -127,11 +128,11 @@ final class MCPHTTPTransport: MCPTransport {
 
     private static func networkMessage(_ code: URLError.Code) -> String {
         switch code {
-        case .notConnectedToInternet: return "No internet connection."
-        case .timedOut: return "The server took too long to respond."
+        case .notConnectedToInternet: return String(localized: "No internet connection.")
+        case .timedOut: return String(localized: "The server took too long to respond.")
         case .cannotFindHost, .cannotConnectToHost, .dnsLookupFailed:
-            return "The server could not be reached."
-        default: return "The request to the server failed."
+            return String(localized: "The server could not be reached.")
+        default: return String(localized: "The request to the server failed.")
         }
     }
 }

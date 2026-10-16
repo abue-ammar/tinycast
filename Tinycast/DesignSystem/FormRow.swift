@@ -8,11 +8,12 @@ struct FormRow<Content: View>: View {
 
     @Environment(\.metrics) private var metrics
 
+    /// No title lines a row up under the labelled ones above it.
     init(
-        _ title: String, alignment: VerticalAlignment = .center, labelInset: CGFloat? = nil,
-        @ViewBuilder content: () -> Content
+        _ title: LocalizedStringResource? = nil, alignment: VerticalAlignment = .center,
+        labelInset: CGFloat? = nil, @ViewBuilder content: () -> Content
     ) {
-        self.title = title
+        self.title = title.map { String(localized: $0) } ?? ""
         self.alignment = alignment
         self.labelInset = labelInset
         self.content = content()

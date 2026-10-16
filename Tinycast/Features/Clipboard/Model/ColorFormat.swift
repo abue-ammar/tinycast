@@ -11,11 +11,11 @@ enum ColorFormat: CaseIterable, Hashable, Sendable {
 
     var title: String {
         switch self {
-        case .hex: return "Hex"
-        case .hexWithAlpha: return "Hex with Alpha"
+        case .hex: return String(localized: "Hex")
+        case .hexWithAlpha: return String(localized: "Hex with Alpha")
         case .rgba: return "RGBA"
         case .hsl: return "HSL"
-        case .hslWithAlpha: return "HSL with Alpha"
+        case .hslWithAlpha: return String(localized: "HSL with Alpha")
         case .oklch: return "Oklch"
         }
     }

@@ -30,7 +30,7 @@ final class DictationKeyManager {
         let wanted = isWanted && isSessionActive ? HIDKeyMapping.dictationKeyToF20 : nil
         let isChange = wanted != remapper.mapping
         if !remapper.apply(wanted), wanted != nil, isChange, hotKeys.bindsDictationKey {
-            onProblem?("macOS refused to remap the Dictation key")
+            onProblem?(String(localized: "macOS refused to remap the Dictation key"))
         }
     }
 

@@ -14,7 +14,8 @@ enum FallbackActionsMenu {
                     title: fallback.openVerb, systemImage: "list.bullet.rectangle", shortcut: "↵"
                 ) { core.fallbackCoordinator.run(fallback, query: query) },
                 PopoverMenuItem(
-                    title: "Configure Fallbacks…", systemImage: "slider.horizontal.3", startsSection: true
+                    title: String(localized: "Configure Fallbacks…"), systemImage: "slider.horizontal.3",
+                    startsSection: true
                 ) {
                     core.fallbackCoordinator.showSettings()
                 }

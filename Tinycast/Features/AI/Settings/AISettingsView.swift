@@ -87,11 +87,11 @@ struct AISettingsView: View {
 
     private var defaultModelFooter: String {
         if settings.defaultModel?.isOnDevice == true {
-            return "Apple Intelligence runs on this Mac. Nothing leaves it."
+            return String(localized: "Apple Intelligence runs on this Mac. Nothing leaves it.")
         }
         return settings.defaultModel == nil
-            ? "Turn on Apple Intelligence, or add a provider above."
-            : "Only the selected provider is contacted."
+            ? String(localized: "Turn on Apple Intelligence, or add a provider above.")
+            : String(localized: "Only the selected provider is contacted.")
     }
 
     private var appleIntelligenceReason: String? {
@@ -107,9 +107,10 @@ struct AISettingsView: View {
         }
         if !settings.connections.isEmpty {
             let count = settings.connections.count
-            providers.append(count == 1 ? "1 API connection" : "\(count) API connections")
+            providers.append(String(localized: "\(count) API connections"))
         }
-        return providers.isEmpty ? "No external providers ready" : providers.joined(separator: ", ")
+        return providers.isEmpty
+            ? String(localized: "No external providers ready") : providers.joined(separator: ", ")
     }
 
     private func syncSelection() {
@@ -132,8 +133,10 @@ struct AISettingsView: View {
             } label: {
                 SettingsRowTitle(.aiChat, "Tool call rounds")
                 Text(
-                    "A reply stops after this many; Unlimited runs until Stop. "
-                        + "API connections, Codex and Claude.")
+                    """
+                    A reply stops after this many; Unlimited runs until Stop. API connections, Codex \
+                    and Claude.
+                    """)
             }
         } header: {
             SettingsSectionHeader(.aiChat)

@@ -274,12 +274,12 @@ struct ExtensionMarkdownView: View {
                         .textSelection(.enabled)
                 case .bullet(let text):
                     HStack(alignment: .top, spacing: metrics.spacing.sm) {
-                        Text("•").foregroundStyle(.secondary)
+                        Text(verbatim: "•").foregroundStyle(.secondary)
                         Text(inline(text)).font(metrics.typography.rowTitle)
                     }
                 case .numbered(let index, let text):
                     HStack(alignment: .top, spacing: metrics.spacing.sm) {
-                        Text("\(index).").foregroundStyle(.secondary).monospacedDigit()
+                        Text(verbatim: "\(index).").foregroundStyle(.secondary).monospacedDigit()
                         Text(inline(text)).font(metrics.typography.rowTitle)
                     }
                 case .quote(let text):

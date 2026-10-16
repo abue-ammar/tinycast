@@ -14,13 +14,13 @@ enum RoomLayoutKind: String, Codable, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .auto: "Auto"
-        case .focus: "Focus"
-        case .stack: "Stack"
-        case .columns: "Columns"
-        case .grid: "Grid"
-        case .custom: "Custom"
-        case .saved: "As Arranged"
+        case .auto: String(localized: "Auto")
+        case .focus: String(localized: "Focus")
+        case .stack: String(localized: "Stack")
+        case .columns: String(localized: "Columns")
+        case .grid: String(localized: "Grid")
+        case .custom: String(localized: "Custom")
+        case .saved: String(localized: "As Arranged")
         }
     }
 }

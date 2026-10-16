@@ -81,7 +81,7 @@ struct FileSearchRow: View {
         guard !showsLocation, result.isDirectory, !result.parentName.isEmpty else {
             return Text(result.name)
         }
-        let parent = Text("\(result.parentName)/").foregroundStyle(.secondary)
+        let parent = Text(verbatim: "\(result.parentName)/").foregroundStyle(.secondary)
         return Text("\(parent)\(result.name)")
     }
 

@@ -19,8 +19,8 @@ enum ModifierKey: String, CaseIterable, Codable, Sendable {
 
     var side: String? {
         switch self {
-        case .leftControl, .leftOption, .leftShift, .leftCommand: "Left"
-        case .rightControl, .rightOption, .rightShift, .rightCommand: "Right"
+        case .leftControl, .leftOption, .leftShift, .leftCommand: String(localized: "Left")
+        case .rightControl, .rightOption, .rightShift, .rightCommand: String(localized: "Right")
         case .globe: nil
         }
     }

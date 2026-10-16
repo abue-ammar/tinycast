@@ -5,22 +5,24 @@ enum QuickActionFailure: LocalizedError, Equatable {
     case needsAccessibility
     case noTarget
     /// The app answered but exposes no focused text element — Chromium before its tree is built.
-    case unreadableApp(String)
+    case unreadableApp(String?)
     case noSelection
     case tooLong
 
     var errorDescription: String? {
         switch self {
         case .needsAccessibility:
-            return "Tinycast needs the Accessibility permission to read the selected text."
+            return String(localized: "Tinycast needs the Accessibility permission to read the selected text.")
         case .noTarget:
-            return "Select text in another app first."
-        case .unreadableApp(let name):
-            return "\(name) doesn't share its text with Tinycast."
+            return String(localized: "Select text in another app first.")
+        case .unreadableApp(let name?):
+            return String(localized: "\(name) doesn't share its text with Tinycast.")
+        case .unreadableApp(nil):
+            return String(localized: "That app doesn't share its text with Tinycast.")
         case .noSelection:
-            return "Select some text first."
+            return String(localized: "Select some text first.")
         case .tooLong:
-            return "That selection is too long to work on."
+            return String(localized: "That selection is too long to work on.")
         }
     }
 

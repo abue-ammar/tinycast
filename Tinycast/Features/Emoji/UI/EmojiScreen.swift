@@ -38,7 +38,7 @@ struct EmojiScreen: PaletteScreen {
     /// Flat grid order across sections — what the selection indexes.
     var rows: [EmojiEntry] { sections.flatMap(\.entries) }
 
-    var primaryActionTitle: String { vm.pasteTarget?.pasteTitle ?? "Paste" }
+    var primaryActionTitle: String { vm.pasteTarget?.pasteTitle ?? String(localized: "Paste") }
 
     private func entry(at selection: Int) -> EmojiEntry? {
         let rows = rows
@@ -132,9 +132,9 @@ struct EmojiScreen: PaletteScreen {
     private func content(selection: Int, scroll: ScrollIntent) -> some View {
         let sections = sections
         if !index.isLoaded {
-            EmptyResults(text: "Loading emoji…")
+            EmptyResults(text: String(localized: "Loading emoji…"))
         } else if sections.isEmpty {
-            EmptyResults(text: "No emoji found")
+            EmptyResults(text: String(localized: "No emoji found"))
         } else {
             EmojiGridView(
                 sections: sections,
@@ -188,50 +188,51 @@ enum EmojiActionsMenu {
         let noun = entry.category.itemTitle
         var items = [
             PopoverMenuItem(
-                title: target?.pasteTitle ?? "Paste",
+                title: target?.pasteTitle ?? String(localized: "Paste"),
                 icon: .paste(target, fallback: "doc.on.clipboard"), shortcut: "↵"
             ) {
                 core.emojiCoordinator.pasteEmoji(entry)
             },
             PopoverMenuItem(
-                title: "Copy to Clipboard", systemImage: "doc.on.doc", shortcut: "⌘↵"
+                title: String(localized: "Copy to Clipboard"), systemImage: "doc.on.doc", shortcut: "⌘↵"
             ) {
                 core.emojiCoordinator.copyEmoji(entry)
             },
             PopoverMenuItem(
-                title: "Paste and Keep Window Open",
+                title: String(localized: "Paste and Keep Window Open"),
                 icon: .paste(target, fallback: "macwindow"), shortcut: "⌥↵"
             ) {
                 core.emojiCoordinator.pasteEmojiKeepingWindowOpen(entry)
             },
             PopoverMenuItem(
-                title: pinPosition == nil ? "Pin \(noun)" : "Unpin \(noun)",
+                title: pinPosition == nil
+                    ? String(localized: "Pin \(noun)") : String(localized: "Unpin \(noun)"),
                 systemImage: pinPosition == nil ? "pin" : "pin.slash",
                 startsSection: true, shortcut: "⌘.", action: togglePin)
         ]
         if let pinPosition {
             items.append(
                 PopoverMenuItem(
-                    title: "Move Up in Pinned", systemImage: "arrow.up",
+                    title: String(localized: "Move Up in Pinned"), systemImage: "arrow.up",
                     isEnabled: pinPosition > 0, shortcut: "⌥⌘↑"
                 ) { movePin(-1) })
             items.append(
                 PopoverMenuItem(
-                    title: "Move Down in Pinned", systemImage: "arrow.down",
+                    title: String(localized: "Move Down in Pinned"), systemImage: "arrow.down",
                     isEnabled: pinPosition < pinCount - 1, shortcut: "⌥⌘↓"
                 ) { movePin(1) })
         }
         items.append(contentsOf: [
             PopoverMenuItem(
-                title: "Actual Size", systemImage: "magnifyingglass",
+                title: String(localized: "Actual Size"), systemImage: "magnifyingglass",
                 isEnabled: canZoom(.actualSize), startsSection: true, shortcut: "⌘0"
             ) { zoom(.actualSize) },
             PopoverMenuItem(
-                title: "Zoom In", systemImage: "plus.magnifyingglass",
+                title: String(localized: "Zoom In"), systemImage: "plus.magnifyingglass",
                 isEnabled: canZoom(.zoomIn), shortcut: "⌘+"
             ) { zoom(.zoomIn) },
             PopoverMenuItem(
-                title: "Zoom Out", systemImage: "minus.magnifyingglass",
+                title: String(localized: "Zoom Out"), systemImage: "minus.magnifyingglass",
                 isEnabled: canZoom(.zoomOut), shortcut: "⌘-"
             ) { zoom(.zoomOut) }
         ])

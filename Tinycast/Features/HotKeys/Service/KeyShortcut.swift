@@ -115,7 +115,7 @@ struct KeyShortcut: Hashable, Sendable {
     }
 
     private static let specialKeyGlyphs: [Int: String] = [
-        kVK_Return: "↵", kVK_ANSI_KeypadEnter: "⌤", kVK_Tab: "⇥", kVK_Space: "Space",
+        kVK_Return: "↵", kVK_ANSI_KeypadEnter: "⌤", kVK_Tab: "⇥", kVK_Space: String(localized: "Space"),
         kVK_Delete: "⌫", kVK_ForwardDelete: "⌦", kVK_Escape: "⎋",
         kVK_LeftArrow: "←", kVK_RightArrow: "→", kVK_UpArrow: "↑", kVK_DownArrow: "↓",
         kVK_Home: "↖", kVK_End: "↘", kVK_PageUp: "⇞", kVK_PageDown: "⇟", kVK_Help: "?⃝"

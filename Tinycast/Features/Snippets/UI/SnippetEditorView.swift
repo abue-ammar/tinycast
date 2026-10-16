@@ -49,14 +49,14 @@ struct SnippetEditorView: View {
 
     private var templateEditor: some View {
         VStack(alignment: .leading, spacing: metrics.spacing.md) {
-            fieldTitle("Snippet")
+            fieldTitle(String(localized: "Snippet"))
             VStack(spacing: metrics.spacing.xs) {
                 FormTextArea(
                     text: $editor.text, selection: $editor.selection, focused: focusBinding(.template),
                     minimumHeight: metrics.size.panelHeight - metrics.size.headerHeight * 4
                         - metrics.spacing.xl - metrics.spacing.md * 2 - metrics.spacing.xs
                         - metrics.typography.textNSFont(.callout).boundingRectForFont.height,
-                    label: "Snippet template", moveFocus: editor.advanceFocus
+                    label: String(localized: "Snippet template"), moveFocus: editor.advanceFocus
                 )
                 .accessibilityHint("Enter the text Tinycast expands.")
                 HStack {
@@ -87,17 +87,20 @@ struct SnippetEditorView: View {
             } action: {
                 placeholderMenuFrame = $0
             }
-            .tooltip("Insert a dynamic placeholder", alignment: .leading, dismissOnPress: true)
+            .tooltip(
+                String(localized: "Insert a dynamic placeholder"), alignment: .leading,
+                dismissOnPress: true
+            )
             .accessibilityLabel("Insert a placeholder")
     }
 
     private func showPlaceholderMenu() {
         let insertionSelection = editor.selection
         let groups: [(title: String, tokens: [String])] = [
-            ("Text", ["{cursor}", "{clipboard}", "{selection}", "{uuid}"]),
-            ("Date & Time", ["{date}", "{time}", "{datetime}", "{day}"]),
-            ("Arguments", ["{argument name=\"Name\"}"]),
-            ("Snippets", ["{snippet name=\"Name\"}"])
+            (String(localized: "Text"), ["{cursor}", "{clipboard}", "{selection}", "{uuid}"]),
+            (String(localized: "Date & Time"), ["{date}", "{time}", "{datetime}", "{day}"]),
+            (String(localized: "Arguments"), ["{argument name=\"Name\"}"]),
+            (String(localized: "Snippets"), ["{snippet name=\"Name\"}"])
         ]
         let items = groups.flatMap { group in
             group.tokens.enumerated().map { index, token in
@@ -118,17 +121,21 @@ struct SnippetEditorView: View {
     private var properties: some View {
         VStack(alignment: .leading, spacing: metrics.spacing.xxl) {
             field(
-                "Name", placeholder: "Snippet name", text: $editor.name,
+                String(localized: "Name"), placeholder: String(localized: "Snippet name"),
+                label: String(localized: "Snippet name"), text: $editor.name,
                 focus: .name,
-                hint: "Required. Shown in the library and launcher.")
+                hint: String(localized: "Required. Shown in the library and launcher."))
             field(
-                "Keyword", placeholder: "Optional, for example !notes", text: $editor.keyword,
-                focus: .keyword, hint: "Optional. Type this to expand the snippet.")
+                String(localized: "Keyword"), placeholder: String(localized: "Optional, for example !notes"),
+                label: String(localized: "Snippet keyword"), text: $editor.keyword,
+                focus: .keyword, hint: String(localized: "Optional. Type this to expand the snippet."))
             option(
-                "Enabled", detail: "Disabled snippets cannot be expanded.",
+                String(localized: "Enabled"),
+                detail: String(localized: "Disabled snippets cannot be expanded."),
                 value: $editor.isEnabled, focus: .enabled)
             option(
-                "Show confirmation", detail: "Confirm on screen after this snippet is inserted.",
+                String(localized: "Show confirmation"),
+                detail: String(localized: "Confirm on screen after this snippet is inserted."),
                 value: $editor.showsConfirmation, focus: .confirmation)
             if let errorMessage = editor.errorMessage {
                 Text(errorMessage)
@@ -150,14 +157,14 @@ struct SnippetEditorView: View {
     }
 
     private func field(
-        _ title: String, placeholder: String, text: Binding<String>,
+        _ title: String, placeholder: String, label: String, text: Binding<String>,
         focus: SnippetEditorSession.Field, hint: String
     ) -> some View {
         VStack(alignment: .leading, spacing: metrics.spacing.md) {
             fieldTitle(title)
             FormTextInput(
                 text: text, focused: focusBinding(focus), placeholder: placeholder,
-                label: "Snippet \(title.lowercased())", moveFocus: editor.advanceFocus
+                label: label, moveFocus: editor.advanceFocus
             )
             .frame(height: metrics.size.dialogButtonHeight)
             .formFieldChrome(focused: focusedField == focus)

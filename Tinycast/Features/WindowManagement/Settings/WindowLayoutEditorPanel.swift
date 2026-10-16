@@ -69,8 +69,9 @@ struct WindowLayoutEditorPanel: View {
     }
 
     private var title: String {
-        if request.isCapture { return "Capture Window Layout" }
-        return request.layout == nil ? "New Window Layout" : "Edit Window Layout"
+        if request.isCapture { return String(localized: "Capture Window Layout") }
+        return request.layout == nil
+            ? String(localized: "New Window Layout") : String(localized: "Edit Window Layout")
     }
 
     private var previewGap: CGFloat {

@@ -11,7 +11,7 @@ enum ExecutablePicker {
         panel.showsHiddenFiles = true
         panel.treatsFilePackagesAsDirectories = true
         panel.resolvesAliases = false
-        panel.prompt = "Use Command"
+        panel.prompt = String(localized: "Use Command")
         panel.message = message
         panel.directoryURL = directory
         // Tinycast is an accessory app, so the panel opens behind the frontmost app without this.

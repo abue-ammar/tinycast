@@ -37,11 +37,11 @@ struct ExtensionPickerField: View {
 
     private var announcedValue: String {
         guard open, !query.isEmpty else { return chosen.isEmpty ? placeholder : label }
-        return chosen.isEmpty ? query : "\(label), searching \(query)"
+        return chosen.isEmpty ? query : String(localized: "\(label), searching \(query)")
     }
 
     private var hint: String {
-        let state = open ? "Showing choices" : "Opens a list of choices"
+        let state = open ? String(localized: "Showing choices") : String(localized: "Opens a list of choices")
         let parts = [error, info].compactMap { $0 }.filter { !$0.isEmpty }
         return ([state] + parts).joined(separator: ". ")
     }
@@ -146,11 +146,11 @@ struct ExtensionPickerField: View {
                         .foregroundStyle(Theme.Colors.textSecondary)
                         .lineLimit(1)
                         .layoutPriority(-1)
-                    Text("·")
+                    Text(verbatim: "·")
                         .font(metrics.typography.rowTitle)
                         .foregroundStyle(Theme.Colors.textTertiary)
                 }
-                ExtensionQueryText(query: query, prompt: "Search…", phase: typedAt)
+                ExtensionQueryText(query: query, prompt: String(localized: "Search…"), phase: typedAt)
             } else {
                 Text(label)
                     .font(metrics.typography.rowTitle)

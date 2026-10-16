@@ -56,9 +56,9 @@ final class ExtensionRuntime: @unchecked Sendable {
         var errorDescription: String? {
             switch self {
             case .runtimeResourceMissing:
-                return "RaycastRuntime.generated.js is missing from the app bundle."
+                return String(localized: "RaycastRuntime.generated.js is missing from the app bundle.")
             case .bootFailed(let message):
-                return "The extension runtime failed to start: \(message)"
+                return String(localized: "The extension runtime failed to start: \(message)")
             }
         }
     }

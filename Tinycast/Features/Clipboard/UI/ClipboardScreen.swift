@@ -178,7 +178,8 @@ enum ClipboardActionsMenu {
         }
         items.append(
             PopoverMenuItem(
-                title: "Paste and Keep Window Open", icon: .paste(target, fallback: "macwindow"),
+                title: String(localized: "Paste and Keep Window Open"),
+                icon: .paste(target, fallback: "macwindow"),
                 shortcut: "⌥↵"
             ) {
                 core.clipboardCoordinator.pasteKeepingWindowOpen(item)
@@ -186,14 +187,16 @@ enum ClipboardActionsMenu {
         if item.isPinned {
             items.append(
                 PopoverMenuItem(
-                    title: "Unpin Entry", systemImage: "pin.slash", startsSection: true, shortcut: "⌘."
+                    title: String(localized: "Unpin Entry"), systemImage: "pin.slash", startsSection: true,
+                    shortcut: "⌘."
                 ) {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
         } else {
             items.append(
                 PopoverMenuItem(
-                    title: "Pin Entry", systemImage: "pin", startsSection: true, shortcut: "⌘."
+                    title: String(localized: "Pin Entry"), systemImage: "pin", startsSection: true,
+                    shortcut: "⌘."
                 ) {
                     core.clipboardCoordinator.togglePinnedClip(item)
                 })
@@ -201,7 +204,7 @@ enum ClipboardActionsMenu {
         if item.offersTextExtraction {
             items.append(
                 PopoverMenuItem(
-                    title: "Copy Text", systemImage: "doc.text.viewfinder",
+                    title: String(localized: "Copy Text"), systemImage: "doc.text.viewfinder",
                     startsSection: true, shortcut: "⇧⌘T"
                 ) {
                     core.clipboardCoordinator.copyImageText(item)
@@ -210,7 +213,7 @@ enum ClipboardActionsMenu {
         if item.kind == .image || item.kind == .file {
             items.append(
                 PopoverMenuItem(
-                    title: "Show in Finder", systemImage: "folder",
+                    title: String(localized: "Show in Finder"), systemImage: "folder",
                     startsSection: !item.offersTextExtraction
                 ) {
                     core.clipboardCoordinator.revealClip(item)
@@ -218,24 +221,24 @@ enum ClipboardActionsMenu {
         }
         if item.kind == .file {
             items.append(
-                PopoverMenuItem(title: "Open", systemImage: "arrow.up.forward.app") {
+                PopoverMenuItem(title: String(localized: "Open"), systemImage: "arrow.up.forward.app") {
                     core.clipboardCoordinator.openClip(item)
                 })
             items.append(
-                PopoverMenuItem(title: "Copy Path", systemImage: "doc.on.clipboard") {
+                PopoverMenuItem(title: String(localized: "Copy Path"), systemImage: "doc.on.clipboard") {
                     core.clipboardCoordinator.copyClipPath(item)
                 })
         }
         items.append(
             PopoverMenuItem(
-                title: "Delete Entry", systemImage: "trash", startsSection: true, shortcut: "⌃X",
-                isDestructive: true
+                title: String(localized: "Delete Entry"), systemImage: "trash", startsSection: true,
+                shortcut: "⌃X", isDestructive: true
             ) {
                 store.remove(item)
             })
         items.append(
             PopoverMenuItem(
-                title: "Delete All Entries", systemImage: "trash", shortcut: "⌃⇧X",
+                title: String(localized: "Delete All Entries"), systemImage: "trash", shortcut: "⌃⇧X",
                 isDestructive: true
             ) {
                 Task { await core.clipboardCoordinator.deleteAllClips() }
@@ -260,15 +263,19 @@ enum ClipboardActionsMenu {
             let oneLine = (item.text ?? "").split(whereSeparator: \.isWhitespace).joined(
                 separator: " ")
             return String(oneLine.prefix(40))
-        case .image: return "Image"
-        case .file: return (item.filePath as NSString?)?.lastPathComponent ?? "File"
+        case .image: return String(localized: "Image")
+        case .file: return (item.filePath as NSString?)?.lastPathComponent ?? String(localized: "File")
         }
     }
 }
 
 extension ClipboardDefaultAction {
     func title(pastingInto target: PasteTarget?) -> String {
-        guard let target, self != .copy else { return title }
-        return "\(title) to \(target.name)"
+        guard let target else { return title }
+        switch self {
+        case .paste: return String(localized: "Paste to \(target.name)")
+        case .copy: return title
+        case .pastePlainText: return String(localized: "Paste as Plain Text to \(target.name)")
+        }
     }
 }

@@ -130,7 +130,7 @@ final class ClipboardCoordinator {
             pasteSequence = sequence
             return
         }
-        core.showMessage("Nothing left to paste", tone: .neutral)
+        core.showMessage(String(localized: "Nothing left to paste"), tone: .neutral)
     }
 
     /// A copy since the last press, or a long pause, starts the walk over from the newest entry.
@@ -145,16 +145,19 @@ final class ClipboardCoordinator {
     /// A write only fails on a vanished file, and a palette that just closes explains nothing.
     private func reportUnavailable(_ item: ClipboardItem) {
         guard item.kind == .file else { return }
-        core.showMessage("That file has moved or been deleted.", tone: .danger)
+        core.showMessage(String(localized: "That file has moved or been deleted."), tone: .danger)
     }
 
     /// Both the ⌃⇧X chord and the menu row land here, so neither can skip the confirmation.
     func deleteAllClips() async {
         guard
             await core.confirm(
-                title: "Delete All Entries",
-                message: "Are you sure you want to proceed with deleting all clipboard history entries?",
-                symbol: PaletteMode.clipboard.systemImage, confirmTitle: "Delete All")
+                title: String(localized: "Delete All Entries"),
+                message: String(
+                    localized: """
+                        Are you sure you want to proceed with deleting all clipboard history entries?
+                        """),
+                symbol: PaletteMode.clipboard.systemImage, confirmTitle: String(localized: "Delete All"))
         else { return }
         clearHistory()
     }
@@ -205,13 +208,13 @@ final class ClipboardCoordinator {
         guard let path = item.filePath else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)
         Paster.copyPlainText(path)
-        core.showMessage("Copied path")
+        core.showMessage(String(localized: "Copied path"))
     }
 
     func copyImageText(_ item: ClipboardItem) {
         guard let path = item.imagePath ?? item.filePath else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)
-        core.showProgress("Reading text…")
+        core.showProgress(String(localized: "Reading text…"))
         let changeCount = NSPasteboard.general.changeCount
         textTask?.cancel()
         textTask = Task {
@@ -222,18 +225,22 @@ final class ClipboardCoordinator {
                 guard exists else {
                     return item.kind == .file
                         ? reportUnavailable(item)
-                        : core.showMessage("That image is no longer available.", tone: .danger)
+                        : core.showMessage(
+                            String(localized: "That image is no longer available."), tone: .danger)
                 }
                 let text = try await ClipboardTextWorker.extract(item)
-                guard !text.isEmpty else { return core.showMessage("No text found", tone: .neutral) }
+                guard !text.isEmpty else {
+                    return core.showMessage(String(localized: "No text found"), tone: .neutral)
+                }
                 guard NSPasteboard.general.changeCount == changeCount else {
-                    return core.showMessage("Clipboard changed, text not copied", tone: .neutral)
+                    return core.showMessage(
+                        String(localized: "Clipboard changed, text not copied"), tone: .neutral)
                 }
                 Paster.copyPlainText(text)
-                core.showMessage("Copied text")
+                core.showMessage(String(localized: "Copied text"))
             } catch is CancellationError {
             } catch {
-                core.showMessage("Couldn’t read the text", tone: .danger)
+                core.showMessage(String(localized: "Couldn’t read the text"), tone: .danger)
             }
         }
     }

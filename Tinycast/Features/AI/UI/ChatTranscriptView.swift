@@ -371,7 +371,7 @@ private struct ChatSourceChip: View {
             NSWorkspace.shared.open(reference.url)
         } label: {
             HStack(spacing: metrics.spacing.md) {
-                Text("\(index)")
+                Text(verbatim: "\(index)")
                     .font(metrics.typography.keyCap)
                     .monospacedDigit()
                     .foregroundStyle(Theme.Colors.textSecondary)
@@ -426,9 +426,11 @@ private struct ChatReasoningBlock: View {
     @State private var expanded = false
 
     private var title: String {
-        if isThinking { return "Thinking…" }
-        guard let duration = block.duration else { return "Thoughts" }
-        return "Thought for \(max(1, Int(duration.rounded())))s"
+        if isThinking { return String(localized: "Thinking…") }
+        guard let duration = block.duration else { return String(localized: "Thoughts") }
+        let seconds = Duration.seconds(max(1, Int(duration.rounded())))
+        return String(
+            localized: "Thought for \(seconds.formatted(.units(allowed: [.seconds], width: .narrow)))")
     }
 
     /// A match inside a folded block would be found and then invisible, so find unfolds it.
@@ -639,7 +641,7 @@ private struct ChatSearchRow: View {
             Text(search.isComplete ? "Searched web" : "Searching web")
                 .font(metrics.typography.rowTrailing)
             if let query = search.query, !query.isEmpty {
-                Text("· \(query)")
+                Text(verbatim: "· \(query)")
                     .font(metrics.typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textTertiary)
                     .lineLimit(1)

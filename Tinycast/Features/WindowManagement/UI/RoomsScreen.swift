@@ -11,9 +11,9 @@ struct RoomsScreen: PaletteScreen {
 
     var primaryActionTitle: String {
         switch row(at: vm.selection) {
-        case .edit: "Choose Windows"
-        case .create: "Create Room"
-        case .room, nil: "Enter Room"
+        case .edit: String(localized: "Choose Windows")
+        case .create: String(localized: "Create Room")
+        case .room, nil: String(localized: "Enter Room")
         }
     }
 
@@ -65,23 +65,32 @@ struct RoomsScreen: PaletteScreen {
         return PopoverMenuContent(
             header: room.name,
             items: [
-                PopoverMenuItem(title: "Enter Room", systemImage: Room.sfSymbol, shortcut: "↵") {
+                PopoverMenuItem(
+                    title: String(localized: "Enter Room"), systemImage: Room.sfSymbol, shortcut: "↵"
+                ) {
                     coordinator.enterRoom(id: room.id)
                 },
-                PopoverMenuItem(title: "Next Layout", systemImage: "rectangle.3.group", shortcut: "⇥") {
+                PopoverMenuItem(
+                    title: String(localized: "Next Layout"), systemImage: "rectangle.3.group",
+                    shortcut: "⇥"
+                ) {
                     coordinator.cycleLayout(of: room, backwards: false)
                 },
                 PopoverMenuItem(
-                    title: "Remember Arrangement", systemImage: "rectangle.dashed.badge.record",
+                    title: String(localized: "Remember Arrangement"),
+                    systemImage: "rectangle.dashed.badge.record",
                     startsSection: true
                 ) {
                     coordinator.rememberArrangement(of: room)
                 },
-                PopoverMenuItem(title: "Choose Windows…", systemImage: "macwindow.badge.plus") {
+                PopoverMenuItem(
+                    title: String(localized: "Choose Windows…"), systemImage: "macwindow.badge.plus"
+                ) {
                     coordinator.editWindows(of: room)
                 },
                 PopoverMenuItem(
-                    title: "Delete Room", systemImage: "trash", startsSection: true, shortcut: "⌃X",
+                    title: String(localized: "Delete Room"), systemImage: "trash", startsSection: true,
+                    shortcut: "⌃X",
                     isDestructive: true
                 ) {
                     coordinator.deleteRoom(room)
@@ -107,7 +116,7 @@ struct RoomsScreen: PaletteScreen {
     @ViewBuilder
     private func content(rows: [RoomRow], selectedID: RoomRow.ID?, scroll: ScrollIntent) -> some View {
         if rows.isEmpty {
-            EmptyResults(text: "Type a name to make your first room")
+            EmptyResults(text: String(localized: "Type a name to make your first room"))
         } else {
             RoomsList(
                 rows: rows, selectedID: selectedID, scroll: scroll,

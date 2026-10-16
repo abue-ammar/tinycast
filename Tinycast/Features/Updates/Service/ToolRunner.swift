@@ -12,7 +12,7 @@ enum ToolRunner {
         var tail: String {
             let lines = output.split(separator: "\n").suffix(8)
             let text = lines.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
-            return text.isEmpty ? "no output" : text
+            return text.isEmpty ? String(localized: "no output") : text
         }
     }
 

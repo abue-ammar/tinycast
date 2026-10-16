@@ -15,7 +15,7 @@ struct MarkdownCodeView: View {
                         .foregroundStyle(Theme.Colors.textTertiary)
                 }
                 Spacer(minLength: 0)
-                ChatCopyButton(text: text, subject: "Code")
+                ChatCopyButton(text: text, label: String(localized: "Copy Code"))
             }
             Text(text)
                 .font(metrics.typography.code)

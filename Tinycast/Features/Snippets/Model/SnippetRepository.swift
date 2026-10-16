@@ -88,14 +88,18 @@ struct SnippetRepository: Sendable {
         var errorDescription: String? {
             switch self {
             case .conflict(let fileURL, _, _):
-                return
-                    "The snippet changed on disk. Reload it before saving or deleting. (\(fileURL.lastPathComponent))"
+                return String(
+                    localized: """
+                        The snippet changed on disk. Reload it before saving or deleting. \
+                        (\(fileURL.lastPathComponent))
+                        """)
             case .fileNotFound(let fileURL):
-                return "The snippet file no longer exists. (\(fileURL.lastPathComponent))"
+                return String(localized: "The snippet file no longer exists. (\(fileURL.lastPathComponent))")
             case .invalidFileLocation(let fileURL):
-                return "The snippet file is outside this Tinycast channel. (\(fileURL.path))"
+                return String(
+                    localized: "The snippet file is outside this Tinycast channel. (\(fileURL.path))")
             case .io(let fileURL, let message):
-                return "Could not access \(fileURL.path): \(message)"
+                return String(localized: "Could not access \(fileURL.path): \(message)")
             }
         }
     }

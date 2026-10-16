@@ -132,16 +132,16 @@ final class WindowSwitchCoordinator {
 
     private func reportPermissionFailure() async {
         let openSettings = await core.reportFailure(
-            title: "Tinycast Needs Accessibility Access",
-            message: "Switching windows reads and raises other apps' windows.",
-            symbol: "macwindow.on.rectangle", recovery: "Open Settings")
+            title: String(localized: "Tinycast Needs Accessibility Access"),
+            message: String(localized: "Switching windows reads and raises other apps' windows."),
+            symbol: "macwindow.on.rectangle", recovery: String(localized: "Open Settings"))
         if openSettings { Permissions.openAccessibilitySettings() }
     }
 
     private func reportGone(_ entry: WindowSwitchEntry) async {
         await core.showNotice(
-            title: "Couldn’t Switch to “\(entry.displayTitle)”",
-            message: "It closed before the switch landed. Search again and retry.",
+            title: String(localized: "Couldn’t Switch to “\(entry.displayTitle)”"),
+            message: String(localized: "It closed before the switch landed. Search again and retry."),
             symbol: "macwindow.on.rectangle", tone: .danger)
     }
 }

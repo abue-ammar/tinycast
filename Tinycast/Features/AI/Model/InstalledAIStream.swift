@@ -50,7 +50,8 @@ enum InstalledAIStreamDecoder {
                 frame.events = [.usage(openCodeUsage(tokens, cost: part?["cost"]))]
             }
         case "error":
-            frame.error = message(in: object) ?? "OpenCode could not finish the response."
+            frame.error =
+                message(in: object) ?? String(localized: "OpenCode could not finish the response.")
         default:
             break
         }
@@ -115,7 +116,9 @@ enum InstalledAIStreamDecoder {
             return frame
         }
         if object["is_error"] as? Bool == true {
-            frame.error = object["result"] as? String ?? "Claude could not finish the response."
+            frame.error =
+                object["result"] as? String
+                ?? String(localized: "Claude could not finish the response.")
             return frame
         }
         if let usage = object["usage"] as? [String: Any] {
@@ -202,7 +205,7 @@ enum InstalledAIStreamDecoder {
             let trimmed = result.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty { return trimmed }
         }
-        return "Grok could not finish the response."
+        return String(localized: "Grok could not finish the response.")
     }
 
     private static func cursor(
@@ -228,7 +231,7 @@ enum InstalledAIStreamDecoder {
                 frame.error =
                     (object["result"] as? String)
                     ?? message(in: object)
-                    ?? "Cursor could not finish the response."
+                    ?? String(localized: "Cursor could not finish the response.")
                 return frame
             }
             frame.completed = true

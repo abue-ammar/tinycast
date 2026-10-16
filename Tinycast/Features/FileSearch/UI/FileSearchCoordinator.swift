@@ -93,7 +93,7 @@ final class FileSearchCoordinator {
                     result.url, configuration: NSWorkspace.OpenConfiguration())
             } catch {
                 await core.showNotice(
-                    title: "Couldn’t Open \(result.name)",
+                    title: String(localized: "Couldn’t Open \(result.name)"),
                     message: error.localizedDescription,
                     symbol: result.isDirectory ? "folder" : "doc", tone: .danger)
             }
@@ -120,18 +120,18 @@ final class FileSearchCoordinator {
 
     func copyPath(_ result: FileSearchResult) {
         Paster.copyPlainText(result.id)
-        core.showMessage("Copied path")
+        core.showMessage(String(localized: "Copied path"))
     }
 
     func copyName(_ result: FileSearchResult) {
         Paster.copyPlainText(result.name)
-        core.showMessage("Copied name")
+        core.showMessage(String(localized: "Copied name"))
     }
 
     /// The file itself rather than its path, so Finder and Mail paste a copy of it.
     func copyFile(_ result: FileSearchResult) {
         PasteboardFiles.write(result.url, to: .general)
-        core.showMessage("Copied file")
+        core.showMessage(String(localized: "Copied file"))
     }
 
     /// Into whichever app the palette was summoned over, which is what the row's title names.
@@ -148,10 +148,10 @@ final class FileSearchCoordinator {
                     try FileManager.default.trashItem(at: result.url, resultingItemURL: nil)
                 }.value
                 session.remove(result)
-                core.showMessage("Moved to Trash")
+                core.showMessage(String(localized: "Moved to Trash"))
             } catch {
                 await core.showNotice(
-                    title: "Couldn’t Move \(result.name) to Trash",
+                    title: String(localized: "Couldn’t Move \(result.name) to Trash"),
                     message: error.localizedDescription,
                     symbol: "trash", tone: .danger)
             }

@@ -104,24 +104,24 @@ final class MenuSearchCoordinator {
 
     private func reportPermissionFailure() async {
         let openSettings = await core.reportFailure(
-            title: "Tinycast Needs Accessibility Access",
-            message: "Searching menus reads the front app's menu bar.",
-            symbol: "menubar.rectangle", recovery: "Open Settings")
+            title: String(localized: "Tinycast Needs Accessibility Access"),
+            message: String(localized: "Searching menus reads the front app's menu bar."),
+            symbol: "menubar.rectangle", recovery: String(localized: "Open Settings"))
         if openSettings { Permissions.openAccessibilitySettings() }
     }
 
     private func reportGone(targetName: String?) async {
         await core.showNotice(
-            title: "Couldn't Activate Menu Item",
-            message: targetName.map { "\($0) is no longer running." }
-                ?? "The application is no longer running.",
+            title: String(localized: "Couldn't Activate Menu Item"),
+            message: targetName.map { String(localized: "\($0) is no longer running.") }
+                ?? String(localized: "The application is no longer running."),
             symbol: "menubar.rectangle", tone: .danger)
     }
 
     private func reportPressFailure(item: MenuSearchItem) async {
         await core.showNotice(
-            title: "Couldn't Activate “\(item.title)”",
-            message: "Its menu changed before the press landed. Search again and retry.",
+            title: String(localized: "Couldn't Activate “\(item.title)”"),
+            message: String(localized: "Its menu changed before the press landed. Search again and retry."),
             symbol: "menubar.rectangle", tone: .danger)
     }
 }

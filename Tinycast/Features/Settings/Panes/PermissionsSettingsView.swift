@@ -130,23 +130,25 @@ struct PermissionsSettingsView: View {
 
     private var accessibilityStatus: (title: String, symbol: String, tint: Color) {
         accessibilityTrusted
-            ? ("Granted", "checkmark.circle.fill", .green)
-            : ("Not granted", "exclamationmark.triangle.fill", .orange)
+            ? (String(localized: "Granted"), "checkmark.circle.fill", .green)
+            : (String(localized: "Not granted"), "exclamationmark.triangle.fill", .orange)
     }
 
     private var calendarStatus: (title: String, symbol: String, tint: Color) {
         switch calendarAccess {
-        case .granted: return ("Granted", "checkmark.circle.fill", .green)
-        case .notDetermined: return ("Not asked yet", "questionmark.circle.fill", .secondary)
-        case .denied: return ("Not granted", "exclamationmark.triangle.fill", .orange)
+        case .granted: return (String(localized: "Granted"), "checkmark.circle.fill", .green)
+        case .notDetermined:
+            return (String(localized: "Not asked yet"), "questionmark.circle.fill", .secondary)
+        case .denied: return (String(localized: "Not granted"), "exclamationmark.triangle.fill", .orange)
         }
     }
 
     private var microphoneStatus: (title: String, symbol: String, tint: Color) {
         switch microphoneAccess {
-        case .authorized: return ("Granted", "checkmark.circle.fill", .green)
-        case .notDetermined: return ("Not asked yet", "questionmark.circle.fill", .secondary)
-        default: return ("Not granted", "exclamationmark.triangle.fill", .orange)
+        case .authorized: return (String(localized: "Granted"), "checkmark.circle.fill", .green)
+        case .notDetermined:
+            return (String(localized: "Not asked yet"), "questionmark.circle.fill", .secondary)
+        default: return (String(localized: "Not granted"), "exclamationmark.triangle.fill", .orange)
         }
     }
 

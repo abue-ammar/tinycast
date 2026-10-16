@@ -14,10 +14,8 @@ enum DictationIdleRelease: Int, CaseIterable, Identifiable, Sendable {
     var id: Self { self }
     var title: String {
         switch self {
-        case .never: "Never"
-        case .oneMinute: "1 minute"
-        case .oneHour: "1 hour"
-        default: "\(rawValue) minutes"
+        case .never: String(localized: "Never")
+        default: Duration.seconds(rawValue * 60).formatted(.units(allowed: [.hours, .minutes], width: .wide))
         }
     }
 }

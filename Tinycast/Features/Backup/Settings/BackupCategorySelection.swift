@@ -23,10 +23,8 @@ struct BackupCategorySelection: View {
     }
 
     private func subtitle(_ category: BackupCategory) -> String? {
-        guard let noun = category.descriptor.countNoun, let count = available?[category] else {
-            return nil
-        }
-        return "\(count) \(noun)"
+        guard let count = available?[category] else { return nil }
+        return category.countText(count)
     }
 
     var body: some View {

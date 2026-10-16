@@ -66,7 +66,7 @@ struct AIModelOption: Identifiable {
             ? [
                 AIModelOption(
                     selection: .appleIntelligence, title: AppleIntelligence.title,
-                    sourceTitle: "On device", menuIcon: appleIntelligenceIcon)
+                    sourceTitle: String(localized: "On device"), menuIcon: appleIntelligenceIcon)
             ] : []
         let codex = codex.map { model in
             AIModelOption(

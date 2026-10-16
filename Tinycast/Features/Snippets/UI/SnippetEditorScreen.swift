@@ -5,7 +5,10 @@ struct SnippetEditorScreen: PaletteScreen {
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
     var rows: [StoredSnippet] { [] }
-    var primaryActionTitle: String { coordinator.editor?.isSaving == true ? "Saving…" : "Save Snippet" }
+    var primaryActionTitle: String {
+        coordinator.editor?.isSaving == true
+            ? String(localized: "Saving…") : String(localized: "Save Snippet")
+    }
     let hidesSearchField = true
     let actsWithoutRows = true
 

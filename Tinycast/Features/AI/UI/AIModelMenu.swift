@@ -18,11 +18,15 @@ enum AIModelMenu {
         }
         if loading {
             items.insert(
-                PopoverMenuItem(title: "Loading models…", icon: .blank, isLoading: true) {}, at: 0)
+                PopoverMenuItem(
+                    title: String(localized: "Loading models…"), icon: .blank, isLoading: true
+                ) {}, at: 0)
         }
         guard !items.isEmpty else {
             return PopoverMenuContent(items: [
-                PopoverMenuItem(title: "Configure AI", systemImage: "slider.horizontal.3") {
+                PopoverMenuItem(
+                    title: String(localized: "Configure AI"), systemImage: "slider.horizontal.3"
+                ) {
                     coordinator.showSettings()
                 }
             ])
@@ -55,12 +59,13 @@ enum AIModelMenu {
         if items.count > 1 {
             items.append(
                 PopoverMenuItem(
-                    title: "Remove All", systemImage: "xmark.circle", startsSection: true
+                    title: String(localized: "Remove All"), systemImage: "xmark.circle",
+                    startsSection: true
                 ) {
                     coordinator.clearAttachments(in: chat)
                 })
         }
-        return PopoverMenuContent(header: "Attached", items: items)
+        return PopoverMenuContent(header: String(localized: "Attached"), items: items)
     }
 
     static func modelHighlight(coordinator: AIChatCoordinator, chat: AIChatState) -> Int {

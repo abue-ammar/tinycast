@@ -76,7 +76,7 @@ private struct RoomPreviewCardView: View {
                 .foregroundStyle(.primary)
                 .layoutPriority(1)
             if !card.title.isEmpty {
-                Text("—  \(card.title)")
+                Text(verbatim: "—  \(card.title)")
                     .font(.body)
                     .foregroundStyle(.secondary)
             }

@@ -48,7 +48,7 @@ private struct DictionaryBlockView: View {
                     }
                 }
                 if let pronunciation {
-                    Text("| \(pronunciation) |")
+                    Text(verbatim: "| \(pronunciation) |")
                         .font(metrics.typography.rowTitle)
                         .foregroundStyle(Theme.Colors.textSecondary)
                 }
@@ -70,7 +70,7 @@ private struct DictionaryBlockView: View {
             }
         case .subsense(let runs):
             HStack(alignment: .firstTextBaseline, spacing: metrics.spacing.sm) {
-                Text("•")
+                Text(verbatim: "•")
                     .foregroundStyle(Theme.Colors.textTertiary)
                 Text(runs.attributed())
             }

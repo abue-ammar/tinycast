@@ -209,24 +209,27 @@ struct RootPaletteView: View {
             header: title,
             items: [
                 PopoverMenuItem(
-                    title: "Changelog",
+                    title: String(localized: "Changelog"),
                     systemImage: "clock.arrow.trianglehead.2.counterclockwise.rotate.90"
                 ) {
                     if let url = URL(string: "https://github.com/abue-ammar/tinycast/releases") {
                         openURL(url)
                     }
                 },
-                PopoverMenuItem(title: "About Tinycast", systemImage: "info.circle") {
+                PopoverMenuItem(title: String(localized: "About Tinycast"), systemImage: "info.circle") {
                     core.settingsCoordinator.showAbout()
                 },
-                PopoverMenuItem(title: "Support Tinycast", systemImage: "heart") {
+                PopoverMenuItem(title: String(localized: "Support Tinycast"), systemImage: "heart") {
                     core.supportCoordinator.showSupport()
                 },
-                PopoverMenuItem(title: "Settings", systemImage: "gearshape", shortcut: "⌘,") {
+                PopoverMenuItem(
+                    title: String(localized: "Settings"), systemImage: "gearshape", shortcut: "⌘,"
+                ) {
                     core.settingsCoordinator.showSettings()
                 },
                 PopoverMenuItem(
-                    title: "Quit \(appName)", systemImage: "rectangle.portrait.and.arrow.right",
+                    title: String(localized: "Quit \(appName)"),
+                    systemImage: "rectangle.portrait.and.arrow.right",
                     isDestructive: true
                 ) {
                     NSApp.terminate(nil)
@@ -249,7 +252,7 @@ struct RootPaletteView: View {
                 popover: filtered.content, selection: $menuSelection,
                 visibleRows: Theme.Size.appMenuVisibleRows,
                 search: PopoverMenu.Search(
-                    placeholder: "Search for actions…", placement: .bottom),
+                    placeholder: String(localized: "Search for actions…"), placement: .bottom),
                 onActivate: activateMenuItem, preferredSelection: filtered.bestMatch)
         case .clipboardFilter:
             return headerMenu(
@@ -702,7 +705,8 @@ struct RootPaletteView: View {
                 headerGutter(width: metrics.spacing.md)
                 HeaderMenuButton(
                     title: vm.fileSearchFilter.title, systemImage: vm.fileSearchFilter.systemImage,
-                    isOpen: openMenu == .fileSearchFilter, help: "Filter by type  ⌘P",
+                    isOpen: openMenu == .fileSearchFilter,
+                    help: String(localized: "Filter by type  ⌘P"),
                     action: toggleFileSearchFilter)
             }
             if !isCollapsed, vm.mode == .emoji {
@@ -711,7 +715,7 @@ struct RootPaletteView: View {
                     title: vm.emojiCategoryFilter.title,
                     systemImage: vm.emojiCategoryFilter.systemImage,
                     isOpen: openMenu == .emojiCategory,
-                    help: "Filter by category  ⌘P",
+                    help: String(localized: "Filter by category  ⌘P"),
                     action: toggleEmojiCategory)
             }
             if !isCollapsed, vm.mode == .ai {
@@ -1081,7 +1085,7 @@ struct RootPaletteView: View {
         let filtered = popover.matching(ActionMenuSearchQuery(vm.menuQuery))
         return PaletteMenuContent(
             popover: filtered.content, selection: $menuSelection, width: width,
-            search: PopoverMenu.Search(placeholder: "Search…", placement: .top),
+            search: PopoverMenu.Search(placeholder: String(localized: "Search…"), placement: .top),
             onActivate: activateMenuItem, preferredSelection: filtered.bestMatch,
             extraRowsHeight: extraRowsHeight)
     }
@@ -1429,8 +1433,9 @@ struct RootPaletteView: View {
 
     /// Never promises a step the click does not take: a root screen closes rather than backs.
     private var backHelp: String {
-        let escape = hasBackStep ? "Esc to go back" : "Esc to close"
-        return "\(escape) or ⌘ Esc to go to root search"
+        hasBackStep
+            ? String(localized: "Esc to go back or ⌘ Esc to go to root search")
+            : String(localized: "Esc to close or ⌘ Esc to go to root search")
     }
 
     private func goBack() {

@@ -9,8 +9,8 @@ enum AIOpensTo: Int, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .recent: return "Recent Conversation"
-        case .newConversation: return "A New Conversation"
+        case .recent: return String(localized: "Recent Conversation")
+        case .newConversation: return String(localized: "A New Conversation")
         }
     }
 }
@@ -26,7 +26,7 @@ enum AINewChatAfter: Int, CaseIterable, Identifiable, Sendable {
     var id: Int { rawValue }
 
     var title: String {
-        self == .never ? "Never" : "\(rawValue) Minutes"
+        self == .never ? String(localized: "Never") : String(localized: "\(rawValue) Minutes")
     }
 
     var interval: TimeInterval { TimeInterval(rawValue) * 60 }

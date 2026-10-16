@@ -48,6 +48,8 @@ struct SystemAction: Identifiable, Hashable, Sendable {
 
     let id: ID
     let name: String
+    /// The English source, which stays searchable under every language.
+    let englishName: String
     let sfSymbol: String
     let confirmation: Confirmation
 
@@ -57,8 +59,9 @@ struct SystemAction: Identifiable, Hashable, Sendable {
 
 enum SystemActionCatalog {
     static let all: [SystemAction] = SystemAction.ID.allCases.map { id in
-        SystemAction(
-            id: id, name: name(for: id), sfSymbol: symbol(for: id),
+        let name = name(for: id)
+        return SystemAction(
+            id: id, name: String(localized: name), englishName: name.key, sfSymbol: symbol(for: id),
             confirmation: confirmation(for: id))
     }
 
@@ -74,7 +77,7 @@ enum SystemActionCatalog {
         byID[id]!
     }
 
-    private static func name(for id: SystemAction.ID) -> String {
+    private static func name(for id: SystemAction.ID) -> LocalizedStringResource {
         switch id {
         case .lockScreen: return "Lock Screen"
         case .sleep: return "Sleep"
@@ -146,20 +149,22 @@ enum SystemActionCatalog {
     }
 
     private static let sessionEndingMessage =
-        "Applications with unsaved changes may ask you to save."
+        String(localized: "Applications with unsaved changes may ask you to save.")
 
     private static func confirmation(for id: SystemAction.ID) -> SystemAction.Confirmation {
         switch id {
         case .restart:
-            return .required(title: "Restart your Mac?", message: sessionEndingMessage)
+            return .required(
+                title: String(localized: "Restart your Mac?"), message: sessionEndingMessage)
         case .shutDown:
-            return .required(title: "Shut down your Mac?", message: sessionEndingMessage)
+            return .required(
+                title: String(localized: "Shut down your Mac?"), message: sessionEndingMessage)
         case .logOut:
-            return .required(title: "Log out now?", message: sessionEndingMessage)
+            return .required(title: String(localized: "Log out now?"), message: sessionEndingMessage)
         case .emptyTrash:
             return .followsFinder(
-                title: "Empty Trash?",
-                message: "The items in the Trash will be permanently deleted.")
+                title: String(localized: "Empty Trash?"),
+                message: String(localized: "The items in the Trash will be permanently deleted."))
         case .quitAllApps:
             return .computed
         default:

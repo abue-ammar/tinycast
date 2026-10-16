@@ -100,8 +100,8 @@ private struct ArgumentFieldChrome: ViewModifier {
     }
 
     private var help: String {
-        if isOwed { return "\(argument.title) — required" }
-        return argument.isOptional ? "\(argument.title) — optional" : argument.title
+        if isOwed { return String(localized: "\(argument.title) — required") }
+        return argument.isOptional ? String(localized: "\(argument.title) — optional") : argument.title
     }
 
     private var fill: Color {
@@ -183,7 +183,7 @@ private struct ArgumentChoiceField: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(argument.title))
-        .accessibilityValue(Text(text.isEmpty ? "No value" : text))
+        .accessibilityValue(Text(text.isEmpty ? String(localized: "No value") : text))
         .accessibilityHint(Text("Opens a list of choices"))
         .accessibilityAddTraits(.isButton)
     }

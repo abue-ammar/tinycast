@@ -1,4 +1,5 @@
 import CoreGraphics
+import Foundation
 
 /// The 3×3 position grid. Raw values are spelled out so renaming a case can't rename a stored one.
 enum WindowLayoutAnchor: String, Codable, CaseIterable, Sendable {
@@ -19,15 +20,15 @@ enum WindowLayoutAnchor: String, Codable, CaseIterable, Sendable {
 
     var title: String {
         switch self {
-        case .topLeft: return "Top Left"
-        case .top: return "Top"
-        case .topRight: return "Top Right"
-        case .left: return "Left"
-        case .center: return "Center"
-        case .right: return "Right"
-        case .bottomLeft: return "Bottom Left"
-        case .bottom: return "Bottom"
-        case .bottomRight: return "Bottom Right"
+        case .topLeft: return String(localized: "Top Left")
+        case .top: return String(localized: "Top")
+        case .topRight: return String(localized: "Top Right")
+        case .left: return String(localized: "Left")
+        case .center: return String(localized: "Center")
+        case .right: return String(localized: "Right")
+        case .bottomLeft: return String(localized: "Bottom Left")
+        case .bottom: return String(localized: "Bottom")
+        case .bottomRight: return String(localized: "Bottom Right")
         }
     }
 

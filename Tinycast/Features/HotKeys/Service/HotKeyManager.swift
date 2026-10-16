@@ -360,35 +360,35 @@ final class HotKeyManager {
     private func displayName(of action: HotKeyAction) -> String {
         switch action {
         case .togglePalette:
-            return "App Launcher"
+            return String(localized: "App Launcher")
         case .dictation:
-            return "Dictation"
+            return String(localized: "Dictation")
         case .command(let id):
             return id.name
         case .app(let bundleID), .settingsPane(let bundleID):
             return displayName?(action) ?? bundleID
         case .customCommand:
-            return displayName?(action) ?? "Custom Command"
+            return displayName?(action) ?? String(localized: "Custom Command")
         case .systemAction(let id):
             return SystemActionCatalog.action(id: id).name
         case .windowCommand(let id):
-            return WindowCommandCatalog.command(id: id)?.name ?? "Window Command"
+            return WindowCommandCatalog.command(id: id)?.name ?? String(localized: "Window Command")
         case .windowLayout:
-            return displayName?(action) ?? "Window Layout"
+            return displayName?(action) ?? String(localized: "Window Layout")
         case .windowRoom:
-            return displayName?(action) ?? "Room"
+            return displayName?(action) ?? String(localized: "Room")
         case .customWindowSize:
-            return displayName?(action) ?? "Custom Size"
+            return displayName?(action) ?? String(localized: "Custom Size")
         case .quicklink:
-            return displayName?(action) ?? "Quicklink"
+            return displayName?(action) ?? String(localized: "Quicklink")
         case .quickAction:
-            return displayName?(action) ?? "Quick Action"
+            return displayName?(action) ?? String(localized: "Quick Action")
         case .appleShortcut:
-            return displayName?(action) ?? "Apple Shortcut"
+            return displayName?(action) ?? String(localized: "Apple Shortcut")
         case .snippet:
-            return displayName?(action) ?? "Snippet"
+            return displayName?(action) ?? String(localized: "Snippet")
         case .extensionCommand:
-            return displayName?(action) ?? "Extension Command"
+            return displayName?(action) ?? String(localized: "Extension Command")
         }
     }
 

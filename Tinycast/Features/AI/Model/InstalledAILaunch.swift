@@ -67,7 +67,7 @@ struct InstalledAILaunch: Equatable, Sendable {
     }
 
     static func missingCommandMessage(_ path: String) -> String {
-        "Nothing can be run at \(path). Check the command path."
+        String(localized: "Nothing can be run at \(path). Check the command path.")
     }
 
     nonisolated static func isVariableName(_ name: String) -> Bool {

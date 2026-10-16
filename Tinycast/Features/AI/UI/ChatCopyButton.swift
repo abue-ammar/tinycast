@@ -4,7 +4,7 @@ struct ChatCopyButton: View {
 
     @Environment(\.metrics) private var metrics
     let text: String
-    var subject = "Message"
+    var label = String(localized: "Copy Message")
 
     /// The stamp is the copy event: a fresh one re-arms the reset, so a second tap holds the check.
     @State private var copiedAt: Date?
@@ -23,7 +23,7 @@ struct ChatCopyButton: View {
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel(copied ? "Copied" : "Copy \(subject)")
+        .accessibilityLabel(copied ? String(localized: "Copied") : label)
         .task(id: copiedAt) {
             guard copied else { return }
             try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))

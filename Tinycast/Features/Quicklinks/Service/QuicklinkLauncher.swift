@@ -11,13 +11,13 @@ enum QuicklinkLauncher {
         var errorDescription: String? {
             switch self {
             case .unresolvable(let link):
-                return "“\(link)” isn't a URL, file path, or deeplink."
+                return String(localized: "“\(link)” isn't a URL, file path, or deeplink.")
             case .missingFile(let path):
-                return "Nothing exists at \(path) any more."
+                return String(localized: "Nothing exists at \(path) any more.")
             case .missingApplication:
-                return "The app this quicklink opens with isn't installed any more."
+                return String(localized: "The app this quicklink opens with isn't installed any more.")
             case .openFailed(let target, let detail):
-                return "macOS could not open \(target).\n\n\(detail)"
+                return String(localized: "macOS could not open \(target).\n\n\(detail)")
             }
         }
 

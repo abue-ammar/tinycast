@@ -49,14 +49,19 @@ enum CommandID: String, CaseIterable, Sendable {
     case support = "command:support"
     case quit = "command:quit"
 
-    var name: String {
+    var name: String { String(localized: nameResource) }
+
+    /// The English source, which stays searchable under every language.
+    var englishName: String { nameResource.key }
+
+    private var nameResource: LocalizedStringResource {
         switch self {
         case .quickAI: return "Quick AI"
         case .aiChat: return "AI Chat"
-        case .fixGrammar: return BuiltInQuickAction.fixGrammar.title
-        case .rewrite: return BuiltInQuickAction.rewrite.title
-        case .translate: return BuiltInQuickAction.translate.title
-        case .summarize: return BuiltInQuickAction.summarize.title
+        case .fixGrammar: return BuiltInQuickAction.fixGrammar.titleResource
+        case .rewrite: return BuiltInQuickAction.rewrite.titleResource
+        case .translate: return BuiltInQuickAction.translate.titleResource
+        case .summarize: return BuiltInQuickAction.summarize.titleResource
         case .calculatorHistory: return "Calculator History"
         case .clipboardHistory: return "Clipboard History"
         case .pasteSequentially: return "Paste Sequentially"

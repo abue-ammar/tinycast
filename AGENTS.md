@@ -112,6 +112,10 @@ feature's doc, under its own `## Invariants`.
 
 ## Conventions worth knowing up front
 
+- **User-facing text is localized through `Localizable.xcstrings`**: SwiftUI literals as they are,
+  `String(localized:)` wherever text travels as a `String`, one literal per sentence. Run
+  `./Scripts/sync-strings.sh` after changing any, and translate all eight languages in the same change.
+  See [standards.md](docs/standards.md#localization).
 - **A new preference also gets a `SettingsFileKey`** and its binding in `SettingsFileSchema`, so the
   opt-in `settings.json` mirror carries it; the exhaustive switch fails the build until it is bound.
   See [settings-file.md](docs/features/settings-file.md).

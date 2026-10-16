@@ -6,7 +6,7 @@ struct CustomCommandEditorScreen: PaletteScreen {
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
     var rows: [CustomCommand] { [] }
-    let primaryActionTitle = "Save Command"
+    let primaryActionTitle = String(localized: "Save Command")
     let hidesSearchField = true
     let actsWithoutRows = true
 

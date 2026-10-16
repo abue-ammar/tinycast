@@ -75,10 +75,9 @@ struct WindowLayoutPlan: Equatable, Sendable {
                 return name
             })
         if !displays.isEmpty, displays.count == skipped.count {
-            return displays.count == 1
-                ? "1 display not connected" : "\(displays.count) displays not connected"
+            return String(localized: "\(displays.count) displays not connected")
         }
-        return skipped.count == 1 ? "1 entry skipped" : "\(skipped.count) entries skipped"
+        return String(localized: "\(skipped.count) entries skipped")
     }
 
     /// Deliberately blind to `isEnabled`: that guard lives in the coordinator, and only there.

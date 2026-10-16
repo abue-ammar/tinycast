@@ -20,10 +20,14 @@ enum AIConnectionKeyPolicy {
         if retargeted {
             return isLoopback
                 ? .removeStored
-                : .reject("Enter an API key for this endpoint — the saved key stays with the old one.")
+                : .reject(
+                    String(
+                        localized: """
+                            Enter an API key for this endpoint — the saved key stays with the old one.
+                            """))
         }
         guard isLoopback || hasStoredKey else {
-            return .reject("Enter an API key for this remote provider.")
+            return .reject(String(localized: "Enter an API key for this remote provider."))
         }
         return .keep
     }

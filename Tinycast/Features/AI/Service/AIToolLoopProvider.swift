@@ -70,7 +70,8 @@ struct AIToolLoopProvider: AIProvider {
                 messages.append(AIMessage(role: .tool, text: "", toolResult: result))
             }
         }
-        throw AIProviderError.responseFailed("Stopped after \(rounds) rounds of tool calls.")
+        throw AIProviderError.responseFailed(
+            String(localized: "Stopped after \(rounds) rounds of tool calls."))
     }
 
     /// One pass over the base route: text flows straight to the transcript, calls are collected.

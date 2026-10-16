@@ -14,29 +14,38 @@ enum BackupCategory: String, CaseIterable, Identifiable, Sendable {
         let symbol: String
         /// Where this category's files sit inside the bundle; empty means the bundle root.
         let subpath: String
-        /// How the picker counts this category; nil where a number would say nothing.
-        let countNoun: String?
     }
 
     var descriptor: Descriptor {
         switch self {
         case .configuration:
             return .init(
-                label: "Settings & Shortcuts", symbol: "slider.horizontal.3", subpath: "",
-                countNoun: nil)
+                label: String(localized: "Settings & Shortcuts"), symbol: "slider.horizontal.3",
+                subpath: "")
         case .clipboard:
             return .init(
-                label: "Clipboard History", symbol: "doc.on.clipboard", subpath: "clipboard",
-                countNoun: "clips")
+                label: String(localized: "Clipboard History"), symbol: "doc.on.clipboard",
+                subpath: "clipboard")
         case .snippets:
             return .init(
-                label: "Snippets", symbol: "curlybraces", subpath: "snippets", countNoun: "snippets")
+                label: String(localized: "Snippets"), symbol: "curlybraces", subpath: "snippets")
         case .notes:
-            return .init(label: "Notes", symbol: "note.text", subpath: "notes", countNoun: "notes")
+            return .init(label: String(localized: "Notes"), symbol: "note.text", subpath: "notes")
         case .learning:
             return .init(
-                label: "Launcher Learning", symbol: "chart.line.uptrend.xyaxis",
-                subpath: "learning", countNoun: "records")
+                label: String(localized: "Launcher Learning"), symbol: "chart.line.uptrend.xyaxis",
+                subpath: "learning")
+        }
+    }
+
+    /// How the picker counts this category; nil where a number would say nothing.
+    func countText(_ count: Int) -> String? {
+        switch self {
+        case .configuration: return nil
+        case .clipboard: return String(localized: "\(count) clips")
+        case .snippets: return String(localized: "\(count) snippets")
+        case .notes: return String(localized: "\(count) notes")
+        case .learning: return String(localized: "\(count) records")
         }
     }
 

@@ -11,10 +11,10 @@ enum AIRetention: Int, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .week: return "7 Days"
-        case .month: return "30 Days"
-        case .threeMonths: return "3 Months"
-        case .forever: return "Forever"
+        case .week: return String(localized: "7 Days")
+        case .month: return String(localized: "30 Days")
+        case .threeMonths: return String(localized: "3 Months")
+        case .forever: return String(localized: "Forever")
         }
     }
 

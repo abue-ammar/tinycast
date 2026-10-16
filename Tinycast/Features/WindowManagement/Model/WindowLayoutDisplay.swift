@@ -19,6 +19,6 @@ struct WindowLayoutDisplay: Codable, Hashable, Sendable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         uuid = try container.decode(String.self, forKey: .uuid)
-        name = try container.decodeIfPresent(String.self, forKey: .name) ?? "Display"
+        name = try container.decodeIfPresent(String.self, forKey: .name) ?? String(localized: "Display")
     }
 }

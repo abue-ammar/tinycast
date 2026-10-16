@@ -19,7 +19,7 @@ struct SnippetMarkdownSerializer {
         }
 
         guard let closingIndex = lines.dropFirst().firstIndex(where: { $0.text == "---" }) else {
-            throw parseError(fileURL, line: 1, "Missing closing frontmatter delimiter")
+            throw parseError(fileURL, line: 1, String(localized: "Missing closing frontmatter delimiter"))
         }
 
         var name: String?
@@ -33,17 +33,20 @@ struct SnippetMarkdownSerializer {
             let lineNumber = lineIndex + 1
             guard !line.text.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
             guard let separator = line.text.firstIndex(of: ":") else {
-                throw parseError(fileURL, line: lineNumber, "Expected a key and value separated by ':'")
+                throw parseError(
+                    fileURL, line: lineNumber, String(localized: "Expected a key and value separated by ':'"))
             }
 
             let rawKey = line.text[..<separator].trimmingCharacters(in: .whitespaces)
             let rawValue = line.text[line.text.index(after: separator)...]
                 .trimmingCharacters(in: .whitespaces)
             guard let key = canonicalKey(for: rawKey) else {
-                throw parseError(fileURL, line: lineNumber, "Unsupported frontmatter key '\(rawKey)'")
+                throw parseError(
+                    fileURL, line: lineNumber, String(localized: "Unsupported frontmatter key '\(rawKey)'"))
             }
             guard seenKeys.insert(key).inserted else {
-                throw parseError(fileURL, line: lineNumber, "Duplicate frontmatter key '\(key)'")
+                throw parseError(
+                    fileURL, line: lineNumber, String(localized: "Duplicate frontmatter key '\(key)'"))
             }
 
             switch key {
@@ -141,7 +144,7 @@ struct SnippetMarkdownSerializer {
     private static func decodeScalar(_ value: String, fileURL: URL, line: Int) throws -> String {
         let scalars = value.unicodeScalars
         guard scalars.first == "\"" else {
-            throw parseError(fileURL, line: line, "String values must use double quotes")
+            throw parseError(fileURL, line: line, String(localized: "String values must use double quotes"))
         }
 
         var decoded = ""
@@ -151,14 +154,15 @@ struct SnippetMarkdownSerializer {
             if scalar == "\"" {
                 let trailing = scalars[scalars.index(after: index)...]
                 guard trailing.allSatisfy({ $0 == " " || $0 == "\t" }) else {
-                    throw parseError(fileURL, line: line, "Unexpected text after quoted value")
+                    throw parseError(
+                        fileURL, line: line, String(localized: "Unexpected text after quoted value"))
                 }
                 return decoded
             }
             if scalar == "\\" {
                 let escapeIndex = scalars.index(after: index)
                 guard escapeIndex < scalars.endIndex else {
-                    throw parseError(fileURL, line: line, "Unterminated escape sequence")
+                    throw parseError(fileURL, line: line, String(localized: "Unterminated escape sequence"))
                 }
                 switch scalars[escapeIndex] {
                 case "\\": decoded.append("\\")
@@ -167,18 +171,18 @@ struct SnippetMarkdownSerializer {
                 case "r": decoded.append("\r")
                 case "t": decoded.append("\t")
                 default:
-                    throw parseError(fileURL, line: line, "Unsupported escape sequence")
+                    throw parseError(fileURL, line: line, String(localized: "Unsupported escape sequence"))
                 }
                 index = scalars.index(after: escapeIndex)
                 continue
             }
             guard scalar != "\n" && scalar != "\r" && scalar != "\t" else {
-                throw parseError(fileURL, line: line, "Control characters must be escaped")
+                throw parseError(fileURL, line: line, String(localized: "Control characters must be escaped"))
             }
             decoded.unicodeScalars.append(scalar)
             index = scalars.index(after: index)
         }
-        throw parseError(fileURL, line: line, "Unterminated quoted value")
+        throw parseError(fileURL, line: line, String(localized: "Unterminated quoted value"))
     }
 
     private static func decodeBoolean(_ value: String, fileURL: URL, line: Int) throws -> Bool {
@@ -186,7 +190,8 @@ struct SnippetMarkdownSerializer {
         case "true": return true
         case "false": return false
         default:
-            throw parseError(fileURL, line: line, "Boolean values must be exactly 'true' or 'false'")
+            throw parseError(
+                fileURL, line: line, String(localized: "Boolean values must be exactly 'true' or 'false'"))
         }
     }
 

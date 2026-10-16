@@ -11,7 +11,7 @@ struct QuickActionModelPicker: View {
             HStack(spacing: Theme.Spacing.lg) {
                 AIModelSelectionRows(
                     selection: selection,
-                    inheritedTitle: "Same as Quick Actions",
+                    inheritedTitle: String(localized: "Same as Quick Actions"),
                     select: { selection = $0 },
                     modelLabel: { Text("Model") },
                     effortLabel: { Text("Reasoning effort") })

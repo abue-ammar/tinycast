@@ -63,9 +63,9 @@ enum ExtensionRefreshPolicy {
     static func refreshNowRefusal(
         foregroundRunning: Bool, refreshingCommand: String?, command: String
     ) -> String? {
-        if refreshingCommand == command { return "Already refreshing." }
+        if refreshingCommand == command { return String(localized: "Already refreshing.") }
         guard foregroundRunning || refreshingCommand != nil else { return nil }
-        return "Another extension command is running. Try again when it finishes."
+        return String(localized: "Another extension command is running. Try again when it finishes.")
     }
 
     /// A hung background run dies before its successor is due, or ticks pile up behind it.
@@ -83,7 +83,8 @@ enum ExtensionRefreshPolicy {
     }
 
     static func headline(_ message: String) -> String {
-        String(message.split(separator: "\n").first ?? "Background refresh failed.")
+        message.split(separator: "\n").first.map(String.init)
+            ?? String(localized: "Background refresh failed.")
     }
 
     /// A subtitle restating the owning extension is dropped: the row already carries it.

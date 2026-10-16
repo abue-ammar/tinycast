@@ -117,7 +117,9 @@ final class MCPOAuthListener {
         }
         let status = outcome == nil ? "400 Bad Request" : "200 OK"
         let page =
-            outcome == nil ? "Invalid sign-in response." : "Return to Tinycast. You can close this tab."
+            outcome == nil
+            ? String(localized: "Invalid sign-in response.")
+            : String(localized: "Return to Tinycast. You can close this tab.")
         let response =
             "HTTP/1.1 \(status)\r\nContent-Type: text/html; charset=utf-8\r\n"
             + "Cache-Control: no-store\r\nContent-Security-Policy: default-src 'none'\r\n"

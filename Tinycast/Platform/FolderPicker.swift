@@ -9,7 +9,7 @@ enum FolderPicker {
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
-        panel.prompt = "Use Folder"
+        panel.prompt = String(localized: "Use Folder")
         panel.message = message
         panel.directoryURL = directory
         // Tinycast is an accessory app, so the panel opens behind the frontmost app without this.

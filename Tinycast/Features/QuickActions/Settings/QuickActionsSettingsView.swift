@@ -206,7 +206,7 @@ struct QuickActionsSettingsView: View {
 
     private func subtitle(for action: QuickAction) -> String? {
         let details = [
-            action.alwaysPreviews ? "Always shown in a panel" : nil,
+            action.alwaysPreviews ? String(localized: "Always shown in a panel") : nil,
             store.modelOverride(for: action).map(routeTitle)
         ].compactMap(\.self)
         return details.isEmpty ? nil : details.joined(separator: " · ")

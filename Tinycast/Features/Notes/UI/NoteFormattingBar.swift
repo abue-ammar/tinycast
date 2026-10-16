@@ -12,39 +12,61 @@ struct NoteFormattingBar: View {
     }
 
     private static let styles = [
-        Control(symbol: "bold", title: "Bold", shortcut: "⌘B", action: .toggleInline(.bold)) {
+        Control(
+            symbol: "bold", title: String(localized: "Bold"), shortcut: "⌘B",
+            action: .toggleInline(.bold)
+        ) {
             $0.inlineStyles.contains(.bold)
         },
-        Control(symbol: "italic", title: "Italic", shortcut: "⌘I", action: .toggleInline(.italic)) {
+        Control(
+            symbol: "italic", title: String(localized: "Italic"), shortcut: "⌘I",
+            action: .toggleInline(.italic)
+        ) {
             $0.inlineStyles.contains(.italic)
         },
         Control(
-            symbol: "strikethrough", title: "Strikethrough", shortcut: "⇧⌘X",
+            symbol: "strikethrough", title: String(localized: "Strikethrough"), shortcut: "⇧⌘X",
             action: .toggleInline(.strikethrough)
         ) { $0.inlineStyles.contains(.strikethrough) },
         Control(
-            symbol: "chevron.left.forwardslash.chevron.right", title: "Inline Code", shortcut: "⌘E",
-            action: .toggleInline(.code)
+            symbol: "chevron.left.forwardslash.chevron.right", title: String(localized: "Inline Code"),
+            shortcut: "⌘E", action: .toggleInline(.code)
         ) { $0.inlineStyles.contains(.code) },
-        Control(symbol: "link", title: "Link", shortcut: "⌘K", action: .toggleLink) { $0.isLink }
+        Control(symbol: "link", title: String(localized: "Link"), shortcut: "⌘K", action: .toggleLink) {
+            $0.isLink
+        }
     ]
 
     private static let blocks = [
-        Control(symbol: "curlybraces", title: "Code Block", shortcut: "⌥⌘C", action: .toggleCodeBlock) {
+        Control(
+            symbol: "curlybraces", title: String(localized: "Code Block"), shortcut: "⌥⌘C",
+            action: .toggleCodeBlock
+        ) {
             $0.isCodeBlock
         },
-        Control(symbol: "text.quote", title: "Quote", shortcut: "⇧⌘B", action: .toggleQuote) { $0.isQuote }
+        Control(
+            symbol: "text.quote", title: String(localized: "Quote"), shortcut: "⇧⌘B",
+            action: .toggleQuote
+        ) { $0.isQuote }
     ]
 
     private static let lists = [
-        Control(symbol: "list.number", title: "Numbered List", shortcut: "⇧⌘7", action: .toggleList(.ordered))
-        {
+        Control(
+            symbol: "list.number", title: String(localized: "Numbered List"), shortcut: "⇧⌘7",
+            action: .toggleList(.ordered)
+        ) {
             $0.list == .ordered
         },
-        Control(symbol: "list.bullet", title: "Bullet List", shortcut: "⇧⌘8", action: .toggleList(.bullet)) {
+        Control(
+            symbol: "list.bullet", title: String(localized: "Bullet List"), shortcut: "⇧⌘8",
+            action: .toggleList(.bullet)
+        ) {
             $0.list == .bullet
         },
-        Control(symbol: "checklist", title: "Task List", shortcut: "⇧⌘9", action: .toggleList(.task)) {
+        Control(
+            symbol: "checklist", title: String(localized: "Task List"), shortcut: "⇧⌘9",
+            action: .toggleList(.task)
+        ) {
             $0.list == .task
         }
     ]
@@ -105,7 +127,7 @@ private struct NoteFormattingToggle: View {
         .accessibilityLabel("Formatting")
         .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
         // Against the window's trailing edge, so a centred label would run off it.
-        .tooltip("Formatting  ⌥⌘T", alignment: .trailing)
+        .tooltip(String(localized: "Formatting  ⌥⌘T"), alignment: .trailing)
     }
 }
 
@@ -150,14 +172,14 @@ private struct NoteHeadingButton: View {
         .accessibilityValue(accessibilityValue)
         .accessibilityAddTraits(isHeading ? .isSelected : [])
         // The leading end of an expanded capsule, which a narrow note pushes against the edge.
-        .tooltip(isOpen ? nil : "Heading", alignment: .leading)
+        .tooltip(isOpen ? nil : String(localized: "Heading"), alignment: .leading)
     }
 
     private var accessibilityValue: String {
         switch level {
         case nil: ""
-        case 0: "Text"
-        case let level?: "Heading \(level)"
+        case 0: String(localized: "Text")
+        case let level?: String(localized: "Heading \(level)")
         }
     }
 }

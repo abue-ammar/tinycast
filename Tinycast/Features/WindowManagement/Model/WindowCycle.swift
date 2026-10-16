@@ -11,17 +11,17 @@ enum WindowCycle: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .off: "None"
-        case .sizes: "Cycle ½, ⅓ and ⅔"
-        case .displays: "Cycle displays"
+        case .off: String(localized: "None")
+        case .sizes: String(localized: "Cycle ½, ⅓ and ⅔")
+        case .displays: String(localized: "Cycle displays")
         }
     }
 
     var detail: String {
         switch self {
-        case .off: "Repeating a half keeps the same frame."
-        case .sizes: "Repeating a half steps through ⅓ and ⅔."
-        case .displays: "Repeating a half moves it across your displays."
+        case .off: String(localized: "Repeating a half keeps the same frame.")
+        case .sizes: String(localized: "Repeating a half steps through ⅓ and ⅔.")
+        case .displays: String(localized: "Repeating a half moves it across your displays.")
         }
     }
 }
