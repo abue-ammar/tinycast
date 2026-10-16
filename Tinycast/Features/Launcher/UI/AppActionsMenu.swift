@@ -78,7 +78,7 @@ enum AppActionsMenu {
                     core.launcherCoordinator.quit(app, force: true)
                 })
         }
-        if app.kind == .application {
+        if app.kind == .application, app.primaryInstallationID == nil {
             items.append(
                 PopoverMenuItem(
                     title: "Uninstall Application", systemImage: "trash", startsSection: true,
@@ -133,7 +133,6 @@ enum AppActionsMenu {
         return PopoverMenuContent(header: app.name, items: items)
     }
 
-    /// A meeting row leads with the same actions as the meeting's card.
     private static func leadingItems(
         app: AppEntry, searchQuery: String, core: AppCore
     ) -> [PopoverMenuItem] {

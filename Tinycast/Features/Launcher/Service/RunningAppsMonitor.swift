@@ -4,6 +4,7 @@ import AppKit
 @Observable
 final class RunningAppsMonitor {
     private(set) var runningBundleIDs: Set<String> = []
+    private var runningAppPaths: Set<String> = []
     @ObservationIgnored private var observers: [NotificationToken] = []
 
     init() {
@@ -21,14 +22,15 @@ final class RunningAppsMonitor {
     }
 
     func isRunning(_ app: AppEntry) -> Bool {
-        guard let bundleID = app.bundleID else { return false }
-        return runningBundleIDs.contains(bundleID)
+        app.kind == .application && app.bundleID != nil && runningAppPaths.contains(app.id)
     }
 
     /// Helpers and agents fire these too, so republish only on a real change.
     private func refresh() {
-        let next = Set(NSWorkspace.shared.runningApplications.compactMap(\.bundleIdentifier))
-        guard next != runningBundleIDs else { return }
-        runningBundleIDs = next
+        let apps = NSWorkspace.shared.runningApplications
+        let bundleIDs = Set(apps.compactMap(\.bundleIdentifier))
+        let paths = Set(apps.compactMap { $0.bundleURL?.resolvingSymlinksInPath().standardizedFileURL.path })
+        if bundleIDs != runningBundleIDs { runningBundleIDs = bundleIDs }
+        if paths != runningAppPaths { runningAppPaths = paths }
     }
 }

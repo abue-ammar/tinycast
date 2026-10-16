@@ -4,7 +4,9 @@ enum AppLauncher {
 
     @MainActor
     static func launch(_ url: URL) {
-        NSWorkspace.shared.openApplication(at: url, configuration: NSWorkspace.OpenConfiguration())
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.allowsRunningApplicationSubstitution = false
+        NSWorkspace.shared.openApplication(at: url, configuration: configuration)
     }
 
     @MainActor
@@ -77,11 +79,10 @@ enum AppLauncher {
         }
     }
 
-    /// Quits every instance; only an unforced quit lets unsaved work put up its sheet.
     @MainActor
     @discardableResult
-    static func quit(bundleID: String, force: Bool = false) -> Bool {
-        let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+    static func quit(bundleID: String, url: URL? = nil, force: Bool = false) -> Bool {
+        let running = runningApplications(bundleID: bundleID, at: url)
         for app in running {
             if force { app.forceTerminate() } else { app.terminate() }
         }
@@ -94,9 +95,18 @@ enum AppLauncher {
     /// A refused quit — a save sheet left standing — relaunches nothing.
     @MainActor
     static func restart(bundleID: String, url: URL) async {
+        let target = url.resolvingSymlinksInPath().standardizedFileURL
+        let running = runningApplications(bundleID: bundleID, at: target)
+        guard !running.isEmpty, !Task.isCancelled, await quitAwaitingExit(running), !Task.isCancelled
+        else { return }
+        launch(target)
+    }
+
+    @MainActor
+    private static func runningApplications(bundleID: String, at url: URL?) -> [NSRunningApplication] {
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        guard !running.isEmpty, await quitAwaitingExit(running) else { return }
-        launch(url)
+        guard let target = url?.resolvingSymlinksInPath().standardizedFileURL else { return running }
+        return running.filter { $0.bundleURL?.resolvingSymlinksInPath().standardizedFileURL == target }
     }
 
     /// Observes before it terminates, so an instance that exits at once can't outrun the wait.

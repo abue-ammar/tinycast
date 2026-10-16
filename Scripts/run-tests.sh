@@ -125,6 +125,19 @@ run app-name-test          Tinycast/Platform/AppDisplayName.swift \
                            Tinycast/Platform/BundleLocalization.swift \
                            $L/SearchRelevance.swift
 run favorites-test         $L/FavoriteSlots.swift
+run app-installation-test  $L/SearchRelevance.swift $L/ScriptRomanization.swift \
+                           $L/LauncherMatch.swift $L/EntryNaming.swift $L/LauncherOrder.swift \
+                           $L/LauncherRankingStore.swift $L/LauncherSuggestions.swift $L/SearchScopes.swift \
+                           Tinycast/Features/Launcher/Service/AppIndex.swift \
+                           Tinycast/Features/Launcher/Service/AppLauncher.swift \
+                           Tinycast/Features/Launcher/Service/RunningAppsMonitor.swift \
+                           Tinycast/Features/Launcher/Service/FavoritesStore.swift \
+                           Tinycast/Features/Launcher/Service/AliasStore.swift \
+                           Tinycast/Features/Launcher/Service/VisibilityStore.swift \
+                           Tinycast/Features/Launcher/Service/BundleNameCache.swift \
+                           Tinycast/Platform/AppDisplayName.swift Tinycast/Platform/BundleLocalization.swift \
+                           Tinycast/Platform/Images/FileIconStamp.swift Tinycast/Platform/Memo.swift \
+                           Tinycast/Platform/Signposts.swift Tinycast/Platform/NotificationToken.swift
 run launcher-file-test     $L/LauncherFileFormat.swift \
                            Tinycast/Features/Settings/Model/SettingsFileJSON.swift
 run launcher-settings-file-test \
