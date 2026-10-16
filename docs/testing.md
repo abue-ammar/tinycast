@@ -727,6 +727,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - A bare amount (`1 usd`) answers in the Mac's region currency, and follows a change to
   System Settings ▸ General ▸ Language & Region without a relaunch — and nothing prompts for location
 - A crypto query (`1 btc`, `0.5 sol to eur`) answers, and `1 usd to btc` stays in plain notation
+- `1000 usd in eur/12` converts and then divides; copying preserves the euro amount and code.
+  `100km/h in m/s / 2` retains the compound target, and `1000 usd in eur / 0` stays silent
 
 ### Calendar and meetings
 

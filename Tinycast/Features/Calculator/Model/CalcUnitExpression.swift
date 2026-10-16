@@ -10,9 +10,14 @@ enum CalcUnitExpression {
     }
 
     static func parse(_ tokens: [CalcToken]) -> UnitDef? {
-        var parser = UnitParser(tokens: tokens)
-        guard let unit = parser.expression(), parser.index == tokens.count else { return nil }
-        return unit
+        guard let result = prefix(tokens, at: 0), result.end == tokens.count else { return nil }
+        return result.unit
+    }
+
+    static func prefix(_ tokens: [CalcToken], at index: Int) -> (unit: UnitDef, end: Int)? {
+        var parser = UnitParser(tokens: tokens, index: index)
+        guard let unit = parser.expression() else { return nil }
+        return (unit, parser.index)
     }
 
     static func factor(_ tokens: [CalcToken], at index: Int) -> (unit: UnitDef, end: Int)? {
@@ -60,10 +65,12 @@ enum CalcUnitExpression {
             guard var left = factor() else { return nil }
             while current == .op(.multiply) || current == .op(.divide) {
                 let dividing = current == .op(.divide)
-                index += 1
-                guard let right = factor(), let result = combine(left, right, dividing: dividing) else {
-                    return nil
+                var next = self
+                next.index += 1
+                guard let right = next.factor(), let result = combine(left, right, dividing: dividing) else {
+                    break
                 }
+                self = next
                 left = result
             }
             return left

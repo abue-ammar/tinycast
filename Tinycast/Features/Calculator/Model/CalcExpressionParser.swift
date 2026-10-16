@@ -19,6 +19,8 @@ struct CalcExpressionParser {
 
     private static let unaryBindingPower = 25
     private static let compositeBindingPower = 40
+    /// Between `+` and `*`: `2 * 500 usd in eur` converts the product, `5 ft 3 in in cm` the height.
+    private static let conversionBindingPower = 15
 
     private var current: CalcToken? {
         position < tokens.count ? tokens[position] : nil
@@ -40,13 +42,17 @@ struct CalcExpressionParser {
 
     private mutating func parseExpression(minBindingPower: Int) -> CalcValue? {
         guard var left = parseOperand(), left.effective.isFinite else { return nil }
-        if let target = peekAdditiveConversion() {
-            position += 2
-            operationCount += 1
-            guard let converted = converted(left, to: target) else { return nil }
-            left = converted
-        }
-        while let binary = peekBinary(left: left), binary.bindingPower >= minBindingPower {
+        while true {
+            if Self.conversionBindingPower >= minBindingPower, let target = peekConversion() {
+                position = target.end
+                operationCount += 1
+                guard let converted = converted(left, to: target.name) else { return nil }
+                left = converted
+                continue
+            }
+            guard let binary = peekBinary(left: left), binary.bindingPower >= minBindingPower else {
+                return left
+            }
             if binary.consumesToken { position += 1 }
             operationCount += 1
             guard
@@ -56,17 +62,15 @@ struct CalcExpressionParser {
             else { return nil }
             left = combined
         }
-        return left
     }
 
-    /// A mid-expression `to` only when `+`/`-` follows it: `to usd * 30` stays genuinely ambiguous.
-    private func peekAdditiveConversion() -> String? {
-        guard position + 2 < tokens.count, CalcUnits.isConnector(tokens[position]),
-            case .ident(let name) = tokens[position + 1],
-            CalcUnits.byName[name] != nil || CalcCurrency.byName[name] != nil,
-            case .op(let next) = tokens[position + 2], next == .add || next == .subtract
+    /// A target that ends its scope stays trailing, so `10kg + 500g to lb` converts the whole sum.
+    private func peekConversion() -> (name: String, end: Int)? {
+        guard position < tokens.count, CalcUnits.isConnector(tokens[position]),
+            let target = CalcQuantity.conversionPrefix(tokens, at: position + 1),
+            target.end < tokens.count, case .op(let next) = tokens[target.end], next.bindingPower != nil
         else { return nil }
-        return name
+        return target
     }
 
     struct BinaryOp {
@@ -505,11 +509,11 @@ struct CalcExpressionParser {
         position += 2
         var values: [CalcValue] = []
         while true {
-            guard let value = parseExpression(minBindingPower: 0), !value.isBoolean else { return nil }
+            guard let end = argumentEnd(), let value = parseScope(upTo: end), !value.isBoolean
+            else { return nil }
             values.append(value)
-            if current == .op(.close) { position += 1; break }
-            guard current == .comma else { return nil }
-            position += 1
+            position = end + 1
+            if tokens[end] == .op(.close) { break }
         }
         operationCount += 1
         let first = values[0]
@@ -531,21 +535,26 @@ struct CalcExpressionParser {
         return CalcValue(amount: result, kind: keepsUnit ? first.kind : .scalar)
     }
 
-    /// A group is its own conversion scope, so `(20 sgd to usd) * 30` converts then multiplies.
     private mutating func parseGrouped() -> CalcValue? {
         guard let close = matchingParenthesis() else { return nil }
         position += 1
-        let target = CalcQuantity.conversionTarget(tokens, from: position, to: close)
-        guard let value = parseGroupedValue(upTo: target?.start ?? close)
-        else { return nil }
+        guard let value = parseScope(upTo: close) else { return nil }
         position = close + 1
+        return value
+    }
+
+    /// A group or argument is its own conversion scope, so `(20 sgd to usd) * 30` converts first.
+    private mutating func parseScope(upTo end: Int) -> CalcValue? {
+        let target = CalcQuantity.conversionTarget(tokens, from: position, to: end)
+        guard let value = parseScopedValue(upTo: target?.start ?? end) else { return nil }
+        position = end
         guard let target else { return value }
         operationCount += 1
         return converted(value, to: target.name)
     }
 
     /// A lone unit or currency implies an amount of 1, the way `eur to usd` already does.
-    private mutating func parseGroupedValue(upTo end: Int) -> CalcValue? {
+    private mutating func parseScopedValue(upTo end: Int) -> CalcValue? {
         if end - position == 1, case .ident(let name) = tokens[position],
             let kind = dimension(named: name)
         {
@@ -568,6 +577,21 @@ struct CalcExpressionParser {
     /// `100 / s` is one second, as `(s)` is; only here, so `m s` keeps meaning a unit pair.
     private var isAfterDivision: Bool {
         position > 0 && tokens[position - 1] == .op(.divide)
+    }
+
+    private func argumentEnd() -> Int? {
+        var depth = 0
+        for index in position..<tokens.count {
+            switch tokens[index] {
+            case .op(.open): depth += 1
+            case .op(.close):
+                if depth == 0 { return index }
+                depth -= 1
+            case .comma where depth == 0: return index
+            default: break
+            }
+        }
+        return nil
     }
 
     private func matchingParenthesis() -> Int? {
