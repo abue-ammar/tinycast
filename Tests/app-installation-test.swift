@@ -172,6 +172,14 @@ struct AppInstallationTest {
                     .appendingPathComponent(bundle.lastPathComponent + ".ready")
                 try! Data().write(to: marker)
             }
+
+            func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+                let bundle = Bundle.main.bundleURL
+                let marker = bundle.deletingLastPathComponent()
+                    .appendingPathComponent(bundle.lastPathComponent + ".reopened")
+                try! Data().write(to: marker)
+                return true
+            }
         }
 
         let app = NSApplication.shared
@@ -219,7 +227,7 @@ struct AppInstallationTest {
             }
         }
         defer { center.removeObserver(observer) }
-        AppLauncher.launch(first)
+        AppLauncher.launch(first, allowsRunningApplicationSubstitution: false)
         check("the first selected installation launches", await waitUntil { running(first) != nil })
         check(
             "the first fixture completes AppKit launch",
@@ -236,7 +244,7 @@ struct AppInstallationTest {
         check(
             "the running dot belongs to the selected path",
             monitor.isRunning(firstEntry) && !monitor.isRunning(secondEntry))
-        AppLauncher.launch(second)
+        AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
         check(
             "another running version cannot replace the selection", await waitUntil { running(second) != nil }
         )
@@ -255,7 +263,7 @@ struct AppInstallationTest {
             "running paths distinguish copies with one bundle ID",
             bothRunning.isRunning(firstEntry) && bothRunning.isRunning(secondEntry))
         let secondPID = running(second)?.processIdentifier
-        AppLauncher.launch(second)
+        AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
         try await Task.sleep(for: .milliseconds(300))
         check("reopening reuses the selected installation", running(second)?.processIdentifier == secondPID)
         check("Quit finds the selected version", AppLauncher.quit(bundleID: id, url: second))
@@ -267,7 +275,7 @@ struct AppInstallationTest {
                 "the running dot clears for only the version that quit",
                 await waitUntil { !monitor.isRunning(secondEntry) && monitor.isRunning(firstEntry) })
         }
-        AppLauncher.launch(second)
+        AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
         check("the second installation can reopen", await waitUntil { running(second) != nil })
         let siblingPID = running(second)?.processIdentifier
         if receivesEvents {
@@ -289,6 +297,20 @@ struct AppInstallationTest {
         check(
             "Force Quit targets the selected path",
             await waitUntil { running(second) == nil && running(first) != nil })
+        let firstPID = running(first)?.processIdentifier
+        let reopened = root.appendingPathComponent("First.app.reopened")
+        try? FileManager.default.removeItem(at: reopened)
+        AppLauncher.launch(second)
+        check(
+            "ordinary app opens reach a running instance",
+            await waitUntil {
+                FileManager.default.fileExists(atPath: reopened.path) || running(second) != nil
+            })
+        check(
+            "ordinary app opens allow running-version substitution",
+            FileManager.default.fileExists(atPath: reopened.path)
+                && running(first)?.processIdentifier == firstPID && running(second) == nil)
+        _ = AppLauncher.quit(bundleID: id, url: second, force: true)
         _ = AppLauncher.quit(bundleID: id, url: first, force: true)
         check(
             "fixture processes are cleaned up",

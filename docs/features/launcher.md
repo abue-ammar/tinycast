@@ -8,8 +8,9 @@ Copies sharing a bundle ID keep app-wide aliases, visibility, ranking, favorites
 Favorites and Suggestions show the representative, while the other copies remain in ordinary results.
 Version subtitles distinguish copies; equal or missing versions also show the containing folder.
 Return opens the selected path with running-application substitution disabled, so a different running
-version cannot replace it. Uninstall is unavailable while indexed copies share the bundle ID, because
-their support files and preferences may be shared.
+version cannot replace it. Restart also reopens the selected path. Bundle-ID-based operations such as
+Window Layouts retain macOS's default running-application substitution. Uninstall is unavailable while
+indexed copies share the bundle ID, because their support files and preferences may be shared.
 
 `./Scripts/run-tests.sh app-installation-test` covers the shipped index and app-wide preferences.
 Set `TINYCAST_TEST_APP_LAUNCH=1` for temporary native-app launch, quit and restart checks; the harness

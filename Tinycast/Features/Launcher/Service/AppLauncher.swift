@@ -3,9 +3,9 @@ import AppKit
 enum AppLauncher {
 
     @MainActor
-    static func launch(_ url: URL) {
+    static func launch(_ url: URL, allowsRunningApplicationSubstitution: Bool = true) {
         let configuration = NSWorkspace.OpenConfiguration()
-        configuration.allowsRunningApplicationSubstitution = false
+        configuration.allowsRunningApplicationSubstitution = allowsRunningApplicationSubstitution
         NSWorkspace.shared.openApplication(at: url, configuration: configuration)
     }
 
@@ -99,7 +99,7 @@ enum AppLauncher {
         let running = runningApplications(bundleID: bundleID, at: target)
         guard !running.isEmpty, !Task.isCancelled, await quitAwaitingExit(running), !Task.isCancelled
         else { return }
-        launch(target)
+        launch(target, allowsRunningApplicationSubstitution: false)
     }
 
     @MainActor

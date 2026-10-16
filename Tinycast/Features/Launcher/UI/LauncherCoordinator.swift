@@ -149,7 +149,7 @@ final class LauncherCoordinator {
         paletteCoordinator.hidePalette(restoreFocus: false)
         switch app.kind {
         case .application:
-            AppLauncher.launch(app.url)
+            AppLauncher.launch(app.url, allowsRunningApplicationSubstitution: false)
         case .systemSettings:
             guard let bundleID = app.bundleID else { return }
             AppLauncher.openSettingsPane(bundleID: bundleID)
