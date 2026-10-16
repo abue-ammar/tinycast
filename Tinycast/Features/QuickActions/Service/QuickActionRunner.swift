@@ -49,7 +49,7 @@ final class QuickActionRunner {
                     role: .user,
                     text: QuickActionPrompt.message(for: action, selection: selection))
             ],
-            maxOutputTokens: maxOutputTokens(for: action, selection: selection))
+            maxOutputTokens: maxOutputTokens(for: action, selection: selection, on: provider))
         var text = ""
         for try await event in provider.stream(request) {
             guard case .text(let delta) = event else { continue }
@@ -64,9 +64,11 @@ final class QuickActionRunner {
     }
 
     /// The on-device window counts the prompt and the reply against one budget, so both need a cap.
-    private static func maxOutputTokens(for action: QuickAction, selection: String) -> Int {
+    private static func maxOutputTokens(
+        for action: QuickAction, selection: String, on provider: any AIProvider
+    ) -> Int {
+        guard provider is AppleIntelligenceProvider else { return AIRequest.defaultMaxOutputTokens }
         let approximateTokens = max(selection.count / 3, 64)
-        return action == .summarize
-            ? min(approximateTokens, 512) : min(approximateTokens * 2, 2_048)
+        return action == .summarize ? min(approximateTokens, 512) : approximateTokens * 2
     }
 }

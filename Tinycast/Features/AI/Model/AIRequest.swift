@@ -90,6 +90,8 @@ struct AIMessage: Equatable, Sendable {
 }
 
 struct AIRequest: Equatable, Sendable {
+    static let defaultMaxOutputTokens = 4_096
+
     let conversationID: UUID?
     let instructions: String?
     let messages: [AIMessage]
@@ -100,7 +102,8 @@ struct AIRequest: Equatable, Sendable {
     let tools: [AITool]
 
     init(
-        instructions: String? = nil, messages: [AIMessage], maxOutputTokens: Int = 4_096,
+        instructions: String? = nil, messages: [AIMessage],
+        maxOutputTokens: Int = defaultMaxOutputTokens,
         webSearch: Bool = false, tools: [AITool] = [], conversationID: UUID? = nil
     ) {
         self.conversationID = conversationID
