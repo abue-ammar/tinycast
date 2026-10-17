@@ -1,0 +1,95 @@
+{
+  "dictation": {
+    "title": "Dictation",
+    "condition": "TINYCAST_NO_DICTATION",
+    "exclude": [
+      "Tinycast/Features/Dictation"
+    ],
+    "keep": [
+      "Tinycast/Features/Dictation/Model"
+    ],
+    "stubs": "Variants/Stubs/Dictation",
+    "dropTargets": [
+      "DictationHelper"
+    ],
+    "dropDependencies": [
+      "DictationHelper",
+      "$(BUILT_PRODUCTS_DIR)/$(DICTATION_EXECUTABLE_NAME).app"
+    ],
+    "infoPlist": {
+      "deleteKeys": [
+        "NSMicrophoneUsageDescription"
+      ],
+      "removeURLSchemes": []
+    },
+    "entitlements": {
+      "deleteKeys": [
+        "com.apple.security.device.audio-input"
+      ]
+    },
+    "absentFromBundle": [
+      "Contents/Helpers/Tinycast Dev Dictation.app"
+    ]
+  },
+  "extensions": {
+    "title": "Raycast Extensions",
+    "condition": "TINYCAST_NO_EXTENSIONS",
+    "exclude": [
+      "Tinycast/Features/Extensions",
+      "Tinycast/Resources/RaycastRuntime.generated.js",
+      "Tinycast/Features/Extensions/Model/ExtensionBootConfig.swift"
+    ],
+    "keep": [
+      "Tinycast/Features/Extensions/Model",
+      "Tinycast/Features/Extensions/UI/ExtensionScreen.swift"
+    ],
+    "stubs": "Variants/Stubs/Extensions",
+    "dropTargets": [],
+    "dropDependencies": [],
+    "infoPlist": {
+      "deleteKeys": [
+        "NSRemindersFullAccessUsageDescription"
+      ],
+      "removeURLSchemes": [
+        "raycast",
+        "com.raycast"
+      ]
+    },
+    "entitlements": {
+      "deleteKeys": [
+        "com.apple.security.cs.allow-jit"
+      ]
+    },
+    "absentFromBundle": [
+      "Contents/Resources/RaycastRuntime.generated.js"
+    ]
+  },
+  "ai": {
+    "title": "AI (AI Chat, Quick AI, MCP, Quick Actions)",
+    "condition": "TINYCAST_NO_AI",
+    "exclude": [
+      "Tinycast/Features/AI",
+      "Tinycast/Features/MCP",
+      "Tinycast/Features/QuickActions"
+    ],
+    "keep": [
+      "Tinycast/Features/AI/Model",
+      "Tinycast/Features/AI/Settings/AISettingsStore.swift",
+      "Tinycast/Features/MCP/Model",
+      "Tinycast/Features/MCP/Settings/MCPSettingsStore.swift",
+      "Tinycast/Features/QuickActions/Model",
+      "Tinycast/Features/QuickActions/Settings/QuickActionSettingsStore.swift"
+    ],
+    "stubs": "Variants/Stubs/AI",
+    "dropTargets": [],
+    "dropDependencies": [],
+    "infoPlist": {
+      "deleteKeys": [],
+      "removeURLSchemes": []
+    },
+    "entitlements": {
+      "deleteKeys": []
+    },
+    "absentFromBundle": []
+  }
+}
