@@ -598,7 +598,7 @@ struct RootPaletteView: View {
             }
             .modifier(
                 ExtensionShortcutKeys(
-                    screen: menuOpen ? nil : screen as? ExtensionCommandScreen, selection: sel)
+                    screen: { menuOpen ? nil : screen as? ExtensionCommandScreen }, selection: sel)
             )
             .onKeyPress(phases: .down) { press in
                 guard press.modifiers.contains(.command),
