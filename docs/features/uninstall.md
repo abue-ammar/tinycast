@@ -183,7 +183,9 @@ shared with File Search: it opens the per-user `TCC.db`, then the system one at
 which is what makes it usable under the rule that this feature asks for no permissions. macOS 27 has
 no per-user `TCC.db` at all, so a probe of that file alone reads every grant as "no access" and locks
 every gated row — keep the system path. It runs once per scan, not once per candidate, and can only
-under-report (a per-folder grant reads as "no access"), which just leaves a row locked.
+under-report (a per-folder grant reads as "no access"), which just leaves a row locked. Settings ›
+Permissions shows the same status and opens the Full Disk Access pane in System Settings; File Search
+keeps its own access section. Granting access is optional for Uninstall and required for File Search.
 
 Symlinks are never followed: `lstat`, and no descent when sizing. A symlinked candidate is judged and
 trashed as the link.
@@ -233,11 +235,12 @@ trade); the two Finder actions hand focus to Finder and so hide the palette. Sho
 route and drives Finder over Apple events, which raises the system Automation prompt on first use.
 
 `UninstallCoordinator.performUninstall()` is the one funnel, so neither ↵ nor the menu row can skip the
-confirmation. If the app is running it quits that copy and **waits for it to exit** before trashing
-anything — an app still quitting writes its saved state and preferences back behind the trash. If it
-hasn't exited within `AppLauncher`'s grace period (a save sheet left standing), nothing is moved. It then
-trashes, and **only clears the app's hotkey,
-favorite, visibility and ranking when the bundle itself went** — a leftovers-only cleanup leaves the
+confirmation. After confirmation it checks the selected copy again and **waits for it to exit** before
+trashing anything — an app still quitting writes its saved state and preferences back behind the trash.
+If it hasn't exited within `AppLauncher`'s grace period (a save sheet left standing), nothing is moved.
+The wait checks `NSRunningApplication.isTerminated`, since workspace exit notifications exclude
+background and menu-bar apps. It then trashes, and **only clears the app's hotkey, favorite, visibility
+and ranking when the bundle itself went** — a leftovers-only cleanup leaves the
 app installed. The bundle is trashed last: either order can leave a partial state, but with the
 bundle still in place the user can re-run the uninstall to retry, and once it's gone the launcher
 entry that reaches this screen is gone with it. Success shows the message pill; partial failure names

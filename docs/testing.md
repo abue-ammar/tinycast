@@ -146,6 +146,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `custom-command-test` | Command storage and execution, editor drafts, argument identities and dynamic keyboard focus |
 | `custom-command-list-test` | Browser result snapshots, observation, row actions and empty-library messages |
 | `uninstall-test` | all five pure files in `Uninstall/Model/` |
+| `uninstall-coordinator-test` | Confirmation and the post-confirmation quit gate; recorded quit and Trash effects only |
 | `quicklink-test` | all of `Quicklinks/Model/`, plus editor drafts and placeholder selection |
 | `quicklink-coordinator-test` | Opening and requested arguments, launcher editing, current enabled-state preservation, deletion during editing and feature gates; no platform effects or on-screen focus checks |
 | `apple-shortcut-test` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |
@@ -533,6 +534,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Rows appear with no loading copy at any point; folder sizes fill in behind them and totals climb
 - Locked rows cannot be checked; filtering by name works
 - Confirming moves items to the Trash and they are **recoverable from it**
+- A running app exits before any files move, including a menu-bar app or one launched during confirmation
+- An app that refuses to quit leaves every item in place after the grace period
+- Full Disk Access appears in both Permissions and File Search, and both open the correct privacy pane
+- With Full Disk Access granted, protected leftovers become selectable; administrator-only items stay locked
 - Escaping mid-scan cancels promptly with no spinner left behind
 - Hiding and immediately restoring the screen never strands an in-flight file icon as a placeholder
 

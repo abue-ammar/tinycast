@@ -5,6 +5,7 @@ import SwiftUI
 struct PermissionsSettingsView: View {
     @Environment(AppCore.self) private var core
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
+    @State private var fullDiskAccess = Permissions.hasFullDiskAccess()
     @State private var calendarAccess = Permissions.calendarAccess()
     @State private var microphoneAccess = Permissions.microphoneAccess()
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -40,6 +41,42 @@ struct PermissionsSettingsView: View {
                 }
             } header: {
                 SettingsSectionHeader(.permissionsAccessibility)
+            }
+
+            Section {
+                LabeledContent {
+                    HStack(spacing: Theme.Spacing.lg) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            Image(
+                                systemName: fullDiskAccess
+                                    ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
+                            )
+                            .accessibilityHidden(true)
+                            Text(fullDiskAccess ? "Granted" : "Not granted")
+                        }
+                        .foregroundStyle(fullDiskAccess ? Color.green : Color.orange)
+                        Button(fullDiskAccess ? "Open…" : "Open Privacy Settings…") {
+                            Permissions.openFullDiskAccessSettings()
+                        }
+                        .help("Opens Privacy & Security › Full Disk Access.")
+                    }
+                } label: {
+                    HStack(spacing: Theme.Spacing.lg) {
+                        Image(systemName: "internaldrive.fill")
+                            .font(.system(size: SettingsListMetrics.iconSize - Theme.Spacing.xs))
+                            .frame(width: SettingsListMetrics.iconSize)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                            SettingsRowTitle(.permissionsFullDiskAccess, "Full Disk Access")
+                            Text("For File Search and protected app leftovers.")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            } header: {
+                SettingsSectionHeader(.permissionsFullDiskAccess)
+            } footer: {
+                Text("Optional for uninstalling apps; required for File Search.")
             }
 
             Section {
@@ -155,6 +192,11 @@ struct PermissionsSettingsView: View {
     private func refresh() {
         let trusted = Permissions.isAccessibilityTrusted()
         if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+        let diskAccess = Permissions.hasFullDiskAccess()
+        if diskAccess != fullDiskAccess {
+            fullDiskAccess = diskAccess
+            core.fileIndexer.refreshAccess()
+        }
         let access = Permissions.calendarAccess()
         if access != calendarAccess { calendarAccess = access }
         let microphone = Permissions.microphoneAccess()

@@ -75,7 +75,12 @@ fails silently.
 
 ## Full Disk Access
 
-Tinycast **checks** whether it has Full Disk Access but **never asks** for it.
+Tinycast **checks** whether it has Full Disk Access but **never asks** for it automatically.
+Settings → Permissions and Settings → File Search both show its status and offer a button to open
+System Settings → Privacy & Security → Full Disk Access, where you can grant it manually.
+
+[File Search](/docs/features/file-search) requires this access to build its private index on your Mac.
+For uninstalling apps, it is optional.
 
 The [uninstaller](/docs/launcher/uninstall) checks in the background to work out which files it can
 move. Without Full Disk Access, protected folders like `~/Library/Containers`,
@@ -84,9 +89,6 @@ those by hand.
 
 ## What Tinycast never needs
 
-- **File access for File Search.** [File Search](/docs/features/file-search) uses the Spotlight
-  index that macOS already maintains. If Spotlight hasn't indexed something, you get fewer results,
-  not a permission prompt.
 - **Screen Recording.** The window switcher reads window titles through Accessibility.
 - **Location.** The calculator picks your currency from your Mac's region setting.
 - **Input Monitoring.** Snippets listen through Accessibility, as described above.

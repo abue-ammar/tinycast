@@ -54977,6 +54977,64 @@
         }
       }
     },
+    "For File Search and protected app leftovers." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für die Dateisuche und geschützte App-Reste."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For File Search and protected app leftovers."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para la búsqueda de archivos y los archivos residuales protegidos de las apps."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pour la recherche de fichiers et les fichiers résiduels protégés des apps."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル検索と、保護されたアプリの残存ファイルに使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "파일 검색과 보호된 앱 잔여 파일에 사용합니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Para a pesquisa de arquivos e os arquivos residuais protegidos de apps."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для поиска файлов и защищённых остаточных файлов приложений."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用于文件搜索和受保护的应用残留文件。"
+          }
+        }
+      }
+    },
     "Force" : {
       "localizations" : {
         "de" : {
@@ -86623,6 +86681,64 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "本地端点可选"
+          }
+        }
+      }
+    },
+    "Optional for uninstalling apps; required for File Search." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Für die Deinstallation von Apps optional; für die Dateisuche erforderlich."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Optional for uninstalling apps; required for File Search."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional para desinstalar apps; obligatorio para la búsqueda de archivos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facultatif pour désinstaller des apps ; requis pour la recherche de fichiers."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "アプリのアンインストールでは任意ですが、ファイル検索には必要です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "앱 제거에는 선택 사항이며, 파일 검색에는 필수입니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional para desinstalar apps; necessário para a pesquisa de arquivos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Необязателен для удаления приложений; необходим для поиска файлов."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "卸载应用时可选；文件搜索必须启用。"
           }
         }
       }

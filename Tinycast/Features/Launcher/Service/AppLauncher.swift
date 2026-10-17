@@ -105,7 +105,6 @@ enum AppLauncher {
     @MainActor
     static func quitAwaitingExit(bundleID: String, url: URL) async -> Bool {
         let running = runningApplications(bundleID: bundleID, at: url)
-        guard !running.isEmpty else { return true }
         return await quitAwaitingExit(running)
     }
 
@@ -116,28 +115,21 @@ enum AppLauncher {
         return running.filter { $0.bundleURL?.resolvingSymlinksInPath().standardizedFileURL == target }
     }
 
-    /// Observes before it terminates, so an instance that exits at once can't outrun the wait.
     @MainActor
     private static func quitAwaitingExit(_ apps: [NSRunningApplication]) async -> Bool {
-        let center = NSWorkspace.shared.notificationCenter
-        let (exits, continuation) = AsyncStream.makeStream(of: pid_t.self)
-        let observer = center.addObserver(
-            of: NSWorkspace.shared, for: NSWorkspace.DidTerminateApplicationMessage.self
-        ) { continuation.yield($0.application.processIdentifier) }
-        defer { center.removeObserver(observer) }
-
-        var pending = Set(apps.map(\.processIdentifier))
+        guard !Task.isCancelled else { return false }
         for app in apps { app.terminate() }
 
-        let grace = Task {
-            try? await Task.sleep(for: exitGrace); continuation.finish()
+        let deadline = ContinuousClock.now + exitGrace
+        while apps.contains(where: { !$0.isTerminated }) {
+            guard !Task.isCancelled, ContinuousClock.now < deadline else { return false }
+            do {
+                try await Task.sleep(for: .milliseconds(50))
+            } catch {
+                return false
+            }
         }
-        defer { grace.cancel() }
-        for await pid in exits {
-            pending.remove(pid)
-            if pending.isEmpty { return true }
-        }
-        return false
+        return !Task.isCancelled
     }
 
     /// Finder is never a Quit All target: `terminate()` only makes it relaunch.

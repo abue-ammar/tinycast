@@ -266,6 +266,26 @@ struct AppInstallationTest {
                 try! Data().write(to: marker)
             }
 
+            func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+                let bundle = Bundle.main.bundleURL
+                let marker = bundle.deletingLastPathComponent()
+                    .appendingPathComponent(bundle.lastPathComponent + ".refuse-quit")
+                if FileManager.default.fileExists(atPath: marker.path) { return .terminateCancel }
+                let delayed = bundle.deletingLastPathComponent()
+                    .appendingPathComponent(bundle.lastPathComponent + ".delay-quit")
+                if FileManager.default.fileExists(atPath: delayed.path) {
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(250))
+                        let completed = bundle.deletingLastPathComponent()
+                            .appendingPathComponent(bundle.lastPathComponent + ".quit-completed")
+                        try! Data().write(to: completed)
+                        sender.reply(toApplicationShouldTerminate: true)
+                    }
+                    return .terminateLater
+                }
+                return .terminateNow
+            }
+
             func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
                 let bundle = Bundle.main.bundleURL
                 let marker = bundle.deletingLastPathComponent()
@@ -359,7 +379,19 @@ struct AppInstallationTest {
         AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
         try await Task.sleep(for: .milliseconds(300))
         check("reopening reuses the selected installation", running(second)?.processIdentifier == secondPID)
-        check("Quit finds the selected version", AppLauncher.quit(bundleID: id, url: second))
+        let delayed = root.appendingPathComponent("Second.app.delay-quit")
+        try Data().write(to: delayed)
+        check(
+            "waiting for an accessory app to quit succeeds",
+            await AppLauncher.quitAwaitingExit(bundleID: id, url: second))
+        check(
+            "the quit wait includes the app's final writes",
+            FileManager.default.fileExists(
+                atPath: root.appendingPathComponent("Second.app.quit-completed").path))
+        try FileManager.default.removeItem(at: delayed)
+        check(
+            "waiting for an absent installation succeeds",
+            await AppLauncher.quitAwaitingExit(bundleID: id, url: second))
         check(
             "Quit leaves its sibling running",
             await waitUntil { running(second) == nil && running(first) != nil })
@@ -371,21 +403,33 @@ struct AppInstallationTest {
         AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
         check("the second installation can reopen", await waitUntil { running(second) != nil })
         let siblingPID = running(second)?.processIdentifier
-        if receivesEvents {
-            let firstPID = running(first)?.processIdentifier
-            await AppLauncher.restart(bundleID: id, url: first)
-            check(
-                "Restart reopens the selected version",
-                await waitUntil {
-                    running(first).map { $0.processIdentifier != firstPID } ?? false
-                })
-            check(
-                "Restart leaves the sibling process alone", running(second)?.processIdentifier == siblingPID)
-        }
+        let restartedPID = running(first)?.processIdentifier
+        await AppLauncher.restart(bundleID: id, url: first)
+        check(
+            "Restart reopens the selected version without workspace notifications",
+            await waitUntil {
+                running(first).map { $0.processIdentifier != restartedPID } ?? false
+            })
+        check(
+            "Restart leaves the sibling process alone", running(second)?.processIdentifier == siblingPID)
         let canceled = Task { await AppLauncher.restart(bundleID: id, url: second) }
         canceled.cancel()
         await canceled.value
         check("a canceled restart leaves the app running", running(second)?.processIdentifier == siblingPID)
+        let refusal = root.appendingPathComponent("Second.app.refuse-quit")
+        try Data().write(to: refusal)
+        let started = ContinuousClock.now
+        check(
+            "a refused quit times out without claiming success",
+            await !AppLauncher.quitAwaitingExit(bundleID: id, url: second))
+        check("a refused quit retains the grace period", ContinuousClock.now - started >= .seconds(5))
+        check("a refused quit leaves the app alive", running(second)?.processIdentifier == siblingPID)
+        try FileManager.default.removeItem(at: refusal)
+        let canceledQuit = Task { await AppLauncher.quitAwaitingExit(bundleID: id, url: second) }
+        canceledQuit.cancel()
+        check("a canceled quit fails", await !canceledQuit.value)
+        try await Task.sleep(for: .milliseconds(300))
+        check("a canceled quit leaves the app running", running(second)?.processIdentifier == siblingPID)
         _ = AppLauncher.quit(bundleID: id, url: second, force: true)
         check(
             "Force Quit targets the selected path",

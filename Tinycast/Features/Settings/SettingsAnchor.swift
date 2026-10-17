@@ -114,6 +114,7 @@ extension SettingsAnchor {
     static let extensionsStorage = Self(tab: .extensions, title: "Storage")
 
     static let permissionsAccessibility = Self(tab: .permissions, title: "Accessibility")
+    static let permissionsFullDiskAccess = Self(tab: .permissions, title: "Full Disk Access")
     static let permissionsCalendars = Self(tab: .permissions, title: "Calendars")
     static let permissionsMicrophone = Self(tab: .permissions, title: "Microphone")
 

@@ -474,6 +474,8 @@ run custom-command-test    Tinycast/Platform/PseudoTerminal.swift \
                            Tinycast/Features/CustomCommands/Service/ShellCommandRunner.swift
 run custom-command-list-test Tinycast/Features/CustomCommands/Model/CustomCommand.swift \
                              Tinycast/Features/CustomCommands/UI/CustomCommandListScreen.swift
+run uninstall-coordinator-test Tinycast/Features/Uninstall/Model/*.swift \
+                           Tinycast/Features/Uninstall/UI/UninstallCoordinator.swift
 run uninstall-test         Tinycast/Features/Uninstall/Model/UninstallTarget.swift \
                            Tinycast/Features/Uninstall/Model/UninstallSearchRoot.swift \
                            Tinycast/Features/Uninstall/Model/UninstallRules.swift \
