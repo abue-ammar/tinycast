@@ -103,6 +103,13 @@ enum AppLauncher {
     }
 
     @MainActor
+    static func quitAwaitingExit(bundleID: String, url: URL) async -> Bool {
+        let running = runningApplications(bundleID: bundleID, at: url)
+        guard !running.isEmpty else { return true }
+        return await quitAwaitingExit(running)
+    }
+
+    @MainActor
     private static func runningApplications(bundleID: String, at url: URL?) -> [NSRunningApplication] {
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
         guard let target = url?.resolvingSymlinksInPath().standardizedFileURL else { return running }

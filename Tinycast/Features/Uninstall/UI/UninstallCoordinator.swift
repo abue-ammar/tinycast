@@ -72,8 +72,18 @@ final class UninstallCoordinator {
                     symbol: "trash", confirmTitle: String(localized: "Move to Trash"))
             else { return }
 
-            if running, let bundleID = app.bundleID { _ = AppLauncher.quit(bundleID: bundleID) }
             session.setTrashing(true)
+            // An app still quitting rewrites its saved state and preferences behind the trash.
+            if running, let bundleID = app.bundleID,
+                await !AppLauncher.quitAwaitingExit(bundleID: bundleID, url: app.url)
+            {
+                session.setTrashing(false)
+                await core.showNotice(
+                    title: String(localized: "Nothing Was Moved"),
+                    message: String(localized: "\(app.name) didn’t quit. Quit it, then try again."),
+                    symbol: "trash", tone: .danger)
+                return
+            }
             let report = await UninstallRunner.moveToTrash(items)
             session.setTrashing(false)
 

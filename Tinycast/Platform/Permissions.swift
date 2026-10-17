@@ -30,6 +30,7 @@ enum Permissions {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let guarded = [
             home + "/Library/Application Support/com.apple.TCC/TCC.db",
+            // macOS 27 has no per-user TCC.db, so only the system one can answer there.
             "/Library/Application Support/com.apple.TCC/TCC.db"
         ]
         return guarded.contains { path in

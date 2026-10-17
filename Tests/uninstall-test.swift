@@ -9,6 +9,9 @@ struct UninstallTests {
     static let home = "/Users/tester"
     static let ownBundleID = "com.tinycast.app"
     static let ownBundleURL = URL(fileURLWithPath: "/Applications/Tinycast.app")
+    static let recentDocuments =
+        "Application Support/com.apple.sharedfilelist/"
+        + "com.apple.LSSharedFileList.ApplicationRecentDocuments"
 
     static func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
         if condition() {
@@ -132,6 +135,9 @@ struct UninstallTests {
         expect(
             evidence("com.foo.Bar.binarycookies", "Cookies", app) == .bundleID,
             "a .binarycookies strips")
+        expect(
+            evidence("com.foo.bar.sfl3", recentDocuments, app) == .bundleID,
+            "a recent-documents list strips its .sfl3 and matches case-folded")
         expect(
             evidence("com.foo.Bar.8A1F2C3D-1111-2222-3333-444455556666.plist", "Preferences/ByHost", app)
                 == .bundleID,
@@ -461,6 +467,10 @@ struct UninstallTests {
                 path: home + "/Library/Preferences/com.foo.Bar.plist", home: home),
             "preferences are not TCC-gated")
         expect(
+            UninstallProtectionRules.isTCCProtected(
+                path: home + "/Library/" + recentDocuments + "/com.foo.bar.sfl3", home: home),
+            "recent-documents lists are TCC-gated — measured: listing them needs Full Disk Access")
+        expect(
             !UninstallProtectionRules.isTCCProtected(
                 path: home + "/Library/Application Scripts/com.foo.Bar", home: home),
             "Application Scripts is NOT TCC-gated — measured, and it is why Books' scripts are removable")
@@ -593,7 +603,8 @@ struct UninstallTests {
         let shapes: [(String) -> String] = [
             { $0 }, { $0 + ".plist" }, { $0 + ".savedState" }, { $0 + ".binarycookies" },
             { $0 + ".helper" }, { $0 + ".Renderer.plist" }, { "group." + $0 },
-            { "ABCDE12345." + $0 }, { $0 + ".8A1F2C3D-1111-2222-3333-444455556666.plist" }
+            { "ABCDE12345." + $0 }, { $0 + ".8A1F2C3D-1111-2222-3333-444455556666.plist" },
+            { $0.lowercased() + ".sfl3" }
         ]
 
         var leaks: [String] = []
@@ -644,7 +655,8 @@ struct UninstallTests {
         let bundleIDOnly: Set<String> = [
             "Preferences", "Preferences/ByHost", "Containers", "Group Containers",
             "Application Scripts", "Saved Application State", "HTTPStorages", "WebKit", "Cookies",
-            "Autosave Information", "LaunchAgents", "LaunchDaemons", "PrivilegedHelperTools"
+            "Autosave Information", "LaunchAgents", "LaunchDaemons", "PrivilegedHelperTools",
+            recentDocuments
         ]
         expect(
             roots.filter { bundleIDOnly.contains($0.relativePath) }

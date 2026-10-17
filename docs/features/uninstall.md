@@ -37,7 +37,7 @@ Same split as `WindowManagement`: a pure half that decides, an impure half that 
 | `Model/UninstallRules.swift` | Matching, plus `isAcceptableCandidate` |
 | `Model/UninstallProtection.swift` | `PathFacts` → `UninstallProtection` |
 | `Model/UninstallPlan.swift` | `UninstallCandidate`, `UninstallPlan`, `UninstallSelection` |
-| `Service/UninstallScanner.swift` | **Impure.** `discover` (`contentsOfDirectory`, `lstat`, the FDA probe) and `measure` (the directory walks) |
+| `Service/UninstallScanner.swift` | **Impure.** `discover` (`contentsOfDirectory`, `lstat`, `Permissions.hasFullDiskAccess`) and `measure` (the directory walks) |
 | `Service/UninstallRunner.swift` | **Impure.** `trashItem`, and nothing else |
 | `Service/UninstallSession.swift` | `@MainActor` lifecycle behind the screen |
 | `UI/UninstallScreen.swift`, `UI/UninstallView.swift` | The palette screen, list, row and actions menu |
@@ -126,6 +126,11 @@ corrupts the installer's view of the system), `~/Library/Keychains`, `/Library/E
 user-document location. `/usr/local` is reached **only** through `binDirectories`, and only for
 symlinks that resolve into the bundle — never by name, and never recursively.
 
+One root only yields under Full Disk Access:
+`Application Support/com.apple.sharedfilelist/com.apple.LSSharedFileList.ApplicationRecentDocuments`,
+each app's recent-documents list, named `<bundle id>.sfl3`. Without the grant the listing itself is
+refused, so the root contributes nothing rather than a locked row. `~/Library/Cookies` behaves the same.
+
 `UninstallRules.isAcceptableCandidate` is belt and braces over whatever matched: an immediate child of
 its own root, never the home directory or `/`, no relative components, and no overlap with the app
 bundle (which is emitted separately).
@@ -166,17 +171,19 @@ a row that has since become locked for free.
 
 The TCC list is **measured, not assumed.** A probe that creates and then trashes a throwaway
 directory in each candidate location shows that `~/Library/Containers`, `~/Library/Group Containers`
-and `~/Library/Cookies` refuse the move, while `~/Library/Application Scripts` and
+and `~/Library/Cookies` refuse the move, and `com.apple.sharedfilelist` refuses even the listing, while `~/Library/Application Scripts` and
 `~/Library/Autosave Information` allow it — which is why Books' five `Application Scripts` rows are
 checkable while the five `Containers` rows beside them are locked. Note that _listing_ a directory is
 not the test: both container roots enumerate fine and still refuse the trash. Re-measure before
 adding an entry.
 
-**Full Disk Access is detected, never requested.** The probe opens
-`~/Library/Application Support/com.apple.TCC/TCC.db` — TCC denies that read _silently_, with no
-prompt, which is what makes it usable under the rule that this feature asks for no permissions. It
-runs once per scan, not once per candidate, and can only under-report (a per-folder grant reads as
-"no access"), which just leaves a row locked.
+**Full Disk Access is detected, never requested.** The probe is `Permissions.hasFullDiskAccess()`,
+shared with File Search: it opens the per-user `TCC.db`, then the system one at
+`/Library/Application Support/com.apple.TCC/TCC.db`. TCC denies that read _silently_, with no prompt,
+which is what makes it usable under the rule that this feature asks for no permissions. macOS 27 has
+no per-user `TCC.db` at all, so a probe of that file alone reads every grant as "no access" and locks
+every gated row — keep the system path. It runs once per scan, not once per candidate, and can only
+under-report (a per-folder grant reads as "no access"), which just leaves a row locked.
 
 Symlinks are never followed: `lstat`, and no descent when sizing. A symlinked candidate is judged and
 trashed as the link.
@@ -226,7 +233,10 @@ trade); the two Finder actions hand focus to Finder and so hide the palette. Sho
 route and drives Finder over Apple events, which raises the system Automation prompt on first use.
 
 `UninstallCoordinator.performUninstall()` is the one funnel, so neither ↵ nor the menu row can skip the
-confirmation. It quits the app first if it's running, trashes, and **only clears the app's hotkey,
+confirmation. If the app is running it quits that copy and **waits for it to exit** before trashing
+anything — an app still quitting writes its saved state and preferences back behind the trash. If it
+hasn't exited within `AppLauncher`'s grace period (a save sheet left standing), nothing is moved. It then
+trashes, and **only clears the app's hotkey,
 favorite, visibility and ranking when the bundle itself went** — a leftovers-only cleanup leaves the
 app installed. The bundle is trashed last: either order can leave a partial state, but with the
 bundle still in place the user can re-run the uninstall to retry, and once it's gone the launcher

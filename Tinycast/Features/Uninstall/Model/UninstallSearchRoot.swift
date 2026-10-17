@@ -51,6 +51,11 @@ struct UninstallSearchRoot: Hashable, Sendable {
         UninstallSearchRoot(
             base: .userLibrary, relativePath: "Autosave Information", styles: [.bundleID]),
         UninstallSearchRoot(base: .userLibrary, relativePath: "LaunchAgents", styles: [.bundleID]),
+        UninstallSearchRoot(
+            base: .userLibrary,
+            relativePath: "Application Support/com.apple.sharedfilelist/"
+                + "com.apple.LSSharedFileList.ApplicationRecentDocuments",
+            styles: [.bundleID]),
         // Plug-in wells: a child is a wrapper named after its product, suffix stripped.
         UninstallSearchRoot(
             base: .userLibrary, relativePath: "Internet Plug-Ins", styles: [.bundleID, .displayName]),

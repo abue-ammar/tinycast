@@ -28,7 +28,7 @@ enum UninstallScanner {
         try await Signposts.interval("UninstallScanner.discover") {
             let home = NSHomeDirectory()
             let environment = UninstallEnvironment(
-                home: home, hasFullDiskAccess: detectFullDiskAccess(home: home))
+                home: home, hasFullDiskAccess: Permissions.hasFullDiskAccess())
             guard
                 let identity = UninstallIdentity.make(
                     target: target, otherAppNames: otherAppNames, otherBundleIDs: otherBundleIDs,
@@ -240,13 +240,5 @@ enum UninstallScanner {
             size.bytes += Int64(values?.totalFileSize ?? values?.fileSize ?? 0)
         }
         return size
-    }
-
-    /// Detected, never requested: TCC denies silently, and under-reporting only locks a row.
-    private static func detectFullDiskAccess(home: String) -> Bool {
-        let descriptor = open(home + "/Library/Application Support/com.apple.TCC/TCC.db", O_RDONLY)
-        guard descriptor >= 0 else { return false }
-        close(descriptor)
-        return true
     }
 }
