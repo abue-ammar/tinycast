@@ -1,7 +1,6 @@
 import Foundation
 
 enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
-    case system
     case english = "en"
     case german = "de"
     case spanish = "es"
@@ -17,7 +16,6 @@ enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     /// Each language names itself, so someone who picked the wrong one can still find their own.
     var title: String {
         switch self {
-        case .system: String(localized: "System")
         case .english: "English"
         case .german: "Deutsch"
         case .spanish: "Español"
@@ -30,20 +28,14 @@ enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var preferences: [String]? { self == .system ? nil : [rawValue] }
-
     /// Reads a stored list, including a regional tag such as `de-DE` that System Settings writes.
     init(storedPreferences: [String]?) {
         guard let storedPreferences, !storedPreferences.isEmpty else {
-            self = .system
+            self = .english
             return
         }
-        let shipped = Self.allCases.filter { $0 != .system }.map(\.rawValue)
-        let match = Bundle.preferredLocalizations(from: shipped, forPreferences: storedPreferences)
+        let match = Bundle.preferredLocalizations(
+            from: Self.allCases.map(\.rawValue), forPreferences: storedPreferences)
         self = match.first.flatMap(Self.init(rawValue:)) ?? .english
-    }
-
-    func localization(available: [String], system: [String]) -> String? {
-        Bundle.preferredLocalizations(from: available, forPreferences: preferences ?? system).first
     }
 }

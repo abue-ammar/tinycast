@@ -266,10 +266,12 @@ the catalog (Xcode's own build does the same in the IDE). The six privacy prompt
   `SystemAction` and `WindowCommand` keep their English source as `englishName`, which the launcher
   indexes as an alternate title.
 
-System is the default. Settings › General › Language writes the same per-app `AppleLanguages` key as
-System Settings › Language & Region › Applications, and it applies on relaunch. Because that key also
-changes `Locale.preferredLanguages` for this process, anything that indexes what the user *types* —
-app names, emoji keywords — reads macOS's own list through `SystemLanguages.preferred` instead.
+English is the default; Tinycast never follows the Mac's language. Settings › General › Language
+writes the same per-app `AppleLanguages` key as System Settings › Language & Region › Applications,
+and it applies on relaunch. `TinycastLaunch` writes the key back before anything is localized, so an
+empty or unshipped list still launches in English. Because that key also changes
+`Locale.preferredLanguages` for this process, anything that indexes what the user *types* — app
+names, emoji keywords — reads macOS's own list through `SystemLanguages.preferred` instead.
 
 ## What is actually checked
 

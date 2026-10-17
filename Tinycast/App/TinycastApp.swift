@@ -1,6 +1,13 @@
 import SwiftUI
 
 @main
+enum TinycastLaunch {
+    static func main() {
+        AppSettings.pinLanguage()
+        TinycastApp.main()
+    }
+}
+
 struct TinycastApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
 

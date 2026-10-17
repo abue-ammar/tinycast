@@ -63,7 +63,6 @@ struct SettingsRowTitle: View {
         self.init(anchor, verbatim: String(localized: title))
     }
 
-    /// For a title its owner already resolved, such as `SettingsRow`'s.
     init(_ anchor: SettingsAnchor, verbatim title: String) {
         self.anchor = anchor
         self.title = title

@@ -51,7 +51,6 @@ enum CommandID: String, CaseIterable, Sendable {
 
     var name: String { String(localized: nameResource) }
 
-    /// The English source, which stays searchable under every language.
     var englishName: String { nameResource.key }
 
     private var nameResource: LocalizedStringResource {

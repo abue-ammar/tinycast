@@ -22,7 +22,6 @@ struct GeneralSettingsView: View {
                 Picker(selection: $settings.language) {
                     ForEach(AppLanguage.allCases) { language in
                         Text(verbatim: language.title).tag(language)
-                        if language == .system { Divider() }
                     }
                 } label: {
                     SettingsRowTitle(.generalGeneral, "Language")

@@ -48,7 +48,6 @@ struct SystemAction: Identifiable, Hashable, Sendable {
 
     let id: ID
     let name: String
-    /// The English source, which stays searchable under every language.
     let englishName: String
     let sfSymbol: String
     let confirmation: Confirmation

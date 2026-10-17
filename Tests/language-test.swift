@@ -18,13 +18,12 @@ struct LanguageTests {
 
     static func main() {
         print("# a stored list reads back as the choice that wrote it")
-        check("nothing stored follows macOS", AppLanguage(storedPreferences: nil) == .system)
-        check("an empty list follows macOS", AppLanguage(storedPreferences: []) == .system)
-        check("System removes the app language override", AppLanguage.system.preferences == nil)
-        for language in AppLanguage.allCases where language != .system {
+        check("nothing stored is English", AppLanguage(storedPreferences: nil) == .english)
+        check("an empty list is English", AppLanguage(storedPreferences: []) == .english)
+        for language in AppLanguage.allCases {
             check(
                 "\(language.rawValue) round-trips",
-                AppLanguage(storedPreferences: language.preferences) == language)
+                AppLanguage(storedPreferences: [language.rawValue]) == language)
         }
 
         print("# System Settings' regional tags land on the shipped language")
@@ -36,21 +35,13 @@ struct LanguageTests {
             AppLanguage(storedPreferences: ["zh-Hans-CN"]) == .chineseSimplified)
         check("an unshipped language reads as English", AppLanguage(storedPreferences: ["it"]) == .english)
 
-        print("# what each choice launches into")
+        print("# each choice launches into its own localization")
         let shipped = ["en", "de", "es", "fr", "ja", "ko", "pt", "ru", "zh-Hans"]
-        check(
-            "English resolves to English",
-            AppLanguage.english.localization(available: shipped, system: ["de"]) == "en")
-        check(
-            "System follows the Mac language",
-            AppLanguage.system.localization(available: shipped, system: ["de-DE", "en"]) == "de")
-        check(
-            "System falls back to English for an unshipped language",
-            AppLanguage.system.localization(available: shipped, system: ["it"]) == "en")
-        for language in AppLanguage.allCases where language != .system {
+        for language in AppLanguage.allCases {
             check(
                 "\(language.rawValue) resolves to its bundled localization",
-                language.localization(available: shipped, system: ["de"]) == language.rawValue)
+                Bundle.preferredLocalizations(from: shipped, forPreferences: [language.rawValue]).first
+                    == language.rawValue)
         }
 
         print("# every language names itself")
@@ -96,7 +87,7 @@ struct LanguageTests {
             "pt": ("1 janela", "2 janelas"), "ru": ("1 окно", "2 окна"),
             "zh-Hans": ("1 个窗口", "2 个窗口")
         ]
-        for language in AppLanguage.allCases where language != .system {
+        for language in AppLanguage.allCases {
             let code = language.rawValue
             guard let bundle = Bundle(url: root.appendingPathComponent("\(code).lproj")),
                 let expected = windows[code]

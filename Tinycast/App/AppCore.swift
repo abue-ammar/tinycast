@@ -765,22 +765,18 @@ final class AppCore {
         NSApp.appearance = settings.appearance.nsAppearance
     }
 
+    private var isLanguagePending: Bool { settings.language.rawValue != launchLocalization }
+
     private func offerLanguageRelaunch() {
-        let next = settings.language.localization(
-            available: Bundle.main.localizations, system: SystemLanguages.preferred)
-        guard next != launchLocalization else { return }
+        guard isLanguagePending else { return }
         Task {
             guard
                 await confirm(
                     title: String(localized: "Relaunch Tinycast?"),
                     message: String(localized: "The new language applies after Tinycast relaunches."),
                     symbol: "globe", confirmTitle: String(localized: "Relaunch"), tone: .neutral,
-                    confirmRole: .standard, dismissTitle: String(localized: "Later"))
-            else { return }
-            guard
-                settings.language.localization(
-                    available: Bundle.main.localizations, system: SystemLanguages.preferred)
-                    != launchLocalization
+                    confirmRole: .standard, dismissTitle: String(localized: "Later")),
+                isLanguagePending
             else { return }
             relaunch()
         }

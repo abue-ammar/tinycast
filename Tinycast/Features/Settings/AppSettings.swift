@@ -220,9 +220,9 @@ final class AppSettings {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance.rawValue) }
     }
 
-    /// The per-app key System Settings writes too, so the two never disagree. Read at launch.
+    /// The per-app key System Settings writes too, so the two never disagree.
     var language: AppLanguage {
-        didSet { defaults.set(language.preferences, forKey: Key.language.rawValue) }
+        didSet { defaults.set([language.rawValue], forKey: Key.language.rawValue) }
     }
 
     /// Which separators the calculator reads and writes; `.system` follows Language & Region.
@@ -641,6 +641,19 @@ final class AppSettings {
         didSet { defaults.set(settingsFileEnabled, forKey: Key.settingsFileEnabled.rawValue) }
     }
 
+    /// With no per-app list the bundle follows macOS's languages, so this runs before any lookup.
+    static func pinLanguage() {
+        UserDefaults.standard.set([storedLanguage.rawValue], forKey: Key.language.rawValue)
+    }
+
+    /// The app's own domain only: a plain read falls through to the global list.
+    private static var storedLanguage: AppLanguage {
+        AppLanguage(
+            storedPreferences: Bundle.main.bundleIdentifier
+                .flatMap(UserDefaults.standard.persistentDomain(forName:))?[Key.language.rawValue]
+                as? [String])
+    }
+
     init() {
         // The only feature switch that defaults on, so absence has to outrank a stored `false`.
         clipboardEnabled =
@@ -691,10 +704,7 @@ final class AppSettings {
             ?? .navigateBackOrClose
         appearance =
             defaults.string(forKey: Key.appearance.rawValue).flatMap(AppAppearance.init) ?? .system
-        // The app's own domain only: a plain read falls through to the global list.
-        language = AppLanguage(
-            storedPreferences: Bundle.main.bundleIdentifier
-                .flatMap(defaults.persistentDomain(forName:))?[Key.language.rawValue] as? [String])
+        language = Self.storedLanguage
         calcNumberStyle =
             defaults.string(forKey: Key.calcNumberStyle.rawValue).flatMap(CalcNumberStyle.init)
             ?? .system

@@ -38,7 +38,7 @@ enum BackupCategory: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// How the picker counts this category; nil where a number would say nothing.
+    /// Nil where a number would say nothing.
     func countText(_ count: Int) -> String? {
         switch self {
         case .configuration: return nil
