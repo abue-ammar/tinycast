@@ -736,6 +736,7 @@ final class AppCore {
             {
                 _ = $0.fileSearchScopes
                 _ = $0.fileSearchIgnorePatterns
+                _ = $0.fileSearchRemovedDefaultPatterns
             }, reproject: { $0.fileSearchCoordinator.applyPolicy() })
         track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetCoordinator.applySnippetsEnabled() })
         // Not a feature switch, but the same re-projection: a combo has the chord's ⇧ bit baked in.

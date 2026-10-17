@@ -41,7 +41,7 @@ final class FileSearchCoordinator {
         indexer.apply(
             FileSearchPolicy(
                 scopes: settings.fileSearchScopes,
-                ignorePatterns: settings.fileSearchIgnorePatterns,
+                ignorePatterns: settings.fileSearchEffectiveIgnorePatterns,
                 homeDirectory: FileManager.default.homeDirectoryForCurrentUser))
     }
 

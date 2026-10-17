@@ -317,10 +317,24 @@ final class AppSettings {
         didSet { defaults.set(fileSearchScopes, forKey: Key.fileSearchScopes.rawValue) }
     }
 
+    /// Only what the user added; the shipped rules are compiled into `FileSearchIgnoreList`.
     var fileSearchIgnorePatterns: [String] {
         didSet {
             defaults.set(fileSearchIgnorePatterns, forKey: Key.fileSearchIgnorePatterns.rawValue)
         }
+    }
+
+    var fileSearchRemovedDefaultPatterns: [String] {
+        didSet {
+            defaults.set(
+                fileSearchRemovedDefaultPatterns,
+                forKey: Key.fileSearchRemovedDefaultPatterns.rawValue)
+        }
+    }
+
+    var fileSearchEffectiveIgnorePatterns: [String] {
+        FileSearchIgnoreList.patterns(
+            added: fileSearchIgnorePatterns, removedDefaults: fileSearchRemovedDefaultPatterns)
     }
 
     var fileSearchShowInLauncher: Bool {
@@ -740,8 +754,9 @@ final class AppSettings {
             defaults.stringArray(forKey: Key.fileSearchScopes.rawValue)
             ?? FileSearchScope.defaultScopes
         fileSearchIgnorePatterns =
-            defaults.stringArray(forKey: Key.fileSearchIgnorePatterns.rawValue)
-            ?? FileSearchIgnoreList.defaults
+            defaults.stringArray(forKey: Key.fileSearchIgnorePatterns.rawValue) ?? []
+        fileSearchRemovedDefaultPatterns =
+            defaults.stringArray(forKey: Key.fileSearchRemovedDefaultPatterns.rawValue) ?? []
         fileSearchShowInLauncher = defaults.bool(forKey: Key.fileSearchShowInLauncher.rawValue)
         notesEnabled = defaults.bool(forKey: Key.notesEnabled.rawValue)
         dictationEnabled = defaults.bool(forKey: Key.dictationEnabled.rawValue)

@@ -218,14 +218,12 @@ private struct FileSearchIgnoreSection: View {
 
     private let home = FileManager.default.homeDirectoryForCurrentUser
 
-    private var isDefault: Bool { settings.fileSearchIgnorePatterns == FileSearchIgnoreList.defaults }
+    private var patterns: [String] { settings.fileSearchEffectiveIgnorePatterns }
 
     var body: some View {
         Section {
-            ForEach(settings.fileSearchIgnorePatterns, id: \.self) { pattern in
-                PatternRow(pattern: pattern) {
-                    settings.fileSearchIgnorePatterns.removeAll { $0 == pattern }
-                }
+            ForEach(patterns, id: \.self) { pattern in
+                PatternRow(pattern: pattern) { remove(pattern) }
             }
 
             // Titled, a grouped form squeezes the field into a sliver too narrow to click.
@@ -237,10 +235,8 @@ private struct FileSearchIgnoreSection: View {
                     .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
                 Button("Add Folder…", action: addFolders)
                     .help("Skip a folder and everything in it.")
-                if !isDefault {
-                    Button("Restore Defaults") {
-                        settings.fileSearchIgnorePatterns = FileSearchIgnoreList.defaults
-                    }
+                if patterns != FileSearchIgnoreList.defaults {
+                    Button("Restore Defaults", action: restoreDefaults)
                 }
             }
         } header: {
@@ -270,8 +266,25 @@ private struct FileSearchIgnoreSection: View {
     private func add(_ text: String) {
         let pattern = text.trimmingCharacters(in: .whitespaces)
         draft = ""
-        guard !pattern.isEmpty, !settings.fileSearchIgnorePatterns.contains(pattern) else { return }
-        settings.fileSearchIgnorePatterns.append(pattern)
+        guard !pattern.isEmpty, !patterns.contains(pattern) else { return }
+        if FileSearchIgnoreList.defaults.contains(pattern) {
+            settings.fileSearchRemovedDefaultPatterns.removeAll { $0 == pattern }
+        } else {
+            settings.fileSearchIgnorePatterns.append(pattern)
+        }
+    }
+
+    private func remove(_ pattern: String) {
+        if FileSearchIgnoreList.defaults.contains(pattern) {
+            settings.fileSearchRemovedDefaultPatterns.append(pattern)
+        } else {
+            settings.fileSearchIgnorePatterns.removeAll { $0 == pattern }
+        }
+    }
+
+    private func restoreDefaults() {
+        settings.fileSearchIgnorePatterns = []
+        settings.fileSearchRemovedDefaultPatterns = []
     }
 }
 

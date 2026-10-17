@@ -160,7 +160,7 @@ struct FileSearchTests {
         }
         for path in [
             "/Users/test/.Trash", "/Users/test/Library/Caches", "/Users/test/Library/Containers",
-            "/Users/test/Library/Application Support"
+            "/Users/test/Library/Application Support", "/Library/Caches", "/private/var/folders"
         ] {
             expect(
                 shipped.excludes(name: URL(filePath: path).lastPathComponent, path: path),
@@ -175,6 +175,18 @@ struct FileSearchTests {
         expect(
             !shipped.excludes(name: "Preferences", path: "/Users/test/Library/Preferences"),
             "only the noisy parts of the user's Library are skipped")
+
+        let edited = FileSearchIgnoreList.patterns(
+            added: ["*.log", "node_modules", "*.log"], removedDefaults: [".git", "*.log"])
+        expect(!edited.contains(".git"), "a removed default no longer applies")
+        expect(
+            edited.filter { $0 == "node_modules" }.count == 1,
+            "an added copy of a default never lists it twice")
+        expect(edited.last == "*.log", "an added pattern follows the defaults once")
+        expect(
+            FileSearchIgnoreList.patterns(added: [], removedDefaults: [])
+                == FileSearchIgnoreList.defaults,
+            "no edits leave exactly the defaults")
     }
 
     static func ignorePathMatching() {
@@ -235,7 +247,7 @@ struct FileSearchTests {
         expect(
             policy.ignore.excludes(name: "run.log", path: "/Volumes/Work/run.log")
                 && !policy.ignore.excludes(name: "node_modules", path: "/Volumes/Work/node_modules"),
-            "only the stored patterns apply, so a removed default stays removed")
+            "the policy applies exactly the patterns it is given")
 
         let same = FileSearchPolicy(
             scopes: ["~/Developer", "~", "/Volumes/Work", "~/Developer"],

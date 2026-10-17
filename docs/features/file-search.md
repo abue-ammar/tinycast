@@ -28,9 +28,11 @@ design follows [fsearch](https://github.com/noahdunnagan/fsearch).
   duplicate or an event that races a rebuild changes nothing twice.
 - **File Search is off by default, and off means no index on disk.** Disabling stops the watcher, cancels
   any build and deletes `Application Support/<bundle id>/FileIndex/`.
-- **Both lists store exactly what the pane shows.** `FileSearchScope.defaultScopes` and
-  `FileSearchIgnoreList.defaults` only seed an unset preference; every row can be removed, and
-  **Restore Defaults** appears once a list differs from its seed.
+- **The shipped ignore rules are compiled in and never persisted.** `fileSearchIgnorePatterns` stores
+  only what the user added and `fileSearchRemovedDefaultPatterns` only the shipped rules they removed,
+  so changing `FileSearchIgnoreList.defaults` reaches installs that already ran. Every row can be
+  removed, and **Restore Defaults** clears both lists. Scopes are one stored list that `defaultScopes`
+  only seeds.
 - **The launcher's Files section is off by default, and off costs nothing.** With it off a keystroke never
   reaches the index, and `LauncherScreen` reads the switch before the session, so it observes nothing.
 - **A superseded query never publishes.** The session runs one search at a time, keeps only the newest
@@ -162,7 +164,13 @@ folders (`node_modules`, `.git`, `build`, `DerivedData`, `.venv`, …), the Phot
 the `~/.cache` and `~/.npm` caches, and the noisy parts of `~/Library` — `Application Support`,
 `Caches`, `Containers`, `Developer`, `Group Containers` and `Mail`. Together they hold most of a home
 folder's entries and most of its churn: one browser's cache alone rewrites tens of thousands of files
-on every page load. `Preferences`, `LaunchAgents` and the cloud drives stay indexed.
+on every page load. `Preferences`, `LaunchAgents` and the cloud drives stay indexed. `/Library/Caches`
+and `/private/var/folders` cover a scope added outside home.
+
+The pane lists `FileSearchIgnoreList.patterns(added:removedDefaults:)`: the defaults the user kept,
+then what they added. Adding a removed default takes it off the removed list rather than storing it
+twice, and a default repeated in `fileSearchIgnorePatterns` is ignored, so a shipped rule has one
+switch.
 
 `fnmatch` runs with `FNM_CASEFOLD` and without `FNM_PATHNAME`, so `*` spans `/`. Name patterns read the
 NUL-terminated name straight out of the `getattrlistbulk` buffer. Literal path patterns first check the
