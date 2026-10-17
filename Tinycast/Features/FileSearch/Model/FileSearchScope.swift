@@ -2,8 +2,8 @@ import Foundation
 
 /// The configured scopes are the crawl roots: only what lies under one is indexed or searched.
 enum FileSearchScope {
-    /// The whole disk; stored tilde-abbreviated otherwise, so a backup stays portable.
-    static let defaultScopes = ["/"]
+    /// Stored tilde-abbreviated, so a backup stays portable.
+    static let defaultScopes = ["~"]
 
     static func expand(_ scope: String, homeDirectory: URL) -> URL {
         guard scope.hasPrefix("~") else {
@@ -22,9 +22,13 @@ enum FileSearchScope {
         return "~" + path.dropFirst(home.count)
     }
 
+    /// Keeps a scope inside another as the user listed it; only `roots(for:)` folds it.
     static func normalize(_ scopes: [String], homeDirectory: URL) -> [String] {
-        roots(for: scopes, homeDirectory: homeDirectory)
-            .map { abbreviate($0, homeDirectory: homeDirectory) }
+        var seen = Set<String>()
+        return scopes.compactMap { scope in
+            let path = expand(scope, homeDirectory: homeDirectory).path
+            return seen.insert(path).inserted ? abbreviate(path, homeDirectory: homeDirectory) : nil
+        }
     }
 
     static func roots(for scopes: [String], homeDirectory: URL) -> [String] {

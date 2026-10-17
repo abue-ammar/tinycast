@@ -3,7 +3,6 @@ import Foundation
 struct FileSearchPolicy: Sendable, Equatable {
     struct Request: Codable, Sendable, Equatable {
         let scopes: [String]
-        /// Only what the user added; the shipped rules are applied on top.
         let ignorePatterns: [String]
         let homeDirectory: String
     }
@@ -40,9 +39,8 @@ struct FileSearchPolicy: Sendable, Equatable {
         // Not standardized: that drops a leading `/private`, and the crawl compares real paths.
         homePath = homeDirectory.path
         roots = FileSearchScope.roots(for: request.scopes, homeDirectory: homeDirectory)
-        let patterns = FileSearchIgnoreList.defaults + request.ignorePatterns
-        ignore = FileSearchIgnoreList(patterns: patterns, homeDirectory: homeDirectory)
-        fingerprint = Self.fnv1a((roots + ["\0"] + patterns).joined(separator: "\n"))
+        ignore = FileSearchIgnoreList(patterns: request.ignorePatterns, homeDirectory: homeDirectory)
+        fingerprint = Self.fnv1a((roots + ["\0"] + request.ignorePatterns).joined(separator: "\n"))
     }
 
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.request == rhs.request }

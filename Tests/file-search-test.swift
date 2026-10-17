@@ -158,7 +158,10 @@ struct FileSearchTests {
         for name in FileSearchIgnoreList.defaults where !name.contains("/") {
             expect(shipped.excludes(name: name, path: "/x/\(name)"), "\(name) is skipped")
         }
-        for path in ["/Users/test/Library/Caches", "/Library/Caches", "/private/var/folders"] {
+        for path in [
+            "/Users/test/.Trash", "/Users/test/Library/Caches", "/Users/test/Library/Containers",
+            "/Users/test/Library/Application Support"
+        ] {
             expect(
                 shipped.excludes(name: URL(filePath: path).lastPathComponent, path: path),
                 "\(path) is skipped")
@@ -167,8 +170,11 @@ struct FileSearchTests {
             !shipped.excludes(name: "Caches", path: "/Users/test/Developer/Caches"),
             "a caches folder elsewhere is indexed")
         expect(
-            !shipped.excludes(name: ".git", path: "/x/.git"),
+            !shipped.excludes(name: ".config", path: "/Users/test/.config"),
             "hidden folders are indexed unless a pattern says otherwise")
+        expect(
+            !shipped.excludes(name: "Preferences", path: "/Users/test/Library/Preferences"),
+            "only the noisy parts of the user's Library are skipped")
     }
 
     static func ignorePathMatching() {
@@ -228,8 +234,8 @@ struct FileSearchTests {
             "a cleared list resolves to no roots at all")
         expect(
             policy.ignore.excludes(name: "run.log", path: "/Volumes/Work/run.log")
-                && policy.ignore.excludes(name: "node_modules", path: "/Volumes/Work/node_modules"),
-            "the user's patterns and the shipped ones both apply")
+                && !policy.ignore.excludes(name: "node_modules", path: "/Volumes/Work/node_modules"),
+            "only the stored patterns apply, so a removed default stays removed")
 
         let same = FileSearchPolicy(
             scopes: ["~/Developer", "~", "/Volumes/Work", "~/Developer"],
@@ -265,8 +271,9 @@ struct FileSearchTests {
                 == ["~/Developer", "/etc"],
             "normalizing abbreviates home and drops the duplicate it creates")
         expect(
-            FileSearchScope.normalize(["~/a", "/", "~"], homeDirectory: home) == ["/"],
-            "adding the whole disk absorbs every other scope")
+            FileSearchScope.normalize(["~/a", "/", "~", "/Users/test/a"], homeDirectory: home)
+                == ["~/a", "/", "~"],
+            "normalizing keeps a nested scope listed; only the crawl folds it")
         expect(
             FileSearchScope.expand("~", homeDirectory: home).path == "/Users/test",
             "a bare tilde expands to home itself")

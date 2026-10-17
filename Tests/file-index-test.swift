@@ -27,7 +27,7 @@ struct FileIndexTests {
         }
 
         let policy = FileSearchPolicy(
-            scopes: [root.path], ignorePatterns: ["~/Movies"], homeDirectory: root)
+            scopes: [root.path], ignorePatterns: ["node_modules", "~/Movies"], homeDirectory: root)
         let index = FileIndex()
         let snapshot = try build(policy, at: scratch.appending(path: "index.bin"))
         index.replace(with: snapshot, policy: policy)
@@ -61,7 +61,7 @@ struct FileIndexTests {
             main.map(snapshot.path(of:)) == root + "/Developer/app/src/main.swift",
             "a path round-trips")
         expect(snapshot.lookup(root + "/Developer/app/.git/config") != nil, "hidden files are indexed")
-        expect(snapshot.lookup(root + "/Developer/app/node_modules") == nil, "a shipped rule skips")
+        expect(snapshot.lookup(root + "/Developer/app/node_modules") == nil, "a name rule skips")
         expect(snapshot.lookup(root + "/Movies") == nil, "a tilde path skips that folder")
         if let developer = snapshot.lookup(root + "/Developer"), let main {
             expect(snapshot.subtree(of: developer).contains(main), "a subtree is one range")
