@@ -8,8 +8,8 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
   compiled by `emoji-test`, so an `import AppKit` there breaks the test suite.
 - **`EmojiData.generated.swift` and `Resources/EmojiKeywords/` are emitted by `node Scripts/gen-emoji.js`**
   (Node 18+ for global `fetch`) and are never edited by hand. Regenerate and commit instead.
-- **Keyword packs are plain files, never `.lproj` folders.** One localization folder in the bundle
-  would switch AppKit's own menus and text out of English; the app stays English.
+- **Keyword packs are plain files, never `.lproj` folders.** Search loads packs for the user's
+  macOS languages independently of Tinycast's UI language.
 
 ## Layout
 
@@ -39,7 +39,7 @@ are pure.
   leading word: `birthday` keeps 🎂 first, and `pray` favours the annotation over "prayer beads".
 - **Colon-wrapped queries are unwrapped**, so `:+1:` reuses CLDR's `+1` annotation with no alias table.
 - **Other languages add keywords; English always stays.** `AppCore` loads one pack per language in
-  `Locale.preferredLanguages`, matched by `Bundle.preferredLocalizations` (`zh-CN` reads `zh-Hans`), so
+  `SystemLanguages.preferred`, matched by `Bundle.preferredLocalizations` (`zh-CN` reads `zh-Hans`), so
   a Simplified Chinese Mac finds 🐱 by `猫` and by `cat`. Pack terms join after the English keywords,
   so an English name match still ranks first. An English-only Mac reads no pack. The generator drops terms
   English already has, folds `’` to `'`, and gives katakana a hiragana twin, since an IME shows hiragana

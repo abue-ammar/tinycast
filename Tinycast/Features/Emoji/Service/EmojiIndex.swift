@@ -61,7 +61,7 @@ final class EmojiIndex {
         revision &+= 1
     }
 
-    /// Plain files, never `.lproj`: one would switch AppKit's own text out of English.
+    /// Plain files let search follow macOS languages independently of the app's UI language.
     private nonisolated static func keywordPacks(for languages: [String], in bundle: Bundle) -> [String] {
         let urls = bundle.urls(forResourcesWithExtension: "txt", subdirectory: "EmojiKeywords") ?? []
         let byLanguage = Dictionary(
