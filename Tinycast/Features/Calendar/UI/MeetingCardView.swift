@@ -27,7 +27,7 @@ struct MeetingCard: View {
                 }
             }
             Spacer(minLength: metrics.spacing.md)
-            Text(UpcomingWindow.countdown(to: meeting.start, now: now))
+            Text(UpcomingWindow.countdown(to: meeting.start, now: now, locale: .current))
                 .font(metrics.typography.rowTitle.weight(.medium))
                 .lineLimit(1)
                 .padding(.horizontal, metrics.spacing.md)
@@ -43,7 +43,7 @@ struct MeetingCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(meeting.title), \(subtitle), "
-                + UpcomingWindow.countdown(to: meeting.start, now: now)
+                + UpcomingWindow.countdown(to: meeting.start, now: now, locale: .current)
         )
         .accessibilityAddTraits(.isButton)
     }

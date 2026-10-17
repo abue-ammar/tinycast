@@ -126,7 +126,7 @@ struct DictationSettingsView: View {
                             Text("Auto").tag("")
                             Divider()
                             ForEach(DictationLanguage.allCases) { language in
-                                Text(language.displayName).tag(language.rawValue)
+                                Text(language.displayName(locale: .current)).tag(language.rawValue)
                             }
                         } label: {
                             SettingsRowTitle(.dictationModel, "Language")
@@ -139,7 +139,7 @@ struct DictationSettingsView: View {
                 Section {
                     Picker(selection: $settings.dictationIdleRelease) {
                         ForEach(DictationIdleRelease.allCases) { option in
-                            Text(option.title).tag(option)
+                            Text(option.title(locale: .current)).tag(option)
                         }
                     } label: {
                         SettingsRowTitle(.dictationMemory, "Release model from memory")

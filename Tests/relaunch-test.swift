@@ -77,7 +77,7 @@ struct RelaunchTests {
         check(
             "repeated termination runs cleanup and teardown once",
             first == [
-                "first.start", "first.request-returned", "first.cleanup-start", "first.repeat-returned",
+                "first.start", "first.request-returned", "first.cleanup-start", "first.repeat-deferred",
                 "first.heartbeat", "first.cleanup-end", "first.flush-start", "first.flush-end",
                 "first.teardown"
             ])
@@ -145,7 +145,9 @@ final class AppCore {
         record("start")
         if stage == "first" {
             Task { @MainActor in
-                NSApp.terminate(nil)
+                RunLoop.main.perform(inModes: [.common]) {
+                    MainActor.assumeIsolated { NSApp.terminate(nil) }
+                }
                 record("request-returned")
             }
         } else {
@@ -157,8 +159,8 @@ final class AppCore {
         record("cleanup-start")
         if stage == "first" {
             Task { @MainActor in
-                NSApp.terminate(nil)
-                record("repeat-returned")
+                let reply = NSApp.delegate?.applicationShouldTerminate?(NSApp)
+                record(reply == .terminateLater ? "repeat-deferred" : "repeat-rejected")
                 record("heartbeat")
             }
         }

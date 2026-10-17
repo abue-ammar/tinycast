@@ -3,6 +3,7 @@ import Foundation
 @main
 struct DictationTest {
     static func main() {
+        let locale = Locale(identifier: "en_US")
         func check(_ actual: String, _ expected: String) {
             guard actual == expected else {
                 print("Expected \(expected.debugDescription), got \(actual.debugDescription)")
@@ -66,8 +67,12 @@ struct DictationTest {
         check(DictationModel.redux.title, "Parakeet · Redux")
         check(DictationModel.ultra.title, "Parakeet · Ultra")
         check(DictationIdleRelease.allCases.map(\.rawValue).description, "[0, 1, 2, 5, 10, 15, 20, 30, 60]")
-        check(DictationIdleRelease.never.title, "Never")
-        check(DictationIdleRelease.oneHour.title, "1 hour")
+        check(DictationIdleRelease.never.title(locale: locale), "Never")
+        check(DictationIdleRelease.oneHour.title(locale: locale), "1 hour")
+        check(DictationIdleRelease.oneHour.title(locale: Locale(identifier: "fr_FR")), "1\u{00a0}heure")
+        check(DictationLanguage.english.displayName(locale: locale), "English")
+        check(DictationLanguage.english.displayName(locale: Locale(identifier: "de_DE")), "Englisch")
+        check(DictationLanguage.english.rawValue, "English")
         check(DictationModel.qwenSmall.folderName, "qwen-0.6b")
         check(DictationModel.qwenLarge.folderName, "qwen-1.7b")
         for family in DictationModel.Family.allCases {

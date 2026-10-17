@@ -28,7 +28,7 @@ struct CameraPreviewView: View {
                 Text(meeting.title)
                     .font(Theme.Typography.rowTitle)
                     .lineLimit(1)
-                Text(UpcomingWindow.countdown(to: meeting.start, now: now))
+                Text(UpcomingWindow.countdown(to: meeting.start, now: now, locale: .current))
                     .font(Theme.Typography.rowTrailing)
                     .foregroundStyle(Theme.Colors.textSecondary)
             }

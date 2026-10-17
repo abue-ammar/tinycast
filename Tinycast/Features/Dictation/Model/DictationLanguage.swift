@@ -13,7 +13,7 @@ enum DictationLanguage: String, CaseIterable, Identifiable, Sendable {
     var id: Self { self }
 
     /// The raw value is what the model is prompted with; the picker shows the reader's own name.
-    var displayName: String { Locale.current.localizedString(forLanguageCode: code) ?? rawValue }
+    func displayName(locale: Locale) -> String { locale.localizedString(forLanguageCode: code) ?? rawValue }
 
     private var code: String {
         switch self {

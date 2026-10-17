@@ -3,6 +3,7 @@ import Foundation
 @main
 @MainActor
 struct VolumeLevelTests {
+    static let locale = Locale(identifier: "en_US")
     static var failures = 0
     static var passes = 0
 
@@ -32,12 +33,12 @@ struct VolumeLevelTests {
             if line < VolumeLevel.steps {
                 expect(
                     VolumeLevel.stepped(level, up: true), level + VolumeLevel.step,
-                    "up from \(VolumeLevel.percentage(level)) moves one step")
+                    "up from \(VolumeLevel.percentage(level, locale: locale)) moves one step")
             }
             if line > 0 {
                 expect(
                     VolumeLevel.stepped(level, up: false), level - VolumeLevel.step,
-                    "down from \(VolumeLevel.percentage(level)) moves one step")
+                    "down from \(VolumeLevel.percentage(level, locale: locale)) moves one step")
             }
         }
 
@@ -71,7 +72,7 @@ struct VolumeLevelTests {
             let line = preset * Double(VolumeLevel.steps)
             expect(
                 line == line.rounded(),
-                "the \(VolumeLevel.percentage(preset)) preset is on the grid")
+                "the \(VolumeLevel.percentage(preset, locale: locale)) preset is on the grid")
         }
 
         // Speaker glyph: muted and silent both read as slashed, whatever the underlying level.
@@ -92,14 +93,17 @@ struct VolumeLevelTests {
             "the glyph never steps backwards as the level rises")
         expect(Set(bands).count == 3, "every band is reachable on the step grid")
 
-        expect(VolumeLevel.percentage(0) == "0%", "zero reads 0%")
-        expect(VolumeLevel.percentage(0.45) == "45%", "a grid level reads a round number")
-        expect(VolumeLevel.percentage(1) == "100%", "full reads 100%")
-        expect(VolumeLevel.percentage(1.4) == "100%", "an over-range level reads 100%")
-        expect(VolumeLevel.percentage(-0.2) == "0%", "an under-range level reads 0%")
+        expect(VolumeLevel.percentage(0, locale: locale) == "0%", "zero reads 0%")
+        expect(VolumeLevel.percentage(0.45, locale: locale) == "45%", "a grid level reads a round number")
+        expect(VolumeLevel.percentage(1, locale: locale) == "100%", "full reads 100%")
+        expect(VolumeLevel.percentage(1.4, locale: locale) == "100%", "an over-range level reads 100%")
+        expect(VolumeLevel.percentage(-0.2, locale: locale) == "0%", "an under-range level reads 0%")
+        expect(
+            VolumeLevel.percentage(0.45, locale: Locale(identifier: "fr_FR")) == "45\u{00a0}%",
+            "the supplied locale controls percent spacing")
         expect(
             (0...VolumeLevel.steps).allSatisfy {
-                !VolumeLevel.percentage(Double($0) * VolumeLevel.step).contains(".")
+                !VolumeLevel.percentage(Double($0) * VolumeLevel.step, locale: locale).contains(".")
             },
             "no grid level ever reads as a fraction")
 

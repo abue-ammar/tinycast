@@ -23,11 +23,14 @@ struct VolumeHUDView: View {
                 }
                 .frame(height: Theme.Size.volumeTrackHeight)
                 // Muted prints the word: the bar is empty, and a number would contradict it.
-                Text(state.muted ? String(localized: "Muted") : VolumeLevel.percentage(state.level))
-                    .font(Theme.Typography.rowTrailing)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                    .monospacedDigit()
-                    .frame(width: Theme.Size.volumeReadout, alignment: .trailing)
+                Text(
+                    state.muted
+                        ? String(localized: "Muted") : VolumeLevel.percentage(state.level, locale: .current)
+                )
+                .font(Theme.Typography.rowTrailing)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .monospacedDigit()
+                .frame(width: Theme.Size.volumeReadout, alignment: .trailing)
             }
         }
         // Asymmetric: side padding costs far more on a 200pt box than a 420pt dialog.

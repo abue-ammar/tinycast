@@ -377,8 +377,8 @@ struct AIProvidersPanel: View {
                     if let email = account.email {
                         RedactedText(
                             value: email,
-                            revealHelp: "Click to reveal the signed-in account",
-                            hideHelp: "Click to hide the signed-in account")
+                            revealHelp: String(localized: "Click to reveal the signed-in account"),
+                            hideHelp: String(localized: "Click to hide the signed-in account"))
                     }
                 }
             }
@@ -461,8 +461,8 @@ struct AIProvidersPanel: View {
             if let email = account.email {
                 RedactedText(
                     value: email,
-                    revealHelp: "Click to reveal the signed-in account",
-                    hideHelp: "Click to hide the signed-in account")
+                    revealHelp: String(localized: "Click to reveal the signed-in account"),
+                    hideHelp: String(localized: "Click to hide the signed-in account"))
             }
         }
     }

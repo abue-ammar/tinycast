@@ -375,7 +375,7 @@ final class CalendarCoordinator {
             guard
                 await core.confirm(
                     title: String(localized: "Join \(meeting.title)?"),
-                    message: UpcomingWindow.countdown(to: meeting.start, now: Date()),
+                    message: UpcomingWindow.countdown(to: meeting.start, now: Date(), locale: .current),
                     symbol: link.provider.sfSymbol, confirmTitle: String(localized: "Join"),
                     tone: .neutral, confirmRole: .standard,
                     dismissTitle: String(localized: "Not Now"))

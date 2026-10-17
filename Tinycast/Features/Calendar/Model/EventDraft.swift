@@ -22,11 +22,12 @@ struct EventDraft: Sendable, Equatable {
         start(from: now).addingTimeInterval(TimeInterval(durationMinutes * 60))
     }
 
-    static func label(startOffset minutes: Int) -> String {
-        minutes == 0 ? String(localized: "Now") : label(duration: minutes)
+    static func label(startOffset minutes: Int, locale: Locale) -> String {
+        minutes == 0 ? String(localized: "Now", locale: locale) : label(duration: minutes, locale: locale)
     }
 
-    static func label(duration minutes: Int) -> String {
-        Duration.seconds(minutes * 60).formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
+    static func label(duration minutes: Int, locale: Locale) -> String {
+        Duration.seconds(minutes * 60).formatted(
+            .units(allowed: [.hours, .minutes], width: .abbreviated).locale(locale))
     }
 }

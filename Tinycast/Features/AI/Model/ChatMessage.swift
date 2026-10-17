@@ -136,10 +136,9 @@ extension Array where Element == ChatToolUse {
     var failedCount: Int { count { $0.state == .failed } }
 
     var completedLabel: String {
-        let label = String(localized: "Called \(count) tools")
         let failures = failedCount
-        guard failures > 0 else { return label }
-        return "\(label) · " + String(localized: "\(failures) failed")
+        guard failures > 0 else { return String(localized: "Called \(count) tools") }
+        return String(localized: "Called \(count) tools · \(failures) failed")
     }
 }
 

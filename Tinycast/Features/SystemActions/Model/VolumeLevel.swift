@@ -19,8 +19,8 @@ enum VolumeLevel {
         return clamped(line / Double(steps))
     }
 
-    static func percentage(_ level: Double) -> String {
-        Int((clamped(level) * 100).rounded()).formatted(.percent)
+    static func percentage(_ level: Double, locale: Locale) -> String {
+        Int((clamped(level) * 100).rounded()).formatted(.percent.locale(locale))
     }
 
     /// Shared by the HUD and slider, so one level never draws two different icons.

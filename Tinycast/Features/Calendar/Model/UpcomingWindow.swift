@@ -27,10 +27,12 @@ struct UpcomingWindow: Sendable {
         return linked.first { $0.isInProgress(now: now) } ?? linked.first { $0.start > now }
     }
 
-    static func countdown(to start: Date, now: Date) -> String {
+    static func countdown(to start: Date, now: Date, locale: Locale) -> String {
         let delta = start.timeIntervalSince(now)
-        if delta > 0 { return String(localized: "in \(duration(delta, rounding: .up))") }
-        return String(localized: "Now")
+        if delta > 0 {
+            return String(localized: "in \(duration(delta, rounding: .up, locale: locale))", locale: locale)
+        }
+        return String(localized: "Now", locale: locale)
     }
 
     struct RowPill: Equatable, Sendable {
@@ -39,15 +41,19 @@ struct UpcomingWindow: Sendable {
     }
 
     /// A row's pill: a countdown until midnight, then the date, so tomorrow never passes for today.
-    static func rowPill(for event: MeetingEvent, now: Date, calendar: Calendar) -> RowPill? {
-        if event.isInProgress(now: now) { return RowPill(text: String(localized: "Now"), isImminent: true) }
+    static func rowPill(
+        for event: MeetingEvent, now: Date, calendar: Calendar, locale: Locale
+    ) -> RowPill? {
+        if event.isInProgress(now: now) {
+            return RowPill(text: String(localized: "Now", locale: locale), isImminent: true)
+        }
         let delta = event.start.timeIntervalSince(now)
         guard delta > 0 else { return nil }
         let isImminent = delta <= 60 * 60
         guard isImminent || calendar.isDate(event.start, inSameDayAs: now) else {
             return RowPill(text: dayLabel(event.start, calendar: calendar), isImminent: false)
         }
-        return RowPill(text: countdown(to: event.start, now: now), isImminent: isImminent)
+        return RowPill(text: countdown(to: event.start, now: now, locale: locale), isImminent: isImminent)
     }
 
     static func dayLabel(_ date: Date, calendar: Calendar) -> String {
@@ -55,23 +61,28 @@ struct UpcomingWindow: Sendable {
     }
 
     /// The menu bar names the time left once a meeting has been underway for five minutes.
-    static func menuBarCountdown(for event: MeetingEvent, now: Date) -> String {
-        if now < event.start { return countdown(to: event.start, now: now) }
-        if now < event.start.addingTimeInterval(5 * 60) { return String(localized: "Now") }
+    static func menuBarCountdown(for event: MeetingEvent, now: Date, locale: Locale) -> String {
+        if now < event.start { return countdown(to: event.start, now: now, locale: locale) }
+        if now < event.start.addingTimeInterval(5 * 60) { return String(localized: "Now", locale: locale) }
         if now < event.end {
-            return String(localized: "\(duration(event.end.timeIntervalSince(now), rounding: .down)) left")
+            return String(
+                localized:
+                    "\(duration(event.end.timeIntervalSince(now), rounding: .down, locale: locale)) left",
+                locale: locale)
         }
-        return String(localized: "Now")
+        return String(localized: "Now", locale: locale)
     }
 
     private static func duration(
-        _ interval: TimeInterval, rounding: FloatingPointRoundingRule
+        _ interval: TimeInterval, rounding: FloatingPointRoundingRule, locale: Locale
     ) -> String {
         let minutes = max(1, Int((interval / 60).rounded(rounding)))
         guard minutes > 60 else {
-            return Duration.seconds(minutes * 60).formatted(.units(allowed: [.minutes], width: .abbreviated))
+            return Duration.seconds(minutes * 60).formatted(
+                .units(allowed: [.minutes], width: .abbreviated).locale(locale))
         }
         let hours = max(1, Int((Double(minutes) / 60).rounded()))
-        return Duration.seconds(hours * 3600).formatted(.units(allowed: [.hours], width: .abbreviated))
+        return Duration.seconds(hours * 3600).formatted(
+            .units(allowed: [.hours], width: .abbreviated).locale(locale))
     }
 }

@@ -560,7 +560,10 @@ final class AppCore {
     func relaunch() {
         guard !relaunchRequested else { return }
         relaunchRequested = true
-        NSApp.terminate(nil)
+        // AppKit's termination loop must start outside a Swift task or dispatch callback.
+        RunLoop.main.perform(inModes: [.common]) {
+            MainActor.assumeIsolated { NSApp.terminate(nil) }
+        }
     }
 
     func prepareForTermination() {

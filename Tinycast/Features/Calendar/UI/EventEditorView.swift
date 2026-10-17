@@ -29,13 +29,15 @@ struct EventEditorView: View {
                     choice(
                         String(localized: "Start"), field: .start,
                         selection: $editor.draft.startOffsetMinutes,
-                        values: EventDraft.startOffsets, label: EventDraft.label(startOffset:))
+                        values: EventDraft.startOffsets,
+                        label: { EventDraft.label(startOffset: $0, locale: .current) })
                 }
                 FormRow("Duration") {
                     choice(
                         String(localized: "Duration"), field: .duration,
                         selection: $editor.draft.durationMinutes,
-                        values: EventDraft.durations, label: EventDraft.label(duration:))
+                        values: EventDraft.durations,
+                        label: { EventDraft.label(duration: $0, locale: .current) })
                 }
                 FormRow {
                     Text("It goes on the calendar new events go to.")
