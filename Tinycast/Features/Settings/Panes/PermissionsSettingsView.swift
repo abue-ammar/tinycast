@@ -47,15 +47,12 @@ struct PermissionsSettingsView: View {
                 LabeledContent {
                     HStack(spacing: Theme.Spacing.lg) {
                         HStack(spacing: Theme.Spacing.xs) {
-                            Image(
-                                systemName: fullDiskAccess
-                                    ? "checkmark.circle.fill" : "exclamationmark.triangle.fill"
-                            )
-                            .accessibilityHidden(true)
-                            Text(fullDiskAccess ? "Granted" : "Not granted")
+                            Image(systemName: fullDiskAccessStatus.symbol)
+                                .accessibilityHidden(true)
+                            Text(fullDiskAccessStatus.title)
                         }
-                        .foregroundStyle(fullDiskAccess ? Color.green : Color.orange)
-                        Button(fullDiskAccess ? "Open…" : "Open Privacy Settings…") {
+                        .foregroundStyle(fullDiskAccessStatus.tint)
+                        Button(fullDiskAccess ? "Open…" : "Grant Access…") {
                             Permissions.openFullDiskAccessSettings()
                         }
                         .help("Opens Privacy & Security › Full Disk Access.")
@@ -75,8 +72,6 @@ struct PermissionsSettingsView: View {
                 }
             } header: {
                 SettingsSectionHeader(.permissionsFullDiskAccess)
-            } footer: {
-                Text("Optional for uninstalling apps; required for File Search.")
             }
 
             Section {
@@ -166,7 +161,15 @@ struct PermissionsSettingsView: View {
     private var calendarNeedsPrompt: Bool { calendarAccess == .notDetermined }
 
     private var accessibilityStatus: (title: String, symbol: String, tint: Color) {
-        accessibilityTrusted
+        grantStatus(accessibilityTrusted)
+    }
+
+    private var fullDiskAccessStatus: (title: String, symbol: String, tint: Color) {
+        grantStatus(fullDiskAccess)
+    }
+
+    private func grantStatus(_ granted: Bool) -> (title: String, symbol: String, tint: Color) {
+        granted
             ? (String(localized: "Granted"), "checkmark.circle.fill", .green)
             : (String(localized: "Not granted"), "exclamationmark.triangle.fill", .orange)
     }

@@ -86685,64 +86685,6 @@
         }
       }
     },
-    "Optional for uninstalling apps; required for File Search." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Für die Deinstallation von Apps optional; für die Dateisuche erforderlich."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Optional for uninstalling apps; required for File Search."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opcional para desinstalar apps; obligatorio para la búsqueda de archivos."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Facultatif pour désinstaller des apps ; requis pour la recherche de fichiers."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "アプリのアンインストールでは任意ですが、ファイル検索には必要です。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "앱 제거에는 선택 사항이며, 파일 검색에는 필수입니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opcional para desinstalar apps; necessário para a pesquisa de arquivos."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Необязателен для удаления приложений; необходим для поиска файлов."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "卸载应用时可选；文件搜索必须启用。"
-          }
-        }
-      }
-    },
     "Optional label" : {
       "localizations" : {
         "de" : {

@@ -20,8 +20,8 @@ struct UninstallCoordinatorTests {
                     aliases: AliasStore(), core: core)
 
                 coordinator.performUninstall()
-                for _ in 0..<100 {
-                    if core.finished { break }
+                let deadline = ContinuousClock.now + .seconds(5)
+                while !core.finished, ContinuousClock.now < deadline {
                     try? await Task.sleep(for: .milliseconds(1))
                 }
                 expect(core.finished, "the operation completes")
