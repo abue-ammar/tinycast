@@ -1,0 +1,27 @@
+name: GitLab mirror
+
+# GITLAB_TOKEN is a GitLab token with write_repository; when it expires the push fails, so renew it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitlab-mirror
+  cancel-in-progress: false
+
+jobs:
+  push:
+    if: github.repository == 'abue-ammar/tinycast'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Push main to GitLab
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+        run: git push "https://oauth2:${GITLAB_TOKEN}@gitlab.com/abue-ammar/tinycast.git" HEAD:refs/heads/main
