@@ -345,64 +345,6 @@
         }
       }
     },
-    "%@ acts as %@, shown as ✦ in shortcuts." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ sendet %2$@, in Kurzbefehlen als ✦ dargestellt."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@ sends %2$@, shown as ✦ in shortcuts."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ envía %@, que se muestra como ✦ en los atajos."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ simule %@, représenté par ✦ dans les raccourcis."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@は%@を送信します。ショートカットでは✦と表示されます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@은(는) %@을(를) 보내며, 단축키에서 ✦로 표시됩니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ envia %@, exibido como ✦ nos atalhos."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ отправляет %@; в сочетаниях клавиш отображается как ✦."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ 发送 %@，在快捷键中显示为 ✦。"
-          }
-        }
-      }
-    },
     "%@ already exists. Import applies its settings here; Replace overwrites it with the current ones." : {
       "localizations" : {
         "de" : {
@@ -2608,6 +2550,64 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 运行着自己的 Hyper Key。请退出它以使用此 Hyper Key。"
+          }
+        }
+      }
+    },
+    "%@ sends %@, shown as ✦ in shortcuts." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sendet %2$@, in Kurzbefehlen als ✦ dargestellt."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ sends %2$@, shown as ✦ in shortcuts."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ envía %@, que se muestra como ✦ en los atajos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ envoie %@, affiché sous la forme ✦ dans les raccourcis."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@は%@を送信します。ショートカットでは✦と表示されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@은(는) %@을(를) 보내며, 단축키에서 ✦로 표시됩니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ envia %@, exibido como ✦ nos atalhos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ отправляет %@; в сочетаниях клавиш отображается как ✦."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 发送 %@，在快捷键中显示为 ✦。"
           }
         }
       }
@@ -17054,6 +17054,162 @@
         }
       }
     },
+    "Allows dictating text." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ermöglicht die Texteingabe per Diktat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite dictar texto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet de dicter du texte."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音声でのテキスト入力を許可します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "텍스트를 받아쓸 수 있습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite ditar texto."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Позволяет вводить текст под диктовку."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许听写文本。"
+          }
+        }
+      }
+    },
+    "Allows File Search and finding protected app leftovers." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ermöglicht die Dateisuche und das Finden geschützter App-Reste."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite buscar archivos y encontrar archivos residuales protegidos de las apps."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet la recherche de fichiers et la détection des fichiers résiduels protégés des apps."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル検索と、保護されたアプリの残存ファイルの検出を許可します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "파일 검색과 보호된 앱 잔여 파일 찾기를 허용합니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite pesquisar arquivos e encontrar arquivos residuais protegidos de apps."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Позволяет искать файлы и находить защищённые остаточные файлы приложений."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许文件搜索和查找受保护的应用残留文件。"
+          }
+        }
+      }
+    },
+    "Allows joining your next meeting." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ermöglicht den Beitritt zu deinem nächsten Meeting."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite unirte a tu próxima reunión."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet de rejoindre votre prochaine réunion."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "次のミーティングへの参加を許可します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다음 미팅에 참가할 수 있습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite entrar na sua próxima reunião."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Позволяет присоединиться к следующей встрече."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许加入你的下一场会议。"
+          }
+        }
+      }
+    },
     "API Connection" : {
       "localizations" : {
         "de" : {
@@ -21055,6 +21211,58 @@
         }
       }
     },
+    "Allows pasting clipboard items and expanded snippets into active apps." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erlaubt das Einsetzen von Objekten aus der Zwischenablage und erweiterten Textbausteinen in aktive Apps."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite pegar elementos del portapapeles y fragmentos expandidos en las apps activas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permet de coller les éléments du presse-papiers et d’insérer des extraits dans l’app active."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードの項目や展開したスニペットを、使用中のAppにペーストできるようにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "클립보드 항목과 확장된 스니펫을 활성 앱에 붙여넣을 수 있습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Permite colar itens da área de transferência e trechos expandidos em apps ativos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Позволяет вставлять объекты из буфера обмена и раскрытые сниппеты в активные приложения."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "允许将剪贴板项目和展开的文本片段粘贴到活跃的 App 中。"
+          }
+        }
+      }
+    },
     "Allows pasting and window management." : {
       "localizations" : {
         "de" : {
@@ -21103,162 +21311,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "允许粘贴内容和管理窗口。"
-          }
-        }
-      }
-    },
-    "Allows pasting clipboard items and inserting snippets into active apps." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Erlaubt das Einsetzen von Objekten aus der Zwischenablage und das Einfügen von Textbausteinen in aktive Apps."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permite pegar elementos del portapapeles e insertar fragmentos en las apps activas."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permet de coller les éléments du presse-papiers et d’insérer des extraits dans l’app active."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "クリップボードの項目のペーストやスニペットの挿入を、使用中のAppで行えるようにします。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "활성 앱에 클립보드 항목을 붙여넣고 스니펫을 삽입할 수 있습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permite colar itens da área de transferência e inserir trechos em apps ativos."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Позволяет вставлять объекты из буфера обмена и сниппеты в активные приложения."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "允许在当前 App 中粘贴剪贴板项目和插入文本片段。"
-          }
-        }
-      }
-    },
-    "Allows you to dictate text." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ermöglicht die Texteingabe per Diktat."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permite dictar texto."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permet de dicter du texte."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "音声でのテキスト入力を許可します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "텍스트를 받아쓸 수 있습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permite ditar texto."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Позволяет вводить текст под диктовку."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "允许听写文本。"
-          }
-        }
-      }
-    },
-    "Allows you to view and create events." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ermöglicht das Anzeigen und Erstellen von Terminen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permite consultar y crear eventos."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permet de consulter et de créer des événements."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "イベントの表示と作成を許可します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이벤트를 보고 생성할 수 있습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Permite consultar e criar eventos."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Позволяет просматривать и создавать события."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "允许查看和创建日程。"
           }
         }
       }
@@ -23155,58 +23207,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "应用"
-          }
-        }
-      }
-    },
-    "Apply this layout" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dieses Layout anwenden"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aplicar esta disposición"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Appliquer cette disposition"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このレイアウトを適用"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 레이아웃 적용"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aplicar este layout"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Применить эту раскладку"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "应用此布局"
           }
         }
       }
@@ -25136,6 +25136,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "自动加入会议"
+          }
+        }
+      }
+    },
+    "Auto-switch input source" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eingabequelle automatisch wechseln"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiar automáticamente la fuente de entrada"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changer automatiquement de source de saisie"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "入力ソースを自動で切り替える"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "입력 소스 자동 전환"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alternar fonte de entrada automaticamente"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Автопереключение источника ввода"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自动切换输入法"
           }
         }
       }
@@ -41439,58 +41491,6 @@
         }
       }
     },
-    "Create Command" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Befehl erstellen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Crear comando"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Créer une commande"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コマンドを作成"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "명령 생성"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Criar comando"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Создать команду"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "创建命令"
-          }
-        }
-      }
-    },
     "Create Custom Command" : {
       "localizations" : {
         "de" : {
@@ -44152,58 +44152,6 @@
         }
       }
     },
-    "Delete Command" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Befehl löschen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eliminar comando"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Supprimer la commande"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コマンドを削除"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "명령 삭제"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Excluir comando"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Удалить команду"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "删除命令"
-          }
-        }
-      }
-    },
     "Delete Custom Command" : {
       "localizations" : {
         "de" : {
@@ -45247,18 +45195,18 @@
         }
       }
     },
-    "Disabled snippets cannot be inserted." : {
+    "Disabled snippets cannot be expanded." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deaktivierte Textbausteine können nicht eingefügt werden."
+            "value" : "Deaktivierte Textbausteine können nicht erweitert werden."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Los fragmentos desactivados no se pueden insertar."
+            "value" : "Los fragmentos desactivados no se pueden expandir."
           }
         },
         "fr" : {
@@ -45270,31 +45218,31 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無効なスニペットは挿入できません。"
+            "value" : "無効なスニペットは展開できません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "비활성화된 스니펫은 삽입할 수 없습니다."
+            "value" : "비활성화된 스니펫은 확장할 수 없습니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Trechos desativados não podem ser inseridos."
+            "value" : "Trechos desativados não podem ser expandidos."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Отключённые сниппеты нельзя вставить."
+            "value" : "Отключённые сниппеты нельзя раскрыть."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已停用的文本片段无法插入。"
+            "value" : "已停用的文本片段无法展开。"
           }
         }
       }
@@ -46977,58 +46925,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "编辑 API 连接"
-          }
-        }
-      }
-    },
-    "Edit Command" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Befehl bearbeiten"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar comando"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Modifier la commande"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コマンドを編集"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "명령 편집"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Editar comando"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Изменить команду"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "编辑命令"
           }
         }
       }
@@ -50574,18 +50470,18 @@
         }
       }
     },
-    "Enter the text Tinycast will insert." : {
+    "Enter the text Tinycast expands." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gib den Text ein, den Tinycast einfügen soll."
+            "value" : "Gib den Text ein, den Tinycast erweitert."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Introduce el texto que Tinycast insertará."
+            "value" : "Introduce el texto que Tinycast expande."
           }
         },
         "fr" : {
@@ -50597,31 +50493,31 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tinycastが挿入するテキストを入力してください。"
+            "value" : "Tinycastが展開するテキストを入力してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Tinycast가 삽입할 텍스트를 입력하십시오."
+            "value" : "Tinycast에서 확장할 텍스트를 입력하십시오."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Insira o texto que o Tinycast vai inserir."
+            "value" : "Insira o texto que o Tinycast expande."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Введите текст, который Tinycast будет вставлять."
+            "value" : "Введите текст, который раскрывает Tinycast."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请输入 Tinycast 要插入的文本。"
+            "value" : "请输入 Tinycast 要展开的文本。"
           }
         }
       }
@@ -51717,6 +51613,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "展开"
+          }
+        }
+      }
+    },
+    "Expand templates from the launcher or by keyword." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vorlagen über den Launcher oder per Stichwort erweitern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expande plantillas desde el lanzador o mediante una palabra clave."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insérer des extraits depuis le lanceur ou à l’aide d’un mot-clé."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ランチャーまたはキーワードからテンプレートを展開します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "런처 또는 키워드로 템플릿을 확장합니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expanda modelos pelo iniciador ou por palavra-chave."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Раскрывайте шаблоны из лаунчера или по ключевому слову."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从启动器或通过关键词展开模板。"
           }
         }
       }
@@ -55081,6 +55029,58 @@
         }
       }
     },
+    "Follow the cursor across displays" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dem Zeiger über Displays hinweg folgen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguir el cursor entre pantallas"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir le lanceur sur l’écran du pointeur"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カーソルに合わせてディスプレイ間を移動"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "디스플레이 간 커서를 따라가기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seguir o cursor entre telas"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Следовать за курсором между дисплеями"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跨显示器跟随光标"
+          }
+        }
+      }
+    },
     "Food & Drink" : {
       "localizations" : {
         "de" : {
@@ -55129,64 +55129,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "食物与饮料"
-          }
-        }
-      }
-    },
-    "For File Search and protected app leftovers." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Für die Dateisuche und geschützte App-Reste."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "For File Search and protected app leftovers."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Para la búsqueda de archivos y los archivos residuales protegidos de las apps."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pour la recherche de fichiers et les fichiers résiduels protégés des apps."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "ファイル検索と、保護されたアプリの残存ファイルに使用します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "파일 검색과 보호된 앱 잔여 파일에 사용합니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Para a pesquisa de arquivos e os arquivos residuais protegidos de apps."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Для поиска файлов и защищённых остаточных файлов приложений."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用于文件搜索和受保护的应用残留文件。"
           }
         }
       }
@@ -56390,58 +56332,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "通用"
-          }
-        }
-      }
-    },
-    "Get Info in Finder" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Informationen im Finder"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obtener información en el Finder"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lire les informations"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finderで情報を見る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Finder에서 정보 가져오기"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Obter Informações no Finder"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Свойства в Finder"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在访达中显示简介"
           }
         }
       }
@@ -63327,18 +63217,18 @@
         }
       }
     },
-    "Insert a variable" : {
+    "Insert a dynamic placeholder" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Variable einfügen"
+            "value" : "Dynamischen Platzhalter einfügen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Insertar una variable"
+            "value" : "Insertar un marcador dinámico"
           }
         },
         "fr" : {
@@ -63350,83 +63240,83 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "変数を挿入"
+            "value" : "動的なプレースホルダを挿入"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "변수 삽입"
+            "value" : "동적 자리 표시자 삽입"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Inserir uma variável"
+            "value" : "Inserir um marcador dinâmico"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Вставить переменную"
+            "value" : "Вставить динамическую подстановку"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "插入变量"
+            "value" : "插入动态占位符"
           }
         }
       }
     },
-    "Insert snippets from the launcher or by keyword." : {
+    "Insert a placeholder" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Füge Textbausteine über den Launcher oder per Stichwort ein."
+            "value" : "Platzhalter einfügen"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Inserta fragmentos desde el lanzador o mediante una palabra clave."
+            "value" : "Insertar un marcador"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Insérer des extraits depuis le lanceur ou à l’aide d’un mot-clé."
+            "value" : "Insérer une variable"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "ランチャーまたはキーワードでスニペットを挿入します。"
+            "value" : "プレースホルダを挿入"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "런처 또는 키워드로 스니펫을 삽입합니다."
+            "value" : "자리 표시자 삽입"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Insira trechos pelo iniciador ou por palavra-chave."
+            "value" : "Inserir um marcador"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Вставляйте сниппеты из лаунчера или по ключевому слову."
+            "value" : "Вставить подстановку"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "从启动器或通过关键词插入文本片段。"
+            "value" : "插入占位符"
           }
         }
       }
@@ -65929,58 +65819,6 @@
         }
       }
     },
-    "Keep current input source" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aktuelle Eingabequelle beibehalten"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mantener la fuente de entrada actual"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conserver la source actuelle"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "現在の入力ソースを維持"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "현재 입력 소스 유지"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Manter a fonte de entrada atual"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сохранить текущий источник ввода"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保留当前输入法"
-          }
-        }
-      }
-    },
     "Keep history for" : {
       "localizations" : {
         "de" : {
@@ -66185,6 +66023,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "缺少密钥"
+          }
+        }
+      }
+    },
+    "Key presses can't reach the Hyper Key while Secure Input is on." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tastenanschläge erreichen die Hyper Key nicht, solange „Sichere Eingabe“ aktiv ist."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las pulsaciones de teclas no pueden llegar a la Hyper Key mientras la entrada segura está activada."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La saisie sécurisée empêche Hyper Key de recevoir les frappes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "セキュアな入力がオンの間は、キー入力がHyper Keyに届きません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보안 입력이 켜져 있는 동안에는 키 입력이 Hyper Key에 전달되지 않습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As teclas pressionadas não chegam à Hyper Key enquanto a Entrada Segura estiver ativada."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Пока включён защищённый ввод, нажатия клавиш не доходят до Hyper Key."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "“安全键盘输入”开启时，按键无法到达 Hyper Key。"
           }
         }
       }
@@ -66452,6 +66342,110 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "关键词"
+          }
+        }
+      }
+    },
+    "Keyword expansion needs Accessibility access" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Stichworterweiterung benötigt Zugriff auf die Bedienungshilfen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La expansión por palabra clave necesita acceso de Accesibilidad"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le remplacement de texte nécessite l’autorisation d’accessibilité"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーワード展開にはアクセシビリティのアクセスが必要です"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키워드 확장에는 손쉬운 사용 접근 권한이 필요합니다"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A expansão por palavra-chave precisa de acesso de Acessibilidade"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для раскрытия по ключевому слову нужен доступ универсального доступа"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关键词展开需要辅助功能访问权限"
+          }
+        }
+      }
+    },
+    "Keyword expansion requires the Accessibility permission. Keystrokes stay on this Mac." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Stichworterweiterung erfordert die Berechtigung für Bedienungshilfen. Tastenanschläge bleiben auf diesem Mac."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La expansión por palabra clave requiere el permiso de Accesibilidad. Las pulsaciones de teclas permanecen en este Mac."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le remplacement de texte nécessite l’autorisation d’accessibilité. Les frappes restent sur ce Mac."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーワード展開にはアクセシビリティの許可が必要です。キー入力はこのMacの外に出ません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키워드 확장에는 손쉬운 사용 권한이 필요합니다. 키 입력은 이 Mac에만 보관됩니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A expansão por palavra-chave requer a permissão de Acessibilidade. As teclas digitadas ficam neste Mac."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Для раскрытия по ключевому слову требуется разрешение универсального доступа. Нажатия клавиш остаются на этом Mac."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关键词展开需要辅助功能权限。按键内容保留在这台 Mac 上。"
           }
         }
       }
@@ -67234,58 +67228,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启动器图标"
-          }
-        }
-      }
-    },
-    "Launcher input source" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Eingabequelle automatisch wechseln"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cambiar automáticamente la fuente de entrada"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Source de saisie du lanceur"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "入力ソースを自動で切り替える"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "입력 소스 자동 전환"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Alternar fonte de entrada automaticamente"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Автопереключение источника ввода"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自动切换输入法"
           }
         }
       }
@@ -84968,6 +84910,58 @@
         }
       }
     },
+    "Open Privacy Settings…" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Datenschutzeinstellungen öffnen …"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir ajustes de privacidad…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir les réglages de confidentialité…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プライバシー設定を開く…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "개인정보 보호 설정 열기…"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir ajustes de privacidade…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открыть настройки конфиденциальности…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开隐私设置…"
+          }
+        }
+      }
+    },
     "Open Quicklink" : {
       "localizations" : {
         "de" : {
@@ -85797,58 +85791,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "从启动器打开已存储的链接和搜索。"
-          }
-        }
-      }
-    },
-    "Open the launcher on the display with the pointer" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Dem Zeiger über Displays hinweg folgen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seguir el cursor entre pantallas"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ouvrir le lanceur sur l’écran du pointeur"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "カーソルに合わせてディスプレイ間を移動"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "디스플레이 간 커서를 따라가기"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Seguir o cursor entre telas"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Следовать за курсором между дисплеями"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "跨显示器跟随光标"
           }
         }
       }
@@ -86841,18 +86783,18 @@
         }
       }
     },
-    "Optional. Type this keyword to insert the snippet." : {
+    "Optional. Type this to expand the snippet." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Optional. Gib dieses Stichwort ein, um den Textbaustein einzufügen."
+            "value" : "Optional. Gib dies ein, um den Textbaustein zu erweitern."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opcional. Escribe esta palabra clave para insertar el fragmento."
+            "value" : "Opcional. Escríbelo para expandir el fragmento."
           }
         },
         "fr" : {
@@ -86864,31 +86806,31 @@
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "オプション。このキーワードを入力するとスニペットが挿入されます。"
+            "value" : "オプション。これを入力するとスニペットが展開されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "선택 사항입니다. 이 키워드를 입력하면 스니펫이 삽입됩니다."
+            "value" : "선택 사항입니다. 이를 입력하면 스니펫이 확장됩니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Opcional. Digite esta palavra-chave para inserir o trecho."
+            "value" : "Opcional. Digite isto para expandir o trecho."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Необязательно. Введите это ключевое слово, чтобы вставить сниппет."
+            "value" : "Необязательно. Введите это, чтобы раскрыть сниппет."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "可选。输入此关键词即可插入文本片段。"
+            "value" : "可选。输入此内容即可展开文本片段。"
           }
         }
       }
@@ -99514,6 +99456,58 @@
         }
       }
     },
+    "Run this layout" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dieses Layout ausführen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ejecutar esta disposición"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appliquer cette disposition"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このレイアウトを実行"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 레이아웃 실행"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Executar este layout"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Применить эту раскладку"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "运行此布局"
+          }
+        }
+      }
+    },
     "Run your shortcuts from the launcher." : {
       "localizations" : {
         "de" : {
@@ -100659,58 +100653,6 @@
         }
       }
     },
-    "Search Locations" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Suchorte"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ubicaciones de búsqueda"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Emplacements de recherche"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "検索場所"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "검색 위치"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Locais de busca"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Места поиска"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索位置"
-          }
-        }
-      }
-    },
     "Search Menu Bar Items" : {
       "localizations" : {
         "de" : {
@@ -100863,6 +100805,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索快速链接"
+          }
+        }
+      }
+    },
+    "Search Scopes" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Suchbereiche"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ámbitos de búsqueda"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Emplacements de recherche"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検索範囲"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "검색 범위"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Escopos de busca"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Области поиска"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索范围"
           }
         }
       }
@@ -103099,58 +103093,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安全键盘输入兼容性"
-          }
-        }
-      }
-    },
-    "Secure Input prevents the Hyper Key from receiving key presses." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tastenanschläge erreichen die Hyper Key nicht, solange „Sichere Eingabe“ aktiv ist."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Las pulsaciones de teclas no pueden llegar a la Hyper Key mientras la entrada segura está activada."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La saisie sécurisée empêche Hyper Key de recevoir les frappes."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "セキュアな入力がオンの間は、キー入力がHyper Keyに届きません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "보안 입력이 켜져 있는 동안에는 키 입력이 Hyper Key에 전달되지 않습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "As teclas pressionadas não chegam à Hyper Key enquanto a Entrada Segura estiver ativada."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Пока включён защищённый ввод, нажатия клавиш не доходят до Hyper Key."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "“安全键盘输入”开启时，按键无法到达 Hyper Key。"
           }
         }
       }
@@ -105650,6 +105592,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "显示格式栏"
+          }
+        }
+      }
+    },
+    "Show Info in Finder" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Info im Finder anzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar información en el Finder"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lire les informations"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finderで情報を表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finder에서 정보 보기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar informações no Finder"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показать свойства в Finder"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在访达中显示简介"
           }
         }
       }
@@ -112872,110 +112866,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "文本区域"
-          }
-        }
-      }
-    },
-    "Text replacement needs Accessibility access" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Textersetzung benötigt Zugriff auf die Bedienungshilfen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La sustitución de texto requiere el permiso de Accesibilidad"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le remplacement de texte nécessite l’autorisation d’accessibilité."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "テキスト置換にはアクセシビリティのアクセス権が必要です"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "텍스트 대치에는 손쉬운 사용 접근 권한이 필요합니다"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A substituição de texto requer a permissão de Acessibilidade"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Для замены текста нужно разрешение «Универсальный доступ»"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "文本替换需要辅助功能访问权限"
-          }
-        }
-      }
-    },
-    "Text replacement requires the Accessibility permission. Keystrokes stay on this Mac." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Die Textersetzung erfordert die Berechtigung für Bedienungshilfen. Tastenanschläge bleiben auf diesem Mac."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La sustitución de texto requiere el permiso de Accesibilidad. Las pulsaciones de teclas permanecen en este Mac."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le remplacement de texte nécessite l’autorisation d’accessibilité. Les frappes restent sur ce Mac."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "テキスト置換にはアクセシビリティの許可が必要です。キー入力はこのMacの外に出ません。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "텍스트 대치에는 손쉬운 사용 권한이 필요합니다. 키 입력은 이 Mac 외부로 전송되지 않습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A substituição de texto requer a permissão de Acessibilidade. As teclas digitadas ficam neste Mac."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Для замены текста требуется разрешение «Универсальный доступ». Нажатия клавиш не покидают этот Mac."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "文本替换需要辅助功能权限。按键内容不会离开这台 Mac。"
           }
         }
       }
@@ -129918,6 +129808,58 @@
         }
       }
     },
+    "Waiting for a snippet to finish expanding." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Warten auf den Abschluss einer Textbausteinerweiterung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esperando a que termine de expandirse un fragmento."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En attente de la fin de l’insertion d’un extrait."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "スニペットの展開が完了するのを待っています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "스니펫 확장이 끝나기를 기다리는 중입니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Aguardando um trecho terminar de expandir."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ожидание завершения развертывания сниппета."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在等待文本片段展开完成。"
+          }
+        }
+      }
+    },
     "Waiting for a shortcut…" : {
       "localizations" : {
         "de" : {
@@ -130018,58 +129960,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在等待登录…"
-          }
-        }
-      }
-    },
-    "Waiting for snippet insertion to finish." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Warte, bis der Textbaustein eingefügt ist."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esperando a que termine la inserción de un fragmento."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "En attente de la fin de l’insertion d’un extrait."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "スニペットの挿入が完了するのを待っています。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "스니펫 삽입이 완료되기를 기다리는 중입니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Aguardando o término da inserção de um trecho."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ожидание завершения вставки сниппета."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "正在等待文本片段插入完成。"
           }
         }
       }

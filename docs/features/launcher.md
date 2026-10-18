@@ -58,7 +58,7 @@ reports notification-dependent checks as skipped when the session cannot deliver
 ## Search scopes
 
 `SearchScopes` (`Launcher/Model/SearchScopes.swift`) owns the paths; the list is user-editable in
-Settings → Applications → Search Locations and persisted as `AppSettings.searchScopes`.
+Settings → Applications → Search Scopes and persisted as `AppSettings.searchScopes`.
 A scope is either a directory or a single `.app`
 bundle, stored tilde-abbreviated so the UI reads cleanly and a settings backup stays portable.
 

@@ -89,7 +89,7 @@ private struct WindowLayoutSettingsRow: View {
                 Image(systemName: "play")
             }
             .buttonStyle(.plain)
-            .help("Apply this layout")
+            .help("Run this layout")
             .accessibilityLabel("Run \(layout.name)")
 
             Button(action: onEdit) {

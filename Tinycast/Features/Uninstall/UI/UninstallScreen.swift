@@ -122,7 +122,7 @@ enum UninstallActionsMenu {
             })
         items.append(
             PopoverMenuItem(
-                title: String(localized: "Get Info in Finder"), systemImage: "info.circle",
+                title: String(localized: "Show Info in Finder"), systemImage: "info.circle",
                 shortcut: "⇧⌘I"
             ) {
                 core.uninstallCoordinator.showUninstallItemInfo(candidate)

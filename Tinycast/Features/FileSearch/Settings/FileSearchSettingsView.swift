@@ -47,7 +47,7 @@ private struct FileSearchAccessSection: View {
                         Text(granted ? "Granted" : "Required")
                     }
                     .foregroundStyle(granted ? Color.green : Color.orange)
-                    Button("Open…") {
+                    Button(granted ? "Open…" : "Open Privacy Settings…") {
                         Permissions.openFullDiskAccessSettings()
                     }
                     .help("Opens Privacy & Security › Full Disk Access.")

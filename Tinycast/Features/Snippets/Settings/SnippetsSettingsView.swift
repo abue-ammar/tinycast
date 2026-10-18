@@ -12,7 +12,7 @@ struct SnippetsSettingsView: View {
             FeatureSwitchSection(
                 anchor: .snippetsSnippets,
                 enableTitle: "Enable snippets",
-                enableSubtitle: "Insert snippets from the launcher or by keyword.",
+                enableSubtitle: "Expand templates from the launcher or by keyword.",
                 // Enabling is also keyword-expansion consent, so it uses the confirming setter.
                 isEnabled: Binding(
                     get: { settings.snippetsEnabled },
@@ -31,7 +31,7 @@ struct SnippetsSettingsView: View {
                                 .foregroundStyle(.orange)
                                 .frame(width: SettingsListMetrics.iconSize)
                             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                                Text("Text replacement needs Accessibility access")
+                                Text("Keyword expansion needs Accessibility access")
                                     .foregroundStyle(.orange)
                                 Text("Launcher search still works.")
                                     .foregroundStyle(.secondary)

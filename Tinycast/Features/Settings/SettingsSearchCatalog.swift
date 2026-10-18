@@ -135,7 +135,7 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Escape Key Behavior",
             keywords: ["escape", "esc", "back", "close", "navigate"]),
         .init(
-            .generalGeneral, "Launcher input source",
+            .generalGeneral, "Auto-switch input source",
             keywords: ["keyboard", "layout", "language", "abc"]),
         .init(
             .generalAppearance, "Appearance",
@@ -150,7 +150,7 @@ enum SettingsSearchCatalog {
             .generalAppearance, "Show favorites in compact mode",
             keywords: ["pinned", "apps", "compact"]),
         .init(
-            .generalAppearance, "Open the launcher on the display with the pointer",
+            .generalAppearance, "Follow the cursor across displays",
             keywords: ["monitor", "screen", "pointer", "multi display"]),
         .init(
             .generalAppearance, "Drag to move the launcher",
@@ -187,7 +187,7 @@ enum SettingsSearchCatalog {
             .applicationsApplications, "Enable Applications",
             keywords: ["hide apps", "visibility"]),
         .init(
-            group: .applicationsSearchScopes, "Search Locations",
+            group: .applicationsSearchScopes, "Search Scopes",
             keywords: ["folders", "indexed", "locations", "add folder"]),
         .init(
             group: .applicationsApplications, "Aliases and shortcuts",
@@ -366,7 +366,7 @@ enum SettingsSearchCatalog {
             group: .fileSearchCommands, "File search commands",
             keywords: ["shortcut", "launcher"]),
         .init(
-            group: .fileSearchSearchScopes, "Search Locations",
+            group: .fileSearchSearchScopes, "Search Scopes",
             keywords: ["folders", "locations", "home", "whole disk", "add folder"]),
         .init(
             group: .fileSearchIgnorePatterns, "Ignore Patterns",

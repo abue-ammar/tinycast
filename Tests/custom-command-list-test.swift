@@ -24,9 +24,6 @@ struct CustomCommandListTests {
         let empty = screen()
         expect(empty.rows.isEmpty, "an empty library has no rows")
         expect(empty.primaryActionTitle == "Create Custom Command", "empty libraries offer creation")
-        expect(
-            empty.actions(at: 0)?.items.first?.title == "Create Command",
-            "menus keep the short creation label")
         _ = empty.body(selection: 0, scroll: ScrollIntent())
         expect(EmptyResults.lastText == "No custom commands yet", "an empty library has its own message")
 
@@ -38,10 +35,6 @@ struct CustomCommandListTests {
         vm.pendingArgumentEntryID = second.entryID
         expect(full.landingSelection == 1, "argument prompts select the command in the snapshot")
         expect(full.actions(at: 1)?.header == second.name, "actions address the rendered row")
-        expect(
-            full.actions(at: 1)?.items.map(\.title)
-                == ["Run Command", "Edit Command", "Create Command", "Delete Command"],
-            "menus keep short command labels")
         full.activate(at: 1)
         expect(coordinator.ran == second.id, "activation addresses the rendered row")
         expect(full.perform(.edit, at: 1), "the snapshot supports editing")

@@ -140,10 +140,10 @@ struct QuicklinkEditorView: View {
             insertMenuFrame = $0
         }
         .tooltip(
-            String(localized: "Insert a variable"), alignment: .trailing,
+            String(localized: "Insert a dynamic placeholder"), alignment: .trailing,
             dismissOnPress: true
         )
-        .accessibilityLabel("Insert a variable")
+        .accessibilityLabel("Insert a placeholder")
     }
 
     private func placeholder(

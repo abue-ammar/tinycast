@@ -56,12 +56,12 @@ struct GeneralSettingsView: View {
                 // Empty only when TIS fails; one layout still lists, so the row stays put.
                 if !inputSources.isEmpty {
                     Picker(selection: $settings.autoSwitchInputSourceID) {
-                        Text("Keep current input source").tag(nil as String?)
+                        Text("None").tag(nil as String?)
                         ForEach(inputSources) { source in
                             Text(source.title).tag(Optional(source.id))
                         }
                     } label: {
-                        SettingsRowTitle(.generalGeneral, "Launcher input source")
+                        SettingsRowTitle(.generalGeneral, "Auto-switch input source")
                         Text("While the launcher is open.")
                     }
                 }
@@ -85,7 +85,7 @@ struct GeneralSettingsView: View {
                 }
                 .settingsEnabled(settings.compactMode)
                 Toggle(isOn: $settings.openOnCursorScreen) {
-                    SettingsRowTitle(.generalAppearance, "Open the launcher on the display with the pointer")
+                    SettingsRowTitle(.generalAppearance, "Follow the cursor across displays")
                 }
                 Toggle(isOn: $settings.paletteDraggable) {
                     SettingsRowTitle(.generalAppearance, "Drag to move the launcher")

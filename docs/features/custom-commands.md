@@ -67,7 +67,7 @@ launcher row's **Hide from Root Search** (⇧⌘H); the row marks a hidden comma
 
 ### Launcher editor
 
-**Create Custom Command**, a command row's **Edit Command** action, and the Settings **Add** and
+**Create Custom Command**, a command row's **Edit Custom Command** action, and the Settings **Add** and
 **Edit** buttons open the same `CustomCommandEditorView` in the launcher. There is no second editor
 in Settings; its rows still manage aliases, hotkeys, enabling and deletion.
 

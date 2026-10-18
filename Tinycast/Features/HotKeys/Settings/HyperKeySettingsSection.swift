@@ -27,7 +27,7 @@ struct HyperKeySettingsSection: View {
             return String(localized: "Use one key to hold \(hyperGlyphs) together.")
         }
         return String(
-            localized: "\(settings.hyperKey.title) acts as \(hyperGlyphs), shown as ✦ in shortcuts.")
+            localized: "\(settings.hyperKey.title) sends \(hyperGlyphs), shown as ✦ in shortcuts.")
     }
 
     var body: some View {

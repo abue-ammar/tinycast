@@ -65,7 +65,7 @@ struct PermissionsSettingsView: View {
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             SettingsRowTitle(.permissionsFullDiskAccess, "Full Disk Access")
-                            Text("For File Search and protected app leftovers.")
+                            Text("Allows File Search and finding protected app leftovers.")
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -102,7 +102,7 @@ struct PermissionsSettingsView: View {
                             path: "/System/Applications/Calendar.app")
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             SettingsRowTitle(.permissionsCalendars, "Calendars")
-                            Text("Allows you to view and create events.")
+                            Text("Allows joining your next meeting.")
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -143,7 +143,7 @@ struct PermissionsSettingsView: View {
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             SettingsRowTitle(.permissionsMicrophone, "Microphone")
-                            Text("Allows you to dictate text.")
+                            Text("Allows dictating text.")
                                 .foregroundStyle(.secondary)
                         }
                     }
