@@ -83979,6 +83979,58 @@
         }
       }
     },
+    "Only an administrator can move it, as with App Store apps. Drag it to the Trash in Finder instead." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nur ein Administrator kann es verschieben, wie bei Apps aus dem App Store. Zieh es stattdessen im Finder in den Papierkorb."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Solo un administrador puede moverlo, como ocurre con las apps del App Store. Arrástralo a la papelera desde el Finder."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Seul un administrateur peut le déplacer, comme pour les apps de l’App Store. Faites-le glisser vers la Corbeille dans le Finder."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Storeのアプリと同じく、管理者だけが移動できます。代わりにFinderでゴミ箱にドラッグしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App Store 앱처럼 관리자만 이동할 수 있습니다. 대신 Finder에서 휴지통으로 드래그하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Só um administrador pode movê-lo, como acontece com apps da App Store. Arraste-o para o Lixo no Finder."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Переместить его может только администратор, как и приложения из App Store. Перетащите его в Корзину в Finder."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "与 App Store 应用一样，只有管理员才能移动它。请改为在访达中将其拖到废纸篓。"
+          }
+        }
+      }
+    },
     "Only join known meeting services" : {
       "localizations" : {
         "de" : {

@@ -151,13 +151,20 @@ Precedence, asserted by the harness:
 4. a TCC-gated path without Full Disk Access → `.needsFullDiskAccess`
 5. parent not writable → `.parentNotWritable`
 6. sticky parent _and_ not owned by the current user → `.notOwned`
-7. → `.removable`
+7. a directory the current user can't write → `.notWritable`
+8. → `.removable`
 
-Steps 5 and 6 are the whole ownership story, and the order is deliberate. Removing a directory entry
+Steps 5 to 7 are the whole permission story, and the order is deliberate. Removing a directory entry
 is governed by write permission on the **enclosing directory**, not by who owns the item: a root-owned
 file inside a folder you can write is yours to remove. Checking ownership first — as an earlier
 revision did — grayed out rows that trash perfectly well. Ownership decides exactly one case, a
 sticky parent (`S_ISVTX`, the `/tmp` rule), where only an owner may unlink.
+
+A **directory** also needs its own write bit, because the trash moves it to a new parent and that
+rewrites its `..` entry. This is what locks App Store and TestFlight bundles: they are
+`drwxr-xr-x root:wheel` inside an admin-writable `/Applications`, so the parent check passes and the
+move still fails with `EPERM` (#1634). The row says to drag the bundle to the Trash in Finder, which
+asks for the password this feature never requests.
 
 This is also why `/usr/local/bin/code` stays locked while `/opt/homebrew/bin/orb` does not:
 `/usr/local/bin` is `drwxr-xr-x root:wheel`, so the trash is refused outright (measured, not

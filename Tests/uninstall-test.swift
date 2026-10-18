@@ -437,6 +437,16 @@ struct UninstallTests {
             classify(PathFacts(path: "/Library/Caches/com.foo.Bar", parentIsWritable: false))
                 == .parentNotWritable,
             "trashing is a rename out of the parent, so an unwritable parent locks the row")
+        expect(
+            classify(
+                PathFacts(
+                    path: "/Applications/Store App.app", isDirectory: true, isWritable: false,
+                    isOwnedByCurrentUser: false)) == .notWritable,
+            "a root-owned App Store bundle is locked — moving a directory rewrites its own `..`")
+        expect(
+            classify(PathFacts(path: "/Library/Caches/com.foo.Bar.plist", isWritable: false))
+                == .removable,
+            "an unwritable file still trashes — only a directory needs its own write bit")
 
         let container = PathFacts(path: home + "/Library/Containers/com.foo.Bar")
         expect(
@@ -448,8 +458,8 @@ struct UninstallTests {
 
         let everything = PathFacts(
             path: home + "/Library/Containers/com.foo.Bar", volumeIsReadOnly: true,
-            isSystemRestricted: true, isUserImmutable: true, isOwnedByCurrentUser: false,
-            parentIsWritable: false, parentIsSticky: true)
+            isSystemRestricted: true, isUserImmutable: true, isDirectory: true, isWritable: false,
+            isOwnedByCurrentUser: false, parentIsWritable: false, parentIsSticky: true)
         expect(
             classify(everything) == .systemProtected,
             "precedence: a SIP path reports as system-protected, the most useful of its reasons")

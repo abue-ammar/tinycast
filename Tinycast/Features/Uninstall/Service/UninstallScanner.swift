@@ -163,14 +163,14 @@ enum UninstallScanner {
         let protection = UninstallProtectionRules.classify(scanned.facts, environment: environment)
         guard protection != .missing else { return nil }
         // A symlink is trashed as the link, so it never costs more than its own bytes.
-        let walkable = scanned.isDirectory && !scanned.facts.isSymbolicLink
+        let walkable = scanned.facts.isDirectory && !scanned.facts.isSymbolicLink
         return UninstallCandidate(
             path: path,
             name: displayName ?? (path as NSString).lastPathComponent,
             locationLabel: UninstallRules.abbreviate(
                 (path as NSString).deletingLastPathComponent, home: environment.home),
             evidence: evidence,
-            isDirectory: scanned.isDirectory,
+            isDirectory: scanned.facts.isDirectory,
             size: walkable ? nil : MeasuredSize(bytes: scanned.byteSize),
             protection: protection)
     }
@@ -179,7 +179,7 @@ enum UninstallScanner {
     private static func inspect(
         _ path: String, parent: ParentFacts?
     )
-        -> (facts: PathFacts, isDirectory: Bool, byteSize: Int64)?
+        -> (facts: PathFacts, byteSize: Int64)?
     {
         var info = stat()
         guard lstat(path, &info) == 0 else { return nil }
@@ -193,11 +193,13 @@ enum UninstallScanner {
             volumeIsReadOnly: volumeIsReadOnly,
             isSystemRestricted: info.st_flags & UInt32(SF_RESTRICTED | SF_IMMUTABLE) != 0,
             isUserImmutable: info.st_flags & UInt32(UF_IMMUTABLE) != 0,
+            isDirectory: (info.st_mode & S_IFMT) == S_IFDIR,
+            isWritable: FileManager.default.isWritableFile(atPath: path),
             isOwnedByCurrentUser: info.st_uid == geteuid(),
             parentIsWritable: parent.isWritable,
             parentIsSticky: parent.isSticky)
         // `st_size`, not `st_blocks`: a 593-byte plist occupies a block and must not read as 4 kB.
-        return (facts, (info.st_mode & S_IFMT) == S_IFDIR, Int64(info.st_size))
+        return (facts, Int64(info.st_size))
     }
 
     /// The permission that actually governs a trash, resolved once per root.
