@@ -603,7 +603,7 @@ the two room commands leave together with `windowRoomsShowInLauncher`. See
 
 `QuicklinkStore` supplies its slice the same way custom commands do, sorted pinned-first then
 alphabetically by `Quicklink.precedes`. Only the name is indexed — a URL is a subsequence of nearly
-any query — and a per-item "show in main search" flag filters the slice before it is published. The
+any query — and a per-item "show in root search" flag filters the slice before it is published. The
 four Quicklinks commands are dropped from the built-in slice in the same publish while the feature is
 off, so a toggle can't leave the section and its commands out of step. See
 [quicklinks.md](quicklinks.md).
@@ -777,8 +777,8 @@ rule — per kind, and a new `Kind` case has to answer it to compile. Applicatio
 Commands, Quick Actions, System Actions, Window Commands, Window Layouts, Rooms and extension commands each
 draw a per-row checkbox in their pane, so they carry it. Snippets do not: their pane lists a record
 with its own switches, not a launcher checkbox — a hide nothing in Settings can visibly undo is a
-trap, not a shortcut. Quicklinks and custom commands differ: each editor has its own **Show in main
-search** switch, so the row offers **Hide from Main Search** and `hideFromSearch(at:)` clears that
+trap, not a shortcut. Quicklinks and custom commands differ: each editor has its own **Show in root
+search** switch, so the row offers **Hide from Root Search** and `hideFromSearch(at:)` clears that
 `showsInRootSearch` flag instead of writing `VisibilityStore`.
 `AppActionsMenu` adds the query-driven guard the favorites row already uses: a typed URL lives only
 for its query and has no preference to write.

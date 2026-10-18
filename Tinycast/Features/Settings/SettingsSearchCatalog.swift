@@ -129,7 +129,7 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Automatically check for updates",
             keywords: ["software", "update", "automatic", "disable", "popup"]),
         .init(
-            .generalGeneral, "Return to Main Search",
+            .generalGeneral, "Pop to Root Search",
             keywords: ["reset", "timeout", "back"]),
         .init(
             .generalGeneral, "Escape Key Behavior",

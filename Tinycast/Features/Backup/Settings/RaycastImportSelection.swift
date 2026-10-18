@@ -31,7 +31,7 @@ struct RaycastImportSelection: View {
             option: .quicklinks, symbol: Quicklink.sfSymbol, label: String(localized: "Quicklinks")),
         .init(
             option: .popToRoot, symbol: "arrow.uturn.backward",
-            label: String(localized: "Return to main search")),
+            label: String(localized: "Pop to root")),
         .init(option: .compactMode, symbol: "macwindow", label: String(localized: "Compact mode"))
     ]
 

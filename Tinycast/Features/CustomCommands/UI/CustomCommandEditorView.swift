@@ -45,7 +45,7 @@ struct CustomCommandEditorView: View {
                     FormRow {
                         VStack(alignment: .leading, spacing: metrics.spacing.lg) {
                             option(
-                                String(localized: "Show in main search"),
+                                String(localized: "Show in root search"),
                                 detail: String(
                                     localized: """
                                         List this command alongside apps and other commands.

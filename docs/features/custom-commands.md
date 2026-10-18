@@ -62,8 +62,8 @@ still offers Create. Escape returns to the previous search; editing returns to t
 and selection. Alias and hotkey assignment remain in Settings.
 
 `showsInRootSearch == false` keeps a command out of that slice — and with it its alias — while its
-shortcut still runs it. The editor's **Show in main search** toggle writes it, and so does the
-launcher row's **Hide from Main Search** (⇧⌘H); the row marks a hidden command with `eye.slash`.
+shortcut still runs it. The editor's **Show in root search** toggle writes it, and so does the
+launcher row's **Hide from Root Search** (⇧⌘H); the row marks a hidden command with `eye.slash`.
 
 ### Launcher editor
 

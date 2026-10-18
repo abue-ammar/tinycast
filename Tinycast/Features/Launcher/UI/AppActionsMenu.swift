@@ -60,7 +60,7 @@ enum AppActionsMenu {
         if isPersistent, app.canHideFromSearch || hidesFromRoot {
             let title =
                 hidesFromRoot
-                ? String(localized: "Hide from Main Search") : String(localized: "Hide from Search")
+                ? String(localized: "Hide from Root Search") : String(localized: "Hide from Search")
             items.append(
                 PopoverMenuItem(
                     title: title, systemImage: "eye.slash", shortcut: "⇧⌘H", action: onHideFromSearch))

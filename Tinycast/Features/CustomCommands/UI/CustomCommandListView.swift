@@ -64,7 +64,7 @@ struct CustomCommandList: View {
                 if !command.showsInRootSearch {
                     SymbolImage(name: "eye.slash", size: metrics.size.menuIcon)
                         .foregroundStyle(Theme.Colors.textTertiary)
-                        .accessibilityLabel("Hidden from main search")
+                        .accessibilityLabel("Hidden from root search")
                 }
                 if let keycaps = hotKeys.binding(for: .customCommand(id: command.id))?.keycaps {
                     HStack(spacing: metrics.spacing.xxs) {

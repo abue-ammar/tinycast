@@ -34340,7 +34340,7 @@
         }
       }
     },
-    "Close window and return to main search" : {
+    "Close window and pop to root" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -50782,7 +50782,7 @@
         }
       }
     },
-    "Esc to close or ⌘ Esc to return to main search" : {
+    "Esc to close or ⌘ Esc to go to root search" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -50834,7 +50834,7 @@
         }
       }
     },
-    "Esc to go back or ⌘ Esc to return to main search" : {
+    "Esc to go back or ⌘ Esc to go to root search" : {
       "comment" : "Tooltip on the palette's back button; keep key names",
       "localizations" : {
         "de" : {
@@ -58014,7 +58014,7 @@
         }
       }
     },
-    "Hidden from main search" : {
+    "Hidden from root search" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -58586,7 +58586,7 @@
         }
       }
     },
-    "Hide from Main Search" : {
+    "Hide from Root Search" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -89395,6 +89395,111 @@
         }
       }
     },
+    "Pop to Root Search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zur Hauptsuche zurückkehren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a la búsqueda principal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revenir à la recherche principale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メイン検索に戻る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기본 검색으로 돌아가기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voltar à busca principal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вернуться к основному поиску"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回主搜索"
+          }
+        }
+      }
+    },
+    "Pop to root" : {
+      "comment" : "Setting: the launcher returns to its root view after a timeout",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zur Hauptsuche zurückkehren"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a la búsqueda principal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revenir à la recherche principale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メイン検索に戻る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기본 검색으로 돌아가기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voltar à busca principal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вернуться к основному поиску"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "返回主搜索"
+          }
+        }
+      }
+    },
     "Position" : {
       "localizations" : {
         "de" : {
@@ -97895,58 +98000,6 @@
         }
       }
     },
-    "Return to Main Search" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zur Hauptsuche zurückkehren"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volver a la búsqueda principal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revenir à la recherche principale"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メイン検索に戻る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기본 검색으로 돌아가기"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voltar à busca principal"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вернуться к основному поиску"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回主搜索"
-          }
-        }
-      }
-    },
     "Return to Tinycast. You can close this tab." : {
       "localizations" : {
         "de" : {
@@ -97995,59 +98048,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "请返回 Tinycast。你可以关闭此标签页。"
-          }
-        }
-      }
-    },
-    "Return to main search" : {
-      "comment" : "Setting: the launcher returns to its root view after a timeout",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Zur Hauptsuche zurückkehren"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Volver a la búsqueda principal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Revenir à la recherche principale"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メイン検索に戻る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기본 검색으로 돌아가기"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Voltar à busca principal"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Вернуться к основному поиску"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "返回主搜索"
           }
         }
       }
@@ -106175,58 +106175,6 @@
         }
       }
     },
-    "Show in main search" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "In der Hauptsuche anzeigen"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mostrar en la búsqueda principal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Afficher dans la recherche principale"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "メイン検索に表示"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "기본 검색에 표시"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mostrar na busca principal"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Показывать в основном поиске"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在主搜索中显示"
-          }
-        }
-      }
-    },
     "Show in menu bar" : {
       "localizations" : {
         "de" : {
@@ -106275,6 +106223,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "在菜单栏中显示"
+          }
+        }
+      }
+    },
+    "Show in root search" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In der Hauptsuche anzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar en la búsqueda principal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher dans la recherche principale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "メイン検索に表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기본 검색에 표시"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar na busca principal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показывать в основном поиске"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在主搜索中显示"
           }
         }
       }
@@ -132580,7 +132580,6 @@
     },
     "ai-pinned-conversations" : {
       "comment" : "Section header: pinned clipboard items",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -132640,7 +132639,6 @@
     },
     "ai-system-prompt-off" : {
       "comment" : "Hyper Key status",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -132700,7 +132698,6 @@
     },
     "ai-system-prompt-on" : {
       "comment" : "Provider status; also a context card value",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -132760,7 +132757,6 @@
     },
     "ai-web-search-off" : {
       "comment" : "Hyper Key status",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -132820,7 +132816,6 @@
     },
     "ai-web-search-on" : {
       "comment" : "Provider status; also a context card value",
-      "extractionState" : "extracted_with_value",
       "localizations" : {
         "de" : {
           "stringUnit" : {

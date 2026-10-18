@@ -42,7 +42,7 @@ struct GeneralSettingsView: View {
                         Text(timeout.title).tag(timeout)
                     }
                 } label: {
-                    SettingsRowTitle(.generalGeneral, "Return to Main Search")
+                    SettingsRowTitle(.generalGeneral, "Pop to Root Search")
                     Text("After the launcher closes.")
                 }
                 Picker(selection: $settings.escapeKeyBehavior) {

@@ -1434,8 +1434,8 @@ struct RootPaletteView: View {
     /// Never promises a step the click does not take: a root screen closes rather than backs.
     private var backHelp: String {
         hasBackStep
-            ? String(localized: "Esc to go back or ⌘ Esc to return to main search")
-            : String(localized: "Esc to close or ⌘ Esc to return to main search")
+            ? String(localized: "Esc to go back or ⌘ Esc to go to root search")
+            : String(localized: "Esc to close or ⌘ Esc to go to root search")
     }
 
     private func goBack() {

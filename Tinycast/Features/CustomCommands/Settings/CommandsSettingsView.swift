@@ -92,7 +92,7 @@ private struct CustomCommandSettingsRow: View {
             if !command.showsInRootSearch {
                 Image(systemName: "eye.slash")
                     .foregroundStyle(.secondary)
-                    .help("Hidden from main search")
+                    .help("Hidden from root search")
             }
 
             // An alias only reaches the ranker through the launcher slice, so it dims with it.

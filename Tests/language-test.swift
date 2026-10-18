@@ -158,6 +158,22 @@ struct LanguageTests {
                 forKey: "NSCameraUsageDescription", value: nil, table: "InfoPlist")
             check("\(code) camera privacy prompt loads", privacy.contains("Tinycast"))
 
+            if code == "en" || code == "fr" {
+                for (key, french) in [
+                    "Pop to Root Search": "Revenir à la recherche principale",
+                    "Pop to root": "Revenir à la recherche principale",
+                    "Close window and pop to root": "Fermer la fenêtre et revenir à la recherche principale",
+                    "Hidden from root search": "Masqué de la recherche principale",
+                    "Hide from Root Search": "Masquer de la recherche principale",
+                    "Show in root search": "Afficher dans la recherche principale"
+                ] {
+                    check(
+                        "\(code) root-search terminology is preserved for \(key)",
+                        bundle.localizedString(forKey: key, value: nil, table: nil)
+                            == (code == "fr" ? french : key))
+                }
+            }
+
             for label in contextualLabels {
                 let expected =
                     label.overrides[code]

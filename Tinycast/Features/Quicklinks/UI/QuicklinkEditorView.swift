@@ -25,7 +25,7 @@ struct QuicklinkEditorView: View {
                 FormRow {
                     VStack(alignment: .leading, spacing: metrics.spacing.lg) {
                         option(
-                            String(localized: "Show in main search"),
+                            String(localized: "Show in root search"),
                             detail: String(localized: "List this quicklink alongside apps and commands."),
                             value: $editor.showsInRootSearch, focus: .rootSearch)
                         option(

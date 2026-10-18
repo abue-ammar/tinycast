@@ -152,7 +152,7 @@ private struct QuicklinkSettingsRow: View {
             if !quicklink.showsInRootSearch {
                 Image(systemName: "eye.slash")
                     .foregroundStyle(.secondary)
-                    .help("Hidden from main search")
+                    .help("Hidden from root search")
             }
 
             // An alias only reaches the ranker through the root-search slice, so it dims with it.
