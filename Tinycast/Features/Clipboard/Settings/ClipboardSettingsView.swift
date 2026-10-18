@@ -58,7 +58,7 @@ struct ClipboardSettingsView: View {
                     Button("Clear…", role: .destructive) { confirmingClear = true }
                 } label: {
                     SettingsRowTitle(.clipboardDisabledApplications, "Clear history")
-                    Text("Removes every clip and image.")
+                    Text("Removes every item in the history.")
                 }
             }
         }

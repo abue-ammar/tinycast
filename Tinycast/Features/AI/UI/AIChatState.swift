@@ -390,7 +390,7 @@ enum ChatAttachmentRefusal: Equatable, Sendable {
         case .count:
             return String(
                 localized: "\(AIAttachmentBudget.maxCount) attachments is all one message can carry.")
-        case .size: return String(localized: "That file is too big for this message — send these first.")
+        case .size: return String(localized: "This file is too large to attach.")
         case .textTooLong:
             let limit = AIAttachmentBudget.maxInlinedTextBytes / 1_024
             return String(localized: "That text file is too big to attach — \(limit) KB is the limit.")

@@ -56,7 +56,7 @@ struct CalendarSettingsView: View {
                         Text(window.title).tag(window)
                     }
                 } label: {
-                    SettingsRowTitle(.calendarJoining, "Show the join card")
+                    SettingsRowTitle(.calendarJoining, "Show the meeting card")
                     Text("Before and after a meeting starts.")
                 }
                 Toggle(isOn: $settings.autoJoinMeetings) {

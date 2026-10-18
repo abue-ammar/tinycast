@@ -47,7 +47,7 @@ private struct FileSearchAccessSection: View {
                         Text(granted ? "Granted" : "Required")
                     }
                     .foregroundStyle(granted ? Color.green : Color.orange)
-                    Button(granted ? "Open…" : "Open Privacy Settings…") {
+                    Button("Open…") {
                         Permissions.openFullDiskAccessSettings()
                     }
                     .help("Opens Privacy & Security › Full Disk Access.")
@@ -181,9 +181,14 @@ private struct FileSearchScopesSection: View {
         } header: {
             SettingsSectionHeader(.fileSearchSearchScopes)
         } footer: {
-            Text("Only these folders are indexed and searched. A folder inside another is merged into it.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            Text(
+                """
+                Only these folders and their contents are indexed. Subfolders already included do not \
+                need to be added separately.
+                """
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
         }
         .onAppear(perform: refreshMissing)
         .onChange(of: settings.fileSearchScopes) { _, _ in refreshMissing() }

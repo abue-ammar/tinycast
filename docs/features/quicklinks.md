@@ -170,12 +170,12 @@ Quicklinks are their own `AppEntry.Kind`, their own `AppIndex` slice and their o
 between System Settings and Snippets. Only the **name** is indexed; the destination is not searchable
 (a URL is a subsequence of almost any query) — beside the name, a quicklink answers to whatever
 [user alias](launcher.md#user-aliases) its Settings row carries, which is why a hidden one dims the
-field. Per-quicklink "Show in root search" filters the slice;
+field. Per-quicklink "Show in main search" filters the slice;
 the pane's "Show in launcher" takes the section and the four Quicklink commands out of the
 launcher together, leaving shortcuts and the pane itself working.
 
 Three levers, narrowing in that order: the pane's switches take the whole feature out, the row's
-**Enabled** checkbox makes one quicklink inert, and **Show in root search** keeps a quicklink openable
+**Enabled** checkbox makes one quicklink inert, and **Show in main search** keeps a quicklink openable
 from Search Quicklinks and its shortcut while dropping it from the root list.
 
 `Quicklink.precedes` is the one display order — pinned first in the order they were pinned, then the
@@ -184,7 +184,7 @@ disagree. **Pinned means the top of the Quicklinks section**, not above Applicat
 position in root search would need a second `AppEntry.Kind`, which the kind invariant forbids for one
 feature. The Search Quicklinks screen gives pins their own section, like the clipboard's.
 A root-search row's ⌘K menu adds **Copy Link** (`⌃⌘C`), copying the saved destination exactly,
-**Edit Quicklink** (`⌘E`), opening the same editor as Search Quicklinks, and **Hide from Root Search**
+**Edit Quicklink** (`⌘E`), opening the same editor as Search Quicklinks, and **Hide from Main Search**
 (`⇧⌘H`), which clears `showsInRootSearch` rather than writing
 `VisibilityStore` — the editor's toggle is its undo, and the row stays in Search Quicklinks.
 

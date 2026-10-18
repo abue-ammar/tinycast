@@ -10,7 +10,7 @@ enum EscapeKeyBehavior: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .navigateBackOrClose: return String(localized: "Navigate back or close window")
-        case .closeAndPopToRoot: return String(localized: "Close window and pop to root")
+        case .closeAndPopToRoot: return String(localized: "Close window and return to main search")
         }
     }
 }

@@ -514,6 +514,7 @@ run notes-editor-test      Tinycast/Platform/Signposts.swift \
                            Tinycast/Platform/NotificationToken.swift \
                            Tinycast/Features/TextInjection/Service/InjectableTextView.swift \
                            Tinycast/Features/Notes/Model/NoteDocument.swift \
+                           Tinycast/Features/Notes/Model/NoteTitle.swift \
                            Tinycast/Features/Notes/Model/NoteMarkdown.swift \
                            Tinycast/Features/Notes/Model/NoteMarkdownParser.swift \
                            Tinycast/Features/Notes/Model/NoteInlineScanner.swift \
@@ -540,6 +541,7 @@ run -O index notes-editor-performance \
                            Tinycast/Platform/NotificationToken.swift \
                            Tinycast/Features/TextInjection/Service/InjectableTextView.swift \
                            Tinycast/Features/Notes/Model/NoteDocument.swift \
+                           Tinycast/Features/Notes/Model/NoteTitle.swift \
                            Tinycast/Features/Notes/Model/NoteMarkdown.swift \
                            Tinycast/Features/Notes/Model/NoteMarkdownParser.swift \
                            Tinycast/Features/Notes/Model/NoteInlineScanner.swift \

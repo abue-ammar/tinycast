@@ -24,10 +24,10 @@ struct HyperKeySettingsSection: View {
 
     private var hyperSubtitle: String {
         guard settings.hyperKey != .none else {
-            return String(localized: "Remap one key to \(hyperGlyphs) held together.")
+            return String(localized: "Use one key to hold \(hyperGlyphs) together.")
         }
         return String(
-            localized: "\(settings.hyperKey.title) sends \(hyperGlyphs), shown as ✦ in shortcuts.")
+            localized: "\(settings.hyperKey.title) acts as \(hyperGlyphs), shown as ✦ in shortcuts.")
     }
 
     var body: some View {
@@ -57,7 +57,7 @@ struct HyperKeySettingsSection: View {
                     Text("Trigger Escape").tag(HyperKeyQuickPress.escape)
                 } label: {
                     SettingsRowTitle(.generalHyperKey, "Quick Press")
-                    Text("When \(settings.hyperKey.title) is pressed alone.")
+                    Text("When you press and release \(settings.hyperKey.title) on its own.")
                 }
             }
 
@@ -132,7 +132,8 @@ struct HyperKeySettingsSection: View {
                 return String(localized: "\(appName) runs its own Hyper Key. Quit it to use this one.")
             case .remapUnavailable: return String(localized: "macOS refused to remap the keyboard.")
             case .paused:
-                return String(localized: "Handed back while the Mac sleeps, locks or switches user.")
+                return String(
+                    localized: "The key works normally during sleep, screen lock or user switching.")
             case .off, .active, .needsAccessibility: return nil
             }
         }

@@ -80,6 +80,7 @@ skipped, block and inline Markdown markers are dropped whether or not rendering 
 capped to 120 characters so no row or title bar has to carry a paragraph. `NoteSummary.title` remains the filename; `displayTitle` is what every
 surface renders — switcher rows and their VoiceOver labels, the Trash confirmation, the window title,
 and the title band of `NoteSearch`, so a fuzzy query reaches a note nobody has named.
+An empty unnamed note displays a localized Untitled label, preserving its filename and numeric suffix.
 
 `list()` reads at most 4 KB of each unnamed note to derive it, and a named note costs nothing beyond
 the enumeration it already pays for. The **active** note derives from the live draft rather than the

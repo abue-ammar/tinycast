@@ -1,5 +1,7 @@
+import AppKit
 import CoreGraphics
 import Foundation
+import SwiftUI
 
 /// Drives `CalloutPlacement` against the real `Theme`, so a retuned token fails here.
 @main
@@ -47,6 +49,7 @@ struct CalloutPlacementTests {
         caretTracking()
         degenerateContainers()
         rowGrammar()
+        localizedInstructions()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -165,6 +168,41 @@ struct CalloutPlacementTests {
         expect(
             farLeading.caretX >= caretLimit - 0.001,
             "the pointer stops clear of the leading corner arc")
+    }
+
+    static func localizedInstructions() {
+        _ = NSApplication.shared
+        let url = URL(fileURLWithPath: "Tinycast/Resources/Localizable.xcstrings")
+        guard let data = try? Data(contentsOf: url),
+            let catalog = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let strings = catalog["strings"] as? [String: [String: Any]]
+        else {
+            expect(false, "the translation catalog loads")
+            return
+        }
+        for key in ["Press again for a double press", "Release or complete the shortcut", "Release to record"]
+        {
+            guard let translations = strings[key]?["localizations"] as? [String: [String: Any]] else {
+                expect(false, "\(key) has translations")
+                continue
+            }
+            var labels = ["en": key]
+            for (language, entry) in translations {
+                if let unit = entry["stringUnit"] as? [String: Any], let value = unit["value"] as? String {
+                    labels[language] = value
+                }
+            }
+            for (language, label) in labels {
+                let text = Text(verbatim: label)
+                    .font(Theme.Typography.compactKeyCap)
+                    .frame(width: size.width - Theme.Spacing.md * 2)
+                    .fixedSize(horizontal: false, vertical: true)
+                let height = NSHostingView(rootView: text).fittingSize.height
+                expect(
+                    height <= Theme.Size.shortcutPopoverLine * 2,
+                    "\(key) fits two lines in \(language)")
+            }
+        }
     }
 
     // MARK: - Shared row grammar

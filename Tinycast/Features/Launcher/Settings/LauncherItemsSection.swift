@@ -19,7 +19,7 @@ struct LauncherCategorySwitchSection: View {
             ) {
                 SettingsFeatureToggleLabel(
                     anchor: anchor, title: title,
-                    subtitle: "Off hides all of them and stops their shortcuts.")
+                    subtitle: "Disables the feature and its associated shortcuts.")
             }
         }
     }
@@ -30,6 +30,7 @@ struct LauncherItemsSection: View {
     let kind: AppEntry.Kind
     let anchor: SettingsAnchor
     let searchPrompt: LocalizedStringResource
+    var emptyMessage: LocalizedStringResource = "Nothing here yet."
 
     @Environment(AppIndex.self) private var appIndex
     @Environment(VisibilityStore.self) private var visibility
@@ -47,7 +48,8 @@ struct LauncherItemsSection: View {
         Section {
             SettingsFilterField(prompt: searchPrompt, query: $query)
             LauncherItemsList(
-                entries: entries, query: query, isEnabled: visibility.isKindEnabled(kind))
+                entries: entries, query: query, isEnabled: visibility.isKindEnabled(kind),
+                emptyMessage: emptyMessage)
         } header: {
             SettingsSectionHeader(anchor)
         }
@@ -59,6 +61,7 @@ struct LauncherItemsList: View {
     let entries: [AppEntry]
     let query: String
     let isEnabled: Bool
+    var emptyMessage: LocalizedStringResource = "Nothing here yet."
 
     @Environment(VisibilityStore.self) private var visibility
     @Environment(AliasStore.self) private var aliases
@@ -67,7 +70,7 @@ struct LauncherItemsList: View {
 
     var body: some View {
         if entries.isEmpty {
-            Text(query.isEmpty ? "Nothing here yet." : "No matches for “\(query)”.")
+            Text(query.isEmpty ? emptyMessage : "No matches for “\(query)”.")
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .center)
         } else if entries.first?.kind != .application && entries.first?.kind != .appleShortcut {

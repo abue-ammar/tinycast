@@ -4,6 +4,11 @@ import Foundation
 enum NoteTitle {
     static let untitled = "Untitled"
 
+    static func displayName(_ title: String) -> String {
+        guard isUnnamed(title) else { return title }
+        return String(localized: "Untitled") + title.dropFirst(untitled.count)
+    }
+
     /// Wide enough that the scanned prefix is covered even where every character is four bytes.
     static let headByteCount = 4096
 

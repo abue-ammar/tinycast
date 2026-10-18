@@ -130,7 +130,7 @@ struct AIProvidersPanel: View {
                 Section("On This Mac") {
                     listRow(.appleIntelligence)
                 }
-                Section("Installed") {
+                Section(String(localized: "ai-installed-tools", defaultValue: "Installed")) {
                     ForEach(InstalledAIKind.allCases) { listRow(.installed($0)) }
                 }
                 Section("API Connections") {

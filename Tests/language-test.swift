@@ -87,6 +87,50 @@ struct LanguageTests {
             "pt": ("1 janela", "2 janelas"), "ru": ("1 окно", "2 окна"),
             "zh-Hans": ("1 个窗口", "2 个窗口")
         ]
+        let contextualLabels: [(key: String, source: String, overrides: [String: String])] = [
+            ("applications-empty", "Nothing here yet.", ["fr": "Aucune application à afficher."]),
+            ("system-settings-empty", "Nothing here yet.", ["fr": "Aucun réglage système à afficher."]),
+            ("system-actions-empty", "Nothing here yet.", ["fr": "Aucune action système à afficher."]),
+            ("commands-empty", "Nothing here yet.", ["fr": "Aucune commande à afficher."]),
+            ("apple-shortcuts-empty", "Nothing here yet.", ["fr": "Aucun raccourci à afficher."]),
+            ("snippets-use-default-folder", "Use Default", ["fr": "Utiliser le dossier par défaut"]),
+            ("notes-use-default-folder", "Use Default", ["fr": "Utiliser le dossier par défaut"]),
+            ("dictation-model-installed", "Installed", ["fr": "Installé"]),
+            ("dictation-language-auto", "Auto", ["fr": "Détection automatique"]),
+            ("ai-installed-tools", "Installed", ["fr": "Outils installés"]),
+            ("extensions-installed-section", "Installed", ["fr": "Extensions installées"]),
+            ("extensions-install-section", "Install", ["fr": "Installation"]),
+            ("unit-category-time", "Time", ["fr": "Durée"]),
+            ("window-position-center", "Center", ["fr": "Centre"]),
+            ("onboarding-open-launcher", "App Launcher", ["fr": "Ouvrir le lanceur"]),
+            ("ai-pinned-conversations", "Pinned", ["fr": "Épinglées"]),
+            ("ai-system-prompt-on", "On", ["fr": "Activées"]),
+            ("ai-system-prompt-off", "Off", ["fr": "Désactivées"]),
+            ("ai-web-search-on", "On", ["fr": "Activée"]),
+            ("ai-web-search-off", "Off", ["fr": "Désactivée"]),
+            ("reasoning-effort-low", "Low", ["es": "Bajo", "pt": "Baixo"]),
+            ("reasoning-effort-medium", "Medium", ["es": "Medio", "fr": "Moyen", "pt": "Médio"]),
+            ("reasoning-effort-high", "High", ["es": "Alto", "fr": "Élevé", "pt": "Alto"]),
+            (
+                "emoji-skin-tone-light", "Light",
+                [
+                    "fr": "Claire", "ja": "明るい", "ko": "밝은 피부색", "ru": "Светлый"
+                ]
+            ),
+            (
+                "emoji-skin-tone-medium", "Medium",
+                [
+                    "es": "Medio", "ja": "中間", "ko": "중간 피부색", "pt": "Médio", "ru": "Средний",
+                    "zh-Hans": "中等"
+                ]
+            ),
+            (
+                "emoji-skin-tone-dark", "Dark",
+                [
+                    "fr": "Foncée", "ja": "濃い", "ko": "어두운 피부색", "ru": "Тёмный"
+                ]
+            )
+        ]
         for language in AppLanguage.allCases {
             let code = language.rawValue
             guard let bundle = Bundle(url: root.appendingPathComponent("\(code).lproj")),
@@ -113,6 +157,34 @@ struct LanguageTests {
             let privacy = bundle.localizedString(
                 forKey: "NSCameraUsageDescription", value: nil, table: "InfoPlist")
             check("\(code) camera privacy prompt loads", privacy.contains("Tinycast"))
+
+            for label in contextualLabels {
+                let expected =
+                    label.overrides[code]
+                    ?? bundle.localizedString(forKey: label.source, value: nil, table: nil)
+                check(
+                    "\(code) contextual label \(label.key)",
+                    bundle.localizedString(forKey: label.key, value: nil, table: nil) == expected)
+            }
+            if code == "fr" {
+                for (key, expected) in [
+                    "Medium": "Moyenne", "High": "Élevée", "Light": "Clair", "Dark": "Sombre",
+                    "Time": "Heure", "Center": "Centrer", "Pinned": "Épinglés",
+                    "On": "Activé", "Off": "Désactivé", "Untitled": "Sans titre"
+                ] {
+                    check(
+                        "French label \(key) resolves in its context",
+                        bundle.localizedString(forKey: key, value: nil, table: nil) == expected)
+                }
+                let fill = "50 %"
+                for count in [0, 1, 2] {
+                    let announcement = String(
+                        localized: "Context \(fill), \(count) of \(count) messages sent",
+                        bundle: bundle, locale: locale)
+                    let suffix = count > 1 ? "messages envoyés" : "message envoyé"
+                    check("French context announcement agrees for \(count)", announcement.hasSuffix(suffix))
+                }
+            }
 
             if code == "en" || code == "ru" {
                 let expectedPair = code == "en" ? "1 window · 2 displays" : "1 окно · 2 дисплея"

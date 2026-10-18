@@ -79,7 +79,7 @@ final class SnippetCoordinator {
                     title: String(localized: "Enable snippets?"),
                     message: String(
                         localized: """
-                            Keyword expansion requires the Accessibility permission. Keystrokes stay on \
+                            Text replacement requires the Accessibility permission. Keystrokes stay on \
                             this Mac.
                             """),
                     symbol: "curlybraces", confirmTitle: String(localized: "Continue"), tone: .neutral,

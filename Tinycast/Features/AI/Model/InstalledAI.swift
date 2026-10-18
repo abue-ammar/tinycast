@@ -70,7 +70,7 @@ enum InstalledAIKind: String, CaseIterable, Codable, Identifiable, Sendable {
         case .cursor: return String(localized: "Ask mode · your Cursor MCP servers still apply")
         case .claude:
             return hasManagedMCPPolicy
-                ? String(localized: "MCP on this route is managed by your organization") : nil
+                ? String(localized: "Claude’s MCP configuration is managed by your organization.") : nil
         case .codex, .grok, .openCode: return nil
         }
     }

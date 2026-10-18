@@ -25,7 +25,7 @@ struct QuicklinkEditorView: View {
                 FormRow {
                     VStack(alignment: .leading, spacing: metrics.spacing.lg) {
                         option(
-                            String(localized: "Show in root search"),
+                            String(localized: "Show in main search"),
                             detail: String(localized: "List this quicklink alongside apps and commands."),
                             value: $editor.showsInRootSearch, focus: .rootSearch)
                         option(
@@ -140,10 +140,10 @@ struct QuicklinkEditorView: View {
             insertMenuFrame = $0
         }
         .tooltip(
-            String(localized: "Insert a dynamic placeholder"), alignment: .trailing,
+            String(localized: "Insert a variable"), alignment: .trailing,
             dismissOnPress: true
         )
-        .accessibilityLabel("Insert a placeholder")
+        .accessibilityLabel("Insert a variable")
     }
 
     private func placeholder(

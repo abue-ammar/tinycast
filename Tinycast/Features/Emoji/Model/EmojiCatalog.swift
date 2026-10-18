@@ -147,11 +147,11 @@ enum EmojiSkinTone: String, CaseIterable, Identifiable, Sendable {
     var title: String {
         switch self {
         case .none: return String(localized: "Default")
-        case .light: return String(localized: "Light")
+        case .light: return String(localized: "emoji-skin-tone-light", defaultValue: "Light")
         case .mediumLight: return String(localized: "Medium Light")
-        case .medium: return String(localized: "Medium")
+        case .medium: return String(localized: "emoji-skin-tone-medium", defaultValue: "Medium")
         case .mediumDark: return String(localized: "Medium Dark")
-        case .dark: return String(localized: "Dark")
+        case .dark: return String(localized: "emoji-skin-tone-dark", defaultValue: "Dark")
         }
     }
 

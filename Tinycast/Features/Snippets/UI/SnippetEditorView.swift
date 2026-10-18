@@ -58,7 +58,7 @@ struct SnippetEditorView: View {
                         - metrics.typography.textNSFont(.callout).boundingRectForFont.height,
                     label: String(localized: "Snippet template"), moveFocus: editor.advanceFocus
                 )
-                .accessibilityHint("Enter the text Tinycast expands.")
+                .accessibilityHint("Enter the text Tinycast will insert.")
                 HStack {
                     placeholderMenu
                     Spacer()
@@ -88,10 +88,10 @@ struct SnippetEditorView: View {
                 placeholderMenuFrame = $0
             }
             .tooltip(
-                String(localized: "Insert a dynamic placeholder"), alignment: .leading,
+                String(localized: "Insert a variable"), alignment: .leading,
                 dismissOnPress: true
             )
-            .accessibilityLabel("Insert a placeholder")
+            .accessibilityLabel("Insert a variable")
     }
 
     private func showPlaceholderMenu() {
@@ -128,10 +128,11 @@ struct SnippetEditorView: View {
             field(
                 String(localized: "Keyword"), placeholder: String(localized: "Optional, for example !notes"),
                 label: String(localized: "Snippet keyword"), text: $editor.keyword,
-                focus: .keyword, hint: String(localized: "Optional. Type this to expand the snippet."))
+                focus: .keyword, hint: String(localized: "Optional. Type this keyword to insert the snippet.")
+            )
             option(
                 String(localized: "Enabled"),
-                detail: String(localized: "Disabled snippets cannot be expanded."),
+                detail: String(localized: "Disabled snippets cannot be inserted."),
                 value: $editor.isEnabled, focus: .enabled)
             option(
                 String(localized: "Show confirmation"),

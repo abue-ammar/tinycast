@@ -631,7 +631,7 @@ private struct ContextCard: View {
             ProgressView(value: min(report.fill, 1))
                 .tint(report.tint)
             if report.historyBytes > report.budget {
-                Text("The oldest messages no longer fit and are left out.")
+                Text("The oldest messages are no longer sent to the model.")
                     .font(.caption)
                     .foregroundStyle(Theme.Colors.destructive)
             }
@@ -662,8 +662,16 @@ private struct ContextCard: View {
                 if report.stagedFiles > 0 {
                     row("Attached", "\(report.stagedFiles) · \(bytes(report.stagedBytes))")
                 }
-                row("System prompt", report.systemPrompt ? String(localized: "On") : String(localized: "Off"))
-                row("Web search", report.webSearch ? String(localized: "On") : String(localized: "Off"))
+                row(
+                    "System prompt",
+                    report.systemPrompt
+                        ? String(localized: "ai-system-prompt-on", defaultValue: "On")
+                        : String(localized: "ai-system-prompt-off", defaultValue: "Off"))
+                row(
+                    "Web search",
+                    report.webSearch
+                        ? String(localized: "ai-web-search-on", defaultValue: "On")
+                        : String(localized: "ai-web-search-off", defaultValue: "Off"))
                 row(
                     "MCP servers",
                     report.toolServers == 0

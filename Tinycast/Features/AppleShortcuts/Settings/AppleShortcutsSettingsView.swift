@@ -41,7 +41,10 @@ struct AppleShortcutsSettingsView: View {
     private var library: some View {
         Section {
             SettingsFilterField(prompt: "Search shortcuts…", query: $query)
-            LauncherItemsList(entries: entries, query: query, isEnabled: true)
+            LauncherItemsList(
+                entries: entries, query: query, isEnabled: true,
+                emptyMessage: LocalizedStringResource(
+                    "apple-shortcuts-empty", defaultValue: "Nothing here yet."))
             Button("Open Shortcuts") { core.appleShortcutCoordinator.openShortcutsApp() }
         } header: {
             SettingsSectionHeader(.appleShortcutsShortcuts)

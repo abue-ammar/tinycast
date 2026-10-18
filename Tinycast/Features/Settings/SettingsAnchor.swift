@@ -22,7 +22,7 @@ extension SettingsAnchor {
     static let generalCalculator = Self(tab: .general, title: "Calculator")
     static let generalGeneral = Self(tab: .general, title: "General")
 
-    static let applicationsSearchScopes = Self(tab: .applications, title: "Search Scopes")
+    static let applicationsSearchScopes = Self(tab: .applications, title: "Search Locations")
     static let applicationsApplications = Self(tab: .applications, title: "Applications")
 
     static let systemSettingsSystemSettings = Self(tab: .systemSettings, title: "System Settings")
@@ -68,7 +68,7 @@ extension SettingsAnchor {
     static let fileSearchFullDiskAccess = Self(tab: .fileSearch, title: "Full Disk Access")
     static let fileSearchIndex = Self(tab: .fileSearch, title: "Index")
     static let fileSearchCommands = Self(tab: .fileSearch, title: "Commands")
-    static let fileSearchSearchScopes = Self(tab: .fileSearch, title: "Search Scopes")
+    static let fileSearchSearchScopes = Self(tab: .fileSearch, title: "Search Locations")
     static let fileSearchIgnorePatterns = Self(tab: .fileSearch, title: "Ignore Patterns")
 
     static let notesNotes = Self(tab: .notes, title: "Notes")
@@ -96,7 +96,7 @@ extension SettingsAnchor {
     static let clipboardCommands = Self(tab: .clipboard, title: "Commands")
     static let clipboardHistory = Self(tab: .clipboard, title: "History")
     static let clipboardDisabledApplications = Self(
-        tab: .clipboard, title: "Disabled Applications")
+        tab: .clipboard, title: "Excluded Applications")
 
     static let emojiCommands = Self(tab: .emoji, title: "Commands")
     static let emojiAppearance = Self(tab: .emoji, title: "Appearance")
@@ -109,8 +109,12 @@ extension SettingsAnchor {
 
     static let extensionsExtensions = Self(tab: .extensions, title: "Extensions")
     static let extensionsCompatibility = Self(tab: .extensions, title: "Compatibility")
-    static let extensionsInstalled = Self(tab: .extensions, title: "Installed")
-    static let extensionsInstall = Self(tab: .extensions, title: "Install")
+    static let extensionsInstalled = Self(
+        tab: .extensions,
+        title: LocalizedStringResource("extensions-installed-section", defaultValue: "Installed"))
+    static let extensionsInstall = Self(
+        tab: .extensions,
+        title: LocalizedStringResource("extensions-install-section", defaultValue: "Install"))
     static let extensionsStorage = Self(tab: .extensions, title: "Storage")
 
     static let permissionsAccessibility = Self(tab: .permissions, title: "Accessibility")

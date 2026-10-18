@@ -114,7 +114,7 @@ enum SettingsSearchCatalog {
     private static let general: [SettingsSearchEntry] = [
         .init(pane: .general, keywords: ["preferences", "settings"]),
         .init(
-            .generalGlobalShortcuts, "App Launcher",
+            .generalGlobalShortcuts, "Show Launcher",
             keywords: ["hotkey", "shortcut", "summon", "palette"]),
         .init(
             .generalGeneral, "Language",
@@ -129,17 +129,17 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Automatically check for updates",
             keywords: ["software", "update", "automatic", "disable", "popup"]),
         .init(
-            .generalGeneral, "Pop to Root Search",
+            .generalGeneral, "Return to Main Search",
             keywords: ["reset", "timeout", "back"]),
         .init(
             .generalGeneral, "Escape Key Behavior",
             keywords: ["escape", "esc", "back", "close", "navigate"]),
         .init(
-            .generalGeneral, "Auto-switch input source",
+            .generalGeneral, "Launcher input source",
             keywords: ["keyboard", "layout", "language", "abc"]),
         .init(
-            .generalAppearance, "Theme",
-            keywords: ["dark", "light", "mode", "appearance"]),
+            .generalAppearance, "Appearance",
+            keywords: ["dark", "light", "mode", "theme"]),
         .init(
             .generalAppearance, "Interface size",
             keywords: ["text size", "font size", "scale", "zoom", "bigger", "larger", "legible"]),
@@ -150,10 +150,10 @@ enum SettingsSearchCatalog {
             .generalAppearance, "Show favorites in compact mode",
             keywords: ["pinned", "apps", "compact"]),
         .init(
-            .generalAppearance, "Follow the cursor across displays",
+            .generalAppearance, "Open the launcher on the display with the pointer",
             keywords: ["monitor", "screen", "pointer", "multi display"]),
         .init(
-            .generalAppearance, "Drag to reposition",
+            .generalAppearance, "Drag to move the launcher",
             keywords: ["move", "position", "window"]),
         .init(
             .generalHyperKey, "Hyper Key",
@@ -187,7 +187,7 @@ enum SettingsSearchCatalog {
             .applicationsApplications, "Enable Applications",
             keywords: ["hide apps", "visibility"]),
         .init(
-            group: .applicationsSearchScopes, "Search Scopes",
+            group: .applicationsSearchScopes, "Search Locations",
             keywords: ["folders", "indexed", "locations", "add folder"]),
         .init(
             group: .applicationsApplications, "Aliases and shortcuts",
@@ -366,7 +366,7 @@ enum SettingsSearchCatalog {
             group: .fileSearchCommands, "File search commands",
             keywords: ["shortcut", "launcher"]),
         .init(
-            group: .fileSearchSearchScopes, "Search Scopes",
+            group: .fileSearchSearchScopes, "Search Locations",
             keywords: ["folders", "locations", "home", "whole disk", "add folder"]),
         .init(
             group: .fileSearchIgnorePatterns, "Ignore Patterns",
@@ -424,7 +424,7 @@ enum SettingsSearchCatalog {
             .navigationMenuSearch, "Show Apple menu items",
             keywords: ["apple menu", "about this mac", "recent items", "sleep", "logo"]),
         .init(
-            .navigationMenuSearch, "Disabled Applications",
+            .navigationMenuSearch, "Excluded Applications",
             keywords: ["exclude", "password manager", "ignore", "privacy", "menu bar"])
     ]
 
@@ -507,7 +507,7 @@ enum SettingsSearchCatalog {
             .clipboardHistory, "Default action",
             keywords: ["enter", "return", "paste", "copy", "primary"]),
         .init(
-            group: .clipboardDisabledApplications, "Disabled Applications",
+            group: .clipboardDisabledApplications, "Excluded Applications",
             keywords: ["exclude", "password manager", "ignore", "privacy"]),
         .init(
             .clipboardDisabledApplications, "Clear history",
@@ -540,7 +540,7 @@ enum SettingsSearchCatalog {
             .calendarCalendar, "Upcoming meetings in launcher",
             keywords: ["count", "limit", "events"]),
         .init(
-            .calendarJoining, "Show the join card",
+            .calendarJoining, "Show the meeting card",
             keywords: ["hud", "timing", "early", "reminder"]),
         .init(
             .calendarJoining, "Auto Join Meetings",

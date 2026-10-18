@@ -336,6 +336,9 @@ struct DoubleTapDetectorTests {
 
     static func commandActions() {
         expect(
+            CommandID.createCustomCommand.englishName == "Create Custom Command",
+            "launcher search keeps the explicit English command name")
+        expect(
             HotKeyAction.systemAction(id: .toggleMicrophoneMute).defaultsKey
                 == "hotkey.systemAction.toggle-microphone-mute",
             "microphone mute persists under its own global hotkey key")

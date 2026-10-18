@@ -119,8 +119,8 @@ enum Theme {
         static let shortcutPopoverLine: CGFloat = 14
         /// Summed from the laid-out bands; the width is pinned by `callout-test`.
         static let shortcutPopover = CGSize(
-            width: 132,
-            height: Spacing.sm * 2 + heroKeyCap + Spacing.sm + shortcutPopoverLine + Spacing.sm
+            width: 176,
+            height: Spacing.sm * 2 + heroKeyCap + Spacing.sm + shortcutPopoverLine * 2 + Spacing.sm
                 + compactKeyCap + calloutCaretHeight)
         static let calloutCaretWidth: CGFloat = 15
         static let calloutCaretHeight: CGFloat = 7

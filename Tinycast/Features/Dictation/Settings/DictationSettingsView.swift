@@ -117,13 +117,18 @@ struct DictationSettingsView: View {
                                             || coordinator.models.removing == settings.dictationModel)
                             }
                         } label: {
-                            Text(installed ? "Installed" : "Not installed")
+                            Text(
+                                installed
+                                    ? LocalizedStringResource(
+                                        "dictation-model-installed", defaultValue: "Installed")
+                                    : "Not installed")
                             Text(modelDescription)
                         }
                     }
                     if settings.dictationModel.isQwen, installed {
                         Picker(selection: languageBinding) {
-                            Text("Auto").tag("")
+                            Text(LocalizedStringResource("dictation-language-auto", defaultValue: "Auto"))
+                                .tag("")
                             Divider()
                             ForEach(DictationLanguage.allCases) { language in
                                 Text(language.displayName(locale: .current)).tag(language.rawValue)

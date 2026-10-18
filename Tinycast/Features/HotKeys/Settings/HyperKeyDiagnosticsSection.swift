@@ -112,7 +112,7 @@ struct HyperKeyDiagnosticsSection: View {
         var sentences = [
             diagnostics.secureInputCompatibilityActive
                 ? String(localized: "Tinycast's Hyper shortcuts use Right Control while Secure Input is on.")
-                : String(localized: "Key presses can't reach the Hyper Key while Secure Input is on.")
+                : String(localized: "Secure Input prevents the Hyper Key from receiving key presses.")
         ]
         if !secureInput.likelyOwners.isEmpty {
             sentences.append(
@@ -124,8 +124,8 @@ struct HyperKeyDiagnosticsSection: View {
         if !diagnostics.secureInputCompatibilityActive {
             sentences.append(
                 secureInput.ownerIsLoginWindow
-                    ? String(localized: "Logging out and back in turns it off.")
-                    : String(localized: "Closing that app turns it off."))
+                    ? String(localized: "Logging out and back in turns off Secure Input.")
+                    : String(localized: "Closing that app turns off Secure Input."))
         }
         return sentences.joined(separator: " ")
     }

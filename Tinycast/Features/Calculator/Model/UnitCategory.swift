@@ -12,7 +12,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .length: return String(localized: "Length")
         case .weight: return String(localized: "Weight")
         case .temperature: return String(localized: "Temperature")
-        case .time: return String(localized: "Time")
+        case .time: return String(localized: "unit-category-time", defaultValue: "Time")
         case .area: return String(localized: "Area")
         case .volume: return String(localized: "Volume")
         case .digitalStorage: return String(localized: "Digital Storage")

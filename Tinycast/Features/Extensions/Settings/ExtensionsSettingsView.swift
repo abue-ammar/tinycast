@@ -154,7 +154,8 @@ struct ExtensionsSettingsView: View {
             SettingsSectionHeader(anchor: .extensionsInstalled) {
                 Text(
                     core.extensions.installed.isEmpty
-                        ? "Installed" : "Installed (\(core.extensions.installed.count))")
+                        ? LocalizedStringResource("extensions-installed-section", defaultValue: "Installed")
+                        : "Installed (\(core.extensions.installed.count))")
             }
         } footer: {
             if let updateError {

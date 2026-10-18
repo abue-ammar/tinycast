@@ -856,7 +856,7 @@ See [features/window-layouts.md](features/window-layouts.md#the-editor).
 `ShortcutRecorder` is a **120pt** field showing only the binding. A single modifier binding puts a small
 L/R beside its glyph inside the same cap; double presses show only the two glyphs. The side follows
 the modifier identity macOS reports after remapping. Ordinary combos have no side label. Recording is
-narrated by `ShortcutRecorderPopover`, a small **132 × 82** callout above it: caps, one label line, an
+narrated by `ShortcutRecorderPopover`, a small **176 × 96** callout above it: caps, up to two centred label lines, an
 `esc` cap in the top-left corner. Its fixed frame shows the prompt (`⌥ A` at half opacity, "Type a
 shortcut"), live held keys with their reported side, a pending second modifier tap, or a conflict
 (rejected caps + owner, orange).

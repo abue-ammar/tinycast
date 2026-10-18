@@ -141,6 +141,13 @@ struct NotesTests {
 
     private static func testDerivedTitles() {
         check(
+            "an unnamed display title keeps its numeric suffix",
+            NoteTitle.displayName("Untitled 12") == String(localized: "Untitled") + " 12")
+        check(
+            "display localization leaves user titles untouched",
+            NoteTitle.displayName("Untitled notes") == "Untitled notes"
+                && NoteTitle.displayName("Plan") == "Plan")
+        check(
             "the names Create claims are unnamed",
             NoteTitle.isUnnamed("Untitled") && NoteTitle.isUnnamed("Untitled 12"))
         check(

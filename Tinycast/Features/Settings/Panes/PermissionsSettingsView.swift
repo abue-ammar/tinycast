@@ -34,7 +34,7 @@ struct PermissionsSettingsView: View {
                         )
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             SettingsRowTitle(.permissionsAccessibility, "Accessibility")
-                            Text("Pastes into the app you were using.")
+                            Text("Allows pasting and window management.")
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -102,7 +102,7 @@ struct PermissionsSettingsView: View {
                             path: "/System/Applications/Calendar.app")
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             SettingsRowTitle(.permissionsCalendars, "Calendars")
-                            Text("Finds the join link for your next meeting.")
+                            Text("Allows you to view and create events.")
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -143,7 +143,7 @@ struct PermissionsSettingsView: View {
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                             SettingsRowTitle(.permissionsMicrophone, "Microphone")
-                            Text("Records audio only while dictating.")
+                            Text("Allows you to dictate text.")
                                 .foregroundStyle(.secondary)
                         }
                     }

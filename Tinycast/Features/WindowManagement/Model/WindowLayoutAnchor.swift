@@ -24,7 +24,7 @@ enum WindowLayoutAnchor: String, Codable, CaseIterable, Sendable {
         case .top: return String(localized: "Top")
         case .topRight: return String(localized: "Top Right")
         case .left: return String(localized: "Left")
-        case .center: return String(localized: "Center")
+        case .center: return String(localized: "window-position-center", defaultValue: "Center")
         case .right: return String(localized: "Right")
         case .bottomLeft: return String(localized: "Bottom Left")
         case .bottom: return String(localized: "Bottom")

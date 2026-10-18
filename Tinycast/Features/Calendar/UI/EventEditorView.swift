@@ -40,7 +40,7 @@ struct EventEditorView: View {
                         label: { EventDraft.label(duration: $0, locale: .current) })
                 }
                 FormRow {
-                    Text("It goes on the calendar new events go to.")
+                    Text("The event will be added to your default calendar.")
                         .font(metrics.typography.rowTrailing)
                         .foregroundStyle(Theme.Colors.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

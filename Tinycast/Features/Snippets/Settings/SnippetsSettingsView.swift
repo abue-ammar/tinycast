@@ -12,7 +12,7 @@ struct SnippetsSettingsView: View {
             FeatureSwitchSection(
                 anchor: .snippetsSnippets,
                 enableTitle: "Enable snippets",
-                enableSubtitle: "Expand templates from the launcher or by keyword.",
+                enableSubtitle: "Insert snippets from the launcher or by keyword.",
                 // Enabling is also keyword-expansion consent, so it uses the confirming setter.
                 isEnabled: Binding(
                     get: { settings.snippetsEnabled },
@@ -31,7 +31,7 @@ struct SnippetsSettingsView: View {
                                 .foregroundStyle(.orange)
                                 .frame(width: SettingsListMetrics.iconSize)
                             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                                Text("Keyword expansion needs Accessibility access")
+                                Text("Text replacement needs Accessibility access")
                                     .foregroundStyle(.orange)
                                 Text("Launcher search still works.")
                                     .foregroundStyle(.secondary)
@@ -74,7 +74,9 @@ struct SnippetsSettingsView: View {
 
             LabeledContent {
                 if settings.snippetsFolder != nil {
-                    Button("Use Default", action: coordinator.resetSnippetsFolder)
+                    Button(
+                        String(localized: "snippets-use-default-folder", defaultValue: "Use Default"),
+                        action: coordinator.resetSnippetsFolder)
                 }
                 Button("Choose…", action: coordinator.chooseSnippetsFolder)
                 Button("Open Folder", action: coordinator.revealSnippetsInFinder)

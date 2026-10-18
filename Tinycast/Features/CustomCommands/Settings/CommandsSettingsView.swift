@@ -14,7 +14,8 @@ struct CommandsSettingsView: View {
             LauncherItemsSection(
                 kind: .command,
                 anchor: .commandsCommands,
-                searchPrompt: "Search commands…")
+                searchPrompt: "Search commands…",
+                emptyMessage: LocalizedStringResource("commands-empty", defaultValue: "Nothing here yet."))
 
             FeatureSwitchSection(
                 anchor: .commandsCustomCommands,
@@ -91,7 +92,7 @@ private struct CustomCommandSettingsRow: View {
             if !command.showsInRootSearch {
                 Image(systemName: "eye.slash")
                     .foregroundStyle(.secondary)
-                    .help("Hidden from root search")
+                    .help("Hidden from main search")
             }
 
             // An alias only reaches the ranker through the launcher slice, so it dims with it.

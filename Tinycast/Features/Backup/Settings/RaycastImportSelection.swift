@@ -31,12 +31,12 @@ struct RaycastImportSelection: View {
             option: .quicklinks, symbol: Quicklink.sfSymbol, label: String(localized: "Quicklinks")),
         .init(
             option: .popToRoot, symbol: "arrow.uturn.backward",
-            label: String(localized: "Pop to root")),
+            label: String(localized: "Return to main search")),
         .init(option: .compactMode, symbol: "macwindow", label: String(localized: "Compact mode"))
     ]
 
     private static let columns = Array(
-        repeating: GridItem(.flexible(), spacing: Theme.Spacing.md, alignment: .leading), count: 3)
+        repeating: GridItem(.flexible(), spacing: Theme.Spacing.md, alignment: .leading), count: 2)
 
     private func included(_ option: RaycastImportOptions) -> Binding<Bool> {
         Binding(
