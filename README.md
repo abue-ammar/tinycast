@@ -1,7 +1,7 @@
 # Tinycast
 
 **A tiny, fully native macOS launcher. One hotkey, everything you reach for all day, under 100 MB of
-RAM.**
+RAM.** 
 
 <p align="center">
   <a href="https://github.com/abue-ammar/tinycast/releases/latest">
