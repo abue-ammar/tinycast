@@ -48,13 +48,23 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
   right at up to 30 frames per second.
   Reduce Motion pauses the processing timeline; closing the panel releases its hosting view so no
   animation continues while hidden.
-- Dictation fades the default output's software volume down by about 90% from shortcut press, then restores
+- Dictation fades the default output's software volume down by about 90% from shortcut press (with the
+  start sound when sounds are on), then restores (at once when sounds are on)
   it on completion, cancellation and normal quit. An unsupported output is left untouched, as is a
   volume the user changes during capture. Before each fade step, a bundle-ID Application Support
   file records the device UID, original volume and the values before and after that step.
   Relaunch restores the original device only if its volume still matches that record, including
   when Dictation is disabled. An unavailable device keeps its record for a later attempt; new ducking
   waits for that recovery. File writes run off-main and finish before the hardware changes.
+- Play sounds is off by default. When on, the system Pop plays on the microphone's first samples and
+  again when recording stops (release, toggle, Return or the length limit); cancelling stays silent.
+  A Bluetooth headset drops output while it switches to its microphone, sometimes after the first
+  samples arrive, so with a Bluetooth microphone the start cue waits half a second more. Ducking
+  then starts with the start cue instead of at the press, and never for a session cancelled
+  meanwhile. On stop the volume is restored at once instead of faded, so the cue plays at full
+  volume before the microphone closes and the headset switches back. Ducking is device-wide, so
+  media at full volume can mask the start cue. Through speakers a cue can reach the recording; it is
+  not removed, and Parakeet transcribes nothing for it.
 - The microphone, waveform, permissions and insertion stay in Tinycast. Model loading, audio
   features and decoding run in `Tinycast Dictation` (`Tinycast Dev Dictation` in Debug), started
   only for transcription. Main-app state never retains Core ML models or imports the adapters.
@@ -103,7 +113,8 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
 
 ## Validation
 
-`dictation-field-test` checks composer switching and teardown, scoped cancellation and delayed insertion
+`dictation-field-test` checks composer switching and teardown, scoped cancellation, delayed insertion and
+the order of sound cues against ducking
 with synthetic capture and real AppKit editors, without recording audio or touching the shared clipboard.
 `dictation-test` checks formatting and model options; `dictation-inference-test` checks score selection,
 byte BPE, Fourier/mel features, listening bands and audio partitioning without downloading a model. `dictation-worker-test`
