@@ -29,13 +29,14 @@ enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     }
 
     /// Reads a stored list, including a regional tag such as `de-DE` that System Settings writes.
-    init(storedPreferences: [String]?) {
-        guard let storedPreferences, !storedPreferences.isEmpty else {
+    init(storedPreferences: [String]?, systemPreferences: [String] = []) {
+        let preferences = storedPreferences ?? Array(systemPreferences.prefix(1))
+        guard !preferences.isEmpty else {
             self = .english
             return
         }
         let match = Bundle.preferredLocalizations(
-            from: Self.allCases.map(\.rawValue), forPreferences: storedPreferences)
+            from: Self.allCases.map(\.rawValue), forPreferences: preferences)
         self = match.first.flatMap(Self.init(rawValue:)) ?? .english
     }
 }

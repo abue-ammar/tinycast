@@ -20,7 +20,22 @@ struct LanguageTests {
         print("# a stored list reads back as the choice that wrote it")
         check("nothing stored is English", AppLanguage(storedPreferences: nil) == .english)
         check("an empty list is English", AppLanguage(storedPreferences: []) == .english)
+        check(
+            "a fresh installation selects the system language",
+            AppLanguage(storedPreferences: nil, systemPreferences: ["fr-FR"]) == .french)
+        check(
+            "an unsupported system language falls back to English",
+            AppLanguage(storedPreferences: nil, systemPreferences: ["it-IT", "fr-FR"]) == .english)
+        check(
+            "a stored choice overrides the system language",
+            AppLanguage(storedPreferences: ["de"], systemPreferences: ["fr-FR"]) == .german)
+        check(
+            "an empty stored choice keeps the English fallback",
+            AppLanguage(storedPreferences: [], systemPreferences: ["fr-FR"]) == .english)
         for language in AppLanguage.allCases {
+            check(
+                "a fresh installation supports \(language.rawValue)",
+                AppLanguage(storedPreferences: nil, systemPreferences: [language.rawValue]) == language)
             check(
                 "\(language.rawValue) round-trips",
                 AppLanguage(storedPreferences: [language.rawValue]) == language)

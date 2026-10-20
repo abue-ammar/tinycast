@@ -254,6 +254,9 @@ run appearance-test        Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
                            Tinycast/Features/Settings/AppAppearance.swift
 run language-test          Tinycast/Features/Settings/AppLanguage.swift
+run onboarding-test        Tinycast/Features/Onboarding/OnboardingCoordinator.swift \
+                           Tinycast/Windows/AppWindowController.swift \
+                           Tinycast/Windows/WindowChrome.swift Tinycast/Platform/ActivationPolicy.swift
 run relaunch-test          Tinycast/App/AppDelegate.swift Tinycast/Platform/RelaunchRunner.swift
 run interface-size-test    Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/Theme.swift \

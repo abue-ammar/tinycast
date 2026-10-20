@@ -664,7 +664,7 @@ final class AppSettings {
         AppLanguage(
             storedPreferences: Bundle.main.bundleIdentifier
                 .flatMap(UserDefaults.standard.persistentDomain(forName:))?[Key.language.rawValue]
-                as? [String])
+                as? [String], systemPreferences: SystemLanguages.preferred)
     }
 
     init() {

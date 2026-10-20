@@ -144,7 +144,8 @@ driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem
 - **Settings and Onboarding** — titled `NSWindow`s, one `Windows/AppWindowController.swift` each, owned
   by `SettingsCoordinator` and `OnboardingCoordinator`. SwiftUI `Settings` and `Window` scenes are
   unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
-  palette's in both directions.
+  palette's in both directions. Onboarding stays accessory rather than registering Dock ownership,
+  so completing it can open the palette without an activation-policy change stealing focus.
 - **Notes** — a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
   Its height fits the note up to 860pt and AppKit autosaves the frame; its TextKit 2 editor renders
   Markdown over the literal source, switches among local Markdown files and stays visible on focus
