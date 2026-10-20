@@ -32,15 +32,15 @@ enum WindowSwitchSweep {
             let iconStamp = iconURL.map(FileIconStamp.value(for:)) ?? 0
             for window in AXWindowAccess.windows(in: application) {
                 AXUIElementSetMessagingTimeout(window, sweepTimeout)
-                guard isSwitchable(window) else { continue }
+                let minimized = AXWindowAccess.bool(window, kAXMinimizedAttribute) == true
+                guard isSwitchable(window, minimized: minimized) else { continue }
                 let handle = entries.count
                 entries.append(
                     WindowSwitchEntry(
                         handle: handle, appName: app.localizedName ?? bundleID,
                         bundleID: bundleID, iconURL: iconURL, iconStamp: iconStamp,
                         title: AXWindowAccess.string(window, kAXTitleAttribute) ?? "",
-                        isMinimized: AXWindowAccess.bool(window, kAXMinimizedAttribute) == true,
-                        appRank: ranks[pid] ?? .max))
+                        isMinimized: minimized, appRank: ranks[pid] ?? .max))
                 elements[handle] = Element(app: app, application: application, window: window)
             }
         }
@@ -49,7 +49,11 @@ enum WindowSwitchSweep {
 
     /// Looser than the layout inventory's rule: a minimized window is exactly what a switcher is
     /// for, and a window on another Space reports no frame until it is raised.
-    private static func isSwitchable(_ window: AXUIElement) -> Bool {
-        AXWindowAccess.string(window, kAXSubroleAttribute) == (kAXStandardWindowSubrole as String)
+    private static func isSwitchable(_ window: AXUIElement, minimized: Bool) -> Bool {
+        WindowSwitchPolicy.isSwitchable(
+            isStandardWindow: AXWindowAccess.string(window, kAXSubroleAttribute)
+                == (kAXStandardWindowSubrole as String),
+            isMinimized: minimized,
+            canMinimize: AXWindowAccess.element(window, kAXMinimizeButtonAttribute) != nil)
     }
 }

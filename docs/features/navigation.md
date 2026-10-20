@@ -41,6 +41,7 @@ launcher and a still-recorded shortcut for any does nothing.
 | --- | --- |
 | `Model/WindowSwitchEntry.swift` | one row: handle, app, title, minimized, rank, search fields |
 | `Model/WindowSwitchOrder.swift` | the MRU sort, pure and total |
+| `Model/WindowSwitchPolicy.swift` | which windows the sweep offers, pure |
 | `Model/WindowSwitchQuery.swift` | ranking over `SearchRelevance`, capped at 200 rows |
 | `Service/WindowZOrder.swift` | the one `CGWindowList` call: per-pid front rank |
 | `Service/WindowSwitchSweep.swift` | the AX sweep, and the live element table it hands back |
@@ -71,10 +72,17 @@ rather than after the user has switched apps once.
 ## The sweep
 
 `WindowSwitchSweep` walks `WindowInventory.candidates()` — regular-policy, non-terminated, not us —
-and takes every window whose subrole is `AXStandardWindow`. That is looser than
+and takes every window `WindowSwitchPolicy` accepts: a standard-subrole one, or a minimized one that
+still has a minimize button. That is looser than
 `WindowInventory.eligibleFrame` in two ways that both matter here: a **minimized** window is exactly
 what a switcher is for, and a window on another Space reports no frame until it is raised, so
 requiring one would hide it.
+
+**A minimized window changes subrole.** Finder and Transmission report their minimized windows as
+`AXDialog`, not `AXStandardWindow`, and back to `AXStandardWindow` when restored, so a subrole test
+alone drops exactly the rows a switcher exists for. A sheet cannot minimize, so the minimize button
+is what still tells a minimized window from a real dialog. The policy is Foundation-only, so the
+harness covers the rule rather than the attribute reads.
 
 Each element gets a 0.2 s messaging timeout, the same as the layout inventory and the menu walk, so
 one hung app cannot stall the summon.
@@ -161,13 +169,14 @@ window's app quit between the sweep and the ↵.
 
 `Tests/window-switch-test.swift` covers the pure half: the handle-derived id, the untitled-window
 fallback, the name/owner split in the search fields, the MRU order and its totality under a shuffled
-sweep, the minimized run at the end, ranking, and the 200-row cap under both an empty and a
-matching query.
+sweep, the minimized run at the end, which windows the sweep offers, ranking, and the 200-row cap
+under both an empty and a matching query.
 
 `WindowZOrder` and `WindowSwitchSweep` are not compiled into the harness and have no automated
 coverage — the AX and `CGWindowList` paths need manual verification, particularly:
 
-1. A minimized window is listed last and ↵ un-minimizes it rather than doing nothing.
+1. A minimized window is listed last and ↵ un-minimizes it rather than doing nothing — for Finder
+   and Transmission too, whose minimized windows read `AXDialog`.
 2. A window on another Space is listed, and ↵ pulls that Space forward.
 3. An app with several windows lists them in its own front-to-back order, under one app rank.
 4. An app quit between the summon and the ↵ reports rather than failing silently.
