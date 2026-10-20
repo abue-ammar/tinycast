@@ -11,6 +11,7 @@ final class DictationCoordinator {
     let models: DictationModelStore
     private let capture = DictationCapture()
     private let audioDucker: DictationAudioDucker
+    private let cues = DictationCueRunner()
     private let panel = DictationPanelController()
     private let injector: TextInjector
     private let showMessage: (String, DialogTone) -> Void
@@ -25,6 +26,8 @@ final class DictationCoordinator {
     @ObservationIgnored private var liveText = ""
     @ObservationIgnored private var liveDeliveryFailed = false
     @ObservationIgnored private var stopTask: Task<Void, Never>?
+    @ObservationIgnored private var cueTask: Task<Void, Never>?
+    @ObservationIgnored private var pendingStartCue: UUID?
     @ObservationIgnored private var finishWhenStarted = false
     @ObservationIgnored private var target: InjectionTarget?
     /// The field a mic button is dictating into; nil for a shortcut's session.
@@ -45,7 +48,11 @@ final class DictationCoordinator {
         self.showMessage = showMessage
         panel.onAccept = { [weak self] in self?.accept() }
         panel.onCancel = { [weak self] in self?.cancel() }
-        capture.onLevels = { [weak self] in self?.panel.state.levels = $0 }
+        capture.onLevels = { [weak self] in
+            guard let self else { return }
+            panel.state.levels = $0
+            if pendingStartCue == token { playStartCue() }
+        }
         capture.onLimit = { [weak self] in self?.accept() }
     }
 
@@ -149,7 +156,8 @@ final class DictationCoordinator {
         liveOffset = 0
         liveText = ""
         self.target = target
-        audioDucker.begin()
+        pendingStartCue = settings.dictationPlaysSounds ? current : nil
+        if pendingStartCue == nil { audioDucker.begin() }
         startTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -170,6 +178,21 @@ final class DictationCoordinator {
         }
     }
 
+    /// Measured with AirPods: output resumes up to a quarter second after the first samples.
+    private static let bluetoothSettle = Duration.milliseconds(500)
+
+    private func playStartCue() {
+        pendingStartCue = nil
+        let current = token
+        cueTask = Task { [weak self] in
+            guard let self else { return }
+            if capture.isBluetooth { try? await Task.sleep(for: Self.bluetoothSettle) }
+            guard token == current, phase == .starting || phase == .listening else { return }
+            cues.play()
+            audioDucker.begin()
+        }
+    }
+
     func released() {
         guard settings.dictationMode == .pushToTalk else { return }
         if phase == .starting { finishWhenStarted = true }
@@ -181,7 +204,13 @@ final class DictationCoordinator {
         phase = .transcribing
         panel.state.phase = .transcribing
         field?.isTranscribing = true
-        audioDucker.end()
+        if settings.dictationPlaysSounds {
+            // At once, so the cue plays at full volume before the microphone closes.
+            audioDucker.restoreImmediately()
+            cues.play()
+        } else {
+            audioDucker.end()
+        }
         // A cancelled chunk keeps its audio: the final pass starts at liveOffset, losing nothing.
         let pendingLive = liveTask
         liveTask = nil
@@ -358,6 +387,7 @@ final class DictationCoordinator {
     func prepareForTermination() {
         enableTask?.cancel()
         cancel()
+        cueTask?.cancel()
         audioDucker.restoreImmediately()
         models.prepareForTermination()
     }

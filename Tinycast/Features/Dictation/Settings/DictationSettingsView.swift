@@ -75,6 +75,10 @@ struct DictationSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(issue == nil ? Color.secondary : Color.orange)
                     }
+                    Toggle(isOn: $settings.dictationPlaysSounds) {
+                        SettingsRowTitle(.dictationCommands, "Play sounds")
+                        Text("Play a sound when recording starts and stops.")
+                    }
                 } header: {
                     SettingsSectionHeader(.dictationCommands)
                 }
