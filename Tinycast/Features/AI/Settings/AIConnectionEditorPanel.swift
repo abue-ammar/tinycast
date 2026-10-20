@@ -4,15 +4,19 @@ struct AIConnectionEditorTarget: Identifiable {
     let connection: AIConnection
     let hasStoredKey: Bool
     let isNew: Bool
+    let headers: [String: String]
+    let headersUnavailable: Bool
     var id: UUID { connection.id }
 }
 
 struct AIConnectionEditorPanel: View {
     let target: AIConnectionEditorTarget
-    let onSave: (AIConnection, String, Bool) -> String?
+    let onSave: (AIConnection, String, [String: String], Bool) -> String?
     let onCancel: () -> Void
 
     @State private var connection: AIConnection
+    @State private var headers: [AIRequestHeaders.Entry]
+    @State private var headersChanged = false
     @State private var key = ""
     @State private var modelQuery = ""
     @State private var discovery: ModelDiscoveryState = .waitingForKey
@@ -23,13 +27,17 @@ struct AIConnectionEditorPanel: View {
 
     init(
         target: AIConnectionEditorTarget,
-        onSave: @escaping (AIConnection, String, Bool) -> String?,
+        onSave: @escaping (AIConnection, String, [String: String], Bool) -> String?,
         onCancel: @escaping () -> Void
     ) {
         self.target = target
         self.onSave = onSave
         self.onCancel = onCancel
         _connection = State(initialValue: target.connection)
+        let names = target.headersUnavailable ? target.connection.headerNames ?? [] : target.headers.keys.sorted()
+        _headers = State(initialValue: names.map {
+            AIRequestHeaders.Entry(name: $0, value: target.headers[$0] ?? "")
+        })
     }
 
     var body: some View {
@@ -92,6 +100,8 @@ struct AIConnectionEditorPanel: View {
                     }
                 }
 
+                requestHeadersSection
+
                 Section {
                     modelDiscoveryContent
                 } header: {
@@ -137,12 +147,23 @@ struct AIConnectionEditorPanel: View {
             guard !Task.isCancelled else { return }
             await discoverModels()
         }
-        .onChange(of: key) { discoveryRevision += 1 }
+        .onChange(of: key) {
+            error = nil
+            discoveryRevision += 1
+        }
+        .onChange(of: headers) {
+            headersChanged = true
+            error = nil
+            discoveryRevision += 1
+        }
         .onChange(of: connection.baseURL) {
+            headers.removeAll()
+            error = nil
             connection.dropDeclaredLevels()
             discoveryRevision += 1
         }
         .onChange(of: connection.provider) { oldProvider, newProvider in
+            headers.removeAll()
             if connection.baseURL.isEmpty || connection.baseURL == oldProvider.defaultBaseURL {
                 connection.baseURL = newProvider.defaultBaseURL
             }
@@ -151,13 +172,58 @@ struct AIConnectionEditorPanel: View {
         }
     }
 
+    private var requestHeadersSection: some View {
+        Section {
+            if target.headersUnavailable && !headersChanged {
+                Label(
+                    "Re-enter or remove the unavailable request headers before saving.",
+                    systemImage: "exclamationmark.triangle"
+                )
+                .foregroundStyle(.orange)
+            }
+            ForEach($headers) { $header in
+                VStack(spacing: Theme.Spacing.md) {
+                    HStack(spacing: Theme.Spacing.md) {
+                        TextField("Header name", text: $header.name, prompt: Text("Name"))
+                            .settingsEditorTextField()
+                        Button {
+                            headers.removeAll { $0.id == header.id }
+                        } label: {
+                            Image(systemName: "minus.circle").foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Remove Header")
+                        .accessibilityLabel("Remove Header")
+                    }
+                    RevealableSecureField(
+                        title: String(localized: "Header value"), text: $header.value,
+                        prompt: Text("Value")
+                    )
+                    .settingsEditorTextField()
+                }
+            }
+            Button("Add Header", systemImage: "plus") {
+                headers.append(AIRequestHeaders.Entry())
+            }
+        } header: {
+            Text("Request Headers")
+        } footer: {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                Text("Header values stay in Keychain and override matching default headers.")
+                Text("Changing the provider or base URL clears the request headers.")
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        }
+    }
+
     @ViewBuilder
     private var modelDiscoveryContent: some View {
         switch discovery {
         case .waitingForKey:
             ForEach(connection.models, id: \.self) { model in selectedModelRow(model) }
-            if AIEndpointPolicy.isLoopback(connection.baseURL) {
-                Label("Checking this local endpoint for models…", systemImage: "network")
+            if AIEndpointPolicy.isLoopback(connection.baseURL) || !headers.isEmpty {
+                Label("Checking this endpoint for models…", systemImage: "network")
                     .foregroundStyle(.secondary)
             } else {
                 Label("Enter an API key to search its available models.", systemImage: "key")
@@ -325,6 +391,7 @@ struct AIConnectionEditorPanel: View {
 
     private var apiKeyPlaceholder: String {
         if storedKeyMatchesTarget { return String(localized: "Leave blank to keep saved key") }
+        if !headers.isEmpty { return String(localized: "Optional with request headers") }
         if AIEndpointPolicy.isLoopback(connection.baseURL) {
             return String(localized: "Optional for local endpoint")
         }
@@ -355,6 +422,19 @@ struct AIConnectionEditorPanel: View {
     }
 
     private func discoverModels() async {
+        guard !target.headersUnavailable || headersChanged else {
+            discovery = .failed(
+                String(localized: "Re-enter or remove the unavailable request headers before saving."),
+                allowsManualEntry: false)
+            return
+        }
+        let requestHeaders: [String: String]
+        do {
+            requestHeaders = try AIRequestHeaders.validated(headers)
+        } catch {
+            discovery = .failed(error.localizedDescription, allowsManualEntry: false)
+            return
+        }
         let enteredKey = key.trimmingCharacters(in: .whitespacesAndNewlines)
         let apiKey: String
         if !enteredKey.isEmpty {
@@ -368,7 +448,7 @@ struct AIConnectionEditorPanel: View {
                     allowsManualEntry: false)
                 return
             }
-        } else if AIEndpointPolicy.isLoopback(connection.baseURL) {
+        } else if AIEndpointPolicy.isLoopback(connection.baseURL) || !requestHeaders.isEmpty {
             apiKey = ""
         } else {
             discovery = .waitingForKey
@@ -388,7 +468,8 @@ struct AIConnectionEditorPanel: View {
         discovery = .loading
         do {
             let models = try await modelDiscovery.models(
-                provider: connection.provider, baseURL: baseURL, apiKey: apiKey)
+                provider: connection.provider, baseURL: baseURL, apiKey: apiKey,
+                headers: requestHeaders)
             guard !Task.isCancelled else { return }
             discovery = .loaded(models)
         } catch is CancellationError {
@@ -433,8 +514,19 @@ struct AIConnectionEditorPanel: View {
     }
 
     private func save() {
+        guard !target.headersUnavailable || headersChanged else {
+            error = String(localized: "Re-enter or remove the unavailable request headers before saving.")
+            return
+        }
+        let requestHeaders: [String: String]
+        do {
+            requestHeaders = try AIRequestHeaders.validated(headers)
+        } catch {
+            self.error = error.localizedDescription
+            return
+        }
         if case .failed(_, let allowsManualEntry) = discovery, !allowsManualEntry {
-            error = String(localized: "Resolve the API key or endpoint error before saving.")
+            error = String(localized: "Resolve the connection error before saving.")
             return
         }
         guard !connection.models.isEmpty else {
@@ -449,7 +541,8 @@ struct AIConnectionEditorPanel: View {
                 ?? String(localized: "Enter a valid provider base URL.")
             return
         }
-        error = onSave(connection, key, target.isNew)
+        connection.headerNames = requestHeaders.isEmpty ? nil : requestHeaders.keys.sorted()
+        error = onSave(connection, key, requestHeaders, target.isNew)
     }
 }
 

@@ -10,6 +10,7 @@ enum AIProviderFactory {
         subscription: ChatGPTSubscriptionManager,
         installedAI: InstalledAIManager,
         keyStore: KeychainSecretStore = .aiAPIKeys,
+        headerStore: AIConnectionHeaderStore = .keychain,
         guardrails: SystemLanguageModel.Guardrails = .default,
         toolServers: AIToolServerSession? = nil
     ) throws -> any AIProvider {
@@ -72,7 +73,14 @@ enum AIProviderFactory {
                 throw AIProviderError.unavailable(
                     String(localized: "The API key could not be read from Keychain."))
             }
-            guard AIEndpointPolicy.isLoopback(connection.baseURL) || !key.isEmpty else {
+            let headers: [String: String]
+            do {
+                headers = try headerStore.headers(for: connection)
+            } catch {
+                throw AIProviderError.unavailable(
+                    String(localized: "The request headers could not be read from Keychain."))
+            }
+            guard AIEndpointPolicy.isLoopback(connection.baseURL) || !key.isEmpty || !headers.isEmpty else {
                 throw AIProviderError.unavailable(String(localized: "Add an API key in Settings."))
             }
             let effort = connection.offeredEffort(savedEffort, for: model)
@@ -80,7 +88,8 @@ enum AIProviderFactory {
                 configuration: AIHTTPConfiguration(
                     provider: connection.provider, baseURL: baseURL, model: model, effort: effort,
                     disablesThinking: effort == AIConnection.ReasoningOptions.noEffort
-                        && connection.takesThinkingField),
+                        && connection.takesThinkingField,
+                    headers: headers),
                 apiKey: key)
         }
     }

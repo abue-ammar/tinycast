@@ -2,6 +2,35 @@ import Foundation
 
 /// The JSON body each route expects. Pure on purpose: a wrong shape is a mid-conversation 400.
 enum AIRequestBody {
+    static func request(
+        _ input: AIRequest, configuration: AIHTTPConfiguration, apiKey: String,
+        appTitle: String, googleClientHeader: String
+    ) throws -> URLRequest {
+        var request = URLRequest(url: configuration.endpointURL)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 90
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        switch configuration.shape {
+        case .openAICompatible:
+            if !apiKey.isEmpty {
+                request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+            }
+            if configuration.provider == .gemini {
+                request.setValue(googleClientHeader, forHTTPHeaderField: "x-goog-api-client")
+            } else if configuration.provider == .openRouter {
+                request.setValue(appTitle, forHTTPHeaderField: "X-OpenRouter-Title")
+            }
+        case .anthropic:
+            if !apiKey.isEmpty { request.setValue(apiKey, forHTTPHeaderField: "x-api-key") }
+            request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        }
+        try AIRequestHeaders.apply(configuration.headers, to: &request)
+        request.httpBody = try JSONSerialization.data(
+            withJSONObject: make(input, configuration: configuration))
+        return request
+    }
+
     static func make(
         _ input: AIRequest, configuration: AIHTTPConfiguration
     ) -> [String: Any] {

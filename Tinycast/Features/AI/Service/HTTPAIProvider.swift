@@ -4,6 +4,8 @@ struct HTTPAIProvider: AIProvider {
     private let configuration: AIHTTPConfiguration
     private let apiKey: String
 
+    private var secrets: [String] { [apiKey] + AIRequestHeaders.secrets(configuration.headers) }
+
     init(configuration: AIHTTPConfiguration, apiKey: String) {
         self.configuration = configuration
         self.apiKey = apiKey
@@ -29,9 +31,9 @@ struct HTTPAIProvider: AIProvider {
                             AIProviderFailure.description(
                                 status: response.statusCode, body: body,
                                 retryAfter: response.value(forHTTPHeaderField: "Retry-After"),
-                                secrets: [apiKey]))
+                                secrets: secrets))
                     }
-                    var decoder = AIStreamDecoder(shape: configuration.shape, secrets: [apiKey])
+                    var decoder = AIStreamDecoder(shape: configuration.shape, secrets: secrets)
                     var chunk = Data()
                     chunk.reserveCapacity(2_048)
                     // Per line, not per 2 KB: a short reply must show before the stream closes.
@@ -69,31 +71,9 @@ struct HTTPAIProvider: AIProvider {
     }
 
     private func makeURLRequest(_ input: AIRequest) throws -> URLRequest {
-        var request = URLRequest(url: configuration.endpointURL)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 90
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
-        applyAuthentication(to: &request)
-        request.httpBody = try JSONSerialization.data(
-            withJSONObject: AIRequestBody.make(input, configuration: configuration))
-        return request
-    }
-
-    /// Every route's credential and its own identifying headers; the body knows none of this.
-    private func applyAuthentication(to request: inout URLRequest) {
-        switch configuration.shape {
-        case .openAICompatible:
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-            if configuration.provider == .gemini {
-                request.setValue(Self.googleClientHeader, forHTTPHeaderField: "x-goog-api-client")
-            } else if configuration.provider == .openRouter {
-                request.setValue(Bundle.main.appDisplayName, forHTTPHeaderField: "X-OpenRouter-Title")
-            }
-        case .anthropic:
-            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
-            request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
-        }
+        try AIRequestBody.request(
+            input, configuration: configuration, apiKey: apiKey,
+            appTitle: Bundle.main.appDisplayName, googleClientHeader: Self.googleClientHeader)
     }
 
     private static var googleClientHeader: String {
@@ -105,7 +85,8 @@ struct HTTPAIProvider: AIProvider {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalAndRemoteCacheData
-        return URLSession(configuration: configuration)
+        return URLSession(
+            configuration: configuration, delegate: AIEndpointRedirectDelegate(), delegateQueue: nil)
     }
 
     /// A refusal's body comes with its headers; the status is never held longer than this for one.

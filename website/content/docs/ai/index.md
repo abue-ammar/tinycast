@@ -138,17 +138,25 @@ chats in those tools aren't touched.
 
 ### API connections
 
-Use your own key with **OpenAI API**, **Anthropic Claude**, **Google Gemini**, **OpenRouter**, or
-any **OpenAI Compatible** endpoint, including a local one like Ollama.
+Use your own key or authentication headers with **OpenAI API**, **Anthropic Claude**, **Google Gemini**,
+**OpenRouter**, or any **OpenAI Compatible** endpoint, including a local one like Ollama.
 
-- **Keys are stored only in your login Keychain.** They never appear in preferences, logs or
-  backups.
+- **Keys and request-header values are stored only in your login Keychain.** They never appear in
+  preferences, logs or backups.
 - Remote endpoints must use HTTPS. Plain HTTP only works for `localhost`, `127.0.0.1` and `::1`,
   where a key is optional.
-- A key is tied to the address it was saved for. If you change a connection's base URL, Tinycast
-  asks for a new key instead of sending the old one to the new address.
-- While you edit a connection, Tinycast asks the provider which models your key can use, and you can
-  search that list as you type. If a gateway can't list its models, type the model ID yourself.
+- Keys and headers are tied to the provider and address they were saved for. If you change either,
+  enter credentials for the new destination; Tinycast doesn't send the old ones to it.
+- While you edit a connection, Tinycast asks the provider which models your credentials can use, and
+  you can search that list as you type. If a gateway can't list its models, type the model ID yourself.
+
+For a gateway that needs extra headers, select its connection and choose **Edit…**, then add each name
+and value under **Request Headers**. For example, add `X-Workspace-ID` with the workspace your gateway
+requires, or `Authorization` with `Bearer …` for header-based authentication. You can leave **API Key**
+blank when your headers provide authentication. Header values stay hidden until you reveal them.
+The headers are sent both when loading models and when chatting. A custom header overrides a default
+header with the same name, regardless of capitalization. Remove its row to stop sending it; changing
+the provider or base URL clears the old header values.
 
 For gateways that follow DeepSeek's API, the reasoning effort menu includes **None**, which turns
 thinking off.

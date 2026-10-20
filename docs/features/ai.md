@@ -52,12 +52,13 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   Tinycast over anything else. It is not shown in the pane, and `AIPreamble.swift` holds the only
   copy of it — edit the prompt there, not here. `compose` returns `nil` when the user has turned
   the system prompt off, and every transport drops a nil instruction, so a turn then carries none.
-- **API keys live only in the login Keychain.** `AIConnection` persists the provider, endpoint and
-  model identifiers in `UserDefaults`; it never contains a key. Keys are addressed by connection UUID
-  through `KeychainSecretStore.aiAPIKeys`, and never enter logs, errors or settings backups. A key is issued for one
-  endpoint and never follows a connection retargeted at another — change the provider or base URL and
-  both model discovery and Save ask for a new key, rather than introduce the saved one to a host it
-  was never meant to reach (`AIEndpointPolicy.sameDestination`).
+- **API credentials live only in the login Keychain.** `AIConnection` persists the provider, endpoint,
+  model identifiers and custom request-header names in `UserDefaults`; it never contains a key or a
+  header value. Keys and header values are addressed by connection UUID, and never enter logs, errors
+  or settings backups. A credential is issued for one endpoint and never follows a connection
+  retargeted at another — change the provider or base URL and the editor clears its header values;
+  model discovery never introduces the saved key or headers to the new destination
+  (`AIEndpointPolicy.sameDestination`). A new key or newly entered headers can authenticate it.
 - **Remote endpoints require HTTPS.** Plain HTTP is accepted only for `localhost`, `127.0.0.1` and
   `::1`, where a key is optional, and any other scheme is rejected outright — a loopback host does
   not excuse `ftp://`. `AIEndpointPolicy` is the one place that decides this.
@@ -179,13 +180,14 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   `AIProviderFailure.providerMessage` finds that message in OpenAI's shape and its copies',
   Anthropic's, Gemini's array, vLLM's and OpenRouter's nested `metadata.raw`; a plain-text body is
   shown as sent, an HTML error page is left out wherever it sits, and a JSON body the cap cut gives up
-  only a message that is still whole. The connection's key, bearer tokens and key-shaped strings are
-  replaced with `[redacted]`, and then the message is cut at `messageLimit` (600 characters). A key
+  only a message that is still whole. The connection's key, custom header values, bearer tokens and
+  key-shaped strings are replaced with `[redacted]`, and then the message is cut at `messageLimit`
+  (600 characters). A key
   under eight characters is redacted only as a whole word, so it cannot eat into a longer one; a
   local server's placeholder key is redacted like any other. A mid-stream error is
-  treated the same way: the decoder is handed the key, an Anthropic `error` event shows its message
-  under its line, and an OpenAI-compatible one reads through `metadata.raw` too, or says the provider
-  stopped the response when there is no sentence to show.
+  treated the same way: the decoder is handed the key and header values, an Anthropic `error` event
+  shows its message under its line, and an OpenAI-compatible one reads through `metadata.raw` too, or
+  says the provider stopped the response when there is no sentence to show.
 - **`Model/` stays Foundation-only.** `ai-provider-test` compiles the shipped provider models and pins
   endpoints, request bodies, stream parsing, persistence repair, Codex protocol framing and both
   CLI routes' MCP launch encodings. Request
@@ -332,6 +334,22 @@ The base URL stays editable for every preset because gateways and organization p
 destinations. `AIHTTPConfiguration.endpointURL` accepts a complete endpoint or appends the transport's
 completion path. Gemini requests identify Tinycast through `x-goog-api-client`; OpenRouter requests
 carry the app title.
+
+Every API preset also accepts custom request headers in its connection editor. The same headers go
+to model discovery and every chat request, including requests after tool results. They are applied
+after the provider's defaults, so a custom name replaces an existing header regardless of case.
+This permits gateway authentication through headers without requiring an API key as well. Names
+must be HTTP field-name tokens and unique regardless of case; values cannot contain line breaks or
+other control characters except horizontal tabs. An empty draft row is ignored. Header values are
+revealed only on demand in the editor and are stored in Keychain, bound to the saved endpoint;
+only their names are connection metadata. Editing the provider or URL clears the old values, and
+removing a connection deletes its saved headers with its API key.
+Both discovery and chat follow redirects only within the same origin (scheme, host and effective
+port), so a redirect cannot forward a custom credential header to another destination.
+
+Missing, malformed or endpoint-mismatched saved headers reopen as named rows with empty values.
+The editor requires an explicit edit or removal before saving, so opening it cannot silently replace
+credentials that could not be recovered. A Keychain access error still blocks editing instead.
 
 Each connection has an ordered, deduplicated list of exact model identifiers. While its editor is open,
 Tinycast asks the configured provider for the models available to the entered key and uses the result
@@ -935,8 +953,8 @@ control (`AIProviderTab`), and the chosen page is kept from one provider to the 
 - **Overview** reports an installed tool as checking, ready, sign-in required, missing or failed,
   with the account, Codex's usage windows and the command that ran. It never contains a credential
   field: installation and sign-in happen in each command's own flow. For a connection it shows the
-  provider, base URL and whether a key is stored; **Edit…** in the header opens the connection
-  editor, which remains the explicit Keychain-backed path.
+  provider, base URL, request-header names and whether a key is stored; **Edit…** in the header opens
+  the connection editor, which remains the explicit Keychain-backed path for keys and header values.
 - **Models** is the checklist behind the second invariant above, with Show All, Hide All and a
   filter once a route offers more than eight. The rows are an `NSTableView` in one `Form` row
   (`AIModelChecklist`): a `Form` realizes every row it holds, and OpenCode offers over four hundred.

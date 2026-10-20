@@ -17470,58 +17470,6 @@
         }
       }
     },
-    "API key rejected — check it in Settings." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API-Schlüssel abgelehnt – prüfe ihn in den Einstellungen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clave de API rechazada; revísala en Ajustes."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Clé API refusée ; vérifiez-la dans les Réglages."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "APIキーが拒否されました。設定で確認してください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API 키가 거부되었습니다. 설정에서 확인하십시오."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Chave de API rejeitada — verifique-a nos Ajustes."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ключ API отклонён — проверьте его в настройках."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API 密钥被拒绝，请在“设置”中检查。"
-          }
-        }
-      }
-    },
     "About" : {
       "localizations" : {
         "de" : {
@@ -18977,6 +18925,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加文件夹…"
+          }
+        }
+      }
+    },
+    "Add Header" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Header hinzufügen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Añadir encabezado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajouter un en-tête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘッダーを追加"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤더 추가"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Adicionar cabeçalho"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Добавить заголовок"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "添加请求头"
           }
         }
       }
@@ -21832,6 +21832,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "正在回答"
+          }
+        }
+      }
+    },
+    "API key or request headers rejected — check them in Settings." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API-Schlüssel oder Anfrage-Header abgelehnt — prüfe sie in den Einstellungen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clave de API o encabezados de solicitud rechazados: revísalos en Ajustes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clé API ou en-têtes de requête refusés — vérifiez-les dans les réglages."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーまたはリクエストヘッダーが拒否されました。「設定」で確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 키 또는 요청 헤더가 거부되었습니다. 설정에서 확인하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chave de API ou cabeçalhos da requisição rejeitados — verifique-os nos Ajustes."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ключ API или заголовки запроса отклонены — проверьте их в настройках."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 密钥或请求头被拒绝，请在“设置”中检查。"
           }
         }
       }
@@ -30330,6 +30382,58 @@
         }
       }
     },
+    "Changing the provider or base URL clears the request headers." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn du den Anbieter oder die Basis-URL änderst, werden die Anfrage-Header gelöscht."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cambiar el proveedor o la URL base borra los encabezados de la solicitud."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Changer de fournisseur ou d’URL de base efface les en-têtes de requête."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "プロバイダーまたはベースURLを変更すると、リクエストヘッダーが消去されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제공업체 또는 기본 URL을 변경하면 요청 헤더가 지워집니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alterar o provedor ou a URL base apaga os cabeçalhos da requisição."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "При изменении провайдера или базового URL заголовки запроса очищаются."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "更改提供商或基础 URL 会清除请求头。"
+          }
+        }
+      }
+    },
     "Characters" : {
       "localizations" : {
         "de" : {
@@ -31060,54 +31164,54 @@
         }
       }
     },
-    "Checking this local endpoint for models…" : {
+    "Checking this endpoint for models…" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Dieser lokale Endpunkt wird auf Modelle geprüft …"
+            "value" : "Modelle dieses Endpunkts werden abgefragt…"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Buscando modelos en este endpoint local…"
+            "value" : "Buscando modelos en este endpoint…"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Recherche de modèles sur ce point de terminaison local…"
+            "value" : "Recherche de modèles sur ce point de terminaison…"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "このローカルエンドポイントのモデルを確認中…"
+            "value" : "このエンドポイントでモデルを確認中…"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 로컬 엔드포인트에서 모델을 확인하는 중…"
+            "value" : "이 엔드포인트에서 모델 확인 중…"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Verificando modelos neste endpoint local…"
+            "value" : "Verificando se há modelos neste endpoint…"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Поиск моделей на этом локальном адресе…"
+            "value" : "Проверка доступных моделей на этом эндпоинте…"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "正在检查此本地端点的模型…"
+            "value" : "正在检查此端点的模型…"
           }
         }
       }
@@ -50366,6 +50470,58 @@
         }
       }
     },
+    "Enter a valid HTTP header name." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib einen gültigen HTTP-Header-Namen ein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Introduce un nombre de encabezado HTTP válido."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez un nom d’en-tête HTTP valide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有効なHTTPヘッダー名を入力してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "유효한 HTTP 헤더 이름을 입력하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insira um nome de cabeçalho HTTP válido."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Введите допустимое имя HTTP-заголовка."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请输入有效的 HTTP 请求头名称。"
+          }
+        }
+      }
+    },
     "Enter a valid provider base URL." : {
       "localizations" : {
         "de" : {
@@ -57429,6 +57585,266 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "标头"
+          }
+        }
+      }
+    },
+    "Header name" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Header-Name"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nombre del encabezado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nom de l’en-tête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘッダー名"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤더 이름"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nome do cabeçalho"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имя заголовка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求头名称"
+          }
+        }
+      }
+    },
+    "Header names must be unique, ignoring case." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Header-Namen müssen unabhängig von Groß- und Kleinschreibung eindeutig sein."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los nombres de encabezado deben ser únicos, sin distinguir mayúsculas y minúsculas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les noms d’en-tête doivent être uniques, sans distinction entre majuscules et minuscules."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘッダー名は大文字と小文字を区別せず、重複しないようにしてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤더 이름은 대소문자 구분 없이 고유해야 합니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os nomes dos cabeçalhos devem ser únicos, sem diferenciar maiúsculas de minúsculas."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Имена заголовков должны быть уникальными без учёта регистра."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求头名称不能重复，且不区分大小写。"
+          }
+        }
+      }
+    },
+    "Header value" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Header-Wert"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valor del encabezado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valeur de l’en-tête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘッダー値"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤더 값"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Valor do cabeçalho"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значение заголовка"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求头值"
+          }
+        }
+      }
+    },
+    "Header values cannot contain line breaks or control characters." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Header-Werte dürfen keine Zeilenumbrüche oder Steuerzeichen enthalten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los valores de los encabezados no pueden contener saltos de línea ni caracteres de control."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les valeurs des en-têtes ne peuvent pas contenir de sauts de ligne ni de caractères de contrôle."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘッダー値に改行や制御文字は使用できません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤더 값에는 줄 바꿈이나 제어 문자를 포함할 수 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os valores dos cabeçalhos não podem conter quebras de linha nem caracteres de controle."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значения заголовков не могут содержать переводы строк или управляющие символы."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求头值不能包含换行符或控制字符。"
+          }
+        }
+      }
+    },
+    "Header values stay in Keychain and override matching default headers." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Header-Werte bleiben im Schlüsselbund und überschreiben gleichnamige Standard-Header."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los valores de los encabezados se guardan en el llavero y reemplazan los encabezados predeterminados con el mismo nombre."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les valeurs des en-têtes restent dans le trousseau et remplacent les en-têtes par défaut de même nom."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘッダー値はキーチェーンに保存され、同じ名前のデフォルトヘッダーより優先されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤더 값은 키체인에 저장되며 이름이 같은 기본 헤더보다 우선 적용됩니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os valores dos cabeçalhos ficam no Acesso às Chaves e substituem os cabeçalhos padrão com o mesmo nome."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Значения заголовков хранятся в связке ключей и заменяют заголовки по умолчанию с совпадающими именами."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求头值保存在钥匙串中，并覆盖同名的默认请求头。"
           }
         }
       }
@@ -65038,54 +65454,54 @@
         }
       }
     },
-    "Its saved API key will also be deleted from Keychain." : {
+    "Its saved API key and request headers will also be deleted from Keychain." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Der gesicherte API-Schlüssel wird ebenfalls aus dem Schlüsselbund gelöscht."
+            "value" : "Der gesicherte API-Schlüssel und die Anfrage-Header werden ebenfalls aus dem Schlüsselbund gelöscht."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Su clave de API guardada también se eliminará del llavero."
+            "value" : "Su clave de API y sus encabezados de solicitud guardados también se eliminarán del llavero."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Sa clé API enregistrée sera aussi supprimée du Trousseau."
+            "value" : "Sa clé API et ses en-têtes de requête enregistrés seront aussi supprimés du trousseau."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存されているAPIキーもキーチェーンから削除されます。"
+            "value" : "保存されているAPIキーとリクエストヘッダーもキーチェーンから削除されます。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "저장된 API 키도 키체인에서 삭제됩니다."
+            "value" : "저장된 API 키와 요청 헤더도 키체인에서 삭제됩니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A chave de API salva também será excluída do Acesso às Chaves."
+            "value" : "A chave de API e os cabeçalhos da requisição salvos também serão excluídos do Acesso às Chaves."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Его сохранённый ключ API также будет удалён из связки ключей."
+            "value" : "Сохранённый ключ API и заголовки запроса также будут удалены из связки ключей."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "其已存储的 API 密钥也会从钥匙串中删除。"
+            "value" : "其已保存的 API 密钥和请求头也将从钥匙串中删除。"
           }
         }
       }
@@ -86731,6 +87147,58 @@
         }
       }
     },
+    "Optional with request headers" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bei Anfrage-Headern optional"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional con encabezados de solicitud"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Facultatif avec des en-têtes de requête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストヘッダーを使用する場合は省略可能"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "요청 헤더 사용 시 선택 사항"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opcional com cabeçalhos da requisição"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Необязательно при использовании заголовков запроса"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用请求头时为可选项"
+          }
+        }
+      }
+    },
     "Optional — register automatically" : {
       "localizations" : {
         "de" : {
@@ -92947,6 +93415,58 @@
         }
       }
     },
+    "Re-enter or remove the unavailable request headers before saving." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gib die nicht verfügbaren Anfrage-Header erneut ein oder entferne sie, bevor du sicherst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuelve a introducir los encabezados de solicitud no disponibles o elimínalos antes de guardar."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saisissez à nouveau les en-têtes de requête indisponibles ou supprimez-les avant d’enregistrer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存する前に、使用できないリクエストヘッダーを再入力するか削除してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "저장하기 전에 사용할 수 없는 요청 헤더를 다시 입력하거나 삭제하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Insira novamente ou remova os cabeçalhos da requisição indisponíveis antes de salvar."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повторно введите или удалите недоступные заголовки запроса перед сохранением."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请重新输入或移除不可用的请求头后再保存。"
+          }
+        }
+      }
+    },
     "Reading menu…" : {
       "localizations" : {
         "de" : {
@@ -95679,6 +96199,58 @@
         }
       }
     },
+    "Remove Header" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Header entfernen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Eliminar encabezado"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Supprimer l’en-tête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ヘッダーを削除"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "헤더 삭제"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remover cabeçalho"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Удалить заголовок"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "移除请求头"
+          }
+        }
+      }
+    },
     "Remove This Entry" : {
       "localizations" : {
         "de" : {
@@ -97002,6 +97574,58 @@
         }
       }
     },
+    "Request Headers" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anfrage-Header"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Encabezados de solicitud"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En-têtes de requête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストヘッダー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "요청 헤더"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cabeçalhos da requisição"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Заголовки запроса"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请求头"
+          }
+        }
+      }
+    },
     "Required" : {
       "localizations" : {
         "de" : {
@@ -97576,54 +98200,54 @@
         }
       }
     },
-    "Resolve the API key or endpoint error before saving." : {
+    "Resolve the connection error before saving." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Behebe den Fehler beim API-Schlüssel oder Endpunkt, bevor du sicherst."
+            "value" : "Behebe den Verbindungsfehler vor dem Sichern."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resuelve el error de la clave API o del punto de conexión antes de guardar."
+            "value" : "Resuelve el error de conexión antes de guardar."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Corrigez l’erreur de clé API ou de point de terminaison avant d’enregistrer."
+            "value" : "Résolvez l’erreur de connexion avant d’enregistrer."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "保存する前に、APIキーまたはエンドポイントのエラーを解決してください。"
+            "value" : "接続エラーを解決してから保存してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "저장하기 전에 API 키 또는 엔드포인트 오류를 해결하십시오."
+            "value" : "연결 오류를 해결한 후 저장하세요."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Resolva o erro da chave de API ou do endpoint antes de salvar."
+            "value" : "Resolva o erro de conexão antes de salvar."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Исправьте ошибку ключа API или адреса перед сохранением."
+            "value" : "Устраните ошибку подключения перед сохранением."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "请先解决 API 密钥或端点错误，然后再存储。"
+            "value" : "请先解决连接错误再保存。"
           }
         }
       }
@@ -113985,58 +114609,6 @@
         }
       }
     },
-    "The API key was rejected. Check it and try again." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der API-Schlüssel wurde abgelehnt. Prüfe ihn und versuche es erneut."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Se rechazó la clave API. Compruébala y vuelve a intentarlo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La clé API a été refusée. Vérifiez-la et réessayez."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "APIキーが拒否されました。確認してから、もう一度お試しください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API 키가 거부되었습니다. 확인 후 다시 시도하십시오."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A chave de API foi rejeitada. Verifique-a e tente novamente."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ключ API отклонен. Проверьте его и повторите попытку."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "API 密钥被拒绝。请检查后重试。"
-          }
-        }
-      }
-    },
     "The Codex connection failed." : {
       "localizations" : {
         "de" : {
@@ -114345,6 +114917,110 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法读取 Raycast 导出文件。"
+          }
+        }
+      }
+    },
+    "The API key or request headers could not be saved to Keychain." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der API-Schlüssel oder die Anfrage-Header konnten nicht im Schlüsselbund gesichert werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron guardar la clave de API o los encabezados de solicitud en el llavero."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible d’enregistrer la clé API ou les en-têtes de requête dans le trousseau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーまたはリクエストヘッダーをキーチェーンに保存できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 키 또는 요청 헤더를 키체인에 저장할 수 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível salvar a chave de API ou os cabeçalhos da requisição no Acesso às Chaves."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось сохранить ключ API или заголовки запроса в связке ключей."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法将 API 密钥或请求头保存到钥匙串。"
+          }
+        }
+      }
+    },
+    "The API key or request headers were rejected. Check them and try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der API-Schlüssel oder die Anfrage-Header wurden abgelehnt. Prüfe sie und versuche es erneut."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se rechazaron la clave de API o los encabezados de solicitud. Revísalos e inténtalo de nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La clé API ou les en-têtes de requête ont été refusés. Vérifiez-les et réessayez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "APIキーまたはリクエストヘッダーが拒否されました。確認してからもう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 키 또는 요청 헤더가 거부되었습니다. 확인한 후 다시 시도하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A chave de API ou os cabeçalhos da requisição foram rejeitados. Verifique-os e tente novamente."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ключ API или заголовки запроса отклонены. Проверьте их и повторите попытку."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "API 密钥或请求头被拒绝。请检查后重试。"
           }
         }
       }
@@ -115863,58 +116539,6 @@
         }
       }
     },
-    "The key could not be saved to Keychain." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der Schlüssel konnte nicht im Schlüsselbund gespeichert werden."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo guardar la clave en el llavero."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La clé n’a pas pu être enregistrée dans le trousseau."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "キーをキーチェーンに保存できませんでした。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "키체인에 키를 저장할 수 없습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível salvar a chave no Acesso às Chaves."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось сохранить ключ в связке ключей."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法将密钥存储到钥匙串。"
-          }
-        }
-      }
-    },
     "The key works normally during sleep, screen lock or user switching." : {
       "localizations" : {
         "de" : {
@@ -117423,6 +118047,58 @@
         }
       }
     },
+    "The request headers could not be read from Keychain." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Anfrage-Header konnten nicht aus dem Schlüsselbund gelesen werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron leer los encabezados de solicitud del llavero."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de lire les en-têtes de requête dans le trousseau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーチェーンからリクエストヘッダーを読み出せませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키체인에서 요청 헤더를 읽을 수 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível ler os cabeçalhos da requisição no Acesso às Chaves."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось прочитать заголовки запроса из связки ключей."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法从钥匙串读取请求头。"
+          }
+        }
+      }
+    },
     "The request to the server failed." : {
       "localizations" : {
         "de" : {
@@ -117579,6 +118255,58 @@
         }
       }
     },
+    "The saved API key or request headers could not be updated in Keychain." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der gesicherte API-Schlüssel oder die Anfrage-Header konnten nicht im Schlüsselbund aktualisiert werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudieron actualizar la clave de API o los encabezados de solicitud guardados en el llavero."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Impossible de mettre à jour la clé API ou les en-têtes de requête enregistrés dans le trousseau."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "キーチェーンに保存されているAPIキーまたはリクエストヘッダーを更新できませんでした。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "키체인에 저장된 API 키 또는 요청 헤더를 업데이트할 수 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível atualizar a chave de API ou os cabeçalhos da requisição salvos no Acesso às Chaves."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось обновить сохранённый ключ API или заголовки запроса в связке ключей."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法更新钥匙串中已保存的 API 密钥或请求头。"
+          }
+        }
+      }
+    },
     "The saved key could not be read from Keychain." : {
       "localizations" : {
         "de" : {
@@ -117627,58 +118355,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "无法从钥匙串中读取已存储的密钥。"
-          }
-        }
-      }
-    },
-    "The saved key could not be updated in Keychain." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Der gespeicherte Schlüssel konnte nicht im Schlüsselbund aktualisiert werden."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No se pudo actualizar la clave guardada en el llavero."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "La clé enregistrée n’a pas pu être mise à jour dans le trousseau."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "保存済みのキーをキーチェーンで更新できませんでした。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "키체인에서 저장된 키를 업데이트할 수 없습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Não foi possível atualizar a chave salva no Acesso às Chaves."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Не удалось обновить сохраненный ключ в связке ключей."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "无法更新钥匙串中已存储的密钥。"
           }
         }
       }
@@ -129327,6 +130003,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用已在这台 Mac 上登录的 %@ 命令。不会储存其密钥。"
+          }
+        }
+      }
+    },
+    "Using request headers" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anfrage-Header werden verwendet"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usando encabezados de solicitud"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilisation d’en-têtes de requête"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "リクエストヘッダーを使用中"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "요청 헤더 사용 중"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usando cabeçalhos da requisição"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Используются заголовки запроса"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正在使用请求头"
           }
         }
       }

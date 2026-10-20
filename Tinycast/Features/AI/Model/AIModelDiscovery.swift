@@ -45,7 +45,7 @@ enum AIModelDiscovery {
                         The provider returned an unreadable model list. Enter a model ID manually.
                         """)
             case .rejectedKey:
-                return String(localized: "The API key was rejected. Check it and try again.")
+                return String(localized: "The API key or request headers were rejected. Check them and try again.")
             case .unavailable:
                 return String(
                     localized: """
@@ -61,7 +61,8 @@ enum AIModelDiscovery {
     }
 
     static func query(
-        provider: AIProviderKind, baseURL: URL, apiKey: String, appTitle: String
+        provider: AIProviderKind, baseURL: URL, apiKey: String, appTitle: String,
+        headers: [String: String] = [:]
     ) throws -> Query {
         let usesNativeGemini =
             provider == .gemini
@@ -75,16 +76,17 @@ enum AIModelDiscovery {
         request.setValue("application/json", forHTTPHeaderField: "Accept")
 
         if provider == .anthropic {
-            request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+            if !apiKey.isEmpty { request.setValue(apiKey, forHTTPHeaderField: "x-api-key") }
             request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
         } else if usesNativeGemini {
-            request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
+            if !apiKey.isEmpty { request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key") }
         } else if !apiKey.isEmpty {
             request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         }
         if provider == .openRouter {
             request.setValue(appTitle, forHTTPHeaderField: "X-OpenRouter-Title")
         }
+        try AIRequestHeaders.apply(headers, to: &request)
         return Query(request: request, responseShape: usesNativeGemini ? .gemini : .openAI)
     }
 

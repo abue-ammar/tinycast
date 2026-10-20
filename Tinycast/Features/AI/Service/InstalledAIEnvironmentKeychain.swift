@@ -1,5 +1,17 @@
 import Foundation
 
+extension AIConnectionHeaderStore {
+    static let keychain = AIConnectionHeaderStore(
+        read: { try KeychainSecretStore.aiRequestHeaders.secret(for: $0) },
+        write: { value, id in
+            if let value {
+                try KeychainSecretStore.aiRequestHeaders.setSecret(value, for: id)
+            } else {
+                try KeychainSecretStore.aiRequestHeaders.removeSecret(for: id)
+            }
+        })
+}
+
 extension InstalledAIEnvironmentStore {
     /// One Keychain item per tool, as JSON; a failed read throws, a garbled item reads as none.
     static let keychain = InstalledAIEnvironmentStore(

@@ -58,6 +58,7 @@ struct AIProvidersPanel: View {
     @State private var tab = AIProviderTab.overview
 
     private let keyStore = KeychainSecretStore.aiAPIKeys
+    private let headerStore = AIConnectionHeaderStore.keychain
 
     var body: some View {
         VStack(spacing: 0) {
@@ -109,7 +110,7 @@ struct AIProvidersPanel: View {
             }
             Button("Cancel", role: .cancel) { pendingRemoval = nil }
         } message: {
-            Text("Its saved API key will also be deleted from Keychain.")
+            Text("Its saved API key and request headers will also be deleted from Keychain.")
         }
         .onAppear {
             selection = selection ?? initialSelection
@@ -172,7 +173,7 @@ struct AIProvidersPanel: View {
                     Button(provider.title) {
                         editor = AIConnectionEditorTarget(
                             connection: AIConnection(provider: provider),
-                            hasStoredKey: false, isNew: true)
+                            hasStoredKey: false, isNew: true, headers: [:], headersUnavailable: false)
                     }
                 }
             } label: {
@@ -569,6 +570,14 @@ struct AIProvidersPanel: View {
                     .foregroundStyle(
                         keyIsMissing(connection) ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
             }
+            if let names = connection.headerNames, !names.isEmpty {
+                LabeledContent("Request Headers") {
+                    Text(names.joined(separator: ", "))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .textSelection(.enabled)
+                }
+            }
             if keyError {
                 Label("The login Keychain could not be accessed.", systemImage: "exclamationmark.triangle")
                     .foregroundStyle(.orange)
@@ -782,33 +791,53 @@ struct AIProvidersPanel: View {
 
     private func keyIsMissing(_ connection: AIConnection) -> Bool {
         keyStatuses[connection.id] != true && !AIEndpointPolicy.isLoopback(connection.baseURL)
+            && connection.headerNames?.isEmpty != false
     }
 
     private func keyStatus(_ connection: AIConnection) -> String {
         if keyStatuses[connection.id] == true { return String(localized: "Stored in Keychain") }
+        if connection.headerNames?.isEmpty == false {
+            return String(localized: "Using request headers")
+        }
         return AIEndpointPolicy.isLoopback(connection.baseURL)
             ? String(localized: "None needed locally") : String(localized: "Missing")
     }
 
     private func edit(_ connection: AIConnection) {
-        editor = AIConnectionEditorTarget(
-            connection: connection,
-            hasStoredKey: keyStatuses[connection.id] == true,
-            isNew: false)
+        do {
+            let hasStoredKey = try keyStore.hasSecret(for: connection.id)
+            let headers: [String: String]
+            let headersUnavailable: Bool
+            do {
+                headers = try headerStore.headers(for: connection)
+                headersUnavailable = false
+            } catch AIConnectionHeaderStore.StoreError.unavailable {
+                headers = [:]
+                headersUnavailable = true
+            }
+            editor = AIConnectionEditorTarget(
+                connection: connection,
+                hasStoredKey: hasStoredKey,
+                isNew: false, headers: headers, headersUnavailable: headersUnavailable)
+        } catch {
+            keyError = true
+        }
     }
 
     private func saveConnection(
-        _ connection: AIConnection, key: String, isNew: Bool
+        _ connection: AIConnection, key: String, headers: [String: String], isNew: Bool
     ) -> String? {
-        let outcome = AIConnectionKeyPolicy.resolve(
-            enteredKey: key, connection: connection, saved: settings.connection(id: connection.id),
-            hasStoredKey: keyStatuses[connection.id] == true)
         do {
-            switch outcome {
-            case .store(let key): try keyStore.setSecret(key, for: connection.id)
-            case .removeStored: try keyStore.removeSecret(for: connection.id)
-            case .keep: break
-            case .reject(let message): return message
+            let outcome = AIConnectionKeyPolicy.resolve(
+                enteredKey: key, connection: connection, saved: settings.connection(id: connection.id),
+                hasStoredKey: try keyStore.hasSecret(for: connection.id))
+            if case .reject(let message) = outcome { return message }
+            try headerStore.save(headers, for: connection) {
+                switch outcome {
+                case .store(let key): try keyStore.setSecret(key, for: connection.id)
+                case .removeStored: try keyStore.removeSecret(for: connection.id)
+                case .keep, .reject: break
+                }
             }
             settings.save(connection)
             editor = nil
@@ -819,14 +848,16 @@ struct AIProvidersPanel: View {
         } catch {
             keyError = true
             return isNew
-                ? String(localized: "The key could not be saved to Keychain.")
-                : String(localized: "The saved key could not be updated in Keychain.")
+                ? String(localized: "The API key or request headers could not be saved to Keychain.")
+                : String(localized: "The saved API key or request headers could not be updated in Keychain.")
         }
     }
 
     private func removeConnection(_ connection: AIConnection) {
         do {
-            try keyStore.removeSecret(for: connection.id)
+            try headerStore.remove(for: connection.id) {
+                try keyStore.removeSecret(for: connection.id)
+            }
             settings.removeConnection(id: connection.id)
             pendingRemoval = nil
             loadKeyStatuses()

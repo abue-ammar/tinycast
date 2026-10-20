@@ -103,10 +103,17 @@ struct AIProviderTests {
         instructionsFollowTheSetting()
         providerPresetsResolveEndpoints()
         modelCatalogBuildsProviderRequests()
+        connectionHeaderMetadataSurvives()
+        connectionHeadersStayBoundToTheirEndpoint()
+        connectionHeaderWritesRestoreOnFailure()
+        requestHeadersValidateBeforeUse()
+        customHeadersReachDiscoveryAndChatRequests()
+        echoedHeaderValuesStayOutOfErrors()
         modelCatalogDecodesProviderResponses()
         modelCatalogSearchesWithoutRenderingEverything()
         exactMatchNamesOnlyAWholeModel()
         endpointPolicyRejectsUnsafeRemoteURLs()
+        redirectsKeepHeadersOnTheirOriginalOrigin()
         storedKeysDoNotFollowARetargetedConnection()
         savingAConnectionDecidesItsKey()
         sseFramesSurviveSplits()
@@ -521,6 +528,379 @@ struct AIProviderTests {
             "an explicit completion endpoint is not appended twice")
     }
 
+    static func connectionHeaderMetadataSurvives() {
+        let connection = AIConnection(provider: .anthropic, models: ["claude"])
+        let legacy = try? JSONEncoder().encode(connection)
+        let decoded = legacy.flatMap { try? JSONDecoder().decode(AIConnection.self, from: $0) }
+        expect(decoded == connection, "a connection saved before headers existed still decodes")
+        expect(decoded?.headerNames == nil, "an old connection has no custom header metadata")
+
+        let suite = "AIProviderTests.headers"
+        let defaults = isolatedDefaults(suite)
+        defer { discardSuite(suite, defaults) }
+        var withHeaders = connection
+        withHeaders.headerNames = ["Authorization", "X-Tenant-ID"]
+        let store = AISettingsStore(defaults: defaults)
+        store.save(withHeaders)
+        let reopened = AISettingsStore(defaults: defaults)
+        expect(
+            reopened.connection(id: connection.id)?.headerNames == withHeaders.headerNames,
+            "header names survive saving and reopening the connection")
+        let persisted = defaults.data(forKey: AppSettingsKey.aiConnections.rawValue)
+        let records = persisted.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [[String: Any]]
+        expect(
+            records?.first?["headerNames"] as? [String] == withHeaders.headerNames,
+            "connection defaults record the names the Keychain values belong to")
+        expect(
+            records?.first?["headers"] == nil,
+            "the connection metadata contains no dictionary of header values")
+        reopened.removeConnection(id: connection.id)
+        expect(reopened.connections.isEmpty, "removing a connection removes its header metadata")
+    }
+
+    static func connectionHeadersStayBoundToTheirEndpoint() {
+        let kept = KeptHeaders()
+        let store = AIConnectionHeaderStore(read: { kept.read($0) }, write: { kept.write($0, for: $1) })
+        let values = ["X-Token": "opaque-secret-value", "X-Tenant-ID": "tenant"]
+        var connection = AIConnection(provider: .anthropic, models: ["claude"], headerNames: values.keys.sorted())
+        connection.baseURL = "  https://gateway.example/anthropic  "
+        do {
+            try store.save(values, for: connection, updatingKey: {})
+            let loaded = try store.headers(for: connection)
+            expect(
+                loaded == values,
+                "header values round-trip through the credential store")
+        } catch { expect(false, "valid request headers must save and reload") }
+
+        func refuses(_ changed: AIConnection) -> Bool {
+            do {
+                _ = try store.headers(for: changed)
+                return false
+            } catch { return error is AIConnectionHeaderStore.StoreError }
+        }
+        var retargeted = connection
+        retargeted.baseURL = "https://other.example/anthropic"
+        expect(refuses(retargeted), "saved header credentials cannot follow an endpoint change")
+        retargeted = connection
+        retargeted.provider = .openAI
+        expect(refuses(retargeted), "saved header credentials cannot follow a provider change")
+        retargeted = connection
+        retargeted.headerNames = ["X-Token", "X-Other"]
+        expect(refuses(retargeted), "metadata that disagrees with stored header names is refused")
+        retargeted = connection
+        retargeted.headerNames = ["x-token", "x-tenant-id"]
+        expect(
+            (try? store.headers(for: retargeted)) == values,
+            "header-name casing does not change the credential binding")
+
+        let empty = AIConnection(provider: .anthropic, models: ["claude"])
+        let unreadable = AIConnectionHeaderStore(
+            read: { _ in throw KeychainUnreadable() }, write: { _, _ in throw KeychainUnreadable() })
+        expect(
+            (try? unreadable.headers(for: empty)) == [:],
+            "a connection with no headers never reads unrelated Keychain data")
+        do {
+            _ = try unreadable.headers(for: connection)
+            expect(false, "an unreadable header item must report its I/O failure")
+        } catch {
+            expect(
+                error is KeychainUnreadable,
+                "a Keychain I/O failure remains distinct from a confirmed missing or corrupt item")
+        }
+
+        kept.write(nil, for: connection.id)
+        expect(refuses(connection), "missing header credentials fail rather than sending an incomplete request")
+        kept.write("not-json", for: connection.id)
+        expect(refuses(connection), "corrupt header credentials fail rather than silently disappearing")
+        let injected: [String: Any] = [
+            "provider": connection.provider.rawValue,
+            "baseURL": connection.baseURL.trimmingCharacters(in: .whitespacesAndNewlines),
+            "values": ["X-Token": "secret\r\nInjected: yes", "X-Tenant-ID": "tenant"]
+        ]
+        if let data = try? JSONSerialization.data(withJSONObject: injected) {
+            kept.write(String(decoding: data, as: UTF8.self), for: connection.id)
+            expect(refuses(connection), "stored values are validated again before any request uses them")
+        } else { expect(false, "the corrupted-header fixture must encode") }
+    }
+
+    static func connectionHeaderWritesRestoreOnFailure() {
+        let kept = KeptHeaders()
+        let store = AIConnectionHeaderStore(read: { kept.read($0) }, write: { kept.write($0, for: $1) })
+        let connection = AIConnection(
+            provider: .openAI, models: ["gpt"], headerNames: ["X-Token"])
+        func fails(_ action: () throws -> Void) -> Bool {
+            do { try action(); return false } catch { return true }
+        }
+        do { try store.save(["X-Token": "original"], for: connection, updatingKey: {}) }
+        catch { expect(false, "the original header fixture must save") }
+        let original = kept.read(connection.id)
+        expect(
+            fails {
+                try store.save(["X-Token": "replacement"], for: connection) {
+                    throw KeychainUnreadable()
+                }
+            },
+            "an API-key update failure fails the entire connection save")
+        expect(
+            kept.read(connection.id) == original,
+            "an API-key update failure restores the previous header credentials")
+        expect(
+            fails {
+                try store.remove(for: connection.id) { throw KeychainUnreadable() }
+            },
+            "a failed API-key removal fails connection removal")
+        expect(
+            kept.read(connection.id) == original,
+            "a failed API-key removal restores the previous header credentials")
+
+        var updatedKey = false
+        let failedWrite = AIConnectionHeaderStore(
+            read: { kept.read($0) }, write: { _, _ in throw KeychainUnreadable() })
+        expect(
+            fails {
+                try failedWrite.save(["X-Token": "replacement"], for: connection) { updatedKey = true }
+            },
+            "a failed header write surfaces as a save failure")
+        expect(
+            !updatedKey && kept.read(connection.id) == original,
+            "a failed header write leaves the API key and previous headers untouched")
+
+        let failedRead = AIConnectionHeaderStore(
+            read: { _ in throw KeychainUnreadable() }, write: { kept.write($0, for: $1) })
+        expect(
+            fails {
+                try failedRead.save(["X-Token": "replacement"], for: connection) { updatedKey = true }
+            },
+            "a failed Keychain read cannot be mistaken for an empty credential entry")
+        expect(
+            !updatedKey && kept.read(connection.id) == original,
+            "an unreadable previous entry is never overwritten")
+
+        do {
+            try store.save([:], for: connection) { updatedKey = true }
+            expect(kept.read(connection.id) == nil, "clearing the last header deletes its Keychain item")
+            expect(updatedKey, "a successful clear still applies the requested API-key update")
+            try store.save(["X-Token": "restored"], for: connection, updatingKey: {})
+            try store.remove(for: connection.id, updatingKey: {})
+            expect(kept.read(connection.id) == nil, "removing a connection deletes its header credentials")
+        } catch { expect(false, "successful clear and remove operations must complete") }
+
+        expect(
+            fails {
+                try store.save(["X-Token": "new"], for: connection) { throw KeychainUnreadable() }
+            },
+            "a first save also fails if the API key cannot be updated")
+        expect(kept.read(connection.id) == nil, "a failed first save leaves no orphan header credentials")
+    }
+
+    static func requestHeadersValidateBeforeUse() {
+        let entries: [AIRequestHeaders.Entry] = [
+            .init(), .init(name: " \t", value: " \t"),
+            .init(name: "  X-Tenant-ID\t", value: "  tenant value\t "),
+            .init(name: "X-Empty", value: ""),
+            .init(name: "!#$%&'*+-.^_`|~0123456789AZaz", value: "all tokens")
+        ]
+        let valid = try? AIRequestHeaders.validated(entries)
+        expect(valid?.count == 3, "untouched blank editor rows do not become request headers")
+        expect(
+            valid?["X-Tenant-ID"] == "  tenant value\t ",
+            "header names are trimmed while field values are preserved")
+        expect(valid?["X-Empty"] == "", "an explicitly named empty header is valid")
+        expect(
+            valid?["!#$%&'*+-.^_`|~0123456789AZaz"] == "all tokens",
+            "all HTTP token punctuation remains available in a header name")
+
+        func rejection(_ entries: [AIRequestHeaders.Entry]) -> AIRequestHeaders.ValidationError? {
+            do {
+                _ = try AIRequestHeaders.validated(entries)
+                return nil
+            } catch { return error as? AIRequestHeaders.ValidationError }
+        }
+        expect(
+            rejection([.init(name: "X-Token", value: "a"), .init(name: "x-token", value: "b")])
+                == .duplicateName,
+            "names that differ only by case cannot silently overwrite one another")
+        for name in ["", "X Token", "X:Token", "X\nToken", "X\rToken", "X\tToken", "用户", "X/Token"] {
+            expect(
+                rejection([.init(name: name, value: "private-value")]) == .invalidName,
+                "a missing, non-ASCII or non-token header name is rejected")
+        }
+        for value in ["a\r\nInjected: yes", "a\n", "a\r", "a\0", "a\u{1F}", "a\u{7F}", "a\u{85}", "a\u{2028}"] {
+            expect(
+                rejection([.init(name: "X-Token", value: value)]) == .invalidValue,
+                "line breaks and control characters cannot inject a request header")
+        }
+        var request = URLRequest(url: URL(string: "https://gateway.example/v1")!)
+        request.setValue("original", forHTTPHeaderField: "Authorization")
+        do {
+            try AIRequestHeaders.apply(
+                ["X-Valid": "value", "X-Invalid": "private\r\nvalue"], to: &request)
+            expect(false, "invalid header dictionaries must fail before a request is built")
+        } catch {
+            expect(
+                request.value(forHTTPHeaderField: "X-Valid") == nil
+                    && request.value(forHTTPHeaderField: "Authorization") == "original",
+                "validation completes before any field is applied")
+            expect(
+                !error.localizedDescription.contains("private"),
+                "a validation error never displays the supplied header value")
+        }
+        do {
+            try AIRequestHeaders.apply(["authorization": "replacement"], to: &request)
+            expect(
+                request.value(forHTTPHeaderField: "Authorization") == "replacement",
+                "custom headers override a built-in field without regard to case")
+            expect(
+                request.allHTTPHeaderFields?.keys.filter { $0.lowercased() == "authorization" }.count == 1,
+                "an override creates only one effective HTTP field")
+        } catch { expect(false, "a valid override must apply") }
+    }
+
+    static func customHeadersReachDiscoveryAndChatRequests() {
+        let input = AIRequest(messages: [AIMessage(role: .user, text: "hello")])
+        let overrides = [
+            "authorization": "Custom gateway-auth",
+            "X-Request-Token": "opaque-request-token",
+            "accept": "application/custom",
+            "content-type": "application/gateway+json",
+            "x-api-key": "gateway-key",
+            "anthropic-version": "gateway-version",
+            "x-goog-api-key": "gateway-key",
+            "x-goog-api-client": "gateway-client",
+            "x-openrouter-title": "Gateway title"
+        ]
+        for provider in AIProviderKind.allCases {
+            let baseURL = URL(string: provider.defaultBaseURL)!
+            let configuration = AIHTTPConfiguration(
+                provider: provider, baseURL: baseURL, model: "model", headers: overrides)
+            let chat = try? AIRequestBody.request(
+                input, configuration: configuration, apiKey: "built-in-key", appTitle: "Tinycast",
+                googleClientHeader: "tinycast-oai/test")
+            let discovery = try? AIModelDiscovery.query(
+                provider: provider, baseURL: baseURL, apiKey: "built-in-key", appTitle: "Tinycast",
+                headers: overrides)
+            expect(chat?.httpMethod == "POST", "\(provider.title) still sends a chat POST")
+            expect(
+                discovery?.request.httpMethod == "GET", "\(provider.title) still lists models with GET")
+            for (name, value) in overrides {
+                expect(
+                    chat?.value(forHTTPHeaderField: name) == value,
+                    "\(provider.title) chat requests apply custom \(name)")
+                expect(
+                    discovery?.request.value(forHTTPHeaderField: name) == value,
+                    "\(provider.title) model discovery applies custom \(name)")
+            }
+            let body = chat?.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
+            expect(
+                body?["model"] as? String == "model" && body?["stream"] as? Bool == true,
+                "request header overrides preserve the provider's streaming request body")
+
+            let headerOnly = ["X-Request-Token": "opaque-request-token"]
+            let noKeyChat = try? AIRequestBody.request(
+                input,
+                configuration: AIHTTPConfiguration(
+                    provider: provider, baseURL: baseURL, model: "model", headers: headerOnly),
+                apiKey: "", appTitle: "Tinycast", googleClientHeader: "tinycast-oai/test")
+            let noKeyDiscovery = try? AIModelDiscovery.query(
+                provider: provider, baseURL: baseURL, apiKey: "", appTitle: "Tinycast",
+                headers: headerOnly)
+            expect(
+                noKeyChat?.value(forHTTPHeaderField: "X-Request-Token") == "opaque-request-token"
+                    && noKeyDiscovery?.request.value(forHTTPHeaderField: "X-Request-Token")
+                        == "opaque-request-token",
+                "custom authentication headers work without an API key for \(provider.title)")
+            for name in ["Authorization", "x-api-key", "x-goog-api-key"] {
+                expect(
+                    noKeyChat?.value(forHTTPHeaderField: name) == nil
+                        && noKeyDiscovery?.request.value(forHTTPHeaderField: name) == nil,
+                    "an absent key does not synthesize empty authentication for \(provider.title)")
+            }
+        }
+        do {
+            _ = try AIRequestBody.request(
+                input,
+                configuration: AIHTTPConfiguration(
+                    provider: .openAI, baseURL: URL(string: AIProviderKind.openAI.defaultBaseURL)!,
+                    model: "model", headers: ["X-Token": "secret\nInjected: yes"]),
+                apiKey: "key", appTitle: "Tinycast", googleClientHeader: "tinycast-oai/test")
+            expect(false, "chat request construction must reject injected headers")
+        } catch {
+            expect(
+                error as? AIRequestHeaders.ValidationError == .invalidValue,
+                "chat request construction applies header validation")
+        }
+        do {
+            _ = try AIModelDiscovery.query(
+                provider: .anthropic, baseURL: URL(string: AIProviderKind.anthropic.defaultBaseURL)!,
+                apiKey: "key", appTitle: "Tinycast", headers: ["X-Token": "a", "x-token": "b"])
+            expect(false, "discovery must reject ambiguous header names")
+        } catch {
+            expect(
+                error as? AIRequestHeaders.ValidationError == .duplicateName,
+                "discovery request construction applies header validation")
+        }
+    }
+
+    static func echoedHeaderValuesStayOutOfErrors() {
+        let headers = [
+            "X-Request-Token": "  opaque-private-header-value  ",
+            "authorization": "  bEaReR bare-auth-token  ",
+            "Proxy-Authorization": "Basic cHJpdmF0ZTp0b2tlbg=="
+        ]
+        let headerSecrets = AIRequestHeaders.secrets(headers)
+        expect(
+            Set(headerSecrets) == Set([
+                "  opaque-private-header-value  ", "opaque-private-header-value",
+                "  bEaReR bare-auth-token  ", "bEaReR bare-auth-token", "bare-auth-token",
+                "Basic cHJpdmF0ZTp0b2tlbg==", "cHJpdmF0ZTp0b2tlbg=="
+            ]),
+            "redaction includes exact values, trimmed echoes and Basic or Bearer token-only echoes")
+        expect(
+            AIRequestHeaders.secrets(["X-Empty": "", "X-Spaces": "   "]).allSatisfy { !$0.isEmpty },
+            "redaction never receives an empty secret")
+        let secrets = ["key"] + headerSecrets
+        expect(
+            AIProviderFailure.redacted(
+                "Rejected bare-auth-token and cHJpdmF0ZTp0b2tlbg==", secrets: secrets)
+                == "Rejected [redacted] and [redacted]",
+            "a gateway echoing just an authentication token cannot bypass header-value redaction")
+        let customSchemeSecrets = AIRequestHeaders.secrets([
+            "Authorization": "Token alternate-private-token",
+            "Proxy-Authorization": "Custom proxy-private-token"
+        ])
+        expect(
+            customSchemeSecrets.contains("alternate-private-token")
+                && customSchemeSecrets.contains("proxy-private-token"),
+            "authentication schemes used by custom gateways also contribute their bare credentials")
+        expect(
+            AIProviderFailure.redacted(
+                "Rejected alternate-private-token and proxy-private-token", secrets: customSchemeSecrets)
+                == "Rejected [redacted] and [redacted]",
+            "a bare token echoed from a custom authentication scheme is redacted")
+        let body = Data(#"{"error":{"message":"Rejected opaque-private-header-value"}}"#.utf8)
+        let described = AIProviderFailure.description(
+            status: 403, body: body, retryAfter: nil, secrets: secrets)
+        expect(
+            !described.contains("opaque-private-header-value") && described.contains("[redacted]"),
+            "a provider's refusal cannot echo a custom header's secret into the transcript")
+        for shape in [AIHTTPConfiguration.APIShape.openAICompatible, .anthropic] {
+            var decoder = AIStreamDecoder(shape: shape, secrets: secrets)
+            let frame = Data(
+                "data: {\"type\":\"error\",\"error\":{\"message\":\"Rejected opaque-private-header-value\"}}\n\n".utf8)
+            do {
+                _ = try decoder.feed(frame)
+                expect(false, "a streamed provider error must fail")
+            } catch {
+                if case .responseFailed(let message)? = error as? AIProviderError {
+                    expect(
+                        message.contains("Rejected [redacted]")
+                            && !message.contains("opaque-private-header-value"),
+                        "both stream shapes redact values supplied in custom headers")
+                } else { expect(false, "a streamed provider error preserves its failure type") }
+            }
+        }
+    }
+
     static func modelCatalogBuildsProviderRequests() {
         let expected: [(AIProviderKind, String)] = [
             (.openAI, "https://api.openai.com/v1/models"),
@@ -721,6 +1101,42 @@ struct AIProviderTests {
             "file URLs are not a provider")
     }
 
+    static func redirectsKeepHeadersOnTheirOriginalOrigin() {
+        let source = URL(string: "https://gateway.example/v1/models")!
+        let allowed = [
+            "https://gateway.example/api/models?limit=10",
+            "https://GATEWAY.EXAMPLE/v1/models",
+            "https://gateway.example:443/redirected"
+        ]
+        for destination in allowed {
+            expect(
+                AIEndpointPolicy.permitsRedirect(from: source, to: URL(string: destination)!),
+                "a redirect within the original HTTPS origin can keep its headers")
+        }
+        for destination in [
+            "https://other.example/v1/models", "http://gateway.example/v1/models",
+            "https://gateway.example:8443/v1/models", "ftp://gateway.example/v1/models"
+        ] {
+            expect(
+                !AIEndpointPolicy.permitsRedirect(from: source, to: URL(string: destination)!),
+                "credentials never follow a redirect to a different host, scheme or port")
+        }
+        expect(
+            AIEndpointPolicy.permitsRedirect(
+                from: URL(string: "https://gateway.example:443/models")!, to: source),
+            "explicit and implicit HTTPS default ports identify the same origin")
+        expect(
+            AIEndpointPolicy.permitsRedirect(
+                from: URL(string: "http://localhost:80/models")!,
+                to: URL(string: "http://LOCALHOST/v1/models")!),
+            "explicit and implicit HTTP default ports identify the same local origin")
+        expect(
+            !AIEndpointPolicy.permitsRedirect(
+                from: URL(string: "http://localhost:11434/models")!,
+                to: URL(string: "http://localhost:11435/models")!),
+            "local servers on different ports do not share request credentials")
+    }
+
     static func storedKeysDoNotFollowARetargetedConnection() {
         var saved = AIConnection()
         saved.provider = .openAI
@@ -789,6 +1205,21 @@ struct AIProviderTests {
             Policy.resolve(enteredKey: "", connection: moved, saved: remote, hasStoredKey: false)
                 == .reject("Enter an API key for this remote provider."),
             "with no saved key there is nothing to retarget, only a missing key")
+        var headerOnly = remote
+        headerOnly.headerNames = ["Authorization"]
+        expect(
+            Policy.resolve(enteredKey: "", connection: headerOnly, saved: nil, hasStoredKey: false)
+                == .keep,
+            "a remote connection can authenticate through its request headers without an API key")
+        headerOnly.baseURL = moved.baseURL
+        expect(
+            Policy.resolve(enteredKey: "", connection: headerOnly, saved: remote, hasStoredKey: true)
+                == .removeStored,
+            "a retarget using its own header credentials discards the old endpoint's API key")
+        expect(
+            Policy.resolve(enteredKey: "new-key", connection: headerOnly, saved: remote, hasStoredKey: true)
+                == .store("new-key"),
+            "a new explicit API key can accompany custom headers")
     }
 
     static func sseFramesSurviveSplits() {
@@ -1094,7 +1525,7 @@ struct AIProviderTests {
                 == "The provider is temporarily unavailable (HTTP 502).",
             "an HTML error page is not pasted into the chat")
         expect(
-            shown(401, "") == "API key rejected — check it in Settings.",
+            shown(401, "") == "API key or request headers rejected — check them in Settings.",
             "an empty body leaves the line alone")
         expect(
             shown(
@@ -1305,7 +1736,7 @@ struct AIProviderTests {
         do { _ = try anthropic.feed(rejected) } catch { anthropicError = error }
         expect(
             anthropicError as? AIProviderError
-                == .responseFailed("API key rejected — check it in Settings."),
+                == .responseFailed("API key or request headers rejected — check them in Settings."),
             "an Anthropic error event names the cause without echoing the key")
 
         var silent = AIStreamDecoder(shape: .openAICompatible)
@@ -2342,6 +2773,20 @@ private func isolatedDefaults(_ name: String) -> UserDefaults {
     let defaults = UserDefaults(suiteName: name)!
     defaults.removePersistentDomain(forName: name)
     return defaults
+}
+
+// The credential store's Sendable effects share only this locked in-memory fixture.
+private final class KeptHeaders: @unchecked Sendable {
+    private let lock = NSLock()
+    private var values: [UUID: String] = [:]
+
+    func read(_ id: UUID) -> String? {
+        lock.withLock { values[id] }
+    }
+
+    func write(_ value: String?, for id: UUID) {
+        lock.withLock { values[id] = value }
+    }
 }
 
 /// Stands in for the Keychain: what a harness saved, read back the way a launch would.

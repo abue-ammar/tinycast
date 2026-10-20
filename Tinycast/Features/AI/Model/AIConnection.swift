@@ -70,11 +70,12 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     /// Models the catalog marked as taking images — only OpenRouter's says, so only it is gated.
     var visionModels: [String]
     var reasoningOptions: [String: ReasoningOptions]?
+    var headerNames: [String]?
 
     init(
         id: UUID = UUID(), name: String = "", provider: AIProviderKind = .openAI,
         baseURL: String? = nil, models: [String] = [], visionModels: [String] = [],
-        reasoningOptions: [String: ReasoningOptions]? = nil
+        reasoningOptions: [String: ReasoningOptions]? = nil, headerNames: [String]? = nil
     ) {
         self.id = id
         self.name = name
@@ -83,6 +84,7 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         self.models = models
         self.visionModels = visionModels
         self.reasoningOptions = reasoningOptions
+        self.headerNames = headerNames
     }
 
     /// A preset pointed away from its own API is a gateway, and only a gateway takes a thinking field.
@@ -363,16 +365,18 @@ struct AIHTTPConfiguration: Equatable, Sendable {
     let model: String
     let effort: String?
     let disablesThinking: Bool
+    let headers: [String: String]
 
     init(
         provider: AIProviderKind, baseURL: URL, model: String, effort: String? = nil,
-        disablesThinking: Bool = false
+        disablesThinking: Bool = false, headers: [String: String] = [:]
     ) {
         self.provider = provider
         self.baseURL = baseURL
         self.model = model
         self.effort = effort
         self.disablesThinking = disablesThinking
+        self.headers = headers
     }
 
     var shape: APIShape { provider.apiShape }
@@ -420,6 +424,15 @@ enum AIEndpointPolicy {
     /// A key is issued for one endpoint, so a changed provider or base URL leaves it behind.
     static func sameDestination(_ connection: AIConnection, _ other: AIConnection) -> Bool {
         connection.provider == other.provider && connection.baseURL == other.baseURL
+    }
+
+    static func permitsRedirect(from original: URL, to redirected: URL) -> Bool {
+        guard let scheme = original.scheme?.lowercased(), ["http", "https"].contains(scheme),
+            scheme == redirected.scheme?.lowercased(),
+            let host = original.host()?.lowercased(), host == redirected.host()?.lowercased()
+        else { return false }
+        let defaultPort = scheme == "https" ? 443 : 80
+        return (original.port ?? defaultPort) == (redirected.port ?? defaultPort)
     }
 
     static func isLoopback(_ value: String) -> Bool {

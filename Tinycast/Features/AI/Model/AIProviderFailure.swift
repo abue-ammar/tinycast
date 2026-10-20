@@ -34,7 +34,7 @@ enum AIProviderFailure {
     static func statusLine(_ status: Int, retryAfter: String?) -> String {
         switch status {
         case 401, 403:
-            return String(localized: "API key rejected — check it in Settings.")
+            return String(localized: "API key or request headers rejected — check them in Settings.")
         case 429:
             guard let retryAfter, let seconds = Int(retryAfter), seconds >= 0 else {
                 return String(localized: "Rate limit reached — try again later.")
