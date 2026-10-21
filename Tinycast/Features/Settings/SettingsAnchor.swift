@@ -9,7 +9,7 @@ struct SettingsAnchor: Hashable, Sendable {
 
     init(tab: SettingsTab, title: LocalizedStringResource) {
         self.tab = tab
-        self.title = String(localized: title)
+        self.title = title.resolved()
     }
 }
 

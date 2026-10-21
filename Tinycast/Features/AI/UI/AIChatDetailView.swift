@@ -689,7 +689,7 @@ private struct ContextCard: View {
 
     private func section(_ title: LocalizedStringResource) -> some View {
         GridRow {
-            Text(String(localized: title).uppercased())
+            Text(title.resolved().uppercased())
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.tertiary)
                 .gridCellColumns(2)

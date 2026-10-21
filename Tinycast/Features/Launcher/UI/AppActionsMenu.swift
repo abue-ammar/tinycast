@@ -170,7 +170,7 @@ enum AppActionsMenu {
             }
         var items = [
             PopoverMenuItem(
-                title: String(localized: app.kind.descriptor.openVerb), systemImage: primarySymbol,
+                title: app.kind.descriptor.openVerb.resolved(), systemImage: primarySymbol,
                 shortcut: "↵"
             ) { core.launcherCoordinator.launch(app, searchQuery: searchQuery) }
         ]

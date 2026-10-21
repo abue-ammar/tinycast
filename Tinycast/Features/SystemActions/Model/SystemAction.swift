@@ -60,7 +60,7 @@ enum SystemActionCatalog {
     static let all: [SystemAction] = SystemAction.ID.allCases.map { id in
         let name = name(for: id)
         return SystemAction(
-            id: id, name: String(localized: name), englishName: name.key, sfSymbol: symbol(for: id),
+            id: id, name: name.resolved(), englishName: name.key, sfSymbol: symbol(for: id),
             confirmation: confirmation(for: id))
     }
 

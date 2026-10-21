@@ -13,7 +13,7 @@ struct FormRow<Content: View>: View {
         _ title: LocalizedStringResource? = nil, alignment: VerticalAlignment = .center,
         labelInset: CGFloat? = nil, @ViewBuilder content: () -> Content
     ) {
-        self.title = title.map { String(localized: $0) } ?? ""
+        self.title = title.map { $0.resolved() } ?? ""
         self.alignment = alignment
         self.labelInset = labelInset
         self.content = content()

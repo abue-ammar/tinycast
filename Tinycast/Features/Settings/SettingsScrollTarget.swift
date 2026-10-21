@@ -60,7 +60,7 @@ struct SettingsRowTitle: View {
     let title: String
 
     init(_ anchor: SettingsAnchor, _ title: LocalizedStringResource) {
-        self.init(anchor, verbatim: String(localized: title))
+        self.init(anchor, verbatim: title.resolved())
     }
 
     init(_ anchor: SettingsAnchor, verbatim title: String) {

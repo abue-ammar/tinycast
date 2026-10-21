@@ -17,13 +17,13 @@ struct SettingsSearchEntry: Identifiable, Hashable, Sendable {
 
     /// One setting, which its pane marks with a matching `SettingsRowTitle`.
     init(_ anchor: SettingsAnchor, _ title: LocalizedStringResource, keywords: [String] = []) {
-        let localized = String(localized: title)
+        let localized = title.resolved()
         self.init(.row(anchor, localized), localized, keywords + [title.key])
     }
 
     /// A whole group, for a result no single row answers — a list, or a section's master switch.
     init(group anchor: SettingsAnchor, _ title: LocalizedStringResource, keywords: [String] = []) {
-        self.init(.section(anchor), String(localized: title), keywords + [title.key])
+        self.init(.section(anchor), title.resolved(), keywords + [title.key])
     }
 
     init(pane: SettingsTab, keywords: [String] = []) {
@@ -289,7 +289,8 @@ enum SettingsSearchCatalog {
         .init(.aiDefault, "Reasoning effort", keywords: ["thinking", "effort", "deepseek"]),
         .init(.aiChat, "Web search", keywords: ["browse", "internet"]),
         .init(.aiChat, "Suggested replies", keywords: ["choices", "chips", "follow-up", "buttons"]),
-        .init(.aiChat, "Tool call rounds", keywords: ["mcp", "tools", "limit", "loop", "agent", "unlimited"]),
+        .init(
+            .aiChat, "Tool call rounds", keywords: ["mcp", "tools", "limit", "loop", "agent", "unlimited"]),
         .init(
             .aiConversations, "Opens to",
             keywords: ["new chat", "last", "summon", "resume", "window", "quick ai"]),

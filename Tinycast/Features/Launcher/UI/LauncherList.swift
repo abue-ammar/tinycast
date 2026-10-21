@@ -120,7 +120,7 @@ struct LauncherList: View {
                 })
         }
         if !meetings.isEmpty {
-            rows.append(.header(String(localized: AppEntry.Kind.meeting.descriptor.sectionTitle)))
+            rows.append(.header(AppEntry.Kind.meeting.descriptor.sectionTitle.resolved()))
             rows.append(contentsOf: meetings.map { .app($0, slot: nil) })
         }
         if !suggestions.isEmpty {
@@ -139,7 +139,7 @@ struct LauncherList: View {
         ]
         for kind in kinds {
             guard let group = grouped[kind], !group.isEmpty else { continue }
-            rows.append(.header(String(localized: kind.descriptor.sectionTitle)))
+            rows.append(.header(kind.descriptor.sectionTitle.resolved()))
             rows.append(contentsOf: group.map { .app($0, slot: nil) })
         }
         // A missing kind would make every later row activate its neighbour: assert instead.

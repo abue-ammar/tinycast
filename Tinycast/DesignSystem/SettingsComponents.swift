@@ -112,7 +112,7 @@ extension SettingsRow where Icon == EmptyView {
         @ViewBuilder trailing: () -> Trailing
     ) {
         self.init(
-            title: String(localized: title), subtitle: subtitle,
+            title: title.resolved(), subtitle: subtitle,
             subtitleLineLimit: subtitleLineLimit, alignment: alignment, anchor: anchor,
             icon: { EmptyView() }, trailing: trailing)
     }

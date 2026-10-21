@@ -92,7 +92,7 @@ enum WindowCommandCatalog {
     static let all: [WindowCommand] = WindowCommand.ID.allCases.map { id in
         let name = name(for: id)
         return WindowCommand(
-            id: id, name: String(localized: name), englishName: name.key, sfSymbol: symbol(for: id),
+            id: id, name: name.resolved(), englishName: name.key, sfSymbol: symbol(for: id),
             kind: kind(for: id), group: group(for: id), cyclesOnRepeat: cyclesOnRepeat.contains(id),
             resizes: !movesOnly.contains(id))
     }
