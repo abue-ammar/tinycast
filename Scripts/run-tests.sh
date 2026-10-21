@@ -49,7 +49,9 @@ if [ "${1:-}" = "--exec" ]; then
 fi
 
 QUEUE="$BIN/queue"
+EXCLUSIVE_QUEUE="$BIN/exclusive-queue"
 : > "$QUEUE"
+: > "$EXCLUSIVE_QUEUE"
 rm -f "$BIN"/*.failed "$BIN"/*.running
 
 failed=()
@@ -67,10 +69,11 @@ fi
 
 # `slow` dispatches in the first wave; `index` only claims editor flags for a hand-run harness.
 run() {
-    local opt=-Onone pri=1 index_only=0
+    local opt=-Onone pri=1 index_only=0 queue="$QUEUE"
     while :; do
         case "$1" in
             slow)  pri=0; shift;;
+            exclusive) queue="$EXCLUSIVE_QUEUE"; shift;;
             -O)    opt=-O; shift;;
             index) index_only=1; shift;;
             *)     break;;
@@ -100,7 +103,7 @@ run() {
     fi
 
     # xargs splits the queue on whitespace, so no harness source path may contain a space.
-    printf '%s %s %s %s\n' "$pri" "$name" "$opt" "$*" >> "$QUEUE"
+    printf '%s %s %s %s\n' "$pri" "$name" "$opt" "$*" >> "$queue"
 }
 
 L=Tinycast/Features/Launcher/Model
@@ -254,7 +257,7 @@ run appearance-test        Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
                            Tinycast/Features/Settings/AppAppearance.swift
 run language-test          Tinycast/Features/Settings/AppLanguage.swift
-run onboarding-test        Tinycast/Features/Onboarding/OnboardingCoordinator.swift \
+run exclusive onboarding-test Tinycast/Features/Onboarding/OnboardingCoordinator.swift \
                            Tinycast/Windows/AppWindowController.swift \
                            Tinycast/Windows/WindowChrome.swift Tinycast/Platform/ActivationPolicy.swift
 run relaunch-test          Tinycast/App/AppDelegate.swift Tinycast/Platform/RelaunchRunner.swift
@@ -865,8 +868,16 @@ report() {
     done
 }
 
+dispatch() {
+    [ -s "$1" ] || return 0
+    sort -s -k1,1n "$1" | cut -d' ' -f2- | xargs -P "$2" -L1 "$SELF" --exec
+}
+
 # Without this the suite reports "all passed" whenever dispatch itself dies and no harness ran.
-if ! { sort -s -k1,1n "$QUEUE" | cut -d' ' -f2- | xargs -P "$JOBS" -L1 "$SELF" --exec; echo "dispatch $?"; } | report; then
+if ! {
+    dispatch "$QUEUE" "$JOBS" && dispatch "$EXCLUSIVE_QUEUE" 1
+    echo "dispatch $?"
+} | report; then
     echo "harness dispatch failed; no result below can be trusted" >&2
     exit 1
 fi
@@ -875,7 +886,7 @@ elapsed=$((SECONDS - started))
 # A compiler diagnostic is far longer than PIPE_BUF, so the workers log it and it is replayed here.
 while read -r _ name _; do
     if [ -f "$BIN/$name.failed" ]; then failed+=("$name"); fi
-done < "$QUEUE"
+done < <(cat "$QUEUE" "$EXCLUSIVE_QUEUE")
 
 if [ ${#failed[@]} -gt 0 ]; then
     for name in "${failed[@]}"; do
