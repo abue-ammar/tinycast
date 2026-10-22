@@ -156,7 +156,7 @@ the option to hide a current event immediately or after a chosen delay.
 | My Schedule | Opens the `.schedule` palette mode. | yes |
 | Create Event | Opens the launcher form for a title, a start and a duration, and writes the event. | yes |
 | Copy Meeting Link | The same meeting's link, to the pasteboard. | no |
-| Open in Calendar | Hands the meeting to Calendar.app. | no |
+| Open in Calendar | Hands the meeting to Calendar.app, or opens another default calendar app. | no |
 
 **A command that opens a surface is bindable**; the two that act on the next meeting are reached
 through the join card's own ⌘K menu instead, where the meeting they act on is on screen.

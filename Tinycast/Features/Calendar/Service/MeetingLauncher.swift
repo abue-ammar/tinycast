@@ -44,10 +44,17 @@ enum MeetingLauncher {
     @MainActor
     @discardableResult
     static func showInCalendar(_ event: MeetingEvent) -> Bool {
+        let workspace = NSWorkspace.shared
         guard
             let url = URL(
                 string: "ical://ekevent/\(event.calendarItemID)?method=show&options=more")
         else { return false }
-        return NSWorkspace.shared.open(url)
+        // The default calendar app owns webcal; only Calendar.app reads ical:// links.
+        if let webcal = URL(string: "webcal://"), let app = workspace.urlForApplication(toOpen: webcal),
+            app != workspace.urlForApplication(toOpen: url)
+        {
+            return workspace.open(app)
+        }
+        return workspace.open(url)
     }
 }
