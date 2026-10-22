@@ -212,7 +212,7 @@ struct DictationFieldTest {
         fixture.models.finish("Spoken words")
         try await wait { fixture.coordinator.field == nil }
         expect(
-            !AudioEvents.log.contains("cue"),
+            !AudioEvents.log.contains("start cue") && !AudioEvents.log.contains("stop cue"),
             "No cue plays unless sounds are on")
     }
 
@@ -226,10 +226,12 @@ struct DictationFieldTest {
         expect(AudioEvents.log.isEmpty, "The start cue waits for the microphone's first samples")
         fixture.capture.onLevels?([])
         try await wait { AudioEvents.log.contains("duck") }
-        expect(AudioEvents.log == ["cue", "duck"], "The start cue plays on the first samples, with ducking")
+        expect(
+            AudioEvents.log == ["start cue", "duck"],
+            "The start cue plays on the first samples, with ducking")
         fixture.coordinator.toggle(into: editor)
         expect(
-            AudioEvents.log == ["cue", "duck", "restore", "cue"],
+            AudioEvents.log == ["start cue", "duck", "restore", "stop cue"],
             "The stop cue plays once the volume is restored, before the microphone closes")
         expect(fixture.capture.isRecording, "The microphone is still open when the stop cue plays")
         try await wait { fixture.models.pending != nil }
@@ -249,7 +251,7 @@ struct DictationFieldTest {
         fixture.coordinator.cancel(in: editor)
         try await wait { !fixture.capture.isRecording }
         try await Task.sleep(for: .milliseconds(50))
-        expect(AudioEvents.log.filter { $0 == "cue" }.count == 1, "Cancelling plays no stop cue")
+        expect(!AudioEvents.log.contains("stop cue"), "Cancelling plays no stop cue")
     }
 
     private static func testCancelDuringStartCue() async throws {
@@ -263,7 +265,7 @@ struct DictationFieldTest {
         fixture.coordinator.cancel(in: editor)
         try await Task.sleep(for: .milliseconds(600))
         expect(
-            !AudioEvents.log.contains("cue") && !AudioEvents.log.contains("duck"),
+            !AudioEvents.log.contains("start cue") && !AudioEvents.log.contains("duck"),
             "A session cancelled before its start cue plays no cue and never ducks")
     }
 
@@ -276,7 +278,7 @@ struct DictationFieldTest {
         fixture.capture.isBluetooth = true
         let samples = ContinuousClock.now
         fixture.capture.onLevels?([])
-        try await wait { AudioEvents.log.contains("cue") }
+        try await wait { AudioEvents.log.contains("start cue") }
         expect(
             ContinuousClock.now - samples >= .milliseconds(500),
             "A Bluetooth microphone delays the start cue until its headset has switched output")
@@ -493,7 +495,9 @@ final class DictationAudioDucker {
 
 @MainActor
 final class DictationCueRunner {
-    func play() { AudioEvents.log.append("cue") }
+    enum Cue { case start, stop }
+
+    func play(_ cue: Cue) { AudioEvents.log.append(cue == .start ? "start cue" : "stop cue") }
 }
 
 @MainActor

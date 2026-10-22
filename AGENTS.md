@@ -103,7 +103,8 @@ feature's doc, under its own `## Invariants`.
   lists a command is a separate fact, and `SettingsTab.ownedCommands` is the only place that states it.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` and
   `Resources/EmojiKeywords/` come from `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`,
-  `CountryZoneData.generated.swift` from `node Scripts/gen-countries.js`, and
+  `CountryZoneData.generated.swift` from `node Scripts/gen-countries.js`, `Resources/DictationStart.wav`
+  and `DictationStop.wav` from `node Scripts/gen-dictation-sounds.js`, and
   `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is
   committed so building the app never needs Node.
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are

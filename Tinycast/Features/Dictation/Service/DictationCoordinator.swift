@@ -178,7 +178,7 @@ final class DictationCoordinator {
         }
     }
 
-    /// Measured with AirPods: output resumes up to a quarter second after the first samples.
+    /// A Bluetooth headset's output resumes up to a quarter second after the first samples.
     private static let bluetoothSettle = Duration.milliseconds(500)
 
     private func playStartCue() {
@@ -188,7 +188,7 @@ final class DictationCoordinator {
             guard let self else { return }
             if capture.isBluetooth { try? await Task.sleep(for: Self.bluetoothSettle) }
             guard token == current, phase == .starting || phase == .listening else { return }
-            cues.play()
+            cues.play(.start)
             audioDucker.begin()
         }
     }
@@ -205,9 +205,8 @@ final class DictationCoordinator {
         panel.state.phase = .transcribing
         field?.isTranscribing = true
         if settings.dictationPlaysSounds {
-            // At once, so the cue plays at full volume before the microphone closes.
             audioDucker.restoreImmediately()
-            cues.play()
+            cues.play(.stop)
         } else {
             audioDucker.end()
         }
