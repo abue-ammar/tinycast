@@ -778,7 +778,9 @@ final class AppSettings {
             defaults.object(forKey: Key.dictationAdaptsCapitalization.rawValue) == nil
             || defaults.bool(forKey: Key.dictationAdaptsCapitalization.rawValue)
         dictationLiveInsertion = defaults.bool(forKey: Key.dictationLiveInsertion.rawValue)
-        dictationPlaysSounds = defaults.bool(forKey: Key.dictationPlaysSounds.rawValue)
+        dictationPlaysSounds =
+            defaults.object(forKey: Key.dictationPlaysSounds.rawValue) == nil
+            || defaults.bool(forKey: Key.dictationPlaysSounds.rawValue)
         dictationIdleRelease =
             defaults.object(forKey: Key.dictationIdleRelease.rawValue)
             .flatMap { $0 as? Int }

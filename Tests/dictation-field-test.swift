@@ -202,6 +202,7 @@ struct DictationFieldTest {
 
     private static func testSoundsOff() async throws {
         let fixture = Fixture()
+        fixture.settings.dictationPlaysSounds = false
         let editor = ComposerTextView()
         AudioEvents.log = []
         fixture.coordinator.toggle(into: editor)
@@ -218,7 +219,6 @@ struct DictationFieldTest {
 
     private static func testSounds() async throws {
         let fixture = Fixture()
-        fixture.settings.dictationPlaysSounds = true
         let editor = ComposerTextView()
         AudioEvents.log = []
         try await fixture.start(into: editor)
@@ -242,7 +242,6 @@ struct DictationFieldTest {
 
     private static func testCancelSilently() async throws {
         let fixture = Fixture()
-        fixture.settings.dictationPlaysSounds = true
         let editor = ComposerTextView()
         AudioEvents.log = []
         try await fixture.start(into: editor)
@@ -256,7 +255,6 @@ struct DictationFieldTest {
 
     private static func testCancelDuringStartCue() async throws {
         let fixture = Fixture()
-        fixture.settings.dictationPlaysSounds = true
         let editor = ComposerTextView()
         AudioEvents.log = []
         try await fixture.start(into: editor)
@@ -271,7 +269,6 @@ struct DictationFieldTest {
 
     private static func testBluetoothStartCue() async throws {
         let fixture = Fixture()
-        fixture.settings.dictationPlaysSounds = true
         let editor = ComposerTextView()
         AudioEvents.log = []
         try await fixture.start(into: editor)
@@ -405,7 +402,7 @@ final class AppSettings {
     var dictationDestination = DictationDestination.copy
     var dictationAdaptsCapitalization = true
     var dictationLiveInsertion = false
-    var dictationPlaysSounds = false
+    var dictationPlaysSounds = true
 }
 
 enum HotKeyAction { case dictation }

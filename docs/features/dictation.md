@@ -55,7 +55,7 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
   Relaunch restores the original device only if its volume still matches that record, including
   when Dictation is disabled. An unavailable device keeps its record for a later attempt; new ducking
   waits for that recovery. File writes run off-main and finish before the hardware changes.
-- Play sounds is off by default. When on, a rising chime plays on the microphone's first samples and a
+- Play sounds is on by default. When on, a rising chime plays on the microphone's first samples and a
   falling one when recording stops (release, toggle, Return or the length limit); cancelling stays
   silent. Both are synthesized by `Scripts/gen-dictation-sounds.js`, so no third-party audio ships.
   A Bluetooth headset drops output while it switches to its microphone, sometimes after the first
