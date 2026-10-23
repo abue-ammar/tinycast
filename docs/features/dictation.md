@@ -55,9 +55,10 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
   Relaunch restores the original device only if its volume still matches that record, including
   when Dictation is disabled. An unavailable device keeps its record for a later attempt; new ducking
   waits for that recovery. File writes run off-main and finish before the hardware changes.
-- Play sounds is on by default. When on, a rising chime plays on the microphone's first samples and a
-  falling one when recording stops (release, toggle, Return or the length limit); cancelling stays
-  silent. Both are synthesized by `Scripts/gen-dictation-sounds.js`, so no third-party audio ships.
+- Play sounds is on by default. When on, macOS's `dt-begin.caf` plays on the microphone's first samples
+  and `dt-confirm.caf` when recording stops (release, toggle, Return or the length limit); cancelling
+  stays silent. These are internal resources in `AssistantServices.framework`, not bundled audio;
+  their location is undocumented, and a missing sound is silently skipped without blocking dictation.
   A Bluetooth headset drops output while it switches to its microphone, sometimes after the first
   samples arrive, so with a Bluetooth microphone the start cue waits half a second more. Ducking
   then starts with the start cue instead of at the press, and never for a session cancelled
@@ -113,6 +114,7 @@ compilation of its 2-bit weights; Ultra's encoder and both variants' decoder/joi
 
 ## Validation
 
+`dictation-cue-test` checks system resource paths, playback ordering and missing sounds without audio output.
 `dictation-field-test` checks composer switching and teardown, scoped cancellation, delayed insertion and
 the order of sound cues against ducking
 with synthetic capture and real AppKit editors, without recording audio or touching the shared clipboard.
