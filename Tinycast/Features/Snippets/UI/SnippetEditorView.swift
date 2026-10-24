@@ -53,7 +53,7 @@ struct SnippetEditorView: View {
             VStack(spacing: metrics.spacing.xs) {
                 FormTextArea(
                     text: $editor.text, selection: $editor.selection, focused: focusBinding(.template),
-                    minimumHeight: metrics.size.panelHeight - metrics.size.headerHeight * 4
+                    minimumHeight: metrics.size.panelHeight - metrics.size.textAreaUnit * 4
                         - metrics.spacing.xl - metrics.spacing.md * 2 - metrics.spacing.xs
                         - metrics.typography.textNSFont(.callout).boundingRectForFont.height,
                     label: String(localized: "Snippet template"), moveFocus: editor.advanceFocus

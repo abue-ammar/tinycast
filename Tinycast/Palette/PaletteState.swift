@@ -43,7 +43,6 @@ final class PaletteState {
     /// Bumped for ⌘0 / ⌘+ / ⌘-, which the panel claims before the field editor can.
     private(set) var emojiGridZoomToken = UUID()
     private(set) var emojiGridZoom: EmojiGridZoom?
-    /// Set by the compact bar's overflow to expand without a query; cleared by `prepare`.
     var forceExpanded = false
     /// The paste target, mirrored on every show; `prepare` resets the screen, not this.
     var pasteTarget: PasteTarget?

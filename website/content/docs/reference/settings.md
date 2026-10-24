@@ -31,7 +31,7 @@ There are 21 panes in four groups.
 | Interface size                    | Default · Large · Larger                                           | **Default**                       |
 | Background transparency           | Less to More, with Reset                                           | Middle                            |
 | Compact mode                      | On · Off                                                           | Off                               |
-| Show favorites in compact mode    | On · Off                                                           | **On**                            |
+| Compact Shortcuts                 | Zero to four ordered shortcuts, shown when Compact is selected      | Clipboard, Files, Snippets, Quicklinks |
 | Follow the cursor across displays | On · Off                                                           | **On**                            |
 | Drag to reposition                | On · Off                                                           | Off                               |
 | Launch at login                   | On · Off                                                           | Off                               |

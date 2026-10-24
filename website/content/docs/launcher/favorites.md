@@ -40,12 +40,8 @@ In the clipboard screen, the same number keys paste your pinned entries instead.
 
 ## In compact mode
 
-With [compact mode](/docs/palette#appearance) and **Show favorites in compact mode** both on, your
-favorites appear as icons on the right side of the slim search bar.
-
-The bar fits five icons, and the same numbers open them. If you have more than five, a **…** button
-appears after them. Click it, or press <kbd>↓</kbd>, to open the full list. <kbd>⌘</kbd><kbd>6</kbd>
-and higher still open the favorites that don't fit in the bar.
+The slim search bar of [compact mode](/docs/palette#appearance) doesn't show your favorites, but the
+same numbers still open them. Press <kbd>↓</kbd> to open the full list.
 
 ## Favorites don't affect ranking
 

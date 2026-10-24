@@ -1,4 +1,5 @@
 import AppKit
+import Carbon.HIToolbox
 import SwiftUI
 
 @MainActor
@@ -179,6 +180,9 @@ struct PaletteMenuClickTests {
             panel.cursor(at: NSPoint(x: 400, y: view.bounds.height - 50)) === NSCursor.iBeam,
             "the search rectangle still supplies its stable cursor")
 
+        field.isEditable = true
+        boundaryArrows(in: panel, field: field)
+
         let hosting = NSHostingView(
             rootView: ScrollView {
                 TextField("Extension placeholder", text: .constant(""))
@@ -209,5 +213,54 @@ struct PaletteMenuClickTests {
     private static func textField(in view: NSView) -> NSTextField? {
         if let field = view as? NSTextField { return field }
         return view.subviews.lazy.compactMap { textField(in: $0) }.first
+    }
+
+    private static func boundaryArrows(in panel: PalettePanel, field: NSTextField) {
+        field.stringValue = ""
+        panel.makeFirstResponder(field)
+        guard let editor = panel.firstResponder as? NSTextView else {
+            check(false, "the search field owns the real AppKit field editor")
+            return
+        }
+        var boundaries: [PalettePanel.HeaderFieldBoundary] = []
+        panel.onHeaderFieldBoundaryArrow = {
+            boundaries.append($0); return true
+        }
+        defer { panel.onHeaderFieldBoundaryArrow = nil }
+
+        func send(_ code: Int, modifiers: NSEvent.ModifierFlags = []) {
+            let characters = code == kVK_LeftArrow ? "\u{F702}" : "\u{F703}"
+            let event = NSEvent.keyEvent(
+                with: .keyDown, location: .zero, modifierFlags: modifiers,
+                timestamp: ProcessInfo.processInfo.systemUptime, windowNumber: panel.windowNumber,
+                context: nil, characters: characters, charactersIgnoringModifiers: characters,
+                isARepeat: false, keyCode: UInt16(code))!
+            panel.sendEvent(event)
+        }
+
+        editor.setSelectedRange(NSRange(location: 0, length: 0))
+        send(kVK_RightArrow)
+        send(kVK_LeftArrow)
+        check(boundaries == [.trailing, .leading], "empty search forwards both boundary arrows")
+        editor.string = "abc"
+        editor.setSelectedRange(NSRange(location: 1, length: 0))
+        send(kVK_RightArrow)
+        check(boundaries.count == 2, "arrows inside text stay with the caret")
+        editor.setSelectedRange(NSRange(location: 3, length: 0))
+        send(kVK_RightArrow)
+        check(
+            boundaries.last == .trailing && boundaries.count == 3,
+            "Right reaches the header handler at the text boundary")
+        editor.setSelectedRange(NSRange(location: 0, length: 3))
+        send(kVK_RightArrow)
+        check(boundaries.count == 3, "selected text collapses before boundary navigation")
+        send(kVK_RightArrow, modifiers: .shift)
+        check(boundaries.count == 3, "modified arrows retain their text editing behavior")
+        editor.setMarkedText(
+            "あ", selectedRange: NSRange(location: 1, length: 0),
+            replacementRange: NSRange(location: 0, length: 3))
+        send(kVK_RightArrow)
+        check(boundaries.count == 3, "marked IME text owns boundary arrows")
+        editor.unmarkText()
     }
 }

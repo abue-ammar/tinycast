@@ -27,7 +27,7 @@ struct CustomCommandEditorView: View {
                         VStack(alignment: .leading, spacing: metrics.spacing.md) {
                             FormTextArea(
                                 text: $editor.shellCommand, selection: $editor.selection,
-                                focused: focusBinding(.command), minimumHeight: metrics.size.headerHeight * 2,
+                                focused: focusBinding(.command), minimumHeight: metrics.size.textAreaUnit * 2,
                                 label: String(localized: "Shell command"), isCode: true,
                                 moveFocus: editor.advanceFocus
                             )

@@ -458,7 +458,7 @@ only while the score is above 1 and the entry was opened in the last 17 days, wh
 stale habit stop overriding the alignment.
 
 Every pick through `LauncherCoordinator.launch` is a visit, with the query as it was typed: a list
-click, a result, a favorite by ⌘-digit or from the compact bar, the ⌘K Open row. A global shortcut
+click, a result, a favorite by ⌘-digit, the ⌘K Open row. A global shortcut
 is not a visit, and neither is a fallback or a query-driven row. A category listing records the visit
 and not the word. `rank` reads the store once per pass through `snapshot()` — one clock read, not one
 per candidate — and the memos key on the ranking, alias, visibility, favorites and shortcut revisions
@@ -696,7 +696,7 @@ internals live in [navigation.md](navigation.md) and [menu-search.md](menu-searc
 The ranking harness covers the frecency curve, search-term retention and its 17-day gate, pruning,
 persistence and both reset paths; see the command in `development.md`.
 
-Launcher rows and compact favorites ask for the point size they actually draw at, scaled by the
+Launcher rows ask for the point size they actually draw at, scaled by the
 view's `displayScale`: 24/26/29pt becomes 48/52/58px at 2×. `IconCache` still rasterizes through its
 96px canvas first — AppKit picks the representation and the drop shadow from that size — and then
 keeps only the row-sized bitmap, in an 8 MB cost-capped row cache separate from the 32 MB one.
@@ -751,10 +751,9 @@ that screen; the eleventh favorite is still listed and reorderable, and simply h
 
 Both palette sizes serve the chords from the same prefix, because `paletteIsCollapsed` already
 requires an empty query: **compact implies empty implies `favoriteCount` is the pinned prefix**. That
-is why `LauncherScreen.pinnedFavorites` feeds the strip, the chords and the numbered rows alike,
-rather than the compact bar re-deriving an empty-query order of its own. In compact the strip draws
-the first five; ⌘6–⌘0 still launch favorites it has no room for, and the "…" is a button after them
-rather than a slot, so no favorite loses its digit to the overflow.
+is why `LauncherScreen.pinnedFavorites` feeds the chords and the numbered rows alike, rather than
+the compact bar re-deriving an empty-query order of its own. The compact bar draws no favorites, yet
+every slot still launches one.
 
 Holding ⌘ swaps each numbered row's kind label for its chord. `PalettePanel` publishes the modifier
 into `PaletteState.commandHeld` from `.flagsChanged` and clears it in `resignKey` — not in `prepare`,
@@ -822,8 +821,7 @@ and the lead card keep SwiftUI's own gesture. The operation is **copy only**, as
 [clipboard.md](clipboard.md#dragging-out) explains: on the boot volume a file-URL drag would default
 to a move, and moving an app out of `/Applications` is never what a launcher should do. The image is
 the shared icon bitmap when it is warm and `NSWorkspace`'s otherwise, never a decode, and a landed
-drop hides the palette through `PaletteCoordinator.dragLanded()`. Compact mode's favorite buttons do
-not drag.
+drop hides the palette through `PaletteCoordinator.dragLanded()`.
 
 ## Quitting and restarting apps
 

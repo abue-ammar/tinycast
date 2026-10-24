@@ -32,6 +32,12 @@ in `Features/Settings/` (`Model/`, `Service/`, `SettingsFileSchema.swift`), the 
 
 ## Layout
 
+`appearance.compactBarCommands` is an ordered array of zero to four unique command identifiers.
+For example, `["command:clipboard-history", "command:search-emoji", "command:ai-chat"]` shows
+Clipboard History, Emoji & Symbols and Quick AI in that order. Only the eight commands offered by
+Compact Shortcuts are accepted; unknown, duplicate, unsupported or excess entries reject the whole
+value. `[]` removes every shortcut, and omitting the key leaves the current selection unchanged.
+
 | File | Role |
 | --- | --- |
 | `Settings/Model/SettingsFileKey.swift` | Every key, in file order; the raw value is its `section.name` path |

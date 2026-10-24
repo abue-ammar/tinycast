@@ -74,7 +74,7 @@ struct QuicklinkEditorView: View {
             VStack(spacing: metrics.spacing.xs) {
                 FormTextArea(
                     text: $editor.link, selection: $editor.selection, focused: focusBinding(.link),
-                    minimumHeight: metrics.size.headerHeight * 2 + metrics.spacing.xl
+                    minimumHeight: metrics.size.textAreaUnit * 2 + metrics.spacing.xl
                         - metrics.spacing.md * 2 - metrics.spacing.xs
                         - metrics.typography.textNSFont(.body).boundingRectForFont.height,
                     label: String(localized: "Quicklink link"), allowsLineBreaks: false,

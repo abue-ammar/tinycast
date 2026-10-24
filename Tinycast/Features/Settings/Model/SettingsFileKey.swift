@@ -15,7 +15,7 @@ enum SettingsFileKey: String, CaseIterable, Sendable {
     case animationsEnabled = "appearance.animations"
     case interfaceSize = "appearance.interfaceSize"
     case compactMode = "appearance.compactMode"
-    case showFavoritesInCompactMode = "appearance.showFavoritesInCompactMode"
+    case compactBarCommands = "appearance.compactBarCommands"
     case openOnCursorScreen = "appearance.followCursorAcrossDisplays"
     case paletteDraggable = "appearance.dragToReposition"
     case hyperKey = "hyperKey.key"

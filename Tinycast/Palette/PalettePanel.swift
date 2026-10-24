@@ -44,7 +44,7 @@ final class PalettePanel: NSPanel, AnimatedPanel {
     /// Nil while a selection can still collapse normally, or when the caret is not at an edge.
     private func headerFieldBoundary(for event: NSEvent) -> HeaderFieldBoundary? {
         guard event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
-            let editor = fieldEditor, editor.selectedRange().length == 0
+            let editor = fieldEditor, !editor.hasMarkedText(), editor.selectedRange().length == 0
         else { return nil }
         switch Int(event.keyCode) {
         case kVK_LeftArrow where editor.selectedRange().location == 0: return .leading

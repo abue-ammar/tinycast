@@ -68,6 +68,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         /// Derived, not scaled: the compact bar must stay exactly the header in symmetric slack.
         var compactHeight: CGFloat { headerHeight + headerPadding * 2 }
         var bottomBarHeight: CGFloat { scaledPoints(Theme.Size.bottomBarHeight, scale) }
+        var textAreaUnit: CGFloat { scaledPoints(Theme.Size.textAreaUnit, scale) }
         var barButtonHeight: CGFloat { scaledPoints(Theme.Size.barButtonHeight, scale) }
         var rowIcon: CGFloat { scaledPoints(Theme.Size.rowIcon, scale) }
         var resultRowIcon: CGFloat { scaledPoints(Theme.Size.resultRowIcon, scale) }
@@ -159,7 +160,7 @@ struct InterfaceMetrics: Equatable, Sendable {
         var headerIcon: Font {
             scale == 1
                 ? Theme.Typography.headerIcon
-                : .system(size: scaledPoints(18, scale), weight: .medium)
+                : .system(size: scaledPoints(Theme.Typography.headerIconSize, scale), weight: .medium)
         }
 
         var rowTitle: Font { font(Theme.Typography.rowTitle, .body) }

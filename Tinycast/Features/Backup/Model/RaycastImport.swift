@@ -55,15 +55,9 @@ enum RaycastImport {
                 settings.popToRootSeconds = secs
                 hasSettings = true
             }
-            if options.contains(.compactMode) {
-                if let compact = backup.settings?.compactMode {
-                    settings.compactMode = compact
-                    hasSettings = true
-                }
-                if let showFavorites = backup.settings?.showFavoritesInCompactMode {
-                    settings.showFavoritesInCompactMode = showFavorites
-                    hasSettings = true
-                }
+            if options.contains(.compactMode), let compact = backup.settings?.compactMode {
+                settings.compactMode = compact
+                hasSettings = true
             }
             if options.contains(.shortcuts) {
                 if let shift = backup.settings?.hyperKeyIncludesShift {

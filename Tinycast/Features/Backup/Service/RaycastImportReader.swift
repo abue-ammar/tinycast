@@ -75,10 +75,6 @@ enum RaycastImportReader {
             data.compactMode = (mode == "compact")
             mapped = true
         }
-        if let showFavorites = general?["showFavoritesInCompactMode"] as? Bool {
-            data.showFavoritesInCompactMode = showFavorites
-            mapped = true
-        }
         return mapped ? data : nil
     }
 

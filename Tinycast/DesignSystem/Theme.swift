@@ -86,7 +86,8 @@ enum Theme {
         static let noteTrafficLightInset: CGFloat = 20
         /// Fraction of visible height above the palette's top edge; it grows downward.
         static let paletteTopMarginFraction: CGFloat = 0.18
-        static let headerHeight: CGFloat = 44
+        /// The search row; padded alike above and below, it is the compact bar's whole height.
+        static let headerHeight: CGFloat = 36
         /// Fixed slot for the header glyph, so the field starts at one x in every mode.
         static let headerIconSlot: CGFloat = 22
         /// The narrowest a strip squeezes the search field to: the caret and a few characters.
@@ -105,6 +106,8 @@ enum Theme {
         static let dropGuideFadeThreshold: CGFloat = 36
         static let dropGuideFadeDistance: CGFloat = 180
         static let bottomBarHeight: CGFloat = 52
+        /// The unit a form's text area counts its minimum height in, so it scales with the interface.
+        static let textAreaUnit: CGFloat = 44
         static let barButtonHeight: CGFloat = 28
         static let rowIcon: CGFloat = 24
         static let resultRowIcon: CGFloat = 26
@@ -329,6 +332,27 @@ enum Theme {
         static let glide = Animation.timingCurve(0.2, 0, 0, 1, duration: Theme.Duration.roomGlide)
     }
 
+    enum CompactBarMotion {
+        /// Under the 10pt gap, so resting buttons stand apart and only moving ones fuse.
+        static let blend: CGFloat = 8
+        /// Parked inside the capsule's end this small, so each button pinches out of it.
+        static let parkedScale: CGFloat = 0.36
+        /// One button after another, beaded off the capsule.
+        static let stagger: TimeInterval = 0.055
+        /// A summon lands first; the buttons extrude once the window has arrived.
+        static let revealDelay: TimeInterval = 0.12
+        /// The glyph surfaces once its glass has formed, and blurs in rather than popping.
+        static let glyphDelay: TimeInterval = 0.24
+        static let glyphFade: TimeInterval = 0.16
+        static let glyphBlur: CGFloat = 4
+        /// Past the window's own close animation, so parking the buttons is never seen.
+        static let parkAfterHide: TimeInterval = 0.3
+        /// The capsule undershoots as it shortens, then settles.
+        static let capsule = Animation.spring(response: 0.44, dampingFraction: 0.62)
+        /// The buttons barely overshoot: the last rests on the window's edge, which would clip it.
+        static let button = Animation.spring(response: 0.44, dampingFraction: 0.86)
+    }
+
     enum MenuMotion {
         /// Starts promptly and eases gently into the chevron's final direction.
         static let chevronAnimation = Animation.timingCurve(
@@ -342,7 +366,8 @@ enum Theme {
         /// `NSFont` is not `Sendable`, hence the isolation; every reader is a view anyway.
         @MainActor static let searchFieldNSFont = NSFont.systemFont(
             ofSize: searchFieldSize, weight: .regular)
-        static let headerIcon = Font.system(size: 18, weight: .medium)
+        static let headerIconSize: CGFloat = 18
+        static let headerIcon = Font.system(size: headerIconSize, weight: .medium)
         static let rowTitle = Font.body
         static let rowTrailing = Font.callout
         static let sectionHeader = Font.subheadline.weight(.medium)
@@ -418,6 +443,10 @@ enum Theme {
         static let controlHover = ramp(dark: 0.16, light: 0.14)
         /// A held control is stronger than hover, so mouse-down always reads.
         static let controlPressed = ramp(dark: 0.24, light: 0.20)
+        static let compactShortcutGlassSelection = ramp(dark: 1, light: 0)
+        static let compactShortcutSelection = ramp(dark: 0.20, light: 0.55)
+        static let compactShortcutSelectedInk = adaptive(
+            dark: .srgbInk(1, alpha: 1), light: .srgbInk(1, alpha: 1))
         /// Control borders: outlined kbd chips.
         static let border = ramp(dark: 0.20, light: 0.18)
         /// Alpha 1, so a call site can dim it with `.opacity` and land on the value it replaced.

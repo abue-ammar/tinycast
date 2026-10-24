@@ -83,6 +83,9 @@ the shortcut again to close it.
 
 In both cases, the first press clears any text you typed.
 
+With Compact mode enabled, Escape at expanded launcher search clears text, then collapses the
+palette, then closes it. This sequence applies under either Escape preference.
+
 ## Where it opens
 
 Both placement settings are in **Settings → General → Appearance**.
@@ -110,7 +113,6 @@ unplug a monitor. Positions aren't included in backups, since they don't carry o
 | Interface size                 | Default · Large · Larger               | **Default** |
 | Background transparency        | A slider from Less to More, with Reset | Middle      |
 | Compact mode                   | On · Off                               | Off         |
-| Show favorites in compact mode | On · Off                               | On          |
 
 **Theme.** System follows macOS whenever it changes. Light uses the same design with inverted
 colors, and the layout, type and animations stay the same.
@@ -122,8 +124,15 @@ stays the same size.
 the original look.
 
 **Compact mode** opens the launcher as a slim search bar that expands into the full list as you
-type. <kbd>↓</kbd> expands it and selects the first row. With **Show favorites in compact mode** on,
-your favorite apps appear at the right of the bar. See [Favorites](/docs/launcher/favorites).
+type. <kbd>←</kbd> and <kbd>→</kbd> select Search or a shortcut, stopping at either end.
+<kbd>↓</kbd> on Search expands the list and selects its first row; on a shortcut it opens that item.
+<kbd>return</kbd> opens a selected shortcut. Typing from any shortcut starts a search.
+
+**Settings → General → Compact Shortcuts** appears when Compact is selected. Add, change, remove
+and reorder up to four shortcuts, or remove them all for a search-only bar. The defaults are Clipboard
+History, Search Files, Search Snippets and Search Quicklinks. You can also choose Emoji & Symbols,
+Show Notes, My Schedule and Quick AI. Show Notes opens the Notes window. A disabled feature's shortcut
+stays configured and reappears in its original position when enabled again.
 
 The [Toggle System Appearance](/docs/launcher/system-actions) action changes the appearance of
 _macOS itself_. Tinycast follows it only while its own theme is set to System.

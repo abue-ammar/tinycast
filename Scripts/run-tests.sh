@@ -328,6 +328,20 @@ run palette-tab-test       Tinycast/Palette/PaletteMode.swift \
                            Tinycast/Features/Quicklinks/Model/Quicklink.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift
+run compact-bar-test       Tinycast/Features/Launcher/Model/CompactBarSelection.swift \
+                           Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Features/Settings/Model/*.swift \
+                           Tinycast/Features/Launcher/Model/CommandID.swift \
+                           Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/QuickActions/Model/QuickAction.swift \
+                           Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
+                           Tinycast/Features/QuickActions/Model/CustomQuickAction.swift \
+                           Tinycast/Features/Quicklinks/Model/Quicklink.swift \
+                           Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
+                           Tinycast/Features/SystemActions/Model/SystemAction.swift \
+                           Tinycast/Features/WindowManagement/Model/WindowCommand.swift \
+                           Tinycast/Features/Snippets/Model/Snippet.swift \
+                           Tinycast/Platform/LocalizedResource.swift
 run fallback-test          Tinycast/Features/Launcher/Model/Fallback.swift \
                            Tinycast/Features/Launcher/Model/CommandID.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
