@@ -103,7 +103,7 @@ struct AppleIntelligenceProvider: AIProvider {
             return .responseFailed(
                 String(localized: "Apple Intelligence does not support this language yet."))
         case .assetsUnavailable:
-            return .unavailable(String(localized: "Apple Intelligence is still downloading its model."))
+            return .unavailable(String(localized: "Apple Intelligence is not available on this Mac."))
         case .rateLimited:
             return .responseFailed(String(localized: "Apple Intelligence is busy. Try again shortly."))
         case .concurrentRequests:

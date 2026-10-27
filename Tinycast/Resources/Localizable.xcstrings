@@ -22512,106 +22512,54 @@
         }
       }
     },
-    "Apple Intelligence is still downloading its model." : {
+    "Apple Intelligence is not available on this Mac." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence lädt sein Modell noch."
+            "value" : "Apple Intelligence ist auf diesem Mac nicht verfügbar."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence sigue descargando su modelo."
+            "value" : "Apple Intelligence no está disponible en este Mac."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence télécharge encore son modèle."
+            "value" : "Apple Intelligence n’est pas disponible sur ce Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligenceはまだモデルをダウンロード中です。"
+            "value" : "このMacではApple Intelligenceを利用できません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence가 아직 모델을 다운로드하는 중입니다."
+            "value" : "이 Mac에서는 Apple Intelligence를 사용할 수 없습니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A Apple Intelligence ainda está baixando o modelo dela."
+            "value" : "A Apple Intelligence não está disponível neste Mac."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence всё ещё загружает свою модель."
+            "value" : "Apple Intelligence недоступен на этом Mac."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence 仍在下载其模型。"
-          }
-        }
-      }
-    },
-    "Apple Intelligence is still downloading its model. Try again shortly." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence lädt sein Modell noch. Versuche es gleich noch einmal."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence sigue descargando su modelo. Vuelve a intentarlo en unos instantes."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence télécharge encore son modèle. Réessayez dans un instant."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligenceはまだモデルをダウンロード中です。しばらくしてからもう一度お試しください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence가 아직 모델을 다운로드하는 중입니다. 잠시 후 다시 시도하십시오."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A Apple Intelligence ainda está baixando o modelo dela. Tente novamente em instantes."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence всё ещё загружает свою модель. Повторите попытку чуть позже."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence 仍在下载其模型。请稍后重试。"
+            "value" : "Apple Intelligence 在这台 Mac 上不可用。"
           }
         }
       }
