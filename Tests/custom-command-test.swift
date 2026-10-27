@@ -409,6 +409,84 @@ struct CustomCommandTests {
             "output arrives while the command is still running",
             (firstOutputAt ?? .greatestFiniteMagnitude) < 0.5)
 
+        // A picker's last line ends without a newline, and the command then waits on its answer.
+        let prompting = ShellCommandRunner.stream("printf 'Continue? [y/N] '; sleep 1")
+        let asked = Date()
+        var promptShownAt: TimeInterval?
+        for await event in prompting.events {
+            if case .output(let text) = event, text.contains("Continue?"), promptShownAt == nil {
+                promptShownAt = Date().timeIntervalSince(asked)
+            }
+        }
+        check(
+            "a prompt that ends no line is shown while the command waits",
+            (promptShownAt ?? .greatestFiniteMagnitude) < 0.5)
+
+        // `é` split across reads: the text before it flushes, its lone lead byte waits for the rest.
+        var decoder = ShellCommandRunner.TerminalTextDecoder()
+        decoder.append([0x63, 0x61, 0x66, 0xC3], count: 4)
+        check("text ahead of a split character can flush", decoder.canFlush)
+        check("a forced flush stops short of the split character", decoder.take(force: true) == "caf")
+        check("a lone partial character gives the idle flush nothing to wait on", !decoder.canFlush)
+        decoder.append([0xA9], count: 1)
+        check("the completed character flushes whole", decoder.take(force: true) == "\u{e9}")
+
+        let splitAcrossWrites = ShellCommandRunner.stream("printf 'caf\\303'; sleep 0.6; printf '\\251\\n'")
+        let splitStarted = Date()
+        var splitLog = ""
+        var headShownAt: TimeInterval?
+        for await event in splitAcrossWrites.events {
+            guard case .output(let text) = event else { continue }
+            splitLog += text
+            if headShownAt == nil { headShownAt = Date().timeIntervalSince(splitStarted) }
+        }
+        check(
+            "a character split across writes arrives whole and uncorrupted",
+            splitLog == "caf\u{e9}\r\n" && (headShownAt ?? .greatestFiniteMagnitude) < 0.5)
+
+        func transcript(_ session: ShellCommandSession) async -> String {
+            var log = ""
+            for await event in session.events {
+                if case .output(let text) = event { log += text }
+            }
+            return log
+        }
+
+        let coloured = await transcript(ShellCommandRunner.stream("printf '\\033[1;31mred\\033[0m plain\\n'"))
+        check(
+            "colour escapes reach the window byte for byte",
+            coloured == "\u{1B}[1;31mred\u{1B}[0m plain\r\n")
+
+        let progress = await transcript(
+            ShellCommandRunner.stream("for i in 1 2 3; do printf '\\r%d%%' $i; sleep 0.1; done; echo"))
+        check("progress frames arrive in order, none lost or doubled", progress == "\r1%\r2%\r3%\r\n")
+
+        let large = await collect(
+            ShellCommandRunner.stream("head -c 200000 /dev/zero | tr '\\0' x; printf '\\n'; seq 20000"))
+        let largeLines = large.log.split(separator: "\n", omittingEmptySubsequences: false)
+        check(
+            "large output arrives complete",
+            largeLines.count == 20001 && largeLines.first?.count == 200_000 && largeLines.last == "20000")
+
+        // Stopped once the prompt shows, so a slow shell start under load cannot race the stop.
+        let heldPrompt = ShellCommandRunner.stream("printf 'Continue? '; sleep 5")
+        var stoppedAt: Date?
+        var heldResult: ShellCommandResult?
+        for await event in heldPrompt.events {
+            switch event {
+            case .output(let text):
+                guard stoppedAt == nil, text.contains("Continue?") else { continue }
+                stoppedAt = Date()
+                heldPrompt.stop()
+            case .finished(let result):
+                heldResult = result
+            }
+        }
+        check(
+            "stop ends a command waiting at a prompt, which still showed",
+            heldResult?.termination == .stopped
+                && Date().timeIntervalSince(stoppedAt ?? .distantPast) < 1.5)
+
         let statused = await collect(ShellCommandRunner.stream("exit 7"))
         check(
             "a streamed run reports its exit status",

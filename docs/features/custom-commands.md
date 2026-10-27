@@ -223,7 +223,8 @@ Because a terminal makes tools colour their output, `ANSIInterpreter` renders SG
 printing the escapes — that is what replaces the old red-stderr tint, which was a mistake: stderr is
 where most tools log progress, so colouring it as an error made a successful `brew update` look
 broken. A bare carriage return rewinds its line, so a progress bar redraws in place instead of
-stacking a line per frame.
+stacking a line per frame. A line the command has not ended is shown once the pty goes quiet for
+40 ms, since a prompt or a picker's last line is followed by a wait, not a newline.
 
 The log is an `NSTextView` and only the undrawn tail is appended; a quarter-megabyte of output
 re-laid-out per line is seconds of work. The run publishes each append as an explicit `delta` and

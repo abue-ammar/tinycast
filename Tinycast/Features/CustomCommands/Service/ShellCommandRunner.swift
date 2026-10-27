@@ -197,6 +197,14 @@ enum ShellCommandRunner {
         var lastYield = ContinuousClock().now
 
         while true {
+            // A waiting prompt never prints again, so only a quiet pty can show its unended line.
+            if decoder.canFlush, !hasOutput(terminal.parentEnd, within: flushInterval) {
+                if let text = decoder.take(force: true) {
+                    continuation.yield(.output(text))
+                    lastYield = ContinuousClock().now
+                }
+                continue
+            }
             // Zero is EOF; -1 with EIO is what a pty master returns once its child is gone.
             let count = read(terminal.parentEnd, &buffer, readSize)
             guard count > 0 else { break }
@@ -208,6 +216,7 @@ enum ShellCommandRunner {
             }
         }
         if let text = decoder.take(force: true) { continuation.yield(.output(text)) }
+        if let text = decoder.takeTruncated() { continuation.yield(.output(text)) }
 
         let status = terminal.wait()
         terminal.close()
@@ -216,6 +225,17 @@ enum ShellCommandRunner {
                 ShellCommandResult(
                     termination: stopped.isSet ? .stopped : .exited(status: status))))
         continuation.finish()
+    }
+
+    /// A hangup counts as output, so the `read` that follows still sees the child go.
+    nonisolated private static func hasOutput(_ descriptor: Int32, within interval: Duration) -> Bool {
+        var request = pollfd(fd: descriptor, events: Int16(POLLIN), revents: 0)
+        var ready: Int32
+        // An interrupted wait says nothing about the pty; falling through would block in `read`.
+        repeat {
+            ready = poll(&request, 1, Int32(interval / .milliseconds(1)))
+        } while ready < 0 && errno == EINTR
+        return ready != 0
     }
 
     /// Set from the main actor and read on the drain queue, so the flag carries its own lock.
@@ -237,8 +257,11 @@ enum ShellCommandRunner {
     }
 
     /// Whole lines only: a newline is a scalar boundary, so no read decodes mid-character.
-    private struct TerminalTextDecoder {
+    struct TerminalTextDecoder {
         private var pending: [UInt8] = []
+
+        /// A lone partial character is not text yet, so waiting on it alone would wake for nothing.
+        var canFlush: Bool { scalarBoundary(before: pending.count) > 0 }
 
         mutating func append(_ bytes: [UInt8], count: Int) {
             pending.append(contentsOf: bytes[0..<count])
@@ -253,10 +276,21 @@ enum ShellCommandRunner {
                 end = scalarBoundary(before: pending.count)
             }
             guard let end, end > 0 else { return nil }
-            // Latin-1 cannot fail, so other encodings still reach the reader.
             let bytes = Array(pending[0..<end])
             pending.removeFirst(end)
-            return String(bytes: bytes, encoding: .utf8) ?? String(bytes: bytes, encoding: .isoLatin1)
+            return Self.decode(bytes)
+        }
+
+        /// Once the command is gone nothing can complete a character, so its bytes are shown as is.
+        mutating func takeTruncated() -> String? {
+            guard !pending.isEmpty else { return nil }
+            defer { pending.removeAll() }
+            return Self.decode(pending)
+        }
+
+        /// Latin-1 cannot fail, so other encodings still reach the reader.
+        private static func decode(_ bytes: [UInt8]) -> String? {
+            String(bytes: bytes, encoding: .utf8) ?? String(bytes: bytes, encoding: .isoLatin1)
         }
 
         /// Walks back over at most three continuation bytes to the start of a whole character.
@@ -270,7 +304,8 @@ enum ShellCommandRunner {
             // A lead byte only holds back when its own sequence is still incomplete.
             guard boundary > 0 else { return index }
             let lead = pending[boundary - 1]
-            let width = lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1
+            // RFC 3629: 0xF5 and up never begin a character, so nothing is held back for them.
+            let width = lead >= 0xF5 ? 1 : lead >= 0xF0 ? 4 : lead >= 0xE0 ? 3 : lead >= 0xC0 ? 2 : 1
             return index - boundary + 1 >= width ? index : boundary - 1
         }
     }
