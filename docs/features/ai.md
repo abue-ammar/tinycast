@@ -149,7 +149,9 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   `AppleIntelligence.contextBudget` rather than the cloud routes' ~100 KB because the on-device window
   holds a prompt and its reply together. Availability is asked for each time, never cached at launch:
   the model finishes downloading mid-session, and reading it inside a view body leaves SwiftUI
-  observing the framework's own state.
+  observing the framework's own state. `modelNotReady` is also what a Mac whose profile switches
+  Apple Intelligence off reports, so its copy says only that the model is not available and never
+  promises a download.
 - **An unavailable on-device model is reported, never rerouted.** Fall-forward exists for a route the
   reader *removed*; a Mac with Apple Intelligence switched off keeps its stored selection and is told
   why, because silently moving someone from a free, private, local model onto a billed endpoint is
@@ -652,7 +654,10 @@ window, and every chat action either surface sends — is the nineteenth feature
 - With Apple Intelligence available and nothing else configured, opening chat or the AI pane leaves
   the selection reading **Apple Intelligence** without asking for anything.
 - With it switched off in System Settings, the pane says so and chat says so; neither moves the
-  reader onto a configured API connection.
+  reader onto a configured API connection. Both the AI pane and the providers panel offer Open System
+  Settings…, which lands on the Apple Intelligence & Siri pane.
+- On a Mac that does not support Apple Intelligence, its toggle in the providers panel reads off and
+  cannot be changed, and no Open System Settings… button appears.
 - Install and sign in to each supported command outside Tinycast, choose one of its discovered models,
   and confirm Chat and each model-backed Quick Action use it without showing a credential field.
 - Sign out of an installed command, press Check Again, and confirm its models leave both pickers while

@@ -9,6 +9,9 @@ enum AppleIntelligenceStatus: Equatable, Sendable {
 
     var isAvailable: Bool { self == .available }
 
+    /// False only when the hardware rules it out, so System Settings has nothing to offer.
+    var isSupported: Bool { self != .deviceNotEligible }
+
     /// `nil` while the model can run, so a caller can treat it as the whole failure condition.
     var message: String? {
         switch self {
@@ -18,9 +21,9 @@ enum AppleIntelligenceStatus: Equatable, Sendable {
             return String(localized: "This Mac does not support Apple Intelligence.")
         case .notEnabled:
             return String(localized: "Turn on Apple Intelligence in System Settings to chat on device.")
+        // Also what a profile that switches it off reports, so the copy cannot promise a download.
         case .modelNotReady:
-            return String(
-                localized: "Apple Intelligence is still downloading its model. Try again shortly.")
+            return String(localized: "Apple Intelligence is not available on this Mac.")
         }
     }
 }
@@ -29,6 +32,8 @@ enum AppleIntelligence {
     /// Ours rather than a vendor's: this route names no remote model to borrow an id from.
     static let modelID = "apple-intelligence"
     static let title = "Apple Intelligence"
+    static let settingsURL = URL(
+        string: "x-apple.systempreferences:com.apple.Siri-Settings.extension")!
 
     /// The on-device window holds prompt and reply together, so each leaves room for the other.
     static let contextBudget = 6_000
