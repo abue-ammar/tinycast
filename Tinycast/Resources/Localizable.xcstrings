@@ -22512,106 +22512,54 @@
         }
       }
     },
-    "Apple Intelligence is still downloading its model." : {
+    "Apple Intelligence is currently unavailable. Check its status in System Settings." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence lädt sein Modell noch."
+            "value" : "Apple Intelligence ist derzeit nicht verfügbar. Prüfe den Status in den Systemeinstellungen."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence sigue descargando su modelo."
+            "value" : "Apple Intelligence no está disponible actualmente. Consulta su estado en Ajustes del Sistema."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence télécharge encore son modèle."
+            "value" : "Apple Intelligence est actuellement indisponible. Consultez son état dans Réglages Système."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligenceはまだモデルをダウンロード中です。"
+            "value" : "Apple Intelligenceは現在利用できません。システム設定で状態を確認してください。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence가 아직 모델을 다운로드하는 중입니다."
+            "value" : "현재 Apple Intelligence를 사용할 수 없습니다. 시스템 설정에서 상태를 확인하십시오."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "A Apple Intelligence ainda está baixando o modelo dela."
+            "value" : "A Apple Intelligence está indisponível no momento. Verifique o status nos Ajustes do Sistema."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence всё ещё загружает свою модель."
+            "value" : "Apple Intelligence сейчас недоступен. Проверьте его статус в Системных настройках."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Apple Intelligence 仍在下载其模型。"
-          }
-        }
-      }
-    },
-    "Apple Intelligence is still downloading its model. Try again shortly." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence lädt sein Modell noch. Versuche es gleich noch einmal."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence sigue descargando su modelo. Vuelve a intentarlo en unos instantes."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence télécharge encore son modèle. Réessayez dans un instant."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligenceはまだモデルをダウンロード中です。しばらくしてからもう一度お試しください。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence가 아직 모델을 다운로드하는 중입니다. 잠시 후 다시 시도하십시오."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "A Apple Intelligence ainda está baixando o modelo dela. Tente novamente em instantes."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence всё ещё загружает свою модель. Повторите попытку чуть позже."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Apple Intelligence 仍在下载其模型。请稍后重试。"
+            "value" : "Apple Intelligence 目前不可用。请在“系统设置”中查看其状态。"
           }
         }
       }

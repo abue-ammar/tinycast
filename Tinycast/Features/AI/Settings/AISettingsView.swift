@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct AISettingsView: View {
@@ -62,9 +63,17 @@ struct AISettingsView: View {
     private var defaultModelSection: some View {
         Section {
             // A Mac with nothing configured is the one that needs telling its free route is off.
-            if let reason = appleIntelligenceReason {
-                Label(reason, systemImage: "apple.intelligence")
-                    .foregroundStyle(.secondary)
+            if let status = appleIntelligenceStatus, let reason = status.message {
+                LabeledContent {
+                    if status.isSupported {
+                        Button("Open System Settings…") {
+                            NSWorkspace.shared.open(AppleIntelligence.settingsURL)
+                        }
+                    }
+                } label: {
+                    Label(reason, systemImage: "apple.intelligence")
+                        .foregroundStyle(.secondary)
+                }
             }
             AIModelSelectionRows(
                 selection: settings.defaultModel,
@@ -94,8 +103,8 @@ struct AISettingsView: View {
             : String(localized: "Only the selected provider is contacted.")
     }
 
-    private var appleIntelligenceReason: String? {
-        settings.isAppleIntelligenceAvailable() ? nil : AppleIntelligenceProvider.status().message
+    private var appleIntelligenceStatus: AppleIntelligenceStatus? {
+        settings.isAppleIntelligenceAvailable() ? nil : AppleIntelligenceProvider.status()
     }
 
     private var providerSummary: String {
