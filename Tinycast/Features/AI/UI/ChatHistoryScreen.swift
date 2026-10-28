@@ -84,7 +84,9 @@ struct ChatHistoryScreen: PaletteScreen {
                 )
                 .frame(width: metrics.size.clipboardListWidth)
                 Rectangle().fill(Theme.Colors.separator).frame(width: Theme.Size.hairline)
-                ChatHistoryPreview(history: history, chat: chat, conversationID: selected?.id)
+                ChatHistoryPreview(
+                    history: history, chat: chat, settings: coordinator.aiSettings,
+                    conversationID: selected?.id)
             }
         }
     }

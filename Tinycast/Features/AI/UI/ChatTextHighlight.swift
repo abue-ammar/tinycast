@@ -50,4 +50,6 @@ extension EnvironmentValues {
     @Entry var chatFindPath: [Int] = []
     /// A reply's source numbers by URL key; empty everywhere but a finished reply with sources.
     @Entry var chatCitations: [String: Int] = [:]
+    /// Settings → AI → Expand thinking: a reasoning fold starts open, and streams in the open.
+    @Entry var chatExpandsReasoning = false
 }
