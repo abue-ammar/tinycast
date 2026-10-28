@@ -144,6 +144,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `ModifierKey.swift`, `ModifierKeyDetector.swift`, `HotKeyBinding.swift`, `HotKeySpelling.swift`, `HyperKey.swift`, `HIDKeyMapping.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
 | `hyper-key-test` | `HotKeys/Model/HIDKeyMapping.swift`, `HyperKeyConflictPolicy.swift`, `Service/KeyboardRemapper.swift`, `RemapInstanceLock.swift` — mapping ownership, refused writes, crash recovery, device reconnection, Caps Lock and 🎤 remaps sharing a keyboard, conflict severities, Modifier Keys and Karabiner parsing, another app taking over Caps Lock, one process per Hyper Key |
 | `hotkey-dispatch-test` | `HotKeys/Service/HotKeyManager.swift` — Secure Input side isolation, shared Control registrations, press/release routing, recording and cancellation; isolated preferences and simulated Carbon registration |
+| `deeplink-test` | `Launcher/Model/EntryDeepLink.swift`, `HotKeys/Model/HotKeyAction+EntryID.swift` — every bindable command, window command and system action round-trips through its link, stored rows by UUID, snippet paths through percent-encoding, case folding, and the links that must not resolve |
 | `dictation-key-test` | `HotKeys/Service/DictationKeyManager.swift` — shared and separate preference domains, ownership handoff through the real health ticker, and retry cancellation on unbind or termination; isolated preferences, lock files and simulated keyboards |
 | `dictation-test` | `Dictation/Model/DictationModel.swift`, `DictationTextFormatter.swift` — model paths and text formatting |
 | `dictation-field-test` | Composer rebinding and teardown, field-scoped dictation cancellation, and queued insertion validity; synthetic capture and real AppKit editors |
@@ -898,6 +899,16 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   with the gap, hides other apps and parks their extra windows; quitting, `kill -9` then relaunching, and
   turning Window Management off each bring every window back.
   Repeat on two displays and with Reduce Motion on
+
+### Deeplinks
+
+- ⇧⌘C on a command, window command, system action, quicklink and extension row says Deeplink
+  copied; ⌘K lists Copy Deeplink there, and not on an application or a System Settings pane
+- `open -g` each copied link with the palette closed: it runs what the row's shortcut runs, and a
+  window command moves the frontmost app's window
+- Open a command's link twice: it toggles, as its shortcut does. Turn the feature off: the link does
+  nothing
+- Hide a command from launcher search: its link still runs. Open a mistyped link: the launcher opens
 
 ### Extensions
 

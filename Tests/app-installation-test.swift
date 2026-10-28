@@ -555,6 +555,7 @@ enum HotKeyAction: Hashable, Sendable {
     case customCommand(id: UUID), systemAction(id: SystemAction.ID), windowCommand(id: WindowCommand.ID)
     case customWindowSize(id: UUID), windowLayout(id: UUID), windowRoom(id: UUID), quicklink(id: UUID)
     case appleShortcut(id: UUID), snippet(id: UUID), extensionCommand(entryID: String)
+    init?(entryID: String) { nil }
 }
 struct OtherEntry<Tag: Sendable>: Sendable {
     var id = UUID()
