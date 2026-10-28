@@ -891,6 +891,15 @@ struct ExtensionTests {
         let tiny = ExtensionDeepLink.parse(
             url: URL(string: "tinycast://extensions/linear/linear/create-issue")!)
         check("deeplink mirrors raycast:// as tinycast://", tiny == canonical)
+        let copied = ExtensionDeepLink.url(extensionName: "linear/linear", commandName: "create-issue")
+        check(
+            "a copied scoped deeplink parses back to its command",
+            copied.flatMap(ExtensionDeepLink.parse) == canonical, String(describing: copied))
+        let copiedBare = ExtensionDeepLink.url(extensionName: "demo", commandName: "search")
+        check(
+            "a copied bare deeplink parses back to its command",
+            copiedBare.flatMap(ExtensionDeepLink.parse)?.extensionCandidates == ["demo"],
+            String(describing: copiedBare))
 
         let bare = ExtensionDeepLink.parse(url: URL(string: "raycast://extensions/demo/search")!)
         check(

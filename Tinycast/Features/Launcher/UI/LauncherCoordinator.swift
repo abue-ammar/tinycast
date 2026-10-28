@@ -291,6 +291,23 @@ final class LauncherCoordinator {
         AppLauncher.showInFinder(app.url)
     }
 
+    func deepLink(for app: AppEntry) -> URL? {
+        if let ref = ExtensionCommandRef(entryID: app.id) {
+            return ExtensionDeepLink.url(
+                extensionName: ref.extensionName, commandName: ref.commandName)
+        }
+        return EntryDeepLink.url(forEntryID: app.id)
+    }
+
+    func copyDeepLink(_ url: URL) {
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        guard Paster.copyPlainText(url.absoluteString) else {
+            core.showMessage(String(localized: "Couldn’t copy link"))
+            return
+        }
+        core.showMessage(String(localized: "Deeplink copied"))
+    }
+
     /// Focus is never handed back: the relaunch takes it, or the app that refused has it.
     func restart(_ app: AppEntry) {
         guard app.kind == .application, let bundleID = app.bundleID else { return }

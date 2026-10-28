@@ -616,7 +616,9 @@ so rather than failing silently. `ExtensionDeepLink` owns the claimed schemes an
 covered by `Tests/ext-test.swift`. Two-segment links without `source=webstore` keep running commands
 as `<extension>/<command>`; three-segment command links keep running even with that parameter.
 An extension's own `open("raycast://…")` resolves through the same
-`ExtensionManager.resolve(_:)` instead of launching Raycast.
+`ExtensionManager.resolve(_:)` instead of launching Raycast. Copy Deeplink on a command's launcher
+row writes the `tinycast://extensions/…` form; built-in rows have their own links, in
+[deeplinks.md](deeplinks.md).
 
 For view commands, nonempty `fallbackText` also prefills the search field: lists and grids filter
 locally or receive it through `onSearchTextChange` when their handler mounts. It remains available
