@@ -134,6 +134,9 @@ enum SettingsBackupCoverage {
             "Whether prompts may reach a search engine is a choice each Mac makes for itself.",
         AppSettingsKey.aiChoices.rawValue:
             "Changes the instructions every turn carries, and no other AI setting travels.",
+        AppSettingsKey.aiExpandsReasoning.rawValue:
+            "How much of a reply a reader sees unasked is this Mac's own choice, and no other AI "
+            + "setting travels.",
         AppSettingsKey.aiSystemPrompt.rawValue:
             "Standing instructions to a model are the one AI setting that changes every answer; an "
             + "import must not carry them onto another Mac unseen.",
