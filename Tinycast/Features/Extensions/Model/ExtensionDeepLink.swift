@@ -37,6 +37,15 @@ struct ExtensionDeepLink: Sendable, Equatable {
         return ["raycast", "tinycast", "com.raycast", "raycastinternal"].contains(scheme)
     }
 
+    /// An owner-scoped `extensionName` parses back through `route(url:)` as owner and extension.
+    static func url(extensionName: String, commandName: String) -> URL? {
+        var components = URLComponents()
+        components.scheme = "tinycast"
+        components.host = "extensions"
+        components.path = "/\(extensionName)/\(commandName)"
+        return components.url
+    }
+
     static func parse(url: URL) -> ExtensionDeepLink? {
         guard case .command(let link)? = route(url: url) else { return nil }
         return link

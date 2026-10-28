@@ -348,6 +348,7 @@ struct LauncherScreen: PaletteScreen {
         case .restart: return restart(at: selection)
         case .edit: return editItem(at: selection)
         case .copyPath: return copyQuicklink(at: selection)
+        case .copyFile: return copyDeepLink(at: selection)
         case .favoriteSlot(let index): return launchFavorite(at: index)
         case .copyCalculation: return copyCalculation(at: selection)
         case .openInApp, .showDetails:
@@ -362,6 +363,14 @@ struct LauncherScreen: PaletteScreen {
             let quicklink = quicklink(for: app)
         else { return false }
         core.quicklinkCoordinator.copyQuicklink(id: quicklink.id)
+        return true
+    }
+
+    private func copyDeepLink(at selection: Int) -> Bool {
+        guard let app = entry(at: selection),
+            let deepLink = core.launcherCoordinator.deepLink(for: app)
+        else { return false }
+        core.launcherCoordinator.copyDeepLink(deepLink)
         return true
     }
 
