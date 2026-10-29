@@ -134,7 +134,7 @@ path.win32 = path;
 
 // ─── process ────────────────────────────────────────────────────────
 
-let bootEnvironment = { platform: "darwin", arch: "arm64", env: {}, cwd: "/", homedir: "/", tmpdir: "/tmp", execPath: "" };
+let bootEnvironment = { platform: "darwin", arch: "arm64", env: {}, cwd: "/", homedir: "/", tmpdir: "/tmp", execPath: "", groups: [] };
 
 export function configureNodeShims(info) {
   bootEnvironment = { ...bootEnvironment, ...info };
@@ -179,6 +179,11 @@ const process = {
   stderr: { write: (text) => console.error(String(text).replace(/\n$/, "")), isTTY: false, columns: 80 },
   stdin: { on: () => {}, resume: () => {}, pause: () => {}, isTTY: false },
   cwd: () => bootEnvironment.cwd,
+  getuid: () => bootEnvironment.uid,
+  getgid: () => bootEnvironment.gid,
+  geteuid: () => bootEnvironment.euid,
+  getegid: () => bootEnvironment.egid,
+  getgroups: () => [...bootEnvironment.groups],
   chdir: () => {
     throw new Error("process.chdir is not supported in Tinycast extensions.");
   },
@@ -264,8 +269,8 @@ const os = {
     username: bootEnvironment.username || "",
     homedir: bootEnvironment.homedir,
     shell: bootEnvironment.shell || "/bin/zsh",
-    uid: 501,
-    gid: 20,
+    uid: bootEnvironment.uid,
+    gid: bootEnvironment.gid,
   }),
   cpus: () => hostCallSync("os", "cpus", []),
   totalmem: () => bootEnvironment.totalmem || 0,

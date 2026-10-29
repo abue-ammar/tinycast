@@ -11,6 +11,11 @@ struct ExtensionBootConfig: Sendable {
     var temporaryDirectory: String
     var workingDirectory: String
     var totalMemory: Double
+    var userID: uid_t
+    var groupID: gid_t
+    var effectiveUserID: uid_t
+    var effectiveGroupID: gid_t
+    var groupIDs: [gid_t]
     var environmentVariables: [String: String]
 
     static func current(supportDirectory: URL) -> ExtensionBootConfig {
@@ -26,6 +31,10 @@ struct ExtensionBootConfig: Sendable {
             + "/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         variables["HOME"] = FileManager.default.homeDirectoryForCurrentUser.path
 
+        var groups = [gid_t](repeating: 0, count: Int(getgroups(0, nil)))
+        let groupCount = getgroups(Int32(groups.count), &groups)
+        groups = Array(groups.prefix(Int(max(groupCount, 0))))
+
         return ExtensionBootConfig(
             arch: arch,
             release: info.operatingSystemVersionString,
@@ -36,6 +45,11 @@ struct ExtensionBootConfig: Sendable {
             temporaryDirectory: FileManager.default.temporaryDirectory.path,
             workingDirectory: supportDirectory.path,
             totalMemory: Double(info.physicalMemory),
+            userID: getuid(),
+            groupID: getgid(),
+            effectiveUserID: geteuid(),
+            effectiveGroupID: getegid(),
+            groupIDs: groups,
             environmentVariables: variables)
     }
 
@@ -52,6 +66,11 @@ struct ExtensionBootConfig: Sendable {
                     "tmpdir": temporaryDirectory,
                     "cwd": workingDirectory,
                     "totalmem": totalMemory,
+                    "uid": userID,
+                    "gid": groupID,
+                    "euid": effectiveUserID,
+                    "egid": effectiveGroupID,
+                    "groups": groupIDs,
                     "env": environmentVariables,
                     "execPath": ""
                 ]
