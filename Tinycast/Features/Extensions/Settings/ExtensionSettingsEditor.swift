@@ -20,7 +20,6 @@ private struct ExtensionSettingsEditorPanelSurface: ViewModifier {
     func body(content: Content) -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous)
         content
-            .background(Theme.Colors.panelScrim, in: shape)
             .glassEffect(.regular, in: shape)
     }
 }

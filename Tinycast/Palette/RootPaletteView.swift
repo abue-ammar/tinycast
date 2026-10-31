@@ -342,8 +342,6 @@ struct RootPaletteView: View {
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Compact, the bar's own glass shapes are the surface and the window is bare.
-                .background(isCollapsed ? .clear : Theme.Colors.panelScrim)
                 // Hidden rather than unmounted, so expanding never shows a frame without glass.
                 .background(GlassEffectView().opacity(isCollapsed ? 0 : 1))
                 .overlay {
@@ -359,10 +357,12 @@ struct RootPaletteView: View {
                 )
                 .clipShape(
                     RoundedRectangle(
-                        cornerRadius: isCollapsed ? 0 : metrics.radius.panel, style: .continuous)
-                        .inset(by: -renderingOutset))),
-            selection: sel)
-            .padding(renderingOutset)
+                        cornerRadius: isCollapsed ? 0 : metrics.radius.panel, style: .continuous
+                    )
+                    .inset(by: -renderingOutset))),
+            selection: sel
+        )
+        .padding(renderingOutset)
     }
 
     /// The emoji grid's observers, split out so `stateObservers` stays within type-checker reach.

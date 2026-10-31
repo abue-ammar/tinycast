@@ -286,11 +286,10 @@ private struct SettingsEditorPanelSurface: ViewModifier {
         let draggable = content.background(WindowDragBackground())
         if controlsOnGlass {
             draggable
-                .background(Theme.Colors.panelScrim, in: shape)
                 .glassEffect(.regular, in: shape)
         } else {
             draggable.background {
-                shape.fill(Theme.Colors.panelScrim).glassEffect(.regular, in: shape)
+                shape.fill(.clear).glassEffect(.regular, in: shape)
             }
         }
     }

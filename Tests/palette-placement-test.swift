@@ -77,7 +77,9 @@ struct PalettePlacementTests {
                     "the visible anchor survives the window outset")
                 let moved = compact.offsetBy(dx: 137, dy: -53)
                 let movedAnchor = PalettePlacement.anchor(of: moved, outset: outset)
-                expect(movedAnchor == CGPoint(x: anchor.x + 137, y: anchor.y - 53), "drag uses the visible anchor")
+                expect(
+                    movedAnchor == CGPoint(x: anchor.x + 137, y: anchor.y - 53),
+                    "drag uses the visible anchor")
                 let expanded = PalettePlacement.frame(at: movedAnchor, size: expandedSize, outset: 0)
                 expect(expanded.minX, movedAnchor.x, "expanding retains the visible left edge")
                 expect(expanded.maxY, movedAnchor.y, "expanding retains the visible top edge")

@@ -92,7 +92,8 @@ struct CompactBar: View {
         .accessibilityHidden(!revealed)
         .glassEffect(
             .regular.tint(selection == command ? Theme.Colors.compactShortcutSelectionTint : nil)
-                .interactive(), in: .circle)
+                .interactive(), in: .circle
+        )
         .scaleEffect(revealed ? 1 : BarMotion.parkedScale)
         .position(revealed ? geometry.center(of: index) : geometry.parked)
         .allowsHitTesting(revealed)
