@@ -263,18 +263,17 @@ selected button. Typing, pasting or clicking Search resets the selection. The Ap
 boundary-arrow hook handles navigation without moving input focus away from Search; marked IME text
 and modified arrows retain their normal editing behavior.
 
-Keyboard selection uses a filled circle and white monochrome glyph, without an outline. Symbols use
+Keyboard selection uses a neutral gray circle and white monochrome glyph in both appearances. Symbols use
 `SymbolImage`, including the appearance-aware outline for Emoji & Symbols. Settings keeps each icon
 beside its name in a command menu, with borderless move/remove controls at the trailing edge.
 The contrast fill sits behind the glyph above `GlassEffectContainer`, where the material cannot wash
-it out. Light uses a medium gray fill; Dark adds a subtle white wash over its existing glass selection.
+it out. A thin light rim in Light and dark rim in Dark keep the selected circle distinct from its glass.
 
 Mouse and keyboard activation synchronously call `LauncherCoordinator.runCommand` in a transaction
 with animations disabled. No merge animation or delayed activation survives beneath the destination
 screen. Palette screens push over root search as before; Show Notes closes the palette and opens
 its existing window. The summon reveal still animates independently.
 A shared scrim mask prevents overlapping surface fills from painting twice beneath the query.
-Selected Dark buttons keep their native glass scrim outside that mask to preserve their highlight.
 The original fill and travel timing is unchanged.
 
 At expanded launcher root, Escape clears the query while setting `forceExpanded`, so clearing and
