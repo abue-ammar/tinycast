@@ -454,8 +454,10 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   of the capsule's end, the last one never clipped at the window's edge; with Show animations off they
   appear in place. Mouse and keyboard activation open the command immediately, without a fuse,
   delayed reveal or shortcut shapes beneath the expanded panel. Show Notes opens its window
-- Compact mode: arrow navigation moves a neutral gray selection with a white monochrome glyph;
-  the selected circle has a thin light rim in Light and a dark rim in Dark;
+- Compact mode: arrow navigation tints the selected glass circle and uses a white monochrome glyph;
+  inspect its native contour at actual size in both appearances, without a second fill or stroke;
+  the left capsule and rightmost button must remain whole through opening, hovering, and selection,
+  and expanding/collapsing after a drag must preserve the visible bar’s top-left position;
   Emoji & Symbols uses the same outlined glyph as the launcher in both Light and Dark
 - Verify compact selection in the live glass compositor in both appearances; an offscreen view bitmap
   omits the material and cannot prove selection contrast

@@ -47,6 +47,8 @@ struct RootPaletteView: View {
     /// Compact vs. full; the source of truth is on `AppCore`, so the two can't disagree.
     private var isCollapsed: Bool { core.paletteCoordinator.paletteIsCollapsed }
 
+    private var renderingOutset: CGFloat { isCollapsed ? Theme.Size.paletteGlassOutset : 0 }
+
     private var screen: any PaletteScreen {
         switch vm.mode {
         case .launcher:
@@ -355,8 +357,12 @@ struct RootPaletteView: View {
                             ? Theme.Duration.dialogEnter : Theme.Duration.dialogExit),
                     value: core.isDimmingPaletteForDialog
                 )
-                .clipShape(RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))),
+                .clipShape(
+                    RoundedRectangle(
+                        cornerRadius: isCollapsed ? 0 : metrics.radius.panel, style: .continuous)
+                        .inset(by: -renderingOutset))),
             selection: sel)
+            .padding(renderingOutset)
     }
 
     /// The emoji grid's observers, split out so `stateObservers` stays within type-checker reach.

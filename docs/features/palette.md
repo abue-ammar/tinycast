@@ -263,18 +263,17 @@ selected button. Typing, pasting or clicking Search resets the selection. The Ap
 boundary-arrow hook handles navigation without moving input focus away from Search; marked IME text
 and modified arrows retain their normal editing behavior.
 
-Keyboard selection uses a neutral gray circle and white monochrome glyph in both appearances. Symbols use
+Keyboard selection tints the existing glass circle and draws its glyph in white. Symbols use
 `SymbolImage`, including the appearance-aware outline for Emoji & Symbols. Settings keeps each icon
 beside its name in a command menu, with borderless move/remove controls at the trailing edge.
-The contrast fill sits behind the glyph above `GlassEffectContainer`, where the material cannot wash
-it out. A thin light rim in Light and dark rim in Dark keep the selected circle distinct from its glass.
+The system glass material draws the selected face and contour together; no fill or stroke is painted
+over it. The glyph stays above `GlassEffectContainer` so a morph cannot smear it.
 
 Mouse and keyboard activation synchronously call `LauncherCoordinator.runCommand` in a transaction
 with animations disabled. No merge animation or delayed activation survives beneath the destination
 screen. Palette screens push over root search as before; Show Notes closes the palette and opens
 its existing window. The summon reveal still animates independently.
-A shared scrim mask prevents overlapping surface fills from painting twice beneath the query.
-The original fill and travel timing is unchanged.
+The compact bar has no custom scrim or mask; its capsule and buttons use native regular glass.
 
 At expanded launcher root, Escape clears the query while setting `forceExpanded`, so clearing and
 collapsing remain separate presses. The next Escape clears that flag and collapses; another closes.
@@ -288,9 +287,11 @@ layer would fill it. See [ui.md](../ui.md#panel-structure) for the shapes and th
 
 ## Window placement
 
-`PaletteWindowController` resolves an anchor (left edge + top edge) **once per summon** and reuses it
+`PaletteWindowController` resolves the visible content anchor (left edge + top edge) **once per summon** and reuses it
 for every compact↔expanded resize, so only the height changes and the top edge never drifts. The
 anchor is dropped on hide, so the next summon re-resolves for wherever the user is then.
+The compact window adds a four-point transparent drawing margin for the native glass rim.
+Its content remains at the same anchor; dragging and snapping convert back to that visible anchor.
 
 All of the arithmetic lives in `PalettePlacement`, which is CoreGraphics-only and takes every screen
 fact as a parameter, so `palette-placement-test` drives the shipped rules rather than a copy of them.
