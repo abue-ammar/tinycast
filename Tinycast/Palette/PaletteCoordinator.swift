@@ -148,6 +148,10 @@ final class PaletteCoordinator {
         windowController.applyCollapsed(paletteIsCollapsed)
     }
 
+    func recutPaletteShadow() {
+        windowController.recutShadow()
+    }
+
     // MARK: - Dragging
 
     func beginPaletteDrag() {

@@ -706,7 +706,7 @@ struct RootPaletteView: View {
                 if isCollapsed {
                     CompactBar(
                         commands: compactCommands, selection: compactSelection.command,
-                        onRun: runCompactCommand)
+                        onRun: runCompactCommand, onSettle: core.paletteCoordinator.recutPaletteShadow)
                 }
             }
             // Next turn, once the show's `land()` and search refocus are done, so neither undoes it.

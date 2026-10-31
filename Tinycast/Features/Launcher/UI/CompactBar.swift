@@ -40,6 +40,7 @@ struct CompactBar: View {
     let commands: [CommandID]
     let selection: CommandID?
     let onRun: (CommandID) -> Void
+    let onSettle: () -> Void
     @Environment(PaletteState.self) private var palette
     @Environment(\.metrics) private var metrics
     @Environment(\.colorScheme) private var colorScheme
@@ -179,7 +180,9 @@ struct CompactBar: View {
     /// Out on every summon, and parked only once the window has faded, so leaving fades it whole.
     private func followVisibility() async {
         guard !palette.isVisible else {
-            isRevealed = true
+            var reveal = Transaction()
+            reveal.addAnimationCompletion(criteria: .removed, onSettle)
+            withTransaction(reveal) { isRevealed = true }
             return
         }
         try? await Task.sleep(for: .seconds(Motion.duration(BarMotion.parkAfterHide)))

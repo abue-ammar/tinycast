@@ -487,9 +487,13 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         let height = collapsed ? size.compactHeight : size.panelHeight
         let frame = NSRect(
             x: anchor.x, y: anchor.y - height, width: size.panelWidth, height: height)
-        // A shadow is cut once from the window's alpha, so compact's moving glass relies on its own.
-        panel.hasShadow = !collapsed
         panel.setFrame(frame, display: true)
+        recutShadow()
+    }
+
+    func recutShadow() {
+        guard let panel, panel.isVisible else { return }
+        panel.invalidateShadow()
     }
 
     /// The display to anchor to; never `NSScreen.main`, which follows the focused window.
