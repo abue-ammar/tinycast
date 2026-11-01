@@ -44,7 +44,7 @@ struct SearchScopesSection: View {
         let panel = NSOpenPanel()
         panel.canChooseDirectories = true
         panel.canChooseFiles = true
-        panel.allowedContentTypes = [.applicationBundle]
+        panel.allowedContentTypes = [.folder, .applicationBundle]
         // Otherwise an .app is navigated into rather than selected.
         panel.treatsFilePackagesAsDirectories = false
         panel.allowsMultipleSelection = true
