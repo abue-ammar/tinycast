@@ -47,6 +47,10 @@ struct DeepLinkTests {
         fieldChecks()
         consentChecks()
         settingsChecks()
+        encodingChecks()
+        routeInputChecks()
+        windowSizeChecks()
+        consentKeyChecks()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -199,12 +203,21 @@ struct DeepLinkTests {
                 .arguments == .named(["n": "3", "x": "1.5", "b": "true", "z": ""]),
             "numbers, booleans and null become the text a field would hold")
         expect(
-            input("context=%7B%22name%22%3A%22Docs%22%7D")?.context == ["name": "Docs"],
+            input("context=%7B%22name%22%3A%22Docs%22%7D")?.context == .fields(["name": "Docs"]),
             "context is a JSON object")
         expect(input("arguments=nope") == nil, "malformed arguments refuse the link")
         expect(input("arguments=%7B%22a%22%3A%7B%7D%7D") == nil, "a nested value refuses the link")
-        expect(input("context=%5B%5D") == nil, "context must be an object")
-        let oversized = String(repeating: "a", count: DeepLinkInput.maximumParameterLength + 1)
+        expect(
+            input("context=%5B%7B%22name%22%3A%22A%22%7D%2C%7B%22name%22%3A%22B%22%7D%5D")?.context
+                == .list([["name": "A"], ["name": "B"]]),
+            "a list of objects is a batch")
+        expect(input("context=%5B%22a%22%5D") == nil, "a list of anything else refuses the link")
+        expect(input("context=%5B%7B%22a%22%3A%5B%5D%7D%5D") == nil, "a nested value in a batch refuses it")
+        let marks = "a" + String(repeating: "\u{301}", count: DeepLinkInput.maximumParameterBytes)
+        expect(
+            DeepLinkInput(queryItems: [URLQueryItem(name: "fallbackText", value: marks)]) == nil,
+            "the cap counts bytes, so combining marks can't hide inside one character")
+        let oversized = String(repeating: "a", count: DeepLinkInput.maximumParameterBytes + 1)
         expect(input("fallbackText=" + oversized) == nil, "an oversized parameter refuses the link")
     }
 
@@ -212,17 +225,17 @@ struct DeepLinkTests {
         let names = ["Branch", "Message", "Branch"]
         let position: (Int) -> String = { "$\($0 + 1)" }
         let positional = DeepLinkInput(
-            fallbackText: "ignored", arguments: .positional(["main", "fix", "x", "extra"]), context: [:])
+            fallbackText: "ignored", arguments: .positional(["main", "fix", "x", "extra"]), context: nil)
         expect(
             positional.fieldValues(names: names, fieldID: position)
                 == ["$1": "main", "$2": "fix", "$3": "x"],
             "positional values fill fields in order and extras are dropped")
         let named = DeepLinkInput(
-            fallbackText: nil, arguments: .named(["Branch": "main", "Other": "y"]), context: [:])
+            fallbackText: nil, arguments: .named(["Branch": "main", "Other": "y"]), context: nil)
         expect(
             named.fieldValues(names: names, fieldID: position) == ["$1": "main"],
             "a named value fills only the first field of that name")
-        let text = DeepLinkInput(fallbackText: "rust", arguments: nil, context: [:])
+        let text = DeepLinkInput(fallbackText: "rust", arguments: nil, context: nil)
         let quicklinkNames = ["Query", "Site"]
         expect(
             text.fieldValues(names: quicklinkNames, fieldID: { quicklinkNames[$0] })
@@ -240,6 +253,113 @@ struct DeepLinkTests {
             expect(SettingsTab(slug: tab.slug) == tab, "settings/\(tab.slug) opens its own tab")
         }
         expect(SettingsTab(slug: "nope") == nil, "an unknown tab opens nothing")
+    }
+
+    static func encodingChecks() {
+        let entryID = "command:search-files"
+        let inputs: [DeepLinkInput] = [
+            DeepLinkInput(fallbackText: "a & b = c + d # é 😀 %20", arguments: nil, context: nil),
+            DeepLinkInput(fallbackText: nil, arguments: .named(["Query": "x/y?z", "Site": ""]), context: nil),
+            DeepLinkInput(fallbackText: nil, arguments: .positional(["a", "", "c"]), context: nil),
+            DeepLinkInput(
+                fallbackText: nil, arguments: nil,
+                context: .fields(["name": "Docs", "link": "https://a.b/?q=1"])),
+            DeepLinkInput(fallbackText: "t", arguments: nil, context: .list([["name": "A"], ["name": "B"]]))
+        ]
+        for original in inputs {
+            let url = DeepLink.url(forEntryID: entryID, scheme: scheme, input: original)
+            let parsed = url.flatMap { DeepLink(url: $0, scheme: scheme) }
+            expect(
+                parsed == .entry(.command(.searchFiles), original),
+                "\(url?.absoluteString ?? "nil") reads back as the input it was built from")
+        }
+        expect(
+            DeepLink.url(forEntryID: entryID, scheme: scheme)?.query == nil,
+            "a link with no input has no query")
+        expect(
+            DeepLinkInput(fallbackText: nil, arguments: .named(["q": "rust"]), context: nil).summary
+                == #"{"q":"rust"}"#,
+            "a summary shows the input as it was sent")
+        let long = DeepLinkInput(
+            fallbackText: String(repeating: "x", count: 500), arguments: nil, context: nil)
+        expect(long.summary.count == 161 && long.summary.hasSuffix("…"), "a long summary is cut")
+    }
+
+    static func routeInputChecks() {
+        let note = "Groceries & plans?.md"
+        expect(
+            DeepLink.url(forNote: note, scheme: scheme).flatMap { DeepLink(url: $0, scheme: scheme) }
+                == .note(name: note),
+            "a note's link reads back as its file name")
+        expect(parse("tinycast://note/a/b.md") == nil, "a note name is one segment")
+        let chat = UUID()
+        expect(
+            DeepLink.url(forChat: chat, scheme: scheme).flatMap { DeepLink(url: $0, scheme: scheme) }
+                == .chat(id: chat),
+            "a chat's link reads back as its ID")
+        expect(parse("tinycast://chat/nope") == nil, "a chat link needs a UUID")
+        expect(
+            parse("tinycast://system-action/set-volume?fallbackText=40")
+                == .entry(
+                    .systemAction(id: .setVolume),
+                    DeepLinkInput(fallbackText: "40", arguments: nil, context: nil)),
+            "set-volume carries its level as input")
+        expect(
+            DeepLinkSource.outside.mayRun(.quicklink(id: chat)), "a link from outside may open a quicklink")
+        expect(!DeepLinkSource.tinycast.mayRun(.quicklink(id: chat)), "a quicklink may not open a quicklink")
+        expect(
+            DeepLinkSource.tinycast.mayRun(.command(.searchFiles)),
+            "a quicklink may open anything else")
+    }
+
+    static func windowSizeChecks() {
+        let base = "tinycast://window-size?arguments="
+        let json = #"{"width":"1200","height":"60%","anchor":"top-left","x":"10","y":"-20"}"#
+        let encoded = json.addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
+        guard case .windowSize(let size)? = parse(base + encoded) else {
+            return expect(false, "a window-size link with a size parses")
+        }
+        expect(size.width == .init(1200, .points), "a bare width is points")
+        expect(size.height == .init(60, .percent), "a % height is a share of the screen")
+        expect(size.anchor == .topLeft && size.offset == .init(x: 10, y: -20), "anchor and offset apply")
+        let fields: [String: String] = ["width": "800", "height": "600"]
+        let plain = CustomWindowSize(linkFields: fields)
+        expect(plain?.anchor == .center && plain?.offset == .zero, "anchor and offset default")
+        for (field, value) in [
+            ("width", "0"), ("width", "101%"), ("height", "big"), ("anchor", "middle"), ("x", "5000")
+        ] {
+            var bad = fields
+            bad[field] = value
+            expect(CustomWindowSize(linkFields: bad) == nil, "\(field)=\(value) is refused, not clamped")
+        }
+        expect(CustomWindowSize(linkFields: ["width": "800"]) == nil, "a size needs both sides")
+        expect(parse("tinycast://window-size") == nil, "a window-size link with no size is refused")
+    }
+
+    static func consentKeyChecks() {
+        let plain = DeepLinkInput.none
+        let text = DeepLinkInput(fallbackText: "~/Downloads/", arguments: nil, context: nil)
+        expect(
+            !DeepLinkConsentPolicy.requiresConsent(.command(.searchFiles), input: plain),
+            "a screen with no input never asks")
+        expect(
+            DeepLinkConsentPolicy.requiresConsent(.command(.searchFiles), input: text),
+            "any input asks, since a page chose it")
+        let entryID = "snippet:/Users/me/What?.md"
+        let keyed = DeepLinkConsentPolicy.key(entryID: entryID, input: text)
+        expect(
+            keyed != DeepLinkConsentPolicy.key(entryID: entryID, input: plain),
+            "a grant with input never covers the row without it")
+        expect(
+            keyed
+                != DeepLinkConsentPolicy.key(
+                    entryID: entryID, input: DeepLinkInput(fallbackText: "~/", arguments: nil, context: nil)),
+            "a grant covers only its exact input")
+        let parts = DeepLinkConsentPolicy.parts(ofKey: keyed)
+        expect(parts?.entryID == entryID && parts?.input == text, "a key reads back, even with ? in a path")
+        expect(
+            DeepLinkConsentPolicy.parts(ofKey: "system-action:lock-screen")?.input == plain,
+            "a plain key is the row alone")
     }
 
     static func consentChecks() {

@@ -34,16 +34,32 @@ struct ExtensionDeepLink: Sendable, Equatable {
 
     static func claims(_ url: URL) -> Bool {
         guard let scheme = url.scheme?.lowercased() else { return false }
-        return ["raycast", "tinycast", "com.raycast", "raycastinternal"].contains(scheme)
+        return ["raycast", "tinycast", "tinycast-dev", "com.raycast", "raycastinternal"].contains(scheme)
     }
 
-    /// An owner-scoped `extensionName` parses back through `route(url:)` as owner and extension.
-    static func url(extensionName: String, commandName: String) -> URL? {
+    /// Reads back through `route(url:)`, owner-scoped names included; `scheme` is the channel's.
+    static func url(
+        extensionName: String, commandName: String, arguments: [String: String], scheme: String
+    ) -> URL? {
         var components = URLComponents()
-        components.scheme = "tinycast"
+        components.scheme = scheme
         components.host = "extensions"
         components.path = "/\(extensionName)/\(commandName)"
+        if !arguments.isEmpty, let encoded = encodedArguments(arguments) {
+            components.percentEncodedQueryItems = [URLQueryItem(name: "arguments", value: encoded)]
+        }
         return components.url
+    }
+
+    /// Encoded strictly, so `parseArguments` reads back exactly what was typed.
+    private static func encodedArguments(_ arguments: [String: String]) -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let unreserved = CharacterSet(
+            charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+        return (try? encoder.encode(arguments))
+            .flatMap { String(bytes: $0, encoding: .utf8) }
+            .flatMap { $0.addingPercentEncoding(withAllowedCharacters: unreserved) }
     }
 
     static func parse(url: URL) -> ExtensionDeepLink? {

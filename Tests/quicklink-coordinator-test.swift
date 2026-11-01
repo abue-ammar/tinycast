@@ -503,12 +503,16 @@ enum AppLauncher {
 
 enum DialogTone { case danger, neutral, success }
 
+enum DeepLinkSource { case outside, tinycast }
+
 @MainActor
 final class DeepLinkCoordinator {
-    enum Source { case outside, tinycast }
-    var opened: [(URL, Source)] = []
-    func handles(_ url: URL) -> Bool { url.scheme == "tinycast" }
-    func open(_ url: URL, source: Source = .outside) { opened.append((url, source)) }
+    var opened: [(URL, DeepLinkSource)] = []
+    func handles(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "tinycast"
+            && url.host(percentEncoded: false)?.lowercased() != "extensions"
+    }
+    func open(_ url: URL, source: DeepLinkSource = .outside) { opened.append((url, source)) }
 }
 
 @MainActor
@@ -525,7 +529,11 @@ final class AppCore {
     func reportFailure(title: String, message: String, symbol: String, recovery: String) async -> Bool {
         false
     }
-    func confirm(title: String, message: String, symbol: String, confirmTitle: String) async -> Bool {
+    enum ConfirmRole { case standard, destructive }
+    func confirm(
+        title: String, message: String, symbol: String, confirmTitle: String,
+        tone: DialogTone = .danger, confirmRole: ConfirmRole = .destructive
+    ) async -> Bool {
         confirmations += 1
         return false
     }
