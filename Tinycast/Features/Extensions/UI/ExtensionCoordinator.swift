@@ -200,7 +200,7 @@ final class ExtensionCoordinator {
         let missing = extensions.storage.missingRequiredPreferences(
             extension: owner.manifest.name,
             schemas: owner.manifest.preferences + command.preferences)
-        if launchType == .userInitiated, !missing.isEmpty {
+        if launchType == .userInitiated, command.mode != .view, !missing.isEmpty {
             Task {
                 guard
                     await core.confirm(
