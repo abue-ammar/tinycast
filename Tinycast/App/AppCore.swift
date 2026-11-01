@@ -236,6 +236,10 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var quickAICoordinator = QuickAICoordinator(
         chats: aiChats, settings: settings, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var deepLinkCoordinator = DeepLinkCoordinator(
+        scheme: AppURLScheme.current, settings: settings, hotKeys: hotKeys,
+        paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
+        core: self)
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
@@ -415,13 +419,7 @@ final class AppCore {
                 }
             }
             hotKeys.displayName = { [weak self] action in self?.hotKeyDisplayName(for: action) }
-            hotKeys.allowsAction = { [weak self] action in
-                guard let self, visibility.allowsHotKey(action) else { return false }
-                if action == .dictation { return settings.dictationEnabled }
-                // A disabled feature drops its commands from the launcher; their shortcuts go too.
-                guard case .command(let id) = action else { return true }
-                return appIndex.isCommandEnabled(id)
-            }
+            hotKeys.allowsAction = { [weak self] in self?.allowsHotKeyAction($0) ?? false }
             KeyShortcut.displayedHyperChord = { [settings] in
                 guard settings.hyperKey != .none else { return nil }
                 return KeyShortcut.hyperChord(includesShift: settings.hyperKeyIncludesShift)
@@ -482,8 +480,8 @@ final class AppCore {
     }
 
     func handleOpenURL(_ url: URL) {
-        if let action = EntryDeepLink.action(for: url) {
-            hotKeys.perform(action)
+        if deepLinkCoordinator.handles(url) {
+            deepLinkCoordinator.open(url)
             return
         }
         guard ExtensionDeepLink.claims(url) else { return }
@@ -500,6 +498,15 @@ final class AppCore {
     }
 
     /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.
+    /// The category switch hotkeys and links share; each feature's own switch guards its funnel too.
+    func allowsHotKeyAction(_ action: HotKeyAction) -> Bool {
+        guard visibility.allowsHotKey(action) else { return false }
+        if action == .dictation { return settings.dictationEnabled }
+        // A disabled feature drops its commands from the launcher; their shortcuts go too.
+        guard case .command(let id) = action else { return true }
+        return appIndex.isCommandEnabled(id)
+    }
+
     private func hotKeyDisplayName(for action: HotKeyAction) -> String? {
         switch action {
         case .app(let bundleID):

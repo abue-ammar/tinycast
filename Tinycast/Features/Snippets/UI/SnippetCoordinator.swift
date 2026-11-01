@@ -122,14 +122,25 @@ final class SnippetCoordinator {
     // MARK: - Browsing and editing
 
     /// The switch gates the browser, the way Search Files re-checks its own before opening.
-    func showSnippets() {
+    func showSnippets(query: String = "") {
         guard settings.snippetsEnabled else { return }
-        paletteCoordinator.togglePalette(mode: .snippets)
+        paletteCoordinator.togglePalette(mode: .snippets, seeding: query.isEmpty ? nil : query)
     }
 
     func editSnippet(_ record: StoredSnippet?) {
         guard settings.snippetsEnabled else { return }
         editor = SnippetEditorSession(record: record)
+        paletteCoordinator.showPalette(mode: .snippetEditor)
+    }
+
+    /// A new snippet already filled in, from a link; nothing is written until it is saved.
+    func createSnippet(name: String, text: String, keyword: String) {
+        guard settings.snippetsEnabled else { return }
+        let editor = SnippetEditorSession(record: nil)
+        editor.name = name
+        editor.text = text
+        editor.keyword = keyword
+        self.editor = editor
         paletteCoordinator.showPalette(mode: .snippetEditor)
     }
 

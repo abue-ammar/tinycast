@@ -292,11 +292,10 @@ final class LauncherCoordinator {
     }
 
     func deepLink(for app: AppEntry) -> URL? {
-        if let ref = ExtensionCommandRef(entryID: app.id) {
-            return ExtensionDeepLink.url(
-                extensionName: ref.extensionName, commandName: ref.commandName)
+        guard app.kind != .extensionCommand else {
+            return extensionCoordinator.deepLink(forEntryID: app.id)
         }
-        return EntryDeepLink.url(forEntryID: app.id)
+        return core.deepLinkCoordinator.url(forEntryID: app.id)
     }
 
     func copyDeepLink(_ url: URL) {

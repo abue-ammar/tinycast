@@ -216,6 +216,10 @@ final class QuicklinkCoordinator {
         _ quicklink: Quicklink, link: String, forcingDefaultApp: Bool
     ) {
         if windowController.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
+        // Tinycast's own link stays in-process: chosen here, so it never asks or steals focus.
+        if let url = URL(string: link), core.deepLinkCoordinator.handles(url) {
+            return core.deepLinkCoordinator.open(url, source: .tinycast)
+        }
         let openWith = forcingDefaultApp ? nil : quicklink.openWithBundleID
         Task {
             do throws(QuicklinkLauncher.Failure) {
@@ -328,6 +332,17 @@ final class QuicklinkCoordinator {
     func editQuicklink(_ quicklink: Quicklink?) {
         guard settings.quicklinksEnabled else { return }
         editor = QuicklinkEditorSession(quicklink: quicklink)
+        paletteCoordinator.showPalette(mode: .quicklinkEditor)
+    }
+
+    /// A new quicklink already filled in, from a link; nothing is written until it is saved.
+    func createQuicklink(name: String, link: String, openWithBundleID: String?) {
+        guard settings.quicklinksEnabled else { return }
+        let editor = QuicklinkEditorSession(quicklink: nil)
+        editor.name = name
+        editor.link = link
+        editor.openWithBundleID = openWithBundleID
+        self.editor = editor
         paletteCoordinator.showPalette(mode: .quicklinkEditor)
     }
 

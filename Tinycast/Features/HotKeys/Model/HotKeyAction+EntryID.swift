@@ -30,4 +30,22 @@ extension HotKeyAction {
             return nil
         }
     }
+
+    /// The inverse of `init?(entryID:)`; nil for the actions no row ID names.
+    var entryID: String? {
+        switch self {
+        case .command(let id): id.hotKeyAction == nil ? nil : id.rawValue
+        case .systemAction(let id): SystemActionCatalog.action(id: id).entryID
+        case .windowCommand(let id): WindowCommandCatalog.command(id: id)?.entryID
+        case .customWindowSize(let id): CustomWindowSize.entryIDPrefix + id.uuidString.lowercased()
+        case .windowLayout(let id): WindowLayout.entryIDPrefix + id.uuidString.lowercased()
+        case .windowRoom(let id): Room.entryIDPrefix + id.uuidString.lowercased()
+        case .quickAction(let id): CustomQuickAction.entryIDPrefix + id.uuidString.lowercased()
+        case .customCommand(let id): CustomCommand.entryIDPrefix + id.uuidString.lowercased()
+        case .quicklink(let id): Quicklink.entryIDPrefix + id.uuidString.lowercased()
+        case .appleShortcut(let id): AppleShortcut.entryID(for: id)
+        case .snippet(let id): StoredSnippet.entryIDPrefix + id
+        case .togglePalette, .dictation, .app, .settingsPane, .extensionCommand: nil
+        }
+    }
 }

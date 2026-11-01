@@ -357,7 +357,7 @@ final class HotKeyManager {
         return actions
     }
 
-    private func displayName(of action: HotKeyAction) -> String {
+    func displayName(of action: HotKeyAction) -> String {
         switch action {
         case .togglePalette:
             return String(localized: "App Launcher")

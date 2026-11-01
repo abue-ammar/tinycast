@@ -83,6 +83,12 @@ final class ExtensionCoordinator {
         runExtensionCommand(entry)
     }
 
+    /// The link Copy Deeplink gives an extension row; extensions alone know their URL shape.
+    func deepLink(forEntryID entryID: String) -> URL? {
+        guard let ref = ExtensionCommandRef(entryID: entryID) else { return nil }
+        return ExtensionDeepLink.url(extensionName: ref.extensionName, commandName: ref.commandName)
+    }
+
     /// A `raycast://extensions/…` link: the same command the launcher would run, by slug.
     func runDeepLink(_ link: ExtensionDeepLink) {
         guard settings.extensionsEnabled else {

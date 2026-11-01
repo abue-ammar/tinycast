@@ -14,6 +14,7 @@ struct NotesTests {
         testMarkdownFormatting()
         testRevealPolicy()
         try testUnnamedNotesTitleThemselves()
+        try testCreatedNoteHoldsItsSource()
         testSwitcherInteraction()
         testWindowPlacement()
         try await testStoreCollectionAndAutosave()
@@ -186,6 +187,17 @@ struct NotesTests {
         check(
             "rules and fences carry no title",
             NoteTitle.firstLine(of: "---\n```swift\nlet x = 1\n```") == "let x = 1")
+    }
+
+    private static func testCreatedNoteHoldsItsSource() throws {
+        let root = temporaryRoot("created-source")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = try repository(in: root)
+
+        let created = try repository.create(source: "Call Sam ☎️\n")
+        check(
+            "a note created with text starts out holding it",
+            try repository.load(created.id).source == "Call Sam ☎️\n")
     }
 
     private static func testUnnamedNotesTitleThemselves() throws {

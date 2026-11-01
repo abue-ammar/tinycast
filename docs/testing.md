@@ -144,7 +144,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `ModifierKey.swift`, `ModifierKeyDetector.swift`, `HotKeyBinding.swift`, `HotKeySpelling.swift`, `HyperKey.swift`, `HIDKeyMapping.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
 | `hyper-key-test` | `HotKeys/Model/HIDKeyMapping.swift`, `HyperKeyConflictPolicy.swift`, `Service/KeyboardRemapper.swift`, `RemapInstanceLock.swift` — mapping ownership, refused writes, crash recovery, device reconnection, Caps Lock and 🎤 remaps sharing a keyboard, conflict severities, Modifier Keys and Karabiner parsing, another app taking over Caps Lock, one process per Hyper Key |
 | `hotkey-dispatch-test` | `HotKeys/Service/HotKeyManager.swift` — Secure Input side isolation, shared Control registrations, press/release routing, recording and cancellation; isolated preferences and simulated Carbon registration |
-| `deeplink-test` | `Launcher/Model/EntryDeepLink.swift`, `HotKeys/Model/HotKeyAction+EntryID.swift` — every bindable command, window command and system action round-trips through its link, stored rows by UUID, snippet paths through percent-encoding, case folding, and the links that must not resolve |
+| `deeplink-test` | `DeepLinks/Model/`, `HotKeys/Model/HotKeyAction+EntryID.swift`, `Settings/SettingsTab.swift` — every bindable command, window command and system action round-trips through its link and its entry ID, stored rows by UUID, snippet paths through percent-encoding, case folding, the channel's scheme, the links that must not resolve (Raycast schemes, the `extensions` host), input decoding and its refusals, field filling, consent classes, and every Settings tab slug |
 | `dictation-key-test` | `HotKeys/Service/DictationKeyManager.swift` — shared and separate preference domains, ownership handoff through the real health ticker, and retry cancellation on unbind or termination; isolated preferences, lock files and simulated keyboards |
 | `dictation-test` | `Dictation/Model/DictationModel.swift`, `DictationTextFormatter.swift` — model paths and text formatting |
 | `dictation-field-test` | Composer rebinding and teardown, field-scoped dictation cancellation, and queued insertion validity; synthetic capture and real AppKit editors |
@@ -902,13 +902,38 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### Deeplinks
 
+Debug answers `tinycast-dev://`; use that scheme for every link below.
+
 - ⇧⌘C on a command, window command, system action, quicklink and extension row says Deeplink
-  copied; ⌘K lists Copy Deeplink there, and not on an application or a System Settings pane
-- `open -g` each copied link with the palette closed: it runs what the row's shortcut runs, and a
-  window command moves the frontmost app's window
-- Open a command's link twice: it toggles, as its shortcut does. Turn the feature off: the link does
-  nothing
-- Hide a command from launcher search: its link still runs. Open a mistyped link: the launcher opens
+  copied; ⌘K lists Copy Deeplink there, and not on an application or a System Settings pane. A
+  built-in row's link starts `tinycast-dev://`
+- `open -g` each copied link with the palette closed: it runs what the row's shortcut runs
+- Open a window command's link with a plain `open` (no `-g`): after the question, it moves the
+  window of the app you were in, not Tinycast
+- Open a command's link twice: it toggles, as its shortcut does. Turn the feature off: the link shows
+  a HUD naming it and runs nothing
+- Hide a command from launcher search: its link still runs. Open a mistyped link: a HUD says it
+  can't open it
+- The first link to a window command, system action or quicklink asks. Cancel runs nothing, Run Once
+  runs it and asks again next time, Always Allow runs it and never asks again. Settings → General →
+  Deeplinks lists it; remove it there and the next link asks again. A clipboard-history link never
+  asks. Export a backup: the allowed list is not in it
+- Open two asking links back to back: only the first asks; the second runs nothing
+- `command/search-files?fallbackText=~/Downloads/`, `command/clipboard-history?fallbackText=a`,
+  `command/switch-windows?fallbackText=a` and `search?fallbackText=2%2B2` open their screen already
+  searching (the last shows the calculator card). `command/ai-chat?fallbackText=hi` types into Quick
+  AI and sends nothing
+- A quicklink `https://example.com/?q={argument}`: `?arguments=%7B%22Argument%22%3A%22x%22%7D` and
+  `?fallbackText=x` both open `?q=x`; with no input it asks for the argument. A custom command with
+  one argument and `?arguments=%5B%22x%22%5D` runs with `$1` = `x`
+- `command/create-quicklink?context=%7B%22name%22%3A%22Docs%22%2C%22link%22%3A%22https%3A%2F%2Fexample.com%22%7D`
+  opens the editor filled in; Cancel saves nothing. `command/create-snippet?fallbackText=hello` and
+  `command/create-note?fallbackText=hello` start with `hello`
+- `?arguments=nope` on any link: a HUD says it can't open it, and nothing runs
+- `settings/permissions` opens Settings on Permissions; `settings/nope` shows the HUD
+- A quicklink whose link is `tinycast-dev://window-command/left-half` moves the window without
+  asking
+- `raycast://extensions/<owner>/<ext>/<cmd>` still runs an installed extension command
 
 ### Extensions
 
