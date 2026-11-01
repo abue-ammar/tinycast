@@ -197,6 +197,25 @@ final class ExtensionCoordinator {
         fallbackText: String? = nil, launchType: ExtensionLaunchType = .userInitiated,
         launchContext: [String: RenderValue] = [:]
     ) {
+        let missing = extensions.storage.missingRequiredPreferences(
+            extension: owner.manifest.name,
+            schemas: owner.manifest.preferences + command.preferences)
+        if launchType == .userInitiated, !missing.isEmpty {
+            Task {
+                guard
+                    await core.confirm(
+                        title: owner.manifest.title,
+                        message: ExtensionLaunchError.missingPreferences(missing).localizedDescription,
+                        symbol: "puzzlepiece.extension",
+                        confirmTitle: String(localized: "Configure Extension"),
+                        tone: .neutral, confirmRole: .standard),
+                    extensions.isEnabled,
+                    let installed = extensions.extensionNamed(owner.manifest.name)
+                else { return }
+                showExtensionSettings(for: installed)
+            }
+            return
+        }
         switch command.mode {
         case .view:
             // Switch the palette over first, so the launching state is what the user sees.
