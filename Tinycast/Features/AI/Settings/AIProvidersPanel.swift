@@ -286,8 +286,14 @@ struct AIProvidersPanel: View {
         if !settings.isRouteEnabled(.appleIntelligence) { turnedOffSection() }
         Section {
             LabeledContent {
-                Text(available ? "Ready" : "Unavailable")
-                    .foregroundStyle(.secondary)
+                if available {
+                    Text("Ready")
+                        .foregroundStyle(.secondary)
+                } else if AppleIntelligenceProvider.status().isSupported {
+                    Button("Open System Settings…") {
+                        NSWorkspace.shared.open(AppleIntelligence.settingsURL)
+                    }
+                }
             } label: {
                 Text(AppleIntelligence.title)
                 Text(
@@ -771,14 +777,18 @@ struct AIProvidersPanel: View {
     }
 
     private func routeToggle(_ route: AIProviderRoute) -> some View {
-        Toggle(
+        // Off for display only: the stored choice belongs to the reader, not to this Mac.
+        let unsupported =
+            route == .appleIntelligence && !AppleIntelligenceProvider.status().isSupported
+        return Toggle(
             "Enable \(title(for: route))",
             isOn: Binding(
-                get: { settings.isRouteEnabled(route.source) },
+                get: { !unsupported && settings.isRouteEnabled(route.source) },
                 set: { settings.setRoute(route.source, enabled: $0) })
         )
         .labelsHidden()
         .toggleStyle(.switch)
+        .disabled(unsupported)
     }
 
     private var removalPresented: Binding<Bool> {
