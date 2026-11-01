@@ -39,7 +39,6 @@ final class WindowCommandCoordinator {
         runWindowSize(size)
     }
 
-    /// A saved size, or one a link spelled out; both are placed the same way.
     func runWindowSize(_ size: CustomWindowSize) {
         guard settings.windowManagementEnabled else { return }
         windowMover.perform(size, target: handOffTarget(), gap: CGFloat(settings.windowGap))

@@ -45,7 +45,7 @@ final class DeepLinkCoordinator {
         guard let link = DeepLink(url: url, scheme: scheme) else { return reportUnknownLink() }
         switch link {
         case .launcher(let text):
-            paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: text == nil, seeding: text)
+            openLauncher(typing: text, source: source)
         case .settings(let slug):
             guard let tab = SettingsTab(slug: slug) else { return reportUnknownLink() }
             settingsCoordinator.showSettings(tab: tab)
@@ -92,30 +92,31 @@ final class DeepLinkCoordinator {
         let typed = values.filter { !$0.value.isEmpty }
         guard !typed.isEmpty else { return .none }
         guard case .customCommand? = HotKeyAction(entryID: entryID) else {
-            return DeepLinkInput(fallbackText: nil, arguments: .named(typed), context: nil)
+            return DeepLinkInput(arguments: .named(typed))
         }
         let ordered = (0..<CustomCommandArgument.limit).map {
             values[CustomCommandArgument.fieldID(at: $0)] ?? ""
         }
         let filled = ordered.prefix(through: ordered.lastIndex { !$0.isEmpty } ?? 0)
-        return DeepLinkInput(fallbackText: nil, arguments: .positional(Array(filled)), context: nil)
+        return DeepLinkInput(arguments: .positional(Array(filled)))
     }
 
     // MARK: - Allowed links
 
     /// Named for Settings; a row deleted since keeps its ID as its name, so it can still go.
     var allowedLinks: [AllowedLink] {
-        settings.deepLinkAllowedEntryIDs.map { AllowedLink(id: $0, name: consentName(forKey: $0)) }
+        settings.allowedDeepLinks.map { AllowedLink(id: $0, name: consentName(forKey: $0)) }
     }
 
     func revoke(_ link: AllowedLink) {
-        settings.deepLinkAllowedEntryIDs.removeAll { $0 == link.id }
+        settings.allowedDeepLinks.removeAll { $0 == link.id }
     }
 
     private func consentName(forKey key: String) -> String {
         if key == DeepLink.windowSizeHost { return String(localized: "Custom Size") }
         guard let parts = DeepLinkConsentPolicy.parts(ofKey: key),
-            let action = HotKeyAction(entryID: parts.entryID)
+            let action = parts.entryID == DeepLink.searchHost
+                ? .togglePalette : HotKeyAction(entryID: parts.entryID)
         else { return key }
         let name = hotKeys.displayName(of: action)
         return parts.input.isEmpty ? name : name + " · " + parts.input.summary
@@ -167,6 +168,21 @@ final class DeepLinkCoordinator {
         }
     }
 
+    /// Typed text is one Return from a fallback row, so it asks like any other input.
+    private func openLauncher(typing text: String?, source: DeepLinkSource) {
+        guard let text else {
+            return paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
+        }
+        let input = DeepLinkInput(fallbackText: text)
+        runAfterConsent(
+            name: hotKeys.displayName(of: .togglePalette), input: input,
+            key: DeepLinkConsentPolicy.key(entryID: DeepLink.searchHost, input: input), asks: true,
+            source: source
+        ) { [weak self] in
+            self?.paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: false, seeding: text)
+        }
+    }
+
     private func runWindowSize(_ size: CustomWindowSize, source: DeepLinkSource) {
         let name = String(localized: "Custom Size")
         guard settings.windowManagementEnabled else {
@@ -185,7 +201,7 @@ final class DeepLinkCoordinator {
         name: String, input: DeepLinkInput, key: String, asks: Bool, source: DeepLinkSource,
         _ body: @escaping @MainActor () -> Void
     ) {
-        guard asks, source == .outside, !settings.deepLinkAllowedEntryIDs.contains(key) else {
+        guard asks, source == .outside, !settings.allowedDeepLinks.contains(key) else {
             return body()
         }
         guard !isAskingConsent else {
@@ -197,8 +213,8 @@ final class DeepLinkCoordinator {
             let choice = await askConsent(name: name, input: input)
             isAskingConsent = false
             guard choice != .cancel else { return }
-            if choice == .alwaysAllow, !settings.deepLinkAllowedEntryIDs.contains(key) {
-                settings.deepLinkAllowedEntryIDs.append(key)
+            if choice == .alwaysAllow, !settings.allowedDeepLinks.contains(key) {
+                settings.allowedDeepLinks.append(key)
             }
             body()
         }

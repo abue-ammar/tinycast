@@ -225,17 +225,16 @@ struct DeepLinkTests {
         let names = ["Branch", "Message", "Branch"]
         let position: (Int) -> String = { "$\($0 + 1)" }
         let positional = DeepLinkInput(
-            fallbackText: "ignored", arguments: .positional(["main", "fix", "x", "extra"]), context: nil)
+            fallbackText: "ignored", arguments: .positional(["main", "fix", "x", "extra"]))
         expect(
             positional.fieldValues(names: names, fieldID: position)
                 == ["$1": "main", "$2": "fix", "$3": "x"],
             "positional values fill fields in order and extras are dropped")
-        let named = DeepLinkInput(
-            fallbackText: nil, arguments: .named(["Branch": "main", "Other": "y"]), context: nil)
+        let named = DeepLinkInput(arguments: .named(["Branch": "main", "Other": "y"]))
         expect(
             named.fieldValues(names: names, fieldID: position) == ["$1": "main"],
             "a named value fills only the first field of that name")
-        let text = DeepLinkInput(fallbackText: "rust", arguments: nil, context: nil)
+        let text = DeepLinkInput(fallbackText: "rust")
         let quicklinkNames = ["Query", "Site"]
         expect(
             text.fieldValues(names: quicklinkNames, fieldID: { quicklinkNames[$0] })
@@ -258,13 +257,11 @@ struct DeepLinkTests {
     static func encodingChecks() {
         let entryID = "command:search-files"
         let inputs: [DeepLinkInput] = [
-            DeepLinkInput(fallbackText: "a & b = c + d # é 😀 %20", arguments: nil, context: nil),
-            DeepLinkInput(fallbackText: nil, arguments: .named(["Query": "x/y?z", "Site": ""]), context: nil),
-            DeepLinkInput(fallbackText: nil, arguments: .positional(["a", "", "c"]), context: nil),
-            DeepLinkInput(
-                fallbackText: nil, arguments: nil,
-                context: .fields(["name": "Docs", "link": "https://a.b/?q=1"])),
-            DeepLinkInput(fallbackText: "t", arguments: nil, context: .list([["name": "A"], ["name": "B"]]))
+            DeepLinkInput(fallbackText: "a & b = c + d # é 😀 %20"),
+            DeepLinkInput(arguments: .named(["Query": "x/y?z", "Site": ""])),
+            DeepLinkInput(arguments: .positional(["a", "", "c"])),
+            DeepLinkInput(context: .fields(["name": "Docs", "link": "https://a.b/?q=1"])),
+            DeepLinkInput(fallbackText: "t", context: .list([["name": "A"], ["name": "B"]]))
         ]
         for original in inputs {
             let url = DeepLink.url(forEntryID: entryID, scheme: scheme, input: original)
@@ -277,11 +274,9 @@ struct DeepLinkTests {
             DeepLink.url(forEntryID: entryID, scheme: scheme)?.query == nil,
             "a link with no input has no query")
         expect(
-            DeepLinkInput(fallbackText: nil, arguments: .named(["q": "rust"]), context: nil).summary
-                == #"{"q":"rust"}"#,
+            DeepLinkInput(arguments: .named(["q": "rust"])).summary == #"{"q":"rust"}"#,
             "a summary shows the input as it was sent")
-        let long = DeepLinkInput(
-            fallbackText: String(repeating: "x", count: 500), arguments: nil, context: nil)
+        let long = DeepLinkInput(fallbackText: String(repeating: "x", count: 500))
         expect(long.summary.count == 161 && long.summary.hasSuffix("…"), "a long summary is cut")
     }
 
@@ -302,7 +297,7 @@ struct DeepLinkTests {
             parse("tinycast://system-action/set-volume?fallbackText=40")
                 == .entry(
                     .systemAction(id: .setVolume),
-                    DeepLinkInput(fallbackText: "40", arguments: nil, context: nil)),
+                    DeepLinkInput(fallbackText: "40")),
             "set-volume carries its level as input")
         expect(
             DeepLinkSource.outside.mayRun(.quicklink(id: chat)), "a link from outside may open a quicklink")
@@ -338,7 +333,7 @@ struct DeepLinkTests {
 
     static func consentKeyChecks() {
         let plain = DeepLinkInput.none
-        let text = DeepLinkInput(fallbackText: "~/Downloads/", arguments: nil, context: nil)
+        let text = DeepLinkInput(fallbackText: "~/Downloads/")
         expect(
             !DeepLinkConsentPolicy.requiresConsent(.command(.searchFiles), input: plain),
             "a screen with no input never asks")
@@ -353,7 +348,7 @@ struct DeepLinkTests {
         expect(
             keyed
                 != DeepLinkConsentPolicy.key(
-                    entryID: entryID, input: DeepLinkInput(fallbackText: "~/", arguments: nil, context: nil)),
+                    entryID: entryID, input: DeepLinkInput(fallbackText: "~/")),
             "a grant covers only its exact input")
         let parts = DeepLinkConsentPolicy.parts(ofKey: keyed)
         expect(parts?.entryID == entryID && parts?.input == text, "a key reads back, even with ? in a path")

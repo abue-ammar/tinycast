@@ -9,11 +9,11 @@ enum DeepLink: Equatable, Sendable {
     /// A note by its file name, which is all a note is known by.
     case note(name: String)
     case chat(id: UUID)
-    /// A size spelled out in the link rather than saved.
     case windowSize(CustomWindowSize)
 
     /// Extension links own this host, so built-in parsing must never claim it.
     static let extensionsHost = "extensions"
+    static let searchHost = "search"
     static let windowSizeHost = "window-size"
     private static let noteHost = "note"
     private static let chatHost = "chat"
@@ -59,7 +59,7 @@ enum DeepLink: Equatable, Sendable {
 
     private static func link(host: String, path: String, input: DeepLinkInput) -> DeepLink? {
         switch (host, path.isEmpty) {
-        case ("", true), ("search", true):
+        case ("", true), (searchHost, true):
             return .launcher(fallbackText: input.fallbackText)
         case ("settings", false):
             return path.contains("/") ? nil : .settings(slug: path.lowercased())

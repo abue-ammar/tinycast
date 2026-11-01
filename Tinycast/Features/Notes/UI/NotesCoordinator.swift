@@ -6,7 +6,7 @@ import SwiftUI
 final class NotesCoordinator {
     private enum Presentation: Equatable {
         case editor
-        case create
+        case create(source: String)
         case search
         case note(NoteID)
     }
@@ -27,8 +27,6 @@ final class NotesCoordinator {
     @ObservationIgnored private var operationID = 0
     @ObservationIgnored private var pendingIssue: NotesStore.Issue?
     private var pendingPresentation: Presentation?
-    /// A link's text for the next note created, whichever path ends up creating it.
-    @ObservationIgnored private var pendingNoteSource = ""
     private var enablementGeneration = 0
     private(set) var isSwitcherPresented = false
     private(set) var switcherSelection: NoteID?
@@ -141,20 +139,17 @@ final class NotesCoordinator {
     }
 
     func createNote() {
-        request(.create)
+        createNote(text: "")
     }
 
-    /// Two links landing before the note exists share it, so neither one's text is lost.
     func createNote(text: String) {
-        pendingNoteSource = pendingNoteSource.isEmpty ? text : pendingNoteSource + "\n\n" + text
-        request(.create)
+        request(.create(source: text))
     }
 
     func searchNotes() {
         request(.search)
     }
 
-    /// A link to one note: the window loads, then shows that note, as picking it would.
     func open(_ id: NoteID) {
         request(.note(id))
     }
@@ -429,8 +424,11 @@ final class NotesCoordinator {
             guard let self else { return }
             // Create is its own load: the collection it would wait for is the one it adds to.
             let loaded =
-                presentation == .create
-                ? await store.create(source: takePendingNoteSource()) : await store.start()
+                if case .create(let source) = presentation {
+                    await store.create(source: source)
+                } else {
+                    await store.start()
+                }
             guard generation == enablementGeneration else {
                 if !settings.notesEnabled { store.stop() }
                 return
@@ -438,7 +436,9 @@ final class NotesCoordinator {
             loadTask = nil
             guard loaded, settings.notesEnabled, !Task.isCancelled else { return }
             // The note this task just made satisfies a create still pending; never make a second.
-            if presentation == .create, pendingPresentation == .create {
+            if case .create = presentation,
+                pendingPresentation == presentation || pendingPresentation == .create(source: "")
+            {
                 pendingPresentation = .editor
             }
             guard let next = pendingPresentation else { return }
@@ -452,8 +452,8 @@ final class NotesCoordinator {
         case .editor:
             closeSwitcher()
             windowController.show(focusEditor: true)
-        case .create:
-            await showEditor { await store.create(source: takePendingNoteSource()) }
+        case .create(let source):
+            await showEditor { await store.create(source: source) }
         case .note(let id):
             await showEditor { await store.select(id) }
         case .search:
@@ -471,11 +471,6 @@ final class NotesCoordinator {
         else { return }
         closeSwitcher()
         windowController.show(focusEditor: true)
-    }
-
-    private func takePendingNoteSource() -> String {
-        defer { pendingNoteSource = "" }
-        return pendingNoteSource
     }
 
     /// A newer show or hide retires an older operation's right to put what it loaded on screen.

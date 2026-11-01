@@ -1,7 +1,6 @@
 import Foundation
 
 extension CustomWindowSize {
-    /// `width` and `height` are required; `anchor` defaults to center and `x`/`y` to no shift.
     init?(linkFields fields: [String: String]) {
         guard let width = fields["width"].flatMap(Dimension.init(linkValue:)),
             let height = fields["height"].flatMap(Dimension.init(linkValue:)),
@@ -16,7 +15,6 @@ extension CustomWindowSize {
         return WindowLayoutAnchor(rawValue: value.lowercased())
     }
 
-    /// A whole number of points inside the range a saved size allows.
     private static func offset(_ value: String?) -> Int? {
         guard let value else { return 0 }
         return Int(value).flatMap { Offset.range.contains($0) ? $0 : nil }
