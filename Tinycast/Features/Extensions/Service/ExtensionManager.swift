@@ -6,6 +6,7 @@ enum ExtensionSessionState: Equatable {
     case launching
     case rendered(RenderTree)
     case failed(String)
+    case needsPreferences(String)
     /// A no-view command that ran to completion.
     case finished
 }
@@ -405,7 +406,8 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         guard missing.isEmpty else {
             running = ExtensionCommandRef(
                 extensionName: owner.manifest.name, commandName: command.name)
-            state = .failed(ExtensionLaunchError.missingPreferences(missing).localizedDescription)
+            state = .needsPreferences(
+                ExtensionLaunchError.missingPreferences(missing).localizedDescription)
             return
         }
         guard let bundle = owner.bundleURL(for: command) else {

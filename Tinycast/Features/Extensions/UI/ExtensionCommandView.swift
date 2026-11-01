@@ -21,7 +21,7 @@ struct ExtensionCommandView: View {
         switch state {
         case .launching where screen.root == nil:
             EmptyResults(text: String(localized: "Starting…"))
-        case .failed(let message):
+        case .failed(let message), .needsPreferences(let message):
             ExtensionFailureView(message: message)
         case .finished:
             EmptyResults(text: String(localized: "Done"))

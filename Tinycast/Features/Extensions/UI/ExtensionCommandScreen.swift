@@ -26,7 +26,12 @@ struct ExtensionCommandScreen: PaletteScreen {
     }
 
     /// A form or rowless Detail's primary action stands even with no row to land on.
-    var actsWithoutRows: Bool { isForm || screen.kind == .detail }
+    var actsWithoutRows: Bool { needsPreferences || isForm || screen.kind == .detail }
+
+    private var needsPreferences: Bool {
+        if case .needsPreferences = extensions.state { return true }
+        return false
+    }
 
     /// A text area edits with ↑/↓ itself, so only ⇥ leaves it.
     func ownsVerticalKeys(at selection: Int) -> Bool {
@@ -59,14 +64,18 @@ struct ExtensionCommandScreen: PaletteScreen {
 
     /// A submenu reached first is a grouping device, so its title stands in for the leaf's.
     var primaryActionTitle: String {
+        if needsPreferences { return String(localized: "Configure Extension") }
         let primary = primaryAction(at: vm.selection)
         return primary?.enclosingSubmenuTitle ?? primary?.title ?? String(localized: "Run")
     }
 
-    func hasPrimaryAction(at selection: Int) -> Bool { primaryAction(at: selection) != nil }
+    func hasPrimaryAction(at selection: Int) -> Bool {
+        needsPreferences || primaryAction(at: selection) != nil
+    }
 
     /// A form usually ships one Submit action, and a one-row ⌘K panel is noise beside its pill.
     func hasActions(at selection: Int) -> Bool {
+        guard !needsPreferences else { return false }
         guard isForm else { return true }
         return ExtensionScreen.actions(in: screen.actionPanel(forItemAt: selection)).count > 1
     }
@@ -130,6 +139,10 @@ struct ExtensionCommandScreen: PaletteScreen {
     }
 
     func activate(at selection: Int) {
+        if needsPreferences {
+            extensions.openPreferences(scope: "extension")
+            return
+        }
         guard let primary = primaryAction(at: selection) else { return }
         if primary.enclosingSubmenuTitle != nil {
             vm.selection = selection
