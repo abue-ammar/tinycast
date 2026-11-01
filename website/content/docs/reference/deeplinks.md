@@ -35,7 +35,7 @@ closes.
 
 ## Send text and arguments
 
-Links take the same parameters as Raycast's. Encode their values for a URL.
+Links take three parameters. Encode their values for a URL.
 
 - **`fallbackText`** types text into the command's first field. For example,
   `tinycast://command/search-files?fallbackText=~/Downloads/` opens Search Files already searching.
@@ -66,7 +66,8 @@ Shut Down and other big system actions still ask their own question too.
 To make a command ask again, remove it in **Settings → General → Deeplinks**. This list is never
 part of a backup.
 
-A quicklink that points to a `tinycast://` link runs it without asking, because you made it.
+A quicklink that points to a `tinycast://` link runs it without asking, because you made it. It
+can't point to another quicklink.
 
 ## Karabiner-Elements
 

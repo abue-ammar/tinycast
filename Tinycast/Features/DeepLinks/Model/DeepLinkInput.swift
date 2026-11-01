@@ -1,6 +1,6 @@
 import Foundation
 
-/// What a link carries besides its target, under Raycast's parameter names.
+/// What a link carries besides its target: text, field values and an editor's contents.
 struct DeepLinkInput: Equatable, Sendable {
     enum Arguments: Equatable, Sendable {
         case named([String: String])
@@ -24,7 +24,6 @@ struct DeepLinkInput: Equatable, Sendable {
     /// Nil when a parameter is malformed or oversized: the link fails rather than run without it.
     init?(queryItems: [URLQueryItem]) {
         var input = Self.none
-        var launchContext: [String: String]?
         for item in queryItems {
             guard let value = item.value, !value.isEmpty else { continue }
             guard value.count <= Self.maximumParameterLength else { return nil }
@@ -37,15 +36,10 @@ struct DeepLinkInput: Equatable, Sendable {
             case "context":
                 guard let context = Self.object(fromJSON: value) else { return nil }
                 input.context = context
-            case "launchcontext":
-                guard let context = Self.object(fromJSON: value) else { return nil }
-                launchContext = context
             default:
                 continue
             }
         }
-        // Raycast reads `launchContext` first, so a link carrying both means that one.
-        if let launchContext { input.context = launchContext }
         self = input
     }
 

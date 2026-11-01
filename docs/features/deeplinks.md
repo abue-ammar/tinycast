@@ -8,7 +8,7 @@ open -g "tinycast://command/clipboard-history"
 open -g "tinycast://command/search-files?fallbackText=~/Downloads/"
 ```
 
-A link can also carry input, in Raycast's parameter names. **Copy Deeplink** (⇧⌘C, or ⌘K on the
+A link can also carry input: text, field values and an editor's contents. **Copy Deeplink** (⇧⌘C, or ⌘K on the
 row) puts a row's exact link on the clipboard, so nobody has to build one by hand.
 
 `Features/DeepLinks/` holds:
@@ -43,6 +43,8 @@ row) puts a row's exact link on the clipboard, so nobody has to build one by han
   extension row. Moving extensions out of the app means deleting that one branch.
 - **A link never carries shell text.** Open in Browser, Run Shell Command and Quit have no link. A
   custom command takes arguments as `$1…$3`, never spliced into its script.
+- **A quicklink never opens a quicklink.** Its own-scheme link runs in-process and synchronously, so
+  a quicklink that reached itself would recurse forever. `DeepLinkCoordinator` refuses it with a HUD.
 - **A create link never saves.** `create-quicklink` and `create-snippet` open a filled-in editor.
   Nothing is written until the reader saves.
 - **A link from outside that acts outside Tinycast asks first.** See [Consent](#consent).
@@ -79,12 +81,11 @@ already cover them.
 
 ## Input
 
-The names match Raycast's, and are case-insensitive:
+The parameter names are case-insensitive:
 
 - **`fallbackText`** — text for the target's first field.
 - **`arguments`** — URL-encoded JSON. An object fills fields by name, an array fills them in order.
-- **`context`** — a URL-encoded JSON object. `launchContext` is accepted too, and wins over
-  `context`, as in Raycast.
+- **`context`** — a URL-encoded JSON object, for the create editors.
 
 Values are coerced to the text a field would hold: numbers and booleans become their text, `null`
 becomes empty. **Malformed JSON, a nested value or a parameter over 64 KB refuses the whole link**
@@ -97,7 +98,7 @@ included, are ignored, because each built-in already knows whether it shows a sc
 | A search screen (list below) | `fallbackText` opens it searching; a seeded screen never toggles shut             |
 | `command/ai-chat`            | `fallbackText` is typed into Quick AI, never sent                                 |
 | `command/create-quicklink`   | `context` `{name, link, openWith}`; `fallbackText` is the link                    |
-| `command/create-snippet`     | `context` `{name or title, text or snippet, keyword}`; `fallbackText` is the text |
+| `command/create-snippet`     | `context` `{name, text, keyword}`; `fallbackText` is the text |
 | `command/create-note`        | `context` `{text}` or `fallbackText` becomes the new note's text                  |
 | `quicklink/<uuid>`           | `arguments` by argument name; `fallbackText` fills the first required one         |
 | `custom-command/<uuid>`      | `arguments` as `["a", "b"]`, or by argument name; `fallbackText` is `$1`          |
@@ -121,9 +122,8 @@ build until it is classed:
 
 The question offers **Always Allow**, **Run Once** and **Cancel**. Always Allow stores the row's
 entry ID in `deepLinkAllowedEntryIDs`. Destructive system actions still ask their own question after
-it. One question shows at a time: a link that arrives meanwhile is logged and dropped, as Raycast
-does. The gate is checked again after the answer, so a feature turned off during the question still
-wins.
+it. One question shows at a time: a link that arrives meanwhile is logged and dropped. The gate is
+checked again after the answer, so a feature turned off during the question still wins.
 
 A link Tinycast opens itself — a quicklink whose link is the channel's own scheme — runs in-process
 with `source: .tinycast`. It never asks, because the reader chose it in Tinycast. It never goes
