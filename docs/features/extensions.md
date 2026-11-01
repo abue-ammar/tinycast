@@ -695,7 +695,9 @@ its preferences, keyed by `providerId`. Only a command the user opened can start
 background refresh fails until then. While the browser is up the palette hides, but Pop to Root
 Search holds off, because resetting would stop the command and cancel the sign-in. Summoning the
 palette meanwhile returns to the waiting command, and the palette comes back on its own when the
-redirect lands.
+redirect lands. Leaving the command cancels its browser session and finishes the pending host call
+without waiting for a browser callback, so the sign-in hold cannot outlive the command. A browser
+session that refuses to start fails immediately; duplicate or late callbacks cannot finish it twice.
 
 **Node built-ins** — `path`, `fs` (+ `fs/promises`, `createReadStream`/`createWriteStream`, a snapshot-backed `opendir`, and
 the descriptor calls `tar` unpacks through), `os`,
