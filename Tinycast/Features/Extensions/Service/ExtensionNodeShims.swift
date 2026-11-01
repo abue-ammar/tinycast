@@ -406,6 +406,8 @@ final class ExtensionNodeShims: @unchecked Sendable {
         return [
             "size": Double(status.st_size),
             "mode": Int(status.st_mode),
+            "uid": Int(status.st_uid),
+            "gid": Int(status.st_gid),
             "mtimeMs": milliseconds(status.st_mtimespec),
             "atimeMs": milliseconds(status.st_atimespec),
             "ctimeMs": milliseconds(status.st_ctimespec),

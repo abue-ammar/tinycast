@@ -4,6 +4,7 @@
 //   node fixtures.mjs
 
 import { createHarness, bootConfig, describeTree } from "./test.mjs";
+import { statSync } from "node:fs";
 import { transformSync } from "esbuild";
 import { runModuleFixtures } from "./modules-fixtures.mjs";
 import { runOAuthFixtures } from "./oauth-fixtures.mjs";
@@ -331,6 +332,44 @@ module.exports.default = () => {
   emitter.emit("ordinary", 1);
   emitter.emit("ordinary", 2);
   globalThis.__once = { calls, chained, emitted, repeated, removedCalls, ordinary };
+};
+`;
+
+// isexe v3's POSIX check, which `which` runs on every PATH candidate.
+const isexeSource = `
+const fs = require("fs");
+
+module.exports.default = () => {
+  const checkMode = (stat) => {
+    const myUid = process.getuid?.();
+    const myGroups = process.getgroups?.() ?? [];
+    const myGid = process.getgid?.() ?? myGroups[0];
+    if (myUid === undefined || myGid === undefined) throw new Error("cannot get uid or gid");
+    const groups = new Set([myGid, ...myGroups]);
+    const mod = stat.mode;
+    return !!(
+      mod & 0o001 ||
+      (mod & 0o010 && groups.has(stat.gid)) ||
+      (mod & 0o100 && stat.uid === myUid) ||
+      (mod & 0o110 && myUid === 0)
+    );
+  };
+  const isexe = (path) => {
+    try {
+      const stat = fs.statSync(path);
+      return stat.isFile() && checkMode(stat);
+    } catch (error) {
+      return error.message;
+    }
+  };
+  const stat = fs.statSync("/etc/hosts");
+  globalThis.__isexe = {
+    ids: [process.getuid(), process.getgid(), process.geteuid(), process.getegid(), process.getgroups()],
+    userInfo: [require("os").userInfo().uid, require("os").userInfo().gid],
+    owner: [stat.uid, stat.gid],
+    executable: isexe("/bin/sh"),
+    plain: isexe("/etc/hosts"),
+  };
 };
 `;
 
@@ -974,6 +1013,17 @@ export async function runFixtures() {
     check("once removes itself before recursive emission", result?.emitted === true && result?.repeated === false);
     check("once can still be removed using the original listener", result?.removedCalls === 0);
     check("ordinary listeners retain their receiver and repeated delivery", JSON.stringify(result?.ordinary) === "[[true,1],[true,2]]");
+  });
+
+  await run("which/isexe sees the user's ids and file owners", isexeSource, "no-view", async (harness) => {
+    const result = harness.call("globalThis.__isexe");
+    const hostIds = [process.getuid(), process.getgid(), process.geteuid(), process.getegid(), process.getgroups()];
+    const hosts = statSync("/etc/hosts");
+    check("process reports the booted ids", JSON.stringify(result?.ids) === JSON.stringify(hostIds), JSON.stringify(result?.ids));
+    check("os.userInfo agrees with process", JSON.stringify(result?.userInfo) === JSON.stringify(hostIds.slice(0, 2)), JSON.stringify(result?.userInfo));
+    check("stat carries the file owner", JSON.stringify(result?.owner) === JSON.stringify([hosts.uid, hosts.gid]), JSON.stringify(result?.owner));
+    check("an executable is found", result?.executable === true, String(result?.executable));
+    check("a plain file is not executable", result?.plain === false, String(result?.plain));
   });
 
   // A plist's binary <data> must decode without aborting the host read.
