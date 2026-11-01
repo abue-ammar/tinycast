@@ -348,7 +348,9 @@ struct FileSearchTests {
         expect(FileSearchPreviewKind(pathExtension: "swift") == .quickLook, "declared text")
         expect(FileSearchPreviewKind(pathExtension: "pdf") == .pdf, "a PDF draws in process")
         expect(FileSearchPreviewKind(pathExtension: "mov") == .media, "a movie plays")
-        expect(FileSearchPreviewKind(pathExtension: "jsx") == nil, "undeclared waits on bytes")
+        expect(
+            FileSearchPreviewKind(pathExtension: "tinycastunknown") == nil,
+            "undeclared waits on bytes")
         expect(FileSearchPreviewKind(pathExtension: "ts") == nil, ".ts: TypeScript or MPEG-TS")
 
         let source = Data("export const x = () => <div>é</div>\n".utf8)
