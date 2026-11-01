@@ -6,8 +6,10 @@ final class ExtensionFetcher: Sendable {
     private let session: URLSession
 
     init() {
-        Self.disableAppSSO()
         let configuration = URLSessionConfiguration.ephemeral
+        if configuration.responds(to: NSSelectorFromString("set_preventsAppSSO:")) {
+            configuration.setValue(true, forKey: "_preventsAppSSO")
+        }
         configuration.timeoutIntervalForRequest = 60
         configuration.httpCookieStorage = nil
         configuration.urlCredentialStorage = nil
@@ -17,27 +19,6 @@ final class ExtensionFetcher: Sendable {
     }
 
     deinit { session.invalidateAndCancel() }
-
-    /// Opt URLSession out of the macOS Extensible SSO (AppSSO) broker.
-    ///
-    /// On macOS, URLSession hands a request off to any installed AppSSO extension whose
-    /// identity-provider URLs it matches — enterprise brokers such as Kerberos or a corporate
-    /// SSO. An extension does plain HTTP and sets its own cookies and headers; when a server
-    /// answers a redirect to one of those IdP URLs, the broker intercepts it and, with no window
-    /// or interactive context behind a launcher's background fetch, fails the request
-    /// (`com.apple.AppSSO.AuthorizationError` -5) instead of letting the redirect follow with the
-    /// credentials the extension already sent. The request then dies even though the same call
-    /// succeeds from a plain HTTP client. WebKit disables the broker for its own non-interactive
-    /// loads the same way (`SOAuthorizationCoordinator`). The toggle is a process-wide private
-    /// class method that is idempotent, so it is called behind a `responds(to:)` check and is a
-    /// no-op on a system without it; every networked surface here is already ephemeral with no
-    /// cookie jar.
-    private static func disableAppSSO() {
-        let session: AnyObject = URLSession.self
-        let selector = NSSelectorFromString("_disableAppSSO")
-        guard session.responds(to: selector) else { return }
-        _ = session.perform(selector)
-    }
 
     enum FetchError: LocalizedError {
         case badURL(String)

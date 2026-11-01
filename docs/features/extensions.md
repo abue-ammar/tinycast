@@ -20,6 +20,8 @@ produces, rendered natively into the palette. No Electron, no browser, no Node.j
 - **Bridges share one private HTTP transport, never execution state.** Cookies, credential storage and
   URL caching are disabled. Individual task cancellation leaves other requests running; releasing the
   fetcher invalidates its session so CFNetwork does not retain discarded connections and sessions.
+  Only its session configuration opts out of the AppSSO broker through the private `_preventsAppSSO`
+  property when its setter is available. Other sessions keep their own authentication behavior.
 - **An idle menu item holds no JavaScript.** Once `isLoading` clears, keep only the native button and
   its snapshot. Reload a fresh context when its menu opens; retain it until the menu closes and any
   asynchronous action and host calls finish. Never keep a context alive to preserve handlers.
