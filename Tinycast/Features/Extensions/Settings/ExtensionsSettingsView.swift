@@ -410,6 +410,7 @@ private struct ExtensionDisclosure: View {
                     .padding(.top, Theme.Spacing.lg)
             }
         }
+        .id(SettingsTarget.row(.extensionsInstalled, installed.manifest.name))
     }
 
     private var summary: some View {
@@ -442,7 +443,6 @@ private struct ExtensionDisclosure: View {
         .accessibilityLabel(
             isExpanded ? "Hide \(installed.title) settings" : "Configure \(installed.title)"
         )
-        .id(SettingsTarget.row(.extensionsInstalled, installed.manifest.name))
     }
 
     /// One `Grid` for every run: separate grids size columns apart, stranding controls.
