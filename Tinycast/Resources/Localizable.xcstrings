@@ -16533,6 +16533,58 @@
         }
       }
     },
+    "A quicklink can’t open another quicklink" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein Quicklink kann keinen anderen Quicklink öffnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un enlace rápido no puede abrir otro enlace rápido"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un lien rapide ne peut pas ouvrir un autre lien rapide"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クイックリンクから別のクイックリンクは開けません"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "빠른 링크는 다른 빠른 링크를 열 수 없음"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um link rápido não pode abrir outro link rápido"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Быстрая ссылка не может открыть другую быструю ссылку"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "快速链接无法打开另一个快速链接"
+          }
+        }
+      }
+    },
     "A quicklink with this name already exists." : {
       "localizations" : {
         "de" : {

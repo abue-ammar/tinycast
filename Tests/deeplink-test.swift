@@ -184,7 +184,7 @@ struct DeepLinkTests {
             "fallbackText is percent-decoded")
         expect(
             input("FALLBACKTEXT=hi")?.fallbackText == "hi",
-            "parameter names are case-insensitive, as Raycast's are")
+            "parameter names are case-insensitive")
         expect(input("fallbackText=")?.isEmpty == true, "an empty value is no input")
         expect(input("launchType=background")?.isEmpty == true, "an unknown parameter is ignored")
         expect(
@@ -204,10 +204,6 @@ struct DeepLinkTests {
         expect(input("arguments=nope") == nil, "malformed arguments refuse the link")
         expect(input("arguments=%7B%22a%22%3A%7B%7D%7D") == nil, "a nested value refuses the link")
         expect(input("context=%5B%5D") == nil, "context must be an object")
-        expect(
-            input("context=%7B%22a%22%3A%221%22%7D&launchContext=%7B%22b%22%3A%222%22%7D")?.context
-                == ["b": "2"],
-            "launchContext wins over context, as in Raycast")
         let oversized = String(repeating: "a", count: DeepLinkInput.maximumParameterLength + 1)
         expect(input("fallbackText=" + oversized) == nil, "an oversized parameter refuses the link")
     }

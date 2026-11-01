@@ -85,6 +85,12 @@ final class DeepLinkCoordinator {
     }
 
     private func run(_ action: HotKeyAction, input: DeepLinkInput, source: Source) {
+        // A quicklink reaching a quicklink could reach itself, and that loop never unwinds.
+        if source == .tinycast, case .quicklink = action {
+            core.showMessage(
+                String(localized: "A quicklink can’t open another quicklink"), tone: .danger)
+            return
+        }
         guard core.allowsHotKeyAction(action) else {
             let name = hotKeys.displayName(of: action)
             core.showMessage(String(localized: "“\(name)” is turned off"), tone: .danger)
@@ -185,7 +191,7 @@ final class DeepLinkCoordinator {
         return true
     }
 
-    /// `fallbackText` is the link field, the editor's first, as Raycast fills a first input.
+    /// `fallbackText` is the link, the editor's first field.
     private func createQuicklink(from input: DeepLinkInput) -> Bool {
         let context = input.context
         guard let link = context["link"] ?? input.fallbackText else { return false }
@@ -197,15 +203,11 @@ final class DeepLinkCoordinator {
         return true
     }
 
-    /// Raycast's own payloads say `title` and `snippet` as often as `name` and `text`.
     private func createSnippet(from input: DeepLinkInput) -> Bool {
         let context = input.context
-        guard let text = context["text"] ?? context["snippet"] ?? input.fallbackText else {
-            return false
-        }
+        guard let text = context["text"] ?? input.fallbackText else { return false }
         core.snippetCoordinator.createSnippet(
-            name: context["name"] ?? context["title"] ?? "", text: text,
-            keyword: context["keyword"] ?? "")
+            name: context["name"] ?? "", text: text, keyword: context["keyword"] ?? "")
         return true
     }
 
