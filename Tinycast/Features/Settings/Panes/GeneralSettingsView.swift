@@ -195,7 +195,8 @@ private struct FileManagerRow: View {
                     .foregroundStyle(
                         selection.isConfiguredApplicationMissing
                             ? Color.orange
-                            : Color.secondary)
+                            : Color.secondary
+                    )
                     .lineLimit(2)
                     .truncationMode(.middle)
                     .help(subtitle)
@@ -241,7 +242,7 @@ private struct FileManagerRow: View {
         panel.prompt = String(localized: "Use App")
         panel.message = String(localized: "Choose the app Tinycast uses to show files in their folders.")
         // Tinycast is an accessory app, so the panel opens behind the frontmost app without this.
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         guard panel.runModal() == .OK, let url = panel.url,
             let bundleID = Bundle(url: url)?.bundleIdentifier
         else { return }
