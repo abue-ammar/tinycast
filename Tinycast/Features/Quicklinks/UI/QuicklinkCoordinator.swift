@@ -452,6 +452,23 @@ final class QuicklinkCoordinator {
         return store.append(merge.additions)
     }
 
+    /// A link's batch: nothing is added until the reader agrees, and duplicates are skipped.
+    func importQuicklinks(offered incoming: [Quicklink]) async {
+        guard settings.quicklinksEnabled, !incoming.isEmpty else { return }
+        guard
+            await core.confirm(
+                title: String(localized: "Add \(incoming.count) quicklinks from a link?"),
+                message: ListFormatter.localizedString(byJoining: incoming.map(\.name)),
+                symbol: Quicklink.sfSymbol, confirmTitle: String(localized: "Add"), tone: .neutral,
+                confirmRole: .standard)
+        else { return }
+        let added = addImportedQuicklinks(incoming)
+        guard !added.isEmpty else {
+            return core.showMessage(String(localized: "Nothing to Import"), tone: .neutral)
+        }
+        core.showMessage(String(localized: "Imported \(added.count) quicklinks."))
+    }
+
     func importQuicklinks() async {
         guard let url = BackupActions.chooseJSONFile() else { return }
         do {

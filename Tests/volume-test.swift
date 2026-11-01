@@ -28,6 +28,13 @@ struct VolumeLevelTests {
         expect(VolumeLevel.clamped(1.5), 1, "above one clamps to one")
         expect(VolumeLevel.clamped(0.42), 0.42, "an in-range level passes through")
 
+        expect(VolumeLevel.level(fromPercent: "50") == 0.5, "a link's 50 is half volume")
+        expect(VolumeLevel.level(fromPercent: " 25% ") == 0.25, "a percent sign and spaces are fine")
+        expect(VolumeLevel.level(fromPercent: "0") == 0, "zero is a level")
+        for refused in ["101", "-1", "loud", "", "nan", "50%%"] {
+            expect(VolumeLevel.level(fromPercent: refused) == nil, "\"\(refused)\" is not a level")
+        }
+
         for line in 0...VolumeLevel.steps {
             let level = Double(line) * VolumeLevel.step
             if line < VolumeLevel.steps {

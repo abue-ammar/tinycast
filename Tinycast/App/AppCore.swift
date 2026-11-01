@@ -244,6 +244,8 @@ final class AppCore {
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
     private(set) var isShowingDialog = false
+    /// A link that launched the app can arrive before `start` wires anything; it waits, then runs.
+    @ObservationIgnored private var pendingURLs: [URL]? = []
     var isDimmingPaletteForDialog: Bool { isShowingDialog && windowController.isVisible }
     @ObservationIgnored private lazy var dialogs = DialogController(
         settings: settings,
@@ -467,6 +469,13 @@ final class AppCore {
                 showMessage(String(localized: "Updated to Tinycast \(version.description)"))
             }
         }
+        openPendingURLs()
+    }
+
+    private func openPendingURLs() {
+        let waiting = pendingURLs ?? []
+        pendingURLs = nil
+        waiting.forEach(handleOpenURL)
     }
 
     func handleReopen() {
@@ -480,6 +489,10 @@ final class AppCore {
     }
 
     func handleOpenURL(_ url: URL) {
+        if pendingURLs != nil {
+            pendingURLs?.append(url)
+            return
+        }
         if deepLinkCoordinator.handles(url) {
             deepLinkCoordinator.open(url)
             return
@@ -497,8 +510,7 @@ final class AppCore {
         }
     }
 
-    /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.
-    /// The category switch hotkeys and links share; each feature's own switch guards its funnel too.
+    /// The category switch hotkeys and links share; each feature's switch guards its funnel too.
     func allowsHotKeyAction(_ action: HotKeyAction) -> Bool {
         guard visibility.allowsHotKey(action) else { return false }
         if action == .dictation { return settings.dictationEnabled }
@@ -507,6 +519,7 @@ final class AppCore {
         return appIndex.isCommandEnabled(id)
     }
 
+    /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.
     private func hotKeyDisplayName(for action: HotKeyAction) -> String? {
         switch action {
         case .app(let bundleID):

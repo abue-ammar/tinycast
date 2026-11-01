@@ -10,6 +10,14 @@ enum VolumeLevel {
         min(max(level, 0), 1)
     }
 
+    /// `50` or `50%` from a link, as the 0–1 level the runner takes; nil outside 0–100.
+    static func level(fromPercent text: String) -> Double? {
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
+        let digits = trimmed.hasSuffix("%") ? String(trimmed.dropLast()) : trimmed
+        guard let percent = Double(digits), (0...100).contains(percent) else { return nil }
+        return percent / 100
+    }
+
     /// From the nearest line, since a device may store a level slightly off the one it was given.
     static func stepped(_ level: Double, up: Bool) -> Double {
         let line = (clamped(level) * Double(steps)).rounded() + (up ? 1 : -1)

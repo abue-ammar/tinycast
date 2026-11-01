@@ -131,6 +131,7 @@ struct AIChatSidebarView: View {
         Button("Rename…", systemImage: "pencil") { beginRename(conversation) }
         Divider()
         Button("Copy Chat", systemImage: "doc.on.doc") { coordinator.copyChat(id: conversation.id) }
+        Button("Copy Deeplink", systemImage: "link") { coordinator.copyDeepLink(toChat: conversation.id) }
         Button("Export as Markdown…", systemImage: "square.and.arrow.up") {
             coordinator.exportChat(id: conversation.id)
         }

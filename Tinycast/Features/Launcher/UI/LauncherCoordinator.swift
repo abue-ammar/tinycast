@@ -225,7 +225,7 @@ final class LauncherCoordinator {
         case .searchSnippets:
             snippetCoordinator.showSnippets()
         case .createSnippet:
-            snippetCoordinator.editSnippet(nil)
+            snippetCoordinator.createSnippetFromSelection()
         case .createWindowLayout:
             dismissPalette()
             windowLayoutCoordinator.editWindowLayout(nil)
@@ -291,20 +291,47 @@ final class LauncherCoordinator {
         AppLauncher.showInFinder(app.url)
     }
 
-    func deepLink(for app: AppEntry) -> URL? {
-        guard app.kind != .extensionCommand else {
-            return extensionCoordinator.deepLink(forEntryID: app.id)
+    /// The values typed into a row's argument fields, keyed as that row's own launch reads them.
+    func argumentValues(for entry: AppEntry) -> [String: String] {
+        let palette = core.palette
+        switch entry.kind {
+        case .quicklink:
+            guard let quicklink = Quicklink.id(fromEntryID: entry.id).flatMap(core.quicklinks.quicklink)
+            else { return [:] }
+            return QuicklinkArgumentsAccessory.values(for: quicklink, vm: palette)
+        case .customCommand:
+            guard let command = core.customCommands.command(entryID: entry.id) else { return [:] }
+            return CustomCommandArgumentsAccessory.values(for: command, vm: palette)
+        default:
+            var values: [String: String] = [:]
+            for argument in extensionCoordinator.commandArguments(for: entry) ?? [] {
+                let typed = palette.commandArguments[PaletteState.argumentKey(entry.id, argument.name)]
+                if let typed, !typed.isEmpty { values[argument.name] = typed }
+            }
+            return values
         }
-        return core.deepLinkCoordinator.url(forEntryID: app.id)
+    }
+
+    /// Whatever is typed into the row's fields rides along, so the link fills them the same way.
+    func deepLink(for app: AppEntry) -> URL? {
+        let values = argumentValues(for: app)
+        guard app.kind != .extensionCommand else {
+            return extensionCoordinator.deepLink(forEntryID: app.id, arguments: values)
+        }
+        return core.deepLinkCoordinator.url(forEntryID: app.id, values: values)
+    }
+
+    /// A Settings row's link: the same as its launcher row's, with no fields typed.
+    func deepLink(for action: HotKeyAction) -> URL? {
+        if case .extensionCommand(let entryID) = action {
+            return extensionCoordinator.deepLink(forEntryID: entryID, arguments: [:])
+        }
+        return action.entryID.flatMap { core.deepLinkCoordinator.url(forEntryID: $0) }
     }
 
     func copyDeepLink(_ url: URL) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        guard Paster.copyPlainText(url.absoluteString) else {
-            core.showMessage(String(localized: "Couldn’t copy link"))
-            return
-        }
-        core.showMessage(String(localized: "Deeplink copied"))
+        core.deepLinkCoordinator.copy(url)
     }
 
     /// Focus is never handed back: the relaunch takes it, or the app that refused has it.

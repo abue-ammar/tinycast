@@ -4,10 +4,11 @@ import SwiftUI
 @MainActor
 @Observable
 final class NotesCoordinator {
-    private enum Presentation {
+    private enum Presentation: Equatable {
         case editor
         case create
         case search
+        case note(NoteID)
     }
 
     private let store: NotesStore
@@ -139,13 +140,27 @@ final class NotesCoordinator {
         }
     }
 
-    func createNote(text: String = "") {
-        pendingNoteSource = text
+    func createNote() {
+        request(.create)
+    }
+
+    /// Two links landing before the note exists share it, so neither one's text is lost.
+    func createNote(text: String) {
+        pendingNoteSource = pendingNoteSource.isEmpty ? text : pendingNoteSource + "\n\n" + text
         request(.create)
     }
 
     func searchNotes() {
         request(.search)
+    }
+
+    /// A link to one note: the window loads, then shows that note, as picking it would.
+    func open(_ id: NoteID) {
+        request(.note(id))
+    }
+
+    func copyDeepLink(to id: NoteID) {
+        core.deepLinkCoordinator.copyLink(toNote: id)
     }
 
     func openSwitcher() {
@@ -438,17 +453,24 @@ final class NotesCoordinator {
             closeSwitcher()
             windowController.show(focusEditor: true)
         case .create:
-            let generation = presentationGeneration
-            guard await store.create(source: takePendingNoteSource()), settings.notesEnabled,
-                !Task.isCancelled, generation == presentationGeneration
-            else { return }
-            closeSwitcher()
-            windowController.show(focusEditor: true)
+            await showEditor { await store.create(source: takePendingNoteSource()) }
+        case .note(let id):
+            await showEditor { await store.select(id) }
         case .search:
             // The switcher hangs off the note window, so that window has to exist first.
             windowController.show(focusEditor: false)
             openSwitcher()
         }
+    }
+
+    /// Shown only if the change landed and no newer show or hide claimed the window meanwhile.
+    private func showEditor(after change: () async -> Bool) async {
+        let generation = presentationGeneration
+        guard await change(), settings.notesEnabled, !Task.isCancelled,
+            generation == presentationGeneration
+        else { return }
+        closeSwitcher()
+        windowController.show(focusEditor: true)
     }
 
     private func takePendingNoteSource() -> String {
