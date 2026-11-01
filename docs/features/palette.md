@@ -424,6 +424,9 @@ The same empty `query` would read as "nothing left to delete" to the bare-backsp
 `PalettePanel.sendEvent` asks the editor's `hasMarkedText()` itself and lets Backspace through to the
 IME while a composition is in flight. That covers every screen, an extension's search field included.
 
+The palette's arrow, ⇥ and esc handlers return `.ignored` while `isComposing` holds, so the IME
+pages, expands and cancels its candidate window with them. An open menu still claims them first.
+
 The observation follows first responder, since SwiftUI hands the window's one field editor to
 whichever field holds focus, and it watches `NSTextView.didChangeSelectionNotification`. Measured,
 that is the **only** notification a marked-text change posts: `NSText.didChangeNotification` fires on

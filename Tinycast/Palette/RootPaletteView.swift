@@ -521,8 +521,9 @@ struct RootPaletteView: View {
                     moveMenu(1)
                     return .handled
                 }
+                // Marked text owns these keys: an IME drives its candidate window with them.
+                if vm.isComposing { return .ignored }
                 if isCollapsed {
-                    guard !vm.isComposing else { return .ignored }
                     if compactSelection.command != nil {
                         activateCompactSelection()
                         return .handled
@@ -542,17 +543,20 @@ struct RootPaletteView: View {
                     moveMenu(-1)
                     return .handled
                 }
+                if vm.isComposing { return .ignored }
                 return moveVertically(-1)
             }
             .onKeyPress(keys: [.leftArrow], phases: [.down, .repeat]) { press in
                 if vm.isControlListOpen { return .ignored }
                 if menuOpen { return .handled }
+                if vm.isComposing { return .ignored }
                 if moveCompactSelection(-1, modifiers: press.modifiers) { return .handled }
                 return moveHorizontally(-1) ? .handled : .ignored
             }
             .onKeyPress(keys: [.rightArrow], phases: [.down, .repeat]) { press in
                 if vm.isControlListOpen { return .ignored }
                 if menuOpen { return .handled }
+                if vm.isComposing { return .ignored }
                 if moveCompactSelection(1, modifiers: press.modifiers) { return .handled }
                 return moveHorizontally(1) ? .handled : .ignored
             }
@@ -595,6 +599,7 @@ struct RootPaletteView: View {
             .onKeyPress(.escape) {
                 // An open control list owns Escape before the palette beneath it.
                 if vm.isControlListOpen { return .ignored }
+                if vm.isComposing, !menuOpen { return .ignored }
                 switch PaletteEscapeAction.resolve(
                     menuOpen: menuOpen, menuQuery: vm.menuQuery,
                     argumentFocused: argumentFocused != nil, query: vm.query, mode: vm.mode,
@@ -626,8 +631,9 @@ struct RootPaletteView: View {
             }
             .onKeyPress(keys: [.tab], phases: .down) { press in
                 // ⇥ inside an open list belongs to the list, not to the form's field order.
-                if vm.isControlListOpen { return .handled }
-                if !menuOpen { advanceTabFocus(backwards: press.modifiers.contains(.shift)) }
+                if vm.isControlListOpen || menuOpen { return .handled }
+                if vm.isComposing { return .ignored }
+                advanceTabFocus(backwards: press.modifiers.contains(.shift))
                 return .handled
             }
             .modifier(
