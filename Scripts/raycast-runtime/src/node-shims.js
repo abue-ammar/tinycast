@@ -1872,4 +1872,25 @@ globalThis.process = process;
 globalThis.Buffer = Buffer;
 globalThis.global = globalThis;
 
+// JSContext exposes native Atomics but no shared buffers; extensions have no worker threads.
+if (typeof globalThis.SharedArrayBuffer === "undefined") {
+  globalThis.SharedArrayBuffer = ArrayBuffer;
+  const load = Atomics.load;
+  Atomics.wait = (array, index, value, timeout) => {
+    if (!(array instanceof Int32Array) && !(array instanceof BigInt64Array)) {
+      throw new TypeError("Atomics.wait requires an Int32Array or BigInt64Array");
+    }
+    const offset = Math.trunc(+index) || 0;
+    load(array, offset);
+    const expected = array instanceof BigInt64Array ? BigInt.asIntN(64, value) : value >> 0;
+    const milliseconds = +timeout;
+    if (load(array, offset) !== expected) return "not-equal";
+    if (Number.isNaN(milliseconds) || milliseconds === Infinity) {
+      throw new TypeError("Atomics.wait with an infinite timeout is not supported in Tinycast extensions");
+    }
+    if (milliseconds > 0) hostCallSync("atomics", "wait", [milliseconds]);
+    return "timed-out";
+  };
+}
+
 export { Buffer, process, EventEmitter };

@@ -58,6 +58,12 @@ final class ExtensionNodeShims: @unchecked Sendable {
         case "proc": return try process(method: method, arguments: arguments)
         case "crypto": return try crypto(method: method, arguments: arguments)
         case "zlib": return try compression(method: method, arguments: arguments)
+        case "atomics" where method == "wait":
+            guard let milliseconds = (arguments.first as? NSNumber)?.doubleValue,
+                milliseconds.isFinite, milliseconds >= 0
+            else { throw ShimError.failed("Atomics.wait needs a finite timeout.", "EINVAL") }
+            Thread.sleep(forTimeInterval: milliseconds / 1_000)
+            return nil
         default: throw ShimError.failed("Unknown host module '\(api)'.", "ENOSYS")
         }
     }

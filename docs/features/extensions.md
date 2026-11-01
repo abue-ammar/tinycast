@@ -111,6 +111,13 @@ Two host-call flavours:
   `execSync`, `createHash`, `gunzipSync`. Safe because Swift services these entirely on the JS queue;
   nothing there touches the main actor, so a blocking answer cannot deadlock.
 
+JavaScriptCore exposes native `Atomics` but no `SharedArrayBuffer` constructor. The runtime aliases
+`SharedArrayBuffer` to `ArrayBuffer` so dependencies can allocate their locks at module scope. Native
+atomic reads and writes still apply; `Atomics.wait` sleeps on the JS queue for a finite timeout,
+returns immediately for a mismatched value or nonpositive timeout, and rejects an indefinite wait.
+There are no worker threads to notify a waiter, so this supports synchronous sleep helpers rather
+than shared-memory coordination. If native shared buffers are available, both globals stay native.
+
 ## The Swift host
 
 `Tinycast/Features/Extensions/`, split the same way as every other feature:
