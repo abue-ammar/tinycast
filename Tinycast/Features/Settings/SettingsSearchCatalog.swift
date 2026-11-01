@@ -126,6 +126,9 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Show in menu bar",
             keywords: ["menubar", "status item", "icon", "hide"]),
         .init(
+            .generalGeneral, "File Manager",
+            keywords: ["finder", "qspace", "forklift", "reveal", "show in finder", "files"]),
+        .init(
             .generalGeneral, "Automatically check for updates",
             keywords: ["software", "update", "automatic", "disable", "popup"]),
         .init(

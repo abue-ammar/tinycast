@@ -102,6 +102,7 @@ because the app rewrites the file.
     "popToRootSeconds": 0,
     "escapeKeyBehavior": "navigateBackOrClose",
     "autoSwitchInputSource": null,
+    "fileManagerBundleID": null,
     "supportReminders": true
   },
   "clipboard": {
@@ -134,6 +135,7 @@ Where a number has a special case, the case is a word:
 | `calendar.hideCurrentEventAfterMinutes` | `"never"`, 0 (as it starts), 5, 10, 30 |
 | `windowManagement.gap` | 0 to 64 |
 | `snippets.folder`, `notes.folder` | an absolute or `~/` path, or `null` for Application Support |
+| `general.fileManagerBundleID` | an installed app's bundle ID, or `null` to follow the system viewer |
 
 On first launch, `general.language` is set to the primary system language if supported, otherwise
 `"en"`. That explicit choice is saved; later system-language changes do not change it.

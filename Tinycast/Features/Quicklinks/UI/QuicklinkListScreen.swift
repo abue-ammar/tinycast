@@ -74,7 +74,7 @@ struct QuicklinkListScreen: PaletteScreen {
         case .duplicate: coordinator.duplicateQuicklink(id: quicklink.id)
         case .copyPath: coordinator.copyQuicklink(id: quicklink.id)
         case .pin: coordinator.toggleQuicklinkPinned(id: quicklink.id)
-        case .showInFinder: return coordinator.showQuicklinkInFinder(quicklink)
+        case .showInFileManager: return coordinator.showQuicklinkInFileManager(quicklink)
         case .delete: Task { await coordinator.deleteQuicklink(id: quicklink.id) }
         default: return false
         }
@@ -181,10 +181,10 @@ enum QuicklinkActionsMenu {
         if QuicklinkCoordinator.revealablePath(of: quicklink) != nil {
             items.append(
                 PopoverMenuItem(
-                    title: String(localized: "Show in Finder"), systemImage: "folder", startsSection: true,
-                    shortcut: "⌘F"
+                    title: AppLauncher.currentFileManager.actionTitle, systemImage: "folder",
+                    startsSection: true, shortcut: "⌘F"
                 ) {
-                    core.quicklinkCoordinator.showQuicklinkInFinder(quicklink)
+                    core.quicklinkCoordinator.showQuicklinkInFileManager(quicklink)
                 })
         }
         items.append(

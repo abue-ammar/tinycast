@@ -23,74 +23,74 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Application", sectionTitle: "Applications",
                     openVerb: "Open Application", canHideFromSearch: true,
-                    canRevealInFinder: true, canDragOut: true, isSymbolIcon: false, rankPriority: 4)
+                    canRevealInFileManager: true, canDragOut: true, isSymbolIcon: false, rankPriority: 4)
             case .systemSettings:
                 return KindDescriptor(
                     label: "System Setting", sectionTitle: "System Settings",
                     openVerb: "Open System Setting", canHideFromSearch: true,
-                    canRevealInFinder: true, canDragOut: false, isSymbolIcon: false, rankPriority: 1)
+                    canRevealInFileManager: true, canDragOut: false, isSymbolIcon: false, rankPriority: 1)
             case .command:
                 return KindDescriptor(
                     label: "Command", sectionTitle: "Commands",
                     openVerb: "Run Command", canHideFromSearch: true,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .quickAction:
                 return KindDescriptor(
                     label: "Quick Action", sectionTitle: "Quick Actions",
                     openVerb: "Run Quick Action", canHideFromSearch: true,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .customCommand:
                 return KindDescriptor(
                     label: "Custom Command", sectionTitle: "Custom Commands",
                     openVerb: "Run Custom Command", canHideFromSearch: false,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .snippet:
                 return KindDescriptor(
                     label: "Snippet", sectionTitle: "Snippets",
                     openVerb: "Paste Snippet", canHideFromSearch: false,
-                    canRevealInFinder: true, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: true, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .systemAction:
                 return KindDescriptor(
                     label: "System Action", sectionTitle: "System Actions",
                     openVerb: "Run System Action", canHideFromSearch: true,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .windowCommand:
                 return KindDescriptor(
                     label: "Window Command", sectionTitle: "Window Management",
                     openVerb: "Move Window", canHideFromSearch: true,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .windowLayout:
                 return KindDescriptor(
                     label: "Window Layout", sectionTitle: "Window Layouts",
                     openVerb: "Arrange Windows", canHideFromSearch: true,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .windowRoom:
                 return KindDescriptor(
                     label: "Room", sectionTitle: "Rooms", openVerb: "Enter Room",
-                    canHideFromSearch: true, canRevealInFinder: false, canDragOut: false,
+                    canHideFromSearch: true, canRevealInFileManager: false, canDragOut: false,
                     isSymbolIcon: true, rankPriority: 3)
             case .quicklink:
                 return KindDescriptor(
                     label: "Quicklink", sectionTitle: "Quicklinks",
                     openVerb: "Open Quicklink", canHideFromSearch: false,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 2)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 2)
             case .appleShortcut:
                 // File-backed so every row draws the Shortcuts app's own icon.
                 return KindDescriptor(
                     label: "Apple Shortcut", sectionTitle: "Apple Shortcuts",
                     openVerb: "Run Shortcut", canHideFromSearch: true,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: false, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: false, rankPriority: 3)
             case .extensionCommand:
                 // The label is per-entry, the owning extension's title; this is the fallback.
                 return KindDescriptor(
                     label: "Extension", sectionTitle: "Extensions",
                     openVerb: "Run Command", canHideFromSearch: true,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .meeting:
                 return KindDescriptor(
                     label: "Meeting", sectionTitle: "Meetings",
                     openVerb: "Join Meeting", canHideFromSearch: false,
-                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 1)
+                    canRevealInFileManager: false, canDragOut: false, isSymbolIcon: true, rankPriority: 1)
             }
         }
     }
@@ -102,7 +102,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         let openVerb: LocalizedStringResource
         /// Only where Settings lists a per-item checkbox to put it back: a hide is never one-way.
         let canHideFromSearch: Bool
-        let canRevealInFinder: Bool
+        let canRevealInFileManager: Bool
         /// Only an application: a pane or a shortcut dropped on another app opens nothing there.
         let canDragOut: Bool
         let isSymbolIcon: Bool
@@ -203,7 +203,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
     }
 
     /// Synthetic entries have no file to reveal; a destination is its record's own action.
-    var canRevealInFinder: Bool { kind.descriptor.canRevealInFinder }
+    var canRevealInFileManager: Bool { kind.descriptor.canRevealInFileManager }
 
     var canHideFromSearch: Bool { kind.descriptor.canHideFromSearch }
 

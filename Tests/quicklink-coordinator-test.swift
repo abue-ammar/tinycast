@@ -305,7 +305,9 @@ struct QuicklinkCoordinatorTests {
         defer { folder.cleanUp() }
         AppLauncher.revealed = []
         folder.window.isVisible = true
-        expect(folder.coordinator.showQuicklinkInFinder(folder.link), "a folder link is revealed")
+        expect(
+            folder.coordinator.showQuicklinkInFileManager(folder.link),
+            "a folder link is revealed")
         expect(
             AppLauncher.revealed == [URL(fileURLWithPath: "/Applications")],
             "Finder is shown the folder itself")
@@ -315,7 +317,9 @@ struct QuicklinkCoordinatorTests {
             let fixture = try Fixture(link: link)
             defer { fixture.cleanUp() }
             fixture.window.isVisible = true
-            expect(!fixture.coordinator.showQuicklinkInFinder(fixture.link), "\(link) has nothing to reveal")
+            expect(
+                !fixture.coordinator.showQuicklinkInFileManager(fixture.link),
+                "\(link) has nothing to reveal")
             expect(fixture.window.isVisible, "\(link) leaves the palette open")
         }
         expect(AppLauncher.revealed.count == 1, "only the folder link reached Finder")
@@ -485,7 +489,7 @@ enum Paster {
 @MainActor
 enum AppLauncher {
     static var revealed: [URL] = []
-    static func showInFinder(_ url: URL) { revealed.append(url) }
+    static func showInFileManager(_ url: URL) { revealed.append(url) }
 }
 
 enum DialogTone { case danger, neutral, success }

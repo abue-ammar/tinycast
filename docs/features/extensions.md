@@ -671,7 +671,7 @@ interval floor instead of sixty.
 
 **APIs** — `Clipboard`, `LocalStorage`, `Cache`, `environment`, `getPreferenceValues`, `showToast`,
 `showHUD`, `confirmAlert`, `closeMainWindow`, `popToRoot`, `clearSearchBar`, `open`, `trash`,
-`showInFinder`, `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
+`showInFinder` (routed through the selected file manager), `getApplications`, `getDefaultApplication`, `getFrontmostApplication`,
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `updateCommandMetadata`,
 `openExtensionPreferences`, `OAuth`,
 `useNavigation`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.

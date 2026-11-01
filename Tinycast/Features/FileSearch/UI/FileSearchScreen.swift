@@ -49,7 +49,7 @@ struct FileSearchScreen: PaletteScreen {
 
     func secondary(at selection: Int) -> Bool {
         guard let result = result(at: selection) else { return false }
-        core.fileSearchCoordinator.showInFinder(result)
+        core.fileSearchCoordinator.showInFileManager(result)
         return true
     }
 
@@ -143,8 +143,9 @@ enum FileSearchActionsMenu {
                     systemImage: result.isDirectory ? "folder" : "doc", shortcut: "↵"
                 ) { coordinator.open(result) },
                 PopoverMenuItem(
-                    title: String(localized: "Show in Finder"), systemImage: "folder", shortcut: "⌘↵"
-                ) { coordinator.showInFinder(result) },
+                    title: AppLauncher.currentFileManager.actionTitle, systemImage: "folder",
+                    shortcut: "⌘↵"
+                ) { coordinator.showInFileManager(result) },
                 PopoverMenuItem(title: String(localized: "Share…"), systemImage: "square.and.arrow.up") {
                     coordinator.share(result)
                 }

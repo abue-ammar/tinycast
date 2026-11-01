@@ -238,7 +238,7 @@ which reads `previousApp` before hiding the panel and then calls the same `expan
 launcher row does — so template expansion, cursor placement, the Accessibility prompt, the
 confirmation HUD and the pasteboard lease are the ones described below, not a second copy of them.
 The rest of the menu is **Edit Snippet** (⌘E) and **Create Snippet** (⌘N), which open the launcher
-editor, **Show in Finder** (⌘↵), and **Delete Snippet** (⌃X), separated at the bottom in red. Deletion
+editor, **Show in File Manager** (⌘↵), and **Delete Snippet** (⌃X), separated at the bottom in red. Deletion
 always confirms before removing the snippet file and reports a failure without losing the record.
 These shortcuts also work with the menu closed; ⌘N works even when the browser has no rows.
 

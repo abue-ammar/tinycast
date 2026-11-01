@@ -187,7 +187,7 @@ final class ClipboardCoordinator {
     func revealClip(_ item: ClipboardItem) {
         guard let url = clipURL(for: item) else { return }
         paletteCoordinator.hidePalette(restoreFocus: false)
-        AppLauncher.showInFinder(url)
+        AppLauncher.showInFileManager(url)
     }
 
     /// Nil only for a vanished file, which the HUD reports rather than hand over a dead path.

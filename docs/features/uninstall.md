@@ -236,9 +236,9 @@ name or location; there is no sort control, and the footer's leading corner keep
 circle. The primary pill is the one rendered in `Theme.Colors.destructive`.
 
 ↵ uninstalls, ⌘↵ toggles the highlighted row, clicking the checkbox toggles, double-clicking a row
-toggles. ⌘K carries Uninstall, Select/Unselect File, Copy Path, Show in Finder and Show Info in
+toggles. ⌘K carries Uninstall, Select/Unselect File, Copy Path, Show in File Manager and Show Info in
 Finder. There is no launcher keybinding for Uninstall — it is a menu action only. Copy Path stays on the screen (losing a whole scan to copy one path is a bad
-trade); the two Finder actions hand focus to Finder and so hide the palette. Show Info has no AppKit
+trade); both reveal actions hand focus to their app and so hide the palette. Show Info has no AppKit
 route and drives Finder over Apple events, which raises the system Automation prompt on first use.
 
 `UninstallCoordinator.performUninstall()` is the one funnel, so neither ↵ nor the menu row can skip the

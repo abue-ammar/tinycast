@@ -73,7 +73,7 @@ struct PaletteShortcutTests {
         expect(
             resolve("f", command: true, shift: true, control: true), .toggleFavorite,
             "an extra Control still reads ⇧⌘F")
-        expect(resolve("f", command: true), .showInFinder, "⌘F shows the row in Finder")
+        expect(resolve("f", command: true), .showInFileManager, "⌘F shows the row in its file manager")
         expect(resolve("h", command: true, shift: true), .hideFromSearch, "⇧⌘H hides the row")
         expect(resolve("h", command: true), nil, "⌘H is not the hide chord")
         expect(resolve("q", shift: true, control: true), .quit, "⌃⇧Q quits the app")
@@ -107,7 +107,7 @@ struct PaletteShortcutTests {
         let expanded: [PaletteShortcut] = [
             .copyFile, .copyName, .copyPath, .copyText, .pasteFile, .quickLook, .openInApp,
             .showDetails, .toggleFavorite, .hideFromSearch, .quit, .forceQuit, .minimizeWindow,
-            .hideApp, .restart, .edit, .duplicate, .showInFinder
+            .hideApp, .restart, .edit, .duplicate, .showInFileManager
         ]
         let anywhere: [PaletteShortcut] = [
             .commandDelete, .delete, .deleteAll, .pin, .favoriteSlot(0), .continueInChat, .newItem,
@@ -123,7 +123,7 @@ struct PaletteShortcutTests {
         let closing: [PaletteShortcut] = [
             .delete, .deleteAll, .copyFile, .copyName, .copyPath, .copyText, .copyCalculation,
             .quickLook, .openInApp, .showDetails, .toggleFavorite, .hideFromSearch, .minimizeWindow,
-            .newItem, .settings, .edit, .duplicate, .showInFinder
+            .newItem, .settings, .edit, .duplicate, .showInFileManager
         ]
         let leaving: [PaletteShortcut] = [
             .commandDelete, .pasteFile, .quit, .forceQuit, .hideApp, .restart, .pin, .favoriteSlot(0),

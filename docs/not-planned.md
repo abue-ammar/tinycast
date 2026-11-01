@@ -96,7 +96,7 @@ launchers. We accept that to keep the app simple.
   your history.** Delete them by hand if you need to. ([#1407](https://github.com/abue-ammar/tinycast/issues/1407))
 - **A large ⌘Y Quick Look preview.** The preview pane already shows the selected item. ([#1067](https://github.com/abue-ammar/tinycast/issues/1067), [#740](https://github.com/abue-ammar/tinycast/issues/740),
   [#1477](https://github.com/abue-ammar/tinycast/issues/1477))
-- **Open images in Preview.** **Instead:** use Show in Finder. ([#1328](https://github.com/abue-ammar/tinycast/issues/1328))
+- **Open images in Preview.** **Instead:** use Show in File Manager. ([#1328](https://github.com/abue-ammar/tinycast/issues/1328))
 - **Link previews or website icons.** ([#1330](https://github.com/abue-ammar/tinycast/issues/1330), [#747](https://github.com/abue-ammar/tinycast/issues/747))
 - **Keep a pasted item where it was.** A pasted item always moves to the top. ([#1577](https://github.com/abue-ammar/tinycast/issues/1577))
 - **Copy without closing Tinycast.** ([#1215](https://github.com/abue-ammar/tinycast/issues/1215))
@@ -225,7 +225,6 @@ Tinycast is an all-in-one launcher, not a full window manager. Its window tools 
 These are on hold, not ruled out.
 
 - **Contacts search**, as a separate plugin. ([#1503](https://github.com/abue-ammar/tinycast/issues/1503))
-- **Open files in a Finder replacement.** ([#1494](https://github.com/abue-ammar/tinycast/issues/1494))
 - **Deeplinks for built-in commands.** Waits until the commands settle. ([#1005](https://github.com/abue-ammar/tinycast/issues/1005))
 - **Emoji names in the picker.** Long names don't fit yet. ([#965](https://github.com/abue-ammar/tinycast/issues/965))
 - **Keep any window on top.** ([#527](https://github.com/abue-ammar/tinycast/issues/527))

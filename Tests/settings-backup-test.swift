@@ -69,6 +69,10 @@ struct SettingsBackupTest {
             "the Notes menu bar item rides the settings backup",
             mirrored["notesShowsInMenuBar"] == .notesShowsInMenuBar)
         check(
+            "the file manager stays out of the settings backup",
+            excluded[AppSettingsKey.fileManagerBundleID.rawValue] != nil
+                && !mirrored.values.contains(.fileManagerBundleID))
+        check(
             "clipboard enablement rides the settings backup",
             mirrored["clipboardEnabled"] == .clipboardEnabled)
         check(

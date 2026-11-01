@@ -96,6 +96,10 @@ final class FileSearchCoordinator {
 
     func open(_ result: FileSearchResult) {
         paletteCoordinator.hidePalette(restoreFocus: false)
+        if result.isDirectory {
+            AppLauncher.openDirectoryInFileManager(result.url)
+            return
+        }
         Task {
             do {
                 _ = try await NSWorkspace.shared.open(
@@ -109,9 +113,9 @@ final class FileSearchCoordinator {
         }
     }
 
-    func showInFinder(_ result: FileSearchResult) {
+    func showInFileManager(_ result: FileSearchResult) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        AppLauncher.showInFinder(result.url)
+        AppLauncher.showInFileManager(result.url)
     }
 
     /// macOS's own share sheet, anchored to the palette's trailing edge so the row stays beside it.

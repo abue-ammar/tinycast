@@ -233,8 +233,8 @@ its default app. A system `QLPreviewPanel` would take key, and the palette hides
 
 | Row | Chord | What it does |
 | --- | --- | --- |
-| Open File / Open Folder | ↵ | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller |
-| Show in Finder | ⌘↵ | reveals and dismisses |
+| Open File / Open Folder | ↵ | A file opens in its default app; a folder goes to the selected file manager. Hides the palette without restoring focus, and reports a file-open failure through the dialog controller |
+| Show in File Manager | ⌘↵ | reveals in the selected file manager and dismisses; the menu names Finder or the chosen app |
 | Share… | — | `NSSharingServicePicker`, anchored to the palette's trailing edge so the row it was opened from stays visible beside it. Escape or a click elsewhere dismisses it, and the palette is never hidden, so the flow returns to the same row. There is no chord: the destinations are the system's, and it is the only place a system popover is right |
 | Copy File | ⇧⌘C | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string` |
 | Copy Name | ⌥⌘C | through `Paster`, palette stays open |
@@ -299,6 +299,9 @@ Settings ▸ File Search owns the `fileSearchEnabled` switch, which is off when 
 the **Show in launcher** switch beneath it, along with the Full Disk Access status, the index status and **Rebuild Index**, the scope list, the
 ignore patterns and the Search Files command row. The lists are ordinary settings carried by Tinycast
 settings backups; importing them grants no permission.
+
+The app used by **Open Folder** and **Show in File Manager** is the global choice under
+Settings ▸ General. It defaults to macOS's file viewer, so File Search works without configuring it.
 
 `AppCore` observes the switch and asks `FileSearchCoordinator` to project `CommandID.searchFiles` into
 the launcher and to start or stop `FileIndexer`; a second observation hands it the new policy when either

@@ -193,6 +193,7 @@ struct SettingsFileTest {
         var shows = true
         var seconds = 0
         var name: String?
+        var fileManager: String?
         var scopes = ["/Applications"]
     }
 
@@ -203,6 +204,7 @@ struct SettingsFileTest {
                 (0...90).contains($0) ? $0 : nil
             },
             SettingsFileBinding(.autoSwitchInputSource, fixture, \.name),
+            SettingsFileBinding(.fileManagerBundleID, fixture, \.fileManager),
             SettingsFileBinding(.searchScopes, fixture, \.scopes)
         ]
     }
@@ -219,7 +221,9 @@ struct SettingsFileTest {
             "a missing file is written from the current settings, folder and all",
             contents(of: url).contains(#""popToRootSeconds": 15"#))
 
-        let edited = #"{"general": {"showInMenuBar": false, "popToRootSeconds": 30}}"#
+        let qspace = "com.jinghaoshe.qspace.pro"
+        let edited =
+            #"{"general": {"showInMenuBar": false, "popToRootSeconds": 30, "fileManagerBundleID": "\#(qspace)"}}"#
         try write(edited, to: url)
         let fixture = Fixture()
         fixture.scopes = ["/Custom"]
@@ -228,6 +232,7 @@ struct SettingsFileTest {
         synced.onIssues = { reported.append($0) }
         synced.start(importing: true)
         check("an import sets what the file names", !fixture.shows && fixture.seconds == 30)
+        check("a file manager bundle ID is accepted", fixture.fileManager == qspace)
         check("a key the file leaves out keeps its value", fixture.scopes == ["/Custom"])
         check("an import leaves the file as it was written", contents(of: url) == edited)
         check("a clean import reports nothing", reported.isEmpty)
@@ -237,7 +242,16 @@ struct SettingsFileTest {
         check("a rejected value keeps the current one", fixture.seconds == 30)
         check("a rejected value is reported", reported.last == [.invalidValue(.popToRootTimeout)])
 
-        try write(#"{"general": {"popToRootSeconds": 45}}"#, to: url)
+        try write(
+            #"{"general": {"popToRootSeconds": 45, "fileManagerBundleID": 42}}"#, to: url)
+        await settle { reported.last == [.invalidValue(.fileManagerBundleID)] }
+        check("a non-string file manager keeps the current application", fixture.fileManager == qspace)
+
+        try write(
+            #"{"general": {"popToRootSeconds": 45, "fileManagerBundleID": null}}"#, to: url)
+        await settle { fixture.fileManager == nil }
+        check("null clears the file manager override", fixture.fileManager == nil)
+
         await settle { fixture.seconds == 45 }
         check("an edit made elsewhere applies", fixture.seconds == 45)
         check("a key removed from the file keeps its value", !fixture.shows)

@@ -49,7 +49,7 @@ struct ClipboardScreen: PaletteScreen {
             guard let item = item(at: selection), item.offersTextExtraction else { return false }
             core.clipboardCoordinator.copyImageText(item)
             return true
-        case .showInFinder:
+        case .showInFileManager:
             guard let item = item(at: selection), item.kind != .text else { return false }
             core.clipboardCoordinator.revealClip(item)
             return true
@@ -221,7 +221,8 @@ enum ClipboardActionsMenu {
         if item.kind != .text {
             items.append(
                 PopoverMenuItem(
-                    title: String(localized: "Show in Finder"), systemImage: "folder", shortcut: "⌘F"
+                    title: AppLauncher.currentFileManager.actionTitle, systemImage: "folder",
+                    shortcut: "⌘F"
                 ) {
                     core.clipboardCoordinator.revealClip(item)
                 })

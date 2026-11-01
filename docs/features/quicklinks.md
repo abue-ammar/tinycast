@@ -196,7 +196,7 @@ the selected quicklink's glyph over an Information block (name, link, the app it
 shortcut, when it was created). Like Calculator History it stays out of the Tab cycle and exits via the
 back chevron or a bare backspace.
 Its ⌘K menu carries Open (`↵`), Open With Default App (`⌘↵`, only when a handler is saved), Copy Link (`⌃⌘C`),
-Edit (`⌘E`), Create (`⌘N`), Duplicate (`⌘D`), Pin/Unpin (`⌘.`), Show in Finder (`⌘F`, only for a resolved path), and
+Edit (`⌘E`), Create (`⌘N`), Duplicate (`⌘D`), Pin/Unpin (`⌘.`), Show in File Manager (`⌘F`, only for a resolved path), and
 Delete (`⌃X`). `QuicklinkCoordinator` owns each action, so a chord and its menu row can't drift.
 Root-search visibility is not offered here: the launcher row hides itself, and the editor restores it.
 Edit and Create also work with the menu closed; ⌘N works when the browser has no rows.

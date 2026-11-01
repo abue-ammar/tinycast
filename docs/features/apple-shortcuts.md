@@ -66,7 +66,7 @@ lines in Tinycast's own dialog.
 
 `AppEntry.Kind.appleShortcut` is its own section, published right after Quicklinks. It is file-backed
 rather than a symbol tile: every row's `url` is Shortcuts.app, so each draws that app's icon from one
-cached bitmap. Reveal in Finder is refused, because the file is the app, not the shortcut.
+cached bitmap. Reveal is refused, because the file is the app, not the shortcut.
 
 The pane lists rows through `LauncherItemsList`, the same table the launcher-category panes use: icon,
 name, alias, shortcut recorder and the checkbox that hides one row from launcher search while its

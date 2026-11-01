@@ -39,7 +39,7 @@ struct SnippetsScreen: PaletteScreen {
     /// ⌘↵ reveals the file, as it does on a snippet's launcher row.
     func secondary(at selection: Int) -> Bool {
         guard let record = record(at: selection) else { return false }
-        core.snippetCoordinator.showSnippetInFinder(record)
+        core.snippetCoordinator.showSnippetInFileManager(record)
         return true
     }
 
@@ -120,10 +120,10 @@ enum SnippetActionsMenu {
                     core.snippetCoordinator.editSnippet(nil)
                 },
                 PopoverMenuItem(
-                    title: String(localized: "Show in Finder"), systemImage: "folder", startsSection: true,
-                    shortcut: "⌘↵"
+                    title: AppLauncher.currentFileManager.actionTitle, systemImage: "folder",
+                    startsSection: true, shortcut: "⌘↵"
                 ) {
-                    core.snippetCoordinator.showSnippetInFinder(record)
+                    core.snippetCoordinator.showSnippetInFileManager(record)
                 },
                 PopoverMenuItem(
                     title: String(localized: "Delete Snippet"), systemImage: "trash", startsSection: true,

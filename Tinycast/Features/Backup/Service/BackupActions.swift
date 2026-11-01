@@ -344,7 +344,7 @@ enum BackupActions {
     }
 
     static func revealSettingsFile() {
-        AppLauncher.showInFinder(AppPaths.settingsFile())
+        AppLauncher.showInFileManager(AppPaths.settingsFile())
     }
 
     private static func confirmExecutableImport(

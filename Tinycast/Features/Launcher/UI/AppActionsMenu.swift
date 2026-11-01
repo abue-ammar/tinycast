@@ -148,12 +148,13 @@ enum AppActionsMenu {
                     core.snippetCoordinator.editSnippet(record)
                 })
         }
-        if app.canRevealInFinder {
+        if app.canRevealInFileManager {
             items.append(
                 PopoverMenuItem(
-                    title: String(localized: "Show in Finder"), systemImage: "folder", shortcut: "⌘↵"
+                    title: AppLauncher.currentFileManager.actionTitle, systemImage: "folder",
+                    shortcut: "⌘↵"
                 ) {
-                    core.launcherCoordinator.showInFinder(app)
+                    core.launcherCoordinator.showInFileManager(app)
                 })
         }
         return items

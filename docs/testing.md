@@ -116,6 +116,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `app-installation-test` | Multiple app copies and app-wide preferences; file-favorite persistence, mixed ordering, hidden slots and restoration through the existing favorite key list |
 | `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
 | `scopes-test` | `Launcher/Model/SearchScopes.swift` |
+| `file-viewer-test` | `Launcher/Model/FileViewerPolicy.swift` — explicit/system/Finder precedence and both fallback levels |
 | `app-name-test` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
 | `language-test` | `AppLanguage` and both string catalogs — compile every language, load privacy prompts, and select plural forms and independent counts at runtime |
 | `localized-resource-test` | `Platform/LocalizedResource.swift` — `resolved()` matches `String(localized:)` in every language, for plain, contextual, interpolated, plural and missing keys |
@@ -630,6 +631,14 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 
 ### File Search
 
+- With **File Manager** set to System Default, reveal follows the app in `defaults read -g NSFileViewer`,
+  then Finder when that key is absent or names a missing app
+- Choose QSpace Pro: every **Show in …** row names QSpace Pro, and revealing a file or folder selects
+  it in QSpace's parent listing; Return on a folder hands it to QSpace without leaving the palette up
+- Choose an app, quit and reopen Tinycast: the same app resolves by bundle ID; remove the app and the
+  General row says **Application Not Found**, while reveal falls back without an operation dialog
+- **Use System Default** clears the override; settings backup omits it, while `settings.json` accepts a
+  bundle ID and `null`
 - With File Search **off**: Search Files is absent, its shortcut no-ops, and no index folder exists
 - Without Full Disk Access the pane shows **Required** with the hint, the palette says so, and ↵ and the
   button both open Privacy & Security › Full Disk Access; granting it starts a build with no relaunch
@@ -642,7 +651,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Files under home rank above system, hidden and bundle files with the same name
 - Creating, renaming and deleting a file in `~/Desktop` shows in results within a second
 - **Rebuild Index** rebuilds while the old index keeps answering
-- Return opens, Command-Return reveals in Finder, and Copy Path keeps the palette open with a HUD
+- Return opens, Command-Return reveals in the selected file manager, and Copy Path keeps the palette open with a HUD
 - A file and a folder drag into Finder as copies and into a browser's upload field; a cancelled drag
   flies back and leaves the palette up, a landed one hides it
 - Replacing a query quickly never lets an older result list overwrite the current query
@@ -766,7 +775,7 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Clicking another app leaves the panel visible; Escape, Command-W, and the red light hide it
 - Command-Q does nothing anywhere; with Settings in front, Command-W closes Settings
 - Hiding restores the previous external app or Tinycast window
-- Open Notes Folder opens Finder with the active Markdown file selected, or the folder with no note
+- Open Notes Folder reveals the active Markdown file in the selected file manager, or opens the folder with no note
 - Hide a saved checklist, reset its boxes in another editor, and reopen: the boxes match the file
 - Reopen an unchanged note: Undo still works; an external content change starts fresh history
 - Remove the active file while hidden: reopening selects a remaining note or shows the empty state

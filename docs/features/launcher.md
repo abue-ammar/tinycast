@@ -794,18 +794,26 @@ untouched. One function answers both the menu row and the chord, and it re-tests
 than trusting the caller, so ⇧⌘H falls through to whatever else wants the press on a row that offers
 no such menu item.
 
-## Reveal in Finder
+## Reveal in File Manager
 
-Application and System Settings results expose **Show in Finder** in their ⌘K Actions menu and on
+Application and System Settings results expose **Show in Finder** or **Show in <App>** in their ⌘K Actions menu and on
 **⌘↵**. Synthetic command results have no filesystem location, so neither the menu row nor the
-shortcut is available for them. `AppEntry.canRevealInFinder` is the one rule both the menu row and
+shortcut is available for them. `AppEntry.canRevealInFileManager` is the one rule both the menu row and
 the key handler read, so the advertised chord can't drift from the behavior.
 
-`AppLauncher.showInFinder` is every feature's reveal. `activateFileViewerSelecting` leaves the file
-viewer to bring itself forward, and macOS refuses that request while Tinycast is `.regular` (an open
-Settings or About window) yet inactive, which the non-activating palette makes common. Only in that
-state does the reveal also open the viewer named by the global `NSFileViewer` default, Finder when it
-is unset, so every other reveal is exactly the one system call.
+`AppLauncher.showInFileManager` is every feature's reveal. Its target is the app chosen in
+Settings ▸ General, then the global `NSFileViewer` default, then Finder. Finder keeps
+`activateFileViewerSelecting`; macOS refuses its forward request while Tinycast is `.regular` (an
+open Settings or About window) yet inactive, which the non-activating palette makes common, so that
+state opens Finder again. A third-party viewer receives the item URL through
+`NSWorkspace.open(_:withApplicationAt:)`, which also avoids macOS 26.4's failure to route Reveal
+through `NSFileViewer` in some apps.
+
+The selected app decides what a folder URL means. QSpace selects that folder in its parent; Finder's
+Open Folder enters it. If the chosen app was removed or rejects the URL, the action falls back to the
+system viewer and then Finder, while Settings marks the explicit choice **Application Not Found**.
+`AppLauncher.showInfoInFinder` remains Finder-only because no generic file-manager API exposes Get
+Info.
 
 ## Dragging an application out
 

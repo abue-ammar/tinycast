@@ -46,8 +46,8 @@ final class SnippetCoordinator {
 
     // MARK: - Feature switch
 
-    func revealSnippetsInFinder() {
-        NSWorkspace.shared.open(store.snippetsDirectory)
+    func revealSnippetsInFileManager() {
+        AppLauncher.openDirectoryInFileManager(store.snippetsDirectory)
     }
 
     /// Points the library at a folder as it is; nothing is moved out of the old one.
@@ -170,9 +170,9 @@ final class SnippetCoordinator {
         if self.editor === editor { self.editor = nil }
     }
 
-    func showSnippetInFinder(_ record: StoredSnippet) {
+    func showSnippetInFileManager(_ record: StoredSnippet) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        AppLauncher.showInFinder(record.fileURL)
+        AppLauncher.showInFileManager(record.fileURL)
     }
 
     func deleteSnippet(id: StoredSnippet.ID) async {

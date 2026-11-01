@@ -468,7 +468,7 @@ Carrying file bytes would make a backup unbounded and defeat the point of refere
 
 ## Dragging out
 
-Every row is a drag source, so reaching another app costs one gesture instead of Reveal in Finder and
+Every row is a drag source, so reaching another app costs one gesture instead of revealing and
 a second drag. The press and the session are `onRowClick`'s `drag:` in
 `DesignSystem/Interaction/RowClick.swift`, shared with [File Search](file-search.md#dragging-out) and
 the launcher's [application rows](launcher.md#dragging-an-application-out); `ClipDrag.swift` is only

@@ -79,8 +79,8 @@ struct SnippetsSettingsView: View {
                         action: coordinator.resetSnippetsFolder)
                 }
                 Button("Choose…", action: coordinator.chooseSnippetsFolder)
-                Button("Open Folder", action: coordinator.revealSnippetsInFinder)
-                    .accessibilityHint("Reveals the snippets folder in Finder.")
+                Button("Open Folder", action: coordinator.revealSnippetsInFileManager)
+                    .accessibilityHint("Reveals the snippets folder in the selected file manager.")
             } label: {
                 SettingsRowTitle(.snippetsLibrary, "Snippets Folder")
                 Text((snippetsStore.snippetsDirectory.path as NSString).abbreviatingWithTildeInPath)

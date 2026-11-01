@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct GeneralSettingsView: View {
     @Environment(AppCore.self) private var core
@@ -29,6 +30,7 @@ struct GeneralSettingsView: View {
                 Toggle(isOn: $settings.launchAtLogin) {
                     SettingsRowTitle(.generalGeneral, "Launch at login")
                 }
+                FileManagerRow()
                 Toggle(isOn: $settings.showInMenuBar) {
                     SettingsRowTitle(.generalGeneral, "Show in menu bar")
                     Text("Shortcuts still work when the menu bar icon is hidden.")
@@ -167,6 +169,83 @@ struct GeneralSettingsView: View {
 
     private func refreshInputSources() {
         inputSources = core.inputSourceSwitcher.options(selecting: settings.autoSwitchInputSourceID)
+    }
+}
+
+private struct FileManagerRow: View {
+    @Environment(AppSettings.self) private var settings
+
+    private var selection: AppLauncher.FileManagerSelection {
+        AppLauncher.fileManager(configuredBundleID: settings.fileManagerBundleID)
+    }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: Theme.Spacing.lg) {
+            Image(nsImage: icon)
+                .resizable()
+                .renderingMode(.original)
+                .interpolation(.high)
+                .id(IconCache.style.generation)
+                .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                SettingsRowTitle(.generalGeneral, "File Manager")
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(
+                        selection.isConfiguredApplicationMissing
+                            ? Color.orange
+                            : Color.secondary)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+                    .help(subtitle)
+            }
+            Spacer(minLength: Theme.Spacing.lg)
+            HStack(spacing: Theme.Spacing.md) {
+                Button("Choose…", action: choose)
+                if !selection.followsSystem {
+                    Button("Use System Default") {
+                        settings.fileManagerBundleID = nil
+                    }
+                }
+            }
+        }
+    }
+
+    private var subtitle: String {
+        if selection.isConfiguredApplicationMissing {
+            return String(localized: "Application Not Found · \(selection.configuredBundleID ?? "")")
+        }
+        let location = selection.appURL?.path ?? selection.bundleID
+        return selection.followsSystem
+            ? String(localized: "System Default · \(selection.name) · \(location)")
+            : String(localized: "\(selection.name) · \(location)")
+    }
+
+    private var icon: NSImage {
+        guard let path = selection.appURL?.path else {
+            return NSWorkspace.shared.icon(for: .applicationBundle)
+        }
+        return IconCache.icon(forFile: path)
+    }
+
+    private func choose() {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [.applicationBundle]
+        // Otherwise an .app is navigated into rather than selected.
+        panel.treatsFilePackagesAsDirectories = false
+        panel.directoryURL = URL(fileURLWithPath: "/Applications")
+        panel.prompt = String(localized: "Use App")
+        panel.message = String(localized: "Choose the app Tinycast uses to show files in their folders.")
+        // Tinycast is an accessory app, so the panel opens behind the frontmost app without this.
+        NSApp.activate(ignoringOtherApps: true)
+        guard panel.runModal() == .OK, let url = panel.url,
+            let bundleID = Bundle(url: url)?.bundleIdentifier
+        else { return }
+        settings.fileManagerBundleID = bundleID
     }
 }
 

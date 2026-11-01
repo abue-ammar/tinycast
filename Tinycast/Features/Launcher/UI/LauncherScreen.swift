@@ -320,11 +320,11 @@ struct LauncherScreen: PaletteScreen {
             return core.calculatorCoordinator.putAnswerInSearchBar(result)
         }
         if let file = file(at: selection) {
-            core.fileSearchCoordinator.showInFinder(file)
+            core.fileSearchCoordinator.showInFileManager(file)
             return true
         }
-        guard let app = entry(at: selection), app.canRevealInFinder else { return false }
-        core.launcherCoordinator.showInFinder(app)
+        guard let app = entry(at: selection), app.canRevealInFileManager else { return false }
+        core.launcherCoordinator.showInFileManager(app)
         return true
     }
 

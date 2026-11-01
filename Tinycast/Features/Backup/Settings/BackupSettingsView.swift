@@ -134,7 +134,9 @@ struct BackupSettingsView: View {
                 }
                 if core.settings.settingsFileEnabled {
                     LabeledContent {
-                        Button("Show in Finder", action: BackupActions.revealSettingsFile)
+                        Button(
+                            AppLauncher.currentFileManager.actionTitle,
+                            action: BackupActions.revealSettingsFile)
                     } label: {
                         Text("Settings changed here are written to the file, and edits to it apply here.")
                             .foregroundStyle(.secondary)

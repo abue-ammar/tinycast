@@ -454,7 +454,8 @@ final class ExtensionHostBridge: ExtensionHostAPI {
 
         case "showInFinder":
             guard let path = arguments.first?.stringValue else { return nil }
-            AppLauncher.showInFinder(URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
+            AppLauncher.showInFileManager(
+                URL(fileURLWithPath: (path as NSString).expandingTildeInPath))
             return nil
 
         case "trash":

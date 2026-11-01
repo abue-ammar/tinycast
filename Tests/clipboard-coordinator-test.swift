@@ -263,7 +263,7 @@ final class PaletteCoordinator {
 }
 
 enum AppLauncher {
-    static func showInFinder(_ url: URL) {}
+    static func showInFileManager(_ url: URL) {}
     static func open(_ url: URL) {}
 }
 

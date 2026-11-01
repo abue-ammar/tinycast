@@ -375,10 +375,10 @@ final class QuicklinkCoordinator {
 
     /// False for a link that names no file or folder, leaving ⌘F unhandled.
     @discardableResult
-    func showQuicklinkInFinder(_ quicklink: Quicklink) -> Bool {
+    func showQuicklinkInFileManager(_ quicklink: Quicklink) -> Bool {
         guard let path = Self.revealablePath(of: quicklink) else { return false }
         paletteCoordinator.hidePalette(restoreFocus: false)
-        AppLauncher.showInFinder(URL(fileURLWithPath: path))
+        AppLauncher.showInFileManager(URL(fileURLWithPath: path))
         return true
     }
 

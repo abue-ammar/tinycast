@@ -47,7 +47,7 @@ enum PaletteShortcut: Equatable {
     /// ⌘D.
     case duplicate
     /// ⌘F, for a screen whose ⌘↵ already does something else.
-    case showInFinder
+    case showInFileManager
     /// ⌥⌘,, the screen's own settings; ⌘, alone stays the app's.
     case settings
     /// ⌘J, Quick AI handing its conversation to the AI Chat window.
@@ -74,7 +74,7 @@ enum PaletteShortcut: Equatable {
         if command, !shift, matches("o") { return .openInApp }
         if command, !shift, matches("i") { return .showDetails }
         if control, matches("x") { return shift ? .deleteAll : .delete }
-        if command, matches("f") { return shift ? .toggleFavorite : .showInFinder }
+        if command, matches("f") { return shift ? .toggleFavorite : .showInFileManager }
         if command, shift, matches("h") { return .hideFromSearch }
         if control, shift, matches("q") { return option ? .forceQuit : .quit }
         if control, shift, matches("m") { return .minimizeWindow }
@@ -93,7 +93,7 @@ enum PaletteShortcut: Equatable {
         switch self {
         case .copyFile, .copyName, .copyPath, .copyText, .pasteFile, .quickLook, .openInApp,
             .showDetails, .toggleFavorite, .hideFromSearch, .quit, .forceQuit, .minimizeWindow,
-            .hideApp, .restart, .edit, .duplicate, .showInFinder:
+            .hideApp, .restart, .edit, .duplicate, .showInFileManager:
             true
         case .commandDelete, .delete, .deleteAll, .pin, .favoriteSlot, .continueInChat, .newItem,
             .settings, .copyCalculation:
@@ -105,7 +105,7 @@ enum PaletteShortcut: Equatable {
         switch self {
         case .delete, .deleteAll, .copyFile, .copyName, .copyPath, .copyText, .copyCalculation,
             .quickLook, .openInApp, .showDetails, .toggleFavorite, .hideFromSearch, .minimizeWindow,
-            .newItem, .settings, .edit, .duplicate, .showInFinder:
+            .newItem, .settings, .edit, .duplicate, .showInFileManager:
             true
         case .commandDelete, .pasteFile, .quit, .forceQuit, .hideApp, .restart, .pin, .favoriteSlot,
             .continueInChat:

@@ -324,10 +324,10 @@ final class NotesCoordinator {
 
     func openNotesFolder() {
         guard let fileURL = store.activeFileURL else {
-            NSWorkspace.shared.open(store.notesDirectory)
+            AppLauncher.openDirectoryInFileManager(store.notesDirectory)
             return
         }
-        AppLauncher.showInFinder(fileURL)
+        AppLauncher.showInFileManager(fileURL)
     }
 
     func moveToTopRight() {

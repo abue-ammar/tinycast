@@ -95,7 +95,7 @@ enum AppLauncher {
         return quitSucceeded
     }
 
-    static func showInFinder(_ url: URL) {}
+    static func showInFileManager(_ url: URL) {}
     static func showInfoInFinder(_ url: URL) async -> Bool { true }
 }
 

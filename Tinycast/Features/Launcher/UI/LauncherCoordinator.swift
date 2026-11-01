@@ -286,9 +286,9 @@ final class LauncherCoordinator {
         ranking.reset(itemKey: app.preferenceKey)
     }
 
-    func showInFinder(_ app: AppEntry) {
+    func showInFileManager(_ app: AppEntry) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        AppLauncher.showInFinder(app.url)
+        AppLauncher.showInFileManager(app.url)
     }
 
     /// Focus is never handed back: the relaunch takes it, or the app that refused has it.

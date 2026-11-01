@@ -102,9 +102,9 @@ final class UninstallCoordinator {
         core.showMessage(String(localized: "Copied path"))
     }
 
-    func showUninstallItemInFinder(_ candidate: UninstallCandidate) {
+    func showUninstallItemInFileManager(_ candidate: UninstallCandidate) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        AppLauncher.showInFinder(candidate.url)
+        AppLauncher.showInFileManager(candidate.url)
     }
 
     func showUninstallItemInfo(_ candidate: UninstallCandidate) {

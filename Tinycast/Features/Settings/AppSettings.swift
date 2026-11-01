@@ -166,6 +166,17 @@ final class AppSettings {
         didSet { defaults.set(showInMenuBar, forKey: Key.showInMenuBar.rawValue) }
     }
 
+    /// Nil follows the system file viewer. The app must exist on this Mac, so this never travels.
+    var fileManagerBundleID: String? {
+        didSet {
+            guard let fileManagerBundleID else {
+                defaults.removeObject(forKey: Key.fileManagerBundleID.rawValue)
+                return
+            }
+            defaults.set(fileManagerBundleID, forKey: Key.fileManagerBundleID.rawValue)
+        }
+    }
+
     var automaticallyCheckForUpdates: Bool {
         didSet {
             defaults.set(
@@ -697,6 +708,7 @@ final class AppSettings {
         showInMenuBar =
             defaults.object(forKey: Key.showInMenuBar.rawValue) == nil
             || defaults.bool(forKey: Key.showInMenuBar.rawValue)
+        fileManagerBundleID = defaults.string(forKey: Key.fileManagerBundleID.rawValue)
         automaticallyCheckForUpdates =
             defaults.object(forKey: Key.automaticallyCheckForUpdates.rawValue) == nil
             || defaults.bool(forKey: Key.automaticallyCheckForUpdates.rawValue)

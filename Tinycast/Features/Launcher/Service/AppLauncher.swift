@@ -1,6 +1,25 @@
 import AppKit
 
 enum AppLauncher {
+    struct FileManagerSelection {
+        let bundleID: String
+        let appURL: URL?
+        let name: String
+        let followsSystem: Bool
+        let configuredBundleID: String?
+        let isConfiguredApplicationMissing: Bool
+
+        var actionTitle: String {
+            bundleID == FileViewerPolicy.finderBundleID
+                ? String(localized: "Show in Finder")
+                : String(localized: "Show in \(name)")
+        }
+    }
+
+    private enum FileManagerAction {
+        case reveal
+        case openDirectory
+    }
 
     @MainActor
     static func launch(_ url: URL, allowsRunningApplicationSubstitution: Bool = true) {
@@ -15,9 +34,100 @@ enum AppLauncher {
     }
 
     @MainActor
-    static func showInFinder(_ url: URL) {
-        NSWorkspace.shared.activateFileViewerSelecting([url])
-        bringFileViewerForwardIfRefused()
+    static func showInFileManager(_ url: URL) {
+        perform(url, action: .reveal, using: currentFileManager.bundleID)
+    }
+
+    @MainActor
+    static func openDirectoryInFileManager(_ url: URL) {
+        perform(url, action: .openDirectory, using: currentFileManager.bundleID)
+    }
+
+    @MainActor
+    static var currentFileManager: FileManagerSelection {
+        let configuredBundleID = UserDefaults.standard.string(
+            forKey: FileViewerPolicy.configuredBundleIDKey)
+        return fileManager(configuredBundleID: configuredBundleID)
+    }
+
+    @MainActor
+    static func fileManager(configuredBundleID: String?) -> FileManagerSelection {
+        let systemBundleID = UserDefaults.standard.string(
+            forKey: FileViewerPolicy.systemFileViewerKey)
+        let target = FileViewerPolicy.resolvedTarget(
+            configuredBundleID: configuredBundleID, systemBundleID: systemBundleID,
+            isAvailable: { applicationURL(for: $0) != nil })
+        let appURL = applicationURL(for: target.bundleID)
+        return FileManagerSelection(
+            bundleID: target.bundleID,
+            appURL: appURL,
+            name: target == .finder
+                ? String(localized: "Finder") : bundleName(at: appURL, bundleID: target.bundleID),
+            followsSystem: normalizedBundleID(configuredBundleID) == nil,
+            configuredBundleID: normalizedBundleID(configuredBundleID),
+            isConfiguredApplicationMissing: FileViewerPolicy.isConfiguredApplicationMissing(
+                configuredBundleID: configuredBundleID,
+                isAvailable: { applicationURL(for: $0) != nil }))
+    }
+
+    @MainActor
+    private static func perform(
+        _ url: URL, action: FileManagerAction, using bundleID: String
+    ) {
+        let target =
+            bundleID.caseInsensitiveCompare(FileViewerPolicy.finderBundleID) == .orderedSame
+            ? FileViewerTarget.finder : .application(bundleID: bundleID)
+        if target == .finder {
+            openWithFinder(url, action: action)
+            return
+        }
+        guard let appURL = applicationURL(for: bundleID) else {
+            fallbackToSystem(url, action: action, failedBundleID: bundleID)
+            return
+        }
+
+        let configuration = NSWorkspace.OpenConfiguration()
+        configuration.activates = true
+        NSWorkspace.shared.open(
+            [url], withApplicationAt: appURL, configuration: configuration
+        ) { _, error in
+            guard error != nil else { return }
+            Task { @MainActor in
+                fallbackToSystem(url, action: action, failedBundleID: bundleID)
+            }
+        }
+    }
+
+    @MainActor
+    private static func fallbackToSystem(
+        _ url: URL, action: FileManagerAction, failedBundleID: String
+    ) {
+        let systemBundleID = UserDefaults.standard.string(
+            forKey: FileViewerPolicy.systemFileViewerKey)
+        let systemTarget = FileViewerPolicy.resolvedTarget(
+            configuredBundleID: nil, systemBundleID: systemBundleID,
+            isAvailable: { applicationURL(for: $0) != nil })
+        if systemTarget.bundleID != failedBundleID {
+            perform(url, action: action, using: systemTarget.bundleID)
+            return
+        }
+        openWithFinder(url, action: action)
+    }
+
+    @MainActor
+    private static func openWithFinder(_ url: URL, action: FileManagerAction) {
+        switch action {
+        case .reveal:
+            NSWorkspace.shared.activateFileViewerSelecting([url])
+            bringFileViewerForwardIfRefused()
+        case .openDirectory:
+            guard let finder = applicationURL(for: FileViewerPolicy.finderBundleID) else {
+                NSWorkspace.shared.open(url)
+                return
+            }
+            NSWorkspace.shared.open(
+                [url], withApplicationAt: finder, configuration: NSWorkspace.OpenConfiguration())
+        }
     }
 
     /// While `.regular` and inactive, cooperative activation refuses the viewer's own activation.
@@ -25,14 +135,25 @@ enum AppLauncher {
     private static func bringFileViewerForwardIfRefused() {
         guard NSApp.activationPolicy() == .regular, !NSApp.isActive,
             let viewer = NSWorkspace.shared.urlForApplication(
-                withBundleIdentifier: fileViewerBundleID)
+                withBundleIdentifier: FileViewerPolicy.finderBundleID)
         else { return }
         NSWorkspace.shared.openApplication(at: viewer, configuration: NSWorkspace.OpenConfiguration())
     }
 
-    /// The global `NSFileViewer` default is how a replacement file viewer takes over reveals.
-    private static var fileViewerBundleID: String {
-        UserDefaults.standard.string(forKey: "NSFileViewer") ?? "com.apple.finder"
+    @MainActor
+    private static func applicationURL(for bundleID: String) -> URL? {
+        NSWorkspace.shared.urlForApplication(withBundleIdentifier: bundleID)
+    }
+
+    @MainActor
+    private static func bundleName(at url: URL?, bundleID: String) -> String {
+        guard let url, let bundle = Bundle(url: url) else { return bundleID }
+        return bundle.installedAppName
+    }
+
+    private static func normalizedBundleID(_ bundleID: String?) -> String? {
+        let trimmed = bundleID?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed?.isEmpty == false ? trimmed : nil
     }
 
     /// No AppKit route for Get Info, so this drives Finder over Apple events — seconds when cold.
