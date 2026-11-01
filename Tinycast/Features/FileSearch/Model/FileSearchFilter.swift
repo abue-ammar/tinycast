@@ -76,4 +76,9 @@ enum FileSearchFilter: CaseIterable, Sendable {
         let package = UTType(filenameExtension: pathExtension, conformingTo: .package)
         return package.flatMap { $0.isDeclared ? $0 : nil } ?? .folder
     }
+
+    static func isPackage(extension pathExtension: String, isDirectory: Bool) -> Bool {
+        guard isDirectory else { return false }
+        return contentType(extension: pathExtension, isDirectory: true)?.conforms(to: .package) == true
+    }
 }

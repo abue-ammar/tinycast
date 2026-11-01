@@ -96,7 +96,10 @@ final class FileSearchCoordinator {
 
     func open(_ result: FileSearchResult) {
         paletteCoordinator.hidePalette(restoreFocus: false)
-        if result.isDirectory {
+        if result.isDirectory,
+            !FileSearchFilter.isPackage(
+                extension: result.url.pathExtension, isDirectory: true)
+        {
             AppLauncher.openDirectoryInFileManager(result.url)
             return
         }

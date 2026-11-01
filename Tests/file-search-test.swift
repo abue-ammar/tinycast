@@ -157,6 +157,18 @@ struct FileSearchTests {
             FileSearchFilter.documents.accepts(contentType: rtfd, isDirectory: true)
                 && !FileSearchFilter.folders.accepts(contentType: rtfd, isDirectory: true),
             "a document package files under Documents, not Folders")
+        expect(
+            FileSearchFilter.isPackage(extension: "app", isDirectory: true),
+            "an application bundle is classified as a package")
+        expect(
+            FileSearchFilter.isPackage(extension: "rtfd", isDirectory: true),
+            "any declared package is not routed as a plain folder")
+        expect(
+            !FileSearchFilter.isPackage(extension: "v2", isDirectory: true),
+            "a dotted folder name is not a package")
+        expect(
+            !FileSearchFilter.isPackage(extension: "app", isDirectory: false),
+            "a regular file with a package extension is not classified as a package")
     }
 
     static func ignoreRules() {
