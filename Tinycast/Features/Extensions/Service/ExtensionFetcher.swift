@@ -7,6 +7,9 @@ final class ExtensionFetcher: Sendable {
 
     init() {
         let configuration = URLSessionConfiguration.ephemeral
+        if configuration.responds(to: NSSelectorFromString("set_preventsAppSSO:")) {
+            configuration.setValue(true, forKey: "_preventsAppSSO")
+        }
         configuration.timeoutIntervalForRequest = 60
         configuration.httpCookieStorage = nil
         configuration.urlCredentialStorage = nil
