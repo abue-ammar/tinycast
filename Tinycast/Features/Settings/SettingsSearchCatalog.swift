@@ -181,7 +181,10 @@ enum SettingsSearchCatalog {
             keywords: ["fuzzy", "strict", "loose", "matching", "typo", "root search"]),
         .init(
             .generalSearch, "Learned ranking",
-            keywords: ["reset", "history", "order", "privacy"])
+            keywords: ["reset", "history", "order", "privacy"]),
+        .init(
+            group: .generalDeepLinks, "Deeplinks",
+            keywords: ["link", "url", "tinycast://", "allow", "karabiner", "shortcuts", "automation"])
     ]
 
     private static let applications: [SettingsSearchEntry] = [

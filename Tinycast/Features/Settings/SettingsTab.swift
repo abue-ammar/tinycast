@@ -5,6 +5,40 @@ enum SettingsTab: CaseIterable, Identifiable {
     /// The case, never an index: a selectable `List` flattens section and row IDs together.
     var id: Self { self }
 
+    init?(slug: String) {
+        guard let tab = Self.allCases.first(where: { $0.slug == slug }) else { return nil }
+        self = tab
+    }
+
+    /// `tinycast://settings/<slug>`; spelled out, so renaming a case never breaks a saved link.
+    var slug: String {
+        switch self {
+        case .general: "general"
+        case .applications: "applications"
+        case .systemSettings: "system-settings"
+        case .systemActions: "system-actions"
+        case .commands: "commands"
+        case .quicklinks: "quicklinks"
+        case .appleShortcuts: "apple-shortcuts"
+        case .fallbacks: "fallbacks"
+        case .clipboard: "clipboard"
+        case .snippets: "snippets"
+        case .fileSearch: "file-search"
+        case .windowManagement: "window-management"
+        case .navigation: "navigation"
+        case .notes: "notes"
+        case .calendar: "calendar"
+        case .emoji: "emoji"
+        case .dictation: "dictation"
+        case .ai: "ai"
+        case .quickActions: "quick-actions"
+        case .extensions: "extensions"
+        case .permissions: "permissions"
+        case .backup: "backup"
+        case .about: "about"
+        }
+    }
+
     var title: String {
         switch self {
         case .general: return String(localized: "General")

@@ -26,6 +26,8 @@ final class NotesCoordinator {
     @ObservationIgnored private var operationID = 0
     @ObservationIgnored private var pendingIssue: NotesStore.Issue?
     private var pendingPresentation: Presentation?
+    /// A link's text for the next note created, whichever path ends up creating it.
+    @ObservationIgnored private var pendingNoteSource = ""
     private var enablementGeneration = 0
     private(set) var isSwitcherPresented = false
     private(set) var switcherSelection: NoteID?
@@ -137,7 +139,8 @@ final class NotesCoordinator {
         }
     }
 
-    func createNote() {
+    func createNote(text: String = "") {
+        pendingNoteSource = text
         request(.create)
     }
 
@@ -410,7 +413,9 @@ final class NotesCoordinator {
         loadTask = Task { [weak self] in
             guard let self else { return }
             // Create is its own load: the collection it would wait for is the one it adds to.
-            let loaded = presentation == .create ? await store.create() : await store.start()
+            let loaded =
+                presentation == .create
+                ? await store.create(source: takePendingNoteSource()) : await store.start()
             guard generation == enablementGeneration else {
                 if !settings.notesEnabled { store.stop() }
                 return
@@ -434,8 +439,8 @@ final class NotesCoordinator {
             windowController.show(focusEditor: true)
         case .create:
             let generation = presentationGeneration
-            guard await store.create(), settings.notesEnabled, !Task.isCancelled,
-                generation == presentationGeneration
+            guard await store.create(source: takePendingNoteSource()), settings.notesEnabled,
+                !Task.isCancelled, generation == presentationGeneration
             else { return }
             closeSwitcher()
             windowController.show(focusEditor: true)
@@ -444,6 +449,11 @@ final class NotesCoordinator {
             windowController.show(focusEditor: false)
             openSwitcher()
         }
+    }
+
+    private func takePendingNoteSource() -> String {
+        defer { pendingNoteSource = "" }
+        return pendingNoteSource
     }
 
     /// A newer show or hide retires an older operation's right to put what it loaded on screen.

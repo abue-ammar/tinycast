@@ -18,6 +18,7 @@ struct QuicklinkCoordinatorTests {
         try await hotKeySelectedTextTargets()
         try await hotKeyCopiesOnce()
         try await plainLink()
+        try ownSchemeLink()
         try copying()
         try editing()
         try await deleting()
@@ -216,6 +217,18 @@ struct QuicklinkCoordinatorTests {
             QuicklinkLauncher.opened.first?.link == fixture.link.link,
             "a plain link opens without selection input")
         expect(fixture.injector.copies == 0, "a link that reads no selection never sends ⌘C")
+    }
+
+    static func ownSchemeLink() throws {
+        let fixture = try Fixture(link: "tinycast://command/search-files?fallbackText={argument}")
+        defer { fixture.cleanUp() }
+        fixture.coordinator.openQuicklink(id: fixture.link.id, values: ["Argument": "~/Downloads"])
+        expect(QuicklinkLauncher.opened.isEmpty, "Tinycast's own link never leaves the process")
+        expect(
+            fixture.core.deepLinkCoordinator.opened.map(\.0.absoluteString)
+                == ["tinycast://command/search-files?fallbackText=~%2FDownloads"]
+                && fixture.core.deepLinkCoordinator.opened.first?.1 == .tinycast,
+            "it runs as a link Tinycast chose, so it never asks")
     }
 
     static func copying() throws {
@@ -489,6 +502,15 @@ enum AppLauncher {
 }
 
 enum DialogTone { case danger, neutral, success }
+
+@MainActor
+final class DeepLinkCoordinator {
+    enum Source { case outside, tinycast }
+    var opened: [(URL, Source)] = []
+    func handles(_ url: URL) -> Bool { url.scheme == "tinycast" }
+    func open(_ url: URL, source: Source = .outside) { opened.append((url, source)) }
+}
+
 @MainActor
 final class AppCore {
     let palette = PaletteState()
@@ -496,6 +518,7 @@ final class AppCore {
     lazy var quicklinkCoordinator: QuicklinkCoordinator = {
         fatalError("The fixture must wire the coordinator")
     }()
+    let deepLinkCoordinator = DeepLinkCoordinator()
     var messages: [String] = []
     var confirmations = 0
     func showNotice(title: String, message: String, symbol: String, tone: DialogTone) async {}

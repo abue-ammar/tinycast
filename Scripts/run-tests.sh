@@ -479,7 +479,10 @@ run window-layout-test     Tinycast/Features/WindowManagement/Model/WindowComman
                            Tinycast/Features/WindowManagement/Model/CustomWindowSize.swift \
                            Tinycast/Features/WindowManagement/Model/CustomWindowSizeStore.swift \
                            Tinycast/Platform/LocalizedResource.swift
-run deeplink-test          Tinycast/Features/Launcher/Model/EntryDeepLink.swift \
+run deeplink-test          Tinycast/Features/DeepLinks/Model/DeepLink.swift \
+                           Tinycast/Features/DeepLinks/Model/DeepLinkInput.swift \
+                           Tinycast/Features/DeepLinks/Model/DeepLinkConsentPolicy.swift \
+                           Tinycast/Features/Settings/SettingsTab.swift \
                            Tinycast/Features/Launcher/Model/CommandID.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction+EntryID.swift \

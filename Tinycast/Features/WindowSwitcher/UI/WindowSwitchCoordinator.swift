@@ -39,6 +39,13 @@ final class WindowSwitchCoordinator {
         paletteCoordinator.togglePalette(mode: .switchWindows)
     }
 
+    /// A link's text filters the list it opens; there is no held chord to switch on release.
+    func show(query: String) {
+        guard settings.navigationEnabled, hasAccessibility() else { return }
+        disarmSwitchOnRelease()
+        paletteCoordinator.togglePalette(mode: .switchWindows, seeding: query)
+    }
+
     /// The first step lands on the window behind the current one, which the list opens on.
     private func step(by offset: Int) {
         let count = session.filtered.count
