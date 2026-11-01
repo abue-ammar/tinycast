@@ -34,6 +34,9 @@ For anything private, email [iabueammar@gmail.com](mailto:iabueammar@gmail.com).
   or every app at once.
 - **Global hotkey** — one shortcut summons the palette from anywhere.
 - **Per-app hotkeys** — bind a key to an app; press it to toggle (focus/hide).
+- **Deeplinks** — run any command, window action, quicklink, snippet, note or chat from a
+  `tinycast://` URL, for Karabiner-Elements, Shortcuts or scripts. A link can carry text and
+  arguments, and a link from outside asks before it acts. Copy Deeplink (⇧⌘C) gives you the link.
 - **Search Files** — open files and folders from the folders you choose, through Spotlight, with no
   index of our own.
 - **Dictionary** — look a word up with the Define Word command, or define whatever you typed from the

@@ -9,7 +9,7 @@ enum WindowTarget {
     /// Our panels never activate, so the frontmost app is not what the user is looking at.
     static func current() -> WindowTarget? {
         if let own = NSApp.keyWindow.flatMap(placeable) { return .own(own) }
-        return NSWorkspace.shared.frontmostApplication.map(WindowTarget.external)
+        return FrontmostApp.current.map(WindowTarget.external)
     }
 
     /// The same answer from what the palette recorded when it covered the screen.

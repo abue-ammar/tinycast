@@ -30,10 +30,10 @@ turn on keystroke listening.
 
 ## Commands
 
-| Command         | Does                                |
-| --------------- | ----------------------------------- |
-| Search Snippets | Opens the snippet browser           |
-| Create Snippet  | Opens the editor with a new snippet |
+| Command         | Does                                                                          |
+| --------------- | ----------------------------------------------------------------------------- |
+| Search Snippets | Opens the snippet browser                                                     |
+| Create Snippet  | Opens the editor with a new snippet, starting from the text you have selected |
 
 You can give both a global shortcut and an alias in **Settings → Snippets**.
 

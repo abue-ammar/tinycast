@@ -263,6 +263,10 @@ enum AIChatActionsMenu {
                 ClosureMenuItem(String(localized: "Copy Chat"), symbol: "text.bubble") {
                     coordinator.copyChat(id: chat.session.id)
                 })
+            menu.addItem(
+                ClosureMenuItem(String(localized: "Copy Deeplink"), symbol: "link") {
+                    coordinator.copyDeepLink(toChat: chat.session.id)
+                })
         }
         if !chat.pendingAttachments.isEmpty {
             menu.addItem(

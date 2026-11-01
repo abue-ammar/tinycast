@@ -122,14 +122,58 @@ final class SnippetCoordinator {
     // MARK: - Browsing and editing
 
     /// The switch gates the browser, the way Search Files re-checks its own before opening.
-    func showSnippets() {
+    func showSnippets(query: String = "") {
         guard settings.snippetsEnabled else { return }
-        paletteCoordinator.togglePalette(mode: .snippets)
+        paletteCoordinator.togglePalette(mode: .snippets, seeding: query.isEmpty ? nil : query)
     }
 
     func editSnippet(_ record: StoredSnippet?) {
         guard settings.snippetsEnabled else { return }
         editor = SnippetEditorSession(record: record)
+        paletteCoordinator.showPalette(mode: .snippetEditor)
+    }
+
+    /// Starts from the text selected in the app in front, read through Accessibility, never ⌘C.
+    func createSnippetFromSelection() {
+        guard settings.snippetsEnabled else { return }
+        let selection = paletteCoordinator.targetApp.flatMap(AccessibilityText.selection(in:))
+        createSnippet(name: "", text: selection ?? "", keyword: "")
+    }
+
+    /// A link's batch, written only once the reader agrees; copies already here are skipped.
+    func importSnippets(offered incoming: [Snippet]) async {
+        guard settings.snippetsEnabled, !incoming.isEmpty else { return }
+        guard
+            await core.confirm(
+                title: String(localized: "Add \(incoming.count) snippets from a link?"),
+                message: ListFormatter.localizedString(byJoining: incoming.map(\.name)),
+                symbol: "curlybraces", confirmTitle: String(localized: "Add"), tone: .neutral,
+                confirmRole: .standard)
+        else { return }
+        // Matched as a backup import matches, so the same link twice leaves no second copy.
+        let existing = Set(store.snippets.map { [$0.snippet.name, $0.snippet.text] })
+        let fresh = incoming.filter { !existing.contains([$0.name, $0.text]) }
+        guard !fresh.isEmpty else {
+            return core.showMessage(String(localized: "Nothing to Import"), tone: .neutral)
+        }
+        do {
+            let created = try await store.importSnippets(fresh)
+            core.showMessage(String(localized: "Imported \(created.count) snippets."))
+        } catch {
+            await core.showNotice(
+                title: String(localized: "Import Failed"), message: error.localizedDescription,
+                symbol: "curlybraces", tone: .danger)
+        }
+    }
+
+    /// A new snippet already filled in, from a link; nothing is written until it is saved.
+    func createSnippet(name: String, text: String, keyword: String) {
+        guard settings.snippetsEnabled else { return }
+        let editor = SnippetEditorSession(record: nil)
+        editor.name = name
+        editor.text = text
+        editor.keyword = keyword
+        self.editor = editor
         paletteCoordinator.showPalette(mode: .snippetEditor)
     }
 
