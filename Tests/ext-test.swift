@@ -195,6 +195,7 @@ struct ExtensionTests {
         await searchAccessoryRuntimeChecks()
         await nodeContractChecks()
         await bufferEventChecks()
+        await sharedArrayBufferChecks()
         await webAssemblyChecks()
         await asyncComponentChecks()
         await menuBarRuntimeChecks()
@@ -1697,6 +1698,56 @@ struct ExtensionTests {
             check(name, host.huds == ["\(name) passed"], recorder.failures.joined(separator: "|"))
             await runtime.stop(session: name)
             runtime.shutdown()
+        }
+    }
+
+    @MainActor
+    static func sharedArrayBufferChecks() async {
+        let (runtime, host, recorder) = makeRuntime()
+        defer { runtime.shutdown() }
+        do {
+            try await runtime.boot(
+                config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+            let command = #"""
+                const assert = require("assert");
+                const lock = new Int32Array(new SharedArrayBuffer(4));
+                Atomics.store(lock, 0, 5);
+                assert.equal(Atomics.add(lock, 0, "3"), 5);
+                assert.equal(Atomics.compareExchange(lock, 0, "8", 0), 8);
+                assert.equal(Atomics.load(lock, 0), 0);
+                assert.equal(Atomics.wait(lock, 0, 1), "not-equal");
+                assert.equal(Atomics.wait(lock, undefined, 4294967296, 0), "timed-out");
+                assert.equal(Atomics.wait(lock, 0, 0, -1), "timed-out");
+                assert.equal(Atomics.notify(lock, 0), 0);
+                const started = Date.now();
+                assert.equal(Atomics.wait(lock, 0, 0, 40), "timed-out");
+                assert(Date.now() - started >= 40);
+                const big = new BigInt64Array(new SharedArrayBuffer(8));
+                assert.equal(Atomics.wait(big, 0, "0", 0), "timed-out");
+                assert.equal(Atomics.wait(big, 0, 1n), "not-equal");
+                for (const operation of [
+                  () => Atomics.wait(new Uint32Array(1), 0, 0, 0),
+                  () => Atomics.wait(lock, 0, 0n, 0),
+                  () => Atomics.wait(lock, 0, 0),
+                  () => Atomics.wait(lock, 0, 0, Infinity),
+                ]) assert.throws(operation, TypeError);
+                assert.throws(() => Atomics.wait(lock, 1, 0, 0), RangeError);
+                module.exports.default = async () => {
+                  await require("@raycast/api").showHUD("SharedArrayBuffer passed");
+                };
+                """#
+            await runtime.start(
+                session: "shared-buffer", code: command,
+                file: URL(fileURLWithPath: "/tmp/shared-buffer.js"), mode: .noView,
+                context: launchContext(mode: .noView))
+            await settle(until: { recorder.finished || !recorder.failures.isEmpty })
+            check(
+                "SharedArrayBuffer allocation and finite waits work in JavaScriptCore",
+                host.huds == ["SharedArrayBuffer passed"] && recorder.finished,
+                recorder.failures.joined(separator: "|"))
+            await runtime.stop(session: "shared-buffer")
+        } catch {
+            check("SharedArrayBuffer runtime boots", false, String(describing: error))
         }
     }
 

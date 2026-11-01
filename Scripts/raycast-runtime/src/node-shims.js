@@ -1872,56 +1872,24 @@ globalThis.process = process;
 globalThis.Buffer = Buffer;
 globalThis.global = globalThis;
 
-// ─── SharedArrayBuffer / Atomics ────────────────────────────────────
-//
-// JavaScriptCore's `JSContext` API does not expose `SharedArrayBuffer` (it is
-// gated off in the embedding API even though the standalone `jsc` shell has it).
-// Packages that drive an `Atomics.wait`-based sleep or lock allocate a
-// `new Int32Array(new SharedArrayBuffer(n))` at module load, so the whole module
-// throws on import ("can't find variable: SharedMemoryBuffer") before a command
-// can render. An extension runs on one thread, so a `SharedArrayBuffer` is
-// indistinguishable from an `ArrayBuffer` here, and the atomic operations are
-// trivially correct with no second thread to race. `wait` can never block,
-// because nothing else can `notify`, so it returns synchronously the way the
-// spec requires for a value that already differs or a zero timeout.
+// JSContext exposes native Atomics but no shared buffers; extensions have no worker threads.
 if (typeof globalThis.SharedArrayBuffer === "undefined") {
   globalThis.SharedArrayBuffer = ArrayBuffer;
-}
-if (typeof globalThis.Atomics === "undefined") {
-  const asIndex = (array, index) => {
-    const i = Number(index);
-    if (!Number.isInteger(i) || i < 0 || i >= array.length) {
-      throw new RangeError("Atomics: index out of range");
+  const load = Atomics.load;
+  Atomics.wait = (array, index, value, timeout) => {
+    if (!(array instanceof Int32Array) && !(array instanceof BigInt64Array)) {
+      throw new TypeError("Atomics.wait requires an Int32Array or BigInt64Array");
     }
-    return i;
-  };
-  const update = (array, index, transform) => {
-    const i = asIndex(array, index);
-    const previous = array[i];
-    array[i] = transform(previous);
-    return previous;
-  };
-  globalThis.Atomics = {
-    load: (array, index) => array[asIndex(array, index)],
-    store: (array, index, value) => (array[asIndex(array, index)] = value),
-    add: (array, index, value) => update(array, index, (p) => p + value),
-    sub: (array, index, value) => update(array, index, (p) => p - value),
-    and: (array, index, value) => update(array, index, (p) => p & value),
-    or: (array, index, value) => update(array, index, (p) => p | value),
-    xor: (array, index, value) => update(array, index, (p) => p ^ value),
-    exchange: (array, index, value) => update(array, index, () => value),
-    compareExchange: (array, index, expected, replacement) => {
-      const i = asIndex(array, index);
-      const previous = array[i];
-      if (previous === expected) array[i] = replacement;
-      return previous;
-    },
-    // No other thread exists to flip the value, so a wait either sees a value
-    // that already differs or runs its timeout out; it never parks the thread.
-    wait: (array, index, value) =>
-      array[asIndex(array, index)] === value ? "timed-out" : "not-equal",
-    notify: () => 0,
-    isLockFree: () => true,
+    const offset = Math.trunc(+index) || 0;
+    load(array, offset);
+    const expected = array instanceof BigInt64Array ? BigInt.asIntN(64, value) : value >> 0;
+    const milliseconds = +timeout;
+    if (load(array, offset) !== expected) return "not-equal";
+    if (Number.isNaN(milliseconds) || milliseconds === Infinity) {
+      throw new TypeError("Atomics.wait with an infinite timeout is not supported in Tinycast extensions");
+    }
+    if (milliseconds > 0) hostCallSync("atomics", "wait", [milliseconds]);
+    return "timed-out";
   };
 }
 
