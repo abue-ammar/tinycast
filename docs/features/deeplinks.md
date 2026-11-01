@@ -57,7 +57,7 @@ Settings shortcut field; only the Settings window sets it.
   it adds anything.
 - **A quicklink never opens a quicklink.** Its own-scheme link runs in-process and synchronously, so
   a quicklink that reached itself would recurse forever. `DeepLinkSource.mayRun(_:)` refuses it.
-- **Consent never travels.** `deepLinkAllowedEntryIDs` is excluded from backups and from
+- **Consent never travels.** `allowedDeepLinks` is excluded from backups and from
   `settings.json`, since each entry lets any app or web page run a command unasked.
 
 ## Links
@@ -156,7 +156,8 @@ unknown link before any question, so a page cannot learn what exists by asking.
 Always Allow stores `DeepLinkConsentPolicy.key(entryID:input:)`: the row alone, or the row with its
 exact input, the row's ID percent-encoded so a `?` in a snippet path cannot fake the split. A grant
 never covers different input, so a Karabiner key with fixed text asks once and an attacker's text
-still asks. A size spelled out in a link is one target, `window-size`, whatever the size.
+still asks. A search link's row is `search`. A size spelled out in a link is one target,
+`window-size`, whatever the size.
 Destructive system actions still ask their own question after it. One question shows at a time: a
 link that arrives meanwhile is logged and dropped. The gate is checked again after the answer, so a
 feature turned off during the question still wins.

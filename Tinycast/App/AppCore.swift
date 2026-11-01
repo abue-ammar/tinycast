@@ -510,7 +510,6 @@ final class AppCore {
         }
     }
 
-    /// The category switch hotkeys and links share; each feature's switch guards its funnel too.
     func allowsHotKeyAction(_ action: HotKeyAction) -> Bool {
         guard visibility.allowsHotKey(action) else { return false }
         if action == .dictation { return settings.dictationEnabled }

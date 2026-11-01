@@ -664,10 +664,8 @@ final class AppSettings {
     }
 
     /// Rows a link from outside may run without asking; only `DeepLinkCoordinator` adds to it.
-    var deepLinkAllowedEntryIDs: [String] {
-        didSet {
-            defaults.set(deepLinkAllowedEntryIDs, forKey: Key.deepLinkAllowedEntryIDs.rawValue)
-        }
+    var allowedDeepLinks: [String] {
+        didSet { defaults.set(allowedDeepLinks, forKey: Key.allowedDeepLinks.rawValue) }
     }
 
     /// With no per-app list the bundle follows macOS's languages, so this runs before any lookup.
@@ -906,7 +904,6 @@ final class AppSettings {
             defaults.object(forKey: Key.supportReminders.rawValue) == nil
             || defaults.bool(forKey: Key.supportReminders.rawValue)
         settingsFileEnabled = defaults.bool(forKey: Key.settingsFileEnabled.rawValue)
-        deepLinkAllowedEntryIDs =
-            defaults.stringArray(forKey: Key.deepLinkAllowedEntryIDs.rawValue) ?? []
+        allowedDeepLinks = defaults.stringArray(forKey: Key.allowedDeepLinks.rawValue) ?? []
     }
 }

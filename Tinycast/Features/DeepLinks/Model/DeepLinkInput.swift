@@ -15,7 +15,7 @@ struct DeepLinkInput: Equatable, Sendable {
 
     /// Bytes, not characters: one character can carry any number of combining marks.
     static let maximumParameterBytes = 65_536
-    static let none = DeepLinkInput(fallbackText: nil, arguments: nil, context: nil)
+    static let none = DeepLinkInput()
     /// RFC 3986's unreserved set, so an encoded value survives any reader of the link intact.
     private static let unreserved = CharacterSet(
         charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
@@ -24,7 +24,7 @@ struct DeepLinkInput: Equatable, Sendable {
     var arguments: Arguments?
     var context: Context?
 
-    init(fallbackText: String?, arguments: Arguments?, context: Context?) {
+    init(fallbackText: String? = nil, arguments: Arguments? = nil, context: Context? = nil) {
         self.fallbackText = fallbackText
         self.arguments = arguments
         self.context = context

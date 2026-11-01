@@ -291,7 +291,6 @@ final class LauncherCoordinator {
         AppLauncher.showInFinder(app.url)
     }
 
-    /// The values typed into a row's argument fields, keyed as that row's own launch reads them.
     func argumentValues(for entry: AppEntry) -> [String: String] {
         let palette = core.palette
         switch entry.kind {
@@ -312,7 +311,6 @@ final class LauncherCoordinator {
         }
     }
 
-    /// Whatever is typed into the row's fields rides along, so the link fills them the same way.
     func deepLink(for app: AppEntry) -> URL? {
         let values = argumentValues(for: app)
         guard app.kind != .extensionCommand else {
@@ -321,7 +319,6 @@ final class LauncherCoordinator {
         return core.deepLinkCoordinator.url(forEntryID: app.id, values: values)
     }
 
-    /// A Settings row's link: the same as its launcher row's, with no fields typed.
     func deepLink(for action: HotKeyAction) -> URL? {
         if case .extensionCommand(let entryID) = action {
             return extensionCoordinator.deepLink(forEntryID: entryID, arguments: [:])
