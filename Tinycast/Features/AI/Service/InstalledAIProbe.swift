@@ -94,40 +94,48 @@ enum InstalledAIProbe {
         environment: [String: String]? = nil, input: Data,
         until answered: @escaping @Sendable (String) -> Bool, timeout: Duration = .seconds(30)
     ) async -> String {
-        await Task.detached {
-            try? FileManager.default.createDirectory(
-                at: workspace, withIntermediateDirectories: true)
-            let process = Process()
-            let stdin = Pipe()
-            let output = Pipe()
-            process.executableURL = executable
-            process.arguments = arguments
-            process.currentDirectoryURL = workspace
-            process.environment =
-                environment ?? ExecutableLocator.environment(running: executable)
-            process.standardInput = stdin
-            process.standardOutput = output
-            process.standardError = FileHandle.nullDevice
-            guard let exit = try? process.runObservingExit() else { return "" }
-            Self.write(input, to: stdin, closing: false)
-            let watchdog = Task {
-                try? await Task.sleep(for: timeout)
-                if process.isRunning { process.terminate() }
-            }
-            var data = Data()
-            // Not `read(upToCount:)`, which waits for a full chunk or EOF and so for the watchdog.
-            while data.count < Self.maximumOutputBytes {
-                let chunk = output.fileHandleForReading.availableData
-                guard !chunk.isEmpty else { break }
-                data.append(chunk)
-                if answered(String(bytes: data, encoding: .utf8) ?? "") { break }
-            }
-            try? stdin.fileHandleForWriting.close()
-            if process.isRunning { process.terminate() }
-            exit.wait()
-            watchdog.cancel()
-            return String(bytes: data, encoding: .utf8) ?? ""
-        }.value
+        let handle = ProcessHandle()
+        return await withTaskCancellationHandler(
+            operation: {
+                await Task.detached {
+                    try? FileManager.default.createDirectory(
+                        at: workspace, withIntermediateDirectories: true)
+                    let process = Process()
+                    let stdin = Pipe()
+                    let output = Pipe()
+                    process.executableURL = executable
+                    process.arguments = arguments
+                    process.currentDirectoryURL = workspace
+                    process.environment =
+                        environment ?? ExecutableLocator.environment(running: executable)
+                    process.standardInput = stdin
+                    process.standardOutput = output
+                    process.standardError = FileHandle.nullDevice
+                    guard let exit = try? process.runObservingExit() else { return "" }
+                    handle.set(process)
+                    Self.write(input, to: stdin, closing: false)
+                    let watchdog = Task {
+                        try? await Task.sleep(for: timeout)
+                        if process.isRunning { process.terminate() }
+                    }
+                    var data = Data()
+                    // `read(upToCount:)` would wait for a full chunk or EOF, so for the watchdog.
+                    while data.count < Self.maximumOutputBytes {
+                        let chunk = output.fileHandleForReading.availableData
+                        guard !chunk.isEmpty else { break }
+                        data.append(chunk)
+                        if answered(String(bytes: data, encoding: .utf8) ?? "") { break }
+                    }
+                    try? stdin.fileHandleForWriting.close()
+                    if process.isRunning { process.terminate() }
+                    exit.wait()
+                    watchdog.cancel()
+                    return String(bytes: data, encoding: .utf8) ?? ""
+                }.value
+            },
+            onCancel: {
+                handle.cancel()
+            })
     }
 
     /// A child that exits before reading must fail the write, not SIGPIPE Tinycast.

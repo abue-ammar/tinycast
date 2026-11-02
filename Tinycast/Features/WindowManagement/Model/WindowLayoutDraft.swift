@@ -106,11 +106,6 @@ final class WindowLayoutDraft {
         update { $0.argument = argument?.isEmpty == true ? nil : argument }
     }
 
-    func setDisplay(_ display: WindowLayoutDisplay) {
-        update { $0.display = display }
-        selectedDisplayUUID = display.uuid
-    }
-
     func setAnchor(_ anchor: WindowLayoutAnchor) {
         update { $0.anchor = anchor }
     }

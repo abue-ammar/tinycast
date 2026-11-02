@@ -65,6 +65,12 @@ QUEUE="$BIN/queue"
 EXCLUSIVE_QUEUE="$BIN/exclusive-queue"
 # `--index` queues nothing, so it must never reset the state of a suite already running.
 if [ "$emit_db" -eq 0 ]; then
+    # Queue, logs and verdicts are shared by path, so a second suite in this $TMPDIR waits its turn.
+    if [ -z "${TINYCAST_SUITE_LOCKED:-}" ]; then
+        export TINYCAST_SUITE_LOCKED=1
+        lockf -k -t 0 "$BIN/suite.lock" true 2>/dev/null || echo "Waiting for the suite already running…" >&2
+        exec lockf -k "$BIN/suite.lock" "$SELF" "$@"
+    fi
     : > "$QUEUE"
     : > "$EXCLUSIVE_QUEUE"
     rm -f "$BIN"/*.failed "$BIN"/*.running
@@ -796,7 +802,10 @@ run update-check-test      Tinycast/Features/Updates/Model/*.swift \
 run support-test           Tinycast/Features/Support/Model/*.swift
 run ai-provider-test       Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \
-                           Tinycast/Features/AI/Settings/AISettingsStore.swift
+                           Tinycast/Features/AI/Settings/AISettingsStore.swift \
+                           Tinycast/Features/AI/Service/CodexAppServerClient.swift \
+                           Tinycast/Features/AI/Service/InstalledAIProbe.swift \
+                           Tinycast/Platform/ExecutableLocator.swift Tinycast/Platform/ProcessExit.swift
 run ai-chat-test           Tinycast/Features/AI/Model/AIRequest.swift \
                            Tinycast/Features/AI/Model/AIConnection.swift \
                            Tinycast/Features/AI/Model/AIConversationOpenPolicy.swift \
@@ -943,7 +952,11 @@ report() {
     while :; do
         asked=$SECONDS
         if IFS= read -r -t 15 line; then
-            case "$line" in "dispatch "*) return "${line#dispatch }";; esac
+            case "$line" in
+                "dispatch "*)
+                    [ "$finished" -eq "$ran" ] || return 1
+                    return "${line#dispatch }";;
+            esac
             finished=$((finished + 1))
             printf '[%*d/%d] %s\n' "${#ran}" "$finished" "$ran" "$line"
             continue

@@ -1,0 +1,95 @@
+name: Issue link
+
+# pull_request_target so forked PRs can be commented on — no checkout, API calls only.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  pull-requests: write
+
+concurrency:
+  group: issue-link-${{ github.event.pull_request.number || 'sweep' }}
+
+jobs:
+  check:
+    if: >-
+      github.event_name == 'schedule' ||
+      !contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.pull_request.author_association)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = "<!-- tinycast:issue-link -->";
+            const linked = /\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?):?\s+(?:(?:[\w.-]+\/[\w.-]+)?#\d+|https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/issues\/\d+)/i;
+            const docsOnly = /\.md$|^docs\/|^website\//;
+            const grace = 24 * 60 * 60 * 1000;
+            const maintainers = ["OWNER", "MEMBER", "COLLABORATOR"];
+            const repo = { owner: context.repo.owner, repo: context.repo.repo };
+            const guidelines = `https://github.com/${repo.owner}/${repo.repo}/blob/main/CONTRIBUTING.md`;
+
+            const findNotice = async (number) => {
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                ...repo, issue_number: number, per_page: 100
+              });
+              return comments.find((c) => c.body?.includes(marker));
+            };
+
+            if (context.eventName === "schedule") {
+              const prs = await github.paginate(github.rest.pulls.list, { ...repo, state: "open", per_page: 100 });
+              for (const pr of prs) {
+                if (maintainers.includes(pr.author_association) || linked.test(pr.body ?? "")) continue;
+                const notice = await findNotice(pr.number);
+                if (!notice || Date.now() - Date.parse(notice.created_at) < grace) continue;
+                await github.rest.issues.createComment({
+                  ...repo,
+                  issue_number: pr.number,
+                  body: [
+                    `Closing this for now, @${pr.user.login}, as it still doesn't link an issue 24 hours after the`,
+                    "reminder above. You're very welcome to open a new pull request once there's an issue to",
+                    "link.",
+                  ].join("\n")
+                });
+                await github.rest.pulls.update({ ...repo, pull_number: pr.number, state: "closed" });
+                core.info(`Closed #${pr.number}: no linked issue.`);
+              }
+              return;
+            }
+
+            const pr = context.payload.pull_request;
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...repo, pull_number: pr.number, per_page: 100
+            });
+            const exempt = pr.user.type === "Bot" || files.every((f) => docsOnly.test(f.filename));
+            const notice = await findNotice(pr.number);
+
+            if (exempt || linked.test(pr.body ?? "")) {
+              if (notice) await github.rest.issues.deleteComment({ ...repo, comment_id: notice.id });
+              return;
+            }
+            if (notice) {
+              core.setFailed("No linked issue. See the PR comment.");
+              return;
+            }
+
+            const body = [
+              marker,
+              `Hi @${pr.user.login}, thanks for taking the time to contribute!`,
+              "",
+              `Before this can be reviewed, please read the [contribution guidelines](${guidelines}) and`,
+              "update the description with:",
+              "",
+              "1. **A linked issue.** If there isn't one yet, open an issue that describes the problem, then",
+              "   add `Closes #<number>` to the description.",
+              "2. **Why this is needed.** The problem it solves, and for whom.",
+              "3. **What it could break.** Any behaviour that changes, and the tradeoffs you made on purpose.",
+              "",
+              "> [!IMPORTANT]",
+              "> This pull request will be closed automatically in 24 hours if it still has no linked issue.",
+              "> Editing the description re-runs this check, and this comment disappears once it passes.",
+            ].join("\n");
+            await github.rest.issues.createComment({ ...repo, issue_number: pr.number, body });
+            core.setFailed("No linked issue. See the PR comment.");

@@ -60,7 +60,9 @@ against the total and shows its run and compile time, a quiet stretch names the 
 than `TINYCAST_TEST_TIMEOUT` seconds (default 300) is killed and reported as timed out. Parallelism is safe
 because each harness already roots its scratch state somewhere of its own — a UUID-suffixed
 `temporaryDirectory`, a `UserDefaults(suiteName:)`, or `NSPasteboard.withUniqueName()` — and a new
-harness must keep doing that rather than reach for a fixed path.
+harness must keep doing that rather than reach for a fixed path. The runner's own queue, logs and
+verdicts do live at a fixed path, so a second suite started in the same `$TMPDIR` waits for the first,
+and a run that reports fewer results than it queued fails rather than passing.
 
 Two consequences worth knowing. Status lines arrive in **completion order**, not the order the `run`
 lines are written; and a failing harness's compiler diagnostics or assertion output are replayed
@@ -195,7 +197,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
 | `update-check-test` | `UpdateCheckStore` — stopping, in-flight cancellation, cached prompt suppression, restart and independent manual checking |
 | `support-test` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
-| `ai-provider-test` | `AI/Model/` and `AISettingsStore` — instruction composition, provider requests and streams, route settings, protocol framing and CLI launch encodings |
+| `ai-provider-test` | `AI/Model/` and `AISettingsStore` — instruction composition, provider requests and streams, route settings, protocol framing, CLI launch encodings and queued Codex writes across cancellation, timeout and Stop |
 | `apple-intelligence-test` | On-device status, snapshot deltas, transcript assembly and error mapping; real generation is opt-in |
 | `syntax-highlight-test` | `AI/Model/SyntaxGrammar.swift`, `SyntaxHighlighter.swift`, `SyntaxStructuredLexers.swift` — every grammar's tokens, language aliases, the size limit and streaming prefixes |
 | `mcp-test` | `MCP/Model/` and `MCPSettingsStore` — JSON-RPC framing, handles, tool names, output flattening, trust, `@server` addressing, the shape a vendor CLI is handed, and which servers Tinycast leaves to that CLI |

@@ -164,6 +164,7 @@ final class ClipboardManager {
         if let type = pb.availableType(from: [.png, .tiff]), let data = pb.data(forType: type) {
             let isPNG = type == .png
             let store = store
+            let capture = store.captureGeneration
             // A big TIFF→PNG re-encode can take 100ms+, so keep the poll off that path.
             Task.detached(priority: .utility) {
                 let png =
@@ -171,7 +172,7 @@ final class ClipboardManager {
                     ? data
                     : NSBitmapImageRep(data: data)?.representation(using: .png, properties: [:])
                 guard let png else { return }
-                await store.addImage(png, sourceBundleID: sourceBundleID)
+                await store.addImage(png, sourceBundleID: sourceBundleID, capture: capture)
             }
         }
     }

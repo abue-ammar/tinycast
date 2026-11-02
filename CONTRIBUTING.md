@@ -29,7 +29,8 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 
 - **A linked issue marked `approved`.** Put `Closes #<number>` in the PR description. Anyone may
   open the PR, not only the issue's author. Docs-only changes (`*.md`, `docs/`, `website/`) need no
-  approved issue.
+  approved issue. A PR with no linked issue gets a reminder and is closed automatically 24 hours
+  later.
 - The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes — harnesses, lint,
   purity, a clean build. Engine changes come with new cases. There is no CI, so **run
   `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally**. CodeRabbit reviews every PR

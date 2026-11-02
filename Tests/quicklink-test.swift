@@ -24,6 +24,7 @@ struct QuicklinkTests {
         persistence()
         readsADatabaseWrittenElsewhere()
         corruptDatabaseIsPreserved()
+        replaceIsAllOrNothing()
         archiveRoundTrip()
         archiveMerge()
         archiveAcceptsAHandWrittenFile()
@@ -406,6 +407,39 @@ struct QuicklinkTests {
         expect(
             throwsError(store, link("Anything")) == .storageUnavailable,
             "a mutation refuses rather than pretending to save")
+    }
+
+    static func replaceIsAllOrNothing() {
+        let dir = scratchDirectory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = QuicklinkStore(directory: dir)
+        _ = try? store.add(link("Kept"))
+        var published = 0
+        store.onChange = { _ in published += 1 }
+        sqlite(
+            dir.appendingPathComponent("quicklinks.sqlite3"),
+            """
+            CREATE TRIGGER reject AFTER INSERT ON quicklinks WHEN NEW.name = 'Rejected'
+            BEGIN SELECT RAISE(ABORT, 'rejected'); END;
+            """)
+
+        let failed = store.replace(with: [link("Imported"), link("Rejected")])
+        expect(failed == 0, "an import whose write fails adds nothing")
+        expect(names(store) == ["Kept"], "a failed import leaves the library in memory untouched")
+        expect(published == 0, "a failed import publishes nothing")
+        let reopened = QuicklinkStore(directory: dir)
+        reopened.load()
+        expect(names(reopened) == ["Kept"], "a failed import leaves the library on disk untouched")
+
+        let replaced = store.replace(with: [link("One"), link("Two"), link("one")])
+        expect(replaced == 2, "a clean import replaces the library, skipping a duplicate name")
+        expect(names(store) == ["One", "Two"], "the replaced library holds only the import")
+        expect(published == 1, "a whole import publishes once")
+
+        let appended = store.append([link("Three"), link("Two")])
+        expect(appended.map(\.name) == ["Three"], "an append skips a name already taken")
+        expect(names(store) == ["One", "Three", "Two"], "an append keeps the library and sorts it")
+        expect(published == 2, "a whole append publishes once")
     }
 
     // MARK: - Archive

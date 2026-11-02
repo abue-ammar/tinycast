@@ -27,6 +27,8 @@
   cannot repeat or skip an entry and a deleted one is passed over rather than pasted.
 - **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so
   `clipboard-test` can compile it standalone. It uses `isolated deinit` for its SQLite teardown.
+- **An image capture keeps the generation from its pasteboard poll.** Clear History and store close
+  retire it across conversion and file writing; a stale capture inserts nothing and leaves no blob.
 - A database that cannot be opened is deleted and recreated. That is sound because a history is
   captured rather than authored, and there is no UI for an unavailable clipboard — `QuicklinkStore`
   deliberately does the opposite. It is **not** a licence to treat the file as disposable: it lives in

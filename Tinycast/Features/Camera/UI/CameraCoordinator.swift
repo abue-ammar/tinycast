@@ -42,7 +42,7 @@ final class CameraCoordinator {
         // The camera goes with the panel, not before it: tearing it down mid-close blanks the feed.
         closing.orderOutAnimated { [weak self] in
             // Unless a panel raised inside the close already owns the camera.
-            guard let self, !opening else { return }
+            guard let self, !opening, panel == nil else { return }
             session.stop()
         }
     }
@@ -55,9 +55,10 @@ final class CameraCoordinator {
     func takePhoto() {
         guard case .live = feed else { return }
         let mirrored = mirrored
+        let shooting = panel
         Task {
             let png = await session.capturePhoto(mirrored: mirrored)
-            close()
+            if panel === shooting { close() }
             guard let png else {
                 core.showMessage(String(localized: "Couldn't take the photo"), tone: .danger)
                 return

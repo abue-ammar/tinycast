@@ -81,14 +81,14 @@ final class QuicklinkStore {
     // Takes a whole draft, so adding an option doesn't churn every call site.
     @discardableResult
     func add(_ draft: Quicklink) throws(QuicklinkError) -> Quicklink {
-        let value = try validated(draft)
+        let value = try validated(draft, among: quicklinks)
         try write(value)
         return value
     }
 
     func update(_ draft: Quicklink) throws(QuicklinkError) {
         guard quicklinks.contains(where: { $0.id == draft.id }) else { return }
-        try write(validated(draft))
+        try write(validated(draft, among: quicklinks))
     }
 
     func remove(id: UUID) throws(QuicklinkError) {
@@ -133,23 +133,48 @@ final class QuicklinkStore {
 
     @discardableResult
     func append(_ incoming: [Quicklink]) -> [Quicklink] {
-        var added: [Quicklink] = []
-        for candidate in incoming {
-            if let stored = try? add(candidate) { added.append(stored) }
-        }
-        return added
+        insert(incoming, replacing: false)
     }
 
     @discardableResult
     func replace(with incoming: [Quicklink]) -> Int {
-        guard isAvailable, sqlite3_exec(db, "DELETE FROM quicklinks", nil, nil, nil) == SQLITE_OK
-        else { return 0 }
-        commit([])
-        return append(Self.sanitized(incoming)).count
+        insert(Self.sanitized(incoming), replacing: true).count
+    }
+
+    private func insert(_ incoming: [Quicklink], replacing: Bool) -> [Quicklink] {
+        guard isAvailable, execute("BEGIN IMMEDIATE") else { return [] }
+        var library = replacing ? [] : quicklinks
+        var added: [Quicklink] = []
+        var succeeded = !replacing || execute("DELETE FROM quicklinks")
+        for candidate in incoming where succeeded {
+            guard let value = try? validated(candidate, among: library) else { continue }
+            succeeded = upsert(value)
+            library.removeAll { $0.id == value.id }
+            library.append(value)
+            added.append(value)
+        }
+        guard succeeded, execute("COMMIT") else {
+            execute("ROLLBACK")
+            return []
+        }
+        commit(library.sorted(by: Quicklink.precedes))
+        return added
+    }
+
+    @discardableResult
+    private func execute(_ sql: String) -> Bool {
+        sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK
     }
 
     private func write(_ value: Quicklink) throws(QuicklinkError) {
-        guard let stmt = upsertStmt else { throw .storageUnavailable }
+        guard upsert(value) else { throw .storageUnavailable }
+        var updated = quicklinks.filter { $0.id != value.id }
+        updated.append(value)
+        commit(updated.sorted(by: Quicklink.precedes))
+    }
+
+    private func upsert(_ value: Quicklink) -> Bool {
+        guard let stmt = upsertStmt else { return false }
         sqlite3_bind_text(stmt, 1, value.id.uuidString, -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 2, value.name, -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 3, value.link, -1, SQLITE_TRANSIENT)
@@ -166,11 +191,7 @@ final class QuicklinkStore {
         let status = sqlite3_step(stmt)
         sqlite3_reset(stmt)
         sqlite3_clear_bindings(stmt)
-        guard status == SQLITE_DONE else { throw .storageUnavailable }
-
-        var updated = quicklinks.filter { $0.id != value.id }
-        updated.append(value)
-        commit(updated.sorted(by: Quicklink.precedes))
+        return status == SQLITE_DONE
     }
 
     private func bind(_ stmt: OpaquePointer, _ index: Int32, _ value: String?) {
@@ -187,7 +208,9 @@ final class QuicklinkStore {
         onChange?(updated)
     }
 
-    private func validated(_ draft: Quicklink) throws(QuicklinkError) -> Quicklink {
+    private func validated(
+        _ draft: Quicklink, among library: [Quicklink]
+    ) throws(QuicklinkError) -> Quicklink {
         guard isAvailable else { throw .storageUnavailable }
         var value = draft
         value.name = draft.name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -209,7 +232,7 @@ final class QuicklinkStore {
                 || QuicklinkDestination.detect(value.link) != nil
         else { throw .unresolvableLink }
         guard
-            !quicklinks.contains(where: {
+            !library.contains(where: {
                 $0.id != value.id
                     && $0.name.compare(value.name, options: .caseInsensitive) == .orderedSame
             })

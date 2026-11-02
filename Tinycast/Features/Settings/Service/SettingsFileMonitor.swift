@@ -38,7 +38,13 @@ final class SettingsFileMonitor {
         }
         fileSource?.cancel()
         fileSource = source(watching: fileURL, events: [.write, .extend, .delete, .rename, .revoke])
-        if folderSource == nil { scheduleRetry() }
+        if !isWatching { scheduleRetry() }
+    }
+
+    private var isWatching: Bool {
+        guard folderSource != nil else { return false }
+        return fileSource != nil
+            || (try? FileManager.default.destinationOfSymbolicLink(atPath: fileURL.path)) == nil
     }
 
     private func source(
@@ -77,7 +83,7 @@ final class SettingsFileMonitor {
         }
     }
 
-    /// Polls only while the folder is missing; the next save or the user brings it back.
+    /// Polls only while the folder or a link's target is missing; the next save brings it back.
     private func scheduleRetry() {
         guard retryTask == nil else { return }
         retryTask = Task { [weak self] in
@@ -89,7 +95,7 @@ final class SettingsFileMonitor {
             guard let self else { return }
             retryTask = nil
             arm()
-            if folderSource != nil { settle() }
+            if isWatching { settle() }
         }
     }
 }
