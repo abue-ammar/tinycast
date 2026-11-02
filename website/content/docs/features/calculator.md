@@ -15,7 +15,9 @@ separate calculator mode; Tinycast works out the answer as you type.
 Copying the answer or putting it in the search bar also saves it to **Calculator History**. Only
 numbers, units and money go in the search bar; a date, a time or a true/false answer does not.
 
-A single word never shows a card. On their own, `tomorrow`, `july` and `pi` are treated as searches.
+Most single words never show a card. On their own, `monday`, `july` and `pi` are treated as
+searches. The exceptions name one moment: `today`, `tomorrow` and `yesterday` show the date, `now`
+shows the date and time, and `time` shows the time on your Mac.
 
 ## Arithmetic
 
@@ -56,6 +58,15 @@ With `+` and `-`, a percentage is relative (`10kg + 20%` is `12 kg`). With `*` a
 fraction (`10kg * 3%` is `0.3 kg`, `10kg / 25%` is `40 kg`).
 
 A unit on its own converts to a related unit: `1m` gives feet and inches, and `1hr` gives 60 min.
+
+Months and years convert as averages: a year is 365.2425 days and a month is a twelfth of that, so
+`3 months to days` is `91.310625 day` and `12 months to years` is `1 yr`. Adding a month to a date
+still follows the calendar (see [Dates and times](#dates-and-times)).
+
+**A conversion can sit in the middle of a calculation.** `1000 usd in eur / 12` converts first,
+then divides, and `round(1000 usd in eur)` works too.
+
+A unit right after `/` means one of that unit, so `100 / s to hz` is `100 Hz`.
 
 Measurements combine into area, volume, speed and more:
 
@@ -140,11 +151,17 @@ you copy a `px`, `rem` or `em` result, the space is removed (`24px`) so you can 
 
 ## Data and transfer rates
 
-`MB/s` is megabytes per second and `Mbps` is megabits per second, so `100Mbps to MB/s` is
-`12.5 MB/s`. Binary units like `MiB/s` and bit amounts like `kbit` also work.
+`MB/s` and `MBps` are megabytes per second and `Mbps` is megabits per second, so `100Mbps to MB/s`
+is `12.5 MB/s`. Binary units like `MiB/s` and bit amounts like `kbit` also work.
 
 Other supported units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), horsepower (`hp`),
 BTU, `rpm` and pound-force (`lbf`).
+
+## Fuel
+
+Fuel economy uses `mpg` and `km/L`, and fuel consumption uses `L/100km`. `15 km/l to mpg` is
+`35.2821875 mpg`, and `100 mi / 4 gal to mpg` is `25 mpg`. To go from one to the other, divide:
+`1 / 36 mpg to l/100km` is `6.533738426 L/100km`.
 
 ## Currency and crypto
 
@@ -185,6 +202,9 @@ over words: `1 sol` is Solana, while `soles` means the Peruvian sol.
 Rates are saved on your Mac and refreshed every 24 hours, counted from when they were saved.
 Restarting Tinycast doesn't refresh them early, so if the saved rates are recent, opening Tinycast
 makes **no** network requests.
+
+A money answer shows when the rates were last updated. Click the refresh button next to it to load
+new rates now.
 
 Crypto prices are best effort. If they fail to load, currencies still work, and Tinycast tries
 loading crypto prices again in 30 minutes.
@@ -283,7 +303,8 @@ functions, `cbrt`, `exp`, `log2`, `sign` and `trunc`, and the constants `tau` an
 
 `min`, `max`, `sum`, `avg`, `mean` and `average` take lists, including measurements:
 `sum(1km,500m)` is `1.5 km`. Inside a function, write `1000` instead of `1,000`, because commas
-separate the values.
+separate the values. If your number format uses a decimal comma, separate values with `;` instead,
+as in `max(2,5; 3)`.
 
 `==`, `!=`, `<`, `<=`, `>` and `>=` compare numbers or compatible units: `1km == 1000m` is `true`.
 Whole numbers support `&`, `|`, `xor`, `~`, `<<` and `>>`. `^` always means a power.
@@ -296,6 +317,15 @@ The calculator only shows an error for real mistakes, like combining two units t
 together (`1kg + 1m`) or a unit and a currency (`Cannot convert Currency to Weight.`).
 
 For anything else, it shows nothing rather than flashing an error while you're still typing.
+
+## Number format
+
+**Settings → General → Calculator → Number format** sets how you write numbers and how answers are
+shown. **System** (the default) follows your Mac's Language & Region settings, so with a decimal
+comma, `2,3 + 1,5` is `3,8`. **English** always uses a decimal point and comma grouping.
+
+With a decimal comma, separate function values and list items with `;`. If a number could be read
+two ways, the calculator shows no card rather than guessing.
 
 ## Calculator History
 

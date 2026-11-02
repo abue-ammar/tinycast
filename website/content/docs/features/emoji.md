@@ -8,6 +8,10 @@ Search emoji and symbols, then paste one into the app you were using.
 Open it with the **Search Emoji & Symbols** command, or with its own global shortcut from
 **Settings → Emoji & Symbols**.
 
+Search matches names and keywords in English. If your Mac's preferred languages include German,
+Spanish, French, Japanese, Korean, Portuguese, Russian or Simplified Chinese, keywords in that
+language work too. English matches still come first.
+
 ## Actions
 
 | Action                     | Shortcut                                            |
@@ -42,8 +46,9 @@ to the end of the section. You can reorder them from the same menu or with the s
 
 ## Frequently used
 
-The emoji you use most appear in a section at the top, so you don't have to search for them. They
-also still appear in their own categories.
+The emoji you used most recently appear in a **Frequently Used** section below Pinned, up to two
+rows, so you don't have to search for them. They also still appear in their own categories. Among
+equally good search matches, the emoji you use most come first.
 
 ## Skin tone
 

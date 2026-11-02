@@ -1,20 +1,22 @@
 ---
 title: Hotkeys
-description: Recording global shortcuts, double-tap modifiers, and the Hyper key.
+description: Recording global shortcuts, modifier keys on their own, and the Hyper key.
 ---
 
 **Tinycast doesn't come with any shortcuts.** You record every global shortcut yourself.
 
 ## What can have a shortcut
 
-- The palette itself (**App Launcher**, in Settings → General)
+- The palette itself (**Show Launcher**, in Settings → General)
 - Every built-in command, except Open in Browser, Run Shell Command and Quit Tinycast. See
   [Commands](/docs/launcher/commands).
 - Every app and every System Settings pane
-- Every quicklink, snippet, custom command, custom Quick Action and extension command
-- All 31 [system actions](/docs/launcher/system-actions)
+- Every quicklink, snippet, custom command, custom Quick Action, Apple Shortcut and extension command
+- All 32 [system actions](/docs/launcher/system-actions)
 - All 35 [window commands](/docs/features/window-management), every
+  [custom size](/docs/features/window-management#custom-sizes), every
   [window layout](/docs/features/window-layouts) and every [room](/docs/features/rooms)
+- Dictation, in Settings → Dictation
 
 You record each shortcut on the item's row in its Settings pane, and it appears as keycaps on the
 item's launcher row.
@@ -29,31 +31,45 @@ The recorder isn't a regular text field. Click it, then press the keys you want.
 A small bubble above the field shows a prompt, then the modifiers you're holding. If the shortcut is
 already in use, it shows a warning that names what uses it.
 
+A key combination needs <kbd>⌘</kbd>, <kbd>⌥</kbd>, <kbd>⌃</kbd> or Globe (🌐︎). Only the function
+keys, F1 to F20, work without one. Press <kbd>esc</kbd> to stop recording, or <kbd>delete</kbd> to
+clear the shortcut.
+
 Recording a shortcut **doesn't need any permissions**. Only _using_ some kinds of shortcuts does.
 
-## Double-tap modifiers
+## Modifier keys on their own
 
-Instead of a key combination, a shortcut can be a double tap of a single <kbd>⌃</kbd>,
-<kbd>⌥</kbd>, <kbd>⇧</kbd> or <kbd>⌘</kbd> key.
+Instead of a key combination, a shortcut can be a single tap or a double tap of one <kbd>⌃</kbd>,
+<kbd>⌥</kbd>, <kbd>⇧</kbd>, <kbd>⌘</kbd> or Globe (🌐︎) key. To record one, tap the key once or twice.
+The recorder waits a moment after the first tap in case a second one follows.
+
+**Tinycast remembers which side you pressed.** A shortcut on Right <kbd>⌘</kbd> doesn't run when you
+tap Left <kbd>⌘</kbd>. A single-tap shortcut shows a small L or R on its keycap. A double-tap shortcut
+shows only the two modifier symbols, but it keeps its side.
 
 The rules:
 
-- A **tap** is a press of exactly one of those four keys, with no other key held and no click,
-  released within **250 ms**.
+- A **tap** is a press of exactly one modifier key, with no other key held and no click, released
+  within **250 ms**.
 - A **double tap** is a second tap of the same key that starts within **300 ms** of releasing the
   first.
-- **The shortcut runs when you release the key the second time, not when you press it.** The key is
-  already up when the action runs, and double-tapping and holding does nothing.
+- **The shortcut runs when you release the key, not when you press it.** The key is already up when
+  the action runs, and holding the key down does nothing.
+- If one key has both a single-tap and a double-tap shortcut, the single tap waits until the time for
+  a second tap is over.
 
-<kbd>⇧</kbd> works as a double tap, even though it can't be a regular shortcut on its own. Caps Lock
-can't be used this way; use the Hyper key for that. Having Caps Lock _on_ doesn't interfere.
+<kbd>⇧</kbd> works here, even though <kbd>⇧</kbd> plus a letter can't be a shortcut. Caps Lock can't
+be used this way; use the Hyper key for that. Having Caps Lock _on_ doesn't interfere.
+
+macOS can run its own action when you press Globe. If that gets in the way, set **Press 🌐︎ key to**
+to **Do Nothing** in **System Settings → Keyboard**.
 
 This needs [Accessibility](/docs/permissions), but **Tinycast never asks for it on its own**. The
 shortcut is saved anyway, the recorder shows a warning that opens System Settings, and the shortcut
 starts working as soon as you grant access.
 
-Tinycast only listens for double taps **while at least one shortcut uses one**, so if you don't use
-them, they cost nothing.
+Tinycast only listens for modifier taps **while at least one shortcut uses one**, so if you don't
+use them, they cost nothing.
 
 ## Hyper key
 

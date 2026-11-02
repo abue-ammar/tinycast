@@ -45,6 +45,11 @@ Center · Center Half · Center Two Thirds · Make Larger · Make Smaller · Res
 Each command's shortcut, alias and launcher checkbox are in the same pane. To turn off a single
 command, clear its shortcut and its checkbox. There's no separate switch for each command.
 
+**Shortcut preset** fills in the window shortcuts of **Rectangle / Magnet** or **Spectacle**. Choose
+one and click **Apply**. Commands the preset doesn't cover keep their shortcuts, and if it would
+replace a shortcut you recorded, Tinycast asks first. A key that something else in Tinycast already
+uses is skipped. Every shortcut stays editable afterward.
+
 ## How sizes are calculated
 
 **Gaps.** Edges next to the screen border get the full gap, and edges between two windows get half,
@@ -63,6 +68,20 @@ same at two thirds of the width.
 
 A window that's too large or partly off-screen is always moved back onto the display. The usable
 area already excludes the menu bar, the Dock and the notch.
+
+## Custom sizes
+
+When no built-in size suits your screen, make your own. In
+**Settings → Window Management → Custom Sizes**, click **New Custom Size** and give it a name, a
+width and a height. Each is in points or a percentage of the screen. Then choose a position on a
+3 × 3 grid, with an optional offset in points.
+
+A custom size works like a built-in command. It has its own launcher entry, shortcut, alias and
+checkbox, and it follows **Show in launcher**. It resizes the window you were last using, on the
+display it's already on, so one shortcut works on your laptop and at your desk. A size larger than
+the screen fills the screen instead.
+
+Restore Window undoes a custom size. Custom sizes never cycle.
 
 ## Cycling and Restore
 

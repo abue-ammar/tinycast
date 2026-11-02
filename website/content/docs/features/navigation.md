@@ -30,6 +30,16 @@ back. **Minimized windows come last.** Type to filter by window title or app nam
 
 If the app quit after the list opened, Tinycast tells you instead of doing nothing.
 
+| Action (<kbd>⌘</kbd><kbd>K</kbd>) | Key                                  | What it does                                            |
+| --------------------------------- | ------------------------------------ | ------------------------------------------------------- |
+| Switch to Window                  | <kbd>return</kbd>                    | Brings the window to the front                          |
+| Minimize Window                   | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>M</kbd> | Minimizes it and keeps the list open                    |
+| Hide Application                  | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>H</kbd> | Hides the window's app and closes the palette           |
+| Quit Application                  | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd> | Quits the app. Its windows leave the list once it quits |
+
+Minimize Window isn't offered for a window that's already minimized, and it does nothing to a
+full-screen window.
+
 Press the Switch Windows shortcut again while the list is open to move to the next window. If you
 keep holding the shortcut's modifier while you press, releasing it switches to the selected window,
 like <kbd>⌘</kbd><kbd>tab</kbd>. For example, with the shortcut set to <kbd>⌥</kbd><kbd>tab</kbd>,
@@ -65,9 +75,9 @@ clicks the selected item.
 | Setting               | Default | What it does                                        |
 | --------------------- | ------- | --------------------------------------------------- |
 | Show Apple menu items | **Off** | Adds the Apple menu, which is the same in every app |
-| Disabled Applications | Empty   | Apps whose menus Tinycast never reads               |
+| Excluded Applications | Empty   | Apps whose menus Tinycast never reads               |
 
-Tinycast checks the Disabled Applications list before reading any menus, so it never reads those
+Tinycast checks the Excluded Applications list before reading any menus, so it never reads those
 apps' menus at all.
 
 When there's nothing to search, you see a short explanation instead of an empty list, like

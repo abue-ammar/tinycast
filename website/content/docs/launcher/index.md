@@ -4,21 +4,33 @@ description: One search across everything Tinycast knows about, and how it order
 ---
 
 The launcher is the root screen. One search covers your apps, System Settings panes, commands,
-quicklinks, snippets, system actions, window commands and layouts, custom commands, Quick Actions,
-extension commands and upcoming meetings.
+quicklinks, Apple Shortcuts, snippets, system actions, window commands, layouts and rooms, custom
+commands, Quick Actions, extension commands and upcoming meetings.
 
 <kbd>return</kbd> opens the selection. <kbd>⌘</kbd><kbd>K</kbd> shows everything else you can do
 with it.
 
 ## With nothing typed
 
-[Favorites](/docs/launcher/favorites) come first, followed by each section in this order:
+[Favorites](/docs/launcher/favorites) come first, then upcoming Meetings and
+[Suggestions](#suggestions), followed by each section in this order:
 
-Meetings → Applications → System Settings → Extensions → Quicklinks → Snippets → System Actions →
-Window Layouts → Window Management → Custom Commands → Quick Actions → Commands
+Applications → System Settings → Extensions → Quicklinks → Apple Shortcuts → Snippets → System
+Actions → Window Layouts → Rooms → Window Management → Custom Commands → Quick Actions → Commands
 
-Each section is sorted alphabetically and keeps that order, because a list that reorders itself as
-you use it is hard to scan.
+Within a section, the entries you open most come first, then entries with an alias. The rest are
+sorted alphabetically. Meetings stay in the order they start.
+
+### Suggestions
+
+**Suggestions** shows up to five entries you're likely to want:
+
+- an app or extension you installed in the last five minutes and haven't opened yet
+- the entries you open most, unless they already have a shortcut
+- while you have little history, a few built-in commands like Clipboard History and Search Files
+
+Favorites, meetings and AI commands are never suggested. A suggested entry doesn't appear again in
+its own section. To hide Suggestions, turn off **Settings → General → Search → Show suggestions**.
 
 When a meeting is about to start, a [join card](/docs/features/calendar#the-join-card) appears above
 everything else.
@@ -33,17 +45,20 @@ appear around it:
 - **A color card** when you paste a color like `#FF5733`.
 - **Open in Browser** at the top when you type a web address or a bare domain, like `github.com`.
 - **Files** below the results, when [File Search](/docs/features/file-search#in-the-launcher) has
-  **Show in launcher** on and you type three or more characters.
+  **Show in launcher** on and you type three or more characters. Favorite files and folders whose
+  names match appear there too, even with **Show in launcher** off.
 - **"Use … with"** rows at the bottom, which send your text somewhere else. See
   [Fallbacks](/docs/launcher/fallbacks).
 
 ### Listing a whole category
 
-Type a section's exact name, like `Snippets`, `Snippet` or `Window Management`, to list that whole
-category under its own heading.
-
-The name has to match exactly. An app with exactly that name still appears too, which is why typing
+Type a section's name, like `Snippets`, `Snippet` or `Window Management`, to list that whole
+category under its own heading. An app with exactly that name still appears too, which is why typing
 `System Settings` lists both the app and its panes.
+
+From three characters, the start of a section's name, or of a word in it, also works: `win` includes
+Window Management and Window Layouts. Your best matches still come first under **Results**, so
+<kbd>return</kbd> opens the top match, and the rest of the category follows under its own heading.
 
 ## How matching works
 
@@ -71,6 +86,9 @@ A few more rules keep results useful:
 - **An extension's name ranks low.** An extension called `Safari` can't push the real Safari out of
   first place.
 
+**Settings → General → Search → Search sensitivity** sets how loose a match can be: **Low**,
+**Medium** (default) or **High**. A lower value also shows less exact matches.
+
 ### Names in your language
 
 Apps are shown the way Finder shows them, in your Mac's language. The English name still works, so
@@ -92,13 +110,14 @@ your Mac.
 If you pick WhatsApp after typing `wha`, it also ranks higher for `w` and `wh`. The more often and
 the more recently you pick something, the bigger the boost.
 
-Some ways of opening things don't count, because they aren't searches: opening something with its
-own shortcut, opening a favorite with <kbd>⌘</kbd> and a number, listing a category, and Open in
-Browser.
+Opening something with its own global shortcut doesn't count, and neither do fallbacks or Open in
+Browser. Opening a favorite, including with <kbd>⌘</kbd> and a number, counts as a use but teaches
+no search word. When you pick from a listed category, the pick counts, but the category's name isn't
+learned as a search for it.
 
 **Resetting.** For one entry, choose <kbd>⌘</kbd><kbd>K</kbd> → **Reset Ranking**. It only appears
 when Tinycast has learned something about that entry. To reset everything, go to
-**Settings → General → Learned ranking → Reset**.
+**Settings → General → Search → Learned ranking** and click **Reset…**.
 
 This data is stored in `launcher-ranking.json` in Tinycast's own folder and is never sent anywhere.
 
@@ -112,8 +131,8 @@ The defaults cover `/Applications`, `/System/Applications`, both `Utilities` fol
 installed, `~/Applications`, and Finder itself.
 
 Tinycast searches **one folder deep**, so it finds `/Applications/Blackmagic Design/DaVinci Resolve.app`
-without a separate scope. Apps nested deeper need their own scope. Tinycast never looks inside an app
-bundle.
+without a separate scope. Apps nested deeper need their own scope. Inside an app, Tinycast only
+looks for the apps it ships with, like Instruments and Simulator inside Xcode.
 
 Scopes are saved with your home folder written as `~`, so a backup still works on another Mac.
 Tinycast searches again as soon as you change them.
@@ -132,11 +151,14 @@ Press <kbd>⌘</kbd><kbd>K</kbd> with an app selected:
 | Hide from Search                                  | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>H</kbd>                |
 | Restart Application                               | <kbd>⌘</kbd><kbd>R</kbd>                            |
 | Quit Application                                  | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd>                |
+| Force Quit Application                            | <kbd>⌃</kbd><kbd>⌥</kbd><kbd>⇧</kbd><kbd>Q</kbd>    |
 | [Uninstall Application](/docs/launcher/uninstall) |                                                     |
 
-**Restart Application** and **Quit Application** only appear while the app is running. Both ask the
-app to quit normally, so an app with unsaved work still asks you to save it. Restart waits up to five
-seconds for the app to quit, then opens it again. If the app doesn't quit, it isn't reopened.
+**Restart Application**, **Quit Application** and **Force Quit Application** only appear while the
+app is running. Restart and Quit ask the app to quit normally, so an app with unsaved work still asks
+you to save it. Restart waits up to five seconds for the app to quit, then opens it again. If the app
+doesn't quit, it isn't reopened. **Force Quit Application** ends the app at once, so it can't save
+or refuse.
 
 To quit every app at once, use the **Quit All Applications**
 [system action](/docs/launcher/system-actions). It leaves Finder and Tinycast running.
@@ -146,8 +168,9 @@ To quit every app at once, use the **Quit All Applications**
 <kbd>⇧</kbd><kbd>⌘</kbd><kbd>H</kbd> (**Hide from Search**) removes the selected entry from search
 results. The palette stays open on the same search.
 
-It works for apps, System Settings panes, commands, Quick Actions, system actions, window commands
-and window layouts. To show an entry again, select its checkbox in the matching Settings pane.
+It works for apps, System Settings panes, commands, Quick Actions, Apple Shortcuts, system actions,
+window commands, window layouts, rooms and extension commands. To show an entry again, select its
+checkbox in the matching Settings pane.
 On a quicklink or custom command it's **Hide from Root Search**, and you turn **Show in root search**
 back on in its editor.
 

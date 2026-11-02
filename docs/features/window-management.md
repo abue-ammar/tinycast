@@ -356,7 +356,7 @@ and every shortcut stays editable afterwards.
 
 - **`AppEntry.Kind.windowCommand`** — entries are `window-command:<id>`, published by
   `AppIndex.setWindowCommandsVisible(_:)` between the system-action and custom-command slices.
-  `LauncherView.rows` mirrors that position with a "Window Management" section; the slice order is the
+  `LauncherList.rows` mirrors that position with a "Window Management" section; the slice order is the
   flat-selection invariant, so the two must move together.
 - **`HotKeyAction.windowCommand(id:)`** — persisted under
   `hotkey.windowCommand.<raw-id>`, matching the shared `HotKeyAction.defaultsKey` convention. Unlike

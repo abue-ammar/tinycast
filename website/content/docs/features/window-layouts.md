@@ -50,7 +50,7 @@ Run a layout from the launcher, with its own global shortcut, or with the ▶ bu
 
 1. Windows that are already open all move into place at once.
 2. Apps that aren't running are opened, and each window is placed as soon as it appears. Tinycast
-   waits up to 10 seconds for each app.
+   waits up to 10 seconds in all for their windows.
 3. The window marked **Bring to front**, if any, is focused once everything else is done. If you
    switched to another app while Tinycast was waiting, your choice is kept.
 
@@ -69,8 +69,8 @@ command, not before the layout ran.
 
 ## Managing layouts
 
-Each layout in Settings has a shortcut recorder, a launcher checkbox, and buttons to run, edit,
-duplicate and delete it. **Show layouts in launcher** (on by default) removes all layouts and the
+Each layout in Settings has an alias field, a shortcut recorder, a launcher checkbox, and buttons
+to run, edit, duplicate and delete it. **Show layouts in launcher** (on by default) removes all layouts and the
 two layout commands from search at once, without affecting the other window commands.
 
 Layouts and their shortcuts are included in [backups](/docs/reference/backup). On another Mac,

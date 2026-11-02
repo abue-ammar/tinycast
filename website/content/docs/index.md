@@ -17,11 +17,12 @@ them and come back later.
 ### 1. Pick a shortcut
 
 Tinycast doesn't come with a shortcut, so it can't take over a key combination you already use.
-Nothing happens until you choose one.
+Until you choose one, open the launcher from the menu bar icon, or open Tinycast again from Finder or
+Spotlight.
 
 The welcome screen asks for a shortcut. To change it later, go to
-**Settings → General → App Launcher**, click the field and press the keys you want. Many people use
-<kbd>⌥</kbd><kbd>Space</kbd>.
+**Settings → General → Global Shortcuts → Show Launcher**, click the field and press the keys you
+want. Many people use <kbd>⌥</kbd><kbd>Space</kbd>.
 
 You can also double-tap a modifier key, like pressing <kbd>⌘</kbd> twice. See
 [Hotkeys](/docs/reference/hotkeys).
@@ -35,9 +36,14 @@ using. The launcher itself doesn't need any permissions. See [Permissions](/docs
 
 ### 3. Bring your Raycast setup (optional)
 
-If you used Raycast, choose its `.rayconfig` export. Tinycast imports your shortcuts, favorites,
-snippets, quicklinks and clipboard history. See
-[Import from Raycast](/docs/reference/import-from-raycast).
+If you used Raycast, choose its `.rayconfig` export and enter the passphrase you set when you
+exported it. You choose what to bring: shortcuts, favorites, aliases, snippets, quicklinks,
+clipboard history and a few settings. See [Import from Raycast](/docs/reference/import-from-raycast).
+
+When you finish, **Get Started** opens the launcher.
+
+Tinycast uses your Mac's language if it has a translation for it, and English otherwise. To change
+it, go to **Settings → General → Language**.
 
 ## Turn on what you want
 
@@ -55,6 +61,8 @@ index or use memory. That's how the app stays small with a long feature list.
 | [Window Management](/docs/features/window-management) | Settings → Window Management |
 | [Calendar](/docs/features/calendar)                   | Settings → Calendar          |
 | [Quicklinks](/docs/launcher/quicklinks)               | Settings → Quicklinks        |
+| Apple Shortcuts                                       | Settings → Apple Shortcuts   |
+| Dictation                                             | Settings → Dictation         |
 | [Custom commands](/docs/launcher/commands)            | Settings → Commands          |
 | [Extensions](/docs/extensions)                        | Settings → Extensions        |
 

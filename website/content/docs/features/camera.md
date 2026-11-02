@@ -11,12 +11,12 @@ it a global shortcut and an alias.
 
 ## Using it
 
-| Control       | Does                                                               |
-| ------------- | ------------------------------------------------------------------ |
-| Take Photo    | Copies a photo to the clipboard as a PNG, then closes              |
-| Mirror        | Flips the preview and the photo together                           |
-| Switch Camera | Switches to your next camera; only shown if you have more than one |
-| Close         | Closes the preview. <kbd>esc</kbd> does the same                   |
+| Control       | Does                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------- |
+| Take Photo    | Copies a photo to the clipboard as a PNG, then closes. <kbd>return</kbd> does the same |
+| Mirror        | Flips the preview and the photo together                                               |
+| Switch Camera | Switches to your next camera; only shown if you have more than one                     |
+| Close         | Closes the preview. <kbd>esc</kbd> does the same                                       |
 
 Clicking anywhere outside the preview also closes it. Clicks in the menu bar and the Dock don't
 count, so you can change video effects in Control Center while you watch the preview.

@@ -104,29 +104,29 @@ When **Default action** is set to Copy to Clipboard, <kbd>return</kbd> and
 
 ## File search
 
-| Key                                  | Does                    |
-| ------------------------------------ | ----------------------- |
-| <kbd>return</kbd>                    | Open File / Open Folder |
-| <kbd>⌘</kbd><kbd>return</kbd>        | Show in Finder          |
-| <kbd>⌘</kbd><kbd>Y</kbd>             | Quick Look              |
-| <kbd>⌘</kbd><kbd>P</kbd>             | Filter by type          |
-| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy File               |
-| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>V</kbd> | Paste File to …         |
-| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Name               |
-| <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Path               |
-| <kbd>⌃</kbd><kbd>X</kbd>             | Move to Trash           |
+| Key                                  | Does                                     |
+| ------------------------------------ | ---------------------------------------- |
+| <kbd>return</kbd>                    | Open File / Open Folder                  |
+| <kbd>⌘</kbd><kbd>return</kbd>        | Show in Finder                           |
+| <kbd>⌘</kbd><kbd>P</kbd>             | Filter by type                           |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy File                                |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>V</kbd> | Paste File to …                          |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Name                                |
+| <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Path                                |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd> | Add to Favorites / Remove from Favorites |
+| <kbd>⌃</kbd><kbd>X</kbd>             | Move to Trash                            |
 
 ## Quicklinks
 
-| Key                                  | Does                            |
-| ------------------------------------ | ------------------------------- |
-| <kbd>return</kbd>                    | Open Quicklink                  |
-| <kbd>⌘</kbd><kbd>return</kbd>        | Open With Default App           |
-| <kbd>⌘</kbd><kbd>E</kbd>             | Edit Quicklink                  |
-| <kbd>⌘</kbd><kbd>D</kbd>             | Duplicate Quicklink             |
-| <kbd>⌘</kbd><kbd>.</kbd>             | Pin / Unpin                     |
-| <kbd>⌘</kbd><kbd>F</kbd>             | Show in Finder                  |
-| <kbd>⌘</kbd><kbd>delete</kbd>        | Delete Quicklink                |
+| Key                           | Does                  |
+| ----------------------------- | --------------------- |
+| <kbd>return</kbd>             | Open Quicklink        |
+| <kbd>⌘</kbd><kbd>return</kbd> | Open With Default App |
+| <kbd>⌘</kbd><kbd>E</kbd>      | Edit Quicklink        |
+| <kbd>⌘</kbd><kbd>D</kbd>      | Duplicate Quicklink   |
+| <kbd>⌘</kbd><kbd>.</kbd>      | Pin / Unpin           |
+| <kbd>⌘</kbd><kbd>F</kbd>      | Show in Finder        |
+| <kbd>⌘</kbd><kbd>delete</kbd> | Delete Quicklink      |
 
 ## Snippets
 

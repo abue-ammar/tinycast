@@ -8,18 +8,18 @@ every other feature is a screen you open from it. <kbd>esc</kbd> takes you back 
 
 ## Moving around
 
-| Key                           | Does                                                 |
-| ----------------------------- | ---------------------------------------------------- |
-| <kbd>return</kbd>             | The main action for the selection                    |
-| <kbd>⌘</kbd><kbd>return</kbd> | The second action, usually Show in Finder or Copy    |
-| <kbd>⌘</kbd><kbd>K</kbd>      | Open the Actions menu for the selection              |
-| <kbd>↑</kbd> <kbd>↓</kbd>     | Move the selection                                   |
-| <kbd>tab</kbd>                | Move between the launcher, AI Chat and the clipboard |
-| <kbd>esc</kbd>                | Clear the search, then go back a screen, then close  |
-| <kbd>⌘</kbd><kbd>esc</kbd>    | Go back to the root search from any screen           |
-| <kbd>delete</kbd>             | In an empty search field, go back one screen         |
-| <kbd>⌘</kbd><kbd>,</kbd>      | Open Settings                                        |
-| <kbd>⌘</kbd><kbd>W</kbd>      | Close the window                                     |
+| Key                           | Does                                                  |
+| ----------------------------- | ----------------------------------------------------- |
+| <kbd>return</kbd>             | The main action for the selection                     |
+| <kbd>⌘</kbd><kbd>return</kbd> | The second action, usually Show in Finder or Copy     |
+| <kbd>⌘</kbd><kbd>K</kbd>      | Open the Actions menu for the selection               |
+| <kbd>↑</kbd> <kbd>↓</kbd>     | Move the selection                                    |
+| <kbd>tab</kbd>                | Move between the launcher, Quick AI and the clipboard |
+| <kbd>esc</kbd>                | Clear the search, then go back a screen, then close   |
+| <kbd>⌘</kbd><kbd>esc</kbd>    | Go back to the root search from any screen            |
+| <kbd>delete</kbd>             | In an empty search field, go back one screen          |
+| <kbd>⌘</kbd><kbd>,</kbd>      | Open Settings                                         |
+| <kbd>⌘</kbd><kbd>W</kbd>      | Close the window                                      |
 
 <kbd>⌘</kbd><kbd>K</kbd> is the best way to learn the app. Every screen lists all of its actions
 there, each with its shortcut. The full list is in [Keyboard shortcuts](/docs/reference/shortcuts).
@@ -51,22 +51,22 @@ Russian or another non-Latin layout, <kbd>⌘</kbd><kbd>K</kbd> is still <kbd>�
 
 ## Tab moves between three screens
 
-<kbd>tab</kbd> cycles through three screens: **launcher → AI Chat → clipboard → launcher**.
+<kbd>tab</kbd> cycles through three screens: **launcher → Quick AI → clipboard → launcher**.
 
-- From the launcher, <kbd>tab</kbd> sends whatever you typed to a new AI chat as a question. When
-  this will happen, the header shows an **AI Chat** hint next to a <kbd>tab</kbd> key.
+- From the launcher, <kbd>tab</kbd> sends whatever you typed to [Quick AI](/docs/ai) as a question.
+  When this will happen, the header shows a **Quick AI** hint next to a <kbd>tab</kbd> key.
 - From the clipboard, your search text carries over to the launcher.
 - <kbd>esc</kbd> goes back through the screens in reverse.
 
-AI Chat is skipped while [AI](/docs/ai) is off, and the clipboard is skipped while
+Quick AI is skipped while [AI](/docs/ai) is off, and the clipboard is skipped while
 [clipboard history](/docs/features/clipboard) is off.
 
 Other screens, like Calculator History or Search Quicklinks, aren't part of the cycle. You only reach
 them by opening them yourself.
 
 There's one exception: when the selected row takes arguments, like a
-[quicklink](/docs/launcher/quicklinks) or an [extension command](/docs/extensions),
-<kbd>tab</kbd> moves through its fields first.
+[quicklink](/docs/launcher/quicklinks), a [custom command](/docs/launcher/commands#arguments) or an
+[extension command](/docs/extensions), <kbd>tab</kbd> moves through its fields first.
 
 ## How screens stack
 
@@ -83,8 +83,8 @@ the shortcut again to close it.
 
 In both cases, the first press clears any text you typed.
 
-With Compact mode enabled, Escape at expanded launcher search clears text, then collapses the
-palette, then closes it. This sequence applies under either Escape preference.
+In compact mode, <kbd>esc</kbd> in the expanded launcher clears your text, then collapses the
+palette, then closes it. This happens with either setting.
 
 ## Where it opens
 
@@ -93,8 +93,8 @@ Both placement settings are in **Settings → General → Appearance**.
 **Follow the cursor across displays** (on by default) opens the palette on the display your pointer
 is on. Turn it off to always use the display with the menu bar.
 
-**Drag to reposition** (off by default) lets you move the panel. Drag the thin strip above the
-search field, the empty space in the header, or the search field itself while it's empty.
+**Drag to move the launcher** (off by default) lets you move the panel. Drag the thin strip above
+the search field, the empty space in the header, or the search field itself while it's empty.
 
 While you drag, dotted guides show the default position and light up when you're close enough to
 snap to it. Release there and the palette snaps back. Release anywhere else and Tinycast remembers
@@ -107,26 +107,27 @@ unplug a monitor. Positions aren't included in backups, since they don't carry o
 
 **Settings → General → Appearance** has these settings:
 
-| Setting                        | Options                                | Default     |
-| ------------------------------ | -------------------------------------- | ----------- |
-| Theme                          | System · Light · Dark                  | **System**  |
-| Interface size                 | Default · Large · Larger               | **Default** |
-| Background transparency        | A slider from Less to More, with Reset | Middle      |
-| Compact mode                   | On · Off                               | Off         |
+| Setting         | Options                  | Default     |
+| --------------- | ------------------------ | ----------- |
+| Appearance      | System · Light · Dark    | **System**  |
+| Show animations | On · Off                 | **On**      |
+| Interface size  | Default · Large · Larger | **Default** |
+| Window mode     | Compact · Expanded       | **Compact** |
 
-**Theme.** System follows macOS whenever it changes. Light uses the same design with inverted
+**Appearance.** System follows macOS whenever it changes. Light uses the same design with inverted
 colors, and the layout, type and animations stay the same.
+
+**Show animations.** Turn it off and every Tinycast window opens, closes and changes at once, with no
+motion.
 
 **Interface size** makes the palette and its floating windows 10% or 20% larger. The Settings window
 stays the same size.
 
-**Background transparency** sets how much of the desktop shows through the glass. **Reset** restores
-the original look.
-
-**Compact mode** opens the launcher as a slim search bar that expands into the full list as you
-type. <kbd>←</kbd> and <kbd>→</kbd> select Search or a shortcut, stopping at either end.
-<kbd>↓</kbd> on Search expands the list and selects its first row; on a shortcut it opens that item.
-<kbd>return</kbd> opens a selected shortcut. Typing from any shortcut starts a search.
+**Window mode.** **Compact** opens the launcher as a slim search bar that expands into the full list
+as you type. In the slim bar, <kbd>←</kbd> and <kbd>→</kbd> select Search or a shortcut, stopping at
+either end. <kbd>↓</kbd> on Search expands the list and selects its first row; on a shortcut it
+opens that item. <kbd>return</kbd> opens a selected shortcut. Typing from any shortcut starts a
+search. **Expanded** always shows the full list.
 
 **Settings → General → Compact Shortcuts** appears when Compact is selected. Add, change, remove
 and reorder up to four shortcuts, or remove them all for a search-only bar. The defaults are Clipboard
@@ -135,7 +136,7 @@ Show Notes, My Schedule and Quick AI. Show Notes opens the Notes window. A disab
 stays configured and marked Off in Settings, then reappears in its place when enabled again.
 
 The [Toggle System Appearance](/docs/launcher/system-actions) action changes the appearance of
-_macOS itself_. Tinycast follows it only while its own theme is set to System.
+_macOS itself_. Tinycast follows it only while its own Appearance is set to System.
 
 ## Input source
 
@@ -158,7 +159,7 @@ AI Chat has its own setting for reopening a conversation. See
 
 ## The menu bar
 
-The Tinycast menu bar icon has **Open Tinycast**, **Clipboard History**, **Settings…**,
-**Check for Updates…**, **Support Tinycast…** and **Quit Tinycast**.
+The Tinycast menu bar icon has **Open Tinycast**, **Clipboard History** (while clipboard history is
+on), **Check for Updates…**, **Support Tinycast…**, **Settings…** and **Quit Tinycast**.
 
 **Settings → General → Show in menu bar** hides the icon. Your shortcuts still work without it.

@@ -1,51 +1,63 @@
 ---
 title: AI Chat
-description: Chat with Apple Intelligence, your installed Codex, Claude, Grok, OpenCode or Cursor, or any API you connect, in the palette.
+description: Chat with Apple Intelligence, your installed Codex, Claude, Grok, OpenCode or Cursor, or any API you connect, in the palette or in its own window.
 ---
 
-AI Chat is a conversation screen inside the palette. The search field becomes the message box, and
-replies appear above it as they stream in. You choose the model: one that runs on your Mac, a
-command-line tool you're already signed in to, or an API key of your own.
+You can chat in two places, and both share one history:
 
-Turn it on in **Settings → AI → Enable AI**. It's **off** by default. While it's off, there's no AI
-Chat command and no chat history file, and <kbd>tab</kbd> goes straight from the launcher to the
-clipboard.
+- **Quick AI** is a screen inside the palette. The search field becomes the message box, and replies
+  appear above it as they stream in.
+- **AI Chat** is a window, with your saved conversations in a sidebar on the left and the open one on
+  the right.
 
-Turning AI off stops a reply that's still streaming. It doesn't delete saved chats or API keys.
+You choose the model: one that runs on your Mac, a command-line tool you're already signed in to, or
+an API key of your own.
+
+Turn it on in **Settings → AI → Enable AI**. It's **off** by default. While it's off, there are no
+Quick AI or AI Chat commands and no chat history file, and <kbd>tab</kbd> goes straight from the
+launcher to the clipboard.
+
+Turning AI off stops any reply that's still streaming and closes the AI Chat window. It doesn't
+delete saved chats or API keys.
 
 ## Opening a chat
 
-- Run the **AI Chat** command in the launcher.
-- Use its global shortcut, which you can record in **Settings → AI**.
+For Quick AI:
+
+- Run the **Quick AI** command in the launcher.
+- Use its global shortcut. Press it again to hide the palette.
 - Press <kbd>tab</kbd> from the launcher. Whatever you typed is sent right away as a new question.
-- Choose the **AI Chat** row under "Use … with" at the bottom of any search. See
+- Choose the **Quick AI** row under "Use … with" at the bottom of any search. See
   [Fallbacks](/docs/launcher/fallbacks).
 
-## Talking to it
+For the AI Chat window:
+
+- Run the **AI Chat** command, or use its own global shortcut. Both close the window again when it's
+  in front.
+- Press <kbd>⌘</kbd><kbd>J</kbd> in Quick AI. The conversation moves to the window, along with any
+  text you've typed and any files you've attached.
+
+Record both shortcuts in **Settings → AI → Commands**.
+
+## Quick AI
 
 Type in the search field and press <kbd>return</kbd> to send. While a reply is streaming,
 <kbd>return</kbd> stops it.
 
-Replies are formatted as Markdown. Your own messages appear exactly as you typed them. A reply keeps
-streaming even if you close the palette or open another screen, and it's saved when it finishes.
+The model name is on the right side of the header. Click it, or press <kbd>⌘</kbd><kbd>P</kbd>, to
+switch models. On models that support it, a second menu beside it changes the reasoning effort. A
+change applies to your _next_ message and never interrupts a reply in progress.
 
-Replies also render math. LaTeX between `\(` and `\)`, or between single `$` signs, appears inline;
-between `\[` and `\]`, or between `$$` signs, it appears on its own line. An equation that's still
-streaming shows as `…` until it's complete, and copying an equation copies its LaTeX. Prices like
-"$5 and $10" stay as written.
-
-The model name is on the right side of the header. Click it to switch models, or to change the
-reasoning effort on models that support it. A change applies to your _next_ message and never
-interrupts a reply in progress.
-
-| Action (<kbd>⌘</kbd><kbd>K</kbd>) | What it does                          |
-| --------------------------------- | ------------------------------------- |
-| Stop Response                     | Stops the reply that's streaming      |
-| New Chat                          | Starts a new conversation             |
-| Copy Last Response                | Copies the latest reply               |
-| Remove Attachments                | Removes every file waiting to be sent |
-| Chat History                      | Opens your saved conversations        |
-| AI Settings                       | Opens Settings → AI                   |
+| Action (<kbd>⌘</kbd><kbd>K</kbd>) | Shortcut                             | What it does                                                    |
+| --------------------------------- | ------------------------------------ | --------------------------------------------------------------- |
+| Stop Response                     | <kbd>⌘</kbd><kbd>.</kbd>             | Stops the reply that's streaming                                |
+| Continue in AI Chat               | <kbd>⌘</kbd><kbd>J</kbd>             | Moves the chat to the window (**Open AI Chat** when it's empty) |
+| New Chat                          | <kbd>⌘</kbd><kbd>N</kbd>             | Starts a new conversation                                       |
+| Regenerate Response               | <kbd>⌘</kbd><kbd>R</kbd>             | Asks again for the last reply                                   |
+| Copy Last Response                | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copies the latest reply                                         |
+| Remove Attachments                |                                      | Removes every file waiting to be sent                           |
+| Chat History                      | <kbd>⌘</kbd><kbd>Y</kbd>             | Opens your saved conversations                                  |
+| AI Settings                       | <kbd>⌥</kbd><kbd>⌘</kbd><kbd>,</kbd> | Opens Settings → AI                                             |
 
 Press <kbd>esc</kbd> in an empty message box to leave the chat. The conversation is still there when
 you come back.
@@ -55,17 +67,82 @@ you come back.
 <kbd>⌘</kbd><kbd>K</kbd> → **Chat History** lists saved conversations grouped by day, with a preview
 of the selected one.
 
-| Action           | Shortcut                             |
-| ---------------- | ------------------------------------ |
-| Open Chat        | <kbd>return</kbd>                    |
-| Delete Chat      | <kbd>⌃</kbd><kbd>X</kbd>             |
-| Delete All Chats | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> |
+| Action              | Shortcut                             |
+| ------------------- | ------------------------------------ |
+| Open Chat           | <kbd>return</kbd>                    |
+| Continue in AI Chat | <kbd>⌘</kbd><kbd>J</kbd>             |
+| Delete Chat         | <kbd>⌃</kbd><kbd>X</kbd>             |
+| Delete All Chats    | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>X</kbd> |
 
-Empty chats are never saved.
+A chat that's already open in the AI Chat window opens there. **Delete All Chats** keeps pinned
+chats. Empty chats are never saved.
+
+## The AI Chat window
+
+The sidebar lists your saved chats, pinned ones first and the rest grouped by day. A new chat appears
+there once you send its first message. A spinner marks a chat whose reply is still streaming. Type in
+the field at the top of the sidebar to filter the list.
+
+Type in the message box at the bottom. <kbd>return</kbd> sends, and <kbd>⇧</kbd><kbd>return</kbd>
+starts a new line. Below the text is one row of controls:
+
+- **+** holds **Attach Files…**, **Web Search** (for models that can search), and **Tools**, which
+  chooses the [MCP servers](/docs/ai/mcp) this chat can use.
+- The model and reasoning menus change the model for this chat.
+- The ring shows how full the model's context is. Hover over it to see the tokens used, the cost
+  where the provider reports it, and what your next message will send.
+- The microphone appears while Dictation is on. Click it to dictate into the message box, then click
+  it again or press <kbd>return</kbd> to insert the text.
+- **Send**, which becomes **Stop** while a reply streams.
+
+Your unsent text is kept when you close the window.
+
+| Key                                                                | Does                           |
+| ------------------------------------------------------------------ | ------------------------------ |
+| <kbd>⌘</kbd><kbd>N</kbd>                                           | New Chat                       |
+| <kbd>⌘</kbd><kbd>B</kbd>                                           | Show or hide the sidebar       |
+| <kbd>⌃</kbd><kbd>tab</kbd>, <kbd>⌃</kbd><kbd>⇧</kbd><kbd>tab</kbd> | Open the next or previous chat |
+| <kbd>⌘</kbd><kbd>F</kbd>                                           | Find in Chat                   |
+| <kbd>⌘</kbd><kbd>G</kbd>, <kbd>⇧</kbd><kbd>⌘</kbd><kbd>G</kbd>     | Next or previous match         |
+| <kbd>⌘</kbd><kbd>K</kbd>                                           | Actions                        |
+| <kbd>⌘</kbd><kbd>.</kbd>                                           | Stop Response                  |
+| <kbd>⌘</kbd><kbd>R</kbd>                                           | Regenerate Response            |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd>                               | Copy Last Response             |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>,</kbd>                               | AI Settings                    |
+| <kbd>esc</kbd>                                                     | Close the window               |
+
+The Actions menu also has **Copy Chat**, **Pin Chat** and **Delete Chat…** once a chat is saved.
+Right-click a chat in the sidebar to pin, rename, copy, export as Markdown or delete it, or press
+<kbd>delete</kbd> to delete the selected one. If you're finding or renaming, <kbd>esc</kbd> ends that
+before it closes the window.
+
+Each chat keeps its own model, so reopening a chat reopens its model too. Picking a model also makes
+it the default for new chats.
+
+## Replies
+
+Replies are formatted as Markdown. Your own messages appear exactly as you typed them. A reply keeps
+streaming even if you close the palette or the window, or switch to another chat, and it's saved
+when it finishes.
+
+Replies also render math. LaTeX between `\(` and `\)`, or between single `$` signs, appears inline;
+between `\[` and `\]`, or between `$$` signs, it appears on its own line. An equation that's still
+streaming shows as `…` until it's complete, and copying an equation copies its LaTeX. Prices like
+"$5 and $10" stay as written.
+
+Web pages a reply links to are listed under it as numbered sources, and each number also follows the
+sentence that cited it.
+
+### Suggested replies
+
+When a reply ends with a few next steps, they appear as buttons. Click one to send it as your next
+message. To turn them off, use **Settings → AI → Suggested replies**, which is **on** by default.
+Apple Intelligence doesn't offer them, and they're also off while **Send a system prompt** is off.
 
 ## Coming back to a chat
 
-Two settings in **Settings → AI** control what you see when you open AI Chat again:
+Two settings in **Settings → AI** control what you see when you open Quick AI or the AI Chat window
+again:
 
 | Setting                        | Options                                  | Default                 |
 | ------------------------------ | ---------------------------------------- | ----------------------- |
@@ -81,7 +158,7 @@ question is never added to an unrelated conversation.
 ## Choosing a model
 
 Models come from **Settings → AI → Providers → Manage…**. **Default model**, below it, sets which
-model chat uses and its reasoning effort.
+model a new chat uses and its reasoning effort.
 
 The panel lists every provider on the left and shows the selected one on the right, in up to three
 tabs:
@@ -101,8 +178,9 @@ every picker**, so you can set an API connection aside without deleting it or it
 Apple Intelligence runs **on your Mac**. It needs no key or account, and nothing leaves your Mac.
 When your Mac supports it, it's the default.
 
-It works with text only, with no web search or attachments. If Apple Intelligence is turned off in
-System Settings, Tinycast tells you. **It never switches you to a paid API without asking.**
+It works with text only, with no web search or attachments. If Apple Intelligence isn't available,
+**Settings → AI** says why. On a Mac that supports it, **Open System Settings…** takes you to its
+settings. **It never switches you to a paid API without asking.**
 
 ### Installed AI: Codex, Claude, Grok, OpenCode and Cursor
 
@@ -148,13 +226,20 @@ any **OpenAI Compatible** endpoint, including a local one like Ollama.
 - A key is tied to the address it was saved for. If you change a connection's base URL, Tinycast
   asks for a new key instead of sending the old one to the new address.
 - While you edit a connection, Tinycast asks the provider which models your key can use, and you can
-  search that list as you type. If a gateway can't list its models, type the model ID yourself.
+  search that list as you type. If a model isn't listed, or the provider can't list its models, type
+  the model ID and choose **Use "…" anyway**.
 - If a gateway needs extra headers, add them under **Request Headers** in the connection editor.
   They're sent with every request, replace a default header of the same name, and their values stay in
   your Keychain. With headers set, the API key is optional.
 
-For gateways that follow DeepSeek's API, the reasoning effort menu includes **None**, which turns
-thinking off.
+When you point an OpenAI-shaped connection at a gateway, meaning any base URL other than the preset's
+own, the reasoning effort menu offers **Default** and **None**. **None** turns thinking off on
+gateways that follow DeepSeek's API. Except on OpenRouter, each model in the connection editor also
+has a **Reasoning levels** menu. Check the levels the gateway accepts (**Minimal**, **Low**,
+**Medium**, **High**) and they appear in the reasoning effort menu too.
+
+If a provider refuses a request, the reply shows the error with the provider's own message. Your key
+and header values are hidden from it.
 
 ## Web search
 
@@ -164,6 +249,9 @@ you turn it on.
 It works with **Codex** and with **OpenRouter** models. Searches appear inline in the reply with the
 query that was used, and sources are linked by name.
 
+In the AI Chat window, **+ → Web Search** turns the same setting on and off. While it's on, a
+**Search** button sits next to **+**. Click it to turn web search off.
+
 ## Attachments
 
 Press <kbd>⌘</kbd><kbd>V</kbd> in the message box to attach what's on your clipboard:
@@ -172,37 +260,40 @@ Press <kbd>⌘</kbd><kbd>V</kbd> in the message box to attach what's on your cli
 - **A PDF.**
 - **A text file**, like a CSV, Markdown or source file. Its contents are added to the message.
 
-Attachments appear as one small pill after your text, with an icon for the newest one and a count,
-like `+2`, for the rest. Hover over the pill to see their names, or click it to list them, with a
-small preview for each image, and remove any one with its ✕. Press <kbd>delete</kbd> in an empty
-message box to remove the last one.
+In the AI Chat window, you can also drop files on it or choose **+ → Attach Files…**.
+
+In Quick AI, attachments appear as one small pill after your text, with an icon for the newest one
+and a count, like `+2`, for the rest. Hover over the pill to see their names, or click it to list
+them, with a small preview for each image, and remove any one with its ✕. Press <kbd>delete</kbd> in
+an empty message box to remove the last one.
 
 Not every model accepts every kind of file. Tinycast refuses an attachment as soon as you add it and
 explains why, so it never sends something the model can't read.
 
-| Route                                      | Images                   | PDFs | Text files |
-| ------------------------------------------ | ------------------------ | ---- | ---------- |
-| Apple Intelligence                         | No                       | No   | Yes        |
-| Codex                                      | Yes                      | No   | Yes        |
-| Claude command                             | Yes                      | No   | Yes        |
-| OpenCode command                           | If the model supports it | No   | Yes        |
-| Grok and Cursor commands                   | No                       | No   | Yes        |
-| OpenAI API and Anthropic Claude            | Yes                      | Yes  | Yes        |
-| Google Gemini and OpenAI Compatible        | Yes                      | No   | Yes        |
-| OpenRouter                                 | If the model supports it | No   | Yes        |
+| Route                               | Images                   | PDFs | Text files |
+| ----------------------------------- | ------------------------ | ---- | ---------- |
+| Apple Intelligence                  | No                       | No   | Yes        |
+| Codex                               | Yes                      | No   | Yes        |
+| Claude command                      | Yes                      | No   | Yes        |
+| OpenCode command                    | If the model supports it | No   | Yes        |
+| Grok and Cursor commands            | No                       | No   | Yes        |
+| OpenAI API and Anthropic Claude     | Yes                      | Yes  | Yes        |
+| Google Gemini and OpenAI Compatible | Yes                      | No   | Yes        |
+| OpenRouter                          | If the model supports it | No   | Yes        |
 
 Only files on your Mac are read. Copied web addresses are never downloaded.
 
 ## System prompt
 
 Tinycast sends a short note before every conversation that tells the model where it's running. The
-**System prompt** box adds your own instructions after that note.
+**System prompt** box adds your own instructions after that note. Apple Intelligence chats get
+neither, because any instruction steers the small on-device model's answers too much.
 
 **Send a system prompt** (on by default) controls both. If you turn it off, no instructions are sent.
 Both are billed again with every message, and the pane mentions this.
 
 When the box contains text, it opens blurred, so a screenshot of Settings doesn't show your
-instructions. Click it to edit.
+instructions. Click the eye button to show and edit it.
 
 ## Tools from MCP servers
 
@@ -214,8 +305,9 @@ MCP servers you add. See [MCP servers](/docs/ai/mcp).
 - Conversations are saved on your Mac in `ai-chats.sqlite3`, in Tinycast's Application Support
   folder.
 - **Keep conversations** sets how long they're kept: **7 Days**, **30 Days**, **3 Months** or
-  **Forever** (default). Old chats are only removed while AI is on, so they're kept on a Mac with AI
-  turned off.
+  **Forever** (default). Pinned chats are always kept. Old chats are only removed while AI is on, so
+  they're kept on a Mac with AI turned off.
 - **No AI settings are included in [backups](/docs/reference/backup)**: not the switch, the
-  connections, the default model, the system prompt, web search or history settings.
+  connections, the default model, the system prompt, web search, suggested replies or history
+  settings.
 - The signed-in Codex account is blurred in Settings until you click it.
