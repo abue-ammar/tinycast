@@ -187,7 +187,7 @@ final class ClipboardStore {
     @ObservationIgnored var onSearchResultsChanged: ((String, [ClipboardItem], [ClipboardItem]) -> Void)?
     /// Rotated whenever the history is replaced, so a helper's late answer lands on nothing.
     @ObservationIgnored private(set) var extractionGeneration = UUID()
-    @ObservationIgnored private var captureGeneration = UUID()
+    @ObservationIgnored private(set) var captureGeneration = UUID()
     /// The only thing a view observes for search freshness; `items` cannot speak for OCR.
     private var searchRevision = 0
     @ObservationIgnored private(set) var textSearchEnabled = false
@@ -379,10 +379,10 @@ final class ClipboardStore {
         prune()
     }
 
-    func addImage(_ data: Data, sourceBundleID: String?) {
+    func addImage(_ data: Data, sourceBundleID: String?, capture: UUID) {
+        guard capture == captureGeneration else { return }
         let url = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
         let item = ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID)
-        let capture = captureGeneration
         // The blob write is multi-MB I/O; only the row insert returns to the main actor.
         Task.detached(priority: .utility) { [weak self] in
             guard (try? data.write(to: url, options: .atomic)) != nil else { return }

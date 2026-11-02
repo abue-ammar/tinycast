@@ -7,7 +7,7 @@ struct ClipboardTests {
     static var failures = 0
     static var passes = 0
 
-    static func main() throws {
+    static func main() async throws {
         pinOrder()
         unpinRejoinsAsNewest()
         pasteLeavesPinsAlone()
@@ -30,6 +30,7 @@ struct ClipboardTests {
         importedImagesArriveOnce()
         imageCopiesLeaveWithTheirBlob()
         orphanedCopiesAreSweptOnLoad()
+        try await retiredImageCapturesStayRetired()
         multiFileCopyMakesOneRowEach()
         fileBatchesRespectTheMemoryWindow()
         referencedFilesOutliveTheirRows()
@@ -46,6 +47,39 @@ struct ClipboardTests {
     }
 
     // MARK: - Cases
+
+    static func retiredImageCapturesStayRetired() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("clipboard-capture-test-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ClipboardStore(directory: directory)
+        let data = Data("captured image".utf8)
+        let beforeClear = store.captureGeneration
+        store.clearAll()
+        store.addImage(data, sourceBundleID: nil, capture: beforeClear)
+        let beforeClose = store.captureGeneration
+        store.close()
+        store.open()
+        store.addImage(data, sourceBundleID: nil, capture: beforeClose)
+        expect(store.items.isEmpty, "a capture retired during conversion never reaches history")
+        let images = directory.appendingPathComponent("images")
+        let blobs = try FileManager.default.contentsOfDirectory(atPath: images.path)
+        expect(
+            blobs.isEmpty,
+            "a capture retired before its write leaves no blob")
+
+        store.addImage(data, sourceBundleID: nil, capture: store.captureGeneration)
+        store.clearAll()
+        store.addImage(data, sourceBundleID: nil, capture: store.captureGeneration)
+        let deadline = ContinuousClock.now.advanced(by: .seconds(3))
+        while store.items.isEmpty, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        expect(store.items.count == 1, "a fresh capture succeeds after retiring an in-flight write")
+        let reopened = ClipboardStore(directory: directory)
+        reopened.load()
+        expect(reopened.items.count == 1, "only the fresh capture is persisted")
+    }
 
     /// Pins stack in pin order, oldest pin first, regardless of how old the entries are.
     static func pinOrder() {

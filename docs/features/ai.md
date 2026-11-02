@@ -772,6 +772,10 @@ next turn wants a different one — a server added or removed, or an OAuth token
 is not a turn and keeps whatever is already running. The account survives the relaunch because it
 was never the process's to begin with. See [MCP](mcp.md) for what goes on the launch line.
 
+Stdin writes run on a serial queue so a blocked server leaves the UI and request timeouts responsive.
+Cancelling, timing out or stopping a request releases its queued payload before the write begins.
+An in-flight frame finishes whole so the following JSON line remains readable.
+
 `CodexTurnRunner` is the generation half behind `CodexInstalledProvider`.
 
 It keeps an ephemeral thread per conversation while the helper stays running, preserving the web

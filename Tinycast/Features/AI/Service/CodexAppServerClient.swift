@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 
 @MainActor
 final class CodexAppServerClient {
@@ -23,6 +24,7 @@ final class CodexAppServerClient {
     private struct PendingRequest {
         let continuation: CheckedContinuation<[String: JSONValue], Error>
         let timeout: Task<Void, Never>
+        var write: CodexInputWriter.Write?
     }
 
     var onNotification: ((String, [String: JSONValue]) -> Void)?
@@ -271,6 +273,7 @@ final class CodexAppServerClient {
     func request(
         method: String, params: [String: Any] = [:], timeout: Duration = .seconds(15)
     ) async throws -> [String: JSONValue] {
+        try Task.checkCancellation()
         guard isRunning else {
             throw ClientError.processExited(String(localized: "Codex is not running."))
         }
@@ -288,7 +291,7 @@ final class CodexAppServerClient {
                     self?.finishRequest(id, with: .failure(error))
                 }
                 do {
-                    try send(
+                    pending[id]?.write = try send(
                         CodexAppServerProtocol.request(id: id, method: method, params: params),
                         ifFailed: failed)
                 } catch {
@@ -333,13 +336,14 @@ final class CodexAppServerClient {
         }
     }
 
+    @discardableResult
     private func send(
         _ data: Data, ifFailed failed: (@MainActor @Sendable (Error) -> Void)? = nil
-    ) throws {
+    ) throws -> CodexInputWriter.Write {
         guard let input else {
             throw ClientError.processExited(String(localized: "Codex is not running."))
         }
-        input.write(data) { error in
+        return input.write(data) { error in
             guard let failed else { return }
             Task { @MainActor in failed(error) }
         }
@@ -382,7 +386,7 @@ final class CodexAppServerClient {
                 let action: CodexElicitation.Action =
                     await onElicitation(elicitation) ? .accept : .decline
                 // `persist` is never answered: only Settings may change a standing decision.
-                try? self?.send(
+                _ = try? self?.send(
                     CodexAppServerProtocol.response(id: id, result: ["action": action.rawValue]))
             }
             elicitations.append((elicitation.threadID, task))
@@ -409,12 +413,12 @@ final class CodexAppServerClient {
             // A form, or a call on a turn that armed nothing: neither is a question Tinycast asks.
             result = ["action": CodexElicitation.Action.decline.rawValue]
         default:
-            try? send(
+            _ = try? send(
                 CodexAppServerProtocol.errorResponse(
                     id: id, message: "Tinycast does not expose Codex tools."))
             return
         }
-        try? send(CodexAppServerProtocol.response(id: id, result: result))
+        _ = try? send(CodexAppServerProtocol.response(id: id, result: result))
     }
 
     private func consumeStderr(_ data: Data) {
@@ -428,6 +432,7 @@ final class CodexAppServerClient {
 
     private func finishRequest(_ id: Int, with result: Result<[String: JSONValue], Error>) {
         guard let request = pending.removeValue(forKey: id) else { return }
+        request.write?.cancel()
         request.timeout.cancel()
         request.continuation.resume(with: result)
     }
@@ -443,6 +448,13 @@ final class CodexAppServerClient {
     }
 
     private func cleanup(error: Error) {
+        let requests = pending
+        pending.removeAll()
+        for request in requests.values {
+            request.write?.cancel()
+            request.timeout.cancel()
+            request.continuation.resume(throwing: error)
+        }
         for elicitation in elicitations { elicitation.task.cancel() }
         elicitations = []
         toolServers = []
@@ -455,17 +467,30 @@ final class CodexAppServerClient {
         input = nil
         outputBuffer.removeAll(keepingCapacity: false)
         stderrBuffer.removeAll(keepingCapacity: false)
-        let requests = pending
-        pending.removeAll()
-        for request in requests.values {
-            request.timeout.cancel()
-            request.continuation.resume(throwing: error)
-        }
     }
 }
 
 /// A server that stops reading must block this queue, never the main actor and its timeouts.
 private final class CodexInputWriter: Sendable {
+    final class Write: Sendable {
+        private let data: Mutex<Data?>
+
+        init(_ data: Data) {
+            self.data = Mutex(data)
+        }
+
+        func take() -> Data? {
+            data.withLock { value in
+                defer { value = nil }
+                return value
+            }
+        }
+
+        func cancel() {
+            data.withLock { $0 = nil }
+        }
+    }
+
     private let handle: FileHandle
     private let queue = DispatchQueue(label: "com.tinycast.codex-input")
 
@@ -473,14 +498,17 @@ private final class CodexInputWriter: Sendable {
         self.handle = handle
     }
 
-    func write(_ data: Data, failed: @escaping @Sendable (Error) -> Void) {
+    func write(_ data: Data, failed: @escaping @Sendable (Error) -> Void) -> Write {
+        let write = Write(data)
         queue.async { [handle] in
+            guard let data = write.take() else { return }
             do {
                 try handle.write(contentsOf: data)
             } catch {
                 failed(error)
             }
         }
+        return write
     }
 
     func close() {
