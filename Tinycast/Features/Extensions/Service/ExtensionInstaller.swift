@@ -303,7 +303,7 @@ private final class OutputTail: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         data.append(chunk)
-        if data.count > Self.limit { data.removeFirst(data.count - Self.limit) }
+        if data.count > Self.limit { data.removeSubrange(data.startIndex..<(data.endIndex - Self.limit)) }
     }
 
     func finish() {
