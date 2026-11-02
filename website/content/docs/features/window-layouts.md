@@ -38,6 +38,9 @@ displays. The right side edits the selected window.
 | Offset            | An adjustment in points from that position                                      |
 | Use preferred gap | Insets the window by the gap set in Window Management, like the tiling commands |
 
+**Use preferred gap** applies to the whole layout. Layouts captured from current windows start with
+it off, so running the captured layout preserves the positions you reviewed.
+
 The preview updates as you type. Press <kbd>⌘</kbd><kbd>return</kbd> to **Save**, because plain
 <kbd>return</kbd> is used by the field you're typing in.
 
@@ -56,10 +59,11 @@ Run a layout from the launcher, with its own global shortcut, or with the ▶ bu
 
 A few rules keep the results predictable:
 
-- **Open windows are matched to the nearest position in the layout**, so windows that are already
-  arranged stay where they are and nothing switches displays.
-- **An entry with an argument always opens a new window**, because that's the only reliable way to
-  get a second window from most apps.
+- **Open windows are matched to the nearest position in the layout**, so an arrangement that's
+  already correct keeps the same window in each position.
+- **An entry with an argument opens that destination in its app**, then Tinycast waits for a new
+  window. Whether the app creates one depends on the app. Repeated entries for the same app and
+  argument are opened only once.
 - **Windows for a missing display are skipped.** If a monitor is disconnected, its windows are left
   alone instead of piling up on your laptop screen.
 - Sizes are fractions of the screen, so a layout still fits after you change the resolution.

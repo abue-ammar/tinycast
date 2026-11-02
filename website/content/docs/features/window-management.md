@@ -95,15 +95,16 @@ off, pressing Left Half again leaves the window where it is. The two cycling mod
   Display 2 left → Display 1 right, then starts over. With one display, it does nothing. Center Half
   stays where it is in this mode.
 
-The cycle starts over when you move the window yourself (by more than 2 points), use a different
-command, move the window to a different display, or wait a while.
+The cycle starts over when you move or resize the window yourself (by more than 2 points), use a
+different command, or move the window to a different display. Waiting between presses doesn't reset it.
 
-**Restore Window goes back one step, not through a history.** Left Half → Maximize → Top Right
+**Restore Window returns to the saved starting position.** Left Half → Maximize → Top Right
 Quarter → Restore Window puts the window back where it **started**, not where it was before the last
 command.
 
-Restore Window also works on windows Tinycast hasn't moved before, because it saves the window's
-frame before the first change. It remembers up to 64 windows, forgets an app's windows when the app
+Tinycast saves the starting position before its first change. Restore Window does nothing until
+Tinycast has moved that window. Moving or resizing the window yourself gives the next command a
+new starting position. Tinycast remembers up to 64 windows, forgets an app's windows when the app
 quits, and never saves this information to disk.
 
 ## Fullscreen
@@ -133,6 +134,6 @@ never skips too far. At the first or last Space, macOS behaves as it normally do
 Minimized windows, sheets, popovers, windows already in native fullscreen, and windows that don't
 report a position or size are skipped.
 
-A window that can't be resized, like System Information, is left where it is instead of being
-partly moved. If an app won't let its window shrink, Tinycast aligns the window to the correct side
-**once** instead of retrying.
+A window that can move but can't be resized keeps its size and moves to the command's position.
+A window that can't move is left untouched. If an app won't let its window shrink, Tinycast aligns
+the window to the correct side **once** instead of retrying.

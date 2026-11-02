@@ -16,20 +16,22 @@ description: Recording global shortcuts, modifier keys on their own, and the Hyp
 - All 35 [window commands](/docs/features/window-management), every
   [custom size](/docs/features/window-management#custom-sizes), every
   [window layout](/docs/features/window-layouts) and every [room](/docs/features/rooms)
-- Dictation, in Settings → Dictation
+- [Dictation](/docs/features/dictation), in Settings → Dictation
 
 You record each shortcut on the item's row in its Settings pane, and it appears as keycaps on the
 item's launcher row.
 
-A command that opens a screen works as a toggle. Press its shortcut once to open the screen, and
-again to close it.
+Most commands that open a screen work as toggles: press the shortcut once to open and again to
+close. [Switch Windows](/docs/features/navigation#switch-windows) uses repeated presses to cycle
+through windows instead.
 
 ## Recording one
 
 The recorder isn't a regular text field. Click it, then press the keys you want.
 
 A small bubble above the field shows a prompt, then the modifiers you're holding. If the shortcut is
-already in use, it shows a warning that names what uses it.
+already used by another Tinycast action, it rejects the new binding and shows a warning naming
+that action. Your existing shortcut stays saved.
 
 A key combination needs <kbd>⌘</kbd>, <kbd>⌥</kbd>, <kbd>⌃</kbd> or Globe (🌐︎). Only the function
 keys, F1 to F20, work without one. Press <kbd>esc</kbd> to stop recording, or <kbd>delete</kbd> to
@@ -68,6 +70,9 @@ This needs [Accessibility](/docs/permissions), but **Tinycast never asks for it 
 shortcut is saved anyway, the recorder shows a warning that opens System Settings, and the shortcut
 starts working as soon as you grant access.
 
+For Dictation in **Hold to talk** mode, a single modifier starts listening after 250 ms and
+releasing it finishes. Double-tap bindings use toggle mode. See [Dictation](/docs/features/dictation).
+
 Tinycast only listens for modifier taps **while at least one shortcut uses one**, so if you don't
 use them, they cost nothing.
 
@@ -98,7 +103,8 @@ This only changes how the shortcut is displayed. With no Hyper key set,
 Changing this setting **updates every saved shortcut**, so none of them stop working. If an update
 would conflict with another shortcut, Tinycast skips it and that shortcut keeps its original keys.
 
-The option is dimmed while Hyper Key is set to None.
+The option is dimmed while Hyper Key is set to None. Changing the physical Hyper key resets
+**Quick Press** to **Does Nothing**.
 
 ### Quick Press
 
@@ -127,7 +133,8 @@ starts working as soon as access is granted.
 
 The **Status** row under the key shows a dot: green while the Hyper key works. Click **Diagnostics…**
 to see what's running, which keyboards are remapped, and anything that conflicts. **Restart Hyper
-Key** sets everything up again.
+Key** sets everything up again. If another app takes over a Caps Lock remapping, Status shows
+**Taken Over** and identifies the affected keyboards. Tinycast leaves that app's mapping in place.
 
 ### Conflicts
 

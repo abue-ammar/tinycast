@@ -75,8 +75,9 @@ Tinycast checks several names for each entry and gives some of them more weight 
 How the letters match also counts. From strongest to weakest: an exact match, a match at the start
 of the name, a match at the start of a word, a match in the middle of a word, and scattered letters.
 
-Typing a name or alias exactly always puts that entry first, no matter how often you picked
-something else. Everything below that can change with [learned ranking](#learned-ranking).
+An exact alias has the strongest priority. Exact names longer than three characters also stay ahead
+of learned matches, while short searches can adapt to your choices. [Learned ranking](#learned-ranking)
+helps decide between matching entries.
 
 A few more rules keep results useful:
 
@@ -94,8 +95,9 @@ A few more rules keep results useful:
 Apps are shown the way Finder shows them, in your Mac's language. The English name still works, so
 on a Mac set to Portuguese, both `Find My` and `Buscar` find the same app.
 
-Apps also match the other names macOS knows them by: `Address Book` finds Contacts,
-`System Preferences` finds System Settings, and `browser`, `浏览器` or `사파리` all find Safari.
+Apps also match alternate names from their own metadata, such as `Address Book` for Contacts and
+`System Preferences` for System Settings. Localized names come from your preferred languages,
+with English names available too.
 
 Names in other scripts also get a Latin spelling: `微信` matches `weixin` and `wx`, `メモ帳` matches
 `memo`, and `Яндекс` matches `yandeks`.
@@ -124,7 +126,8 @@ This data is stored in `launcher-ranking.json` in Tinycast's own folder and is n
 ## Search scopes
 
 **Settings → Applications → Search Scopes** sets which folders Tinycast searches for apps. A scope can
-be a folder or a single `.app`.
+be a folder or a single `.app`. Click **Add…** to choose one or several folders or apps;
+**Restore Defaults** returns to the original list.
 
 The defaults cover `/Applications`, `/System/Applications`, both `Utilities` folders,
 `/System/Library/CoreServices/Applications`, the hidden system folder where Safari is actually
@@ -136,6 +139,18 @@ looks for the apps it ships with, like Instruments and Simulator inside Xcode.
 
 Scopes are saved with your home folder written as `~`, so a backup still works on another Mac.
 Tinycast searches again as soon as you change them.
+
+## Multiple installed copies
+
+If you have several versions of an app, each installed path appears in search. Version numbers,
+and the containing folder when needed, help you tell them apart. Opening or restarting a result
+uses that copy's path.
+
+Copies share their alias, favorite, visibility, learned ranking and global shortcut. Favorites,
+Suggestions and Settings use one representative: the earliest search scope wins, and within a
+folder the newest version wins. An app's global shortcut uses the running app or macOS's default
+copy. Uninstall is unavailable while several indexed copies share the same bundle identifier,
+because their support files can be shared.
 
 ## Actions on an app
 
@@ -162,6 +177,8 @@ or refuse.
 
 To quit every app at once, use the **Quit All Applications**
 [system action](/docs/launcher/system-actions). It leaves Finder and Tinycast running.
+
+You can also drag an app result into Finder or another app that accepts files.
 
 ## Hiding a result
 

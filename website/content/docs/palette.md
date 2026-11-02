@@ -1,10 +1,11 @@
 ---
 title: The palette
-description: Tinycast's one window, how to move around it, and how to adjust it.
+description: Move around Tinycast's floating palette and adjust its appearance and behavior.
 ---
 
-Almost everything in Tinycast happens in one floating panel. The launcher is the root screen, and
-every other feature is a screen you open from it. <kbd>esc</kbd> takes you back one screen at a time.
+The launcher, search tools and Quick AI share one floating panel. AI Chat, Notes, Camera and command
+output also have their own windows. The launcher is the palette's root screen. <kbd>esc</kbd> takes
+you back one screen at a time.
 
 ## Moving around
 
@@ -22,7 +23,9 @@ every other feature is a screen you open from it. <kbd>esc</kbd> takes you back 
 | <kbd>⌘</kbd><kbd>W</kbd>      | Close the window                                      |
 
 <kbd>⌘</kbd><kbd>K</kbd> is the best way to learn the app. Every screen lists all of its actions
-there, each with its shortcut. The full list is in [Keyboard shortcuts](/docs/reference/shortcuts).
+there, with shortcuts beside actions that have them. Type in the menu to filter its actions;
+<kbd>esc</kbd> clears the menu search first, then closes the menu. The full list is in
+[Keyboard shortcuts](/docs/reference/shortcuts).
 
 Every screen except the launcher has a back arrow in the top-left corner. Hover over it to see
 whether clicking goes back a step or closes the window.
@@ -43,11 +46,14 @@ These work anywhere in the palette:
 
 On the [emoji grid](/docs/features/emoji), all four move the selection. Everywhere else,
 <kbd>⌃</kbd><kbd>F</kbd> and <kbd>⌃</kbd><kbd>B</kbd> move the text cursor, which is what you
-usually want in a search field. Chords with an extra modifier, like
+usually want in a search field. In the collapsed compact bar, they select Search or a shortcut.
+Chords with an extra modifier, like
 <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd>, are ignored.
 
-Shortcuts follow key positions, not the characters your input source types. If you use Japanese,
-Russian or another non-Latin layout, <kbd>⌘</kbd><kbd>K</kbd> is still <kbd>⌘</kbd><kbd>K</kbd>.
+Letter shortcuts use your ASCII keyboard layout, so a Japanese, Russian or other non-Latin input
+source keeps them working. ASCII layouts such as Dvorak keep their own letter positions, including
+the Command positions of Dvorak–QWERTY ⌘. While an input method is composing text, its candidate
+selection keys keep their normal behavior.
 
 ## Tab moves between three screens
 
@@ -61,8 +67,9 @@ Russian or another non-Latin layout, <kbd>⌘</kbd><kbd>K</kbd> is still <kbd>�
 Quick AI is skipped while [AI](/docs/ai) is off, and the clipboard is skipped while
 [clipboard history](/docs/features/clipboard) is off.
 
-Other screens, like Calculator History or Search Quicklinks, aren't part of the cycle. You only reach
-them by opening them yourself.
+Other screens, like Calculator History or Search Quicklinks, aren't part of the cycle. On screens
+that don't use <kbd>tab</kbd> themselves, it returns to the launcher with your search text. Rooms
+uses it to try layouts, and forms use it to move between fields.
 
 There's one exception: when the selected row takes arguments, like a
 [quicklink](/docs/launcher/quicklinks), a [custom command](/docs/launcher/commands#arguments) or an
@@ -73,8 +80,10 @@ There's one exception: when the selected row takes arguments, like a
 If you open a screen by typing its name in the launcher, it opens on top of the launcher, and
 <kbd>esc</kbd> takes you back to your search.
 
-If you open a screen with its own global shortcut, it opens by itself with nothing behind it. Press
-the shortcut again to close it.
+If you open a screen with its own global shortcut while the palette is hidden, it opens by itself
+with nothing behind it. If the palette is already visible, the new screen opens over the current
+one. Press its shortcut again to close it;
+Switch Windows uses repeated presses to move the selection.
 
 **Settings → General → Escape Key Behavior** sets what <kbd>esc</kbd> does when the search is empty:
 

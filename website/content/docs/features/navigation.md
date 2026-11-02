@@ -20,8 +20,7 @@ Each command has a checkbox, a shortcut recorder and an alias field in **Setting
 
 ## Switch Windows
 
-The list starts with the app you used most recently, and each app's windows are listed from front to
-back. **Minimized windows come last.** Type to filter by window title or app name.
+The list groups windows by app, with the app whose window is frontmost first. **Minimized windows come last.** Type to filter by window title or app name.
 
 <kbd>return</kbd> (**Switch to Window**) brings the window to the front:
 

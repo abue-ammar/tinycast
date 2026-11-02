@@ -7,7 +7,8 @@ An alias is your own short name for a launcher entry. Type `ps` to get Photoshop
 shell script you run every morning.
 
 Aliases work on **any** entry: apps, System Settings panes, commands, Quick Actions, quicklinks,
-snippets, system actions, window commands and layouts, and extension commands.
+snippets, Apple Shortcuts, system actions, window commands, custom sizes, layouts, rooms and
+extension commands.
 
 ## Setting one
 
