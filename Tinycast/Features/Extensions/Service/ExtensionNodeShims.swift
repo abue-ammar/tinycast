@@ -96,6 +96,7 @@ final class ExtensionNodeShims: @unchecked Sendable {
             }
             return Double(statistics.free_count) * Double(getpagesize())
         }
+        if method == "networkInterfaces" { return try networkInterfaces() }
         guard method == "cpus" else {
             throw ShimError.failed("os.\(method) is not supported.", "ENOSYS")
         }
@@ -133,6 +134,81 @@ final class ExtensionNodeShims: @unchecked Sendable {
                 ]
             ]
         }
+    }
+
+    /// Node's `uv_interface_addresses` filter: up, running, IPv4 or IPv6, in `getifaddrs` order.
+    private func networkInterfaces() throws -> [[String: Any]] {
+        var list: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&list) == 0 else { throw fileError("getifaddrs") }
+        defer { freeifaddrs(list) }
+        guard let first = list else { return [] }
+        return try sequence(first: first) { $0.pointee.ifa_next }.compactMap {
+            try interfaceAddress($0.pointee)
+        }
+    }
+
+    /// A hardware address identifies the Mac itself, so every record reports Node's loopback MAC.
+    private func interfaceAddress(_ entry: ifaddrs) throws -> [String: Any]? {
+        let flags = Int32(bitPattern: entry.ifa_flags)
+        guard flags & IFF_UP != 0, flags & IFF_RUNNING != 0, let socketAddress = entry.ifa_addr else {
+            return nil
+        }
+        let family = Int32(socketAddress.pointee.sa_family)
+        guard family == AF_INET || family == AF_INET6 else { return nil }
+
+        let address = try presentation(Self.addressBytes(socketAddress, family: family), family: family)
+        let netmask = Self.addressBytes(entry.ifa_netmask, family: family)
+        let netmaskText = try presentation(netmask, family: family)
+        var record: [String: Any] = [
+            "name": String(cString: entry.ifa_name),
+            "address": address,
+            "netmask": netmaskText,
+            "family": family == AF_INET ? "IPv4" : "IPv6",
+            "mac": "00:00:00:00:00:00",
+            "internal": flags & IFF_LOOPBACK != 0,
+            "cidr": Self.prefixLength(netmask).map { "\(address)/\($0)" } ?? NSNull()
+        ]
+        if family == AF_INET6 {
+            record["scopeid"] = socketAddress.withMemoryRebound(to: sockaddr_in6.self, capacity: 1) {
+                $0.pointee.sin6_scope_id
+            }
+        }
+        return record
+    }
+
+    /// A netmask's `sockaddr` may be trimmed to its significant bytes, so copy no further than `sa_len`.
+    private static func addressBytes(_ socketAddress: UnsafePointer<sockaddr>?, family: Int32) -> [UInt8] {
+        var storage = sockaddr_storage()
+        if let socketAddress {
+            let length = min(Int(socketAddress.pointee.sa_len), MemoryLayout<sockaddr_storage>.size)
+            withUnsafeMutableBytes(of: &storage) {
+                $0.copyMemory(from: UnsafeRawBufferPointer(start: socketAddress, count: length))
+            }
+        }
+        return withUnsafeBytes(of: storage) { raw in
+            family == AF_INET
+                ? withUnsafeBytes(of: raw.load(as: sockaddr_in.self).sin_addr) { Array($0) }
+                : withUnsafeBytes(of: raw.load(as: sockaddr_in6.self).sin6_addr) { Array($0) }
+        }
+    }
+
+    private func presentation(_ bytes: [UInt8], family: Int32) throws -> String {
+        var buffer = [CChar](repeating: 0, count: Int(INET6_ADDRSTRLEN))
+        return try buffer.withUnsafeMutableBufferPointer { text in
+            guard let written = inet_ntop(family, bytes, text.baseAddress, socklen_t(text.count)) else {
+                throw fileError("inet_ntop")
+            }
+            return String(cString: written)
+        }
+    }
+
+    /// Node reports a null `cidr` when the netmask's bits are not one contiguous run.
+    private static func prefixLength(_ netmask: [UInt8]) -> Int? {
+        let ones = netmask.reduce(0) { $0 + $1.nonzeroBitCount }
+        let contiguous = netmask.indices.map {
+            UInt8(truncatingIfNeeded: 0xFF00 >> min(8, max(0, ones - $0 * 8)))
+        }
+        return contiguous == netmask ? ones : nil
     }
 
     // MARK: - fs
