@@ -416,7 +416,6 @@ private struct RegenerateButton: View {
     }
 }
 
-/// One stretch of thinking: folded unless Settings opens it, a click from either, opened by find.
 private struct ChatReasoningBlock: View {
     @Environment(\.metrics) private var metrics
     @Environment(\.chatTextHighlight) private var highlight
@@ -447,9 +446,7 @@ private struct ChatReasoningBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: metrics.spacing.sm) {
             Button {
-                withAnimation(.easeOut(duration: Theme.Duration.chatFooter)) {
-                    expanded = !(expanded ?? expandsByDefault)
-                }
+                withAnimation(.easeOut(duration: Theme.Duration.chatFooter)) { expanded = !isOpen }
             } label: {
                 HStack(spacing: metrics.spacing.xs) {
                     if isThinking {
