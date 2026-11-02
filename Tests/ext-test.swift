@@ -300,6 +300,21 @@ struct ExtensionTests {
             "os.loadavg returns three finite values",
             loadAverages?.count == 3
                 && loadAverages?.allSatisfy { $0.doubleValue.isFinite && $0.doubleValue >= 0 } == true)
+
+        let interfaces = value("networkInterfaces") as? [[String: Any]] ?? []
+        check(
+            "os.networkInterfaces lists the IPv4 loopback as internal",
+            interfaces.contains {
+                $0["address"] as? String == "127.0.0.1" && $0["family"] as? String == "IPv4"
+                    && $0["internal"] as? Bool == true && $0["cidr"] as? String == "127.0.0.1/8"
+            },
+            "\(interfaces)")
+        check(
+            "os.networkInterfaces never exposes a hardware address",
+            !interfaces.isEmpty && interfaces.allSatisfy { $0["mac"] as? String == "00:00:00:00:00:00" })
+        check(
+            "os.networkInterfaces gives a scope ID to IPv6 addresses only",
+            interfaces.allSatisfy { ($0["scopeid"] is NSNumber) == ($0["family"] as? String == "IPv6") })
     }
 
     @MainActor

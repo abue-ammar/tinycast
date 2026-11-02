@@ -709,7 +709,7 @@ without waiting for a browser callback, so the sign-in hold cannot outlive the c
 session that refuses to start fails immediately; duplicate or late callbacks cannot finish it twice.
 
 **Node built-ins** — `path`, `fs` (+ `fs/promises`, `createReadStream`/`createWriteStream`, a snapshot-backed `opendir`, and
-the descriptor calls `tar` unpacks through), `os`,
+the descriptor calls `tar` unpacks through), `os` (`networkInterfaces` reports every MAC as zeros),
 `child_process` (`exec`, `execFile`, `execSync`, `execFileSync`, `spawnSync`, and a streaming `spawn`,
 each async form reporting the child's real `pid` for `process.kill` — Timers pauses that way),
 `crypto` (hashes, HMAC, PBKDF2, AES-CBC/ECB, random, UUID), `zlib` (gzip/zlib/raw deflate, both
