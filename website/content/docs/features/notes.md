@@ -18,6 +18,12 @@ There are three commands, and each can have its own global shortcut in **Setting
 | **Create Note**  | Creates a new Untitled note and opens it                 |
 | **Search Notes** | Opens the window with the note switcher ready for typing |
 
+### In the menu bar
+
+Turn on **Show in Menu Bar** in **Settings → Notes** to add a Notes icon to the menu bar. It's
+**off** by default. Click the icon to show or hide your notes. Right-click it, or Control- or
+Option-click it, for **Create Note** and **Search Notes**.
+
 ## In the window
 
 The title bar has three buttons: **Create**, **Browse** and **Open Folder**.
@@ -27,8 +33,9 @@ The title bar has three buttons: **Create**, **Browse** and **Open Folder**.
 | <kbd>⌘</kbd><kbd>N</kbd>      | Create a note                               |
 | <kbd>⌘</kbd><kbd>P</kbd>      | Open the switcher, or return to it          |
 | <kbd>⌘</kbd><kbd>O</kbd>      | Open the Notes folder in Finder             |
+| <kbd>⌘</kbd><kbd>F</kbd>      | Find in the note                            |
 | <kbd>⌘</kbd><kbd>W</kbd>      | Hide the window                             |
-| <kbd>esc</kbd>                | Close the switcher, then hide the window    |
+| <kbd>esc</kbd>                | Close Find or the switcher, then hide       |
 | <kbd>⌘</kbd><kbd>delete</kbd> | Move the selected switcher row to the Trash |
 
 <kbd>⌘</kbd><kbd>Q</kbd> does nothing in Notes, so you can't quit Tinycast by accident while
@@ -36,11 +43,15 @@ writing.
 
 ## Files
 
-Notes are stored in Tinycast's Application Support folder:
+By default, notes are stored in Tinycast's Application Support folder:
 
 ```
 ~/Library/Application Support/com.tinycast.app/Notes/
 ```
+
+To keep notes in another folder, click **Choose…** next to **Notes Folder** in **Settings → Notes**.
+Tinycast uses that folder as it is and doesn't move notes out of the old one. **Use Default** goes
+back. The folder choice isn't included in [backups](/docs/reference/backup).
 
 **Each note is one `.md` file, and the file name is the note's title.** There's no frontmatter,
 hidden ID, database or extra file. The file is the note.
@@ -105,8 +116,9 @@ to make room for the buttons.
 To hide it, turn off **Show Formatting Bar** in **Settings → Notes**. The shortcuts still work. The
 bar is also hidden while Render Markdown is off.
 
-Typing, selecting, copy and paste, Find, emoji, input methods and undo all work like they do in any
-Mac text field. An empty note shows **Start writing…**, and the character count appears below the
+Typing, selecting, copy and paste, Find, emoji, input methods, and undo and redo
+(<kbd>⌘</kbd><kbd>Z</kbd> and <kbd>⇧</kbd><kbd>⌘</kbd><kbd>Z</kbd>) all work like they do in any Mac
+text field. An empty note shows **Start writing…**, and the character count appears below the
 note.
 
 [Snippets](/docs/features/snippets) expand directly in the editor, and you can undo them.
@@ -138,8 +150,12 @@ When you quit, Tinycast waits for the last save to finish, but it never stops th
 
 ## The window
 
-You choose the window's size, and macOS remembers it. You can delete every note; the window then
-shows an empty state, and Create Note still works.
+**The window's height fits the note.** It grows and shrinks as you write until it reaches its
+maximum height or the edge of the screen, and then the note scrolls. You choose the width, and macOS
+remembers where the window is. If you drag the height, it stays until your next edit. Double-click
+the title bar to move the window to the top-right corner of the screen.
+
+You can delete every note; the window then shows an empty state, and Create Note still works.
 
 Hiding the window returns you to the app you were using, but only if that app is still in front. If
 you've already switched to something else, you stay there.

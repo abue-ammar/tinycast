@@ -3,9 +3,9 @@ title: Configuring an extension
 description: Preferences, launcher icons, aliases and background refresh for an extension.
 ---
 
-Open **Settings → Extensions**, find the extension in the installed list, and click **Configure**.
-In the launcher, <kbd>⌘</kbd><kbd>K</kbd> → **Configure Extension** on any of its commands opens the
-same screen.
+Open **Settings → Extensions**, find the extension in the **Installed** list, and click its row to
+show its settings. In the launcher, <kbd>⌘</kbd><kbd>K</kbd> → **Configure Extension** on any of its
+commands opens the same settings.
 
 ## Preferences
 
@@ -15,10 +15,14 @@ password field, file picker, folder picker or app picker.
 They're saved separately for each extension in Tinycast's own folder and removed when you uninstall
 the extension.
 
+Preferences the extension needs say **Required**. If one is empty when you run a command,
+Tinycast names the missing preferences and offers **Configure Extension**, which opens these
+settings.
+
 ## Launcher icon
 
-Replace an extension's own artwork with an **SF Symbol on a colored tile**, in one of 18 colors, or
-choose **Use Original** to switch back.
+Click **Change…** to replace an extension's own artwork with an **SF Symbol on a colored tile**, in
+one of 18 colors, or choose **Use Original Icon** to switch back.
 
 The icon applies to **every command** in the extension.
 
@@ -27,7 +31,7 @@ The symbol picker starts with about 85 suggestions, but **search covers the full
 
 Symbols that Apple reserves for its own products, like iCloud, iPhone and AirPlay, aren't offered.
 
-Icon choices **are** included in [backups](/docs/reference/backup).
+Icon choices aren't included in [backups](/docs/reference/backup).
 
 ## Command alias
 
@@ -57,8 +61,9 @@ To keep background refresh light:
 
 ## Uninstalling
 
-Uninstalling removes the extension and everything connected to it: storage, cache, preferences,
-sign-ins, its support folder, the icon choice, command shortcuts, favorites, hidden items,
-aliases and learned ranking.
+Click the trash button on the extension's row in **Settings → Extensions** to uninstall it. This
+removes the extension and everything connected to it: storage, cache, preferences, sign-ins, its
+support folder, the icon choice, command shortcuts, favorites, hidden items, aliases and learned
+ranking.
 
 <kbd>⌘</kbd><kbd>K</kbd> → **Uninstall Extension** in the launcher does the same.

@@ -38,6 +38,9 @@ displays. The right side edits the selected window.
 | Offset            | An adjustment in points from that position                                      |
 | Use preferred gap | Insets the window by the gap set in Window Management, like the tiling commands |
 
+**Use preferred gap** applies to the whole layout. Layouts captured from current windows start with
+it off, so running the captured layout preserves the positions you reviewed.
+
 The preview updates as you type. Press <kbd>⌘</kbd><kbd>return</kbd> to **Save**, because plain
 <kbd>return</kbd> is used by the field you're typing in.
 
@@ -50,16 +53,17 @@ Run a layout from the launcher, with its own global shortcut, or with the ▶ bu
 
 1. Windows that are already open all move into place at once.
 2. Apps that aren't running are opened, and each window is placed as soon as it appears. Tinycast
-   waits up to 10 seconds for each app.
+   waits up to 10 seconds in all for their windows.
 3. The window marked **Bring to front**, if any, is focused once everything else is done. If you
    switched to another app while Tinycast was waiting, your choice is kept.
 
 A few rules keep the results predictable:
 
-- **Open windows are matched to the nearest position in the layout**, so windows that are already
-  arranged stay where they are and nothing switches displays.
-- **An entry with an argument always opens a new window**, because that's the only reliable way to
-  get a second window from most apps.
+- **Open windows are matched to the nearest position in the layout**, so an arrangement that's
+  already correct keeps the same window in each position.
+- **An entry with an argument opens that destination in its app**, then Tinycast waits for a new
+  window. Whether the app creates one depends on the app. Repeated entries for the same app and
+  argument are opened only once.
 - **Windows for a missing display are skipped.** If a monitor is disconnected, its windows are left
   alone instead of piling up on your laptop screen.
 - Sizes are fractions of the screen, so a layout still fits after you change the resolution.
@@ -69,8 +73,8 @@ command, not before the layout ran.
 
 ## Managing layouts
 
-Each layout in Settings has a shortcut recorder, a launcher checkbox, and buttons to run, edit,
-duplicate and delete it. **Show layouts in launcher** (on by default) removes all layouts and the
+Each layout in Settings has an alias field, a shortcut recorder, a launcher checkbox, and buttons
+to run, edit, duplicate and delete it. **Show layouts in launcher** (on by default) removes all layouts and the
 two layout commands from search at once, without affecting the other window commands.
 
 Layouts and their shortcuts are included in [backups](/docs/reference/backup). On another Mac,

@@ -1,13 +1,32 @@
 ---
 title: Installing extensions
-description: The three ways to install, the registries behind them, and when you need a toolchain.
+description: The four ways to install, how updates work, and when you need a toolchain.
 ---
 
-**Settings → Extensions → Install** offers three ways to install extensions.
+**Settings → Extensions → Install** offers four ways to install extensions.
 
-## Search Registries
+## Search extensions
 
-Search every enabled registry and install from any of them. This is the usual way to install.
+**Search…** searches the Raycast Store and installs the extension it has already built. This is the
+usual way to install, and **it doesn't need Node or a package manager**.
+
+The **Install** buttons on the Raycast Store website open the same search in Tinycast, on that
+extension. Nothing installs until you click **Install**. If Raycast is also installed, macOS decides
+which app receives those links.
+
+## Install from GitHub
+
+**Install…** builds one extension from its source on this Mac. Enter `owner/repo`, or paste the link
+your browser shows for one extension's folder, such as a folder inside `raycast/extensions`. Tinycast
+only downloads that folder, not the whole repository.
+
+Building needs Node and a [package manager](#package-managers). Tinycast runs
+`<package manager> install --ignore-scripts`, then builds the extension. **Install scripts are
+skipped**, because they run code you didn't choose to run. If an extension doesn't build, it fails at
+the build step instead of being installed half-broken.
+
+**Only the build is kept.** The source and its dependencies are deleted once the extension
+installs. Closing the panel cancels a build in progress, and nothing is left behind.
 
 ## Import from Raycast
 
@@ -25,42 +44,32 @@ you open it and tells you when Raycast has extensions that Tinycast doesn't.
 Choose any folder that contains a manifest and built command files, like a project you just built
 yourself.
 
-Tinycast only copies `package.json`, the built commands and `assets/`. It never copies
-`node_modules` or source maps.
+Tinycast only copies `package.json`, the built commands, `assets/` and any packages the build
+bundled in `node_modules`. It never copies source maps.
 
-## Registries
+## Updates
 
-Two registries are on by default, and you can add your own.
+Each time you open **Settings → Extensions**, Tinycast checks the Raycast Store for newer versions of
+the extensions you installed from it or imported from Raycast. An extension with an update shows
+**Update** on its row, and **Update All** above the list updates every one. Updating keeps the
+extension's preferences, storage and icon.
 
-|           | Raycast Store              | A GitHub repository        |
-| --------- | -------------------------- | -------------------------- |
-| Gives you | An extension already built | Source code                |
-| You need  | Nothing                    | Node and a package manager |
-
-**Because the store provides prebuilt extensions, most people don't need a toolchain at all.**
-
-A GitHub registry is any repository with one folder per extension, like `raycast/extensions`. Add one
-with `owner/repo` or a link to the folder. Tinycast only downloads the extension's own folder, not the
-whole repository.
-
-Installing from source runs `<package manager> install --ignore-scripts`, then builds the extension.
-**Install scripts are skipped**, because they run code you didn't choose to run. If an extension
-doesn't build, it fails at the build step instead of being installed half-broken.
+Extensions installed from GitHub or a folder are never checked. To update one, install it again.
 
 ## Package managers
 
-**Settings → Extensions → Package manager**
+The **Install from GitHub** panel has a **Package manager** menu.
 
 **Automatic** (default) uses the first one you have from this list: **pnpm → Bun → Yarn → npm**. The
 fastest and most disk-efficient come first, and npm, which is almost always installed, comes last.
 
 Apps opened from the Dock don't get your terminal's `PATH`, so Tinycast checks the usual install
-locations itself: Homebrew, Volta, asdf, mise, fnm, nvm and Yarn. The pane shows what it found, like
-"Found pnpm at /opt/homebrew/bin/pnpm", or tells you that none is installed.
+locations itself: Homebrew, Volta, asdf, mise, fnm, nvm and Yarn. The panel shows what it found, like
+"Found pnpm at /opt/homebrew/bin/pnpm.", or tells you that none is installed.
 
 ### Custom search paths
 
-For other locations, like Nix, the Registries sheet has **Custom search paths**: a list of folders
+For other locations, like Nix, the same panel has **Custom search paths**: a list of folders
 separated by colons, like `PATH`, that Tinycast checks **before** the usual locations.
 
 ```
@@ -75,10 +84,9 @@ Once you set it, every future install uses it.
 
 ## What isn't backed up
 
-Three settings are left out of [backups](/docs/reference/backup) because they're specific to _this
+Two settings are left out of [backups](/docs/reference/backup) because they're specific to _this
 Mac_:
 
-- The registry list
 - The package manager choice
 - Custom search paths
 
@@ -88,8 +96,8 @@ Everything is stored in Tinycast's Application Support folder, and **uninstallin
 removes all of it**: the extension, its storage and cache, its preferences and sign-ins, its support
 folder, its icon choice, and its command shortcuts, favorites, aliases and learned ranking.
 
-**Settings → Extensions → Storage** shows the size of leftover build folders, like those a crashed
-install can leave behind, and offers to remove them. It works even while extensions are off, and
-it's normally empty.
+**Settings → Extensions → Storage → Leftover files** shows the size of leftover build folders, like
+those a crashed install can leave behind, and **Clean Up…** removes them. It works even while
+extensions are off, and it's normally empty.
 
 Tinycast never touches your own `~/Library/pnpm` or `~/.npm`.

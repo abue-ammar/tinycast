@@ -6,7 +6,9 @@ description: Every built-in shortcut in the palette and its screens, in one plac
 These shortcuts are built in and can't be changed. For shortcuts you record yourself, see
 [Hotkeys](/docs/reference/hotkeys).
 
-Shortcuts follow key positions, so they work the same on any keyboard layout or input source.
+Letter shortcuts follow your ASCII keyboard layout even while a non-Latin input source is active.
+Dvorak and other ASCII layouts keep their own letter positions. Number shortcuts use the physical
+number row. See [the palette](/docs/palette#emacs-chords) for input-method behavior.
 
 ## Everywhere in the palette
 
@@ -18,7 +20,7 @@ Shortcuts follow key positions, so they work the same on any keyboard layout or 
 | <kbd>↑</kbd> <kbd>↓</kbd>                           | Move the selection                                     |
 | <kbd>⌃</kbd><kbd>N</kbd> / <kbd>⌃</kbd><kbd>P</kbd> | Same as <kbd>↓</kbd> / <kbd>↑</kbd>                    |
 | <kbd>⌃</kbd><kbd>F</kbd> / <kbd>⌃</kbd><kbd>B</kbd> | Same as <kbd>→</kbd> / <kbd>←</kbd>                    |
-| <kbd>tab</kbd>                                      | Launcher → AI Chat → clipboard, or move through fields |
+| <kbd>tab</kbd>                                      | Launcher → Quick AI → clipboard, or move through fields |
 | <kbd>esc</kbd>                                      | Clear the search, go back a screen, then close         |
 | <kbd>⌘</kbd><kbd>esc</kbd>                          | Back to the root search from any screen                |
 | <kbd>delete</kbd>                                   | In an empty search, go back a screen                   |
@@ -37,11 +39,11 @@ Shortcuts follow key positions, so they work the same on any keyboard layout or 
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>H</kbd>                | Hide from Search                        |
 | <kbd>⌘</kbd><kbd>R</kbd>                            | Restart Application (running apps only) |
 | <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd>                | Quit Application (running apps only)    |
-| <kbd>⌘</kbd><kbd>E</kbd>                            | Edit Quicklink                          |
+| <kbd>⌘</kbd><kbd>E</kbd>                            | Edit Quicklink, Snippet or Custom Command                          |
 | <kbd>⌘</kbd><kbd>return</kbd>                       | Put Answer in Search Bar (calculator)   |
 | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd>           | Copy Calculation, on a calculator card  |
 
-## AI Chat
+## Quick AI
 
 | Key                      | Does                                                |
 | ------------------------ | --------------------------------------------------- |
@@ -104,29 +106,43 @@ When **Default action** is set to Copy to Clipboard, <kbd>return</kbd> and
 
 ## File search
 
-| Key                                  | Does                    |
-| ------------------------------------ | ----------------------- |
-| <kbd>return</kbd>                    | Open File / Open Folder |
-| <kbd>⌘</kbd><kbd>return</kbd>        | Show in Finder          |
-| <kbd>⌘</kbd><kbd>Y</kbd>             | Quick Look              |
-| <kbd>⌘</kbd><kbd>P</kbd>             | Filter by type          |
-| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy File               |
-| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>V</kbd> | Paste File to …         |
-| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Name               |
-| <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Path               |
-| <kbd>⌃</kbd><kbd>X</kbd>             | Move to Trash           |
+| Key                                  | Does                                     |
+| ------------------------------------ | ---------------------------------------- |
+| <kbd>return</kbd>                    | Open File / Open Folder                  |
+| <kbd>⌘</kbd><kbd>return</kbd>        | Show in Finder                           |
+| <kbd>⌘</kbd><kbd>P</kbd>             | Filter by type                           |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy File                                |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>V</kbd> | Paste File to …                          |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Name                                |
+| <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> | Copy Path                                |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd> | Add to Favorites / Remove from Favorites |
+| <kbd>⌃</kbd><kbd>X</kbd>             | Move to Trash                            |
+
+## Switch Windows
+
+| Key                                  | Does              |
+| ------------------------------------ | ----------------- |
+| <kbd>return</kbd>                    | Switch to Window  |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>M</kbd> | Minimize Window   |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>H</kbd> | Hide Application  |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd> | Quit Application  |
+
+Repeated presses of your recorded Switch Windows shortcut move through the list; Switch Windows
+Backwards moves in reverse. After repeating with the modifiers held, release them to switch.
+[Search Menu Bar Items](/docs/features/navigation#search-menu-bar-items) uses <kbd>return</kbd> to
+activate the selected item.
 
 ## Quicklinks
 
-| Key                                  | Does                            |
-| ------------------------------------ | ------------------------------- |
-| <kbd>return</kbd>                    | Open Quicklink                  |
-| <kbd>⌘</kbd><kbd>return</kbd>        | Open With Default App           |
-| <kbd>⌘</kbd><kbd>E</kbd>             | Edit Quicklink                  |
-| <kbd>⌘</kbd><kbd>D</kbd>             | Duplicate Quicklink             |
-| <kbd>⌘</kbd><kbd>.</kbd>             | Pin / Unpin                     |
-| <kbd>⌘</kbd><kbd>F</kbd>             | Show in Finder                  |
-| <kbd>⌘</kbd><kbd>delete</kbd>        | Delete Quicklink                |
+| Key                           | Does                  |
+| ----------------------------- | --------------------- |
+| <kbd>return</kbd>             | Open Quicklink        |
+| <kbd>⌘</kbd><kbd>return</kbd> | Open With Default App |
+| <kbd>⌘</kbd><kbd>E</kbd>      | Edit Quicklink        |
+| <kbd>⌘</kbd><kbd>D</kbd>      | Duplicate Quicklink   |
+| <kbd>⌘</kbd><kbd>.</kbd>      | Pin / Unpin           |
+| <kbd>⌘</kbd><kbd>F</kbd>      | Show in Finder        |
+| <kbd>⌘</kbd><kbd>delete</kbd> | Delete Quicklink      |
 
 ## Snippets
 
@@ -173,10 +189,22 @@ When **Default action** is set to Copy to Clipboard, <kbd>return</kbd> and
 | <kbd>tab</kbd> / <kbd>⇧</kbd><kbd>tab</kbd> | Next or previous layout that fits      |
 | <kbd>⌘</kbd><kbd>K</kbd>                    | Room actions                           |
 | <kbd>⌘</kbd><kbd>N</kbd>                    | Create a room                          |
-| <kbd>⌘</kbd><kbd>delete</kbd>               | Delete the room; its windows stay open |
+| <kbd>⌃</kbd><kbd>X</kbd>                    | Delete the room; its windows stay open |
 
 In the window picker, <kbd>return</kbd> adds or removes a window and <kbd>⌘</kbd><kbd>return</kbd>
 saves the room.
+
+## Custom commands
+
+| Key                           | Does                       |
+| ----------------------------- | -------------------------- |
+| <kbd>return</kbd>             | Run Command                |
+| <kbd>⌘</kbd><kbd>N</kbd>      | Create Custom Command      |
+| <kbd>⌘</kbd><kbd>E</kbd>      | Edit Custom Command        |
+| <kbd>⌃</kbd><kbd>X</kbd>      | Delete Custom Command      |
+
+For a command with arguments, <kbd>tab</kbd> moves through its inline fields and <kbd>return</kbd>
+focuses the first missing required value before running. See [Commands](/docs/launcher/commands#arguments).
 
 ## Window layout editor
 

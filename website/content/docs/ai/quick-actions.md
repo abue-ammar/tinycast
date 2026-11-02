@@ -42,9 +42,13 @@ field.
 
 The result goes straight into your document. To revert it, use undo in that app.
 
+While the model works, a message like **Fixing Grammar…** shows a spinner. Click it to cancel.
+
 ### Preview
 
 A panel shows the result as it comes in. For Fix Grammar and Rewrite, it highlights what changed.
+Summarize and your own actions show their result formatted as Markdown, and you can select text
+across all of it. Copy and Replace use the text as the model wrote it.
 
 | Key                      | Does                   |
 | ------------------------ | ---------------------- |
@@ -106,14 +110,16 @@ Translate uses **Apple's translator on your Mac**. It's free and doesn't send an
 not from your preferred languages, so it only includes languages the translator supports. Bengali,
 for example, isn't available yet.
 
-The first time you translate into a new language, the panel opens and offers to download it, even
-if Translate is set to Replace. While the panel is open, you can also translate into a different
-language.
+The first time you translate into a new language, the panel opens and says the language hasn't been
+downloaded yet, even if Translate is set to Replace. Click **Open Language & Region**, then
+**Translation Languages…**, and download it there. While the panel is open, you can also translate
+into a different language.
 
 ## When an action won't run
 
 - **In Tinycast's own windows.** Pressing a shortcut while Settings is in front does nothing, and
-  Tinycast tells you why.
+  Tinycast tells you why. [Notes](/docs/features/notes) is the exception: Quick Actions work on text
+  you select in a note.
 - **In a password field**, or anywhere Secure Event Input is on.
 - **While another Quick Action is still running.** Actions run one at a time, so two can't change the
   same selection.

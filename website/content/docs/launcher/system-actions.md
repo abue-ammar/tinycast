@@ -1,6 +1,6 @@
 ---
 title: System actions
-description: 31 built-in actions for your Mac, like lock, sleep, volume, Bluetooth and the Trash.
+description: 32 built-in actions for your Mac, like lock, sleep, volume, microphone mute, Bluetooth and the Trash.
 ---
 
 System actions control your Mac itself, like locking the screen or emptying the Trash. You can search
@@ -26,6 +26,8 @@ Dismiss Notifications
 **Files** · Open Trash · Empty Trash · Eject All Disks · Toggle Hidden Files
 
 **Hardware** · Toggle Bluetooth
+
+**Microphone** · Toggle Microphone Mute
 
 ## Confirmation
 
@@ -63,6 +65,10 @@ after 1.6 seconds.
 **Eject All Disks** ejects external and removable drives, including a hard drive connected through a
 dock. It never ejects internal or network volumes.
 
+**Toggle Microphone Mute** changes the default input device's own mute setting. If your microphone
+doesn't support software mute, or its mute control is managed externally, Tinycast explains why it
+couldn't change it.
+
 When you run **Hide All Apps Except Frontmost** or **Quit All Applications** from a shortcut with the
 palette closed, they act on the app that's actually in front. Quit All Applications leaves Finder and
 Tinycast running and asks apps to quit normally, so apps with unsaved work still ask you to save.
@@ -80,7 +86,7 @@ System Settings pane, so the action never fails silently.
 
 **Settings → System Actions** has **Enable System Actions** at the top and a row for each action,
 with a launcher checkbox, a shortcut recorder and an alias field. Use the filter field at the top to
-find an action among the 31 rows.
+find an action among the 32 rows.
 
 Turning off **Enable System Actions** removes every action from search and turns off their
 shortcuts. Clearing a single row's checkbox only hides that action from search, which is the same as

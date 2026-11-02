@@ -67,9 +67,12 @@ You **don't** need this step if you installed with Homebrew.
 ## Updating
 
 Tinycast updates itself. Once a day it checks for a new release on its own channel. When there is
-one, a window shows what changed, and one click downloads it, installs it and relaunches the app. You
-can also check at any time with **Check for Updates** in the launcher, the menu bar or
-**Settings → About**.
+one, a window shows what changed. **Update Now** downloads and installs it, and **Relaunch** starts
+the new version. You can also check at any time with **Check for Updates** in the launcher, the menu
+bar or **Settings → About**.
+
+To stop the daily check, turn off **Automatically check for updates** in **Settings → General**.
+Checking by hand still works.
 
 Because the app manages its own updates, `brew upgrade` skips Tinycast. This is expected. See
 [Updates](/docs/reference/updates) for details.
@@ -83,11 +86,13 @@ after an update.
 brew uninstall --cask abue-ammar/tinycast/tinycast
 ```
 
-To remove the files Tinycast created, delete its Application Support and Caches folders:
+To remove the files Tinycast created, delete its Application Support and Caches folders, and its
+settings:
 
 ```bash
 rm -rf ~/Library/Application\ Support/com.tinycast.app
 rm -rf ~/Library/Caches/com.tinycast.app
+defaults delete com.tinycast.app
 ```
 
 The Application Support folder holds your snippets, notes, quicklinks, clipboard history and AI

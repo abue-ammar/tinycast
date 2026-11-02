@@ -6,8 +6,8 @@ description: What Tinycast asks for, why it needs it, and when it asks.
 Tinycast asks for a permission **only when you use a feature that needs it**, never at launch. The
 launcher, calculator, emoji picker and search all work without any permissions.
 
-**Settings → Permissions** shows the status of Accessibility and Calendars, and opens the right
-System Settings pane for you.
+**Settings → Permissions** shows the status of Accessibility, Full Disk Access, Calendars and
+Microphone, and opens the right System Settings pane for you.
 
 ## Accessibility
 
@@ -24,10 +24,13 @@ Grant it in **System Settings → Privacy & Security → Accessibility**, or fro
 | [Clipboard](/docs/features/clipboard) and [emoji](/docs/features/emoji) paste | Puts the item into the app you were using              |
 | [Snippets](/docs/features/snippets)                                           | Detects the keyword you type, then inserts the text    |
 | [Quick Actions](/docs/ai/quick-actions)                                       | Reads your selected text and replaces it               |
+| [Quicklinks](/docs/launcher/quicklinks) that use your selected text           | Reads the selection from the app you were using        |
+| [Dictation](/docs/features/dictation), when it pastes                         | Puts what you said into the app you were using         |
 | [Window management](/docs/features/window-management) and layouts             | Reads and sets other apps' window frames               |
 | [Navigation](/docs/features/navigation)                                       | Lists open windows and clicks menu bar items           |
+| Play / Pause, Next Track, Previous Track and Dismiss Notifications            | Sends media keys and closes notifications              |
 | [Hyper key](/docs/reference/hotkeys#hyper-key)                                | Turns one physical key into a modifier chord           |
-| Double-tap modifier shortcuts                                                 | Detects the tap pattern                                |
+| Double-tap modifier shortcuts, and holding one modifier to dictate            | Detects the tap or hold                                |
 | <kbd>⌘</kbd><kbd>esc</kbd> back to the root search                            | macOS uses this shortcut unless Tinycast intercepts it |
 | `getSelectedText` in [extensions](/docs/extensions)                           | Reads the selection from the frontmost app             |
 
@@ -61,6 +64,19 @@ Events are read on your Mac and never leave it.
 **Open Camera** and the optional camera preview before a meeting ask for camera access the first
 time you use them. The camera isn't used before then, and it turns off as soon as the preview closes.
 
+## Microphone
+
+[Dictation](/docs/features/dictation) records from your microphone. When you turn on
+**Enable Dictation**, Tinycast explains what it needs first, then shows the macOS prompt. If you
+decline, Dictation stays off. If access is missing later, **Settings → Dictation** shows a warning
+with a button to fix it, and **Settings → Permissions** opens the System Settings pane where you can
+change it.
+
+The microphone is only on while you dictate. Audio stays in memory on your Mac. It's never written
+to disk or sent anywhere.
+
+To paste the text into another app, Dictation also needs Accessibility.
+
 ## Automation and Bluetooth
 
 A few actions show their own macOS prompt the first time you run them:
@@ -92,3 +108,4 @@ those by hand.
 - **Screen Recording.** The window switcher reads window titles through Accessibility.
 - **Location.** The calculator picks your currency from your Mac's region setting.
 - **Input Monitoring.** Snippets listen through Accessibility, as described above.
+- **Speech Recognition.** Dictation runs its own model on your Mac.

@@ -37,17 +37,18 @@ briefly runs a command on a schedule, and only if you turn it on.
 
 ## Menu bar commands
 
-Run a menu bar command once to turn it on. Its icon and title then stay in the menu bar, and the
-interval in its manifest controls how often it refreshes in the background. Opening the menu reloads
-the command, and closing it releases the engine once any running action finishes. Saved items come
-back after a restart without running the extension.
+Run a menu bar command once, or turn on **Show in menu bar** in its
+[settings](/docs/extensions/customising), to turn it on. Its icon and title then stay in the menu
+bar, and the interval in its manifest controls how often it refreshes in the background. Opening the
+menu reloads the command, and closing it releases the engine once any running action finishes. Saved
+items come back after a restart without running the extension.
 
 To stop a menu bar command, turn off **Show in menu bar** in the command's configuration. Installing
 an extension doesn't turn on its menu bar commands.
 
 ## Where to go next
 
-- [Installing extensions](/docs/extensions/installing): the three ways to install, registries and
+- [Installing extensions](/docs/extensions/installing): the four ways to install, updates and
   package managers
 - [What works](/docs/extensions/compatibility): what's supported, and the known gaps
 - [Configuring one](/docs/extensions/customising): preferences, icons, aliases and background

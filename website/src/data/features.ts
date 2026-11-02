@@ -55,7 +55,7 @@ export const coreFeatures: Feature[] = [
   {
     icon: "aiChat",
     title: "AI Chat",
-    body: "Use Apple Intelligence, Claude, Codex, Grok, OpenCode or your own API key.",
+    body: "Use Apple Intelligence, Claude, Codex, Cursor, Grok, OpenCode or your own API key.",
     href: "/docs/ai",
     preview: "aiChat",
     isWide: false,
@@ -124,7 +124,7 @@ export const moreFeatures: MinorFeature[] = [
   },
   {
     icon: "bolt",
-    title: "31 system actions",
+    title: "32 system actions",
     href: "/docs/launcher/system-actions",
   },
   { icon: "emoji", title: "Emoji & symbols", href: "/docs/features/emoji" },

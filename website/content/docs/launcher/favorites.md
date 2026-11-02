@@ -13,6 +13,20 @@ Select an entry and press <kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd>, or choose
 After you add a favorite, the selection moves to your first favorite. After you remove one, the
 selection moves to the favorite above it, so you stay in the Favorites section.
 
+## Files and folders
+
+Files and folders can be favorites too, while [File Search](/docs/features/file-search) is on.
+Select one in **Search Files**, or in the launcher's **Files** section, and press
+<kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd>. It joins the same Favorites section as your apps, with the same
+order and number keys.
+
+- A favorite file is found by its name at any length, even with File Search's **Show in launcher**
+  off. It shows in the **Files** section, above other matches.
+- Tinycast keeps the path you saved. If you move or rename the file, add it again from its new
+  place.
+- Turning off File Search hides favorite files and folders, but keeps them for when you turn it back
+  on.
+
 ## Reordering
 
 Favorites keep the order you give them. With nothing typed, select one and press
@@ -43,10 +57,11 @@ In the clipboard screen, the same number keys paste your pinned entries instead.
 The slim search bar of [compact mode](/docs/palette#appearance) doesn't show your favorites, but the
 same numbers still open them. Press <kbd>↓</kbd> to open the full list.
 
-## Favorites don't affect ranking
+## Favorites and ranking
 
-Opening a favorite with nothing typed, or by its number, doesn't count toward
-[learned ranking](/docs/launcher#learned-ranking), since you didn't search for it.
+Opening a favorite with nothing typed, or by its number, counts as a use in
+[learned ranking](/docs/launcher#learned-ranking). It doesn't teach Tinycast a search word, since you
+didn't type one.
 
 Favorites are included in [backups](/docs/reference/backup), and the
 [Raycast importer](/docs/reference/import-from-raycast) can bring them over.

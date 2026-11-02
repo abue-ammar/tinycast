@@ -100,11 +100,13 @@ Two things aren't part of a `.rayconfig`, so they have their own importers:
 - **Extensions.** **Settings → Extensions → Import from Raycast** copies your installed extensions.
   See [Installing extensions](/docs/extensions/installing#import-from-raycast).
 - **Script commands.** **Settings → Commands → Import Raycast Scripts** turns a folder of scripts
-  into custom commands. See [Commands](/docs/launcher/commands#importing-raycast-script-commands).
+  into custom commands. Scripts that are symlinks are imported too, and run the file they point to.
+  See [Commands](/docs/launcher/commands#importing-raycast-script-commands).
 
 ## Afterward
 
-The pane has a **Quit Raycast** button for when you're ready.
+While Raycast is running, the pane shows a **Quit Raycast** button, so its shortcuts stop clashing
+with yours.
 
 Tinycast doesn't need Raycast to be installed, except to import extensions from it, since that reads
 Raycast's folder.

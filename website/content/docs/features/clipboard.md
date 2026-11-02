@@ -13,7 +13,7 @@ removed. Your existing history is kept, and **Clear history** still works.
 
 ## Opening it
 
-- Press <kbd>tab</kbd> from the launcher (after AI Chat, if AI is on).
+- Press <kbd>tab</kbd> from the launcher (after Quick AI, if AI is on).
 - Run the **Clipboard History** command, or use its global shortcut from **Settings → Clipboard**.
 - Choose **Clipboard History** in the Tinycast menu bar menu.
 
@@ -25,10 +25,12 @@ The footer shows where a paste will go, like "Paste to Notes".
 | -------------------------- | --------------------------------------------------- |
 | Paste                      | <kbd>return</kbd>                                   |
 | Copy to Clipboard          | <kbd>⌘</kbd><kbd>return</kbd>                       |
+| Paste as Plain Text        | <kbd>⌃</kbd><kbd>⌘</kbd><kbd>return</kbd>           |
 | Paste and Keep Window Open | <kbd>⌥</kbd><kbd>return</kbd>                       |
 | Filter by type             | <kbd>⌘</kbd><kbd>P</kbd>                            |
 | Pin / Unpin Entry          | <kbd>⌘</kbd><kbd>.</kbd>                            |
 | Edit Entry                 | <kbd>⌘</kbd><kbd>E</kbd>                            |
+| Copy Text, on an image     | <kbd>⇧</kbd><kbd>⌘</kbd><kbd>T</kbd>                |
 | Show in Finder             | <kbd>⌘</kbd><kbd>F</kbd>                            |
 | Paste a pinned entry       | <kbd>⌘</kbd><kbd>1</kbd> … <kbd>⌘</kbd><kbd>0</kbd> |
 | Delete Entry               | <kbd>⌃</kbd><kbd>X</kbd>                            |
@@ -36,12 +38,19 @@ The footer shows where a paste will go, like "Paste to Notes".
 
 The **Default action** setting swaps <kbd>return</kbd> and <kbd>⌘</kbd><kbd>return</kbd>. If you set
 it to **Copy to Clipboard**, <kbd>return</kbd> copies and <kbd>⌘</kbd><kbd>return</kbd> pastes.
-Double-clicking and the number shortcuts follow the same setting. <kbd>⌥</kbd><kbd>return</kbd>
-always pastes.
+If you set it to **Paste as Plain Text**, <kbd>return</kbd> pastes plain text and
+<kbd>⌃</kbd><kbd>⌘</kbd><kbd>return</kbd> pastes normally. Double-clicking and the number shortcuts
+follow the same setting. <kbd>⌥</kbd><kbd>return</kbd> always pastes.
+
+**Paste as Plain Text** pastes only the text. For a file, that's its path instead of the file. An
+image has no text, so it always pastes as an image.
 
 **Edit Entry** opens a text entry for editing. <kbd>⌘</kbd><kbd>return</kbd> saves the change to
 the same entry and puts it on the clipboard. <kbd>return</kbd> starts a new line, and <kbd>esc</kbd>
-cancels.
+cancels. An entry can be up to 32,000 characters long.
+
+**Copy Text** reads the text in a copied image, or an image file, and puts it on the clipboard. The
+text is recognized on your Mac. If the image has no text, you see **No text found**.
 
 Pasting needs the [Accessibility permission](/docs/permissions).
 
@@ -60,12 +69,13 @@ oldest entry, it shows **Nothing left to paste** instead of starting over.
 
 ## What it keeps
 
-- **Text**, with a preview.
-- **Images**, like screenshots, saved as PNG files.
+- **Text**, with a preview. Text longer than 32,000 characters isn't recorded.
+- **Images**, like screenshots, saved as PNG files. When you paste an image, a terminal receives the
+  path of its saved file, because terminals ignore image data.
 - **Files you copy in Finder.** Tinycast saves a reference to the file in its current location, not
   a copy of the file. Up to 32 files per copy are recorded. When you paste, apps receive the file
   itself, and text fields receive its path.
-- **Colors.** A copied `#FF5733`, `rgb(…)` or `hsl(…)` is shown as a color swatch.
+- **Colors.** A copied `#FF5733`, `rgb(…)`, `hsl(…)` or `oklch(…)` is shown as a color swatch.
 
 If a file has been moved or deleted since you copied it, it stays in your history, because its old
 location can still be useful. Pasting it shows a message instead of failing silently. For file
@@ -100,8 +110,8 @@ a common domain ending, so `Safari.app`, `report.pdf` and `index.html` stay text
 - They come first in both the full list and your search results.
 - <kbd>⌘</kbd><kbd>1</kbd> to <kbd>⌘</kbd><kbd>9</kbd>, then <kbd>⌘</kbd><kbd>0</kbd>, act on the
   first ten visible pinned entries.
-- **Pinned entries are never removed by the retention limit.** **Clear history** still removes
-  everything.
+- **Pinned entries are never removed by the retention limit.** **Clear history** and **Delete All
+  Entries** keep them too. To remove a pinned entry, use **Delete Entry**.
 - Pasting a pinned entry doesn't change its position.
 - **Unpinning an entry makes it the newest entry**, instead of returning it to an old date group.
 
@@ -131,11 +141,11 @@ This setting isn't included in [backups](/docs/reference/backup).
 | Paste Sequentially shortcut    | Any shortcut                                                      | None                       |
 | Keep history for               | 1 Day · 1 Week · 1 Month · 3 Months · 6 Months · 1 Year · Forever | **3 Months**               |
 | Search text in images and PDFs | On · Off                                                          | **Off**                    |
-| Default action                 | Paste · Copy to Clipboard                                         | **Paste**                  |
-| Disabled Applications          | A list of apps                                                    | Keychain Access, Passwords |
-| Clear history                  | Removes every saved clip and image                                | None                       |
+| Default action                 | Paste · Copy to Clipboard · Paste as Plain Text                   | **Paste**                  |
+| Excluded Applications          | A list of apps                                                    | Keychain Access, Passwords |
+| Clear history                  | Removes every entry except pinned ones                            | None                       |
 
-**Disabled Applications** includes Keychain Access and Passwords by default, so Tinycast never
+**Excluded Applications** includes Keychain Access and Passwords by default, so Tinycast never
 records what you copy from them. You can add your own apps. Copies that apps mark as confidential
 are also skipped.
 

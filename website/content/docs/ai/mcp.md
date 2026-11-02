@@ -1,14 +1,14 @@
 ---
 title: MCP servers
-description: Give AI Chat tools from Model Context Protocol servers, remote or running on your Mac.
+description: Give AI chats tools from Model Context Protocol servers, remote or running on your Mac.
 ---
 
 [Model Context Protocol](https://modelcontextprotocol.io) servers provide tools a model can call, like
-reading a folder, searching an issue tracker or looking something up. When you add a server, AI Chat
-gives its tools to the model during your conversations.
+reading a folder, searching an issue tracker or looking something up. When you add a server,
+Tinycast gives its tools to the model during your conversations.
 
 Turn it on in **Settings → AI → MCP Servers → Enable MCP servers**. It's **off** by default, and it
-only applies while [AI Chat](/docs/ai) is on. While either one is off, Tinycast doesn't contact any
+only applies while [AI](/docs/ai) is on. While either one is off, Tinycast doesn't contact any
 server or run any server process.
 
 ## Adding a server
@@ -64,6 +64,10 @@ reply with a spinner while the tool runs. Consecutive calls share one line, whic
 call while it runs, then the number of calls and any failures. Click the line to see each call. The
 reply continues after it, and the calls are saved with the chat.
 
+In the [AI Chat window](/docs/ai#the-ai-chat-window), **+ → Tools** chooses the servers for the open
+chat. Turn off **Use Tools** to offer none, or turn off single servers under **Servers**. The choice
+lasts for that chat only and isn't saved. If the chat's model can't call tools, the menu says so.
+
 ### Talking to one server
 
 Start a message with a handle, like `@filesystem list my desktop`. A tools icon after your text shows
@@ -91,6 +95,10 @@ OpenAI Compatible endpoints) and to the installed **Codex** and **Claude** comma
 commands, the command-line tool calls the tools itself. The servers, the confirmation and the rows in
 the reply work the same as everywhere else, except that OAuth servers you aren't signed in to are
 left out. Tinycast never changes either command's settings.
+
+When a chat offers servers to Codex or Claude, the model may use anything those servers' tools do,
+like running a command or reading a file. The command's own built-in tools stay off, and every call
+still goes through the server's **Trust** setting.
 
 Your own Codex and Claude MCP servers aren't used in a Tinycast chat. Claude is told to use only
 Tinycast's server list. Codex receives Tinycast's servers under their own names, like
@@ -128,8 +136,8 @@ command, and Tinycast doesn't pass any servers to it. The Providers row tells yo
   rounds it used. With Codex, the limit counts individual tool calls instead of rounds, which stops
   a runaway reply sooner. With Unlimited, a reply only ends when the model finishes, when you click
   **Stop**, or, on an API connection, when the tool history passes 1 MB. The reply keeps running
-  while the palette is hidden, and every round is billed by your provider or counted against your
-  plan.
+  while the palette is hidden or the window is closed, and every round is billed by your provider
+  or counted against your plan.
 - Each tool result, and the total of all results in one reply, has a size limit.
 - Servers start when you use chat and stop after **10 minutes** without use, or when Tinycast quits.
   While Codex or Claude is the chat model, a server that runs on your Mac is started by that command

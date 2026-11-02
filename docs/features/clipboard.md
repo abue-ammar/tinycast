@@ -438,7 +438,7 @@ returns false, the coordinator raises a HUD, and the row survives — history is
 happened, and the recorded path is still the answer to "where was it?". The preview says so in
 place, and the Path row keeps showing where the file used to be.
 
-`FilePreviewThumbnailer` is the row tile and the preview still. `QLThumbnailGenerator` is the only
+`FilePreviewThumbnail` is the row tile and the preview still. `QLThumbnailGenerator` is the only
 thing that renders a *content* thumbnail for any type — a video's poster frame, a PDF's first page
 — and with `representationTypes: .all` it falls back to the type icon itself, so every file paints
 something through one path. It copies `ImageThumbnail`'s shape exactly: two byte-bounded caches

@@ -28,16 +28,28 @@ If there's nothing to join, a short message says **Nothing to join right now**.
 ### The join card
 
 The card appears a set time before a meeting starts and stays for the same amount of time after,
-but never past the meeting's end. **Show the join card** sets that time: 1, 2, **5** (default), 10
-or 15 minutes.
+but never past the meeting's end. **Show the meeting card** sets that time: 1, 2, **5** (default),
+10 or 15 minutes.
 
 | Action (<kbd>⌘</kbd><kbd>K</kbd>) | Shortcut                      |
 | --------------------------------- | ----------------------------- |
 | Join Meeting                      | <kbd>return</kbd>             |
 | Copy Meeting Link                 | <kbd>⌘</kbd><kbd>return</kbd> |
-| Open in Calendar                  |                               |
+| Open in Calendar                  | <kbd>⌘</kbd><kbd>O</kbd>      |
+| Show Details                      | <kbd>⌘</kbd><kbd>I</kbd>      |
 
-A meeting without a link opens in Calendar instead.
+A meeting without a link opens in Calendar instead. If another calendar app is your default,
+**Open in Calendar** opens that app.
+
+These actions work the same on every meeting row: the card, the Meetings section in search and My
+Schedule.
+
+### Meeting details
+
+**Show Details** opens a page with the meeting's day, time and calendar, its location, the
+attendees and their replies, and the description. <kbd>return</kbd>, <kbd>⌘</kbd><kbd>return</kbd>,
+<kbd>⌘</kbd><kbd>O</kbd> and <kbd>⌘</kbd><kbd>K</kbd> work on the page the same way they do on the
+row.
 
 ## Which links it finds
 
@@ -49,6 +61,7 @@ Tinycast checks the event's URL, location and notes, in that order. It recognize
   link at the top of an invite never wins over the Meet link below it.
 - Links that aren't meetings, like `zoom.us/download` or a Meet dial-in page, are ignored.
 - **Zoom and Teams open in their desktop apps** if they're installed, and in the browser otherwise.
+  Links open in your default browser, or in the browser you choose in **Open Meeting Links In**.
 - **Google Meet opens with the right account.** If you're signed in to several Google accounts, the
   link opens with the account whose calendar has the meeting, instead of the account chooser.
 - **Copy Meeting Link** copies the link exactly as it appears in the event.
@@ -57,13 +70,13 @@ Declined, canceled, all-day and finished events are always skipped.
 
 ## Commands
 
-| Command           | Does                                                           |
-| ----------------- | -------------------------------------------------------------- |
-| Join Next Meeting | Opens the card's meeting, the running one, or the next one     |
-| My Schedule       | Shows your meetings as a list in the palette                   |
-| Create Event      | Asks for a title, start time and duration, then adds the event |
-| Copy Meeting Link | Copies the next meeting's link                                 |
-| Open in Calendar  | Opens the next meeting in Calendar                             |
+| Command           | Does                                                                                            |
+| ----------------- | ----------------------------------------------------------------------------------------------- |
+| Join Next Meeting | Opens the card's meeting, the running one, or the next one                                      |
+| My Schedule       | Shows your meetings as a list in the palette                                                    |
+| Create Event      | Opens a form for a title, start time and duration, then adds the event to your default calendar |
+| Copy Meeting Link | Copies the next meeting's link                                                                  |
+| Open in Calendar  | Opens the next meeting in Calendar                                                              |
 
 Each command has a checkbox, a shortcut recorder and an alias field in **Settings → Calendar**.
 
@@ -71,14 +84,14 @@ Each command has a checkbox, a shortcut recorder and an alias field in **Setting
 
 Upcoming meetings also appear in launcher search, in their own **Meetings** section.
 **Upcoming meetings in launcher** sets how many: **1 next**, **3 next**, **5 next** (default) or
-**All**. **Show in launcher** removes meetings and calendar commands from search, while the join
+**All**. **Show in launcher** removes meetings from search. The calendar commands stay, and the join
 card, the menu bar item and your shortcuts keep working.
 
 ### My Schedule
 
 My Schedule lists your remaining events for the days Tinycast reads, grouped by day. Type to filter.
-<kbd>return</kbd> joins the selected meeting, and <kbd>⌘</kbd><kbd>K</kbd> offers
-**Open in Calendar**.
+<kbd>return</kbd> joins the selected meeting, and <kbd>⌘</kbd><kbd>K</kbd> offers the same
+actions as the join card.
 
 ## How far ahead it reads
 
@@ -92,6 +105,9 @@ My Schedule lists your remaining events for the days Tinycast reads, grouped by 
 - It only joins meetings that start **after** you turned it on.
 - It joins each meeting **once**, even if you decline the confirmation.
 - **Confirm before joining** (on by default) asks you first.
+- **Only join known meeting services** (off by default) skips events whose only link is a plain web
+  link, like a booking page or a document. The join card, the menu bar and your shortcut still offer
+  those links.
 
 ## Camera preview
 
@@ -107,13 +123,14 @@ the preview opens and turns off as soon as it closes. It's the same camera scree
 The calendar has its **own** menu bar item, separate from the Tinycast icon. You can show either one,
 both or neither.
 
-| Setting                        | Options                                                                  | Default                          |
-| ------------------------------ | ------------------------------------------------------------------------ | -------------------------------- |
-| Calendar in Menu Bar           | Disabled · Meeting Icon · Meeting Title                                  | **Disabled**                     |
-| Days to Show                   | Today · Today and Tomorrow · Next 7 Days                                 | **Today and Tomorrow**           |
-| Show Upcoming Events           | Today · 2 · 5 · 10 · 30 minutes before                                   | **Today**                        |
-| Only show events with meetings | On · Off                                                                 | **On**                           |
-| Hide Current Event             | Keep visible, show time left · Automatically · After 5, 10 or 30 minutes | **Keep visible, show time left** |
+| Setting                                | Options                                                                  | Default                          |
+| -------------------------------------- | ------------------------------------------------------------------------ | -------------------------------- |
+| Calendar in Menu Bar                   | Disabled · Meeting Icon · Meeting Title                                  | **Disabled**                     |
+| Days to Show                           | Today · Today and Tomorrow · Next 7 Days                                 | **Today and Tomorrow**           |
+| Show Upcoming Events                   | Today · 2 · 5 · 10 · 30 minutes before                                   | **Today**                        |
+| Only show events with meetings         | On · Off                                                                 | **On**                           |
+| Hide when there are no upcoming events | On · Off                                                                 | **Off**                          |
+| Hide Current Event                     | Keep visible, show time left · Automatically · After 5, 10 or 30 minutes | **Keep visible, show time left** |
 
 With **Meeting Title**, the item shows something like `Standup • in 4 min`. When there are no more
 events today, it shows **No upcoming events**. "Today" includes the first 30 minutes after midnight.
@@ -125,15 +142,20 @@ with **My Schedule** (<kbd>⌘</kbd><kbd>O</kbd>) and **Calendar Settings…** (
 **Clicking the item itself never joins a meeting**, so a stray click in the menu bar can't start a
 call.
 
+With **Hide when there are no upcoming events** on, the item leaves the menu bar while it has no
+event to show, and comes back when one is due.
+
 Dragging the item out of the menu bar sets it to Disabled.
 
 ## Choosing calendars
 
-The **Calendars** list at the bottom of the pane has a checkbox for each calendar. Holidays and
-Birthdays are the ones people usually turn off. Calendars you add later are on by default.
+The **Calendars** list at the bottom of the pane has a search field and a checkbox for each
+calendar. Holidays and Birthdays are the ones people usually turn off. Calendars you add later are
+on by default.
 
 ## Backups
 
 Three settings are never included in [backups](/docs/reference/backup), because each one is a form
 of consent: the calendar switch itself, **Auto Join Meetings** and **Camera Preview**. Your calendar
-checkboxes also stay on this Mac. Other settings, like the menu bar options, are backed up as usual.
+checkboxes and **Open Meeting Links In** also stay on this Mac. Other settings, like the menu bar
+options, are backed up as usual.

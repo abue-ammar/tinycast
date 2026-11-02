@@ -312,7 +312,7 @@ Stopped.
 
 ## Settings
 
-`MCPSettingsSection` is a section inside Settings → AI, the way `AICommandSection` is. Each row leads
+`MCPSettingsSection` is a section inside Settings → AI, the way its commands section is. Each row leads
 with the handle, because that is the half a reader has to type, then the live status and the
 transport. `MCPServerEditor` reaches `MCPCoordinator` through its environment. The editor holds name,
 HTTP or command, Header or OAuth authentication, optional client ID/secret, one Sign In / Cancel / Sign Out button and live

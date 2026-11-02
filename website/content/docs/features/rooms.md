@@ -35,10 +35,12 @@ Run **Switch Room**. The selected room is previewed over a blurred view of your 
 | <kbd>tab</kbd> / <kbd>⇧</kbd><kbd>tab</kbd> | Try the next or previous layout that fits this display |
 | <kbd>return</kbd>                           | Enter the room                                         |
 | <kbd>⌘</kbd><kbd>K</kbd>                    | Remember Arrangement, Choose Windows, Delete Room      |
-| <kbd>⌘</kbd><kbd>delete</kbd>               | Delete the room; its windows stay open                 |
+| <kbd>⌘</kbd><kbd>N</kbd>                    | Create a room named after your search                  |
+| <kbd>⌃</kbd><kbd>X</kbd>                    | Delete the room; its windows stay open                 |
 
-Every room is also a launcher entry, and each one can have its own global shortcut in
-**Settings → Window Management → Rooms**.
+Every room is also a launcher entry, and each one can have its own global shortcut and alias in
+**Settings → Window Management → Rooms**. **Show rooms in launcher** (on by default) takes every room
+and the two room commands out of search at once.
 
 ## Layouts
 

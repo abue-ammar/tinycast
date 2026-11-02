@@ -175,8 +175,8 @@ Two details carry their weight:
   original frame, because rule 1 captures once and the intermediate actions never overwrite it. A stack
   has no defensible answer for what a _second_ Restore press should do.
 
-Rule 1 also delivers the "works for windows Tinycast never moved" requirement: the capture happens in
-`WindowMover.perform` before a single write.
+Rule 1 captures the starting frame before the first placement. Restore itself is a no-op until a
+placement has been recorded. `WindowMover` leaves `cycleTimeout` unset, so waiting never resets a cycle.
 
 **Cycling covers the four halves and Center Half only**, and `WindowCycle` picks one of three modes,
 `.off` by default so a repeat press stays idempotent unless asked otherwise:
@@ -356,7 +356,7 @@ and every shortcut stays editable afterwards.
 
 - **`AppEntry.Kind.windowCommand`** — entries are `window-command:<id>`, published by
   `AppIndex.setWindowCommandsVisible(_:)` between the system-action and custom-command slices.
-  `LauncherView.rows` mirrors that position with a "Window Management" section; the slice order is the
+  `LauncherList.rows` mirrors that position with a "Window Management" section; the slice order is the
   flat-selection invariant, so the two must move together.
 - **`HotKeyAction.windowCommand(id:)`** — persisted under
   `hotkey.windowCommand.<raw-id>`, matching the shared `HotKeyAction.defaultsKey` convention. Unlike
