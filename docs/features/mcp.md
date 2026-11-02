@@ -61,7 +61,8 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   chain of calls is also honest work, which is why it is a choice and not a constant. Unlimited
   hands the loop no round cap, so the model or Stop ends the turn, even while the palette is hidden.
   Every API turn also ends once its added text, call arguments, results and opaque response items
-  reach `maxTurnHistoryBytes`, since every round resends all of it. Each result is cut to
+  reach `maxTurnHistoryBytes`, since every round resends all of it. History-size exhaustion is
+  reported separately from reaching the selected round cap. Each result is cut to
   `maxResultBytes`, and a turn's results together to `maxTurnResultBytes`, because tool output is
   appended inside the turn and so never passes through `ChatSession.boundedContext`. The same
   number bounds a CLI route, in the terms its own client counts in: Claude takes it as

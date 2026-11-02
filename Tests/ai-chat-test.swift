@@ -367,8 +367,8 @@ struct AIChatTests {
             base.requests.count == 16,
             "the loop stops on the round whose calls and results fill the turn's history")
         expect(
-            failure?.contains("16 rounds") == true,
-            "and the turn fails with a sentence naming the rounds it ran")
+            failure == String(localized: "Stopped because this turn's tool history is too large."),
+            "and the turn names the history-size limit that stopped it")
     }
 
     static func toolOutputIsBoundedBeforeItIsBilled() async {

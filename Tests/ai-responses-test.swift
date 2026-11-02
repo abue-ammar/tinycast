@@ -107,7 +107,6 @@ struct AIResponsesTests {
         let output = outputItems(callID: "call_1")
         let frames =
             try frame(["type": "response.output_item.added", "item": ["type": "reasoning"]])
-            + frame(["type": "response.reasoning_summary_text.delta", "delta": "Looking it up"])
             + frame(["type": "response.output_text.delta", "delta": "Checking…"])
             + frame(["type": "response.function_call_arguments.delta", "delta": "{\"pa"])
         let complete = try completed(
@@ -134,7 +133,7 @@ struct AIResponsesTests {
                     if case .text = $0 { return true }; return false
                 }.count == 1,
                 "the completed output does not repeat streamed text")
-            expect(events.contains(.reasoning("Looking it up")), "reasoning reaches its own fold")
+            expect(events.contains(.thinking), "opaque reasoning still reports thinking activity")
             expect(
                 events.contains(
                     .toolCallRequested(AIToolCall(id: "call_1", name: tool.name, arguments: "{}"))),
@@ -251,6 +250,11 @@ struct AIResponsesTests {
                 expect(false, "opaque reasoning must not bypass the turn budget")
             } catch {
                 expect(base.requests.count == 1, "a full turn is never billed for another round")
+                expect(
+                    error.localizedDescription
+                        == String(
+                            localized: "Stopped because this turn's tool history is too large."),
+                    "fixed and unlimited turns name the size limit rather than the round cap")
             }
         }
     }

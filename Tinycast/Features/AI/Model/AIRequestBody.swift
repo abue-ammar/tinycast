@@ -22,9 +22,6 @@ enum AIRequestBody {
             "store": false
         ]
         if let instructions = input.instructions?.nonEmpty { body["instructions"] = instructions }
-        if let effort = configuration.effort, effort != AIConnection.ReasoningOptions.providerDefault {
-            body["reasoning"] = ["effort": effort]
-        }
         if !input.tools.isEmpty {
             body["tools"] = input.tools.map {
                 [

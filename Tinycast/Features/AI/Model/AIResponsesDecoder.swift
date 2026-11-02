@@ -13,7 +13,6 @@ struct AIResponsesDecoder: Sendable {
             let event = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
             let type = event["type"] as? String
         else {
-            isTerminal = true
             throw AIProviderError.malformedResponse
         }
         switch type {
@@ -22,18 +21,10 @@ struct AIResponsesDecoder: Sendable {
                 throw AIProviderError.malformedResponse
             }
             return delta.isEmpty ? [] : [.text(delta)]
-        case "response.reasoning_summary_text.delta":
-            guard let delta = event["delta"] as? String else {
-                throw AIProviderError.malformedResponse
-            }
-            return [.thinking, .reasoning(delta)]
         case "response.output_item.added":
             let item = event["item"] as? [String: Any]
             return item?["type"] as? String == "reasoning" ? [.thinking] : []
-        case "response.reasoning_summary_part.added":
-            return [.thinking, .reasoning("\n\n")]
         case "response.completed":
-            isTerminal = true
             guard let response = event["response"] as? [String: Any],
                 let output = response["output"] as? [[String: Any]]
             else { throw AIProviderError.malformedResponse }
@@ -49,15 +40,15 @@ struct AIResponsesDecoder: Sendable {
             if let usage = response["usage"] as? [String: Any] {
                 events.append(.usage(Self.usage(usage)))
             }
+            isTerminal = true
             return events + [.finished]
         case "response.failed", "response.incomplete", "error":
-            isTerminal = true
             let response = event["response"] as? [String: Any] ?? event
             let error = response["error"] as? [String: Any]
             let details = response["incomplete_details"] as? [String: Any]
             throw AIProviderError.responseFailed(
                 AIProviderFailure.described(
-                    String(localized: "The provider stopped the response with an error."),
+                    AIProviderFailure.stopped,
                     said: error?["message"] as? String ?? response["message"] as? String
                         ?? details?["reason"] as? String,
                     secrets: secrets))

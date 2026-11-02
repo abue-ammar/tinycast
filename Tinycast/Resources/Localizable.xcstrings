@@ -112336,6 +112336,64 @@
         }
       }
     },
+    "Stopped because this turn's tool history is too large." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gestoppt, weil der Werkzeugverlauf dieser Gesprächsrunde zu groß ist."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stopped because this turn's tool history is too large."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se detuvo porque el historial de herramientas de este turno es demasiado grande."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrêt car l’historique des outils de ce tour est trop volumineux."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このターンのツール履歴が大きすぎるため停止しました。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이번 턴의 도구 기록이 너무 커서 중지했습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Interrompido porque o histórico de ferramentas deste turno é muito grande."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Остановлено: история вызовов инструментов в этом ходе слишком велика."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已停止，因为本轮的工具调用历史过大。"
+          }
+        }
+      }
+    },
     "Storage" : {
       "localizations" : {
         "de" : {

@@ -410,11 +410,13 @@ between the closing tag and the answer, and flushes an unclosed block as reasoni
 system messages are lifted into its top-level `system` field; the other HTTP routes keep system
 messages in the OpenAI message array.
 
-`AIResponsesDecoder` handles Responses text and refusal deltas, reasoning summaries, usage and
+`AIResponsesDecoder` handles Responses text and refusal deltas, thinking activity, usage and
 terminal failures behind the same SSE parser. It releases function calls only after
 `response.completed`, using the complete `response.output` items rather than partially streamed
 arguments. A failed, incomplete or truncated response cannot release a tool call. Tool definitions
 set `strict: false` so the MCP server's optional parameters retain their existing meaning.
+The direct OpenAI route keeps the model's default reasoning and does not request visible summaries;
+its encrypted reasoning items are replayed between tool rounds independently of the thinking indicator.
 
 `AIProviderFactory` resolves the selection, validates an API endpoint, reads an API key at the last
 possible moment and returns `AppleIntelligenceProvider`, `HTTPAIProvider`, `CodexInstalledProvider`

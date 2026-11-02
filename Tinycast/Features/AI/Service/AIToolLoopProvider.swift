@@ -80,8 +80,11 @@ struct AIToolLoopProvider: AIProvider {
                 messages.append(AIMessage(role: .tool, text: "", toolResult: result))
             }
         }
-        throw AIProviderError.responseFailed(
-            String(localized: "Stopped after \(rounds) rounds of tool calls."))
+        let message =
+            carried >= Self.maxTurnHistoryBytes
+            ? String(localized: "Stopped because this turn's tool history is too large.")
+            : String(localized: "Stopped after \(rounds) rounds of tool calls.")
+        throw AIProviderError.responseFailed(message)
     }
 
     /// One pass over the base route: text flows straight to the transcript, calls are collected.

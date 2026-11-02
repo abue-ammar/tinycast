@@ -138,7 +138,7 @@ struct AIStreamDecoder: Sendable {
             isTerminal = true
             throw AIProviderError.responseFailed(
                 AIProviderFailure.providerMessage(in: data)
-                    .map { AIProviderFailure.kept($0, secrets: secrets) } ?? Self.stopped)
+                    .map { AIProviderFailure.kept($0, secrets: secrets) } ?? AIProviderFailure.stopped)
         }
         var events: [AIStreamEvent] = []
         if let choice = chunk.choices?.first {
@@ -225,13 +225,11 @@ struct AIStreamDecoder: Sendable {
         }
     }
 
-    private static let stopped = String(localized: "The provider stopped the response with an error.")
-
     private static func anthropicErrorMessage(_ type: String?) -> String {
         switch type {
         case "authentication_error": return String(localized: "API key rejected — check it in Settings.")
         case "rate_limit_error": return String(localized: "Rate limit reached — try again later.")
-        default: return stopped
+        default: return AIProviderFailure.stopped
         }
     }
 }
