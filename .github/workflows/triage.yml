@@ -21,24 +21,11 @@ jobs:
         with:
           script: |
             const body = [
-              "Thanks for opening this.",
+              "Thanks for opening this! Tinycast stays small and focused, so new features are chosen",
+              "carefully and smaller conveniences are usually closed.",
               "",
-              "A few things worth knowing up front:",
-              "",
-              "**Tinycast aims to stay small and focused**, so it is extremely selective about new",
-              "features. Every request is read, and the ideas that truly matter are the ones taken on.",
-              "Smaller conveniences are usually closed.",
-              "",
-              "> [!WARNING]",
-              "> **Don't write code for this yet.** This issue has to be labelled `approved` first.",
-              ">",
-              "> 1. Wait for a maintainer to add the `approved` label. That label is the only green light —",
-              ">    a reply, a reaction or silence is not one.",
-              "> 2. Once it's there, open your pull request with `Closes #" + context.issue.number + "` in the description.",
-              ">",
-              "> Docs-only changes (`*.md`, `docs/`, `website/`) need no approval.",
-              "",
-              "Thanks for opening this! A maintainer will take a look soon.",
+              "> [!TIP]",
+              "> **Planning to build this?** Discussing the approach here first is highly preferred.",
             ].join("\n");
             await github.rest.issues.createComment({
               owner: context.repo.owner,
