@@ -92,7 +92,10 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   text offset, so `segments` places it where it happened, like a search or a tool call; each block
   is timed until the answer resumes. The transcript folds each under "Thought for Ns", drawing
   `ChatReasoning.displayText` — the stored text without the blank lines a route closes it with;
-  `message_thinking` keeps them; `requestMessages` never sends them back. A route that only says
+  `message_thinking` keeps them; `requestMessages` never sends them back. Settings → AI → Expand
+  thinking (`aiExpandsReasoning`, off by default) starts every fold open, so thinking streams in
+  the open; it rides the `chatExpandsReasoning` environment value from each transcript's host, and a
+  fold the reader has clicked keeps their choice over it. A route that only says
   it is thinking still just shows "Thinking…". How much there is to read is the route's call:
   Claude streams full summaries, while Grok's CLI sends a line or two in the clear and the rest of
   its reasoning encrypted, so a Grok fold is short by design, not by truncation. An OpenAI-shaped

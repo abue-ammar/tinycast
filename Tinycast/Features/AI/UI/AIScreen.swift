@@ -181,7 +181,9 @@ private struct AIChatView: View {
                     status: chat.liveStatus,
                     usage: chat.usage,
                     surface: .palette,
-                    onChoose: chat.isStreaming || !settings.choicesEnabled ? nil : onChoose)
+                    onChoose: chat.isStreaming || !settings.choicesEnabled ? nil : onChoose
+                )
+                .environment(\.chatExpandsReasoning, settings.expandsReasoning)
             }
         }
         .onAppear(perform: onAppear)

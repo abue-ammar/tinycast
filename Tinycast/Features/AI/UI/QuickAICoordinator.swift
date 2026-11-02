@@ -22,6 +22,7 @@ final class QuickAICoordinator {
 
     private var chat: AIChatState { chats.quickAI }
     private var chatCoordinator: AIChatCoordinator { core.aiChatCoordinator }
+    var aiSettings: AISettingsStore { core.aiSettings }
 
     func show() {
         guard settings.aiEnabled else { return }

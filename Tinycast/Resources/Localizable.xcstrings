@@ -52137,6 +52137,58 @@
         }
       }
     },
+    "Expand thinking" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denken ausklappen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expandir el razonamiento"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Développer la réflexion"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "思考を展開"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "생각 펼치기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expandir o raciocínio"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Разворачивать размышления"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "展开思考"
+          }
+        }
+      }
+    },
     "Expanded" : {
       "comment" : "Launcher window mode option",
       "localizations" : {
@@ -120226,6 +120278,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "没有可发送的内容。"
+          }
+        }
+      }
+    },
+    "Thinking blocks start expanded instead of collapsed." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Denkblöcke beginnen ausgeklappt statt eingeklappt."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los bloques de razonamiento empiezan expandidos en lugar de plegados."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les blocs de réflexion s'affichent dépliés au lieu de repliés."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "思考ブロックは折りたたまれず、最初から展開されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "생각 블록이 접힌 상태가 아니라 펼쳐진 상태로 시작합니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os blocos de raciocínio começam expandidos em vez de recolhidos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Блоки размышлений сразу развёрнуты, а не свёрнуты."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "思考块默认展开而不是折叠。"
           }
         }
       }
