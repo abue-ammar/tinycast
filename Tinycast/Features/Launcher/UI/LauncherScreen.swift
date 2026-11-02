@@ -204,23 +204,6 @@ struct LauncherScreen: PaletteScreen {
         return Binding(get: { vm.commandArguments[key] ?? "" }, set: { vm.commandArguments[key] = $0 })
     }
 
-    private func argumentValues(for entry: AppEntry) -> [String: String] {
-        if entry.kind == .quicklink {
-            guard let quicklink = quicklink(for: entry) else { return [:] }
-            return QuicklinkArgumentsAccessory.values(for: quicklink, vm: vm)
-        }
-        if entry.kind == .customCommand {
-            guard let command = core.customCommands.command(entryID: entry.id) else { return [:] }
-            return CustomCommandArgumentsAccessory.values(for: command, vm: vm)
-        }
-        var values: [String: String] = [:]
-        for argument in core.extensionCoordinator.commandArguments(for: entry) ?? [] {
-            let typed = vm.commandArguments[PaletteState.argumentKey(entry.id, argument.name)] ?? ""
-            if !typed.isEmpty { values[argument.name] = typed }
-        }
-        return values
-    }
-
     private func quicklink(for entry: AppEntry) -> Quicklink? {
         Quicklink.id(fromEntryID: entry.id).flatMap(core.quicklinks.quicklink)
     }
@@ -293,7 +276,7 @@ struct LauncherScreen: PaletteScreen {
         case .meeting(let meeting): core.calendarCoordinator.activateMeeting(id: meeting.id)
         case .entry(let app):
             core.launcherCoordinator.launch(
-                app, searchQuery: vm.query, arguments: argumentValues(for: app))
+                app, searchQuery: vm.query, arguments: core.launcherCoordinator.argumentValues(for: app))
         case .file(let result): core.fileSearchCoordinator.open(result)
         case .fallback(let fallback, _):
             core.fallbackCoordinator.run(fallback, query: vm.query)
@@ -348,6 +331,7 @@ struct LauncherScreen: PaletteScreen {
         case .restart: return restart(at: selection)
         case .edit: return editItem(at: selection)
         case .copyPath: return copyQuicklink(at: selection)
+        case .copyFile: return copyDeepLink(at: selection)
         case .favoriteSlot(let index): return launchFavorite(at: index)
         case .copyCalculation: return copyCalculation(at: selection)
         case .openInApp, .showDetails:
@@ -362,6 +346,14 @@ struct LauncherScreen: PaletteScreen {
             let quicklink = quicklink(for: app)
         else { return false }
         core.quicklinkCoordinator.copyQuicklink(id: quicklink.id)
+        return true
+    }
+
+    private func copyDeepLink(at selection: Int) -> Bool {
+        guard let app = entry(at: selection),
+            let deepLink = core.launcherCoordinator.deepLink(for: app)
+        else { return false }
+        core.launcherCoordinator.copyDeepLink(deepLink)
         return true
     }
 
@@ -541,7 +533,7 @@ struct LauncherScreen: PaletteScreen {
             },
             onActivate: {
                 core.launcherCoordinator.launch(
-                    $0, searchQuery: vm.query, arguments: argumentValues(for: $0))
+                    $0, searchQuery: vm.query, arguments: core.launcherCoordinator.argumentValues(for: $0))
             },
             onActions: { app in
                 if let index = rows.firstIndex(of: .entry(app)) { vm.selection = index }

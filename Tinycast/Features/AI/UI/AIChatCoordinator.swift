@@ -87,6 +87,21 @@ final class AIChatCoordinator {
         showWindow(applyingOpenPolicy: true)
     }
 
+    /// A link to one saved chat opens the window on it, whatever the open policy would pick.
+    func showChat(id: UUID) {
+        guard settings.aiEnabled else { return }
+        showWindow()
+        openChat(id: id)
+    }
+
+    /// A link's text joins the unsent line; sending it stays the reader's call.
+    func showWindow(appendingDraft text: String) {
+        guard settings.aiEnabled else { return }
+        showWindow(applyingOpenPolicy: true)
+        let chat = chats.window
+        chat.draft = chat.draft.isEmpty ? text : chat.draft + "\n" + text
+    }
+
     /// The window's views read these through the coordinator, never through `AppCore`.
     var history: ChatHistoryStore { core.chatHistory }
     var aiSettings: AISettingsStore { core.aiSettings }
@@ -151,6 +166,10 @@ final class AIChatCoordinator {
 
     func title(of chat: AIChatState) -> String {
         core.chatHistory.conversation(id: chat.session.id)?.displayTitle ?? chat.session.title
+    }
+
+    func copyDeepLink(toChat id: UUID) {
+        core.deepLinkCoordinator.copyLink(toChat: id)
     }
 
     func copyChat(id: UUID) {

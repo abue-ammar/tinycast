@@ -49,6 +49,10 @@ Services read — which is what keeps it pure and covered by `Tests/quicklink-te
 | a bare host with a letter-led TLD (`github.com/a?b=c`) | `.web`, `https://` prepended                                      |
 | anything else                                          | nothing — the link is rejected                                    |
 
+A `.deeplink` in Tinycast's own scheme never leaves the process: `QuicklinkCoordinator` hands it to
+`DeepLinkCoordinator` as `source: .tinycast`, so it runs without asking and without activating
+Tinycast. See [deeplinks.md](deeplinks.md).
+
 Two false positives are excluded deliberately, because both are commoner than the schemes they would
 shadow: a one-letter "scheme" is a Windows drive letter, and a `scheme:` whose remainder is all
 digits is a `host:port`. A literal space is rescued by encoding it; anything else illegal is a real

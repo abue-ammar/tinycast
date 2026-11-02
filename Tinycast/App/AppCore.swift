@@ -236,10 +236,16 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var quickAICoordinator = QuickAICoordinator(
         chats: aiChats, settings: settings, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
+    @ObservationIgnored private(set) lazy var deepLinkCoordinator = DeepLinkCoordinator(
+        scheme: AppURLScheme.current, settings: settings, hotKeys: hotKeys,
+        paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
+        core: self)
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
     private(set) var isShowingDialog = false
+    /// A link that launched the app can arrive before `start` wires anything; it waits, then runs.
+    @ObservationIgnored private var pendingURLs: [URL]? = []
     var isDimmingPaletteForDialog: Bool { isShowingDialog && windowController.isVisible }
     @ObservationIgnored private lazy var dialogs = DialogController(
         settings: settings,
@@ -415,13 +421,7 @@ final class AppCore {
                 }
             }
             hotKeys.displayName = { [weak self] action in self?.hotKeyDisplayName(for: action) }
-            hotKeys.allowsAction = { [weak self] action in
-                guard let self, visibility.allowsHotKey(action) else { return false }
-                if action == .dictation { return settings.dictationEnabled }
-                // A disabled feature drops its commands from the launcher; their shortcuts go too.
-                guard case .command(let id) = action else { return true }
-                return appIndex.isCommandEnabled(id)
-            }
+            hotKeys.allowsAction = { [weak self] in self?.allowsHotKeyAction($0) ?? false }
             KeyShortcut.displayedHyperChord = { [settings] in
                 guard settings.hyperKey != .none else { return nil }
                 return KeyShortcut.hyperChord(includesShift: settings.hyperKeyIncludesShift)
@@ -469,6 +469,13 @@ final class AppCore {
                 showMessage(String(localized: "Updated to Tinycast \(version.description)"))
             }
         }
+        openPendingURLs()
+    }
+
+    private func openPendingURLs() {
+        let waiting = pendingURLs ?? []
+        pendingURLs = nil
+        waiting.forEach(handleOpenURL)
     }
 
     func handleReopen() {
@@ -482,6 +489,14 @@ final class AppCore {
     }
 
     func handleOpenURL(_ url: URL) {
+        if pendingURLs != nil {
+            pendingURLs?.append(url)
+            return
+        }
+        if deepLinkCoordinator.handles(url) {
+            deepLinkCoordinator.open(url)
+            return
+        }
         guard ExtensionDeepLink.claims(url) else { return }
         guard let route = ExtensionDeepLink.route(url: url) else {
             paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
@@ -493,6 +508,14 @@ final class AppCore {
         case .storeInstall(let install):
             extensionCoordinator.showStoreInstall(install)
         }
+    }
+
+    func allowsHotKeyAction(_ action: HotKeyAction) -> Bool {
+        guard visibility.allowsHotKey(action) else { return false }
+        if action == .dictation { return settings.dictationEnabled }
+        // A disabled feature drops its commands from the launcher; their shortcuts go too.
+        guard case .command(let id) = action else { return true }
+        return appIndex.isCommandEnabled(id)
     }
 
     /// The store-backed half of the conflict message; `HotKeyManager` names the catalogs itself.

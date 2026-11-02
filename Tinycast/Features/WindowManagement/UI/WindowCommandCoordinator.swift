@@ -35,7 +35,12 @@ final class WindowCommandCoordinator {
 
     /// The same funnel for a custom size, so the feature switch gates it identically.
     func runCustomWindowSize(id: UUID) {
-        guard settings.windowManagementEnabled, let size = customSizes.size(id: id) else { return }
+        guard let size = customSizes.size(id: id) else { return }
+        runWindowSize(size)
+    }
+
+    func runWindowSize(_ size: CustomWindowSize) {
+        guard settings.windowManagementEnabled else { return }
         windowMover.perform(size, target: handOffTarget(), gap: CGFloat(settings.windowGap))
     }
 

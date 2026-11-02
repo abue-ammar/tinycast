@@ -663,6 +663,11 @@ final class AppSettings {
         didSet { defaults.set(settingsFileEnabled, forKey: Key.settingsFileEnabled.rawValue) }
     }
 
+    /// Rows a link from outside may run without asking; only `DeepLinkCoordinator` adds to it.
+    var allowedDeepLinks: [String] {
+        didSet { defaults.set(allowedDeepLinks, forKey: Key.allowedDeepLinks.rawValue) }
+    }
+
     /// With no per-app list the bundle follows macOS's languages, so this runs before any lookup.
     static func pinLanguage() {
         UserDefaults.standard.set([storedLanguage.rawValue], forKey: Key.language.rawValue)
@@ -899,5 +904,6 @@ final class AppSettings {
             defaults.object(forKey: Key.supportReminders.rawValue) == nil
             || defaults.bool(forKey: Key.supportReminders.rawValue)
         settingsFileEnabled = defaults.bool(forKey: Key.settingsFileEnabled.rawValue)
+        allowedDeepLinks = defaults.stringArray(forKey: Key.allowedDeepLinks.rawValue) ?? []
     }
 }

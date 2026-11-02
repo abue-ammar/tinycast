@@ -250,7 +250,9 @@ screen has no rows: an empty library would otherwise open a browser with nothing
 `SnippetCoordinator` owns a `SnippetEditorSession`, presented by `SnippetEditorScreen` in
 `PaletteMode.snippetEditor`. **Create Snippet**, **Edit Snippet** (⌘E) in the browser or root search,
 and the settings library's **New Snippet** and **Edit** buttons open this same editor; Settings has no
-second editor. The fields stay inside `Features/Snippets/UI/`, not in the palette shell or the extension form.
+second editor. The **Create Snippet** command alone — from the launcher, a hotkey or a link — starts
+from the text selected in the app in front, read through `AccessibilityText.selection(in:)` and never
+by sending ⌘C; the browser's ⌘N and Settings start empty. The fields stay inside `Features/Snippets/UI/`, not in the palette shell or the extension form.
 
 The template is on the left, with its own **Insert…** placeholder menu, separate from Actions.
 It uses the palette's searchable popup, keeping its existing placeholder groups.

@@ -16,12 +16,23 @@ final class SystemActionCoordinator {
 
     /// The one funnel for every activation route, so no gate can be bypassed.
     func runSystemAction(id: SystemAction.ID) {
-        let target = paletteCoordinator.targetApp
-        if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
-        Task { await perform(SystemActionCatalog.action(id: id), previousApp: target) }
+        run(SystemActionCatalog.action(id: id), volume: nil)
     }
 
-    private func perform(_ action: SystemAction, previousApp: NSRunningApplication?) async {
+    /// A link's level replaces the picker; the action, its gates and its feedback stay the same.
+    func setVolume(_ level: Double) {
+        run(SystemActionCatalog.action(id: .setVolume), volume: Float32(level))
+    }
+
+    private func run(_ action: SystemAction, volume: Float32?) {
+        let target = paletteCoordinator.targetApp
+        if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
+        Task { await perform(action, previousApp: target, volume: volume) }
+    }
+
+    private func perform(
+        _ action: SystemAction, previousApp: NSRunningApplication?, volume: Float32?
+    ) async {
         if action.id == .toggleMicrophoneMute {
             guard !isTogglingMicrophone else { return }
             isTogglingMicrophone = true
@@ -47,8 +58,7 @@ final class SystemActionCoordinator {
         do {
             var feedback: SystemActionFeedback?
             if action.id == .setVolume {
-                let current = try SystemActionRunner.currentVolume()
-                guard let selected = await core.pickVolume(current: current) else { return }
+                guard let selected = try await chosenVolume(volume) else { return }
                 try SystemActionRunner.setVolume(selected)
             } else {
                 feedback = try await SystemActionRunner.run(action.id, previousApp: previousApp)
@@ -65,6 +75,12 @@ final class SystemActionCoordinator {
             await presentFailure(
                 action: action, failure: SystemActionFailure(error.localizedDescription))
         }
+    }
+
+    /// Starts from the current level, so a picker opened by mistake changes nothing.
+    private func chosenVolume(_ preset: Float32?) async throws -> Float32? {
+        if let preset { return preset }
+        return try await core.pickVolume(current: SystemActionRunner.currentVolume())
     }
 
     /// Level and mute actions; macOS draws its HUD only for real media keys.

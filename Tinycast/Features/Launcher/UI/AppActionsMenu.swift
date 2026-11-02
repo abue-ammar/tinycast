@@ -11,6 +11,14 @@ enum AppActionsMenu {
         // A query-driven row lives only for its query, so no preference could outlive it.
         let isPersistent = !CommandCatalog.isQueryDriven(app)
         if isPersistent { items.append(contentsOf: favorites.items) }
+        if let deepLink = core.launcherCoordinator.deepLink(for: app) {
+            items.append(
+                PopoverMenuItem(
+                    title: String(localized: "Copy Deeplink"), systemImage: "link", shortcut: "⇧⌘C"
+                ) {
+                    core.launcherCoordinator.copyDeepLink(deepLink)
+                })
+        }
         if core.launcherRanking.hasRanking(for: app.preferenceKey) {
             items.append(
                 PopoverMenuItem(

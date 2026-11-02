@@ -8,6 +8,7 @@ struct ShortcutRecorder: View {
     var isQuiet = false
 
     @Environment(HotKeyManager.self) private var hotKeys
+    @Environment(\.shortcutDeepLink) private var deepLink
     /// Observed so a modifier-only binding surfaces its warning when the grant changes.
     private var modifierTapMonitor: ModifierTapMonitor { hotKeys.modifierTapMonitor }
     @State private var hovered = false
@@ -47,6 +48,11 @@ struct ShortcutRecorder: View {
                 if hotKeys.recordingAction == old { hotKeys.recordingAction = nil }
             }
             .animation(.easeOut(duration: 0.12), value: hovered)
+            .contextMenu {
+                if let deepLink, let url = deepLink.url(action) {
+                    Button("Copy Deeplink", systemImage: "link") { deepLink.copy(url) }
+                }
+            }
     }
 
     @ViewBuilder

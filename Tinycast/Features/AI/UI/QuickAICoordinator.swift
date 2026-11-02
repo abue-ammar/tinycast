@@ -34,6 +34,13 @@ final class QuickAICoordinator {
         paletteCoordinator.showPalette(mode: .ai)
     }
 
+    /// A link's text, typed but never sent: whether to ask is still the reader's call.
+    func show(draft: String) {
+        guard settings.aiEnabled else { return }
+        applyOpenPolicy()
+        paletteCoordinator.showPalette(mode: .ai, seeding: draft)
+    }
+
     /// ⇥ and the AI fallback: a fresh chat that carries the question, already asked.
     func ask(_ prompt: String) {
         guard settings.aiEnabled else { return }

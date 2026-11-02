@@ -3,6 +3,7 @@
   "pages": [
     "shortcuts",
     "hotkeys",
+    "deeplinks",
     "settings",
     "backup",
     "import-from-raycast",

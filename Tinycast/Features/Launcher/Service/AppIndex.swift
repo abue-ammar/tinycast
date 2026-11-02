@@ -169,34 +169,13 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     var hotKeyAction: HotKeyAction? {
         switch kind {
-        case .command:
-            return CommandCatalog.command(for: self)?.hotKeyAction
-        case .quickAction:
-            if let command = CommandCatalog.command(for: self) { return command.hotKeyAction }
-            return CustomQuickAction.id(fromEntryID: id).map { .quickAction(id: $0) }
         case .application:
             return bundleID.map { .app(bundleID: $0) }
         case .systemSettings:
             return bundleID.map { .settingsPane(bundleID: $0) }
-        case .customCommand:
-            return CustomCommand.id(fromEntryID: id).map { .customCommand(id: $0) }
-        case .systemAction:
-            return SystemActionCatalog.action(forEntryID: id).map { .systemAction(id: $0.id) }
-        case .windowCommand:
-            if let command = WindowCommandCatalog.command(forEntryID: id) {
-                return .windowCommand(id: command.id)
-            }
-            return CustomWindowSize.id(fromEntryID: id).map { .customWindowSize(id: $0) }
-        case .windowLayout:
-            return WindowLayout.id(fromEntryID: id).map { .windowLayout(id: $0) }
-        case .windowRoom:
-            return Room.id(fromEntryID: id).map { .windowRoom(id: $0) }
-        case .quicklink:
-            return Quicklink.id(fromEntryID: id).map { .quicklink(id: $0) }
-        case .appleShortcut:
-            return AppleShortcut.id(fromEntryID: id).map { .appleShortcut(id: $0) }
-        case .snippet:
-            return StoredSnippet.id(fromEntryID: id).map { .snippet(id: $0) }
+        case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
+            .windowRoom, .quicklink, .appleShortcut, .snippet:
+            return HotKeyAction(entryID: id)
         case .extensionCommand, .meeting:
             return nil
         }

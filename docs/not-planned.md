@@ -226,7 +226,6 @@ These are on hold, not ruled out.
 
 - **Contacts search**, as a separate plugin. ([#1503](https://github.com/abue-ammar/tinycast/issues/1503))
 - **Open files in a Finder replacement.** ([#1494](https://github.com/abue-ammar/tinycast/issues/1494))
-- **Deeplinks for built-in commands.** Waits until the commands settle. ([#1005](https://github.com/abue-ammar/tinycast/issues/1005))
 - **Emoji names in the picker.** Long names don't fit yet. ([#965](https://github.com/abue-ammar/tinycast/issues/965))
 - **Keep any window on top.** ([#527](https://github.com/abue-ammar/tinycast/issues/527))
 

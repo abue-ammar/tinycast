@@ -1009,6 +1009,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         }
         coordinator?.runExtensionCommand(
             entry(for: command, in: owner), arguments: link.arguments,
-            fallbackText: link.fallbackText, launchType: link.launchType)
+            fallbackText: link.fallbackText, launchType: link.launchType,
+            launchContext: link.launchContext)
     }
 }

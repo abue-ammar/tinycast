@@ -125,12 +125,12 @@ final class NotesStore {
     }
 
     @discardableResult
-    func create() async -> Bool {
+    func create(source: String = "") async -> Bool {
         guard await flush() else { return false }
         cancelSearch()
         let repository = repository
         let result = await detached {
-            let document = try repository.create()
+            let document = try repository.create(source: source)
             return (document, try repository.list())
         } recover: {
             repository.notesDirectory
