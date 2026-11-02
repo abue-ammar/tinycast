@@ -150,7 +150,7 @@ private struct FileSearchInfoSection: View {
         details = Details()
         let url = result.url
         let isDirectory = result.isDirectory
-        details = await Task.detached(priority: .userInitiated) {
+        let loaded = await Task.detached(priority: .userInitiated) {
             let values = try? url.resourceValues(forKeys: [
                 .contentTypeKey, .fileSizeKey, .creationDateKey, .contentModificationDateKey
             ])
@@ -161,5 +161,7 @@ private struct FileSearchInfoSection: View {
                 created: values?.creationDate,
                 modified: values?.contentModificationDate)
         }.value
+        guard !Task.isCancelled else { return }
+        details = loaded
     }
 }

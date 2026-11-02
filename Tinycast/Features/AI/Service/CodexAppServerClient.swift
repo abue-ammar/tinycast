@@ -40,7 +40,7 @@ final class CodexAppServerClient {
     private(set) var executable: URL?
     private var process: Process?
     private var processID: UUID?
-    private var input: FileHandle?
+    private var input: CodexInputWriter?
     private var outputBuffer = Data()
     private var stderrBuffer = Data()
     private var nextID = 1
@@ -94,15 +94,17 @@ final class CodexAppServerClient {
 
     /// One launch at a time, handshake included; every caller for the same list awaits it.
     func start(toolServers: [AIToolServer] = []) async throws {
+        let generation = self.generation
         while let pending = pendingLaunch {
             if pending.servers == toolServers { return try await pending.task.value }
             _ = await pending.task.result
+            try checkStillWanted(since: generation)
         }
         if isRunning, self.toolServers == toolServers { return }
         let id = UUID()
         let task = Task {
             defer { if pendingLaunch?.id == id { pendingLaunch = nil } }
-            try await launch(toolServers)
+            try await launch(toolServers, since: generation)
         }
         pendingLaunch = (id, toolServers, task)
         try await task.value
@@ -110,14 +112,22 @@ final class CodexAppServerClient {
 
     /// A status check has no list of its own: it joins whatever launch is pending or running.
     func startForCheck() async throws {
+        let generation = self.generation
         // A failed launch does not answer the check, which then starts plainly on its own.
-        while let pending = pendingLaunch { _ = await pending.task.result }
+        while let pending = pendingLaunch {
+            _ = await pending.task.result
+            try checkStillWanted(since: generation)
+        }
         if isRunning { return }
         try await start()
     }
 
-    private func launch(_ toolServers: [AIToolServer]) async throws {
-        let generation = self.generation
+    private func checkStillWanted(since generation: Int) throws {
+        try Task.checkCancellation()
+        try checkNotStopped(since: generation)
+    }
+
+    private func launch(_ toolServers: [AIToolServer], since generation: Int) async throws {
         let settings = launchSettings()
         let executable: URL
         switch settings.command() {
@@ -235,7 +245,7 @@ final class CodexAppServerClient {
         processID = launchID
         // A server that dies mid-write must fail the write, not SIGPIPE Tinycast.
         _ = fcntl(stdin.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
-        input = stdin.fileHandleForWriting
+        input = CodexInputWriter(stdin.fileHandleForWriting)
         self.toolServers = toolServers
 
         // A failed handshake would otherwise leave `isRunning` true on an uninitialized server.
@@ -253,7 +263,7 @@ final class CodexAppServerClient {
                 ])
             try send(CodexAppServerProtocol.notification(method: "initialized"))
         } catch {
-            stop()
+            stop(error: ClientError.processExited(String(localized: "Codex stopped.")))
             throw error
         }
     }
@@ -274,10 +284,15 @@ final class CodexAppServerClient {
                     self?.timeoutRequest(id)
                 }
                 pending[id] = PendingRequest(continuation: continuation, timeout: timeoutTask)
+                let failed: @MainActor @Sendable (Error) -> Void = { [weak self] error in
+                    self?.finishRequest(id, with: .failure(error))
+                }
                 do {
-                    try send(CodexAppServerProtocol.request(id: id, method: method, params: params))
+                    try send(
+                        CodexAppServerProtocol.request(id: id, method: method, params: params),
+                        ifFailed: failed)
                 } catch {
-                    finishRequest(id, with: .failure(error))
+                    failed(error)
                 }
             }
         } onCancel: { [weak self] in
@@ -318,11 +333,16 @@ final class CodexAppServerClient {
         }
     }
 
-    private func send(_ data: Data) throws {
+    private func send(
+        _ data: Data, ifFailed failed: (@MainActor @Sendable (Error) -> Void)? = nil
+    ) throws {
         guard let input else {
             throw ClientError.processExited(String(localized: "Codex is not running."))
         }
-        try input.write(contentsOf: data)
+        input.write(data) { error in
+            guard let failed else { return }
+            Task { @MainActor in failed(error) }
+        }
     }
 
     private func consumeOutput(_ data: Data) {
@@ -429,7 +449,7 @@ final class CodexAppServerClient {
         process?.terminationHandler = nil
         (process?.standardOutput as? Pipe)?.fileHandleForReading.readabilityHandler = nil
         (process?.standardError as? Pipe)?.fileHandleForReading.readabilityHandler = nil
-        try? input?.close()
+        input?.close()
         process = nil
         processID = nil
         input = nil
@@ -441,5 +461,29 @@ final class CodexAppServerClient {
             request.timeout.cancel()
             request.continuation.resume(throwing: error)
         }
+    }
+}
+
+/// A server that stops reading must block this queue, never the main actor and its timeouts.
+private final class CodexInputWriter: Sendable {
+    private let handle: FileHandle
+    private let queue = DispatchQueue(label: "com.tinycast.codex-input")
+
+    init(_ handle: FileHandle) {
+        self.handle = handle
+    }
+
+    func write(_ data: Data, failed: @escaping @Sendable (Error) -> Void) {
+        queue.async { [handle] in
+            do {
+                try handle.write(contentsOf: data)
+            } catch {
+                failed(error)
+            }
+        }
+    }
+
+    func close() {
+        queue.async { [handle] in try? handle.close() }
     }
 }

@@ -187,6 +187,7 @@ final class ClipboardStore {
     @ObservationIgnored var onSearchResultsChanged: ((String, [ClipboardItem], [ClipboardItem]) -> Void)?
     /// Rotated whenever the history is replaced, so a helper's late answer lands on nothing.
     @ObservationIgnored private(set) var extractionGeneration = UUID()
+    @ObservationIgnored private var captureGeneration = UUID()
     /// The only thing a view observes for search freshness; `items` cannot speak for OCR.
     private var searchRevision = 0
     @ObservationIgnored private(set) var textSearchEnabled = false
@@ -309,6 +310,7 @@ final class ClipboardStore {
     func close() {
         setTextSearchEnabled(false)
         extractionGeneration = UUID()
+        captureGeneration = UUID()
         closeDatabase()
         items = []
     }
@@ -380,11 +382,20 @@ final class ClipboardStore {
     func addImage(_ data: Data, sourceBundleID: String?) {
         let url = imagesDir.appendingPathComponent(UUID().uuidString + ".png")
         let item = ClipboardItem(imagePath: url.path, sourceBundleID: sourceBundleID)
+        let capture = captureGeneration
         // The blob write is multi-MB I/O; only the row insert returns to the main actor.
         Task.detached(priority: .utility) { [weak self] in
             guard (try? data.write(to: url, options: .atomic)) != nil else { return }
-            await self?.insert(item)
+            await self?.insertCapture(item, from: capture)
         }
+    }
+
+    private func insertCapture(_ item: ClipboardItem, from capture: UUID) {
+        guard capture == captureGeneration else {
+            deleteBlob(item)
+            return
+        }
+        insert(item)
     }
 
     /// Bulk-insert from an import: original timestamps, external image paths, deduped.
@@ -449,6 +460,7 @@ final class ClipboardStore {
     func clearAll() {
         invalidateSearch()
         extractionGeneration = UUID()
+        captureGeneration = UUID()
         // RETURNING hands back the deleted blobs in the same pass, so no separate SELECT is needed.
         if db != nil,
             let stmt = prepare("DELETE FROM items WHERE pinned_at IS NULL RETURNING image_path")

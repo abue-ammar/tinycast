@@ -351,19 +351,6 @@ final class AISettingsStore {
             environment: values.filter { names.contains($0.key) })
     }
 
-    func disableInstalledModelSelection(for kind: InstalledAIKind) {
-        guard let source = defaultModel?.source else { return }
-        let matches =
-            switch (kind, source) {
-            case (.codex, .codex), (.claude, .claude), (.grok, .grok), (.openCode, .openCode),
-                (.cursor, .cursor):
-                true
-            default: false
-            }
-        guard matches else { return }
-        defaultModel = firstAvailableSelection()
-    }
-
     /// The on-device model leads: free, private, always configured, so never a surprising landing.
     private func firstAvailableSelection() -> AIModelSelection? {
         if isAppleIntelligenceAvailable(), isRouteEnabled(.appleIntelligence) {
