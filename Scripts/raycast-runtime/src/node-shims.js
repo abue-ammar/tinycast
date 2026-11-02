@@ -256,6 +256,15 @@ const process = {
 
 // ─── os ─────────────────────────────────────────────────────────────
 
+/// The host sends a flat list because a JSON object would lose Node's interface order.
+function networkInterfaces() {
+  const interfaces = {};
+  for (const { name, ...address } of hostCallSync("os", "networkInterfaces", [])) {
+    (interfaces[name] ??= []).push(address);
+  }
+  return interfaces;
+}
+
 const os = {
   EOL: "\n",
   platform: () => "darwin",
@@ -277,7 +286,7 @@ const os = {
   freemem: () => hostCallSync("os", "freemem", []),
   uptime: () => hostCallSync("os", "uptime", []),
   loadavg: () => hostCallSync("os", "loadavg", []),
-  networkInterfaces: () => ({}),
+  networkInterfaces,
   endianness: () => "LE",
   devNull: "/dev/null",
   constants: { signals: SIGNALS, errno: {} },

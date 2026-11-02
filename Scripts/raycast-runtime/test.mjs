@@ -20,7 +20,7 @@ import {
   randomBytes,
   randomUUID,
 } from "node:crypto";
-import { cpus, freemem, homedir, loadavg, tmpdir, uptime } from "node:os";
+import { cpus, freemem, homedir, loadavg, networkInterfaces, tmpdir, uptime } from "node:os";
 import { lookup } from "node:dns/promises";
 import * as fs from "node:fs";
 import * as zlib from "node:zlib";
@@ -147,6 +147,10 @@ function syncHostCall(api, method, args) {
       return uptime();
     case "os.loadavg":
       return loadavg();
+    case "os.networkInterfaces":
+      return Object.entries(networkInterfaces()).flatMap(([name, addresses]) =>
+        addresses.map((address) => ({ name, ...address, mac: "00:00:00:00:00:00" })),
+      );
     case "fs.open":
       return fs.openSync(args[0], args[1], args[2]);
     case "fs.close":
