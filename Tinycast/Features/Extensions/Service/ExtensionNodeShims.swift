@@ -640,6 +640,26 @@ final class ExtensionNodeShims: @unchecked Sendable {
                 mode: mode, decrypt: decrypt, key: key, iv: iv, data: data, padding: padding
             ).base64EncodedString()
 
+        case "gcmSeal":
+            let key = Data(base64Encoded: arguments[safe: 0] as? String ?? "") ?? Data()
+            let iv = Data(base64Encoded: arguments[safe: 1] as? String ?? "") ?? Data()
+            let data = Data(base64Encoded: arguments[safe: 2] as? String ?? "") ?? Data()
+            let aad = Data(base64Encoded: arguments[safe: 3] as? String ?? "") ?? Data()
+            let box = try sealGCM(key: key, iv: iv, data: data, aad: aad)
+            return [
+                "ciphertext": box.ciphertext.base64EncodedString(),
+                "tag": box.tag.base64EncodedString()
+            ]
+
+        case "gcmOpen":
+            let key = Data(base64Encoded: arguments[safe: 0] as? String ?? "") ?? Data()
+            let iv = Data(base64Encoded: arguments[safe: 1] as? String ?? "") ?? Data()
+            let data = Data(base64Encoded: arguments[safe: 2] as? String ?? "") ?? Data()
+            let aad = Data(base64Encoded: arguments[safe: 3] as? String ?? "") ?? Data()
+            let tag = Data(base64Encoded: arguments[safe: 4] as? String ?? "") ?? Data()
+            return try openGCM(key: key, iv: iv, data: data, aad: aad, tag: tag)?
+                .base64EncodedString()
+
         default:
             throw ShimError.failed("crypto.\(method) is not supported.", "ENOSYS")
         }
@@ -764,6 +784,21 @@ final class ExtensionNodeShims: @unchecked Sendable {
             throw ShimError.failed("error:1C800064:Provider routines::bad decrypt", "ERR_OSSL_BAD_DECRYPT")
         }
         return output.dropLast(padLength)
+    }
+
+    private func sealGCM(key: Data, iv: Data, data: Data, aad: Data) throws -> AES.GCM.SealedBox {
+        try AES.GCM.seal(
+            data, using: SymmetricKey(data: key), nonce: AES.GCM.Nonce(data: iv), authenticating: aad)
+    }
+
+    /// Returns `nil` when the tag does not verify, so the runtime can raise Node's own error.
+    private func openGCM(key: Data, iv: Data, data: Data, aad: Data, tag: Data) throws -> Data? {
+        let box = try AES.GCM.SealedBox(nonce: AES.GCM.Nonce(data: iv), ciphertext: data, tag: tag)
+        do {
+            return try AES.GCM.open(box, using: SymmetricKey(data: key), authenticating: aad)
+        } catch CryptoKitError.authenticationFailure {
+            return nil
+        }
     }
 
     // MARK: - zlib

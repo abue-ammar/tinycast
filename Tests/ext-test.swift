@@ -1211,6 +1211,9 @@ struct ExtensionTests {
               const errorCode = (callback) => {
                 try { callback(); return "none"; } catch (error) { return error.code; }
               };
+              const errorMessage = (callback) => {
+                try { callback(); return "none"; } catch (error) { return error.message; }
+              };
               const filePaths = [
                 fileURLToPath("file:///Applications/Tinycast%20Beta.app"),
                 fileURLToPath(pathToFileURL("/tmp/a#b.png")),
@@ -1233,6 +1236,22 @@ struct ExtensionTests {
               const encrypted = Buffer.concat([encrypter.update("hello tinycast"), encrypter.final()]);
               const decrypter = crypto.createDecipheriv("aes-256-cbc", "k".repeat(32), Buffer.from("i".repeat(16)));
               const ecb = crypto.createCipheriv("aes-128-ecb", Buffer.alloc(16, 1), null).setAutoPadding(false);
+              const gcmKey = Buffer.alloc(32, 7);
+              const gcmSeal = (iv, aad) => {
+                const cipher = crypto.createCipheriv("aes-256-gcm", gcmKey, iv);
+                if (aad) cipher.setAAD(aad);
+                const ciphertext = Buffer.concat([cipher.update("hello gcm"), cipher.final()]);
+                return { ciphertext, tag: cipher.getAuthTag() };
+              };
+              const gcmOpen = (iv, sealed, aad) => {
+                const decipher = crypto.createDecipheriv("aes-256-gcm", gcmKey, iv);
+                if (aad) decipher.setAAD(aad);
+                decipher.setAuthTag(sealed.tag);
+                return Buffer.concat([decipher.update(sealed.ciphertext), decipher.final()]).toString("utf8");
+              };
+              const shortNonce = gcmSeal(Buffer.from("gcm-nonce-12"));
+              // A 16-byte nonce proves CryptoKit derives a long GCM nonce the way Node does.
+              const longNonce = gcmSeal(Buffer.alloc(16, 9), Buffer.from("header"));
               const cipherShim = [
                 crypto.pbkdf2Sync("password", "salt", 1000, 16, "sha512").toString("hex"),
                 crypto.pbkdf2Sync("", "", 1, 8, "SHA-256").toString("hex"),
@@ -1247,6 +1266,10 @@ struct ExtensionTests {
                 }),
                 errorCode(() => crypto.createCipheriv("aes-256-cbc", "short", "i".repeat(16))),
                 errorCode(() => crypto.pbkdf2Sync("p", "s", 1, 8, "nope")),
+                shortNonce.tag.toString("hex") + ":" + shortNonce.ciphertext.toString("hex"),
+                longNonce.tag.toString("hex") + ":" + longNonce.ciphertext.toString("hex"),
+                gcmOpen(Buffer.alloc(16, 9), longNonce, Buffer.from("header")),
+                errorMessage(() => gcmOpen(Buffer.alloc(16, 9), longNonce)),
                 derived,
               ].join(",");
               return h(List, { navigationTitle: "Synthetic", isLoading: false },
@@ -1319,13 +1342,16 @@ struct ExtensionTests {
                 + "ERR_INVALID_URL_SCHEME",
             String(describing: screen.items.first?.node.array("accessories").dropFirst(2).first))
         check(
-            "crypto shim derives PBKDF2 keys and round-trips AES like Node",
+            "crypto shim derives PBKDF2 keys, round-trips AES and authenticates GCM like Node",
             ExtensionAccessoriesView_labelForTest(
                 screen.items.first?.node.array("accessories").dropFirst(4).first)
                 == "afe6c5530785b6cc6b1c6453384731bd,f7ce0b653d2d72a4,5d11c49af18b4b3e482508362bd2c857,"
                 + "eb7b227687302ff167fef6a04d9f99f3,"
                 + "hello tinycast,17d614f379a9359077e95577fd31c20a,ERR_OSSL_BAD_DECRYPT,"
-                + "ERR_CRYPTO_INVALID_KEYLEN,ERR_CRYPTO_INVALID_DIGEST,6cba6dd1d44f53a3",
+                + "ERR_CRYPTO_INVALID_KEYLEN,ERR_CRYPTO_INVALID_DIGEST,"
+                + "875a7af65e66ba29298577f2c937c48b:589dd2d6d2696c5310,"
+                + "749e7f715a23139cbfa9b3259ab594e1:aaefe159005653143a,hello gcm,"
+                + "Unsupported state or unable to authenticate data,6cba6dd1d44f53a3",
             String(describing: screen.items.first?.node.array("accessories").dropFirst(4).first))
         check(
             "util shim answers debuglog, stripVTControlCharacters, aborted and inspect.custom",
