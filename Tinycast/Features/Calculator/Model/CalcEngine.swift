@@ -52,6 +52,21 @@ struct CalcResult: Equatable, Sendable {
 }
 
 enum CalcEngine {
+    /// The whole of a shared amount, as written: a unit or currency is kept and a lone number is allowed.
+    private static func splitAmount(_ amount: String, rates: CurrencyRates?, region: String?) -> CalcResult? {
+        guard let tokens = CalcTokenizer.tokenize(amount), !tokens.isEmpty else { return nil }
+        if let whole = CalcQuantity.evaluate(
+            tokens, query: amount, rates: rates, region: region, preserveStandaloneUnit: true)
+        {
+            return whole
+        }
+        if let whole = CalcPercent.evaluate(tokens, query: amount) { return whole }
+        return CalcExpressionParser.scalar(tokens).map {
+            CalcResult(
+                expression: amount, sourceBadge: String(localized: "Expression"), payload: .number($0))
+        }
+    }
+
     /// Every environment fact is injected; the answer is canonical, for `format` to localize.
     static func evaluate(
         _ raw: String, now: Date, calendar: Calendar, rates: CurrencyRates? = nil,
@@ -65,6 +80,10 @@ enum CalcEngine {
             return CalcDateTime.namedMoment(query, now: now, calendar: calendar).map(unchained)
         }
 
+        if let fact = CalcDateFacts.evaluate(query, now: now, calendar: calendar) {
+            return unchained(fact)
+        }
+
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) {
             return unchained(dateTime)
         }
@@ -75,6 +94,13 @@ enum CalcEngine {
         }
 
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
+
+        if CalcSplit.mentions(tokens), let split = CalcSplit.parse(query),
+            let whole = splitAmount(split.amount, rates: rates, region: region),
+            let share = CalcSplit.share(of: whole, among: split.count, query: query)
+        {
+            return share
+        }
 
         if let partial = partialResult(
             tokens, query: query, now: now, calendar: calendar, rates: rates, region: region)

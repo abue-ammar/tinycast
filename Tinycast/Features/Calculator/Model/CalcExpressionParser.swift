@@ -620,6 +620,11 @@ struct CalcExpressionParser {
             return nil
         case .unit(let from):
             if let to = CalcUnits.byName[targetName] ?? compoundTarget(targetName) {
+                if !from.isCompatible(with: to), CalcUnits.reciprocal(from, to) {
+                    guard let output = CalcUnits.reciprocalValue(value.effective, from: from, to: to)
+                    else { return nil }
+                    return CalcValue(amount: output, kind: .unit(to))
+                }
                 guard from.isCompatible(with: to) else {
                     return fail(
                         String(
