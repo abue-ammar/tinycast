@@ -159,6 +159,8 @@ enum AIModelDiscovery {
         if path == "/" { path = "" }
         if path.hasSuffix("/chat/completions") {
             path.removeLast("/chat/completions".count)
+        } else if path.hasSuffix("/responses") {
+            path.removeLast("/responses".count)
         } else if path.hasSuffix("/v1/messages") {
             path.removeLast("/v1/messages".count)
         } else if path.hasSuffix("/messages") {

@@ -82,7 +82,7 @@ struct AIProviderTests {
         let openAI = AIRequestBody.make(
             turn,
             configuration: AIHTTPConfiguration(
-                provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
+                provider: .openAICompatible, baseURL: URL(string: "https://api.openai.com/v1")!,
                 model: "gpt"))
         let parts =
             (openAI["messages"] as? [[String: Any]])?.first?["content"] as? [[String: Any]] ?? []
@@ -101,7 +101,7 @@ struct AIProviderTests {
         let documentOnly = AIRequestBody.make(
             AIRequest(messages: [AIMessage(role: .user, text: "", documents: [pdf])]),
             configuration: AIHTTPConfiguration(
-                provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
+                provider: .openAICompatible, baseURL: URL(string: "https://api.openai.com/v1")!,
                 model: "gpt"))
         expect(
             ((documentOnly["messages"] as? [[String: Any]])?.first?["content"]
@@ -327,7 +327,7 @@ struct AIProviderTests {
         let openAI = AIRequestBody.make(
             turn,
             configuration: AIHTTPConfiguration(
-                provider: .openAI, baseURL: URL(string: "https://api.openai.com/v1")!,
+                provider: .openAICompatible, baseURL: URL(string: "https://api.openai.com/v1")!,
                 model: "gpt-5"))
         let catalog = (openAI["tools"] as? [[String: Any]])?.first
         expect(
@@ -518,7 +518,7 @@ struct AIProviderTests {
 
     static func providerPresetsResolveEndpoints() {
         let expected: [(AIProviderKind, String)] = [
-            (.openAI, "https://api.openai.com/v1/chat/completions"),
+            (.openAI, "https://api.openai.com/v1/responses"),
             (.anthropic, "https://api.anthropic.com/v1/messages"),
             (.gemini, "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"),
             (.openRouter, "https://openrouter.ai/api/v1/chat/completions"),
