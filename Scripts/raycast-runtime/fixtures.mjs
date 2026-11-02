@@ -226,6 +226,29 @@ export default function Command() {
     }
   };
   const cpu = os.cpus()[0];
+  // GCM: the tag travels apart from the ciphertext, and AAD must be authenticated too.
+  const gcmKey = Buffer.alloc(32, 7);
+  const gcmIv = Buffer.from("gcm-nonce-12");
+  const gcmCipher = crypto.createCipheriv("aes-256-gcm", gcmKey, gcmIv);
+  const gcmCiphertext = Buffer.concat([gcmCipher.update("hello gcm"), gcmCipher.final()]);
+  const gcmTag = gcmCipher.getAuthTag();
+  const gcmDecipher = crypto.createDecipheriv("aes-256-gcm", gcmKey, gcmIv);
+  gcmDecipher.setAuthTag(gcmTag);
+  const gcmPlaintext = Buffer.concat([gcmDecipher.update(gcmCiphertext), gcmDecipher.final()]).toString("utf8");
+  const gcmAadCipher = crypto.createCipheriv("aes-256-gcm", gcmKey, gcmIv);
+  gcmAadCipher.setAAD(Buffer.from("header"));
+  const gcmAadCiphertext = Buffer.concat([gcmAadCipher.update("aad"), gcmAadCipher.final()]);
+  const gcmAadTag = gcmAadCipher.getAuthTag();
+  const gcmAadDecipher = crypto.createDecipheriv("aes-256-gcm", gcmKey, gcmIv);
+  gcmAadDecipher.setAAD(Buffer.from("header"));
+  gcmAadDecipher.setAuthTag(gcmAadTag);
+  const gcmAadPlaintext = Buffer.concat([gcmAadDecipher.update(gcmAadCiphertext), gcmAadDecipher.final()]).toString("utf8");
+  const gcmTampered = errorCode(() => {
+    const bad = crypto.createDecipheriv("aes-256-gcm", gcmKey, gcmIv);
+    bad.setAuthTag(Buffer.alloc(16));
+    bad.update(gcmCiphertext);
+    bad.final();
+  });
   const parts = [
     path.join("/a/b", "../c", "d.txt"),
     path.extname("x/y/file.tar.gz"),
@@ -239,6 +262,12 @@ export default function Command() {
     new URL("/next?q=1", "https://example.com/base/page").href,
     new URLSearchParams({ a: "1", b: "two words" }).toString(),
     crypto.createHash("sha256").update("abc").digest("hex").slice(0, 8),
+    gcmTag.toString("hex"),
+    gcmCiphertext.toString("hex"),
+    gcmPlaintext,
+    gcmAadTag.toString("hex"),
+    gcmAadPlaintext,
+    gcmTampered,
     Buffer.from("hello").toString("base64"),
     Buffer.from("aGVsbG8=", "base64").toString("utf8"),
     new TextDecoder().decode(new TextEncoder().encode("héllo")),
@@ -1060,6 +1089,12 @@ export async function runFixtures() {
       "https://example.com/next?q=1",
       "a=1&b=two+words",
       "ba7816bf",
+      "875a7af65e66ba29298577f2c937c48b",
+      "589dd2d6d2696c5310",
+      "hello gcm",
+      "8a519646eb764afcf6c5807d6c411c76",
+      "aad",
+      "ERR_OSSL_BAD_DECRYPT",
       "aGVsbG8=",
       "hello",
       "héllo",

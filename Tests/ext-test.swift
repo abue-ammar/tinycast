@@ -1183,6 +1183,20 @@ struct ExtensionTests {
               const encrypted = Buffer.concat([encrypter.update("hello tinycast"), encrypter.final()]);
               const decrypter = crypto.createDecipheriv("aes-256-cbc", "k".repeat(32), Buffer.from("i".repeat(16)));
               const ecb = crypto.createCipheriv("aes-128-ecb", Buffer.alloc(16, 1), null).setAutoPadding(false);
+              // GCM is what an authenticated vault envelope uses: tag apart from ciphertext,
+              // and a tampered tag must fail the same way it does in Node.
+              const gcmCipher = crypto.createCipheriv("aes-256-gcm", Buffer.alloc(32, 7), Buffer.from("gcm-nonce-12"));
+              const gcmCiphertext = Buffer.concat([gcmCipher.update("hello gcm"), gcmCipher.final()]);
+              const gcmTag = gcmCipher.getAuthTag();
+              const gcmDecipher = crypto.createDecipheriv("aes-256-gcm", Buffer.alloc(32, 7), Buffer.from("gcm-nonce-12"));
+              gcmDecipher.setAuthTag(gcmTag);
+              const gcmPlaintext = Buffer.concat([gcmDecipher.update(gcmCiphertext), gcmDecipher.final()]).toString("utf8");
+              const gcmTampered = errorCode(() => {
+                const bad = crypto.createDecipheriv("aes-256-gcm", Buffer.alloc(32, 7), Buffer.from("gcm-nonce-12"));
+                bad.setAuthTag(Buffer.alloc(16));
+                bad.update(gcmCiphertext);
+                bad.final();
+              });
               const cipherShim = [
                 crypto.pbkdf2Sync("password", "salt", 1000, 16, "sha512").toString("hex"),
                 crypto.pbkdf2Sync("", "", 1, 8, "SHA-256").toString("hex"),
@@ -1198,6 +1212,10 @@ struct ExtensionTests {
                 errorCode(() => crypto.createCipheriv("aes-256-cbc", "short", "i".repeat(16))),
                 errorCode(() => crypto.pbkdf2Sync("p", "s", 1, 8, "nope")),
                 derived,
+                gcmTag.toString("hex"),
+                gcmCiphertext.toString("hex"),
+                gcmPlaintext,
+                gcmTampered,
               ].join(",");
               return h(List, { navigationTitle: "Synthetic", isLoading: false },
                 h(List.Item, {
@@ -1222,7 +1240,7 @@ struct ExtensionTests {
             let crypto = ExtensionAccessoriesView_labelForTest(
                 item?.node.array("accessories").dropFirst(4).first)
             return item?.node.string("title") == "count=1" && host.toasts == ["hello"]
-                && crypto?.hasSuffix(",6cba6dd1d44f53a3") == true
+                && crypto?.contains(",6cba6dd1d44f53a3,") == true
         })
 
         check("no failures", recorder.failures.isEmpty, recorder.failures.joined(separator: "\n"))
@@ -1269,13 +1287,14 @@ struct ExtensionTests {
                 + "ERR_INVALID_URL_SCHEME",
             String(describing: screen.items.first?.node.array("accessories").dropFirst(2).first))
         check(
-            "crypto shim derives PBKDF2 keys and round-trips AES like Node",
+            "crypto shim derives PBKDF2 keys, round-trips CBC/ECB and authenticates GCM like Node",
             ExtensionAccessoriesView_labelForTest(
                 screen.items.first?.node.array("accessories").dropFirst(4).first)
                 == "afe6c5530785b6cc6b1c6453384731bd,f7ce0b653d2d72a4,5d11c49af18b4b3e482508362bd2c857,"
                 + "eb7b227687302ff167fef6a04d9f99f3,"
                 + "hello tinycast,17d614f379a9359077e95577fd31c20a,ERR_OSSL_BAD_DECRYPT,"
-                + "ERR_CRYPTO_INVALID_KEYLEN,ERR_CRYPTO_INVALID_DIGEST,6cba6dd1d44f53a3",
+                + "ERR_CRYPTO_INVALID_KEYLEN,ERR_CRYPTO_INVALID_DIGEST,6cba6dd1d44f53a3,"
+                + "875a7af65e66ba29298577f2c937c48b,589dd2d6d2696c5310,hello gcm,ERR_OSSL_BAD_DECRYPT",
             String(describing: screen.items.first?.node.array("accessories").dropFirst(4).first))
         check(
             "util shim answers debuglog, stripVTControlCharacters, aborted and inspect.custom",

@@ -235,12 +235,30 @@ function syncHostCall(api, method, args) {
       return pbkdf2Sync(Buffer.from(args[1], "base64"), Buffer.from(args[2], "base64"), args[3], args[4], args[0])
         .toString("base64");
     case "crypto.cipher": {
-      const [mode, decrypt, key, iv, data, padding] = args;
+      const [mode, decrypt, key, iv, data, padding, aad, authTag] = args;
       const algorithm = `aes-${Buffer.from(key, "base64").length * 8}-${mode}`;
       const create = decrypt ? createDecipheriv : createCipheriv;
       const cipher = create(algorithm, Buffer.from(key, "base64"), mode === "ecb" ? null : Buffer.from(iv, "base64"));
-      cipher.setAutoPadding(padding);
-      return Buffer.concat([cipher.update(Buffer.from(data, "base64")), cipher.final()]).toString("base64");
+      if (mode === "gcm") {
+        if (aad) cipher.setAAD(Buffer.from(aad, "base64"));
+        if (decrypt) cipher.setAuthTag(Buffer.from(authTag, "base64"));
+      } else {
+        cipher.setAutoPadding(padding);
+      }
+      let output;
+      try {
+        output = Buffer.concat([cipher.update(Buffer.from(data, "base64")), cipher.final()]);
+      } catch (error) {
+        // Match the Swift host, which reports GCM verification as OpenSSL's bad decrypt.
+        if (mode === "gcm" && decrypt) {
+          throw Object.assign(new Error("Unsupported state or unable to authenticate data"), {
+            code: "ERR_OSSL_BAD_DECRYPT",
+          });
+        }
+        throw error;
+      }
+      if (mode !== "gcm" || decrypt) return output.toString("base64");
+      return Buffer.concat([cipher.getAuthTag(), output]).toString("base64");
     }
     case "proc.start": {
       const spec = args[0];

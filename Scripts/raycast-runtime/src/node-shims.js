@@ -791,10 +791,12 @@ class Hash {
 }
 
 // Buffers until `final`: a block cipher's concatenated output still matches Node's byte for byte.
+// GCM has no block padding and carries a tag: encryption hands back tag||ciphertext, decryption
+// takes the tag through `setAuthTag` and fails the same way OpenSSL does when it does not verify.
 class Cipher {
   constructor(algorithm, key, iv, decrypt) {
     const name = String(algorithm).toLowerCase().replace(/^aes(128|192|256)$/, "aes-$1-cbc");
-    const match = /^aes-(128|192|256)-(cbc|ecb)$/.exec(name);
+    const match = /^aes-(128|192|256)-(cbc|ecb|gcm)$/.exec(name);
     if (!match) throw cryptoError("Unknown cipher", "ERR_CRYPTO_UNKNOWN_CIPHER");
     this._mode = match[2];
     this._key = cryptoBytes(key);
@@ -802,11 +804,14 @@ class Cipher {
     if (this._key.length !== Number(match[1]) / 8) {
       throw cryptoError("Invalid key length", "ERR_CRYPTO_INVALID_KEYLEN", RangeError);
     }
-    if (this._iv.length !== (this._mode === "cbc" ? 16 : 0)) {
+    const ivLength = this._mode === "cbc" ? 16 : this._mode === "gcm" ? 12 : 0;
+    if (this._iv.length !== ivLength) {
       throw cryptoError("Invalid initialization vector", "ERR_CRYPTO_INVALID_IV", TypeError);
     }
     this._decrypt = decrypt;
     this._padding = true;
+    this._aad = Buffer.alloc(0);
+    this._authTag = undefined;
     this._chunks = [];
     this._finished = false;
   }
@@ -817,6 +822,9 @@ class Cipher {
   }
   final(outputEncoding) {
     if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    if (this._mode === "gcm" && this._decrypt && !this._authTag) {
+      throw cryptoError("Unsupported state or unable to authenticate data", "ERR_OSSL_BAD_DECRYPT");
+    }
     this._finished = true;
     const base64 = hostCallSync("crypto", "cipher", [
       this._mode,
@@ -825,13 +833,46 @@ class Cipher {
       bytesToBase64(this._iv),
       bytesToBase64(Buffer.concat(this._chunks)),
       this._padding,
+      bytesToBase64(this._aad),
+      this._authTag ? bytesToBase64(this._authTag) : null,
     ]);
     const bytes = Buffer.from(base64ToBytes(base64));
-    return outputEncoding ? bytes.toString(outputEncoding) : bytes;
+    if (this._mode !== "gcm" || this._decrypt) {
+      return outputEncoding ? bytes.toString(outputEncoding) : bytes;
+    }
+    // The host returns the tag in front of the ciphertext, the order Node keeps them apart in.
+    this._authTag = Buffer.from(bytes.subarray(0, 16));
+    const ciphertext = bytes.subarray(16);
+    return outputEncoding ? ciphertext.toString(outputEncoding) : ciphertext;
   }
   setAutoPadding(enabled = true) {
     if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
     this._padding = Boolean(enabled);
+    return this;
+  }
+  setAAD(aad) {
+    if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    if (this._mode !== "gcm") throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    this._aad = cryptoBytes(aad);
+    return this;
+  }
+  getAuthTag() {
+    if (this._decrypt) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    if (!this._finished || !this._authTag) {
+      throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    }
+    return Buffer.from(this._authTag);
+  }
+  setAuthTag(tag) {
+    if (this._finished) throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    if (this._mode !== "gcm" || !this._decrypt) {
+      throw cryptoError("Invalid state", "ERR_CRYPTO_INVALID_STATE");
+    }
+    const bytes = cryptoBytes(tag);
+    if (bytes.length !== 16) {
+      throw cryptoError(`Invalid authentication tag length: ${bytes.length}`, "ERR_CRYPTO_INVALID_AUTH_TAG");
+    }
+    this._authTag = bytes;
     return this;
   }
 }

@@ -560,8 +560,11 @@ final class ExtensionNodeShims: @unchecked Sendable {
             let iv = Data(base64Encoded: arguments[safe: 3] as? String ?? "") ?? Data()
             let data = Data(base64Encoded: arguments[safe: 4] as? String ?? "") ?? Data()
             let padding = arguments[safe: 5] as? Bool ?? true
+            let aad = Data(base64Encoded: arguments[safe: 6] as? String ?? "") ?? Data()
+            let authTag = (arguments[safe: 7] as? String).flatMap { Data(base64Encoded: $0) }
             return try crypt(
-                mode: mode, decrypt: decrypt, key: key, iv: iv, data: data, padding: padding
+                mode: mode, decrypt: decrypt, key: key, iv: iv, data: data, padding: padding,
+                aad: aad, authTag: authTag
             ).base64EncodedString()
 
         default:
@@ -634,8 +637,36 @@ final class ExtensionNodeShims: @unchecked Sendable {
     }
 
     private func crypt(
-        mode: String, decrypt: Bool, key: Data, iv: Data, data: Data, padding: Bool
+        mode: String, decrypt: Bool, key: Data, iv: Data, data: Data, padding: Bool,
+        aad: Data = Data(), authTag: Data? = nil
     ) throws -> Data {
+        if mode == "gcm" {
+            guard [16, 24, 32].contains(key.count) else {
+                throw ShimError.failed("Invalid key length", "ERR_CRYPTO_INVALID_KEYLEN")
+            }
+            guard iv.count == 12 else {
+                throw ShimError.failed("Invalid initialization vector", "ERR_CRYPTO_INVALID_IV")
+            }
+            // CryptoKit's nonce is GCM's 96-bit default, which is what every extension passes.
+            let nonce = try AES.GCM.Nonce(data: iv)
+            let symmetric = SymmetricKey(data: key)
+            if decrypt {
+                guard let authTag, authTag.count == 16 else {
+                    throw ShimError.failed(
+                        "Invalid authentication tag", "ERR_CRYPTO_INVALID_AUTH_TAG")
+                }
+                let box = try AES.GCM.SealedBox(nonce: nonce, ciphertext: data, tag: authTag)
+                do {
+                    return try AES.GCM.open(box, using: symmetric, authenticating: aad)
+                } catch {
+                    throw ShimError.failed(
+                        "Unsupported state or unable to authenticate data", "ERR_OSSL_BAD_DECRYPT")
+                }
+            }
+            let box = try AES.GCM.seal(data, using: symmetric, nonce: nonce, authenticating: aad)
+            // The JS side splits the leading tag back off before handing out ciphertext.
+            return box.tag + box.ciphertext
+        }
         guard mode == "cbc" || mode == "ecb" else {
             throw ShimError.failed("Unknown cipher", "ERR_CRYPTO_UNKNOWN_CIPHER")
         }
