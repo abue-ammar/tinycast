@@ -106,7 +106,7 @@ export const badges: Badge[] = [
     height: 66,
   },
   {
-    href: "https://www.trymacapps.com",
+    href: "https://www.trymacapps.com/app/tinycast",
     alt: "Featured on TryMacApps",
     src: "/badges/trymacapps.png",
     width: 200,

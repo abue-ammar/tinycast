@@ -6,7 +6,7 @@ export const supportHero = {
   eyebrow: "Support",
   title: "Enjoying Tinycast?",
   intro:
-    "Tinycast is free and open source, and it stays that way. If it earns a place on your Mac, send some crypto or buy the wallpaper pack. Either one helps me a lot. Thanks.",
+    "Tinycast is free and open source, and it stays that way. If it earns a place on your Mac, buy the wallpaper pack or send some crypto. Either one helps me a lot. Thanks.",
 } as const;
 
 export type Wallet = {
@@ -54,8 +54,8 @@ export const wallets: readonly Wallet[] = [
 export type Method = "crypto" | "card";
 
 export const methods: { id: Method; label: string }[] = [
-  { id: "crypto", label: "Crypto" },
   { id: "card", label: "Card" },
+  { id: "crypto", label: "Crypto" },
 ];
 
 export const cryptoSupport = {

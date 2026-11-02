@@ -95,9 +95,18 @@ standards, the design system and one document per feature.
 
 ## Support
 
-Tinycast is **free, and it stays that way**. If you enjoy it, you can support it with crypto: scan a
-code with your wallet, or copy an address. Send only on the network named for that address. If yours
-isn't listed, [email me](mailto:iabueammar@gmail.com?subject=Supporting%20Tinycast).
+Tinycast is **free, and it stays that way**. If it earns a place on your Mac, consider supporting its
+development. Thanks in advance.
+
+<p align="center">
+  <a href="https://tinycast.dev/support">
+    <img alt="Support Tinycast" width="188" height="44" src="docs/support-button.svg"></a><br>
+  <sub>Payments are handled securely by <a href="https://polar.sh">Polar.sh</a>.</sub>
+</p>
+
+You can also support Tinycast with crypto: scan a code with your wallet, or copy an address. Send
+only on the network named for that address. If yours isn't listed,
+[email me](mailto:iabueammar@gmail.com?subject=Supporting%20Tinycast).
 
 <table>
   <tr>
@@ -133,14 +142,6 @@ bc1qpfxtjpuhm2cm8kg4lqgu3ffjch7vcjf678arwn
 ```text
 4EH7JDXZxkJiahas1xgPyC1iBW9pfCVUXxVtpqvwAz6T
 ```
-
-Prefer a card? Buy the wallpaper pack and get a Discord role.
-
-<p align="center">
-  <a href="https://tinycast.dev/support">
-    <img alt="Support Tinycast" width="188" height="44" src="docs/support-button.svg"></a><br>
-  <sub>Card payments are handled securely by <a href="https://polar.sh">Polar.sh</a>.</sub>
-</p>
 
 ## License
 

@@ -114,7 +114,7 @@ export function CheckoutPanel() {
         </div>
         <label
           className={cn(
-            "mt-2 flex h-11 items-center gap-1 rounded-lg bg-well px-4 transition-shadow",
+            "mt-2 flex h-11 cursor-text items-center gap-1 rounded-lg bg-well px-4 transition-shadow",
             "focus-within:shadow-[inset_0_0_0_1.5px_var(--color-violet)]",
             custom !== "" && "shadow-[inset_0_0_0_1.5px_var(--color-violet)]",
           )}

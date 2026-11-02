@@ -251,6 +251,27 @@
     overflow-x: hidden;
   }
 
+  :where(
+      a[href],
+      button,
+      [role="button"],
+      [role="tab"],
+      [role="menuitem"],
+      summary,
+      input[type="checkbox"],
+      input[type="radio"]
+    ):not(:disabled):not([aria-disabled="true"]),
+  label:has(input:is([type="checkbox"], [type="radio"]):enabled) {
+    cursor: pointer;
+  }
+
+  :where(button, input, [role="button"], [role="tab"], [role="menuitem"]):is(
+    :disabled,
+    [aria-disabled="true"]
+  ) {
+    cursor: not-allowed;
+  }
+
   /* Radix's scroll lock measures the scrollbar and adds an equal margin to the
      body while a dialog is open. `scrollbar-gutter: stable` above already holds
      that space open, so the compensation lands on top of it and slides the page
