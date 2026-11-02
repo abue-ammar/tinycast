@@ -19,6 +19,12 @@ final class AISettingsStore {
     var choicesEnabled: Bool {
         didSet { defaults.set(choicesEnabled, forKey: AppSettingsKey.aiChoices.rawValue) }
     }
+    /// Off by default: a fold keeps the answer in view, and one click opens the thinking.
+    var expandsReasoning: Bool {
+        didSet {
+            defaults.set(expandsReasoning, forKey: AppSettingsKey.aiExpandsReasoning.rawValue)
+        }
+    }
     /// Appended to `AIInstructions.preamble` on every turn, so it is billed on every turn.
     var systemPrompt: String {
         didSet { defaults.set(systemPrompt, forKey: AppSettingsKey.aiSystemPrompt.rawValue) }
@@ -94,6 +100,8 @@ final class AISettingsStore {
             defaults.object(forKey: AppSettingsKey.aiWebSearch.rawValue) as? Bool ?? false
         choicesEnabled =
             defaults.object(forKey: AppSettingsKey.aiChoices.rawValue) as? Bool ?? true
+        expandsReasoning =
+            defaults.object(forKey: AppSettingsKey.aiExpandsReasoning.rawValue) as? Bool ?? false
         systemPrompt = defaults.string(forKey: AppSettingsKey.aiSystemPrompt.rawValue) ?? ""
         systemPromptEnabled =
             defaults.object(forKey: AppSettingsKey.aiSystemPromptEnabled.rawValue) as? Bool ?? true

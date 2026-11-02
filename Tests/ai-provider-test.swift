@@ -1472,11 +1472,13 @@ struct AIProviderTests {
         expect(fresh.opensTo == .recent, "chat reopens on the recent conversation by default")
         expect(fresh.newChatAfter == .fiveMinutes, "the idle window defaults to five minutes")
         expect(fresh.toolRounds == .twentyFive, "a reply's tool rounds default to 25")
+        expect(!fresh.expandsReasoning, "thinking starts folded by default")
 
         fresh.retention = .week
         fresh.opensTo = .newConversation
         fresh.newChatAfter = .never
         fresh.toolRounds = .fifty
+        fresh.expandsReasoning = true
         let reopened = AISettingsStore(defaults: defaults)
         expect(reopened.toolRounds == .fifty, "the tool round cap persists")
         reopened.toolRounds = .unlimited
@@ -1496,6 +1498,7 @@ struct AIProviderTests {
         expect(reopened.retention == .week, "retention persists")
         expect(reopened.opensTo == .newConversation, "the open policy persists")
         expect(reopened.newChatAfter == .never, "Never persists rather than reading as the default")
+        expect(reopened.expandsReasoning, "Expand thinking persists")
     }
 
     static func onDeviceSelectionsRoundTripAndLead() {
