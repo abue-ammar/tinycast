@@ -991,6 +991,24 @@ struct ExtensionTests {
             "deeplink reads fallback text and background launch",
             full?.fallbackText == "hello" && full?.launchType == .background)
 
+        let expectedContext: [String: RenderValue] = [
+            "id": .string("note-1"), "pinned": .bool(true), "tags": .array([.string("a")])
+        ]
+        let encodedContext =
+            #"{"id":"note-1","pinned":true,"tags":["a"]}"#
+            .addingPercentEncoding(withAllowedCharacters: .alphanumerics) ?? ""
+        for name in ["context", "launchContext"] {
+            let withContext = ExtensionDeepLink.parse(
+                url: URL(string: "raycast://extensions/demo/search?\(name)=\(encodedContext)")!)
+            check(
+                "deeplink decodes \(name) JSON",
+                withContext?.launchContext == expectedContext,
+                String(describing: withContext?.launchContext))
+        }
+        check(
+            "deeplink treats a context that isn't an object as none",
+            ExtensionDeepLink.parseContext("[1]").isEmpty && ExtensionDeepLink.parseContext("nope").isEmpty)
+
         let legacy = ExtensionDeepLink.parse(
             url: URL(string: "com.raycast:/extensions/demo/search")!)
         check(

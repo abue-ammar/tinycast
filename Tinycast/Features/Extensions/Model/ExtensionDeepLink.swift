@@ -19,6 +19,7 @@ struct ExtensionDeepLink: Sendable, Equatable {
     let arguments: [String: String]
     let fallbackText: String?
     let launchType: ExtensionLaunchType
+    let launchContext: [String: RenderValue]
 
     /// `owner/ext` first so a scoped manifest wins over a bare slug collision.
     var extensionCandidates: [String] {
@@ -104,6 +105,7 @@ struct ExtensionDeepLink: Sendable, Equatable {
         var arguments: [String: String] = [:]
         var fallbackText: String?
         var launchType = ExtensionLaunchType.userInitiated
+        var launchContext: [String: RenderValue] = [:]
         for item in items {
             switch item.name.lowercased() {
             case "arguments":
@@ -112,6 +114,8 @@ struct ExtensionDeepLink: Sendable, Equatable {
                 fallbackText = item.value
             case "launchtype", "launch_type":
                 launchType = item.value?.lowercased() == "background" ? .background : .userInitiated
+            case "context", "launchcontext":
+                if let raw = item.value { launchContext = parseContext(raw) }
             default:
                 break
             }
@@ -119,7 +123,15 @@ struct ExtensionDeepLink: Sendable, Equatable {
         return .command(
             ExtensionDeepLink(
                 ownerOrAuthor: ownerOrAuthor, extensionName: extensionName, commandName: commandName,
-                arguments: arguments, fallbackText: fallbackText, launchType: launchType))
+                arguments: arguments, fallbackText: fallbackText, launchType: launchType,
+                launchContext: launchContext))
+    }
+
+    nonisolated static func parseContext(_ raw: String) -> [String: RenderValue] {
+        guard let data = raw.data(using: .utf8),
+            let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        else { return [:] }
+        return object.mapValues(RenderValue.init(json:))
     }
 
     /// Raycast sends one URL-encoded JSON object; anything else means no arguments, not a failure.

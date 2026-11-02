@@ -56,7 +56,7 @@ between runs; see [Menu bar commands](/docs/extensions#menu-bar-commands).
 **`raycast://` links** are handled inside Tinycast. Tinycast registers this link type; if Raycast is
 also installed, macOS decides which app receives those links. A link to an installed extension command
 runs that command, whether it comes from another app, the browser or an extension, with its `arguments`,
-`fallbackText` and `launchType` applied. `tinycast://` links work the same way. A Raycast Store
+`fallbackText`, `launchType` and `context` applied. `tinycast://` links work the same way. A Raycast Store
 **Install** link opens [Search extensions](/docs/extensions/installing#search-extensions) on that
 extension. Any other link reopens the palette, since passing it on would open Raycast itself.
 

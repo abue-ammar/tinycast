@@ -287,6 +287,9 @@ struct DeepLinkTests {
                 == .note(name: note),
             "a note's link reads back as its file name")
         expect(parse("tinycast://note/a/b.md") == nil, "a note name is one segment")
+        for name in [".", "..", "%2E%2E"] {
+            expect(parse("tinycast://note/\(name)") == nil, "\(name) is never a note")
+        }
         let chat = UUID()
         expect(
             DeepLink.url(forChat: chat, scheme: scheme).flatMap { DeepLink(url: $0, scheme: scheme) }

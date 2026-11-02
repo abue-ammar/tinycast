@@ -64,7 +64,7 @@ enum DeepLink: Equatable, Sendable {
         case ("settings", false):
             return path.contains("/") ? nil : .settings(slug: path.lowercased())
         case (noteHost, false):
-            return path.contains("/") ? nil : .note(name: path)
+            return path.contains("/") || path == "." || path == ".." ? nil : .note(name: path)
         case (chatHost, false):
             return UUID(uuidString: path).map { .chat(id: $0) }
         case (windowSizeHost, true):

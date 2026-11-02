@@ -943,11 +943,12 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
   opens the editor filled in; Cancel saves nothing. `command/create-snippet?fallbackText=hello` and
   `command/create-note?fallbackText=hello` start with `hello`
 - `command/create-quicklink?context=` with a list of two, one already in the library: it asks to add
-  two, adds one, and the HUD says so. The same for `create-snippet`
+  two, showing each name and link, adds one, and the HUD says so. The same for `create-snippet`,
+  whose question shows names
 - Select text in TextEdit, then run Create Snippet from its hotkey and from the launcher: the editor
   starts with that text, and the clipboard is untouched
 - `system-action/set-volume?fallbackText=30` sets 30% with no picker; `?fallbackText=300` reports the
-  link and changes nothing
+  link before asking and changes nothing. `note/..` reports it too
 - `window-size?arguments=%7B%22width%22%3A%22800%22%2C%22height%22%3A%2260%25%22%7D` sizes the front
   window to 800 pt by 60%; `"width":"0"` reports the link
 - `?arguments=nope` on any link: a HUD says it can't open it, and nothing runs
@@ -955,7 +956,8 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
 - A quicklink whose link is `tinycast-dev://window-command/left-half` moves the window without
   asking. One whose link is another quicklink's says it can't, and nothing loops
 - `raycast://extensions/<owner>/<ext>/<cmd>` and `tinycast-dev://extensions/<owner>/<ext>/<cmd>`
-  still run an installed extension command
+  still run an installed extension command; `?context=` with a JSON object reaches it as
+  `props.launchContext`
 
 ### Extensions
 

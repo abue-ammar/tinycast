@@ -147,7 +147,7 @@ final class DeepLinkCoordinator {
         // Every parsed link names a row; one that didn't would run unasked, so it never runs.
         guard let entryID = action.entryID else { return }
         // Before any question: asking about a row that isn't there only teaches a page what is.
-        guard exists(action) else { return reportUnknownLink() }
+        guard exists(action), accepts(input, for: action) else { return reportUnknownLink() }
         guard isAllowed(action) else { return }
         runAfterConsent(
             name: hotKeys.displayName(of: action), input: input,
@@ -166,6 +166,13 @@ final class DeepLinkCoordinator {
         case .command, .systemAction, .windowCommand: true
         default: hotKeys.displayName?(action) != nil
         }
+    }
+
+    private func accepts(_ input: DeepLinkInput, for action: HotKeyAction) -> Bool {
+        guard case .systemAction(.setVolume) = action, let typed = Self.typedVolume(in: input) else {
+            return true
+        }
+        return VolumeLevel.level(fromPercent: typed) != nil
     }
 
     /// Typed text is one Return from a fallback row, so it asks like any other input.
@@ -373,16 +380,17 @@ final class DeepLinkCoordinator {
         return true
     }
 
-    /// `volume` by name, in order, or as `fallbackText`; a level that doesn't read is refused.
     private func setVolume(with input: DeepLinkInput) -> Bool {
-        let typed = input.fieldValues(names: ["volume"], fieldID: { _ in "volume" })["volume"]
-        guard let typed else { return false }
-        guard let level = VolumeLevel.level(fromPercent: typed) else {
-            reportUnknownLink()
-            return true
+        guard let level = Self.typedVolume(in: input).flatMap(VolumeLevel.level(fromPercent:)) else {
+            return false
         }
         core.systemActionCoordinator.setVolume(level)
         return true
+    }
+
+    /// `volume` by name, in order, or as `fallbackText`.
+    private static func typedVolume(in input: DeepLinkInput) -> String? {
+        input.fieldValues(names: ["volume"], fieldID: { _ in "volume" })["volume"]
     }
 
     private func hidePalette() {

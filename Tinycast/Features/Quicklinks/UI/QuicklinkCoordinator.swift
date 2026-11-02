@@ -458,7 +458,8 @@ final class QuicklinkCoordinator {
         guard
             await core.confirm(
                 title: String(localized: "Add \(incoming.count) quicklinks from a link?"),
-                message: ListFormatter.localizedString(byJoining: incoming.map(\.name)),
+                message: incoming.map { $0.name.isEmpty ? $0.link : "\($0.name) — \($0.link)" }
+                    .joined(separator: "\n"),
                 symbol: Quicklink.sfSymbol, confirmTitle: String(localized: "Add"), tone: .neutral,
                 confirmRole: .standard)
         else { return }
