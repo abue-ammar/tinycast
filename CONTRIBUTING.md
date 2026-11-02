@@ -67,6 +67,14 @@ Two things that are only about contributing, and so are not in those docs:
 - Commit messages imperative: `Add per-app hotkey toggle`.
 - Behaviour you didn't mean to change, didn't change. Say so explicitly in the PR if it did.
 
+## Spam
+
+- Don't ping maintainers with `@` mentions, bumps or "any update?" comments. Every issue and pull
+  request is read.
+- Syncing a fork? Keep this repository's issue and pull request numbers out of your PR title and
+  description. Each one posts a "mentioned this" notice on the original thread.
+- **Constant spamming leads to a block.**
+
 ## Bugs
 
 macOS version, Tinycast version + channel, steps, expected vs actual. A recording beats a paragraph.
