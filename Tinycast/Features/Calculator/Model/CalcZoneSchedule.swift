@@ -52,7 +52,7 @@ extension CalcTimeZone {
             guard let begin = CalcDateTime.wallMoment(phrase + " at " + first, now: now, calendar: zoned),
                 var end = CalcDateTime.wallMoment(phrase + " at " + last, now: now, calendar: zoned)
             else { return nil }
-            if end <= begin, let next = calendar.date(byAdding: .day, value: 1, to: end) { end = next }
+            if end <= begin, let next = zoned.date(byAdding: .day, value: 1, to: end) { end = next }
             let note = dayOffsetNote(
                 SourceMoment(date: begin, zone: source), target: target, calendar: calendar)
             guard let note else { return nil }
@@ -123,7 +123,9 @@ extension CalcTimeZone {
     private static func clockTokens(_ words: [String]) -> [String] {
         var tokens: [String] = []
         for word in words where word != "at" && word != "on" {
-            if word == "am" || word == "pm", let last = tokens.last, Int(last) != nil {
+            if word == "am" || word == "pm", let last = tokens.last, parseClock(last) != nil,
+                parseClock(last + word) != nil
+            {
                 tokens[tokens.count - 1] = last + word
             } else {
                 tokens.append(word)

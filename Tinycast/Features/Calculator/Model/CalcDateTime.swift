@@ -147,6 +147,8 @@ enum CalcDateTime {
             case "ago": if !isFirst { signals.insert(.fromAgo) }
             case "in": if !isFirst, !isLast { signals.insert(.inWord) }
             case "at": if !isFirst, !isLast { signals.insert(.at) }
+            case "new":
+                if index + 1 < words.count, words[index + 1].hasPrefix("year") { signals.insert(.moment) }
             case "next", "last": if isFirst { signals.insert(.nextOrLast) }
             case "unix", "timestamp": signals.formUnion([.timestamp, .moment])
             default: break
@@ -536,6 +538,11 @@ enum CalcDateTime {
         "halloween": (10, 31), "valentines": (2, 14), "valentines day": (2, 14)
     ]
 
+    private static func withoutApostrophes(_ phrase: String) -> String {
+        phrase.unicodeScalars.contains { $0 == "'" || $0 == "’" }
+            ? phrase.replacingOccurrences(of: "['’]", with: "", options: .regularExpression) : phrase
+    }
+
     /// The day a phrase names, nearest occurrence first, for a caller that only wants the date.
     static func day(_ phrase: String, now: Date, calendar: Calendar) -> Date? {
         parseMoment(phrase, now: now, calendar: calendar, bias: .nearest)?.date
@@ -558,10 +565,7 @@ enum CalcDateTime {
         if let edge = boundary(phrase) {
             return boundaryDate(edge, now: now, calendar: calendar).map { Moment(date: $0, hasTime: false) }
         }
-        let plain =
-            phrase.unicodeScalars.contains { $0 == "'" || $0 == "’" }
-            ? phrase.replacingOccurrences(of: "['’]", with: "", options: .regularExpression) : phrase
-        if let day = fixedDays[plain] {
+        if let day = fixedDays[withoutApostrophes(phrase)] {
             return monthDayMoment(month: day.month, day: day.day, now: now, calendar: calendar, bias: bias)
         }
         if let range = phrase.range(of: " at ") {
@@ -569,6 +573,7 @@ enum CalcDateTime {
             let atoms = atomize(dayPhrase)
             let recurring =
                 weekdayByName[dayPhrase] != nil || monthByName[dayPhrase] != nil
+                || fixedDays[withoutApostrophes(dayPhrase)] != nil
                 || (atoms.count == 2 && namesADay(dayPhrase))
                 || (atoms.count == 1 && dayPhrase.split(separator: "/").count == 2)
             guard let clock = parseMeridiemClock(String(phrase[range.upperBound...])),

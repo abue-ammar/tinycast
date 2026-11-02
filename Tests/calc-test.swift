@@ -731,6 +731,12 @@ struct CalcTests {
         expectDisplayAt("christmas + 3 days", "28 December")
         expectNilAt("christmas")
         expectNilAt("easter")
+        expectDisplayAt("new years eve + 3 days", "3 January, 2027")
+        expectDisplayAt("new year's eve + 3 days", "3 January, 2027")
+        let christmasNoon = clock.calendar.date(
+            from: DateComponents(year: 2026, month: 12, day: 25, hour: 12))!
+        expectDisplayAt("hrs till christmas at 9am", "8,757 hours", now: christmasNoon)
+        expectNilAt("new york")
         // Facts about a date
         expectDisplayAt("week number", "30")
         expectDisplayAt("what week is it", "30")
@@ -1262,6 +1268,10 @@ struct CalcTests {
         expectBadgesAt("9am-5pm et in cet", source: "New York", target: "Paris")
         expectNilAt("9am-5pm")
         expectNilAt("9am-5pm et in new york")
+        // A spaced meridiem joins a clock with minutes, and an overnight end advances in the source zone
+        expectDisplayAt("9:30 am to 5:30 pm et in cet", "3:30 PM – 11:30 PM")
+        expectDisplayAt("tomorrow at 1:30 pm et in tokyo", "Saturday, 25 July at 2:30 AM")
+        expectDisplayAt("oct 31 9pm-5am et in london", "Sunday, 1 November, 1:00 AM – 10:00 AM")
         expectDisplayAt(
             "1pm et in london, tokyo, sydney", "6:00 PM · 2:00 AM (tomorrow) · 3:00 AM (tomorrow)")
         expectBadgesAt(
