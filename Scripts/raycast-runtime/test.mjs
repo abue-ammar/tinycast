@@ -246,6 +246,23 @@ function syncHostCall(api, method, args) {
       cipher.setAutoPadding(padding);
       return Buffer.concat([cipher.update(Buffer.from(data, "base64")), cipher.final()]).toString("base64");
     }
+    case "crypto.gcmSeal": {
+      const [key, iv, data, aad] = args.map((value) => Buffer.from(value, "base64"));
+      const cipher = createCipheriv(`aes-${key.length * 8}-gcm`, key, iv).setAAD(aad);
+      const ciphertext = Buffer.concat([cipher.update(data), cipher.final()]);
+      return { ciphertext: ciphertext.toString("base64"), tag: cipher.getAuthTag().toString("base64") };
+    }
+    case "crypto.gcmOpen": {
+      const [key, iv, data, aad, tag] = args.map((value) => Buffer.from(value, "base64"));
+      const decipher = createDecipheriv(`aes-${key.length * 8}-gcm`, key, iv).setAAD(aad).setAuthTag(tag);
+      try {
+        return Buffer.concat([decipher.update(data), decipher.final()]).toString("base64");
+      } catch (error) {
+        // Mirrors the Swift host: a tag that does not verify is a result, not a host failure.
+        if (error.message !== "Unsupported state or unable to authenticate data") throw error;
+        return null;
+      }
+    }
     case "proc.start": {
       const spec = args[0];
       const child = spec.shell

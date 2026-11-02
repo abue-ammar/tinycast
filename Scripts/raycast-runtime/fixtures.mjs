@@ -226,6 +226,29 @@ export default function Command() {
     }
   };
   const cpu = os.cpus()[0];
+  const errorMessage = (fn) => {
+    try {
+      fn();
+      return "none";
+    } catch (error) {
+      return error.message;
+    }
+  };
+  const gcmKey = Buffer.alloc(32, 7);
+  const gcmSeal = (iv, aad) => {
+    const cipher = crypto.createCipheriv("aes-256-gcm", gcmKey, iv);
+    if (aad) cipher.setAAD(aad);
+    const ciphertext = Buffer.concat([cipher.update("hello gcm"), cipher.final()]);
+    return { ciphertext, tag: cipher.getAuthTag() };
+  };
+  const gcmOpen = (iv, sealed, aad) => {
+    const decipher = crypto.createDecipheriv("aes-256-gcm", gcmKey, iv);
+    if (aad) decipher.setAAD(aad);
+    decipher.setAuthTag(sealed.tag);
+    return Buffer.concat([decipher.update(sealed.ciphertext), decipher.final()]).toString("utf8");
+  };
+  const shortNonce = gcmSeal(Buffer.from("gcm-nonce-12"));
+  const longNonce = gcmSeal(Buffer.alloc(16, 9), Buffer.from("header"));
   const parts = [
     path.join("/a/b", "../c", "d.txt"),
     path.extname("x/y/file.tar.gz"),
@@ -241,6 +264,11 @@ export default function Command() {
     new URL("/next?q=1", "https://example.com/base/page").href,
     new URLSearchParams({ a: "1", b: "two words" }).toString(),
     crypto.createHash("sha256").update("abc").digest("hex").slice(0, 8),
+    shortNonce.tag.toString("hex") + ":" + shortNonce.ciphertext.toString("hex"),
+    longNonce.tag.toString("hex") + ":" + longNonce.ciphertext.toString("hex"),
+    gcmOpen(Buffer.alloc(16, 9), longNonce, Buffer.from("header")),
+    errorMessage(() => gcmOpen(Buffer.alloc(16, 9), longNonce)),
+    errorCode(() => crypto.createCipheriv("aes-256-gcm", gcmKey, Buffer.alloc(11))),
     Buffer.from("hello").toString("base64"),
     Buffer.from("aGVsbG8=", "base64").toString("utf8"),
     new TextDecoder().decode(new TextEncoder().encode("héllo")),
@@ -1064,6 +1092,11 @@ export async function runFixtures() {
       "https://example.com/next?q=1",
       "a=1&b=two+words",
       "ba7816bf",
+      "875a7af65e66ba29298577f2c937c48b:589dd2d6d2696c5310",
+      "749e7f715a23139cbfa9b3259ab594e1:aaefe159005653143a",
+      "hello gcm",
+      "Unsupported state or unable to authenticate data",
+      "ERR_CRYPTO_INVALID_IV",
       "aGVsbG8=",
       "hello",
       "héllo",
