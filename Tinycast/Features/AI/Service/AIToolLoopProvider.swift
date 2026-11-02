@@ -11,7 +11,7 @@ struct AIToolLoopProvider: AIProvider {
     static let maxResultBytes = 32_768
     /// Results bypass `boundedContext`, so the turn carries its own ceiling for what they add.
     static let maxTurnResultBytes = 131_072
-    /// Each round resends the whole turn, so with no round cap its growth has to end somewhere.
+    /// Each round replays prior output, including opaque reasoning, so its growth must be bounded.
     static let maxTurnHistoryBytes = 1_048_576
 
     init(
@@ -47,17 +47,26 @@ struct AIToolLoopProvider: AIProvider {
         var spent = 0
         var carried = 0
         var rounds = 0
-        while maxRounds.map({ rounds < $0 }) ?? (carried < Self.maxTurnHistoryBytes) {
+        while carried < Self.maxTurnHistoryBytes, maxRounds.map({ rounds < $0 }) ?? true {
             rounds += 1
             let round = try await streamRound(
                 request.continuing(with: messages, tools: tools), into: continuation)
+            try Task.checkCancellation()
             guard !round.calls.isEmpty else {
                 continuation.yield(.finished)
                 return
             }
             messages.append(
-                AIMessage(role: .assistant, text: round.text, toolCalls: round.calls))
-            carried += round.text.utf8.count + round.calls.reduce(0) { $0 + $1.arguments.utf8.count }
+                AIMessage(
+                    role: .assistant, text: round.text, toolCalls: round.calls,
+                    responseItems: round.responseItems))
+            if round.responseItems.isEmpty {
+                carried += round.text.utf8.count + round.calls.reduce(0) { $0 + $1.arguments.utf8.count }
+            } else {
+                carried += try JSONSerialization.data(
+                    withJSONObject: round.responseItems.map(\.jsonObject)
+                ).count
+            }
             for call in round.calls {
                 try Task.checkCancellation()
                 let tool = tools.first { $0.name == call.name }
@@ -65,21 +74,26 @@ struct AIToolLoopProvider: AIProvider {
                     .toolCall(
                         id: call.id, origin: tool?.origin ?? "", title: tool?.title ?? call.name))
                 let result = await bounded(invoke(call), spent: &spent)
+                try Task.checkCancellation()
                 continuation.yield(.toolResult(id: call.id, isError: result.isError))
                 carried += result.content.utf8.count
                 messages.append(AIMessage(role: .tool, text: "", toolResult: result))
             }
         }
-        throw AIProviderError.responseFailed(
-            String(localized: "Stopped after \(rounds) rounds of tool calls."))
+        let message =
+            carried >= Self.maxTurnHistoryBytes
+            ? String(localized: "Stopped because this turn's tool history is too large.")
+            : String(localized: "Stopped after \(rounds) rounds of tool calls.")
+        throw AIProviderError.responseFailed(message)
     }
 
     /// One pass over the base route: text flows straight to the transcript, calls are collected.
     private func streamRound(
         _ request: AIRequest, into continuation: AIProviderStream.Continuation
-    ) async throws -> (text: String, calls: [AIToolCall]) {
+    ) async throws -> (text: String, calls: [AIToolCall], responseItems: [JSONValue]) {
         var text = ""
         var calls: [AIToolCall] = []
+        var responseItems: [JSONValue] = []
         for try await event in base.stream(request) {
             try Task.checkCancellation()
             switch event {
@@ -88,6 +102,8 @@ struct AIToolLoopProvider: AIProvider {
                 continuation.yield(event)
             case .toolCallRequested(let call):
                 calls.append(call)
+            case .responseOutput(let items):
+                responseItems = items
             // `.finished` is the loop's to send, once the model has stopped asking for tools.
             case .finished:
                 break
@@ -95,7 +111,7 @@ struct AIToolLoopProvider: AIProvider {
                 continuation.yield(event)
             }
         }
-        return (text, calls)
+        return (text, calls, responseItems)
     }
 
     private func bounded(_ result: AIToolResult, spent: inout Int) -> AIToolResult {

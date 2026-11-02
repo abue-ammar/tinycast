@@ -85,7 +85,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   effort. A pick also moves the app default, which is only what a *new* chat starts on. A chat whose
   route was removed in Settings answers on the default rather than failing
   (`AIChatCoordinator.model(for:)`), and keeps its stored pick in case the route comes back.
-- **Reasoning is shown, folded, and never resent.** `AIStreamEvent.reasoning` carries the text a route
+- **Reasoning is shown, folded, and never rebuilt from history.** `AIStreamEvent.reasoning` carries the text a route
   shares — OpenAI-shaped `reasoning` / `reasoning_content` / `reasoning_details`, Anthropic and
   Claude-CLI `thinking_delta`, Codex's reasoning summary — into `ChatMessage.reasoning`, a list of
   `ChatReasoning` blocks. Thinking that resumes after answer text opens a new block pinned at that
@@ -182,6 +182,10 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   rewrites the reader's own selected text and has nothing to call. A turn's tool messages stay inside
   the loop — what the transcript keeps is a `ChatToolUse` record, pinned at a text offset like a
   search, so `boundedContext` can never separate a stored call from its result.
+  The direct OpenAI API uses Responses. Its complete output items, including encrypted reasoning,
+  assistant phase and function-call IDs, travel with the next tool round inside `AIMessage.responseItems`.
+  They count against the turn's history ceiling and are discarded when the turn ends. Responses requests
+  set `store: false`; no response ID or server-side conversation becomes part of saved chat state.
 - **Every HTTP request uses a private ephemeral `URLSession` with no URL cache.** Provider traffic must
   not create a second credential or response cache on disk.
 - **A refusal shows what the provider said.** `HTTPAIProvider` reads a non-200 body before the turn
@@ -334,7 +338,7 @@ as `.codex`, so an existing selection survives the rename.
 | Grok | installed `grok --prompt-file` | user's Grok login |
 | OpenCode | installed `opencode run --standalone` (OpenCode 2) | providers already configured in OpenCode |
 | Cursor | installed `agent -p --mode ask` | user's Cursor login |
-| OpenAI API | OpenAI Chat Completions | `https://api.openai.com/v1` |
+| OpenAI API | OpenAI Responses | `https://api.openai.com/v1` |
 | Anthropic Claude | Anthropic Messages | `https://api.anthropic.com` |
 | Google Gemini | Gemini's OpenAI-compatible API | `https://generativelanguage.googleapis.com/v1beta/openai` |
 | OpenRouter | OpenAI-compatible | `https://openrouter.ai/api/v1` |
@@ -344,6 +348,11 @@ The base URL stays editable for every preset because gateways and organization p
 destinations. `AIHTTPConfiguration.endpointURL` accepts a complete endpoint or appends the transport's
 completion path. Gemini requests identify Tinycast through `x-goog-api-client`; OpenRouter requests
 carry the app title.
+
+Only the OpenAI preset directed at `api.openai.com` uses Responses. An OpenAI preset pointed at a
+gateway, and the OpenAI Compatible preset at any address, retain Chat Completions. A saved direct
+OpenAI `/chat/completions` endpoint resolves to `/responses` without rewriting the saved connection.
+Model discovery also accepts a full `/responses` endpoint and still requests `/models`.
 
 A connection can also carry custom request headers for gateways that route or authenticate by header.
 They go to model discovery and every chat request after the route's own headers, so a custom name
@@ -400,6 +409,14 @@ into answer text. `AIThinkTagDecoder` holds back a tag split across deltas, drop
 between the closing tag and the answer, and flushes an unclosed block as reasoning. Anthropic
 system messages are lifted into its top-level `system` field; the other HTTP routes keep system
 messages in the OpenAI message array.
+
+`AIResponsesDecoder` handles Responses text and refusal deltas, thinking activity, usage and
+terminal failures behind the same SSE parser. It releases function calls only after
+`response.completed`, using the complete `response.output` items rather than partially streamed
+arguments. A failed, incomplete or truncated response cannot release a tool call. Tool definitions
+set `strict: false` so the MCP server's optional parameters retain their existing meaning.
+The direct OpenAI route keeps the model's default reasoning and does not request visible summaries;
+its encrypted reasoning items are replayed between tool rounds independently of the thinking indicator.
 
 `AIProviderFactory` resolves the selection, validates an API endpoint, reads an API key at the last
 possible moment and returns `AppleIntelligenceProvider`, `HTTPAIProvider`, `CodexInstalledProvider`

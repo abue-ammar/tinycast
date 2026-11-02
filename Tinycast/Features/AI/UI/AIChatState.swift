@@ -257,7 +257,7 @@ final class AIChatState {
             guard let index = message.toolUses.lastIndex(where: { $0.callID == id }) else { return }
             message.toolUses[index].state = isError ? .failed : .completed
             session.replaceLast(with: message)
-        case .toolCallRequested:
+        case .toolCallRequested, .responseOutput:
             break
         case .usage(let usage):
             guard var message = session.messages.last, message.role == .assistant else { return }

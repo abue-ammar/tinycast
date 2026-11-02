@@ -59,9 +59,10 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   AI → Chat → Tool call rounds, an `AIToolRounds` of 10, 25, 50, 100 or Unlimited, 25 unless changed
   — after which the turn fails saying so: a model that only calls has stopped answering, but a long
   chain of calls is also honest work, which is why it is a choice and not a constant. Unlimited
-  hands the loop no round cap, so the model or Stop ends the turn, even while the palette is hidden,
-  unless what the turn has added — the model's text, call arguments and results — reaches
-  `maxTurnHistoryBytes`, since every round resends all of it. Each result is cut to
+  hands the loop no round cap, so the model or Stop ends the turn, even while the palette is hidden.
+  Every API turn also ends once its added text, call arguments, results and opaque response items
+  reach `maxTurnHistoryBytes`, since every round resends all of it. History-size exhaustion is
+  reported separately from reaching the selected round cap. Each result is cut to
   `maxResultBytes`, and a turn's results together to `maxTurnResultBytes`, because tool output is
   appended inside the turn and so never passes through `ChatSession.boundedContext`. The same
   number bounds a CLI route, in the terms its own client counts in: Claude takes it as
@@ -212,10 +213,17 @@ carries only the wire name; the loop consumes it and never forwards it. `.toolCa
 emits in its place, already carrying what a transcript row has to show.
 
 `AIRequestBody` builds each provider's JSON. It is pure and harness-pinned because the shapes are
-unforgiving: OpenAI takes a catalog of `{type: "function", function: {…}}` and results as their own
+unforgiving: OpenAI-compatible routes take `{type: "function", function: {…}}` and results as their own
 `role: "tool"` turns, while Anthropic takes `input_schema` with no wrapper, a `tool_use` content
 block whose `input` is the arguments parsed back into an object, and results as `tool_result` blocks
 that must arrive as **one** user turn however many of them there are.
+
+The direct OpenAI route uses Responses instead of the compatible format above. Functions have
+top-level `name`, `description` and `parameters`, with `strict: false` to preserve each server's
+schema. Results are `function_call_output` items linked by `call_id`. The loop replays the preceding
+response's complete output in order, including encrypted reasoning and assistant phase, before the
+results. This state lives only inside the current turn and shares its history-size budget; it never
+enters saved chat history. Gateways and the other compatible routes keep their existing encoding.
 
 ## The loop somebody else runs
 

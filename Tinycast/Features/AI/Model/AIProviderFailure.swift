@@ -2,6 +2,8 @@ import Foundation
 
 /// A refused turn's text for the transcript: the status's line, then what the provider itself said.
 enum AIProviderFailure {
+    static let stopped = String(localized: "The provider stopped the response with an error.")
+
     /// Past this the body is someone else's log, not an answer worth reading for one sentence.
     static let bodyLimit = 8_000
     /// A provider's message is a sentence or two; a longer one is cut rather than filling the chat.

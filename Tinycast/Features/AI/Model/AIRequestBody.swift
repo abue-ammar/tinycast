@@ -6,9 +6,56 @@ enum AIRequestBody {
         _ input: AIRequest, configuration: AIHTTPConfiguration
     ) -> [String: Any] {
         switch configuration.shape {
+        case .openAIResponses: return responses(input, configuration: configuration)
         case .openAICompatible: return openAI(input, configuration: configuration)
         case .anthropic: return anthropic(input, configuration: configuration)
         }
+    }
+
+    private static func responses(
+        _ input: AIRequest, configuration: AIHTTPConfiguration
+    ) -> [String: Any] {
+        var body: [String: Any] = [
+            "model": configuration.model,
+            "input": input.messages.flatMap(responseMessages),
+            "stream": true,
+            "store": false
+        ]
+        if let instructions = input.instructions?.nonEmpty { body["instructions"] = instructions }
+        if !input.tools.isEmpty {
+            body["tools"] = input.tools.map {
+                [
+                    "type": "function", "name": $0.name, "description": $0.description,
+                    "parameters": $0.parameters.jsonObject, "strict": false
+                ]
+            }
+        }
+        return body
+    }
+
+    private static func responseMessages(_ message: AIMessage) -> [[String: Any]] {
+        if !message.responseItems.isEmpty {
+            return message.responseItems.compactMap { $0.jsonObject as? [String: Any] }
+        }
+        if let result = message.toolResult {
+            return [["type": "function_call_output", "call_id": result.callID, "output": result.content]]
+        }
+        var items: [[String: Any]] = []
+        if !message.images.isEmpty || !message.documents.isEmpty {
+            var parts: [[String: Any]] = []
+            if let text = message.text.nonEmpty { parts.append(["type": "input_text", "text": text]) }
+            parts += message.images.map { ["type": "input_image", "image_url": $0.dataURL] }
+            parts += message.documents.map {
+                ["type": "input_file", "filename": $0.name, "file_data": $0.dataURL]
+            }
+            items.append(["role": message.role.rawValue, "content": parts])
+        } else if let text = message.text.nonEmpty {
+            items.append(["role": message.role.rawValue, "content": text])
+        }
+        items += message.toolCalls.map {
+            ["type": "function_call", "call_id": $0.id, "name": $0.name, "arguments": $0.arguments]
+        }
+        return items
     }
 
     private static func openAI(
