@@ -65,6 +65,12 @@ sensitive-type guards, which stay unconditional — a secret must never be recor
 arrives in. A bare screenshot carries no file URL and still falls through to the `.png`/`.tiff`
 branch untouched.
 
+**Rich text is the last resort.** A copy with no file URL, plain text or image, such as a web page's
+HTML-only Clipboard API write, is converted through `NSAttributedString`, RTF before HTML, and
+recorded as a plain text entry. It sits after the image branch because a browser's image copy
+carries an `<img>` fragment beside the pixels. The HTML importer runs WebKit on the main actor, so
+fragments over 256 KB are skipped to bound the stall.
+
 `ClipboardManager.fileURLs(on:volatileRoots:)` takes both the pasteboard and the roots as
 parameters, so `pasteboard-test` can drive an `NSPasteboard.withUniqueName()` and its own scratch
 tree: a harness that touched `NSPasteboard.general` would land in the reader's own running Tinycast
