@@ -748,6 +748,26 @@ struct WindowCommandTests {
             frame(.firstThird, on: right)!,
             "a remembered third is re-derived exactly on the destination")
 
+        let maximizedOnLeft = frame(.maximize, on: left, gap: 16)!
+        let maximizedOnRight = frame(
+            .nextDisplay, window: maximizedOnLeft, gap: 16, allScreens: both)!
+        expectRect(
+            maximizedOnRight, frame(.maximize, on: right, gap: 16)!,
+            "a maximized window fills the destination's canvas with the same gap")
+        expectRect(
+            frame(.previousDisplay, window: maximizedOnRight, gap: 16, allScreens: both)!,
+            maximizedOnLeft, "a maximized window round-trips with the gap intact")
+
+        let quarterOfCanvas = CGRect(x: 368, y: 233, width: 704, height: 434)
+        let scaledOnRight = frame(
+            .nextDisplay, window: quarterOfCanvas, gap: 16, allScreens: both)!
+        expectRect(
+            scaledOnRight, CGRect(x: 2088, y: 368, width: 1264, height: 704),
+            "a partial window keeps its proportions of the canvas")
+        expectRect(
+            frame(.previousDisplay, window: scaledOnRight, gap: 16, allScreens: both)!,
+            quarterOfCanvas, "a partial window round-trips without growing")
+
         expect(
             WindowPlacementEngine.screen(
                 containing: CGRect(x: 1150, y: 0, width: 500, height: 100), in: both)?.id == 1,

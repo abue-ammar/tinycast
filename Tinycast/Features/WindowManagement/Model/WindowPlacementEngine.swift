@@ -106,14 +106,14 @@ enum WindowPlacementEngine {
             host.visibleFrame.width > 0, host.visibleFrame.height > 0
         else { return nil }
 
-        let gap = sanitizedGap(input.gap, in: host.visibleFrame)
-
         switch input.command {
         case .nextDisplay, .previousDisplay:
-            return displayPlacement(input, from: host, gap: gap)
+            return displayPlacement(input, from: host)
         default:
             break
         }
+
+        let gap = sanitizedGap(input.gap, in: host.visibleFrame)
 
         // `cycleLength` is 1 for a non-cycling command, so a stale step can never leak in.
         let step = wrapped(
@@ -219,11 +219,7 @@ enum WindowPlacementEngine {
         }
     }
 
-    private static func displayPlacement(
-        _ input: Input, from host: Screen, gap: CGFloat
-    )
-        -> Placement?
-    {
+    private static func displayPlacement(_ input: Input, from host: Screen) -> Placement? {
         let ordered = ordered(input.screens)
         // A single display makes both commands a quiet no-op rather than a pointless re-place.
         guard ordered.count > 1, let index = ordered.firstIndex(where: { $0.id == host.id })
@@ -231,7 +227,7 @@ enum WindowPlacementEngine {
         let offset = input.command == .nextDisplay ? 1 : -1
         let destination = ordered[(index + offset + ordered.count) % ordered.count]
         let frame = moved(
-            input.windowFrame, from: host, to: destination, gap: gap,
+            input.windowFrame, from: host, to: destination, gap: input.gap,
             lastTile: input.lastTileCommand)
         return Placement(
             frame: frame, screenID: destination.id, anchor: .centered, resizes: true)
@@ -240,24 +236,24 @@ enum WindowPlacementEngine {
     private static func moved(
         _ frame: CGRect, from: Screen, to: Screen, gap: CGFloat, lastTile: WindowCommand.ID?
     ) -> CGRect {
+        let targetGap = sanitizedGap(gap, in: to.visibleFrame)
         // Exactness beats proportion: an untouched tile re-derives instead of being scaled.
         if let lastTile, let fractions = tileFractions(lastTile) {
             return tile(
                 to.visibleFrame, x0: fractions.x0, x1: fractions.x1, y0: fractions.y0,
-                y1: fractions.y1, gap: sanitizedGap(gap, in: to.visibleFrame))
+                y1: fractions.y1, gap: targetGap)
         }
-        let source = from.visibleFrame
-        let target = to.visibleFrame
+        let source = canvas(from.visibleFrame, gap: sanitizedGap(gap, in: from.visibleFrame))
+        let target = canvas(to.visibleFrame, gap: targetGap)
         guard source.width > 0, source.height > 0 else { return frame }
-        // Relative to `visibleFrame`, so a window tucked against the Dock lands tucked again.
         let relativeX = (frame.minX - source.minX) / source.width
         let relativeY = (frame.minY - source.minY) / source.height
         let scaled = CGRect(
             x: target.minX + relativeX * target.width,
             y: target.minY + relativeY * target.height,
-            width: min(target.width, frame.width / source.width * target.width),
-            height: min(target.height, frame.height / source.height * target.height))
-        return rounded(clamped(scaled, into: target))
+            width: min(to.visibleFrame.width, frame.width / source.width * target.width),
+            height: min(to.visibleFrame.height, frame.height / source.height * target.height))
+        return rounded(clamped(scaled, into: to.visibleFrame))
     }
 
     // MARK: - Restore

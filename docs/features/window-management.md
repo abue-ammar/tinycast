@@ -101,6 +101,10 @@ one-point seams.
 the nudges and edge moves) work in
 `canvas = visibleFrame.insetBy(gap)` instead: a centred window has no neighbour to gutter against.
 
+**Next / Previous Display** re-derive a window a tile placed, so it lands as the same tile. Any other
+window keeps its position and size as fractions of the canvas, each display applying its own gap: the
+gap stays the same in points, and a window that filled one canvas fills the other.
+
 **Make Larger / Make Smaller** step by 5% of the _screen_, not of the window, and the step is forced
 even so each edge moves a whole point. That makes the two commands exactly invertible — `size × 0.95 ×
 1.05 ≠ size`, so a size-relative step would shrink a little on every round trip — and it feels the same
