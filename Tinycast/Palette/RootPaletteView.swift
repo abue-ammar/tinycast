@@ -394,6 +394,12 @@ struct RootPaletteView: View {
     /// Split from `body` for the same reason `keyHandlers` is: one chain cannot carry them all.
     @ViewBuilder
     private func stateObservers(_ content: some View) -> some View {
+        modeObservers(sessionObservers(content))
+    }
+
+    /// Focus, query and filters. Split from `stateObservers` so the chain stays type-checkable.
+    @ViewBuilder
+    private func sessionObservers(_ content: some View) -> some View {
         emojiObservers(content)
             // Every show bumps focusToken so the search field refocuses.
             .onChange(of: vm.focusToken) {
@@ -436,6 +442,12 @@ struct RootPaletteView: View {
                 land()
                 fileSearch.search(vm.query, filter: vm.fileSearchFilter)
             }
+    }
+
+    /// Mode, menus and appearance. Split from `stateObservers` so the chain stays type-checkable.
+    @ViewBuilder
+    private func modeObservers(_ content: some View) -> some View {
+        content
             .onChange(of: vm.mode) {
                 vm.clipboardFilter = .all
                 vm.fileSearchFilter = .all

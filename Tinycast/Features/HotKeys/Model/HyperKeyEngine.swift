@@ -25,6 +25,12 @@ struct HyperKeyEngine: Sendable {
     private var downAt: TimeInterval?
     private var used = false
 
+    /// Private state keeps the synthesized initializer private, so the call sites name one.
+    init(route: HyperKeyRoute?, includesShift: Bool = true) {
+        self.route = route
+        self.includesShift = includesShift
+    }
+
     private enum DeviceFlags {
         static let leftControlOptionCommand: UInt64 = 0x29
         static let leftShift: UInt64 = 0x2

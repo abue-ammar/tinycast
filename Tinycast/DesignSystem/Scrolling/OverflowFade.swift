@@ -35,40 +35,42 @@ struct OverflowFadeMask: ViewModifier {
     private func stops(height: CGFloat) -> [Gradient.Stop] {
         guard includesTop else { return bottomStops(height: height) }
         // Popup edges use several stops so neither end cuts abruptly through a row.
-        let topStrength = min(overflow.top / band, 1)
-        let bottomStrength = min(overflow.bottom / band, 1)
+        let full = CGFloat(1)
+        let topStrength = min(overflow.top / band, full)
+        let bottomStrength = min(overflow.bottom / band, full)
         guard max(topStrength, bottomStrength) > 0, height > 0 else {
             return [.init(color: .black, location: 0)]
         }
-        let extent = min(band / height, 0.5)
+        let extent = min(band / height, CGFloat(0.5))
         return [
-            .init(color: .black.opacity(1 - topStrength), location: 0),
+            .init(color: .black.opacity(full - topStrength), location: 0),
             .init(
-                color: .black.opacity(1 - topStrength * 0.75),
+                color: .black.opacity(full - topStrength * 0.75),
                 location: extent * 0.35),
             .init(
-                color: .black.opacity(1 - topStrength * 0.25),
+                color: .black.opacity(full - topStrength * 0.25),
                 location: extent * 0.7),
             .init(color: .black, location: extent),
-            .init(color: .black, location: 1 - extent),
+            .init(color: .black, location: full - extent),
             .init(
-                color: .black.opacity(1 - bottomStrength * 0.25),
-                location: 1 - extent * 0.7),
+                color: .black.opacity(full - bottomStrength * 0.25),
+                location: full - extent * 0.7),
             .init(
-                color: .black.opacity(1 - bottomStrength * 0.75),
-                location: 1 - extent * 0.35),
-            .init(color: .black.opacity(1 - bottomStrength), location: 1)
+                color: .black.opacity(full - bottomStrength * 0.75),
+                location: full - extent * 0.35),
+            .init(color: .black.opacity(full - bottomStrength), location: full)
         ]
     }
 
     /// The original Settings and Notes curve stays unchanged when no popup opts into its top edge.
     private func bottomStops(height: CGFloat) -> [Gradient.Stop] {
-        let strength = min(overflow.bottom / band, 1)
+        let full = CGFloat(1)
+        let strength = min(overflow.bottom / band, full)
         guard strength > 0, height > band else { return [.init(color: .black, location: 0)] }
         return [
             .init(color: .black, location: 0),
-            .init(color: .black, location: 1 - band / height),
-            .init(color: .black.opacity(1 - strength), location: 1)
+            .init(color: .black, location: full - band / height),
+            .init(color: .black.opacity(full - strength), location: full)
         ]
     }
 }
