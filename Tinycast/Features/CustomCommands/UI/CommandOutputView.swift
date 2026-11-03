@@ -70,6 +70,17 @@ struct CommandOutputView: View {
     // MARK: - Footer
 
     private func footer(_ run: CommandRun) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+            hint(run)
+            statusLine(run)
+        }
+        .font(.callout)
+        .foregroundStyle(Theme.Colors.textSecondary)
+        .padding(.horizontal, Theme.Spacing.xxl)
+        .padding(.vertical, Theme.Spacing.lg)
+    }
+
+    private func statusLine(_ run: CommandRun) -> some View {
         HStack(spacing: Theme.Spacing.sm) {
             Circle()
                 .fill(statusTint(run))
@@ -92,11 +103,6 @@ struct CommandOutputView: View {
                     .foregroundStyle(Theme.Colors.textTertiary)
             }
         }
-        .font(.callout)
-        .foregroundStyle(Theme.Colors.textSecondary)
-        .overlay(alignment: .topLeading) { hint(run) }
-        .padding(.horizontal, Theme.Spacing.xxl)
-        .padding(.vertical, Theme.Spacing.lg)
     }
 
     /// Ticks itself rather than being driven by a timer the window would have to own.
@@ -107,19 +113,16 @@ struct CommandOutputView: View {
         }
     }
 
-    /// Sits above the footer rather than in it: the nudge is a sentence, and the bar is a line.
     @ViewBuilder
     private func hint(_ run: CommandRun) -> some View {
         if let hint = run.outcome?.hint {
-            HStack(spacing: Theme.Spacing.sm) {
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
                 Text(hint)
+                    .fixedSize(horizontal: false, vertical: true)
                 Button("Open Settings") { presenter.showCommandSettings() }
                     .buttonStyle(.link)
+                    .fixedSize()
             }
-            .font(.callout)
-            .foregroundStyle(Theme.Colors.textSecondary)
-            .fixedSize()
-            .alignmentGuide(.top) { $0[.bottom] + Theme.Spacing.md }
         }
     }
 
