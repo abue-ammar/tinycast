@@ -30,6 +30,8 @@ struct InlineEmojiListenerTests {
         let escape = try key(kVK_Escape)
         expect(session.handle(.keyDown, escape) != nil, "Escape is free until a picker is presented")
         _ = await messages.next()
+        let space = try key(kVK_Space, text: " ")
+        _ = session.handle(.keyDown, space)
         _ = session.handle(.keyDown, colon)
         guard let presented = await messages.next() else { throw Failure.noMessage }
         session.setPanelBounds(CGRect(x: 10, y: 10, width: 100, height: 100))
@@ -81,8 +83,8 @@ struct InlineEmojiListenerTests {
         let secure = InlineEmojiListener.Session(
             continuation: secureContinuation, secureEventInputEnabled: { true })
         var secureMessages = secureStream.makeAsyncIterator()
-        colon.setIntegerValueField(.eventSourceUserData, value: 0)
-        expect(secure.handle(.keyDown, colon) != nil, "Secure Input keeps all typing with the editor")
+        let secureColon = try key(kVK_ANSI_Semicolon, text: ":", flags: .maskShift)
+        expect(secure.handle(.keyDown, secureColon) != nil, "Secure Input keeps all typing with the editor")
         let secureMessage = await secureMessages.next()
         expect(secureMessage?.effect == .dismiss, "Secure Input never starts a search")
         session.setSuspended(true)

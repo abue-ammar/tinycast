@@ -139,6 +139,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `emoji-search-test` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format, multilingual search |
 | `inline-emoji-test` | `Emoji/Model/InlineEmojiPolicy.swift` — trigger boundaries, query editing, key consumption, expiry and reset |
 | `inline-emoji-listener-test` | Inline emoji callback ordering, key releases and repeats, click targeting and session identity; private, unposted events |
+| `inline-emoji-window-test` | Native picker sizing, hosted content bounds, edge placement, focus policy and view release across interface sizes; no posted events |
 | `command-escape-tap-test` | `Palette/CommandEscapeTap.swift` — dedicated run-loop dispatch while main is blocked, timeout recovery, stale actions, installation cancellation and teardown; private ports and unposted events only |
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` — and hover arming, pointer drift, scroll disarming and highlight tokens |
 | `compact-bar-test` | Compact shortcut order, selection boundaries, zero-to-four slots, identifiers, isolated preferences and invalid settings-file rejection |

@@ -246,7 +246,7 @@ final class InlineEmojiListener: HealthCheckable {
                 return original
             }
             let input = Self.input(for: key, event: event)
-            return state.withLock { state in
+            let consumesKey = state.withLock { state in
                 let isNavigating: Bool
                 if case .move = input {
                     isNavigating = state.policy.query != nil && state.hasResults
@@ -263,8 +263,9 @@ final class InlineEmojiListener: HealthCheckable {
                     continuation.yield(message(.dismiss, revision: state.version))
                 }
                 if decision.consumesKey { state.swallowedKeys.insert(key) }
-                return decision.consumesKey ? nil : original
+                return decision.consumesKey
             }
+            return consumesKey ? nil : original
         }
 
         private func message(_ effect: InlineEmojiPolicy.Effect, revision: UInt64) -> Message {

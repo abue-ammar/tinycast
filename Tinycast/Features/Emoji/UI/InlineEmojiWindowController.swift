@@ -26,7 +26,7 @@ final class InlineEmojiWindowController {
             rootView: InlineEmojiPickerView()
                 .environment(coordinator).environment(settings)
                 .environment(\.metrics, settings.interfaceSize.metrics))
-        hosting.sizingOptions = []
+        hosting.sizingOptions = [.intrinsicContentSize]
         panel.contentView = hosting
         let metrics = settings.interfaceSize.metrics
         let width = metrics.size.menuWidth
@@ -44,6 +44,7 @@ final class InlineEmojiWindowController {
             x: min(max(anchor.minX, visible.minX), visible.maxX - width),
             y: min(max(y, visible.minY), visible.maxY - height), width: width, height: height)
         panel.setFrame(frame, display: true)
+        hosting.setFrameSize(frame.size)
         coordinator.listener.setPanelBounds(
             CGRect(x: frame.minX, y: screenTop - frame.maxY, width: frame.width, height: frame.height))
         panel.orderFrontRegardless()

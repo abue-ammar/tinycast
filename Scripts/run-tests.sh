@@ -252,6 +252,14 @@ run inline-emoji-test      Tinycast/Features/Emoji/Model/InlineEmojiPolicy.swift
 run inline-emoji-listener-test Tinycast/Features/Emoji/Model/InlineEmojiPolicy.swift \
                            Tinycast/Features/Emoji/Service/InlineEmojiListener.swift \
                            Tinycast/Platform/HealthTicker.swift Tinycast/Platform/NotificationToken.swift
+run exclusive inline-emoji-window-test Tinycast/Features/Emoji/UI/InlineEmojiWindowController.swift \
+                           Tinycast/Features/Emoji/UI/InlineEmojiPickerView.swift \
+                           Tinycast/Features/Emoji/Model/InlineEmojiSuggestions.swift \
+                           Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
+                           Tinycast/Features/Settings/InterfaceSize.swift \
+                           Tinycast/Platform/Appearance.swift Tinycast/DesignSystem/Theme.swift \
+                           Tinycast/DesignSystem/InterfaceMetrics.swift \
+                           Tinycast/DesignSystem/GlassEffectView.swift Tinycast/DesignSystem/Interaction/Motion.swift
 run emoji-search-test      Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
                            Tinycast/Features/Emoji/Model/EmojiData.generated.swift \
                            Tinycast/Features/Emoji/Service/EmojiIndex.swift \
