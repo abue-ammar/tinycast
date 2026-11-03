@@ -169,7 +169,9 @@ keys by `AXUIElement` (via `CFEqual`/`CFHash` plus the pid), the harness keys by
 cycle state is never hidden inside the geometry. Its rules, in order:
 
 1. No record → step 0, capture the current frame as the restore point, `canRestore: false`.
-2. The frame drifted from `appliedFrame` by more than 2 pt → step 0, **and refresh** the restore point.
+2. The window left the state we put it in — its frame drifted from `appliedFrame` by more than
+   2 pt, or it is natively fullscreen when we did not leave it so → step 0, **and refresh** the
+   restore point.
 3. A different command, a different display, a `cycleLength` of 1, or a lapsed `cycleTimeout` → step 0.
 4. Otherwise → `(step + 1) % cycleLength`.
 
@@ -187,7 +189,9 @@ Two details carry their weight:
   has no defensible answer for what a _second_ Restore press should do.
 
 Rule 1 captures the starting frame before the first placement. Restore itself is a no-op until a
-placement has been recorded. `WindowMover` leaves `cycleTimeout` unset, so waiting never resets a cycle.
+placement has been recorded. A command that takes a window out of native fullscreen makes fullscreen
+its restore point, whatever chain it continues: Restore re-enters fullscreen, and does nothing while
+the window is still in it. `WindowMover` leaves `cycleTimeout` unset, so waiting never resets a cycle.
 
 **Cycling covers the four halves and Center Half only**, and `WindowCycle` picks one of three modes,
 `.off` by default so a repeat press stays idempotent unless asked otherwise:
@@ -277,13 +281,14 @@ centre. **One correction, no loop** — iterating against an app that fights bac
 visibly jitter.
 
 **Toggle Fullscreen** uses the undocumented `AXFullScreen` attribute, falling back to pressing
-`AXFullScreenButton`, then a quiet no-op. A write that fails with a messaging timeout counts as sent
-and never falls through to the button: the app may still flip, and the press would flip it back. There
-is deliberately no synthetic ⌃⌘F third attempt: it is app-rebindable and could fire an unrelated menu
-command. It does not read geometry back — the
-transition is animated and asynchronous, so any frame read there is a mid-animation value — and it
-clears the cycle chain while keeping the restore point, since macOS restores the pre-fullscreen frame
-itself but the user's original frame is still the right Restore target.
+`AXFullScreenButton` when the attribute is not settable, then a quiet no-op. A write that fails
+counts as sent and never falls through to the button: the app may still flip, and the press would
+flip it back. There is deliberately no synthetic ⌃⌘F third attempt: it is app-rebindable and could
+fire an unrelated menu command. It does not read geometry back — the transition is animated and
+asynchronous, so any frame read there is a mid-animation value — and it clears the cycle chain while
+keeping the restore point, since macOS restores the pre-fullscreen frame itself but the user's
+original frame is still the right Restore target. It records the state it asked for, so the window
+going fullscreen through us does not break the chain.
 
 Windows that are minimized, not `AXWindow`-roled (sheets, popovers), or that report no position or
 size are rejected before any work happens.
@@ -292,18 +297,21 @@ size are rejected before any work happens.
 
 A geometry command on a natively fullscreen window resolves its placement first, so a command with
 nowhere to go — Next Display on one display, or past the last with wrapping off — leaves the window
-alone. Otherwise it exits fullscreen, waits for the window to leave it, and runs the same `place` again
-on the fresh frame. Next and Previous Display then re-enter fullscreen, which macOS does on the
-display now holding the window; every other command leaves it windowed. Re-entry happens even when
-the move turned into a no-op, so a window is never stranded out of fullscreen.
+alone. Otherwise it exits fullscreen, waits **a fixed 750 ms**, and applies the same decision to a
+fresh frame and fresh screens, so an unplugged display is handled like any other move. Next and
+Previous Display then re-enter fullscreen, which macOS does on the display now holding the window;
+every other command leaves it windowed. Re-entry happens even when the move turned into a no-op, so
+a window is never stranded out of fullscreen. Restore afterwards re-enters fullscreen ([Cycling and
+Restore](#cycling-and-restore)).
 
-Each wait polls `isFullScreen` every 50 ms until it reads the wanted state, with a 2 s deadline per
-transition and the window's messaging timeout lowered to 0.5 s meanwhile, since an app mid-animation
-answers slowly. A transition is the one async path in the feature, kept in `fullScreenTransitions` per
-window: **a newer command on the same window cancels it** wherever it is, and the newer command runs
-against the window as it finds it, so the latest press wins. Commands on other windows are unaffected.
-The placement re-reads screens and the frame after the wait, so an unplugged display is handled like
-any other move. Both macOS transitions stay visible.
+The delay is not read off `AXFullScreen`: the attribute flips as the exit animation starts, about
+550 ms before it ends, and an app may undo a frame written before then. Only a failed write is
+confirmed, by polling `AXFullScreen` every 100 ms against a 2 s deadline with the window's messaging
+timeout lowered to 0.5 s; an unanswered read counts as not yet, never as out of fullscreen. A
+transition is the one async path in the feature, kept in `fullScreenTransitions` per window: **a
+newer command on the same window cancels it** wherever it is, and the newer command runs against the
+window as it finds it, so the latest press wins. Commands on other windows are unaffected. Both
+macOS transitions stay visible.
 
 `AXEnhancedUserInterface` is cleared for the duration of the writes and restored immediately, because
 some apps reinterpret frame writes while it is on — but never while VoiceOver is running, which would
@@ -446,7 +454,8 @@ verification, particularly:
    the secondary display, then round-trip Next/Previous Display.
 3. Toggle Fullscreen on a window that accepts it and one that refuses it. Then, on two unequal
    displays, Next and Previous Display on the fullscreen window land it fullscreen on the other
-   display; Left Half on it exits and tiles; a second press mid-transition takes over from the first.
+   display; Left Half on it exits and tiles, and Restore then returns it to fullscreen; a second
+   press mid-transition takes over from the first.
 4. Cycling, in both modes: under `.sizes`, three presses of Left Half, then drag the window and confirm
    the next press restarts at ½. Under `.displays` on two monitors, four presses of Left Half must
    visit every half-slot once and return to the first.
