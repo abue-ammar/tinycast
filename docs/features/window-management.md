@@ -103,7 +103,10 @@ the nudges and edge moves) work in
 
 **Next / Previous Display** re-derive a window a tile placed, so it lands as the same tile. Any other
 window keeps its position and size as fractions of the canvas, each display applying its own gap: the
-gap stays the same in points, and a window that filled one canvas fills the other.
+gap stays the same in points, and a window that filled one canvas fills the other. With **Keep aspect
+ratio** off, the window — tile or not — keeps its size and its offset from the canvas instead, capped
+to the destination. With **Wrap around displays** off, moving past the first or last display is a
+no-op.
 
 **Make Larger / Make Smaller** step by 5% of the _screen_, not of the window, and the step is forced
 even so each edge moves a whole point. That makes the two commands exactly invertible — `size × 0.95 ×
@@ -242,7 +245,7 @@ for keystrokes: same shape, same `Service/` position, one idea applied twice.
 
 ## Applying a placement
 
-`WindowMover.perform(_:target:gap:cycle:)` is the only entry point. `target` is **explicit**
+`WindowMover.perform(_:target:gap:cycle:wrapsDisplays:keepsProportions:)` is the only entry point. `target` is **explicit**
 because the palette is frontmost when a command dispatches from it — `WindowCommandCoordinator` passes
 a `WindowTarget`, which is either an external app or one of our own windows (see
 [Choosing a target](#choosing-a-target)), and restores focus to it rather than dropping it. The own
@@ -250,7 +253,8 @@ case skips AX and the Accessibility prompt entirely: placing our own window need
 synchronous: every AX call is a bounded mach round trip capped by a 1s
 messaging timeout, and `await` would only add reentrancy between a held hotkey's repeats. The timeout
 is set on the application element _and again_ on the window element — it is per-element and never
-inherited.
+inherited. The one exception is [leaving fullscreen](#leaving-fullscreen), which has to wait out an
+animation.
 
 The write sequence is **size → position → size**. Whichever single order you pick is wrong in one
 direction: growing first fails when the source display is smaller than the target size, shrinking first
@@ -273,14 +277,33 @@ centre. **One correction, no loop** — iterating against an app that fights bac
 visibly jitter.
 
 **Toggle Fullscreen** uses the undocumented `AXFullScreen` attribute, falling back to pressing
-`AXFullScreenButton`, then a quiet no-op. There is deliberately no synthetic ⌃⌘F third attempt: it is
-app-rebindable and could fire an unrelated menu command. It does not read geometry back — the
+`AXFullScreenButton`, then a quiet no-op. A write that fails with a messaging timeout counts as sent
+and never falls through to the button: the app may still flip, and the press would flip it back. There
+is deliberately no synthetic ⌃⌘F third attempt: it is app-rebindable and could fire an unrelated menu
+command. It does not read geometry back — the
 transition is animated and asynchronous, so any frame read there is a mid-animation value — and it
 clears the cycle chain while keeping the restore point, since macOS restores the pre-fullscreen frame
 itself but the user's original frame is still the right Restore target.
 
-Windows that are minimized, not `AXWindow`-roled (sheets, popovers), already natively fullscreen, or
-that report no position or size are rejected before any work happens.
+Windows that are minimized, not `AXWindow`-roled (sheets, popovers), or that report no position or
+size are rejected before any work happens.
+
+### Leaving fullscreen
+
+A geometry command on a natively fullscreen window resolves its placement first, so a command with
+nowhere to go — Next Display on one display, or past the last with wrapping off — leaves the window
+alone. Otherwise it exits fullscreen, waits for the window to leave it, and runs the same `place` again
+on the fresh frame. Next and Previous Display then re-enter fullscreen, which macOS does on the
+display now holding the window; every other command leaves it windowed. Re-entry happens even when
+the move turned into a no-op, so a window is never stranded out of fullscreen.
+
+Each wait polls `isFullScreen` every 50 ms until it reads the wanted state, with a 2 s deadline per
+transition and the window's messaging timeout lowered to 0.5 s meanwhile, since an app mid-animation
+answers slowly. A transition is the one async path in the feature, kept in `fullScreenTransitions` per
+window: **a newer command on the same window cancels it** wherever it is, and the newer command runs
+against the window as it finds it, so the latest press wins. Commands on other windows are unaffected.
+The placement re-reads screens and the frame after the wait, so an unplugged display is handled like
+any other move. Both macOS transitions stay visible.
 
 `AXEnhancedUserInterface` is cleared for the duration of the writes and restored immediately, because
 some apps reinterpret frame writes while it is on — but never while VoiceOver is running, which would
@@ -381,8 +404,8 @@ and every shortcut stays editable afterwards.
 - **`AppIndex.setCustomWindowSizes(_:)`** publishes the custom-size slice immediately after the
   window commands, inside the same section. Custom sizes and their bindings ride in settings backups.
 - **Settings** — `windowManagementEnabled` (off), `windowManagementShowInLauncher` (on), `windowGap`
-  (0) and `windowCycle` (`.off`). All four ride in settings backups: unlike `snippetsEnabled` they
-  grant no permission class of their own.
+  (0), `windowCycle` (`.off`), `windowWrapsDisplays` (on) and `windowKeepsProportions` (on). All six
+  ride in settings backups: unlike `snippetsEnabled` they grant no permission class of their own.
 - **Per-command visibility** reuses `VisibilityStore` as-is; clearing a recorded shortcut is how a
   hotkey is disabled, so there is no separate per-command enabled flag. Each command and custom-size
   row carries an alias field, dimmed while its entry is hidden from the launcher. Window commands
@@ -421,7 +444,9 @@ verification, particularly:
    half-moved.
 2. **A mixed-resolution multi-monitor setup** — the coordinate-flip bug appears nowhere else. Tile on
    the secondary display, then round-trip Next/Previous Display.
-3. Toggle Fullscreen on a window that accepts it and one that refuses it.
+3. Toggle Fullscreen on a window that accepts it and one that refuses it. Then, on two unequal
+   displays, Next and Previous Display on the fullscreen window land it fullscreen on the other
+   display; Left Half on it exits and tiles; a second press mid-transition takes over from the first.
 4. Cycling, in both modes: under `.sizes`, three presses of Left Half, then drag the window and confirm
    the next press restarts at ½. Under `.displays` on two monitors, four presses of Left Half must
    visit every half-slot once and return to the first.

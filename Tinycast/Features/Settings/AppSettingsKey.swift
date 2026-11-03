@@ -55,6 +55,8 @@ enum AppSettingsKey: String, CaseIterable {
     case windowManagementShowInLauncher = "windowManagementShowInLauncher"
     case windowGap = "windowManagementGap"
     case windowCycle = "windowManagementCycleMode"
+    case windowWrapsDisplays = "windowManagementWrapDisplays"
+    case windowKeepsProportions = "windowManagementKeepProportions"
     case windowLayoutsShowInLauncher = "windowLayoutsShowInLauncher"
     case windowRoomsShowInLauncher = "windowRoomsShowInLauncher"
     case quicklinksEnabled = "quicklinksEnabled"

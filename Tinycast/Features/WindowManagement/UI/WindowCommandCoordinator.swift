@@ -30,7 +30,8 @@ final class WindowCommandCoordinator {
         }
         windowMover.perform(
             id, target: handOffTarget(), gap: CGFloat(settings.windowGap),
-            cycle: settings.windowCycle)
+            cycle: settings.windowCycle, wrapsDisplays: settings.windowWrapsDisplays,
+            keepsProportions: settings.windowKeepsProportions)
     }
 
     /// The same funnel for a custom size, so the feature switch gates it identically.

@@ -768,6 +768,42 @@ struct WindowCommandTests {
             frame(.previousDisplay, window: scaledOnRight, gap: 16, allScreens: both)!,
             quarterOfCanvas, "a partial window round-trips without growing")
 
+        func moved(
+            _ command: WindowCommand.ID, _ window: CGRect, wraps: Bool = true,
+            keepsProportions: Bool = true, lastTile: WindowCommand.ID? = nil
+        ) -> CGRect? {
+            WindowPlacementEngine.placement(
+                for: WindowPlacementEngine.Input(
+                    command: command, windowFrame: window, screens: both, gap: 16,
+                    lastTileCommand: lastTile, wrapsDisplays: wraps,
+                    keepsProportions: keepsProportions))?.frame
+        }
+        expect(
+            moved(.nextDisplay, scaledOnRight, wraps: false) == nil,
+            "without wrapping, Next Display on the last display does nothing")
+        expect(
+            moved(.previousDisplay, quarterOfCanvas, wraps: false) == nil,
+            "without wrapping, Previous Display on the first display does nothing")
+        expectRect(
+            moved(.nextDisplay, quarterOfCanvas, wraps: false)!, scaledOnRight,
+            "without wrapping, a move between displays still happens")
+
+        expectRect(
+            moved(.nextDisplay, quarterOfCanvas, keepsProportions: false)!,
+            CGRect(x: 1808, y: 233, width: 704, height: 434),
+            "without proportions, a window keeps its size and its offset from the canvas")
+        expectRect(
+            moved(
+                .previousDisplay, CGRect(x: 1456, y: 16, width: 2000, height: 1200),
+                keepsProportions: false)!,
+            CGRect(x: 0, y: 0, width: 1440, height: 900),
+            "without proportions, a window too big for the destination is capped to it")
+        let leftHalfWithGap = frame(.leftHalf, on: left, gap: 16)!
+        expect(
+            moved(.nextDisplay, leftHalfWithGap, keepsProportions: false, lastTile: .leftHalf)?.size
+                == leftHalfWithGap.size,
+            "without proportions, a remembered tile keeps its size too")
+
         expect(
             WindowPlacementEngine.screen(
                 containing: CGRect(x: 1150, y: 0, width: 500, height: 100), in: both)?.id == 1,

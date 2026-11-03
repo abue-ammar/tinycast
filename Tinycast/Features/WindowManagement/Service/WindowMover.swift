@@ -61,6 +61,12 @@ final class WindowMover {
             }
         }
 
+        /// Our own windows answer locally, with no messaging round trip to bound.
+        func setMessagingTimeout(_ seconds: Float) {
+            guard case .external(_, let window) = self else { return }
+            AXUIElementSetMessagingTimeout(window, seconds)
+        }
+
         /// Nothing to suppress on our own windows: it is a remote app's Accessibility setting.
         func suppressEnhancedUserInterface() -> () -> Void {
             guard case .external(let application, _) = self else { return {} }
@@ -111,6 +117,8 @@ final class WindowMover {
     }
 
     private var memory = WindowActionMemory<WindowKey>()
+    /// At most one per window; a newer command on that window cancels it.
+    private var fullScreenTransitions: [WindowKey: Task<Void, Never>] = [:]
     private var terminationToken: NotificationToken?
     private var windowCloseToken: NotificationToken?
 
@@ -158,11 +166,13 @@ final class WindowMover {
     /// Runs `command` against `target`'s focused window, returning whether anything changed.
     @discardableResult
     func perform(
-        _ command: WindowCommand.ID, target: WindowTarget?, gap: CGFloat, cycle: WindowCycle
+        _ command: WindowCommand.ID, target: WindowTarget?, gap: CGFloat, cycle: WindowCycle,
+        wrapsDisplays: Bool, keepsProportions: Bool
     ) -> Bool {
         guard let catalogued = WindowCommandCatalog.command(id: command),
             let focused = focusedWindow(of: target)
         else { return false }
+        fullScreenTransitions.removeValue(forKey: focused.key)?.cancel()
 
         if catalogued.kind == .fullscreen {
             guard toggleFullScreen(focused.surface) else { return false }
@@ -172,6 +182,7 @@ final class WindowMover {
         }
         return place(
             focused, command: command, gap: gap,
+            reentersFullScreen: command == .nextDisplay || command == .previousDisplay,
             cycleLength: {
                 WindowPlacementEngine.cycleLength(for: command, screens: $0, cycle: cycle)
             }
@@ -181,7 +192,8 @@ final class WindowMover {
                     command: command, windowFrame: current, screens: screens, gap: gap,
                     step: decision.step, cycle: cycle, originScreenID: decision.originScreenID,
                     restoreFrame: decision.canRestore ? decision.restoreFrame : nil,
-                    lastTileCommand: decision.lastTileCommand))
+                    lastTileCommand: decision.lastTileCommand, wrapsDisplays: wrapsDisplays,
+                    keepsProportions: keepsProportions))
         }
     }
 
@@ -189,8 +201,9 @@ final class WindowMover {
     @discardableResult
     func perform(_ size: CustomWindowSize, target: WindowTarget?, gap: CGFloat) -> Bool {
         guard let focused = focusedWindow(of: target) else { return false }
+        fullScreenTransitions.removeValue(forKey: focused.key)?.cancel()
         return place(
-            focused, command: nil, gap: gap, cycleLength: { _ in 1 },
+            focused, command: nil, gap: gap, reentersFullScreen: false, cycleLength: { _ in 1 },
             resolve: { current, screens, _ in
                 size.placement(for: current, screens: screens, gap: gap)
             })
@@ -223,12 +236,13 @@ final class WindowMover {
     /// The one decide → resolve → write → commit sequence every geometry press runs through.
     private func place(
         _ focused: FocusedWindow, command: WindowCommand.ID?, gap: CGFloat,
-        cycleLength: ([WindowPlacementEngine.Screen]) -> Int, resolve: Resolver
+        reentersFullScreen: Bool,
+        cycleLength: @escaping ([WindowPlacementEngine.Screen]) -> Int,
+        resolve: @escaping Resolver
     ) -> Bool {
         let surface = focused.surface
         let geometry = AXGeometry(screens: NSScreen.screens)
-        // Tiling a natively fullscreen window fights the window server; leave it alone.
-        guard !surface.isFullScreen, let current = surface.frame(in: geometry) else { return false }
+        guard let current = surface.frame(in: geometry) else { return false }
 
         let screens = AXScreens.converted(NSScreen.screens, geometry: geometry)
         guard let host = WindowPlacementEngine.screen(containing: current, in: screens) else {
@@ -241,6 +255,14 @@ final class WindowMover {
             key: focused.key, command: command, currentFrame: current, currentScreenID: host.id,
             cycleLength: cycleLength(screens), now: now)
         guard let placement = resolve(current, screens, decision) else { return false }
+
+        if surface.isFullScreen {
+            return leaveFullScreen(focused, reentering: reentersFullScreen) {
+                self.place(
+                    focused, command: command, gap: gap, reentersFullScreen: reentersFullScreen,
+                    cycleLength: cycleLength, resolve: resolve)
+            }
+        }
 
         // Checked before any write, so an unpositionable window is left untouched.
         guard surface.canMove else { return false }
@@ -272,6 +294,40 @@ final class WindowMover {
 
     // MARK: - Fullscreen
 
+    private static let fullScreenPollInterval = Duration.milliseconds(50)
+    private static let fullScreenTimeout = Duration.seconds(2)
+    /// An app mid-animation answers slowly; each poll must not stall main for the full second.
+    private static let fullScreenPollMessagingTimeout: Float = 0.5
+
+    /// Places once the window is out of fullscreen. docs/features/window-management.md
+    private func leaveFullScreen(
+        _ focused: FocusedWindow, reentering: Bool, then place: @escaping () -> Bool
+    ) -> Bool {
+        let surface = focused.surface
+        guard toggleFullScreen(surface) else { return false }
+        fullScreenTransitions[focused.key] = Task {
+            // Once cancelled, the entry belongs to whichever command superseded this one.
+            defer { if !Task.isCancelled { fullScreenTransitions[focused.key] = nil } }
+            guard await waitUntil(surface, isFullScreen: false) else { return }
+            _ = place()
+            guard reentering, toggleFullScreen(surface) else { return }
+            _ = await waitUntil(surface, isFullScreen: true)
+        }
+        return true
+    }
+
+    /// False on timeout, or when a newer command on the window cancelled the wait.
+    private func waitUntil(_ surface: Surface, isFullScreen: Bool) async -> Bool {
+        surface.setMessagingTimeout(Self.fullScreenPollMessagingTimeout)
+        defer { surface.setMessagingTimeout(AXWindowAccess.messagingTimeout) }
+        let deadline = ContinuousClock.now + Self.fullScreenTimeout
+        while ContinuousClock.now < deadline {
+            do { try await Task.sleep(for: Self.fullScreenPollInterval) } catch { return false }
+            if surface.isFullScreen == isFullScreen { return true }
+        }
+        return false
+    }
+
     /// `AXFullScreen`, then the green button. docs/features/window-management.md
     private func toggleFullScreen(_ surface: Surface) -> Bool {
         switch surface {
@@ -285,12 +341,11 @@ final class WindowMover {
         case .external(_, let window):
             let target: CFBoolean =
                 AXWindowAccess.isFullScreen(window) ? kCFBooleanFalse : kCFBooleanTrue
-            if AXWindowAccess.isSettable(
-                AXWindowAccess.fullScreenAttribute as String, on: window),
-                AXUIElementSetAttributeValue(
-                    window, AXWindowAccess.fullScreenAttribute, target) == .success
-            {
-                return true
+            if AXWindowAccess.isSettable(AXWindowAccess.fullScreenAttribute as String, on: window) {
+                let result = AXUIElementSetAttributeValue(
+                    window, AXWindowAccess.fullScreenAttribute, target)
+                // A timed-out request may still flip the window; the button would then undo it.
+                if result == .success || result == .cannotComplete { return true }
             }
             guard
                 let button = AXWindowAccess.element(
