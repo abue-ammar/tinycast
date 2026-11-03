@@ -103,6 +103,7 @@ struct WindowCommandTests {
         testSizing()
         testLargerSmaller()
         testNudges()
+        testEdges()
         testDisplays()
         testDisplayCycle()
         testRestore()
@@ -117,7 +118,7 @@ struct WindowCommandTests {
 
     static func testCatalog() {
         let commands = WindowCommandCatalog.all
-        expect(commands.count == 35, "catalog contains all 35 agreed commands")
+        expect(commands.count == 39, "catalog contains all 39 agreed commands")
         expect(commands.map(\.id) == WindowCommand.ID.allCases, "catalog covers every ID once")
         expect(
             Set(commands.map { $0.name.lowercased() }).count == commands.count, "names are unique")
@@ -148,8 +149,11 @@ struct WindowCommandTests {
             "only the five halves cycle on repeat")
         let moveOnly = Set(commands.filter { !$0.resizes }.map(\.id))
         expect(
-            moveOnly == [.moveLeft, .moveRight, .moveUp, .moveDown],
-            "only the four nudges leave the size alone")
+            moveOnly == [
+                .moveLeft, .moveRight, .moveUp, .moveDown,
+                .moveToLeftEdge, .moveToRightEdge, .moveToTopEdge, .moveToBottomEdge
+            ],
+            "only the nudges and edge moves leave the size alone")
         expect(
             Set(commands.filter { $0.kind == .fullscreen }.map(\.id)) == [.toggleFullscreen],
             "only Toggle Fullscreen is a fullscreen command")
@@ -180,7 +184,7 @@ struct WindowCommandTests {
         expect(grouped.first { $0.group == .fourths }?.commands.count == 2, "two fourths")
         expect(grouped.first { $0.group == .thirds }?.commands.count == 5, "five thirds")
         expect(grouped.first { $0.group == .sizing }?.commands.count == 11, "eleven sizing commands")
-        expect(grouped.first { $0.group == .moving }?.commands.count == 6, "six moving commands")
+        expect(grouped.first { $0.group == .moving }?.commands.count == 10, "ten moving commands")
         expect(grouped.first { $0.group == .spaces }?.commands.count == 2, "two space commands")
 
         expect(
@@ -636,6 +640,64 @@ struct WindowCommandTests {
         let pinned = frame(.moveLeft, window: overWide)!
         expect(pinned.minX == 0, "an oversized window pins to the canvas edge")
         expect(pinned.size == overWide.size, "an oversized nudge never resizes")
+    }
+
+    // MARK: - Edges
+
+    static func testEdges() {
+        let start = CGRect(x: 300, y: 300, width: 600, height: 400)
+        expectRect(
+            frame(.moveToLeftEdge, window: start)!, CGRect(x: 0, y: 300, width: 600, height: 400),
+            "move to left edge keeps the size and the vertical position")
+        expectRect(
+            frame(.moveToRightEdge, window: start)!, CGRect(x: 840, y: 300, width: 600, height: 400),
+            "move to right edge keeps the size and the vertical position")
+        expectRect(
+            frame(.moveToTopEdge, window: start)!, CGRect(x: 300, y: 0, width: 600, height: 400),
+            "move to top edge keeps the size and the horizontal position")
+        expectRect(
+            frame(.moveToBottomEdge, window: start)!, CGRect(x: 300, y: 500, width: 600, height: 400),
+            "move to bottom edge keeps the size and the horizontal position")
+
+        expectRect(
+            frame(.moveToLeftEdge, window: start, gap: 12)!,
+            CGRect(x: 12, y: 300, width: 600, height: 400), "the left edge honours the gap")
+        expectRect(
+            frame(.moveToRightEdge, window: start, gap: 12)!,
+            CGRect(x: 828, y: 300, width: 600, height: 400), "the right edge honours the gap")
+        expectRect(
+            frame(.moveToTopEdge, window: start, gap: 12)!,
+            CGRect(x: 300, y: 12, width: 600, height: 400), "the top edge honours the gap")
+        expectRect(
+            frame(.moveToBottomEdge, window: start, gap: 12)!,
+            CGRect(x: 300, y: 488, width: 600, height: 400), "the bottom edge honours the gap")
+
+        let above = CGRect(x: 300, y: -500, width: 600, height: 400)
+        expectRect(
+            frame(.moveToLeftEdge, window: above)!, CGRect(x: 0, y: 0, width: 600, height: 400),
+            "a window above the display comes back onto it")
+
+        let overWide = CGRect(x: 100, y: 100, width: 2000, height: 400)
+        expectRect(
+            frame(.moveToRightEdge, window: overWide)!,
+            CGRect(x: 0, y: 100, width: 2000, height: 400),
+            "an oversized window pins its leading edge rather than leaving the display")
+        expect(frame(.moveToRightEdge, window: .zero) == nil, "a window with no area stays put")
+
+        let right = WindowPlacementEngine.Screen(
+            id: 2, frame: CGRect(x: 1440, y: 0, width: 2560, height: 1440),
+            visibleFrame: CGRect(x: 1440, y: 0, width: 2560, height: 1440))
+        let onRight = CGRect(x: 2000, y: 300, width: 600, height: 400)
+        let both = screens(mainScreen, right)
+        let leftEdge = placement(.moveToLeftEdge, window: onRight, allScreens: both)!
+        expect(leftEdge.screenID == right.id, "an edge move stays on the window's display")
+        expectRect(
+            leftEdge.frame, CGRect(x: 1440, y: 300, width: 600, height: 400),
+            "the left edge is the host display's, not the desktop's")
+        expectRect(
+            frame(.moveToRightEdge, window: onRight, allScreens: both)!,
+            CGRect(x: 3400, y: 300, width: 600, height: 400),
+            "the right edge is the host display's")
     }
 
     // MARK: - Displays

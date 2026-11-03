@@ -1,9 +1,9 @@
 # Window Management
 
-Rectangle-style window actions — halves, quarters, fourths, thirds, sizing, nudging, display moves,
-native fullscreen and Space switching — searchable in the palette and bindable to global shortcuts.
-35 commands, plus any number of user-defined [custom sizes](#custom-sizes), no new dependencies and
-no new permission: they reuse the Accessibility grant clipboard paste already needs.
+Rectangle-style window actions — halves, quarters, fourths, thirds, sizing, nudging, edge moves,
+display moves, native fullscreen and Space switching — searchable in the palette and bindable to
+global shortcuts. 39 commands, plus any number of user-defined [custom sizes](#custom-sizes), no new
+dependencies and no new permission: they reuse the Accessibility grant clipboard paste already needs.
 
 Ships **off**. Settings › Window Management is the switch, and while it is off there are no launcher
 entries and a still-registered shortcut moves nothing.
@@ -65,7 +65,7 @@ overlay rather than in Foundation.
 
 Adding a command is four edits in `WindowCommand.swift` (a case in `ID`, plus `name`, `symbol` and
 `group` arms), an arm in `WindowPlacementEngine.placement` or `tileFractions`, and bumping
-`commands.count == 35` and its group count in the harness. A command opening a new family also needs
+`commands.count == 39` and its group count in the harness. A command opening a new family also needs
 a `Group` case and its `title` arm; `ID.allCases` stays in group order.
 
 ## Coordinate space
@@ -98,7 +98,7 @@ sharing a fractional boundary (480.333 for thirds of 1441) round it identically 
 one-point seams.
 
 **Free-floating commands** (Maximize, Almost Maximize, Reasonable Size, Center, Make Larger/Smaller,
-the nudges) work in
+the nudges and edge moves) work in
 `canvas = visibleFrame.insetBy(gap)` instead: a centred window has no neighbour to gutter against.
 
 **Make Larger / Make Smaller** step by 5% of the _screen_, not of the window, and the step is forced
@@ -106,6 +106,10 @@ even so each edge moves a whole point. That makes the two commands exactly inver
 1.05 ≠ size`, so a size-relative step would shrink a little on every round trip — and it feels the same
 at any window size. Both directions saturate into exact no-ops: the ceiling is the canvas, the floor is
 `max(200×150, 15% of canvas)`.
+
+**Move to Left/Right/Top/Bottom Edge** push the window flush against that side of the canvas
+without resizing it, keeping its position on the other axis. They are idempotent, and a window with
+no area is left alone: pushed to an edge it would sit on the display boundary and change host.
 
 **Reasonable Size** is 60% of the canvas, centred, capped at 1025×900 points. The cap is what makes it
 display-independent — a laptop gets the fraction, a 4K or 5K display gets a moderate window instead of
@@ -383,11 +387,11 @@ and every shortcut stays editable afterwards.
 
 ## Testing
 
-`Tests/window-command-test.swift` (507 assertions) covers the catalog, the AX-space convention lock,
+`Tests/window-command-test.swift` (545 assertions) covers the catalog, the AX-space convention lock,
 tiling on divisible and non-divisible screens, off-origin and negative-coordinate displays, gap
-arithmetic including degenerate values, sizing, the Make Larger/Smaller round trip, nudges, display
-moves and wrapping, both cycling modes including the strip walk, its wrap and a run of real presses
-across displays, restore recovery, every `WindowActionMemory` rule, and a fuzz sweep over every
+arithmetic including degenerate values, sizing, the Make Larger/Smaller round trip, nudges, edge
+moves, display moves and wrapping, both cycling modes including the strip walk, its wrap and a run of
+real presses across displays, restore recovery, every `WindowActionMemory` rule, and a fuzz sweep over every
 command × gap × screen × cycle × step × degenerate window frame checking for non-finite output,
 negative dimensions, off-screen results, non-determinism and, at step 0, drift on repeat.
 

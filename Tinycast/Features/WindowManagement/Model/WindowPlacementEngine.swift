@@ -183,9 +183,11 @@ enum WindowPlacementEngine {
                 frame: resized(current, in: canvas, larger: input.command == .makeLarger),
                 screenID: host.id, anchor: .centered, resizes: true)
 
-        case .moveLeft, .moveRight, .moveUp, .moveDown:
+        case .moveLeft, .moveRight, .moveUp, .moveDown, .moveToLeftEdge, .moveToRightEdge,
+            .moveToTopEdge, .moveToBottomEdge:
+            guard !current.isEmpty else { return nil }
             return Placement(
-                frame: nudged(current, in: canvas, command: input.command), screenID: host.id,
+                frame: shifted(current, in: canvas, command: input.command), screenID: host.id,
                 anchor: .topLeading, resizes: false)
 
         default:
@@ -483,7 +485,7 @@ enum WindowPlacementEngine {
         return rounded(clamped(centred, into: canvas))
     }
 
-    private static func nudged(
+    private static func shifted(
         _ frame: CGRect, in canvas: CGRect, command: WindowCommand.ID
     )
         -> CGRect
@@ -496,6 +498,10 @@ enum WindowPlacementEngine {
         case .moveRight: moved.origin.x += dx
         case .moveUp: moved.origin.y -= dy
         case .moveDown: moved.origin.y += dy
+        case .moveToLeftEdge: moved.origin.x = canvas.minX
+        case .moveToRightEdge: moved.origin.x = canvas.maxX - frame.width
+        case .moveToTopEdge: moved.origin.y = canvas.minY
+        case .moveToBottomEdge: moved.origin.y = canvas.maxY - frame.height
         default: break
         }
         return rounded(clamped(moved, into: canvas))

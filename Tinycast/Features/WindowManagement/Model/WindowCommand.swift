@@ -32,6 +32,10 @@ struct WindowCommand: Identifiable, Hashable, Sendable {
         case moveRight = "move-right"
         case moveUp = "move-up"
         case moveDown = "move-down"
+        case moveToLeftEdge = "move-to-left-edge"
+        case moveToRightEdge = "move-to-right-edge"
+        case moveToTopEdge = "move-to-top-edge"
+        case moveToBottomEdge = "move-to-bottom-edge"
         case nextDisplay = "next-display"
         case previousDisplay = "previous-display"
         case toggleFullscreen = "toggle-fullscreen"
@@ -116,7 +120,10 @@ enum WindowCommandCatalog {
         .leftHalf, .rightHalf, .topHalf, .bottomHalf, .centerHalf
     ]
 
-    static let movesOnly: Set<WindowCommand.ID> = [.moveLeft, .moveRight, .moveUp, .moveDown]
+    static let movesOnly: Set<WindowCommand.ID> = [
+        .moveLeft, .moveRight, .moveUp, .moveDown,
+        .moveToLeftEdge, .moveToRightEdge, .moveToTopEdge, .moveToBottomEdge
+    ]
 
     private static func name(for id: WindowCommand.ID) -> LocalizedStringResource {
         switch id {
@@ -150,6 +157,10 @@ enum WindowCommandCatalog {
         case .moveRight: return "Move Right"
         case .moveUp: return "Move Up"
         case .moveDown: return "Move Down"
+        case .moveToLeftEdge: return "Move to Left Edge"
+        case .moveToRightEdge: return "Move to Right Edge"
+        case .moveToTopEdge: return "Move to Top Edge"
+        case .moveToBottomEdge: return "Move to Bottom Edge"
         case .nextDisplay: return "Move to Next Display"
         case .previousDisplay: return "Move to Previous Display"
         case .toggleFullscreen: return "Toggle Fullscreen"
@@ -188,6 +199,10 @@ enum WindowCommandCatalog {
         case .moveRight: return "arrow.right"
         case .moveUp: return "arrow.up"
         case .moveDown: return "arrow.down"
+        case .moveToLeftEdge: return "arrow.left.to.line"
+        case .moveToRightEdge: return "arrow.right.to.line"
+        case .moveToTopEdge: return "arrow.up.to.line"
+        case .moveToBottomEdge: return "arrow.down.to.line"
         case .nextDisplay: return "rectangle.on.rectangle.angled"
         case .previousDisplay: return "rectangle.on.rectangle.angled"
         case .toggleFullscreen: return "arrow.up.left.and.arrow.down.right.square"
@@ -218,7 +233,8 @@ enum WindowCommandCatalog {
         case .maximize, .almostMaximize, .reasonableSize, .maximizeHeight, .maximizeWidth, .center,
             .centerHalf, .centerTwoThirds, .makeLarger, .makeSmaller, .restore:
             return .sizing
-        case .moveLeft, .moveRight, .moveUp, .moveDown, .nextDisplay, .previousDisplay:
+        case .moveLeft, .moveRight, .moveUp, .moveDown, .moveToLeftEdge, .moveToRightEdge,
+            .moveToTopEdge, .moveToBottomEdge, .nextDisplay, .previousDisplay:
             return .moving
         case .toggleFullscreen:
             return .fullscreen
