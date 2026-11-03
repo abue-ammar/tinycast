@@ -682,6 +682,9 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   Frequently Used. Enable it in Settings → Emoji & Symbols; `:` is shown without an editor.
 - In TextEdit and a browser text field, type `:smile`: the list appears beside the caret without
   taking focus. ↑/↓ select, Return and Tab insert, and a click inserts the clicked result.
+- In a Chromium browser just launched, the first `:` anchors the list to the field; about two seconds
+  later it follows the caret. Disabling the setting or quitting Tinycast clears the browser's
+  `AXEnhancedUserInterface`.
 - Escape keeps the shortcode intact; deleting the trigger closes the list. `https://`, `12:30` and
   `word:word` leave typing alone. An unsupported field or Secure Input shows no picker.
 - Switch the empty-search source to Pinned: a bare `:` follows the full picker's pin order. Switch

@@ -14,10 +14,14 @@ enum AccessibilityText {
         case empty
     }
 
-    static func focusedElement(in app: NSRunningApplication) -> AXUIElement? {
-        let application = AXUIElementCreateApplication(app.processIdentifier)
-        // Per element and never inherited, so the focused element needs its own against a hang.
+    static func application(_ pid: pid_t) -> AXUIElement {
+        let application = AXUIElementCreateApplication(pid)
         AXUIElementSetMessagingTimeout(application, timeout)
+        return application
+    }
+
+    static func focusedElement(in app: NSRunningApplication) -> AXUIElement? {
+        let application = Self.application(app.processIdentifier)
         activateManualAccessibility(of: application)
         var focusedValue: CFTypeRef?
         guard
@@ -30,6 +34,7 @@ enum AccessibilityText {
         else { return nil }
 
         let element = focusedValue as! AXUIElement
+        // Per element and never inherited, so the focused element needs its own against a hang.
         AXUIElementSetMessagingTimeout(element, timeout)
         return element
     }

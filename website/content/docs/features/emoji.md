@@ -22,7 +22,7 @@ insert, or click a result. Escape dismisses the picker and keeps your text. The 
 
 **When search is empty** defaults to **Frequently Used**. Choose **Pinned** to see your pins instead.
 Manage pins in the full picker. The inline picker uses the same search, usage history and skin tone.
-It appears only in text fields that expose their text and caret through Accessibility.
+It appears in text fields that expose their text through Accessibility, including browsers.
 
 ## Actions
 

@@ -6,7 +6,10 @@ struct InlineEmojiTarget {
     let app: NSRunningApplication
     let element: AXUIElement
     let start: Int
-    let caret: CGRect
+    let anchor: CGRect
+    let needsEnhancedUserInterface: Bool
+
+    private static let enhancedUserInterface = "AXEnhancedUserInterface" as CFString
 
     static func capture(query: String) -> Self? {
         guard NSApp.keyWindow == nil,
@@ -20,10 +23,30 @@ struct InlineEmojiTarget {
         let start = range.location - keyword.utf16.count
         guard start >= 0,
             text(in: element, range: NSRange(location: start, length: keyword.utf16.count)) == keyword,
-            isBoundary(start, in: element),
-            let caret = bounds(in: element, range: range)
+            isBoundary(start, in: element)
         else { return nil }
-        return Self(app: app, element: element, start: start, caret: caret)
+        let caret = bounds(in: element, range: range)
+        // Chromium reports no caret until a screen reader appears; the field still places the list.
+        guard let anchor = caret ?? frame(of: element) else { return nil }
+        return Self(
+            app: app, element: element, start: start, anchor: anchor,
+            needsEnhancedUserInterface: caret == nil && isWebField(element))
+    }
+
+    /// Chromium serves caret geometry only to a screen reader, about two seconds after one appears.
+    static func enableEnhancedUserInterface(in pid: pid_t) -> Bool {
+        let application = AccessibilityText.application(pid)
+        var value: CFTypeRef?
+        AXUIElementCopyAttributeValue(application, enhancedUserInterface, &value)
+        guard value as? Bool != true else { return false }
+        AXUIElementSetAttributeValue(application, enhancedUserInterface, kCFBooleanTrue)
+        return true
+    }
+
+    static func restoreEnhancedUserInterface(in pid: pid_t) {
+        guard !NSWorkspace.shared.isVoiceOverEnabled else { return }
+        AXUIElementSetAttributeValue(
+            AccessibilityText.application(pid), enhancedUserInterface, kCFBooleanFalse)
     }
 
     func isFocused() -> Bool {
@@ -51,6 +74,13 @@ struct InlineEmojiTarget {
         return InlineEmojiPolicy.canStart(after: character)
     }
 
+    /// Native fields never speak text markers, and gain nothing from the screen-reader flag.
+    private static func isWebField(_ element: AXUIElement) -> Bool {
+        var value: CFTypeRef?
+        return AXUIElementCopyAttributeValue(
+            element, kAXSelectedTextMarkerRangeAttribute as CFString, &value) == .success
+    }
+
     private static func isSecure(_ element: AXUIElement) -> Bool {
         var value: CFTypeRef?
         AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &value)
@@ -62,11 +92,7 @@ struct InlineEmojiTarget {
         guard
             AXUIElementCopyAttributeValue(
                 element, kAXSelectedTextRangeAttribute as CFString, &value) == .success,
-            let value, CFGetTypeID(value) == AXValueGetTypeID()
-        else { return nil }
-        var range = CFRange()
-        guard AXValueGetValue(value as! AXValue, .cfRange, &range), range.location >= 0,
-            range.length >= 0
+            let range = unpack(value, .cfRange, CFRange()), range.location >= 0, range.length >= 0
         else { return nil }
         return NSRange(location: range.location, length: range.length)
     }
@@ -94,12 +120,31 @@ struct InlineEmojiTarget {
         guard
             AXUIElementCopyParameterizedAttributeValue(
                 element, kAXBoundsForRangeParameterizedAttribute as CFString, parameter, &value) == .success,
-            let value, CFGetTypeID(value) == AXValueGetTypeID()
-        else { return nil }
-        var bounds = CGRect.zero
-        guard AXValueGetValue(value as! AXValue, .cgRect, &bounds), !bounds.isInfinite,
-            !bounds.isNull, bounds.height > 0, bounds.minX.isFinite, bounds.minY.isFinite
+            let bounds = unpack(value, .cgRect, CGRect.zero), isUsable(bounds)
         else { return nil }
         return bounds
+    }
+
+    private static func frame(of element: AXUIElement) -> CGRect? {
+        var position: CFTypeRef?
+        var size: CFTypeRef?
+        guard
+            AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &position) == .success,
+            AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &size) == .success,
+            let origin = unpack(position, .cgPoint, CGPoint.zero),
+            let extent = unpack(size, .cgSize, CGSize.zero)
+        else { return nil }
+        let frame = CGRect(origin: origin, size: extent)
+        return isUsable(frame) ? frame : nil
+    }
+
+    private static func unpack<Value>(_ value: CFTypeRef?, _ type: AXValueType, _ initial: Value) -> Value? {
+        guard let value, CFGetTypeID(value) == AXValueGetTypeID() else { return nil }
+        var result = initial
+        return AXValueGetValue(value as! AXValue, type, &result) ? result : nil
+    }
+
+    private static func isUsable(_ rect: CGRect) -> Bool {
+        !rect.isInfinite && !rect.isNull && rect.height > 0 && rect.minX.isFinite && rect.minY.isFinite
     }
 }

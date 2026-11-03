@@ -137,7 +137,9 @@ final class TextInjector {
                 self.post(group, targetApp: app)
                 guard await self.wait(for: .milliseconds(8)) else { return }
             }
-            guard await self.waitAfterKeywordDeletion(keyword.count), isValid(), !Task.isCancelled else { return }
+            guard await self.waitAfterKeywordDeletion(keyword.count), isValid(), !Task.isCancelled else {
+                return
+            }
             for group in insertion {
                 guard isValid(), !Task.isCancelled else { return }
                 self.post(group, targetApp: app)

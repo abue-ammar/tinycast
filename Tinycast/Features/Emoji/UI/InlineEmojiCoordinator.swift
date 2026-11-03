@@ -5,6 +5,8 @@ import Carbon.HIToolbox
 @Observable
 final class InlineEmojiCoordinator {
     private static let resultLimit = 6
+    /// A browser can take ~40 ms to show the first keystroke in its accessibility tree.
+    private static let captureAttempts = 20
     private(set) var query = ""
     private(set) var entries: [EmojiEntry] = []
     private(set) var selection = 0
@@ -17,6 +19,7 @@ final class InlineEmojiCoordinator {
     private let window: InlineEmojiWindowController
     private var target: InlineEmojiTarget?
     private var version: InlineEmojiListener.Version?
+    private var enhancedApps: Set<pid_t> = []
 
     init(
         index: EmojiIndex, frequent: FrequentEmojiStore, pinned: PinnedEmojiStore,
@@ -40,6 +43,8 @@ final class InlineEmojiCoordinator {
     func stop() {
         listener.stop()
         dismiss()
+        for pid in enhancedApps { InlineEmojiTarget.restoreEnhancedUserInterface(in: pid) }
+        enhancedApps.removeAll()
     }
 
     func dismiss() {
@@ -93,7 +98,7 @@ final class InlineEmojiCoordinator {
     }
 
     private func show(query: String, version: InlineEmojiListener.Version) async {
-        for _ in 0..<8 {
+        for _ in 0..<Self.captureAttempts {
             guard !Task.isCancelled, settings.inlineEmojiEnabled, listener.isCurrent(version) else { return }
             if let captured = InlineEmojiTarget.capture(query: query) {
                 if let target,
@@ -102,12 +107,13 @@ final class InlineEmojiCoordinator {
                 {
                     listener.reset(); dismiss(); return
                 }
+                if captured.needsEnhancedUserInterface { enhanceAccessibility(of: captured.app) }
                 target = captured
                 self.query = query
                 self.version = version
                 entries = suggestions(for: query)
                 selection = 0
-                window.show(coordinator: self, settings: settings, caret: captured.caret)
+                window.show(coordinator: self, settings: settings, anchor: captured.anchor)
                 listener.setHasResults(!entries.isEmpty, version: version)
                 return
             }
@@ -116,6 +122,11 @@ final class InlineEmojiCoordinator {
         guard listener.isCurrent(version) else { return }
         listener.reset()
         dismiss()
+    }
+
+    private func enhanceAccessibility(of app: NSRunningApplication) {
+        guard InlineEmojiTarget.enableEnhancedUserInterface(in: app.processIdentifier) else { return }
+        enhancedApps.insert(app.processIdentifier)
     }
 
     private func suggestions(for query: String) -> [EmojiEntry] {

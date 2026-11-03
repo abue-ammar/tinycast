@@ -31,8 +31,11 @@ versioned effects through a bounded stream. Its watchdog shares `HealthTicker`. 
 scrolling, app switches, sleep, Secure Input and disabling invalidate the session. Synthetic input is
 ignored; typed queries are never persisted.
 
-`InlineEmojiTarget` requires a non-secure focused field with readable text, selection and caret
-bounds. Unsupported fields keep their normal keyboard behavior. Before delivery it verifies the
+`InlineEmojiTarget` requires a non-secure focused field with readable text and selection, and
+anchors the list to the caret, or to the field when the app reports no caret geometry. Chromium
+reports it only to a screen reader, about two seconds after one appears, so a web field without it
+makes the coordinator turn on that app's `AXEnhancedUserInterface`; `stop()` restores it, except while
+VoiceOver runs. Unsupported fields keep their normal keyboard behavior. Before delivery it verifies the
 same element, insertion offset and exact shortcode. `TextInjector` queues tagged Unicode events
 without borrowing the clipboard or activating the app, and checks session identity and focus between
 event groups. Only submitted insertions update usage.

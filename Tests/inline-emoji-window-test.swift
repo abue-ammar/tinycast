@@ -44,7 +44,7 @@ struct InlineEmojiWindowTests {
                         x: screen.visibleFrame.maxX - 1, y: top - screen.visibleFrame.minY - 20, width: 1,
                         height: 20)
                 ] {
-                    controller.show(coordinator: coordinator, settings: settings, caret: anchor)
+                    controller.show(coordinator: coordinator, settings: settings, anchor: anchor)
                     try? await Task.sleep(for: .milliseconds(20))
                     guard let panel = app.windows.first(where: \.isVisible) else {
                         expect(false, "a picker panel is presented")

@@ -57,7 +57,8 @@ final class AppCore {
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let pinnedEmoji = PinnedEmojiStore()
-    @ObservationIgnored private(set) lazy var inlineEmojiListener = InlineEmojiListener(healthTicker: healthTicker)
+    @ObservationIgnored private(set) lazy var inlineEmojiListener = InlineEmojiListener(
+        healthTicker: healthTicker)
     @ObservationIgnored private(set) lazy var inlineEmojiWindow = InlineEmojiWindowController()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()

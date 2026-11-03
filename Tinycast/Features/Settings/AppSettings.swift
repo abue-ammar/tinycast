@@ -732,7 +732,8 @@ final class AppSettings {
             EmojiGridColumns(rawValue: defaults.integer(forKey: Key.emojiGridColumns.rawValue))
             ?? .default
         inlineEmojiEnabled = defaults.bool(forKey: Key.inlineEmojiEnabled.rawValue)
-        inlineEmojiSuggestions = defaults.string(forKey: Key.inlineEmojiSuggestions.rawValue)
+        inlineEmojiSuggestions =
+            defaults.string(forKey: Key.inlineEmojiSuggestions.rawValue)
             .flatMap(InlineEmojiSuggestions.init) ?? .frequentlyUsed
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout.rawValue))

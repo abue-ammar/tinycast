@@ -5,7 +5,7 @@ import SwiftUI
 final class InlineEmojiWindowController {
     private var panel: Panel?
 
-    func show(coordinator: InlineEmojiCoordinator, settings: AppSettings, caret: CGRect) {
+    func show(coordinator: InlineEmojiCoordinator, settings: AppSettings, anchor: CGRect) {
         let panel: Panel
         if let existing = self.panel {
             panel = existing
@@ -33,15 +33,15 @@ final class InlineEmojiWindowController {
         hosting.setFrameSize(NSSize(width: width, height: 1))
         let height = hosting.fittingSize.height
         guard let screenTop = NSScreen.screens.first?.frame.maxY else { return }
-        let anchor = CGRect(
-            x: caret.minX, y: screenTop - caret.maxY, width: caret.width, height: caret.height)
-        let screen = NSScreen.screens.first { $0.frame.intersects(anchor) } ?? NSScreen.main
+        let target = CGRect(
+            x: anchor.minX, y: screenTop - anchor.maxY, width: anchor.width, height: anchor.height)
+        let screen = NSScreen.screens.first { $0.frame.intersects(target) } ?? NSScreen.main
         guard let visible = screen?.visibleFrame else { return }
         let gap = metrics.spacing.xs
-        let below = anchor.minY - gap - height
-        let y = below >= visible.minY ? below : anchor.maxY + gap
+        let below = target.minY - gap - height
+        let y = below >= visible.minY ? below : target.maxY + gap
         let frame = CGRect(
-            x: min(max(anchor.minX, visible.minX), visible.maxX - width),
+            x: min(max(target.minX, visible.minX), visible.maxX - width),
             y: min(max(y, visible.minY), visible.maxY - height), width: width, height: height)
         panel.setFrame(frame, display: true)
         hosting.setFrameSize(frame.size)
