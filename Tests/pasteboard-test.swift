@@ -20,6 +20,7 @@ struct PasteboardTests {
         rejectedFilesDoNotCountTowardTheCap()
         theBoundedReaderStopsAtItsLimit()
         aModernFileURLSuppressesTheLegacyFallback()
+        richTextWithoutPlainTextReadsAsText()
         fileEntriesWriteBackAsFiles()
         aVanishedFileWritesNothing()
         imageEntriesWriteBackWithTheirFile()
@@ -271,6 +272,30 @@ struct PasteboardTests {
             expect(pb.writeObjects(urls as [NSURL]), "file URL fixture is written")
         }
         return pb
+    }
+
+    static func richTextWithoutPlainTextReadsAsText() {
+        let html = board()
+        html.declareTypes([.html], owner: nil)
+        html.setString("<style>p{}</style><p>brew update</p><div>ls &amp;&amp; pwd</div>", forType: .html)
+        expect(
+            ClipboardManager.plainText(fromRichTextOn: html) == "brew update\nls && pwd\n",
+            "HTML reads as its text, without its style")
+
+        let source = NSAttributedString(string: "from rtf")
+        let rtf = board()
+        rtf.declareTypes([.rtf], owner: nil)
+        rtf.setData(
+            source.rtf(from: NSRange(location: 0, length: source.length), documentAttributes: [:]),
+            forType: .rtf)
+        expect(ClipboardManager.plainText(fromRichTextOn: rtf) == "from rtf", "RTF reads as its text")
+
+        let huge = board()
+        huge.declareTypes([.html], owner: nil)
+        huge.setString(String(repeating: "<p>x</p>", count: 40_000), forType: .html)
+        expect(ClipboardManager.plainText(fromRichTextOn: huge) == nil, "oversized HTML is skipped")
+
+        expect(ClipboardManager.plainText(fromRichTextOn: board()) == nil, "an empty board is nil")
     }
 
     // MARK: - Writing
