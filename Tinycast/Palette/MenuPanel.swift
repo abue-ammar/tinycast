@@ -6,8 +6,19 @@ final class MenuPanel: NSPanel, AnimatedPanel {
     weak var paletteState: PaletteState?
     var onKeyDown: ((NSEvent) -> Bool)?
     var onResignKey: ((_ stayedInPalette: Bool) -> Void)?
+    /// Set when typing hands the search field back the keyboard; its refocus selects everything.
+    var putsCaretAtEndOnFocus = false
 
     override var canBecomeKey: Bool { true }
+
+    override func makeFirstResponder(_ responder: NSResponder?) -> Bool {
+        guard super.makeFirstResponder(responder) else { return false }
+        if putsCaretAtEndOnFocus, let editor = responder as? NSTextView {
+            putsCaretAtEndOnFocus = false
+            editor.moveToEndOfDocument(nil)
+        }
+        return true
+    }
 
     init() {
         super.init(
@@ -71,6 +82,17 @@ final class MenuPanelController {
     private var placement: Placement?
 
     var isOpen: Bool { panel?.isVisible ?? false }
+    /// True while the menu's search field owns the field editor.
+    var isSearchFieldFocused: Bool { panel?.firstResponder is NSTextView }
+
+    /// Moves the caret past the text once the field next takes focus, not over a fresh selection.
+    func putCaretAtEndOnNextFocus() {
+        panel?.putsCaretAtEndOnFocus = true
+    }
+
+    func moveFieldEditorCaretToEnd() {
+        (panel?.firstResponder as? NSTextView)?.moveToEndOfDocument(nil)
+    }
 
     func show(
         _ content: AnyView, corner: MenuPanelCorner, parent: NSWindow, core: AppCore,
@@ -153,6 +175,7 @@ final class MenuPanelController {
         guard let panel else { return }
         panel.onKeyDown = nil
         panel.onResignKey = nil
+        panel.putsCaretAtEndOnFocus = false
         if panel.isKeyWindow { parent?.makeKey() }
         // A hidden child must detach or AppKit restores it with its parent on the next summon.
         panel.parent?.removeChildWindow(panel)

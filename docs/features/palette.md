@@ -499,7 +499,8 @@ both its ⌘K panel and its search-bar dropdown, and the reason the seam exists 
 every arrow key and needs the row count alone. Every open path goes through `open(_:highlighting:)`
 and states where the highlight starts: the first row, except the pop-up-shaped menus — the type
 filter, the AI model and effort menus, an extension's search-bar dropdown — which open on the choice
-they already hold.
+they already hold. ↑/↓ walk the selectable rows and wrap at either end, so Down on the last row lands
+on the first and Up on the first lands on the last.
 
 **The palette window consumes a click-away press through its release.** While a menu is open,
 `PalettePanel` dismisses it on either mouse button's press and consumes the matching drag and release
@@ -567,7 +568,10 @@ caret, mouse selection and standard editing commands.
 - The searchable field binds directly to `PaletteState.menuQuery`; Escape clears a non-empty query,
   then closes the menu on the next press. A click outside still closes it immediately. `MenuPanel`
   keeps ↑/↓, ↵, Tab and action chords on the menu while leaving text editing, selection and
-  clipboard commands to AppKit.
+  clipboard commands to AppKit. A printable key pressed while the field does not hold the field
+  editor still lands in `menuQuery` — `typeMenuQuery` appends it and bumps `menuFocusToken`, which
+  both search-field views watch to take the keyboard back — so typing anywhere in the menu's window
+  searches it.
 - The palette window delegate ignores this intentional key transfer. Losing key status to anything
   else still dismisses the palette, and closing the child restores key status before it orders out.
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
