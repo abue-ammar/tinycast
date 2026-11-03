@@ -966,7 +966,6 @@ struct WindowCommandTests {
 
     // MARK: - Action memory
 
-    /// A chain that starts in fullscreen restores to fullscreen; one ending there stays untouched.
     static func testFullScreenRestore(clock: Date, original: CGRect, half: CGRect) {
         let fullScreen = CGRect(x: 0, y: 0, width: 1440, height: 900)
 

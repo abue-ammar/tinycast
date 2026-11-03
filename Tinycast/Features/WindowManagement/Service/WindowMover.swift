@@ -296,7 +296,6 @@ final class WindowMover {
         }
     }
 
-    /// Writes what `decision` resolves to against `snapshot`, then records what landed.
     private func apply(
         _ focused: FocusedWindow, command: WindowCommand.ID?, gap: CGFloat,
         decision: WindowActionMemory<WindowKey>.Decision, snapshot: Snapshot, now: Date,

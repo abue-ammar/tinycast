@@ -249,16 +249,16 @@ for keystrokes: same shape, same `Service/` position, one idea applied twice.
 
 ## Applying a placement
 
-`WindowMover.perform(_:target:gap:cycle:wrapsDisplays:keepsProportions:)` is the only entry point. `target` is **explicit**
-because the palette is frontmost when a command dispatches from it — `WindowCommandCoordinator` passes
-a `WindowTarget`, which is either an external app or one of our own windows (see
-[Choosing a target](#choosing-a-target)), and restores focus to it rather than dropping it. The own
-case skips AX and the Accessibility prompt entirely: placing our own window needs no grant. It is
-synchronous: every AX call is a bounded mach round trip capped by a 1s
-messaging timeout, and `await` would only add reentrancy between a held hotkey's repeats. The timeout
-is set on the application element _and again_ on the window element — it is per-element and never
-inherited. The one exception is [leaving fullscreen](#leaving-fullscreen), which has to wait out an
-animation.
+`WindowMover.perform(_:target:gap:cycle:wrapsDisplays:keepsProportions:)` is the only entry point.
+`target` is **explicit** because the palette is frontmost when a command dispatches from it —
+`WindowCommandCoordinator` passes a `WindowTarget`, which is either an external app or one of our
+own windows (see [Choosing a target](#choosing-a-target)), and restores focus to it rather than
+dropping it. The own case skips AX and the Accessibility prompt entirely: placing our own window
+needs no grant. It is synchronous: every AX call is a bounded mach round trip capped by a 1s
+messaging timeout, and `await` would only add reentrancy between a held hotkey's repeats. The
+timeout is set on the application element _and again_ on the window element — it is per-element and
+never inherited. The one exception is [leaving fullscreen](#leaving-fullscreen), which has to wait
+out an animation.
 
 The write sequence is **size → position → size**. Whichever single order you pick is wrong in one
 direction: growing first fails when the source display is smaller than the target size, shrinking first
