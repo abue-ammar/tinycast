@@ -33,8 +33,7 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
   later.
 - The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes — harnesses, lint,
   purity, a clean build. Engine changes come with new cases. There is no CI, so **run
-  `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally**. CodeRabbit reviews every PR
-  and flags lint violations on the diff, but it does not run the harnesses or build the app.
+  `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally**.
 - Leak-tested and memory-measured. Numbers in the PR.
 - You actually used the app, on your path and the ones next to it.
 - Rebased on `main`, squashed into logical commits.
