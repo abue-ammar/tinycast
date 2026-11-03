@@ -196,6 +196,12 @@ enum SettingsSearchCatalog {
             group: .applicationsSearchScopes, "Search Scopes",
             keywords: ["folders", "indexed", "locations", "add folder"]),
         .init(
+            group: .applicationsAutoQuit, "Auto Quit",
+            keywords: ["quit", "close", "background", "inactive", "memory", "timeout"]),
+        .init(
+            .applicationsAutoQuit, "Default duration",
+            keywords: ["minutes", "interval", "timeout", "auto quit"]),
+        .init(
             group: .applicationsApplications, "Aliases and shortcuts",
             keywords: ["alias", "hotkey", "per app", "hide"])
     ]

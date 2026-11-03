@@ -25,6 +25,7 @@ extension SettingsAnchor {
     static let generalDeepLinks = Self(tab: .general, title: "Deeplinks")
 
     static let applicationsSearchScopes = Self(tab: .applications, title: "Search Scopes")
+    static let applicationsAutoQuit = Self(tab: .applications, title: "Auto Quit")
     static let applicationsApplications = Self(tab: .applications, title: "Applications")
 
     static let systemSettingsSystemSettings = Self(tab: .systemSettings, title: "System Settings")

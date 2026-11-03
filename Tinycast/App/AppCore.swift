@@ -189,6 +189,8 @@ final class AppCore {
         notesCoordinator: notesCoordinator, extensionCoordinator: extensionCoordinator,
         calendarCoordinator: calendarCoordinator,
         core: self)
+    @ObservationIgnored private(set) lazy var autoQuitCoordinator = AutoQuitCoordinator(
+        settings: settings)
     @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
         store: fallbacks, quicklinks: quicklinks, settings: settings, visibility: visibility,
         core: self)
@@ -457,6 +459,7 @@ final class AppCore {
             snippetCoordinator.applySnippetsLauncherPresence()
 
             observeFeatureSwitches()
+            autoQuitCoordinator.start()
 
             // First launch binds no hotkey, so guide once; the marker is written at show-time.
             if !OnboardingState.hasOnboarded {
@@ -772,6 +775,11 @@ final class AppCore {
                 _ = $0.fileSearchRemovedDefaultPatterns
             }, reproject: { $0.fileSearchCoordinator.applyPolicy() })
         track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetCoordinator.applySnippetsEnabled() })
+        track(
+            {
+                _ = $0.autoQuitMinutes
+                _ = $0.autoQuitRules
+            }, reproject: { $0.autoQuitCoordinator.applySettings() })
         // Not a feature switch, but the same re-projection: a combo has the chord's ⇧ bit baked in.
         track({ _ = $0.hyperKeyIncludesShift }, reproject: { $0.applyHyperChord() })
         track(

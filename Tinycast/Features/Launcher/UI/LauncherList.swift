@@ -296,6 +296,7 @@ private struct AppRow: View {
     @Environment(AliasStore.self) private var aliases
     /// Observed here rather than up in the list, so a ⌘ press re-renders rows and not the palette.
     @Environment(PaletteState.self) private var palette
+    @Environment(AppSettings.self) private var settings
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
@@ -316,8 +317,12 @@ private struct AppRow: View {
                 .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
                 .overlay(alignment: .bottom) {
                     if running {
+                        let autoQuit = app.bundleID.map { id in
+                            settings.autoQuitRules.contains { $0.bundleID == id }
+                        } ?? false
                         Circle()
-                            .fill(.secondary)
+                            // Orange means Auto Quit will close it.
+                            .fill(autoQuit ? Theme.Colors.warning : .secondary)
                             .frame(width: 3, height: 3)
                             .offset(y: 3)
                     }

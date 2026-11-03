@@ -9,6 +9,8 @@ struct ApplicationsSettingsView: View {
 
             SearchScopesSection()
 
+            AutoQuitSettingsSection()
+
             LauncherItemsSection(
                 kind: .application,
                 anchor: .applicationsApplications,

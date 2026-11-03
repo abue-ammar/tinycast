@@ -174,6 +174,10 @@ in `commands.builtIn` — by their ID after `command:`. App Launcher and Dictati
   after its last shortcut is cleared, even outside the search scopes.
 - `applications.enabled`, `systemSettings.enabled`, `systemActions.enabled` and
   `commands.builtInEnabled` are each pane's category switch; `commands.enabled` stays custom commands'.
+- `applications.autoQuitMinutes` is 1, 3, 5, 10 or 15. `applications.autoQuit` lists
+  `{ "bundleID", "minutes" }`; `minutes: null` follows the default. Finder, Tinycast, a blank id
+  and a duplicate are dropped, and one unusable entry rejects the list. See
+  [auto-quit.md](auto-quit.md).
 
 ## Window management
 

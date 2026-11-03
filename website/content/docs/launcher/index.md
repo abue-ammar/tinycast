@@ -178,6 +178,11 @@ or refuse.
 To quit every app at once, use the **Quit All Applications**
 [system action](/docs/launcher/system-actions). It leaves Finder and Tinycast running.
 
+**Enable Auto Quit** closes an app after it has sat in the background. The default wait is 3 minutes,
+and each app can use 1, 3, 5, 10 or 15 instead. Choose it from the app's action menu, or manage the
+list in Settings → Applications → Auto Quit. Finder and Tinycast are never included. A recording, or
+playback in Music or Spotify, postpones the quit. A running app with Auto Quit on shows an orange dot.
+
 You can also drag an app result into Finder or another app that accepts files.
 
 ## Hiding a result

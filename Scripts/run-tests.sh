@@ -133,6 +133,9 @@ run index file-search-performance $FS/Model/*.swift $FILE_INDEX
 run ranking-test           $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/LauncherRankingStore.swift
 run scopes-test            $L/SearchScopes.swift
+run auto-quit-test         Tinycast/Features/AutoQuit/Model/AutoQuitSchedule.swift \
+                           Tinycast/Features/Settings/Model/SettingsFileJSON.swift \
+                           Tinycast/Features/Settings/Model/SettingsFileValue.swift
 run app-name-test          Tinycast/Platform/AppDisplayName.swift \
                            Tinycast/Platform/BundleLocalization.swift \
                            $L/SearchRelevance.swift

@@ -24,6 +24,8 @@ enum SettingsBackupCoverage {
         "compactMode": .compactMode,
         "compactBarCommands": .compactBarCommands,
         "searchScopes": .searchScopes,
+        "autoQuitMinutes": .autoQuitMinutes,
+        "autoQuitApps": .autoQuitRules,
         "launcherShowsSuggestions": .launcherShowsSuggestions,
         "rootSearchSensitivity": .rootSearchSensitivity,
         "openOnCursorScreen": .openOnCursorScreen,

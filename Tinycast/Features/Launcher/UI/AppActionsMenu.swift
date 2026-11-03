@@ -37,6 +37,20 @@ enum AppActionsMenu {
                 PopoverMenuItem(
                     title: title, systemImage: "eye.slash", shortcut: "⇧⌘H", action: onHideFromSearch))
         }
+        if app.kind == .application, let bundleID = app.bundleID,
+            core.autoQuitCoordinator.canConfigure(bundleID)
+        {
+            let enabled = core.autoQuitCoordinator.isEnabled(bundleID)
+            items.append(
+                PopoverMenuItem(
+                    title: enabled
+                        ? String(localized: "Disable Auto Quit")
+                        : String(localized: "Enable Auto Quit"),
+                    systemImage: enabled ? "timer.slash" : "timer", startsSection: true
+                ) {
+                    core.autoQuitCoordinator.setEnabled(!enabled, bundleID: bundleID)
+                })
+        }
         if running, app.kind == .application {
             items.append(
                 PopoverMenuItem(

@@ -116,6 +116,26 @@ final class AppSettings {
         didSet { defaults.set(searchScopes, forKey: Key.searchScopes.rawValue) }
     }
 
+    /// The duration a new Auto Quit rule follows, and every rule that has not picked its own.
+    var autoQuitMinutes: AutoQuitMinutes {
+        didSet { defaults.set(autoQuitMinutes.rawValue, forKey: Key.autoQuitMinutes.rawValue) }
+    }
+
+    /// Apps Auto Quit may close, in the order the settings list shows them.
+    var autoQuitRules: [AutoQuitRule] {
+        didSet {
+            let clean = AutoQuitSchedule.normalized(
+                autoQuitRules, ownBundleID: Bundle.main.bundleIdentifier ?? "")
+            if clean != autoQuitRules {
+                autoQuitRules = clean
+                return
+            }
+            if let data = try? JSONEncoder().encode(autoQuitRules) {
+                defaults.set(data, forKey: Key.autoQuitRules.rawValue)
+            }
+        }
+    }
+
     var launcherShowsSuggestions: Bool {
         didSet {
             defaults.set(launcherShowsSuggestions, forKey: Key.launcherShowsSuggestions.rawValue)
@@ -747,6 +767,13 @@ final class AppSettings {
         // Unset seeds the defaults; a stored empty array is a deliberately cleared list.
         searchScopes =
             defaults.stringArray(forKey: Key.searchScopes.rawValue) ?? SearchScopes.defaults
+        autoQuitMinutes =
+            AutoQuitMinutes(rawValue: defaults.integer(forKey: Key.autoQuitMinutes.rawValue))
+            ?? .fallback
+        autoQuitRules = AutoQuitSchedule.normalized(
+            defaults.data(forKey: Key.autoQuitRules.rawValue)
+                .flatMap { try? JSONDecoder().decode([AutoQuitRule].self, from: $0) } ?? [],
+            ownBundleID: Bundle.main.bundleIdentifier ?? "")
         launcherShowsSuggestions =
             defaults.object(forKey: Key.launcherShowsSuggestions.rawValue) == nil
             || defaults.bool(forKey: Key.launcherShowsSuggestions.rawValue)

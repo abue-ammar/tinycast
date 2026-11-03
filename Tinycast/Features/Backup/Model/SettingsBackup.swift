@@ -42,6 +42,8 @@ struct SettingsBackup: Codable {
         var compactMode: Bool?
         var compactBarCommands: [String]?
         var searchScopes: [String]?
+        var autoQuitMinutes: Int?
+        var autoQuitApps: [AutoQuitRule]?
         var launcherShowsSuggestions: Bool?
         var rootSearchSensitivity: String?
         var openOnCursorScreen: Bool?
@@ -158,6 +160,8 @@ extension SettingsBackup {
             compactMode: s.compactMode,
             compactBarCommands: s.compactBarCommands.map(\.rawValue),
             searchScopes: s.searchScopes,
+            autoQuitMinutes: s.autoQuitMinutes.rawValue,
+            autoQuitApps: s.autoQuitRules,
             launcherShowsSuggestions: s.launcherShowsSuggestions,
             rootSearchSensitivity: s.rootSearchSensitivity.rawValue,
             openOnCursorScreen: s.openOnCursorScreen,
@@ -399,6 +403,14 @@ extension SettingsBackup {
         }
         if let scopes = s.searchScopes {
             settings.searchScopes = SearchScopes.normalize(scopes)
+            count += 1
+        }
+        if let minutes = s.autoQuitMinutes, let duration = AutoQuitMinutes(rawValue: minutes) {
+            settings.autoQuitMinutes = duration
+            count += 1
+        }
+        if let apps = s.autoQuitApps {
+            settings.autoQuitRules = apps
             count += 1
         }
         if let flag = s.launcherShowsSuggestions {

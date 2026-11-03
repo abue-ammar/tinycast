@@ -859,6 +859,10 @@ reading the list there left the dot on until some later launch or quit:
 Every quit but Force Quit is a graceful `NSRunningApplication.terminate()`, so an app with unsaved
 work still puts up its own save sheet.
 
+**Enable Auto Quit** and **Disable Auto Quit** sit on the same menu for an application other than
+Finder or Tinycast, running or not. What happens after that is [auto-quit.md](auto-quit.md). An
+opted-in app that is running draws its dot in orange.
+
 The ⌘K menu samples `isRunning` **once, when it opens** (`RootPaletteView.openActions()`), so an app
 launching or quitting elsewhere can't add or drop those rows while the menu is up — the same freeze
 the rest of the menu already has ([palette.md](palette.md)). Only `LauncherList` observes

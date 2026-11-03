@@ -32,7 +32,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ MeetingLink · MeetingEvent · UpcomingWindow · MeetingDay · MenuBarSummary  │
 │ AutoJoinPolicy · EventDraft · SupportReminderSchedule ·                    │
 │ MenuSearch{Item,Shortcut,Query,TreeNode,SnapshotPolicy,Target} ·           │
-│ WindowSwitch{Entry,Order,Query}                                            │
+│ WindowSwitch{Entry,Order,Query} · AutoQuitSchedule                         │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ consumed by
 ┌─ EFFECT ─────────────────────────▼─────────────────────────────────────────┐
@@ -48,7 +48,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 │ CalendarStore · MeetingLauncher · MeetingClock · CameraSession ·           │
 │ SupportReminderStore · AXMenuAccess · WindowZOrder · WindowSwitchSweep ·   │
 │ AppleShortcutRunner · SettingsFileRepository · SettingsFileMonitor ·       │
-│ WindowManagementSettingsFile                                               │
+│ WindowManagementSettingsFile · AutoQuitMonitor · AutoQuitActivity          │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
@@ -94,7 +94,7 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 `CurrencyRateStore`, `FrequentEmojiStore`, `CalendarStore`), the managers, monitors and clocks
 (`ClipboardManager`, the opt-in `ClipboardTextIndexer`, the opt-in `SettingsFileRepository`,
 `HotKeyManager`, `HyperKeyManager`, `DictationKeyManager`, `RunningAppsMonitor`,
-`SnippetKeywordListener`), the shared state
+`AutoQuitMonitor`, `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `MenuSearchSession`, `UninstallSession`,
 `MeetingClock`), `NotesStore`, the twenty-one feature coordinators, and the
 window controllers.
