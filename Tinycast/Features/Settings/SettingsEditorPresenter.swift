@@ -386,6 +386,7 @@ extension View {
             .environment(core.customCommandCoordinator)
             .environment(core.snippetsStore)
             .environment(core.snippetCoordinator)
+            .environment(core.inlineEmojiCoordinator)
             .environment(core.quicklinks)
             .environment(core.quicklinkCoordinator)
             .environment(core.windowLayouts)

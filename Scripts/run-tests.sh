@@ -248,6 +248,10 @@ run index clipboard-thumbnail-performance \
 run emoji-test             Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
                            Tinycast/Features/Emoji/Model/EmojiGridGeometry.swift \
                            Tinycast/Features/Emoji/Model/EmojiData.generated.swift
+run inline-emoji-test      Tinycast/Features/Emoji/Model/InlineEmojiPolicy.swift
+run inline-emoji-listener-test Tinycast/Features/Emoji/Model/InlineEmojiPolicy.swift \
+                           Tinycast/Features/Emoji/Service/InlineEmojiListener.swift \
+                           Tinycast/Platform/HealthTicker.swift Tinycast/Platform/NotificationToken.swift
 run emoji-search-test      Tinycast/Features/Emoji/Model/EmojiCatalog.swift \
                            Tinycast/Features/Emoji/Model/EmojiData.generated.swift \
                            Tinycast/Features/Emoji/Service/EmojiIndex.swift \

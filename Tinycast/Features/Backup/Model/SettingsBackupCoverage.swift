@@ -15,6 +15,7 @@ enum SettingsBackupCoverage {
         "automaticallyCheckForUpdates": .automaticallyCheckForUpdates,
         "emojiSkinTone": .emojiSkinTone,
         "emojiGridColumns": .emojiGridColumns,
+        "inlineEmojiSuggestions": .inlineEmojiSuggestions,
         "popToRootSeconds": .popToRootTimeout,
         "escapeKeyBehavior": .escapeKeyBehavior,
         "appearance": .appearance,
@@ -78,6 +79,8 @@ enum SettingsBackupCoverage {
 
     /// Keys kept out of a backup on purpose, each with the reason it has to stay out.
     static let deliberatelyExcluded: [String: String] = [
+        AppSettingsKey.inlineEmojiEnabled.rawValue:
+            "Inline emoji requires local consent to listen for typed triggers; an import must not enable it.",
         AppSettingsKey.dictationEnabled.rawValue:
             "Microphone capture is an opt-in capability on this Mac; a backup must not enable it.",
         AppSettingsKey.dictationMode.rawValue: "Dictation preferences stay local until backup supports them.",

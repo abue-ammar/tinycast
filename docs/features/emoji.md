@@ -1,6 +1,7 @@
 # Emoji picker
 
 A palette sub-screen (reached like Clipboard / Calculator History) presenting a searchable emoji grid.
+An optional inline picker searches the same catalog beside another app's caret.
 
 ## Invariants
 
@@ -10,6 +11,31 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
   (Node 18+ for global `fetch`) and are never edited by hand. Regenerate and commit instead.
 - **Keyword packs are plain files, never `.lproj` folders.** Search loads packs for the user's
   macOS languages independently of Tinycast's UI language.
+- **Inline emoji is off by default and enabled only in Settings.** Its enablement never enters a
+  backup or `settings.json`, and its trigger is always `:`.
+
+## Inline picker
+
+Settings → Emoji & Symbols → Inline Emoji Picker enables a non-activating list beside the caret.
+Typing `:` at a word boundary opens it; continue typing to search, use ↑/↓ to select, and press
+Return or Tab to replace the shortcode. Clicking a result also inserts it. Escape dismisses the list
+and leaves the typed text intact. Ordinary colons in URLs, times and words do not trigger it.
+
+**When search is empty** chooses Frequently Used (the default, ranked by usage count) or Pinned
+(authored order). Both use the existing stores; an empty source offers typing to search. Pins are
+managed in the full palette picker. Skin tone is shared with that picker.
+
+`InlineEmojiPolicy` owns the bounded, temporary query buffer. `InlineEmojiListener` installs its tap
+only while enabled and Accessibility is granted, returns consumed keys synchronously, and delivers
+versioned effects through a bounded stream. Its watchdog shares `HealthTicker`. Clicks outside,
+scrolling, app switches, sleep, Secure Input and disabling invalidate the session. Synthetic input is
+ignored; typed queries are never persisted.
+
+`InlineEmojiTarget` requires a non-secure focused field with readable text, selection and caret
+bounds. Unsupported fields keep their normal keyboard behavior. Before delivery it verifies the
+same element, insertion offset and exact shortcode. `TextInjector` queues tagged Unicode events
+without borrowing the clipboard or activating the app, and checks session identity and focus between
+event groups. Only submitted insertions update usage.
 
 ## Layout
 

@@ -146,6 +146,7 @@ enum SettingsFileSchema {
         case .clipboardCommands: return launcher.commandsBinding(for: key, owner: .clipboard)
         case .emojiSkinTone: return bind(settings, \.emojiSkinTone)
         case .emojiGridColumns: return bind(settings, \.emojiGridColumns)
+        case .inlineEmojiSuggestions: return bind(settings, \.inlineEmojiSuggestions)
         case .emojiCommands: return launcher.commandsBinding(for: key, owner: .emoji)
         case .calendarShowInLauncher: return bind(settings, \.calendarShowInLauncher)
         case .calendarLauncherLimit: return bind(settings, \.calendarLauncherLimit)
@@ -185,6 +186,7 @@ extension WindowCycle: SettingsFileRawValue {}
 extension ClipboardDefaultAction: SettingsFileRawValue {}
 extension EmojiSkinTone: SettingsFileRawValue {}
 extension EmojiGridColumns: SettingsFileRawValue {}
+extension InlineEmojiSuggestions: SettingsFileRawValue {}
 extension DictationModel: SettingsFileRawValue {}
 extension DictationMode: SettingsFileRawValue {}
 extension DictationDestination: SettingsFileRawValue {}

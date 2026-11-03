@@ -137,6 +137,8 @@ If a change touches anything in the right column, the harness on the left is man
 | `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file or image entry writes back |
 | `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data and keyword packs |
 | `emoji-search-test` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format, multilingual search |
+| `inline-emoji-test` | `Emoji/Model/InlineEmojiPolicy.swift` — trigger boundaries, query editing, key consumption, expiry and reset |
+| `inline-emoji-listener-test` | Inline emoji callback ordering, key releases and repeats, click targeting and session identity; private, unposted events |
 | `command-escape-tap-test` | `Palette/CommandEscapeTap.swift` — dedicated run-loop dispatch while main is blocked, timeout recovery, stale actions, installation cancellation and teardown; private ports and unposted events only |
 | `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` — and hover arming, pointer drift, scroll disarming and highlight tokens |
 | `compact-bar-test` | Compact shortcut order, selection boundaries, zero-to-four slots, identifiers, isolated preferences and invalid settings-file rejection |
@@ -672,6 +674,22 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - Choosing the Search Files fallback right after opens on the same results without a pause
 - With Pop to Root Search delayed, close and reopen before the timeout: the launcher keeps its query
   and file results. Let the timeout expire, or use Immediately: reopening starts with an empty query
+
+### Inline emoji
+
+- A fresh install has **Enable inline emoji picker** off and **When search is empty** set to
+  Frequently Used. Enable it in Settings → Emoji & Symbols; `:` is shown without an editor.
+- In TextEdit and a browser text field, type `:smile`: the list appears beside the caret without
+  taking focus. ↑/↓ select, Return and Tab insert, and a click inserts the clicked result.
+- Escape keeps the shortcode intact; deleting the trigger closes the list. `https://`, `12:30` and
+  `word:word` leave typing alone. An unsupported field or Secure Input shows no picker.
+- Switch the empty-search source to Pinned: a bare `:` follows the full picker's pin order. Switch
+  back: usage counts determine order. Both empty sources allow searching, and skin tone is shared.
+- Open the list near each screen edge, on a secondary display and in full screen, in Light and Dark
+  over a bright desktop: the list stays visible and the app behind it keeps typing focus.
+- Click outside, switch apps, sleep, disable the setting, or move the caret before delivery: no
+  pending insertion edits the new destination. Holding Return inserts only once.
+- Relaunch preserves the source and enablement; backups and `settings.json` carry the source only.
 
 ### Notes
 

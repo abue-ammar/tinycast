@@ -57,6 +57,8 @@ final class AppCore {
     let emojiIndex = EmojiIndex()
     let frequentEmoji = FrequentEmojiStore()
     let pinnedEmoji = PinnedEmojiStore()
+    @ObservationIgnored private(set) lazy var inlineEmojiListener = InlineEmojiListener(healthTicker: healthTicker)
+    @ObservationIgnored private(set) lazy var inlineEmojiWindow = InlineEmojiWindowController()
     let runningApps = RunningAppsMonitor()
     let palette = PaletteState()
     let fileIndexer = FileIndexer()
@@ -199,6 +201,9 @@ final class AppCore {
     @ObservationIgnored private(set) lazy var emojiCoordinator = EmojiCoordinator(
         frequentEmoji: frequentEmoji, settings: settings, windowController: windowController,
         paletteCoordinator: paletteCoordinator)
+    @ObservationIgnored private(set) lazy var inlineEmojiCoordinator = InlineEmojiCoordinator(
+        index: emojiIndex, frequent: frequentEmoji, pinned: pinnedEmoji, settings: settings,
+        injector: textInjector, listener: inlineEmojiListener, window: inlineEmojiWindow)
     @ObservationIgnored private(set) lazy var calculatorCoordinator = CalculatorCoordinator(
         calcHistory: calcHistory, paletteCoordinator: paletteCoordinator, core: self)
     @ObservationIgnored private(set) lazy var calendarCoordinator = CalendarCoordinator(
@@ -456,6 +461,8 @@ final class AppCore {
             // Unconditional: a disabled feature has to take its command rows down with it.
             snippetCoordinator.applySnippetsLauncherPresence()
 
+            inlineEmojiCoordinator.applyEnabled()
+
             observeFeatureSwitches()
 
             // First launch binds no hotkey, so guide once; the marker is written at show-time.
@@ -609,6 +616,7 @@ final class AppCore {
         inputSourceSwitcher.endSession()
         textInjector.prepareForTermination()
         snippetListener.stop()
+        inlineEmojiCoordinator.stop()
         snippetsStore.stop()
         aiChats.reset()
         chatGPTSubscription.stop()
@@ -772,6 +780,7 @@ final class AppCore {
                 _ = $0.fileSearchRemovedDefaultPatterns
             }, reproject: { $0.fileSearchCoordinator.applyPolicy() })
         track({ _ = $0.snippetsEnabled }, reproject: { $0.snippetCoordinator.applySnippetsEnabled() })
+        track({ _ = $0.inlineEmojiEnabled }, reproject: { $0.inlineEmojiCoordinator.applyEnabled() })
         // Not a feature switch, but the same re-projection: a combo has the chord's ⇧ bit baked in.
         track({ _ = $0.hyperKeyIncludesShift }, reproject: { $0.applyHyperChord() })
         track(

@@ -206,6 +206,14 @@ final class AppSettings {
         didSet { defaults.set(emojiGridColumns.rawValue, forKey: Key.emojiGridColumns.rawValue) }
     }
 
+    var inlineEmojiEnabled: Bool {
+        didSet { defaults.set(inlineEmojiEnabled, forKey: Key.inlineEmojiEnabled.rawValue) }
+    }
+
+    var inlineEmojiSuggestions: InlineEmojiSuggestions {
+        didSet { defaults.set(inlineEmojiSuggestions.rawValue, forKey: Key.inlineEmojiSuggestions.rawValue) }
+    }
+
     /// How long a closed palette keeps its state before popping back to the root launcher.
     var popToRootTimeout: PopToRootTimeout {
         didSet { defaults.set(popToRootTimeout.rawValue, forKey: Key.popToRootTimeout.rawValue) }
@@ -723,6 +731,9 @@ final class AppSettings {
         emojiGridColumns =
             EmojiGridColumns(rawValue: defaults.integer(forKey: Key.emojiGridColumns.rawValue))
             ?? .default
+        inlineEmojiEnabled = defaults.bool(forKey: Key.inlineEmojiEnabled.rawValue)
+        inlineEmojiSuggestions = defaults.string(forKey: Key.inlineEmojiSuggestions.rawValue)
+            .flatMap(InlineEmojiSuggestions.init) ?? .frequentlyUsed
         popToRootTimeout =
             PopToRootTimeout(rawValue: defaults.integer(forKey: Key.popToRootTimeout.rawValue))
             ?? .immediately

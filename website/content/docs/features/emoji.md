@@ -12,6 +12,18 @@ Search matches names and keywords in English. If your Mac's preferred languages 
 Spanish, French, Japanese, Korean, Portuguese, Russian or Simplified Chinese, keywords in that
 language work too. English matches still come first.
 
+## Inline picker
+
+Turn on **Settings → Emoji & Symbols → Inline Emoji Picker** to choose emoji while typing in other
+apps. This feature starts off and needs Accessibility access.
+
+Type `:` at the start of a word, then keep typing to search. Use ↑/↓ to choose and Return or Tab to
+insert, or click a result. Escape dismisses the picker and keeps your text. The trigger is always `:`.
+
+**When search is empty** defaults to **Frequently Used**. Choose **Pinned** to see your pins instead.
+Manage pins in the full picker. The inline picker uses the same search, usage history and skin tone.
+It appears only in text fields that expose their text and caret through Accessibility.
+
 ## Actions
 
 | Action                     | Shortcut                                            |

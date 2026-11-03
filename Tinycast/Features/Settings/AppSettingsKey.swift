@@ -14,6 +14,8 @@ enum AppSettingsKey: String, CaseIterable {
     case hyperKeySecureInputCompatibility = "hyperKeySecureInputCompatibility"
     case emojiSkinTone = "emojiSkinTone"
     case emojiGridColumns = "emojiGridColumns"
+    case inlineEmojiEnabled = "inlineEmojiEnabled"
+    case inlineEmojiSuggestions = "inlineEmojiSuggestions"
     case showInMenuBar = "showInMenuBar"
     case automaticallyCheckForUpdates = "automaticallyCheckForUpdates"
     case popToRootTimeout = "popToRootTimeout"

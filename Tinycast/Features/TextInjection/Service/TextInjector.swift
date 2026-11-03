@@ -120,6 +120,32 @@ final class TextInjector {
 
     func drain() async { await deliveryQueue.drain() }
 
+    func replaceTypedText(
+        _ text: String, keyword: String, in app: NSRunningApplication,
+        isValid: @escaping @MainActor () -> Bool,
+        matchesKeyword: @escaping @MainActor () -> Bool,
+        onDelivered: @escaping @MainActor () -> Void
+    ) {
+        deliveryQueue.enqueue(isAutomatic: false) { [weak self] in
+            guard let self, isValid(), matchesKeyword(),
+                Permissions.isAccessibilityTrusted(),
+                let deletion = self.makeDeletionEvents(count: keyword.count),
+                let insertion = self.makeUnicodeEvents(text)
+            else { return }
+            for group in deletion {
+                guard isValid(), !Task.isCancelled else { return }
+                self.post(group, targetApp: app)
+                guard await self.wait(for: .milliseconds(8)) else { return }
+            }
+            guard await self.waitAfterKeywordDeletion(keyword.count), isValid(), !Task.isCancelled else { return }
+            for group in insertion {
+                guard isValid(), !Task.isCancelled else { return }
+                self.post(group, targetApp: app)
+            }
+            onDelivered()
+        }
+    }
+
     func prepareInteractiveExpansion(target: InjectionTarget?) -> Bool {
         if let editor = target?.ownEditor { return editor.isEditable }
         guard targetAcceptsInjection(target?.externalApp), Permissions.ensureAccessibility() else {

@@ -527,6 +527,12 @@ enum SettingsSearchCatalog {
 
     private static let emoji: [SettingsSearchEntry] = [
         .init(
+            .emojiInlinePicker, "Enable inline emoji picker",
+            keywords: ["colon", ":", "typing", "trigger", "autocomplete"]),
+        .init(
+            .emojiInlinePicker, "When search is empty",
+            keywords: ["pins", "pinned", "frequently used", "suggestions"]),
+        .init(
             pane: .emoji,
             keywords: ["picker", "character", "unicode", "smiley"]),
         .init(

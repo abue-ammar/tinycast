@@ -2,10 +2,44 @@ import SwiftUI
 
 struct EmojiSettingsView: View {
     @Environment(AppSettings.self) private var settings
+    @Environment(InlineEmojiCoordinator.self) private var inlinePicker
 
     var body: some View {
         @Bindable var settings = settings
         return Form {
+            Section {
+                Toggle(isOn: $settings.inlineEmojiEnabled) {
+                    SettingsRowTitle(.emojiInlinePicker, "Enable inline emoji picker")
+                    Text("Type : in a text field to search for emoji.")
+                }
+                LabeledContent {
+                    Text(verbatim: ":")
+                        .foregroundStyle(.secondary)
+                } label: {
+                    Text("Trigger")
+                }
+                Picker(selection: $settings.inlineEmojiSuggestions) {
+                    ForEach(InlineEmojiSuggestions.allCases) { source in
+                        Text(source.title).tag(source)
+                    }
+                } label: {
+                    SettingsRowTitle(.emojiInlinePicker, "When search is empty")
+                }
+                if settings.inlineEmojiEnabled, !inlinePicker.listener.isListening,
+                    !Permissions.isAccessibilityTrusted()
+                {
+                    LabeledContent {
+                        Button("Grant Access…") { Permissions.openAccessibilitySettings() }
+                    } label: {
+                        Text("Inline emoji needs Accessibility access")
+                    }
+                }
+            } header: {
+                SettingsSectionHeader(.emojiInlinePicker)
+            } footer: {
+                Text("Arrow keys select an emoji, Return inserts it, and Escape dismisses the picker.")
+            }
+
             FeatureCommandsSection(owner: .emoji, anchor: .emojiCommands)
 
             Section {
