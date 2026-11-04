@@ -453,6 +453,12 @@ enum SettingsSearchCatalog {
             .windowManagementOptions, "Gap between windows",
             keywords: ["padding", "spacing", "margin", "points"]),
         .init(
+            .windowManagementOptions, "Wrap around displays",
+            keywords: ["next display", "previous display", "monitor", "screens", "loop"]),
+        .init(
+            .windowManagementOptions, "Keep aspect ratio",
+            keywords: ["next display", "previous display", "monitor", "scale", "resize"]),
+        .init(
             .windowManagementOptions, "Shortcut preset",
             keywords: ["rectangle", "magnet", "spectacle", "defaults", "import", "shortcuts"]),
         .init(

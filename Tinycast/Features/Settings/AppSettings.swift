@@ -616,6 +616,16 @@ final class AppSettings {
         didSet { defaults.set(windowCycle.rawValue, forKey: Key.windowCycle.rawValue) }
     }
 
+    var windowWrapsDisplays: Bool {
+        didSet { defaults.set(windowWrapsDisplays, forKey: Key.windowWrapsDisplays.rawValue) }
+    }
+
+    var windowKeepsProportions: Bool {
+        didSet {
+            defaults.set(windowKeepsProportions, forKey: Key.windowKeepsProportions.rawValue)
+        }
+    }
+
     /// Off means fully off, down to a still-registered shortcut opening nothing.
     var quicklinksEnabled: Bool {
         didSet { defaults.set(quicklinksEnabled, forKey: Key.quicklinksEnabled.rawValue) }
@@ -883,6 +893,12 @@ final class AppSettings {
         windowGap = defaults.integer(forKey: Key.windowGap.rawValue)
         windowCycle =
             defaults.string(forKey: Key.windowCycle.rawValue).flatMap(WindowCycle.init) ?? .off
+        windowWrapsDisplays =
+            defaults.object(forKey: Key.windowWrapsDisplays.rawValue) == nil
+            || defaults.bool(forKey: Key.windowWrapsDisplays.rawValue)
+        windowKeepsProportions =
+            defaults.object(forKey: Key.windowKeepsProportions.rawValue) == nil
+            || defaults.bool(forKey: Key.windowKeepsProportions.rawValue)
         windowLayoutsShowInLauncher =
             defaults.object(forKey: Key.windowLayoutsShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.windowLayoutsShowInLauncher.rawValue)

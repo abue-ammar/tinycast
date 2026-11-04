@@ -748,6 +748,62 @@ struct WindowCommandTests {
             frame(.firstThird, on: right)!,
             "a remembered third is re-derived exactly on the destination")
 
+        let maximizedOnLeft = frame(.maximize, on: left, gap: 16)!
+        let maximizedOnRight = frame(
+            .nextDisplay, window: maximizedOnLeft, gap: 16, allScreens: both)!
+        expectRect(
+            maximizedOnRight, frame(.maximize, on: right, gap: 16)!,
+            "a maximized window fills the destination's canvas with the same gap")
+        expectRect(
+            frame(.previousDisplay, window: maximizedOnRight, gap: 16, allScreens: both)!,
+            maximizedOnLeft, "a maximized window round-trips with the gap intact")
+
+        let quarterOfCanvas = CGRect(x: 368, y: 233, width: 704, height: 434)
+        let scaledOnRight = frame(
+            .nextDisplay, window: quarterOfCanvas, gap: 16, allScreens: both)!
+        expectRect(
+            scaledOnRight, CGRect(x: 2088, y: 368, width: 1264, height: 704),
+            "a partial window keeps its proportions of the canvas")
+        expectRect(
+            frame(.previousDisplay, window: scaledOnRight, gap: 16, allScreens: both)!,
+            quarterOfCanvas, "a partial window round-trips without growing")
+
+        func moved(
+            _ command: WindowCommand.ID, _ window: CGRect, wraps: Bool = true,
+            keepsProportions: Bool = true, lastTile: WindowCommand.ID? = nil
+        ) -> CGRect? {
+            WindowPlacementEngine.placement(
+                for: WindowPlacementEngine.Input(
+                    command: command, windowFrame: window, screens: both, gap: 16,
+                    lastTileCommand: lastTile, wrapsDisplays: wraps,
+                    keepsProportions: keepsProportions))?.frame
+        }
+        expect(
+            moved(.nextDisplay, scaledOnRight, wraps: false) == nil,
+            "without wrapping, Next Display on the last display does nothing")
+        expect(
+            moved(.previousDisplay, quarterOfCanvas, wraps: false) == nil,
+            "without wrapping, Previous Display on the first display does nothing")
+        expectRect(
+            moved(.nextDisplay, quarterOfCanvas, wraps: false)!, scaledOnRight,
+            "without wrapping, a move between displays still happens")
+
+        expectRect(
+            moved(.nextDisplay, quarterOfCanvas, keepsProportions: false)!,
+            CGRect(x: 1808, y: 233, width: 704, height: 434),
+            "without proportions, a window keeps its size and its offset from the canvas")
+        expectRect(
+            moved(
+                .previousDisplay, CGRect(x: 1456, y: 16, width: 2000, height: 1200),
+                keepsProportions: false)!,
+            CGRect(x: 0, y: 0, width: 1440, height: 900),
+            "without proportions, a window too big for the destination is capped to it")
+        let leftHalfWithGap = frame(.leftHalf, on: left, gap: 16)!
+        expect(
+            moved(.nextDisplay, leftHalfWithGap, keepsProportions: false, lastTile: .leftHalf)?.size
+                == leftHalfWithGap.size,
+            "without proportions, a remembered tile keeps its size too")
+
         expect(
             WindowPlacementEngine.screen(
                 containing: CGRect(x: 1150, y: 0, width: 500, height: 100), in: both)?.id == 1,
@@ -909,6 +965,70 @@ struct WindowCommandTests {
     }
 
     // MARK: - Action memory
+
+    static func testFullScreenRestore(clock: Date, original: CGRect, half: CGRect) {
+        let fullScreen = CGRect(x: 0, y: 0, width: 1440, height: 900)
+
+        var left = WindowActionMemory<Int>()
+        let leaving = left.decide(
+            key: 1, command: .leftHalf, currentFrame: fullScreen, currentScreenID: 1,
+            cycleLength: 3, now: clock, isFullScreen: true)
+        expect(leaving.step == 0, "a press on a fullscreen window starts its cycle at ½")
+        expect(leaving.restoresFullScreen, "a chain that starts fullscreen restores to fullscreen")
+        left.commit(
+            key: 1, command: .leftHalf, decision: leaving, appliedFrame: half, screenID: 1,
+            now: clock)
+        let back = left.decide(
+            key: 1, command: .restore, currentFrame: half, currentScreenID: 1, cycleLength: 1,
+            now: clock)
+        expect(
+            back.canRestore && back.restoresFullScreen,
+            "Restore after leaving fullscreen goes back into fullscreen")
+        left.commit(
+            key: 1, command: .restore, decision: back, appliedFrame: half, screenID: 1, now: clock,
+            appliedFullScreen: true)
+        let again = left.decide(
+            key: 1, command: .restore, currentFrame: fullScreen, currentScreenID: 1,
+            cycleLength: 1, now: clock, isFullScreen: true)
+        expect(
+            again.canRestore && again.restoresFullScreen,
+            "a window Restore fullscreened is still the same chain")
+
+        var moved = WindowActionMemory<Int>()
+        let move = moved.decide(
+            key: 1, command: .nextDisplay, currentFrame: fullScreen, currentScreenID: 1,
+            cycleLength: 1, now: clock, isFullScreen: true)
+        moved.commit(
+            key: 1, command: .nextDisplay, decision: move, appliedFrame: original, screenID: 2,
+            now: clock, appliedFullScreen: true)
+        let afterMove = moved.decide(
+            key: 1, command: .restore, currentFrame: CGRect(x: 1440, y: 0, width: 2560, height: 1440),
+            currentScreenID: 2, cycleLength: 1, now: clock, isFullScreen: true)
+        expect(
+            afterMove.canRestore && afterMove.restoresFullScreen,
+            "after a fullscreen display move, Restore's target is the fullscreen it is already in")
+        let exitedByHand = moved.decide(
+            key: 1, command: .restore, currentFrame: original, currentScreenID: 2, cycleLength: 1,
+            now: clock)
+        expect(
+            exitedByHand.restoresFullScreen,
+            "leaving our fullscreen for the frame we placed keeps the chain")
+
+        var outside = WindowActionMemory<Int>()
+        let seed = outside.decide(
+            key: 1, command: .leftHalf, currentFrame: original, currentScreenID: 1, cycleLength: 1,
+            now: clock)
+        expect(!seed.restoresFullScreen, "a windowed chain restores to a frame")
+        outside.commit(
+            key: 1, command: .leftHalf, decision: seed, appliedFrame: half, screenID: 1, now: clock)
+        let external = outside.decide(
+            key: 1, command: .restore, currentFrame: fullScreen, currentScreenID: 1,
+            cycleLength: 1, now: clock, isFullScreen: true)
+        expect(
+            external.restoresFullScreen && external.lastTileCommand == nil,
+            "fullscreen entered outside Tinycast starts a new chain there")
+        expectRect(external.restoreFrame, fullScreen, "and refreshes the restore point")
+    }
 
     static func testMemory() {
         let clock = Date(timeIntervalSince1970: 1_000_000)
@@ -1079,13 +1199,22 @@ struct WindowCommandTests {
             frame(.restore, restore: second.restoreFrame)!, original, "a second restore is idempotent")
 
         // Fullscreen breaks the cycle chain but keeps the restore point.
-        run.forgetCycle(key: 1)
+        run.forgetCycle(key: 1, isFullScreen: true)
         expect(run.record(for: 1)?.step == 0, "forgetCycle resets the step")
         expect(
             run.record(for: 1)?.originScreenID == run.record(for: 1)?.screenID,
             "forgetCycle restarts the chain on the window's current display")
         expectRect(
             run.record(for: 1)!.restoreFrame, original, "forgetCycle keeps the restore point")
+        let toggledIn = run.decide(
+            key: 1, command: .restore, currentFrame: CGRect(x: 0, y: 0, width: 1440, height: 900),
+            currentScreenID: 1, cycleLength: 1, now: clock, isFullScreen: true)
+        expect(
+            toggledIn.canRestore && !toggledIn.restoresFullScreen,
+            "a window our toggle fullscreened still restores to its original frame")
+        expectRect(toggledIn.restoreFrame, original, "the toggle leaves the restore point alone")
+
+        testFullScreenRestore(clock: clock, original: original, half: half)
 
         // Bounded growth, most-recently-used retained.
         var bounded = WindowActionMemory<Int>(capacity: 64)

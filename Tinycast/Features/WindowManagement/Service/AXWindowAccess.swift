@@ -47,11 +47,14 @@ enum AXWindowAccess {
         return frame(of: window) != nil
     }
 
-    static func isFullScreen(_ window: AXUIElement) -> Bool {
+    static func isFullScreen(_ window: AXUIElement) -> Bool { fullScreenState(window) == true }
+
+    /// Nil when the window does not answer, as a busy app mid-transition often does not.
+    static func fullScreenState(_ window: AXUIElement) -> Bool? {
         var value: CFTypeRef?
         guard
             AXUIElementCopyAttributeValue(window, fullScreenAttribute, &value) == .success
-        else { return false }
+        else { return nil }
         return (value as? Bool) ?? false
     }
 
