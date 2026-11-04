@@ -12,4 +12,17 @@ enum AIInstructions {
             .filter { !$0.isEmpty }
             .joined(separator: "\n\n")
     }
+
+    /// A preset's text always rides, even on device; the preamble still follows its own switch.
+    static func compose(
+        presetInstructions: String, preambleEnabled: Bool, offersChoices: Bool,
+        model: AIModelSelection?
+    ) -> String? {
+        let trimmed = presetInstructions.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard preambleEnabled, model?.isOnDevice != true else {
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        return compose(
+            userPrompt: trimmed, isEnabled: true, offersChoices: offersChoices, model: model)
+    }
 }

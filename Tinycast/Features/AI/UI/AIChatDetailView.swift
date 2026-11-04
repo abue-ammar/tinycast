@@ -198,8 +198,16 @@ private struct AIChatComposer: View {
 
     private func controlRow(compactSearch: Bool) -> some View {
         let searches = coordinator.capabilities(for: chat).webSearch
+        let stamp = chat.session.preset
+        let canChangePreset = chat.session.messages.isEmpty && !chat.isStreaming
         return HStack(spacing: Theme.Spacing.xxs) {
             AIAddMenu(chat: chat, coordinator: coordinator, settings: settings, offersSearch: searches)
+            if stamp != nil || (canChangePreset && !coordinator.presets.isEmpty) {
+                AIPresetPicker(
+                    chat: chat, stamp: stamp, canChange: canChangePreset, coordinator: coordinator
+                )
+                .layoutPriority(-1)
+            }
             if searches, settings.webSearchEnabled {
                 WebSearchPill(settings: settings, isCompact: compactSearch)
                     .transition(.opacity.combined(with: .scale(scale: 0.9)))
@@ -357,6 +365,50 @@ private struct AIAddMenu: View {
         case (true, false): return String(localized: "Attach images or text files")
         case (false, true): return String(localized: "Attach PDFs or text files")
         case (false, false): return String(localized: "Attach text files")
+        }
+    }
+}
+
+/// Picked before the first message; after it, the chat's preset is only a label.
+private struct AIPresetPicker: View {
+    let chat: AIChatState
+    /// Handed in, never read from `chat`: a reply writes the session on every streaming flush.
+    let stamp: ChatPreset.Stamp?
+    let canChange: Bool
+    let coordinator: AIChatCoordinator
+
+    var body: some View {
+        let label = ComposerControlLabel(
+            title: stamp?.name ?? String(localized: "Preset"), showsChevron: canChange
+        ) {
+            ComposerSymbol(name: stamp?.symbol ?? ChatPreset.sfSymbol)
+        }
+        if canChange {
+            Menu {
+                Toggle(
+                    "No Preset",
+                    isOn: Binding(
+                        get: { stamp == nil },
+                        set: { if $0 { coordinator.usePreset(nil, in: chat) } }))
+                Divider()
+                ForEach(coordinator.presets) { preset in
+                    Toggle(
+                        isOn: Binding(
+                            get: { stamp == preset.stamp },
+                            set: { if $0 { coordinator.usePreset(preset, in: chat) } })
+                    ) {
+                        Label(preset.name, systemImage: preset.symbol)
+                    }
+                }
+                Divider()
+                Button("Manage Presets…", action: coordinator.showSettings)
+            } label: {
+                label
+            }
+            .composerMenu()
+            .help("Start this chat from a preset")
+        } else {
+            label.help("This chat's preset")
         }
     }
 }

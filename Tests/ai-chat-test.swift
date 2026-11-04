@@ -61,6 +61,7 @@ struct AIChatTests {
         await reasoningFoldsIntoTheReplyAndIsNeverResent()
         reasoningShowsWithoutItsClosingBlankLines()
         chatsKeepTheirOwnModel()
+        presetsAreStampedOnTheChatTheyStart()
         choicesComeOutOfTheirFence()
         referencesAreTheLinksAReplyCites()
         titlesAreCleanedAndNeverBeatARename()
@@ -1573,6 +1574,33 @@ extension AIChatTests {
         let reopened = AIChatState(history: ChatHistoryStore(directory: directory))
         expect(reopened.open(id: chat.session.id), "the chat reopens")
         expect(reopened.session.model == sonnet, "a later pick is what the chat reopens on")
+    }
+
+    static func presetsAreStampedOnTheChatTheyStart() {
+        let (store, directory) = temporaryStore("preset")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let opus = AIModelSelection.claude(model: "opus", effort: nil)
+        var tools = ChatToolScope()
+        tools.toggle("files")
+        let preset = ChatPreset(
+            name: "SEO", instructions: "Review for SEO.", model: opus, toolScope: tools)
+        let chat = AIChatState(history: store)
+        expect(chat.usePreset(preset), "an empty chat takes a preset")
+        expect(
+            chat.session.model == opus && !chat.toolScope.allows("files"),
+            "the preset's model and tools come with it")
+        chat.send("Hi", using: ScriptedProvider(rounds: []), model: opus)
+        expect(!chat.usePreset(nil), "a chat that has begun keeps its preset")
+        let reopened = AIChatState(history: ChatHistoryStore(directory: directory))
+        expect(reopened.open(id: chat.session.id), "the chat reopens")
+        expect(
+            reopened.session.preset == preset.stamp,
+            "the chat keeps the instructions it started with")
+        expect(!reopened.toolScope.allows("files"), "reopening restores the preset's tools")
+        reopened.startNewChat()
+        expect(
+            reopened.session.preset == nil && reopened.toolScope.allows("files"),
+            "the next chat starts plain, with every server on")
     }
 
     static func titlesAreCleanedAndNeverBeatARename() {

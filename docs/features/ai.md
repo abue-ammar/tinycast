@@ -119,10 +119,19 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   answer carries its sources without a second request.
 - **Tools are chosen per chat.** The Tools submenu under the composer's `+` switches MCP off for the
   chat or turns
-  single servers off (`ChatToolScope`, held on `AIChatState`, not stored); `@server` still narrows
+  single servers off (`ChatToolScope`, held on `AIChatState`, not stored — only a preset's choice
+  rides its stamp and comes back on reopen); `@server` still narrows
   one turn inside that. The scope binds both shapes alike: Tinycast's loop is offered only the
   allowed servers' tools, and a Codex or Claude turn is handed only the allowed servers. A route that
   cannot call tools shows the menu disabled and says why.
+- **A preset is stamped on the chat it starts, never linked.** `AIChatState.usePreset` copies the
+  preset's name, glyph, instructions and tools into `ChatSession.preset` (`ChatPreset.Stamp`) and its
+  model into `ChatSession.model`, and refuses once the chat has a message. `conversation_presets`
+  keeps the stamp, so editing or deleting the preset never changes what an older chat sends. The
+  stamp's instructions take the user prompt's place in `AIInstructions.compose(presetInstructions:…)`
+  and are sent even with the system prompt off and on Apple Intelligence — picking a preset is the
+  reader asking for them — while the preamble still follows its own switch and route. See
+  [Chat presets](#chat-presets).
 - **A reply can end on choices, and a choice is only ever a message.** The preamble lets the model
   close a reply with a fenced `choices` block, one option per line. `ChatChoices.split` lifts the
   fence out of the prose (an unclosed one mid-stream too, so it never flashes as code). A small
@@ -663,7 +672,7 @@ them until an unrelated render or a window exit/re-enter recomputed hover. It di
 `DragGesture(minimumDistance: 0)` rather than a tap, so a press that drifts a few points still closes
 the menu, as a native menu's click-away does.
 
-Seven more `@MainActor @Observable` types join the shared state: `AISettingsStore`,
+Eight more `@MainActor @Observable` types join the shared state: `AISettingsStore`, `ChatPresetStore`,
 `ChatGPTSubscriptionManager`, `InstalledAIManager`, `ChatHistoryStore`, `AIChatSurfacesState` (which
 owns every live `AIChatState`), `MCPSettingsStore` and `MCPServerManager`. `AIChatCoordinator` — the
 window, and every chat action either surface sends — is the nineteenth feature coordinator,
@@ -739,7 +748,18 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Escape closes AI Chat with the composer focused, preserving its draft and any streaming reply.
   Menus and rename fields cancel first; the sidebar clears a nonempty filter, then closes on the
   next Escape. Find in Chat cancels before a second Escape closes the window.
-- Harnesses: `ai-provider-test` (instruction composition and its enable/disable setting, endpoints,
+- Add a chat preset with its own model and one tool server switched off, bind a shortcut, and start
+  it from ⌘Space and from the shortcut: the window opens on an empty chat whose composer names the
+  preset, the model and the tools menu match it, and asking "what are your instructions?" quotes the
+  preset. After a relaunch the chat reopens on the same instructions, model and tools.
+- Edit that preset's instructions: the old chat still answers with the old ones; a new one gets the
+  new ones. With `Send a system prompt` off, a preset chat still follows its instructions.
+- In an empty chat, pick a preset from the composer menu, then No Preset: the model and tools go back
+  to the defaults. After the first message the menu is a label and cannot be changed.
+- Delete a preset with a shortcut bound: the dialog asks first, the row leaves Settings and ⌘Space,
+  and the chord is free for something else to take.
+- Harnesses: `ai-provider-test` (instruction composition and its enable/disable setting, a preset's
+  instructions, `ChatPresetStore`'s validation and unreadable-file refusal, endpoints,
   request bodies, stream decoding including leading
   think tags across content and SSE splits, persistence repair,
   Codex framing, on-device routing, the two MCP launch encodings and the two consent channels, the
@@ -748,7 +768,7 @@ window, and every chat action either surface sends — is the nineteenth feature
   `syntax-highlight-test` (every grammar's tokens, language aliases, the size limit, and that every
   prefix of a streaming block scans in order and inside its own bounds),
   `ai-chat-test` (`ChatSession`, `MarkdownBlock` with its math delimiters, LaTeX subset and
-  mid-stream hold-back, `ChatHistoryStore` with renames and pins,
+  mid-stream hold-back, `ChatHistoryStore` with renames, pins and preset stamps,
   `AIToolLoopProvider`, regenerate, `ChatReasoning`'s display text, the window's open policy and
   `AIChatSurfacesState`'s one-live-place rule),
   and `apple-intelligence-test` (status copy, snapshot deltas,
@@ -982,6 +1002,34 @@ because there the field really is a search. Neither exit touches the conversatio
 The model switcher is `fixedSize` with its title shortened in `AIChatCoordinator` (26 characters,
 middle ellipsis) rather than truncated by layout: a flexible label claimed the row up to its max
 width and clipped the search field well short of the button.
+
+## Chat presets
+
+A preset is a name, a glyph, instructions, an optional model (`nil` follows AI Chat's default) and a
+`ChatToolScope`. `ChatPresetStore` keeps them as `chat-presets.json` in Application Support, ordered
+by `createdAt`, under the same rules as `CustomQuickActionStore`: name and instructions must be
+non-empty, a write lands on disk before the list moves, and a file that will not decode makes every
+mutation refuse rather than write over it.
+
+Settings → AI → **Chat Presets** lists them. Each row carries its alias, its shortcut
+(`HotKeyAction.chatPreset(id:)`, indexed in `boundChatPresetIDs` so a binding whose preset was deleted
+while Tinycast was off is pruned at launch) and its launcher checkbox; the pencil opens
+`ChatPresetEditorPanel`. Deleting confirms first and unwinds the shortcut, favorite, visibility key,
+alias and ranking only once the record is gone. Chats a deleted preset started keep their stamp.
+
+A preset is started three ways, and all of them land on an empty chat:
+
+- **The launcher row or its shortcut** — `AppEntry.Kind.chatPreset`, its own section — calls
+  `AIChatCoordinator.startChat(presetID:)`. It reuses the window's chat only while that chat is empty,
+  so a half-typed line or staged files carry into the preset, and starts a new one otherwise. A
+  deep link to it asks no consent: it opens an empty chat and sends nothing.
+- **The composer's preset menu**, beside `+`, while the chat has no message. It offers No Preset,
+  every preset and Manage Presets…, and is hidden when there are none. Once the first message is
+  sent the menu becomes a plain label naming the chat's preset.
+
+A plain chat started after a preset chat, in the same state, goes back to every tool server on.
+Presets live outside `UserDefaults` and so never travel in a settings backup or `settings.json`, for
+the reason the system prompt does not: standing instructions must not arrive on another Mac unread.
 
 ## Settings and backup boundary
 

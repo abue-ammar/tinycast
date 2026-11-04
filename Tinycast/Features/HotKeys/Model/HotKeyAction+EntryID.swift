@@ -18,6 +18,8 @@ extension HotKeyAction {
             self = .windowRoom(id: id)
         } else if let id = CustomQuickAction.id(fromEntryID: entryID) {
             self = .quickAction(id: id)
+        } else if let id = ChatPreset.id(fromEntryID: entryID) {
+            self = .chatPreset(id: id)
         } else if let id = CustomCommand.id(fromEntryID: entryID) {
             self = .customCommand(id: id)
         } else if let id = Quicklink.id(fromEntryID: entryID) {
@@ -41,6 +43,7 @@ extension HotKeyAction {
         case .windowLayout(let id): WindowLayout.entryIDPrefix + id.uuidString.lowercased()
         case .windowRoom(let id): Room.entryIDPrefix + id.uuidString.lowercased()
         case .quickAction(let id): CustomQuickAction.entryIDPrefix + id.uuidString.lowercased()
+        case .chatPreset(let id): ChatPreset.entryIDPrefix + id.uuidString.lowercased()
         case .customCommand(let id): CustomCommand.entryIDPrefix + id.uuidString.lowercased()
         case .quicklink(let id): Quicklink.entryIDPrefix + id.uuidString.lowercased()
         case .appleShortcut(let id): AppleShortcut.entryID(for: id)

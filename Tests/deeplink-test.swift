@@ -108,6 +108,7 @@ struct DeepLinkTests {
             (WindowLayout.entryIDPrefix + uuid, .windowLayout(id: id)),
             (Room.entryIDPrefix + uuid, .windowRoom(id: id)),
             (CustomQuickAction.entryIDPrefix + uuid, .quickAction(id: id)),
+            (ChatPreset.entryIDPrefix + uuid, .chatPreset(id: id)),
             (CustomCommand.entryIDPrefix + uuid, .customCommand(id: id)),
             (Quicklink.entryIDPrefix + uuid, .quicklink(id: id)),
             (AppleShortcut.entryIDPrefix + uuid, .appleShortcut(id: id))
@@ -367,6 +368,9 @@ struct DeepLinkTests {
         expect(
             !DeepLinkConsentPolicy.requiresConsent(.command(.createQuicklink)),
             "a create editor saves nothing on its own, so it runs without asking")
+        expect(
+            !DeepLinkConsentPolicy.requiresConsent(.chatPreset(id: UUID())),
+            "a preset opens an empty chat and sends nothing, so it runs without asking")
         expect(
             DeepLinkConsentPolicy.requiresConsent(.command(.pasteSequentially)),
             "pasting into another app asks first")

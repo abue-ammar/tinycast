@@ -6,6 +6,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case systemSettings
         case command
         case quickAction
+        case chatPreset
         case customCommand
         case snippet
         case systemAction
@@ -38,6 +39,11 @@ struct AppEntry: Identifiable, Hashable, Sendable {
                 return KindDescriptor(
                     label: "Quick Action", sectionTitle: "Quick Actions",
                     openVerb: "Run Quick Action", canHideFromSearch: true,
+                    canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
+            case .chatPreset:
+                return KindDescriptor(
+                    label: "Chat Preset", sectionTitle: "Chat Presets",
+                    openVerb: "Start Chat", canHideFromSearch: true,
                     canRevealInFinder: false, canDragOut: false, isSymbolIcon: true, rankPriority: 3)
             case .customCommand:
                 return KindDescriptor(
@@ -173,8 +179,8 @@ struct AppEntry: Identifiable, Hashable, Sendable {
             return bundleID.map { .app(bundleID: $0) }
         case .systemSettings:
             return bundleID.map { .settingsPane(bundleID: $0) }
-        case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
-            .windowRoom, .quicklink, .appleShortcut, .snippet:
+        case .command, .quickAction, .chatPreset, .customCommand, .systemAction, .windowCommand,
+            .windowLayout, .windowRoom, .quicklink, .appleShortcut, .snippet:
             return HotKeyAction(entryID: id)
         case .extensionCommand, .meeting:
             return nil
@@ -204,6 +210,7 @@ struct AppEntry: Identifiable, Hashable, Sendable {
         case .command: return CommandCatalog.command(for: self)?.sfSymbol ?? "questionmark"
         case .quickAction:
             return CommandCatalog.command(for: self)?.sfSymbol ?? CustomQuickAction.sfSymbol
+        case .chatPreset: return ChatPreset.sfSymbol
         case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"
         case .windowCommand:
             return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol
@@ -260,6 +267,13 @@ extension AppEntry {
             id: action.entryID, name: action.name,
             url: URL(string: "tinycast://quick-action/" + action.id.uuidString)!,
             bundleID: nil, kind: .quickAction, symbolName: action.iconSymbol)
+    }
+
+    init(_ preset: ChatPreset) {
+        self.init(
+            id: preset.entryID, name: preset.name,
+            url: URL(string: "tinycast://chat-preset/" + preset.id.uuidString)!,
+            bundleID: nil, kind: .chatPreset, symbolName: preset.iconSymbol)
     }
 
     init(_ command: CustomCommand) {
@@ -385,6 +399,7 @@ final class AppIndex {
     private var quicklinkEntries: [AppEntry] = []
     private var appleShortcutEntries: [AppEntry] = []
     private var customQuickActionEntries: [AppEntry] = []
+    private var chatPresetEntries: [AppEntry] = []
     private var extensionEntries: [AppEntry] = []
     private var meetingEntries: [AppEntry] = []
     /// The catalog's commands a disabled feature hides; the Commands slice is recomputed from it.
@@ -455,6 +470,13 @@ final class AppIndex {
         let entries = actions.sorted(by: CustomQuickAction.precedes).map(AppEntry.init)
         guard entries != customQuickActionEntries else { return }
         customQuickActionEntries = entries
+        publishEntries()
+    }
+
+    func setChatPresets(_ presets: [ChatPreset]) {
+        let entries = presets.sorted(by: ChatPreset.precedes).map(AppEntry.init)
+        guard entries != chatPresetEntries else { return }
+        chatPresetEntries = entries
         publishEntries()
     }
 
@@ -679,8 +701,8 @@ final class AppIndex {
                 extensionEntries + quicklinkEntries + appleShortcutEntries + snippetEntries
                     + Self.systemActionEntries + windowLayoutEntries + windowRoomEntries
                     + windowCommandEntries
-                    + customWindowSizeEntries + customCommandEntries + quickActionEntries
-                    + commandEntries)
+                    + customWindowSizeEntries + customCommandEntries + chatPresetEntries
+                    + quickActionEntries + commandEntries)
         guard updated != searchEntries else { return }
         searchEntries = updated
         apps = updated.filter(\.isPrimaryInstallation)

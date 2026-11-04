@@ -35,6 +35,7 @@ final class AIChatCoordinator {
 
     func applyEnabled() {
         appIndex.setCommandsVisible([.aiChat, .quickAI], settings.aiEnabled)
+        applyChatPresetsPresence()
         guard settings.aiEnabled else {
             for request in naming.values { request.cancel() }
             naming = [:]
@@ -228,6 +229,62 @@ final class AIChatCoordinator {
         chats.deleteAll()
     }
 
+    // MARK: - Presets
+
+    var presets: [ChatPreset] { core.chatPresets.presets }
+
+    func applyChatPresetsPresence() {
+        appIndex.setChatPresets(settings.aiEnabled ? core.chatPresets.presets : [])
+    }
+
+    /// A chat that has begun is never re-stamped: the preset goes on a new one.
+    func startChat(presetID id: UUID) {
+        guard settings.aiEnabled, let preset = core.chatPresets.preset(id: id) else { return }
+        chats.newWindowChat()
+        chats.window.usePreset(preset)
+        showWindow()
+    }
+
+    func usePreset(_ preset: ChatPreset?, in chat: AIChatState) {
+        chat.usePreset(preset)
+    }
+
+    func addChatPreset(_ draft: ChatPreset) throws(ChatPresetError) {
+        try core.chatPresets.add(draft)
+    }
+
+    func updateChatPreset(_ draft: ChatPreset) throws(ChatPresetError) {
+        try core.chatPresets.update(draft)
+    }
+
+    /// Chats it started keep their stamp; only the preset and what points at it go.
+    func deleteChatPreset(id: UUID) async {
+        guard let preset = core.chatPresets.preset(id: id) else { return }
+        guard
+            await core.confirm(
+                title: String(localized: "Delete “\(preset.name)”?"),
+                message: String(localized: "Chats it started keep their instructions."),
+                symbol: preset.symbol, confirmTitle: String(localized: "Delete"))
+        else { return }
+        do {
+            guard let removed = try core.chatPresets.remove(id: id) else { return }
+            removeChatPresetReferences(removed)
+        } catch {
+            core.showMessage(error.localizedDescription, tone: .danger)
+        }
+    }
+
+    /// Unwound only once the record is gone, so a kept preset never loses its shortcut.
+    private func removeChatPresetReferences(_ preset: ChatPreset) {
+        let hotKeyAction = HotKeyAction.chatPreset(id: preset.id)
+        if core.hotKeys.recordingAction == hotKeyAction { core.hotKeys.recordingAction = nil }
+        core.hotKeys.setBinding(nil, for: hotKeyAction)
+        core.favorites.remove(keys: [preset.entryID])
+        core.visibility.removeItemKeys([preset.entryID])
+        core.aliases.removeKeys([preset.entryID])
+        core.launcherRanking.reset(itemKey: preset.entryID)
+    }
+
     // MARK: - Titles
 
     /// Asked on the first send, again after an answer if that failed, and never over a rename.
@@ -330,9 +387,16 @@ final class AIChatCoordinator {
     }
 
     private func instructions(for chat: AIChatState) -> String? {
-        AIInstructions.compose(
-            userPrompt: core.aiSettings.systemPrompt,
-            isEnabled: core.aiSettings.systemPromptEnabled,
+        guard let preset = chat.session.preset else {
+            return AIInstructions.compose(
+                userPrompt: core.aiSettings.systemPrompt,
+                isEnabled: core.aiSettings.systemPromptEnabled,
+                offersChoices: core.aiSettings.choicesEnabled,
+                model: model(for: chat))
+        }
+        return AIInstructions.compose(
+            presetInstructions: preset.instructions,
+            preambleEnabled: core.aiSettings.systemPromptEnabled,
             offersChoices: core.aiSettings.choicesEnabled,
             model: model(for: chat))
     }
@@ -453,7 +517,7 @@ final class AIChatCoordinator {
             stagedFiles: chat.pendingAttachments.count,
             stagedBytes: chat.pendingAttachments.reduce(0) { $0 + $1.payload.byteCount },
             usage: chat.usage,
-            systemPrompt: core.aiSettings.systemPromptEnabled,
+            systemPrompt: session.preset != nil || core.aiSettings.systemPromptEnabled,
             webSearch: core.aiSettings.webSearchEnabled && can.webSearch,
             toolServers: can.tools && scope.isEnabled
                 ? mcpServers.count { scope.allows($0.slug) } : 0)

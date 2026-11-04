@@ -138,7 +138,7 @@ struct LauncherList: View {
         let kinds: [AppEntry.Kind] = [
             .meeting, .application, .systemSettings, .extensionCommand, .quicklink, .appleShortcut,
             .snippet, .systemAction, .windowLayout, .windowRoom, .windowCommand, .customCommand,
-            .quickAction, .command
+            .chatPreset, .quickAction, .command
         ]
         for kind in kinds {
             guard let group = grouped[kind], !group.isEmpty else { continue }
