@@ -47,3 +47,9 @@ struct AIToolResult: Equatable, Sendable {
         AIToolResult(callID: callID, content: message, isError: true)
     }
 }
+
+struct AIToolSession: Sendable {
+    let tools: [AITool]
+    let maxCalls: Int?
+    let invoke: @Sendable (AIToolCall) async -> AIToolResult
+}
