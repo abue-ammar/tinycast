@@ -6,17 +6,44 @@ final class FallbackStore {
     private let defaults = UserDefaults.standard
     private let orderKey = "fallbackOrder"
     private let disabledKey = "disabledFallbacks"
+    private let learnsOrderKey = "fallbackLearnsOrder"
+    private let usageKey = "fallbackUsage"
 
     private(set) var orderedIDs: [String]
     private(set) var disabledIDs: Set<String>
+    private(set) var learnsOrder: Bool
+    private(set) var usage: [String: FallbackUsage]
 
     init() {
         orderedIDs = defaults.stringArray(forKey: orderKey) ?? []
         disabledIDs = Set(defaults.stringArray(forKey: disabledKey) ?? [])
+        learnsOrder = defaults.object(forKey: learnsOrderKey) as? Bool ?? true
+        usage =
+            defaults.data(forKey: usageKey)
+            .flatMap { try? JSONDecoder().decode([String: FallbackUsage].self, from: $0) } ?? [:]
     }
 
     func ordered(_ available: [Fallback]) -> [Fallback] {
         Fallback.ordered(available, by: orderedIDs)
+    }
+
+    /// The launcher's order, where Settings keeps showing the one a reader arranged by hand.
+    func ranked(_ ordered: [Fallback]) -> [Fallback] {
+        learnsOrder ? Fallback.ranked(ordered, by: usage, at: Date()) : ordered
+    }
+
+    func setLearnsOrder(_ learns: Bool) {
+        learnsOrder = learns
+        defaults.set(learns, forKey: learnsOrderKey)
+    }
+
+    func recordRun(of fallback: Fallback) {
+        guard learnsOrder else { return }
+        setUsage(FallbackUsage.recordingRun(of: fallback.id, in: usage, at: Date()))
+    }
+
+    func resetUsage() {
+        setUsage([:])
     }
 
     func isEnabled(_ fallback: Fallback) -> Bool { !disabledIDs.contains(fallback.id) }
@@ -39,5 +66,10 @@ final class FallbackStore {
         updated.swapAt(from, to)
         orderedIDs = updated.map(\.id)
         defaults.set(orderedIDs, forKey: orderKey)
+    }
+
+    private func setUsage(_ updated: [String: FallbackUsage]) {
+        usage = updated
+        defaults.set(try? JSONEncoder().encode(updated), forKey: usageKey)
     }
 }

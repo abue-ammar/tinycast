@@ -133,7 +133,7 @@ struct GeneralSettingsView: View {
                     Button("Reset…", role: .destructive) {
                         confirmingRankingReset = true
                     }
-                    .disabled(launcherRanking.isEmpty)
+                    .disabled(launcherRanking.isEmpty && core.fallbacks.usage.isEmpty)
                 } label: {
                     SettingsRowTitle(.generalSearch, "Learned ranking")
                     Text("Learned privately from the results you pick.")
@@ -153,6 +153,7 @@ struct GeneralSettingsView: View {
         ) {
             Button("Reset Ranking", role: .destructive) {
                 launcherRanking.resetAll()
+                core.fallbacks.resetUsage()
             }
             Button("Cancel", role: .cancel) {}
         } message: {

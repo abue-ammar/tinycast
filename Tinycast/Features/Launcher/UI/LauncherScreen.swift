@@ -260,8 +260,10 @@ struct LauncherScreen: PaletteScreen {
                 result: result, core: core, target: vm.pasteTarget,
                 favorites: favoriteActions(for: .file(result), at: selection))
         case .fallback(let fallback, let app):
-            return FallbackActionsMenu.content(
-                fallback: fallback, entry: app, query: vm.query, core: core)
+            let query = vm.query
+            return FallbackActionsMenu.content(fallback: fallback, entry: app, core: core) {
+                run(fallback, query: query)
+            }
         case nil:
             return nil
         }
@@ -278,10 +280,19 @@ struct LauncherScreen: PaletteScreen {
             core.launcherCoordinator.launch(
                 app, searchQuery: vm.query, arguments: core.launcherCoordinator.argumentValues(for: app))
         case .file(let result): core.fileSearchCoordinator.open(result)
-        case .fallback(let fallback, _):
-            core.fallbackCoordinator.run(fallback, query: vm.query)
+        case .fallback(let fallback, _): run(fallback, query: vm.query)
         case nil: break
         }
+    }
+
+    /// A preserved palette re-summons on this index, so it must follow the row the run just moved.
+    private func run(_ fallback: Fallback, query: String) {
+        core.fallbackCoordinator.recordRun(of: fallback)
+        let order = core.fallbackCoordinator.entries(for: query)
+        if let index = order.firstIndex(where: { $0.fallback == fallback }) {
+            vm.selection = fallbackRow(at: index)
+        }
+        core.fallbackCoordinator.run(fallback, query: query)
     }
 
     /// The card's meeting or a meeting row's; both answer the meeting menu's chords.

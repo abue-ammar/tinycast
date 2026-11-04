@@ -156,7 +156,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `dictation-volume-test` | Volume recovery across fade steps, user changes, output switching, failed writes and cancellation; injected audio controls only |
 | `dictation-inference-test` | Dictation byte BPE, Fourier/mel features and non-overlapping audio chunks; no downloaded models |
 | `dictation-worker-test` | Dictation's framed channel, worker reuse/switching, removal, cancellation and broken pipes with a fixture helper |
-| `fallback-test` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
+| `fallback-test` | `Launcher/Model/Fallback.swift` — ids, the arranged order, and the learned order's decay, lead threshold and habit switch — plus the `CommandID` and `Quicklink` ids it is built from |
 | `dictionary-test` | `Dictionary/Model/DictionaryEntry.swift`, `DictionaryMarkup.swift` — a real XHTML record and the plain-text fallback, read into page blocks |
 | `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
 | `system-action-test` | `SystemActions/Model/SystemAction.swift` |
@@ -548,6 +548,11 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   even with the scrollbar thumb dragged from end to end in under a second
 - An app removed since the last open drops out after a reopen
 - Learned ranking still surfaces your habitual result for a short query
+- A query that matches nothing, Run Shell Command run once: Quick AI still leads the next search. Run
+  twice: Run Shell Command leads and ↵ runs it. Settings ▸ Fallbacks keeps its arranged order, and
+  **Put most used first** off restores that order to the launcher
+- With Pop to Root Search delayed, run a fallback that moves up because of this run, then reopen
+  before the timeout: the same fallback is still selected, and the pill names it
 - An application row drags onto the Dock and into a Finder window as a copy, never a move, and a
   landed drop hides the palette; a click still launches; no other kind of row drags
 

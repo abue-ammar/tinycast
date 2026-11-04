@@ -277,7 +277,10 @@ enum SettingsSearchCatalog {
     private static let fallbacks: [SettingsSearchEntry] = [
         .init(
             pane: .fallbacks,
-            keywords: ["no results", "empty", "search web", "order"])
+            keywords: ["no results", "empty", "search web", "order"]),
+        .init(
+            .fallbacksFallbacks, "Put most used first",
+            keywords: ["frequent", "recent", "learned", "ranking", "order"])
     ]
 
     private static let ai: [SettingsSearchEntry] = [

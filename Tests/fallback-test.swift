@@ -18,6 +18,8 @@ struct FallbackTests {
     static func main() {
         identity()
         ordering()
+        ranking()
+        usage()
         headers()
         verbs()
         print("\(passes) passed, \(failures) failed")
@@ -84,6 +86,156 @@ struct FallbackTests {
             Fallback.ordered([ai, files], by: [link.id, files.id, ai.id]) == [files, ai])
 
         check("nothing available is nothing offered", Fallback.ordered([], by: [ai.id]).isEmpty)
+    }
+
+    // MARK: - Ranking
+
+    static let start = Date(timeIntervalSinceReferenceDate: 800_000_000)
+    static let day: TimeInterval = 86_400
+
+    static func at(_ days: Double) -> Date { start.addingTimeInterval(days * day) }
+
+    /// `perDay` runs spread evenly across `days`, from `from`, so a habit reads as a habit.
+    static func runs(
+        _ fallback: Fallback, perDay: Int, days: Double, from: Double,
+        into table: [String: FallbackUsage] = [:]
+    ) -> [String: FallbackUsage] {
+        var table = table
+        for run in 0..<Int(days * Double(perDay)) {
+            let date = at(from + Double(run) / Double(perDay))
+            table = FallbackUsage.recordingRun(of: fallback.id, in: table, at: date)
+        }
+        return table
+    }
+
+    static func ranking() {
+        let ai = Fallback.builtin(.quickAI)
+        let files = Fallback.builtin(.searchFiles)
+        let shell = Fallback.builtin(.runShellCommand)
+        let define = Fallback.builtin(.define)
+        let base = [ai, files, shell, define]
+
+        check(
+            "nothing run keeps the arranged order",
+            Fallback.ranked(base, by: [:], at: start) == base)
+
+        // The first press must not change what Return does on the next search.
+        let once = runs(shell, perDay: 1, days: 1, from: 0)
+        check(
+            "one stray run leads nothing",
+            Fallback.ranked(base, by: once, at: at(1)) == base)
+
+        let twice = runs(shell, perDay: 2, days: 1, from: 0)
+        check(
+            "two close runs take the lead",
+            Fallback.ranked(base, by: twice, at: at(1)) == [shell, ai, files, define])
+
+        // Two runs a month apart are no pattern, however many there have been in total.
+        let apart = FallbackUsage.recordingRun(
+            of: shell.id, in: once, at: at(30))
+        check(
+            "two runs a month apart lead nothing",
+            Fallback.ranked(base, by: apart, at: at(30)) == base)
+
+        var both = runs(shell, perDay: 3, days: 5, from: 0)
+        both = runs(define, perDay: 1, days: 5, from: 0, into: both)
+        check(
+            "the more used leads the less used",
+            Fallback.ranked(base, by: both, at: at(5)) == [shell, define, ai, files])
+
+        // The reader's own arrangement still decides everything nothing has earned.
+        check(
+            "what has not earned the lead keeps its order",
+            Fallback.ranked([files, ai, shell, define], by: both, at: at(5))
+                == [shell, define, files, ai])
+
+        let tied = runs(define, perDay: 2, days: 1, from: 0, into: twice)
+        check(
+            "a tie falls back to the arranged order",
+            Fallback.ranked([define, shell], by: tied, at: at(1)) == [define, shell])
+        check(
+            "a tie reads the same the other way round",
+            Fallback.ranked([shell, define], by: tied, at: at(1)) == [shell, define])
+
+        // The reported case: a long AI habit, then only the shell.
+        let aiHabit = runs(ai, perDay: 5, days: 30, from: 0)
+        let switched = { (days: Double) in
+            runs(shell, perDay: 5, days: days, from: 30, into: aiHabit)
+        }
+        check(
+            "the old habit still leads early in a switch",
+            Fallback.ranked(base, by: switched(2), at: at(32)).first == ai)
+        check(
+            "the new habit leads within a week of switching",
+            Fallback.ranked(base, by: switched(7), at: at(37)).first == shell)
+
+        // The other direction: recency must not make one busy day look like a new habit.
+        let shellHabit = runs(shell, perDay: 5, days: 30, from: 0)
+        let burst = runs(ai, perDay: 15, days: 1, from: 30, into: shellHabit)
+        check(
+            "one busy day does not unseat a habit",
+            Fallback.ranked(base, by: burst, at: at(31)).first == shell)
+
+        // Decay is proportional, so time alone can't swap two rows while nothing is run.
+        check(
+            "a quiet weekend keeps the order",
+            Fallback.ranked(base, by: both, at: at(8)) == [shell, define, ai, files])
+        check(
+            "only the weaker habit lapses when a quiet spell runs on",
+            Fallback.ranked(base, by: both, at: at(12)) == [shell, ai, files, define])
+        check(
+            "a long absence returns to the arranged order",
+            Fallback.ranked(base, by: both, at: at(120)) == base)
+
+        // A deleted quicklink's score must not resurrect it or displace a live row.
+        let gone = Fallback.quicklink(UUID())
+        check(
+            "usage with nothing behind it is ignored",
+            Fallback.ranked(base, by: runs(gone, perDay: 5, days: 3, from: 0), at: at(3)) == base)
+        check(
+            "nothing offered is nothing ranked",
+            Fallback.ranked([], by: twice, at: at(1)).isEmpty)
+    }
+
+    // MARK: - Usage
+
+    static func usage() {
+        let shell = Fallback.builtin(.runShellCommand)
+        let ai = Fallback.builtin(.quickAI)
+
+        let first = FallbackUsage.recordingRun(of: shell.id, in: [:], at: start)
+        let run = first[shell.id]
+        check("a first run scores one", run?.score(at: start) == 1)
+        check(
+            "the score halves over a half-life",
+            run?.score(at: start.addingTimeInterval(FallbackUsage.halfLife)) == 0.5)
+        check(
+            "a clock set backwards never grows the score",
+            run?.score(at: at(-10)) == 1)
+
+        let second = FallbackUsage.recordingRun(
+            of: shell.id, in: first, at: start.addingTimeInterval(FallbackUsage.halfLife))
+        check(
+            "a later run adds to what has decayed",
+            second[shell.id]?.score(at: start.addingTimeInterval(FallbackUsage.halfLife)) == 1.5)
+
+        // The table is what stays on disk, so a deleted quicklink has to leave it eventually.
+        let later = FallbackUsage.recordingRun(of: ai.id, in: first, at: at(365))
+        check("a long-stale entry is forgotten", later[shell.id] == nil, "got \(later)")
+        check("the run itself is kept", later[ai.id] != nil)
+
+        // The shape on disk is the privacy promise: a shell line may hold a secret.
+        let encoded = (try? JSONEncoder().encode(first)).flatMap { String(data: $0, encoding: .utf8) }
+        let decoded = (try? JSONEncoder().encode(first)).flatMap {
+            try? JSONDecoder().decode([String: FallbackUsage].self, from: $0)
+        }
+        check("usage round-trips", decoded == first)
+        check(
+            "usage stores only a score and a time",
+            encoded?.contains("query") == false && encoded?.contains("score") == true
+                && (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(run)))
+                    .flatMap { ($0 as? [String: Any])?.count } == 2,
+            "got \(encoded ?? "nil")")
     }
 
     // MARK: - Header

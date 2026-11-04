@@ -27,9 +27,13 @@ final class FallbackCoordinator {
     /// The launcher's rows. An empty query is nobody's input, so it earns no section at all.
     func entries(for query: String) -> [(fallback: Fallback, entry: AppEntry)] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
-        return available.filter(store.isEnabled).compactMap { fallback in
+        return store.ranked(available).filter(store.isEnabled).compactMap { fallback in
             entry(for: fallback).map { (fallback, $0) }
         }
+    }
+
+    func recordRun(of fallback: Fallback) {
+        store.recordRun(of: fallback)
     }
 
     /// Nil for a quicklink deleted since the order was stored.

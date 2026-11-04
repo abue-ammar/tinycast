@@ -92578,6 +92578,58 @@
         }
       }
     },
+    "Put most used first" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Meistgenutzte zuerst"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar primero los más usados"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher les plus utilisés en premier"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よく使うものを先頭に表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자주 사용하는 항목을 맨 위에 표시"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar os mais usados primeiro"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сначала самые используемые"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "将最常用的排在最前"
+          }
+        }
+      }
+    },
     "Quarters" : {
       "localizations" : {
         "de" : {
@@ -95435,6 +95487,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "最近的对话"
+          }
+        }
+      }
+    },
+    "Recent runs count most, and the order below settles the rest." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Letzte Ausführungen zählen am meisten, den Rest bestimmt die Reihenfolge unten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las ejecuciones recientes cuentan más, y el orden de abajo decide el resto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les exécutions récentes comptent le plus, et l’ordre ci-dessous détermine le reste."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近の実行ほど優先され、それ以外は下の順序で並びます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "최근 실행일수록 우선하며, 나머지는 아래 순서를 따릅니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As execuções recentes contam mais, e a ordem abaixo define o restante."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Недавние запуски важнее всего, а остальное определяет порядок ниже."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最近的运行权重最高，其余按下方顺序排列。"
           }
         }
       }

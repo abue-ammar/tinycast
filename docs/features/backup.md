@@ -19,8 +19,9 @@ A backup carries five independently selectable categories, ticked on export and 
 - **A flag that grants a capability is never carried by a backup**, whether it is excluded from
   `SettingsBackupCoverage` like `snippetsEnabled` or kept out of `AppSettings` entirely. Importing a
   config must not be able to grant something the user never granted. `FallbackStore` is the second
-  case: its order and checkboxes live on their own `UserDefaults` keys precisely so an import cannot
-  arm **Run Shell Command** in someone's launcher. This change adds *content*, never a capability.
+  case: its order, checkboxes and learned usage live on their own `UserDefaults` keys precisely so an
+  import cannot arm **Run Shell Command** in someone's launcher. This change adds *content*, never a
+  capability.
 - **No absolute path may enter a `.tinycast`.** A clip's `imagePath` names a file on the Mac that wrote
   it, so `BackupClipboardItem` carries a bundle-relative `imageName` instead. `backup-archive-test`
   asserts the produced file contains neither `/Users` nor `/Library` — the analogue of

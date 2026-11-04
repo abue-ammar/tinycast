@@ -10,6 +10,10 @@ struct FallbacksSettingsView: View {
     var body: some View {
         Form {
             Section {
+                Toggle(isOn: learnsOrderBinding) {
+                    SettingsRowTitle(.fallbacksFallbacks, "Put most used first")
+                    Text("Recent runs count most, and the order below settles the rest.")
+                }
                 let fallbacks = fallbacks
                 if fallbacks.isEmpty {
                     Text("Nothing to offer — their features are off.")
@@ -31,6 +35,10 @@ struct FallbacksSettingsView: View {
         .formStyle(.grouped)
         .settingsScrollTarget(.fallbacks)
         .releasesFocusOnOutsideClick()
+    }
+
+    private var learnsOrderBinding: Binding<Bool> {
+        Binding(get: { store.learnsOrder }, set: { store.setLearnsOrder($0) })
     }
 }
 

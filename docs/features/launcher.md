@@ -362,7 +362,7 @@ never stored — same streaming window, same Stop button — so `CustomCommandCo
 `lastShellCommand` for the window's Rerun, which has no library entry to look up. It sources the
 shell config (`ll` should mean the reader's own alias) and takes the runner's default home directory.
 
-**The order and the checkboxes are not in a settings backup.** The fallback list is where an import
+**The order, the checkboxes and the learned usage are not in a settings backup.** The fallback list is where an import
 could arm shell execution from the launcher, which is the line `snippetsEnabled` already draws:
 a flag that grants a capability is never carried by a backup.
 
@@ -373,12 +373,37 @@ lists exactly `FallbackCoordinator.available`, so a fallback whose feature is of
 pane as well as from the launcher, and reorders through ↑/↓ buttons like a favorite rather than
 introducing this codebase's first drag-reorder.
 
+**The launcher's order is learned; the pane's is arranged.** Each run adds 1 to a score that halves
+every five days (`FallbackUsage`), and `Fallback.ranked(_:by:at:)` leads with whatever scores at
+least 1.5, highest first. Everything below that keeps the arranged order, which also breaks a tie.
+So the pane always shows the order a reader set by hand, and **Put most used first** turns the
+learned lead off and stops recording.
+
+- **Two runs inside a half-life, not one.** When nothing matches, the first fallback is what Return
+  runs, so a single stray run must not change that on the next search.
+- **A new habit wins by recency, an old one by volume.** At equal rates a switch overtakes after one
+  half-life, and one busy day does not unseat a steady habit. `fallback-test` pins both. Every score
+  decays at the same rate, so time alone never swaps two rows that are both still leading.
+- **Only an id, a score and a time are stored, never the query.** A shell line can hold a secret,
+  which is one reason this is not `LauncherRankingStore`: that table keeps search terms.
+- **The other reason is the backup.** `LauncherRankingStore` travels in a `.tinycast` and this must
+  not: it decides whether Return reaches the shell. `usage` and the switch sit on `FallbackStore`'s own
+  `UserDefaults` keys with the order and the checkboxes, so they have no `SettingsFileKey` either.
+- **A re-summon must land on the same row.** A run can reorder the list, and a re-summon inside the
+  Pop to Root window keeps the query and the selection's index. `LauncherScreen.run` records first and
+  moves the selection to the row's new place. Without that, Return on the reopened palette could run a
+  different fallback, the shell included. Esc from a screen a fallback opened needs none of this: it
+  lands on the first row.
+
+Tab is not a run. It reaches Quick AI without the list, so it says nothing about what the list should
+lead with. General Settings' **Learned ranking** reset clears this usage too.
+
 **A fallback row is not a result, and `LauncherScreen.Row` says so.** `.fallback` is its own case
 with a `fallback-` prefixed id, because Quick AI can be a ranked hit *and* a fallback in the same
 list, and two rows sharing one id would collapse in `ForEach`. That is also why `LauncherList` takes
-a `selectedRowID` rather than an entry id. Nothing about a fallback row is learned, pinned or
-revealed: `activate` routes to `FallbackCoordinator.run` instead of `LauncherCoordinator.launch`, and
-`FallbackActionsMenu` offers only running it and opening the pane.
+a `selectedRowID` rather than an entry id. A fallback row is not pinned or revealed, and it joins no
+learned result ranking: `activate` routes to `FallbackCoordinator.run` instead of
+`LauncherCoordinator.launch`, and `FallbackActionsMenu` offers only running it and opening the pane.
 
 ### User aliases
 

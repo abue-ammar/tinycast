@@ -39,8 +39,23 @@ to change their order.
 Fallbacks for features that are turned off don't appear here or in search. Hiding **Define Word**
 in **Settings → Commands**, or turning off **Enable Commands**, also removes its fallback.
 
-**The order and checkboxes are never included in a [backup](/docs/reference/backup)**, so importing
-a file can't add a shell command runner to your launcher.
+### Most used first
+
+Fallbacks you run often move to the top of the list, so when nothing matches your search, **Return**
+runs the one you use most. If that's **Run Shell Command**, Return runs your text in the shell. The
+button at the bottom right always names what Return will do.
+
+- A fallback needs two recent runs to move up, so one stray run changes nothing.
+- Recent runs count most. If you stop using one fallback and start using another, the new one takes
+  over within about a week.
+- Tinycast stores only which fallback ran and when, never the text you typed.
+
+Turn off **Put most used first** to keep the order you set with the arrow buttons. That order also
+decides everything that hasn't moved up. To clear what Tinycast has learned, use **Learned ranking**
+in **Settings → General**.
+
+**The order, checkboxes and learned usage are never included in a [backup](/docs/reference/backup)**,
+so importing a file can't add a shell command runner to your launcher.
 
 ## Open in Browser
 
