@@ -69,14 +69,16 @@ struct UpdateInstaller: Sendable {
         return staged
     }
 
+    /// Checked again first: Caches can be trimmed before quit, and a damaged copy must not land.
     func install(_ staged: URL) throws {
+        defer { try? FileManager.default.removeItem(at: staged.deletingLastPathComponent()) }
+        guard BundleSignature.isSealed(staged) else { throw UpdateFailure.replaceFailed(staged.path) }
         do {
             _ = try FileManager.default.replaceItemAt(
                 bundleURL, withItemAt: staged, options: .usingNewMetadataOnly)
         } catch {
             throw UpdateFailure.replaceFailed(error.localizedDescription)
         }
-        try? FileManager.default.removeItem(at: staged.deletingLastPathComponent())
     }
 
     private func isReleaseSigned(_ archive: URL, by signatureURL: URL?) async -> Bool {

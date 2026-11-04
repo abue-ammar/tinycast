@@ -330,6 +330,10 @@ struct UpdatesTests {
         expect(
             !BundleSignature.isTrusted(URL(fileURLWithPath: "/nonexistent.app"), releaseSigned: true),
             "and nothing is trusted without a seal to check")
+        expect(BundleSignature.isSealed(sealed), "the re-check before the swap passes an intact bundle")
+        expect(
+            !BundleSignature.isSealed(URL(fileURLWithPath: "/nonexistent.app")),
+            "and fails a missing one")
     }
 
     static func verifiesTheReleaseSignature() {

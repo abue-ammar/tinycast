@@ -122,10 +122,11 @@ One route, whatever the install came from:
 3. Check quarantine natively; clear it if somehow present, and refuse the update if it survives.
 4. Verify the bundle id, the version, and that the code signature is valid and proves the bundle is
    ours — through the release key, or through the running copy's own designated requirement.
-5. Offer Relaunch. At quit, by Relaunch or otherwise, `FileManager.replaceItemAt` swaps the staged
-   bundle in. The staging folder is on the same volume as `/Applications`, which is what lets this be
-   atomic. A copy Tinycast cannot write is reported before the download starts, not worked around;
-   there is no privileged helper.
+5. Offer Relaunch. At quit, by Relaunch or otherwise, the staged bundle's seal is checked again, so
+   a copy damaged since staging is discarded, and `FileManager.replaceItemAt` swaps it in. The
+   staging folder is on the same volume as `/Applications`, which is what lets this be atomic. A
+   copy Tinycast cannot write is reported before the download starts, not worked around; there is no
+   privileged helper.
 6. Relaunch spawns a detached waiter that reopens the app once this process exits — `open` on a
    bundle id that is still running would only re-activate the instance on its way out.
 
