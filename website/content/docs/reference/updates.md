@@ -52,7 +52,7 @@ exactly as it was.
 - **The signature must show that the download is Tinycast**, signed the same way as the copy you're
   running.
 - The app identifier and version must match what's expected.
-- Tinycast never runs `xattr` or asks for an administrator password. If it can't write to
+- Tinycast never asks for an administrator password. If it can't write to
   `/Applications`, it tells you instead of working around it.
 
 Updating never changes your settings, clipboard history, notes, snippets or anything else you

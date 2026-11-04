@@ -18,17 +18,14 @@ no appcast: the release feed the website already reads is the feed the app reads
   `-Universal-` one. Intel takes the universal zip and is offered *nothing* if it is missing, since a
   thin build would install and then refuse to launch; Apple silicon prefers the thin zip and falls
   back to universal.
-- **Nobody ever runs `xattr`.** An archive Tinycast fetched itself is not quarantined — macOS sets
-  that flag for sandboxed downloaders and for apps that opt in with `LSFileQuarantineEnabled`, and
-  Tinycast is neither. `Quarantine` checks anyway through `getxattr`/`removexattr` rather than the
-  `xattr` tool, and an app that still carries the flag is refused rather than installed.
+- **A downloaded update is never quarantined.** macOS sets that flag for sandboxed downloaders and
+  for apps that opt in with `LSFileQuarantineEnabled`, and Tinycast is neither. `Quarantine` checks
+  anyway, and an app that still carries the flag is refused rather than installed.
 - **The signature is the only integrity guarantee.** A downloaded bundle is trusted when its seal
-  validates, nested helper included, *and* it either satisfies the Developer ID requirement pinned in
-  `BundleSignature` or carries the byte-identical leaf certificate the running app does. The
-  requirement names the team, so a certificate renewal strands nobody; the leaf match is the path a
-  copy installed before the Developer ID switch has, and it goes away once none is left. `notarized`
-  is deliberately not in the requirement — it resolves the ticket through `syspolicyd` or the
-  network, so an offline Mac would refuse a bundle the chain already proves is ours.
+  validates, nested helper included, *and* it satisfies the Developer ID requirement pinned in
+  `BundleSignature`. The requirement names the team, so a certificate renewal strands nobody.
+  `notarized` is deliberately not in the requirement — it resolves the ticket through `syspolicyd`
+  or the network, so an offline Mac would refuse a bundle the chain already proves is ours.
 - **A build only ever updates within its own channel.** The channels are separate bundle ids installed
   side by side; crossing would mean installing a different app. `com.tinycast.app.dev` never updates
   at all, and does not advertise the command.

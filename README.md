@@ -87,8 +87,8 @@ Then run the one line that matches your Mac:
 Not sure which Mac you have? **Apple menu → About This Mac.**
 
 - **Early builds:** `brew install --cask tinycast@beta` installs `Tinycast Beta.app` beside the stable app.
-- **DMG from [Releases](https://github.com/abue-ammar/tinycast/releases)?** It's self-signed, so run
-  `xattr -dr com.apple.quarantine "/Applications/Tinycast.app"` once.
+- **DMG from [Releases](https://github.com/abue-ammar/tinycast/releases)?** Drag Tinycast to
+  Applications. It's notarized by Apple, so it opens without a warning.
 
 ## Building from source
 

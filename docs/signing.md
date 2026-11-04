@@ -1,16 +1,13 @@
 # Signing
 
-Tinycast is signed with a **stable self-signed identity** called `Tinycast Self-Signed`. Keeping the
-_same_ identity on every build is what makes macOS remember the Accessibility permission across
-rebuilds and updates — ad-hoc signing changes every build and macOS forgets the grant.
+Tinycast has two signing identities:
 
-An Apple Developer ID certificate now exists, but nothing is signed with it yet. Why that switch is
-staged rather than immediate is [below](#the-developer-id-migration).
-
-You create this identity **once**. The same identity is used for:
-
-- **local dev builds** — so Accessibility persists while you develop (the Xcode project signs with it), and
-- **CI releases** — exported into two GitHub secrets the release workflow imports.
+- **Local builds** sign with a **stable self-signed identity** called `Tinycast Self-Signed`.
+  Keeping the _same_ identity on every build is what makes macOS remember the Accessibility
+  permission across rebuilds — ad-hoc signing changes every build and macOS forgets the grant. Each
+  contributor creates their own, once (§1).
+- **Releases** sign with the team's **Developer ID** and are notarized. That identity exists only in
+  the release workflow's secrets (§2), so a contributor never needs it.
 
 ## 1. Create the `Tinycast Self-Signed` identity (once)
 
@@ -45,36 +42,36 @@ security find-identity -p codesigning | grep "Tinycast Self-Signed"
 
 Now local builds (Xcode, VS Code F5, `xcodebuild`) sign with it, and you grant Accessibility once.
 
-## 2. Generate the CI secrets
+## 2. The release secrets
 
-The release workflow needs the same identity as two repo secrets. Export it, base64-encode it, and
-pick a password:
+Releases read five secrets from the repo's `release` environment (**Settings → Environments**). The
+environment deploys from `main` only, so a workflow pushed to any other branch can never read them.
 
-```sh
-# Pick a random password for the exported bundle.
-P12_PASSWORD="$(openssl rand -base64 24)"; echo "password: $P12_PASSWORD"
+| Secret                              | Holds                                                                       |
+| ----------------------------------- | --------------------------------------------------------------------------- |
+| `DEVELOPER_ID_P12_BASE64`           | the Developer ID Application certificate and its private key, base64 `.p12` |
+| `DEVELOPER_ID_P12_PASSWORD`         | the password the `.p12` was exported with                                   |
+| `NOTARY_KEY_P8_BASE64`              | an App Store Connect API team key (`.p8`) with Developer access, base64     |
+| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | that key's ID and its issuer ID                                             |
 
-# Export the identity (approve the keychain dialog if asked) and base64-encode it.
-security export -t identities -f pkcs12 \
-  -k ~/Library/Keychains/login.keychain-db \
-  -P "$P12_PASSWORD" -o /tmp/signing.p12
-base64 -i /tmp/signing.p12 | tr -d '\n' > /tmp/signing.p12.base64
-rm -f /tmp/signing.p12
-```
-
-Then set the two secrets on the repo (via `gh`, authed as the repo owner, or paste them in the GitHub
-UI under **Settings → Secrets and variables → Actions**):
+Export the Developer ID identity alone — `security export -t identities` bundles every identity in
+the keychain. In Keychain Access, open **My Certificates**, select
+`Developer ID Application: … (J656U8XZ93)`, choose **File → Export Items…** and save a `.p12` with a
+password. Then:
 
 ```sh
-gh secret set SIGNING_P12_BASE64   --repo abue-ammar/tinycast < /tmp/signing.p12.base64
-gh secret set SIGNING_P12_PASSWORD --repo abue-ammar/tinycast --body "$P12_PASSWORD"
-rm -f /tmp/signing.p12.base64   # holds your private key — delete it
+base64 -i DeveloperID.p12 | gh secret set DEVELOPER_ID_P12_BASE64 --env release --repo abue-ammar/tinycast
+gh secret set DEVELOPER_ID_P12_PASSWORD --env release --repo abue-ammar/tinycast --body "<password>"
+base64 -i AuthKey_<key-id>.p8 | gh secret set NOTARY_KEY_P8_BASE64 --env release --repo abue-ammar/tinycast
+gh secret set NOTARY_KEY_ID --env release --repo abue-ammar/tinycast --body "<key-id>"
+gh secret set NOTARY_ISSUER_ID --env release --repo abue-ammar/tinycast --body "<issuer-id>"
 ```
 
-If you ever lose the secrets, just re-run this section — as long as the `Tinycast Self-Signed`
-identity is still in your keychain, the exported identity is the same, so users are unaffected. If you
-lose the identity entirely, recreate it (step 1) and re-do this; existing users will re-grant
-Accessibility once on their next update, then it's stable again.
+**Renew the certificate yearly.** Apple issues a Developer ID certificate for about 13 months.
+Before it expires, the account holder creates a new one on developer.apple.com (**Developer ID
+Application**, **G2 Sub-CA**) and replaces the two `DEVELOPER_ID_P12_*` secrets. Nothing else
+changes: a shipped build stays valid because its signature carries Apple's timestamp, and both the
+updater and macOS pin the team rather than the certificate. The API key does not expire.
 
 ## Hardened runtime
 
@@ -107,36 +104,37 @@ Nothing else is needed: the only `dlopen` is Apple's own IOBluetooth, so library
 on, and `node`, `ray` and shell commands are separate processes it never reaches. Bluetooth has no
 hardened-runtime entitlement.
 
-`./Scripts/verify-signature.sh <path-to-.app>` asserts all of this — the runtime flag on the app *and*
-on `Contents/Helpers/ClipboardTextHelper`, an intact nested seal, no `get-task-allow`, and an
-entitlement for every usage string `Info.plist` declares. Both release jobs run it before packaging:
-a nested binary missing the runtime flag is the most common notarization rejection, and a usage string
-missing its entitlement ships a permission that can never be granted.
+`./Scripts/verify-signature.sh <path-to-.app>` asserts all of this — the runtime flag and a
+timestamped Developer ID signature on the app *and* every helper, an intact nested seal, no
+`get-task-allow`, and an entitlement for every usage string `Info.plist` declares. Both release jobs
+run it before submitting: a nested binary missing the runtime flag is the most common notarization
+rejection, and a usage string missing its entitlement ships a permission that can never be granted.
 
-## The Developer ID migration
+## The Developer ID switch
 
-`BundleSignature` already accepts a bundle signed by the Tinycast team under Apple's Developer ID
-chain, even though releases are still signed with `Tinycast Self-Signed`. That is deliberate and
-staged: the updater compares signatures before it installs, so the code that trusts the new identity
-has to reach users *before* the first build carrying it. Until the switch it also accepts the running
-app's own leaf, which is the only thing a copy installed earlier knows how to check.
+Releases used to be signed with `Tinycast Self-Signed`. `BundleSignature` now trusts a staged bundle
+only when it satisfies a requirement pinning the Tinycast team under Apple's Developer ID chain.
+That requirement shipped in v0.10.20, ahead of the switch, so every copy from v0.10.20 on updates to
+a Developer ID build through its own code. Anything older trusts only its own self-signed leaf and
+must be reinstalled by hand.
 
-The requirement pins the team rather than the certificate, so a Developer ID renewal strands nobody.
-It deliberately omits the `notarized` keyword — that resolves a ticket through `syspolicyd` or the
+The requirement pins the team rather than the certificate, so a renewal strands nobody. It
+deliberately omits the `notarized` keyword — that resolves a ticket through `syspolicyd` or the
 network, and the updater verifies in a cache directory Gatekeeper has never assessed, so an offline
 Mac would refuse a bundle the chain already proves is ours.
 
-**The Developer ID identity stays a CI-only fact.** When the switch happens it is named on the
-release workflow's `xcodebuild` line and nowhere else: `project.yml` keeps signing with
-`Tinycast Self-Signed`, so a contributor keeps building with the one they created in §1 — same name,
-their own key, never shared. Nothing about local development changes.
+macOS keys a TCC grant to the app's designated requirement, which changed with the identity, so the
+first Developer ID build asks for Accessibility once more. Renewals keep it.
 
-**Keep `Tinycast Self-Signed` in the login keychain after the switch.** It is the only way to ship a
-build that a copy predating the migration could still install.
+**The Developer ID identity stays a CI-only fact.** It is named in the release workflow's
+`SIGNING_IDENTITY` and nowhere else: `project.yml` keeps signing with `Tinycast Self-Signed`, so a
+contributor builds with the one they created in §1 — same name, their own key, never shared.
 
-## Quarantine (separate from signing)
+**Keep `Tinycast Self-Signed` in the login keychain.** It is the only way to ship a build that a
+copy older than v0.10.20 could still install.
 
-macOS quarantines anything downloaded from the internet, and Gatekeeper blocks even a correctly
-self-signed app with an "unverified developer" warning. The Homebrew cask runs
-`xattr -dr com.apple.quarantine` in `postflight`, so **brew users never touch it**. People who
-download the DMG directly clear it once by hand.
+## Quarantine
+
+A release is notarized and its DMG stapled, so Gatekeeper opens a downloaded copy without a warning.
+A local `build-dmg.sh` DMG is self-signed and never notarized, so it is for testing on the Mac that
+built it, not for sharing.

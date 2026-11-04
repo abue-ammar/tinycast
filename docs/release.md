@@ -15,10 +15,9 @@ It builds a Release `Tinycast.app` signed with `Tinycast Self-Signed` and packs 
 
 ## Signing & Gatekeeper
 
-Both local builds and CI releases sign with the same stable `Tinycast Self-Signed` identity, not an
-Apple Developer ID — so macOS quarantines a directly-downloaded DMG. The Homebrew cask strips that
-automatically; direct downloaders run `xattr -dr com.apple.quarantine "…/Tinycast.app"` once. Full
-details in [signing.md](signing.md).
+CI releases are signed with the team's Developer ID, notarized and stapled, so a downloaded DMG
+opens without a Gatekeeper warning. Local builds, `build-dmg.sh` included, keep signing with
+`Tinycast Self-Signed` and are never notarized. Full details in [signing.md](signing.md).
 
 ## How the in-app updater consumes a release
 
@@ -77,10 +76,17 @@ A stable run then fans out to a second job, `universal`, which rebuilds the same
 `ARCHS="arm64 x86_64"` and attaches `Tinycast-Universal-<version>.dmg` / `.zip` to the release the
 first job created, then bumps `tinycast-universal`. macOS 26 is the last release that boots on Intel,
 and those Macs need both slices. Both jobs pin `ARCHS` explicitly and assert the slices on *every*
-shipping binary — the app, `ClipboardTextHelper` and `Tinycast Dictation`: trusting `ARCHS_STANDARD` is what
-shipped a thin arm64 build to Intel users once already, and it also keeps the Apple silicon download
-from silently gaining a slice it never needs. A thin helper inside a universal app is the quiet form
-of the same bug: the app boots on Intel and only clipboard OCR or dictation stops working.
+shipping binary — the app, `ClipboardTextHelper`, `FileIndexHelper` and `Tinycast Dictation`:
+trusting `ARCHS_STANDARD` is what shipped a thin arm64 build to Intel users once already, and it
+also keeps the Apple silicon download from silently gaining a slice it never needs. A thin helper
+inside a universal app is the quiet form of the same bug: the app boots on Intel and only clipboard
+OCR or dictation stops working.
+
+Both jobs run in the `release` environment, which holds the signing and notary secrets and deploys
+from `main` only ([signing.md](signing.md#2-the-release-secrets)). After `verify-signature.sh`,
+`Scripts/package-release.sh` packs and signs the DMG, submits it once with `notarytool --wait`, and
+staples the ticket to the DMG and to the app before zipping it, so the updater's zip is stapled too.
+Any status but `Accepted` prints Apple's log and stops the run before anything is published.
 
 Channel builds override `TINYCAST_BUNDLE_IDENTIFIER`, not the target-wide `PRODUCT_BUNDLE_IDENTIFIER`.
 The Dictation helper derives its own identifier with a `.dictation` suffix; signature verification
@@ -106,7 +112,7 @@ Two details the script exists for:
   commit can carry both — so "the previous release" is only ever right within one channel. A stable
   release therefore spans every beta since the last stable.
 - **The body is split by `<!-- tinycast:install -->`.** Everything above it is the changelog;
-  everything below is the Homebrew and quarantine text, which only a download page needs. The update
+  everything below is the install text, which only a download page needs. The update
   window cuts at that marker — see [features/updates.md](features/updates.md). Full PR URLs are
   shortened to `#304`, which still autolinks on the web and fits a 460pt window.
 
