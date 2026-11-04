@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-/// Sealed, and vouched for by the release key or by the running copy's own signing identity.
 enum BundleSignature {
     static func isTrusted(_ bundleURL: URL, releaseSigned: Bool) -> Bool {
         var staticCode: SecStaticCode?

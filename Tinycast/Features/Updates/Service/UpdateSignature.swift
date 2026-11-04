@@ -5,7 +5,6 @@ import Foundation
 enum UpdateSignature {
     private static let publicKeyInfoKey = "TinycastUpdatePublicKey"
 
-    /// `signature` is a release's `.sig` asset: the base64 signature of its zip.
     static func isSigned(_ archive: URL, by signature: Data) -> Bool {
         guard let key = bundledKey,
             let data = try? Data(contentsOf: archive, options: .mappedIfSafe)

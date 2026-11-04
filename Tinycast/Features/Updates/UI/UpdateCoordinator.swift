@@ -161,7 +161,6 @@ final class UpdateCoordinator {
         core.relaunch()
     }
 
-    /// Runs while quitting, whether from Relaunch or not, so the next launch is the new version.
     func installStagedUpdate() {
         guard let stagedApp else { return }
         self.stagedApp = nil
