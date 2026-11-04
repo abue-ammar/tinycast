@@ -8,7 +8,8 @@ enum BundleSignature {
             let staticCode
         else { return false }
         // An unsealed bundle can claim any identity, and a nested helper is where one hides.
-        let flags = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode)
+        let flags = SecCSFlags(
+            rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode | kSecCSStrictValidate)
         guard SecStaticCodeCheckValidity(staticCode, flags, nil) == errSecSuccess else { return false }
         if releaseSigned { return true }
         guard let requirement = runningRequirement else { return false }

@@ -21,13 +21,13 @@ no appcast: the release feed the website already reads is the feed the app reads
 - **A downloaded update is never quarantined.** macOS sets that flag for sandboxed downloaders and
   for apps that opt in with `LSFileQuarantineEnabled`, and Tinycast is neither. `Quarantine` checks
   anyway, and an app that still carries the flag is refused rather than installed.
-- **Two independent trust roots, either of which may change alone.** A downloaded bundle is
-  trusted when its seal validates, nested helpers included, *and* either its zip carries a valid
-  Ed25519 signature from the release key in `TinycastUpdatePublicKey`, or it satisfies the running
-  copy's own designated requirement. Nothing is pinned: a new Apple team still updates through the
-  key, and a new key through an unchanged identity. Changing both in one release strands everyone.
-  `notarized` is deliberately not checked — it resolves the ticket through `syspolicyd` or the
-  network, so an offline Mac would refuse a bundle the signature already proves is ours.
+- **Two independent trust roots, either of which may change alone.** A downloaded bundle is trusted
+  when its seal passes strict validation, nested helpers included, *and* either its zip carries a
+  valid Ed25519 signature from the release key in `TinycastUpdatePublicKey`, or it satisfies the
+  running copy's own designated requirement. Nothing is pinned: a new Apple team still updates
+  through the key, and a new key through an unchanged identity. Changing both in one release strands
+  everyone. `notarized` is deliberately not checked — it resolves the ticket through `syspolicyd` or
+  the network, so an offline Mac would refuse a bundle the signature already proves is ours.
 - **A build only ever updates within its own channel.** The channels are separate bundle ids installed
   side by side; crossing would mean installing a different app. `com.tinycast.app.dev` never updates
   at all, and does not advertise the command.

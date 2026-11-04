@@ -59,8 +59,13 @@ struct UpdateInstaller: Sendable {
         try? FileManager.default.removeItem(at: archive)
 
         onProgress(.verifying)
-        try verify(staged, is: release, releaseSigned: releaseSigned)
-        try Task.checkCancellation()
+        do {
+            try verify(staged, is: release, releaseSigned: releaseSigned)
+            try Task.checkCancellation()
+        } catch {
+            try? FileManager.default.removeItem(at: expanded)
+            throw error
+        }
         return staged
     }
 
