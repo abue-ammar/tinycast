@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import os
 
 /// The installer only performs an update the coordinator has decided is safe.
 @MainActor
@@ -27,6 +28,8 @@ final class UpdateCoordinator {
         title: String(localized: "Software Update"), contentSize: UpdateWindowView.initialSize,
         activation: core.activationPolicy)
     @ObservationIgnored private var installTask: Task<Void, Never>?
+    @ObservationIgnored private var stagedApp: URL?
+    private static let logger = Logger(subsystem: "com.tinycast", category: "Updates")
 
     init(store: UpdateCheckStore, core: AppCore) {
         self.store = store
@@ -112,6 +115,7 @@ final class UpdateCoordinator {
             return
         }
         stage = .installing(release, .downloading(received: 0, expected: release.assetSize))
+        stagedApp = nil
         let installer = self.installer
         // Hoisted: nesting the hop inside the task body would re-capture its weak `self`.
         let onProgress: @Sendable (UpdateInstaller.Phase) -> Void = { [weak self] phase in
@@ -119,7 +123,8 @@ final class UpdateCoordinator {
         }
         installTask = Task { [weak self] in
             do {
-                try await installer.install(release, onProgress: onProgress)
+                let staged = try await installer.prepare(release, onProgress: onProgress)
+                self?.stagedApp = staged
                 self?.store.recordInstall(of: release.version)
                 self?.stage = .readyToRelaunch
             } catch is CancellationError {
@@ -154,6 +159,17 @@ final class UpdateCoordinator {
 
     func relaunch() {
         core.relaunch()
+    }
+
+    /// Runs while quitting, whether from Relaunch or not, so the next launch is the new version.
+    func installStagedUpdate() {
+        guard let stagedApp else { return }
+        self.stagedApp = nil
+        do {
+            try installer.install(stagedApp)
+        } catch {
+            Self.logger.error("Installing the staged update failed: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Private

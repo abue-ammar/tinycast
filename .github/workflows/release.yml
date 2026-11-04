@@ -127,6 +127,7 @@ jobs:
           NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
           ./Scripts/package-release.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
             "dist/${DMG_FILE}" "dist/${ZIP_FILE}"
@@ -162,6 +163,7 @@ jobs:
           gh release create "$TAG" \
             "dist/${{ steps.meta.outputs.dmg_file }}" \
             "dist/${{ steps.meta.outputs.zip_file }}" \
+            "dist/${{ steps.meta.outputs.zip_file }}.sig" \
             --title "${{ steps.meta.outputs.display_name }} ${{ steps.meta.outputs.full_version }}" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             $PRERELEASE_FLAG
@@ -328,6 +330,7 @@ jobs:
           NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
           NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
           NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
         run: |
           ./Scripts/package-release.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
             "dist/Tinycast-Universal-${VERSION}.dmg" "dist/Tinycast-Universal-${VERSION}.zip"
@@ -344,7 +347,8 @@ jobs:
         run: |
           gh release upload "v${VERSION}" \
             "dist/Tinycast-Universal-${VERSION}.dmg" \
-            "dist/Tinycast-Universal-${VERSION}.zip"
+            "dist/Tinycast-Universal-${VERSION}.zip" \
+            "dist/Tinycast-Universal-${VERSION}.zip.sig"
 
       - name: Update Homebrew cask
         env:

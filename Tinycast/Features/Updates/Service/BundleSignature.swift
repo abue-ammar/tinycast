@@ -1,27 +1,30 @@
 import Foundation
 import Security
 
-/// Proves a staged bundle is ours: sealed, and signed by the Tinycast team under Developer ID.
+/// Sealed, and vouched for by the release key or by the running copy's own signing identity.
 enum BundleSignature {
-    /// The team, not the certificate — a leaf is reissued on renewal and on a rename.
-    static let developerID = """
-        anchor apple generic \
-        and certificate leaf[subject.OU] = "J656U8XZ93" \
-        and certificate 1[field.1.2.840.113635.100.6.2.6] exists \
-        and certificate leaf[field.1.2.840.113635.100.6.1.13] exists
-        """
-
-    /// No `notarized`: its ticket lookup can hit the network, and the chain already proves ownership.
-    static func isTrusted(_ bundleURL: URL) -> Bool {
+    static func isTrusted(_ bundleURL: URL, releaseSigned: Bool) -> Bool {
         var staticCode: SecStaticCode?
-        var requirement: SecRequirement?
         guard SecStaticCodeCreateWithPath(bundleURL as CFURL, [], &staticCode) == errSecSuccess,
-            let staticCode,
-            SecRequirementCreateWithString(developerID as CFString, [], &requirement) == errSecSuccess,
-            let requirement
+            let staticCode
         else { return false }
         // An unsealed bundle can claim any identity, and a nested helper is where one hides.
         let flags = SecCSFlags(rawValue: kSecCSCheckAllArchitectures | kSecCSCheckNestedCode)
+        guard SecStaticCodeCheckValidity(staticCode, flags, nil) == errSecSuccess else { return false }
+        if releaseSigned { return true }
+        guard let requirement = runningRequirement else { return false }
         return SecStaticCodeCheckValidity(staticCode, flags, requirement) == errSecSuccess
+    }
+
+    /// The running copy's own requirement, never a pinned one, so a renewed certificate matches.
+    private static var runningRequirement: SecRequirement? {
+        var code: SecCode?
+        var staticCode: SecStaticCode?
+        var requirement: SecRequirement?
+        guard SecCodeCopySelf([], &code) == errSecSuccess, let code,
+            SecCodeCopyStaticCode(code, [], &staticCode) == errSecSuccess, let staticCode,
+            SecCodeCopyDesignatedRequirement(staticCode, [], &requirement) == errSecSuccess
+        else { return nil }
+        return requirement
     }
 }

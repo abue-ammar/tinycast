@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Security
 
@@ -25,7 +26,9 @@ struct UpdatesTests {
         picksTheZipThisMacCanRun()
         rejectsUnusableFeeds()
         offersOnlyWhatIsWorthInstalling()
-        pinsTheDeveloperIDRequirement()
+        picksTheSignatureBesideItsZip()
+        trustsASealedBundleThroughEitherPath()
+        verifiesTheReleaseSignature()
         keepsOnlyTheChangelog()
         laysOutTheChangelog()
         linksMentionsAndPullRequests()
@@ -249,11 +252,11 @@ struct UpdatesTests {
         let newer = AvailableRelease(
             version: AppVersion("0.3.0")!, tag: "v0.3.0", notes: "",
             assetURL: URL(string: "https://example.invalid/a.zip")!, assetSize: 1,
-            publishedAt: nil)
+            signatureURL: nil, publishedAt: nil)
         let same = AvailableRelease(
             version: running, tag: "v0.2.0", notes: "",
             assetURL: URL(string: "https://example.invalid/a.zip")!, assetSize: 1,
-            publishedAt: nil)
+            signatureURL: nil, publishedAt: nil)
 
         expect(
             ReleaseFeed.offer(newer, running: running, skipped: nil)?.version == newer.version,
@@ -292,22 +295,66 @@ struct UpdatesTests {
         Built from 419a5b4. [Full changelog](https://example.invalid/compare)
         """
 
-    /// A malformed string makes `satisfiesDeveloperID` answer false for every build, silently.
-    static func pinsTheDeveloperIDRequirement() {
-        var requirement: SecRequirement?
-        let status = SecRequirementCreateWithString(
-            BundleSignature.developerID as CFString, [], &requirement)
+    static func picksTheSignatureBesideItsZip() {
+        let signed = feed(
+            entry(
+                tag: "v1.0.0", prerelease: false,
+                assets: [
+                    "Tinycast-1.0.0.dmg", "Tinycast-1.0.0.zip", "Tinycast-1.0.0.zip.sig",
+                    "Tinycast-Universal-1.0.0.zip", "Tinycast-Universal-1.0.0.zip.sig"
+                ]))
         expect(
-            status == errSecSuccess && requirement != nil,
-            "the pinned Developer ID requirement still compiles")
+            ReleaseFeed.newest(from: signed, channel: .stable, architecture: .appleSilicon)?
+                .signatureURL?.lastPathComponent == "Tinycast-1.0.0.zip.sig",
+            "the thin zip carries its own signature")
+        expect(
+            ReleaseFeed.newest(from: signed, channel: .stable, architecture: .intel)?
+                .signatureURL?.lastPathComponent == "Tinycast-Universal-1.0.0.zip.sig",
+            "and the universal zip carries the universal one")
 
-        // Without the anchor, any self-signed certificate claiming the same OU would satisfy it.
+        let unsigned = feed(entry(tag: "v1.0.0", prerelease: false, assets: ["Tinycast-1.0.0.zip"]))
+        let release = ReleaseFeed.newest(from: unsigned, channel: .stable, architecture: .appleSilicon)
         expect(
-            BundleSignature.developerID.hasPrefix("anchor apple generic and "),
-            "the requirement is anchored to Apple's chain, not just to a team string")
+            release != nil && release?.signatureURL == nil,
+            "a release without a signature is still offered, for the identity path to judge")
+    }
+
+    static func trustsASealedBundleThroughEitherPath() {
+        let sealed = URL(fileURLWithPath: "/System/Applications/Calculator.app")
         expect(
-            BundleSignature.developerID.contains("field.1.2.840.113635.100.6.1.13"),
-            "the requirement demands a Developer ID Application certificate specifically")
+            BundleSignature.isTrusted(sealed, releaseSigned: true),
+            "a sealed bundle is trusted once the release key vouches for its archive")
+        expect(
+            !BundleSignature.isTrusted(sealed, releaseSigned: false),
+            "without the key, a bundle signed by another identity is refused")
+        expect(
+            !BundleSignature.isTrusted(URL(fileURLWithPath: "/nonexistent.app"), releaseSigned: true),
+            "and nothing is trusted without a seal to check")
+    }
+
+    static func verifiesTheReleaseSignature() {
+        let key = Curve25519.Signing.PrivateKey()
+        let archive = Data("an update archive".utf8)
+        guard let raw = try? key.signature(for: archive) else {
+            expect(false, "a fresh key signs")
+            return
+        }
+        let signature = Data(raw.base64EncodedString().utf8)
+        let verify = { (data: Data, signature: Data, key: Curve25519.Signing.PublicKey) in
+            UpdateSignature.isSigned(data, by: signature, key: key)
+        }
+
+        expect(verify(archive, signature, key.publicKey), "a matching signature verifies")
+        expect(
+            verify(archive, signature + Data("\n".utf8), key.publicKey),
+            "a trailing newline in the .sig asset is tolerated")
+        expect(
+            !verify(Data("a tampered archive".utf8), signature, key.publicKey),
+            "an altered archive fails")
+        expect(
+            !verify(archive, signature, Curve25519.Signing.PrivateKey().publicKey),
+            "another key fails")
+        expect(!verify(archive, Data("not base64".utf8), key.publicKey), "a garbled signature fails")
     }
 
     static func keepsOnlyTheChangelog() {

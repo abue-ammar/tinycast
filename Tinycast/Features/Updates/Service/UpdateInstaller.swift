@@ -5,7 +5,6 @@ struct UpdateInstaller: Sendable {
         case downloading(received: Int64, expected: Int64)
         case extracting
         case verifying
-        case replacing
 
         var message: String {
             switch self {
@@ -13,7 +12,6 @@ struct UpdateInstaller: Sendable {
                 return String(localized: "Downloading… \(Self.size(received)) of \(Self.size(expected))")
             case .extracting: return String(localized: "Expanding…")
             case .verifying: return String(localized: "Verifying…")
-            case .replacing: return String(localized: "Replacing Tinycast…")
             }
         }
 
@@ -33,9 +31,10 @@ struct UpdateInstaller: Sendable {
     let bundleURL: URL
     let stagingDirectory: URL
 
-    func install(
+    /// Everything short of the swap, which waits for quit so no old code runs on new files.
+    func prepare(
         _ release: AvailableRelease, onProgress: @escaping @Sendable (Phase) -> Void
-    ) async throws {
+    ) async throws -> URL {
         try? FileManager.default.createDirectory(
             at: stagingDirectory, withIntermediateDirectories: true)
         let archive = stagingDirectory.appendingPathComponent("\(release.tag).zip")
@@ -48,22 +47,32 @@ struct UpdateInstaller: Sendable {
             onProgress(.downloading(received: received, expected: expected))
         }
 
+        let releaseSigned = await isReleaseSigned(archive, by: release.signatureURL)
+
         onProgress(.extracting)
         let staged = try await expand(archive, into: expanded)
+        try? FileManager.default.removeItem(at: archive)
 
         onProgress(.verifying)
-        try verify(staged, is: release)
-
+        try verify(staged, is: release, releaseSigned: releaseSigned)
         try Task.checkCancellation()
-        onProgress(.replacing)
+        return staged
+    }
+
+    func install(_ staged: URL) throws {
         do {
             _ = try FileManager.default.replaceItemAt(
                 bundleURL, withItemAt: staged, options: .usingNewMetadataOnly)
         } catch {
             throw UpdateFailure.replaceFailed(error.localizedDescription)
         }
-        try? FileManager.default.removeItem(at: archive)
-        try? FileManager.default.removeItem(at: expanded)
+        try? FileManager.default.removeItem(at: staged.deletingLastPathComponent())
+    }
+
+    private func isReleaseSigned(_ archive: URL, by signatureURL: URL?) async -> Bool {
+        guard let signatureURL, let signature = try? await UpdateDownloader.data(from: signatureURL)
+        else { return false }
+        return UpdateSignature.isSigned(archive, by: signature)
     }
 
     private func expand(_ archive: URL, into directory: URL) async throws -> URL {
@@ -81,7 +90,7 @@ struct UpdateInstaller: Sendable {
         return app
     }
 
-    private func verify(_ staged: URL, is release: AvailableRelease) throws {
+    private func verify(_ staged: URL, is release: AvailableRelease, releaseSigned: Bool) throws {
         if Quarantine.isSet(on: staged) { Quarantine.clear(from: staged) }
         // Refuse rather than install something the user would then have to unquarantine by hand.
         guard !Quarantine.isSet(on: staged) else { throw UpdateFailure.quarantined }
@@ -95,7 +104,9 @@ struct UpdateInstaller: Sendable {
             throw UpdateFailure.versionMismatch(
                 expected: release.version.description, found: found ?? String(localized: "unknown"))
         }
-        guard BundleSignature.isTrusted(staged) else { throw UpdateFailure.identityMismatch }
+        guard BundleSignature.isTrusted(staged, releaseSigned: releaseSigned) else {
+            throw UpdateFailure.identityMismatch
+        }
     }
 
     /// Off disk, not through `Bundle`, whose cache would answer for the old copy.

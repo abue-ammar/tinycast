@@ -12,17 +12,10 @@ enum UpdateDownloader {
         _ release: AvailableRelease, to destination: URL
     ) -> AsyncThrowingStream<Event, any Error> {
         AsyncThrowingStream { continuation in
-            let config = URLSessionConfiguration.ephemeral
-            // Cacheless, never `URLSession.shared`, so the only copy is the one on disk.
-            config.urlCache = nil
-            config.timeoutIntervalForRequest = 60
             let delegate = Delegate(
                 destination: destination, expected: release.assetSize, events: continuation)
-            let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-
-            var request = URLRequest(url: release.assetURL)
-            request.setValue("Tinycast", forHTTPHeaderField: "User-Agent")
-            let task = session.downloadTask(with: request)
+            let session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
+            let task = session.downloadTask(with: request(release.assetURL))
             continuation.onTermination = { _ in
                 task.cancel()
                 // A session holds its delegate until invalidated, so this is what breaks the cycle.
@@ -30,6 +23,31 @@ enum UpdateDownloader {
             }
             task.resume()
         }
+    }
+
+    static func data(from url: URL) async throws -> Data {
+        let session = URLSession(configuration: configuration)
+        defer { session.finishTasksAndInvalidate() }
+        let (data, response) = try await session.data(for: request(url))
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard status == 200 else {
+            throw UpdateFailure.downloadFailed(String(localized: "The server answered \(status)."))
+        }
+        return data
+    }
+
+    /// Cacheless, never `URLSession.shared`, so the only copy is the one on disk.
+    private static var configuration: URLSessionConfiguration {
+        let config = URLSessionConfiguration.ephemeral
+        config.urlCache = nil
+        config.timeoutIntervalForRequest = 60
+        return config
+    }
+
+    private static func request(_ url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.setValue("Tinycast", forHTTPHeaderField: "User-Agent")
+        return request
     }
 }
 

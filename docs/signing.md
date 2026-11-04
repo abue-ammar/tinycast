@@ -44,15 +44,16 @@ Now local builds (Xcode, VS Code F5, `xcodebuild`) sign with it, and you grant A
 
 ## 2. The release secrets
 
-Releases read five secrets from the repo's `release` environment (**Settings → Environments**). The
+Releases read six secrets from the repo's `release` environment (**Settings → Environments**). The
 environment deploys from `main` only, so a workflow pushed to any other branch can never read them.
 
-| Secret                              | Holds                                                                       |
-| ----------------------------------- | --------------------------------------------------------------------------- |
-| `DEVELOPER_ID_P12_BASE64`           | the Developer ID Application certificate and its private key, base64 `.p12` |
-| `DEVELOPER_ID_P12_PASSWORD`         | the password the `.p12` was exported with                                   |
-| `NOTARY_KEY_P8_BASE64`              | an App Store Connect API team key (`.p8`) with Developer access, base64     |
-| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | that key's ID and its issuer ID                                             |
+| Secret                              | Holds                                                                                           |
+| ----------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `DEVELOPER_ID_P12_BASE64`           | the Developer ID Application certificate and its private key, base64 `.p12`                     |
+| `DEVELOPER_ID_P12_PASSWORD`         | the password the `.p12` was exported with                                                       |
+| `NOTARY_KEY_P8_BASE64`              | an App Store Connect API team key (`.p8`) with Developer access, base64                         |
+| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | that key's ID and its issuer ID                                                                 |
+| `UPDATE_SIGNING_KEY`                | the release key: an Ed25519 private key, base64, whose public half is `TinycastUpdatePublicKey` |
 
 Export the Developer ID identity alone — `security export -t identities` bundles every identity in
 the keychain. In Keychain Access, open **My Certificates**, select
@@ -65,13 +66,23 @@ gh secret set DEVELOPER_ID_P12_PASSWORD --env release --repo abue-ammar/tinycast
 base64 -i AuthKey_<key-id>.p8 | gh secret set NOTARY_KEY_P8_BASE64 --env release --repo abue-ammar/tinycast
 gh secret set NOTARY_KEY_ID --env release --repo abue-ammar/tinycast --body "<key-id>"
 gh secret set NOTARY_ISSUER_ID --env release --repo abue-ammar/tinycast --body "<issuer-id>"
+gh secret set UPDATE_SIGNING_KEY --env release --repo abue-ammar/tinycast --body "<private-key>"
+```
+
+The release key is made once and never renewed. This prints its private half, then the public half
+that goes into `Info.plist` as `TinycastUpdatePublicKey`:
+
+```sh
+echo 'import CryptoKit; let k = Curve25519.Signing.PrivateKey()
+print(k.rawRepresentation.base64EncodedString(), k.publicKey.rawRepresentation.base64EncodedString())' |
+    xcrun swift -
 ```
 
 **Renew the certificate yearly.** Apple issues a Developer ID certificate for about 13 months.
 Before it expires, the account holder creates a new one on developer.apple.com (**Developer ID
 Application**, **G2 Sub-CA**) and replaces the two `DEVELOPER_ID_P12_*` secrets. Nothing else
-changes: a shipped build stays valid because its signature carries Apple's timestamp, and both the
-updater and macOS pin the team rather than the certificate. The API key does not expire.
+changes: a shipped build stays valid because its signature carries Apple's timestamp, and macOS and
+the updater both match the team rather than the certificate. The API key does not expire.
 
 ## Hardened runtime
 
@@ -110,18 +121,26 @@ timestamped Developer ID signature on the app *and* every helper, an intact nest
 run it before submitting: a nested binary missing the runtime flag is the most common notarization
 rejection, and a usage string missing its entitlement ships a permission that can never be granted.
 
+## Update trust
+
+The updater trusts a downloaded bundle through either of two roots
+([features/updates.md](features/updates.md)):
+
+- **The release key.** `Scripts/sign-update.swift` signs every updater zip with
+  `UPDATE_SIGNING_KEY`, and refuses unless the built app's `TinycastUpdatePublicKey` is its public
+  half, so a release can never ship trusting a key the next one is not signed with.
+- **The running copy's designated requirement**, read at runtime rather than pinned. For a Developer
+  ID build that is the team, so a certificate renewal still matches.
+
+**Never change both in one release.** A new Apple team ships signed by the old key, a new key under
+the old team, and the release after that may change the other.
+
 ## The Developer ID switch
 
-Releases used to be signed with `Tinycast Self-Signed`. `BundleSignature` now trusts a staged bundle
-only when it satisfies a requirement pinning the Tinycast team under Apple's Developer ID chain.
-That requirement shipped in v0.10.20, ahead of the switch, so every copy from v0.10.20 on updates to
-a Developer ID build through its own code. Anything older trusts only its own self-signed leaf and
-must be reinstalled by hand.
-
-The requirement pins the team rather than the certificate, so a renewal strands nobody. It
-deliberately omits the `notarized` keyword — that resolves a ticket through `syspolicyd` or the
-network, and the updater verifies in a cache directory Gatekeeper has never assessed, so an offline
-Mac would refuse a bundle the chain already proves is ours.
+Releases used to be signed with `Tinycast Self-Signed`. Copies up to 0.12.1 trust only their own
+self-signed leaf, or a team other than Tinycast's that an earlier requirement pinned, so they cannot
+install a Developer ID build themselves and are updated by hand once. 0.12.8 pins the Tinycast team;
+every release after it trusts the two roots above.
 
 macOS keys a TCC grant to the app's designated requirement, which changed with the identity, so the
 first Developer ID build asks for Accessibility once more. Renewals keep it.
@@ -130,8 +149,8 @@ first Developer ID build asks for Accessibility once more. Renewals keep it.
 `SIGNING_IDENTITY` and nowhere else: `project.yml` keeps signing with `Tinycast Self-Signed`, so a
 contributor builds with the one they created in §1 — same name, their own key, never shared.
 
-**Keep `Tinycast Self-Signed` in the login keychain.** It is the only way to ship a build that a
-copy older than v0.10.20 could still install.
+**Keep `Tinycast Self-Signed` in the login keychain.** It is the only identity a copy up to 0.12.1
+accepts, should those copies ever need a build they can install themselves.
 
 ## Quarantine
 

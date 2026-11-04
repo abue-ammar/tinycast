@@ -21,11 +21,11 @@ opens without a Gatekeeper warning. Local builds, `build-dmg.sh` included, keep 
 
 ## How the in-app updater consumes a release
 
-Every release publishes two assets from one build: `Tinycast-<version>.dmg`, which people download by
-hand and which the cask installs, and `Tinycast-<version>.zip`, which the in-app updater installs. The
-zip is produced with `ditto -c -k --keepParent --sequesterRsrc` — the only zip that leaves the code
-signature verifiable, which matters because the updater refuses any bundle whose signature does not
-prove it is ours.
+Every release publishes three assets from one build: `Tinycast-<version>.dmg`, which people download
+by hand and which the cask installs, `Tinycast-<version>.zip`, which the in-app updater installs, and
+`Tinycast-<version>.zip.sig`, the zip's signature by the release key. The zip is produced with
+`ditto -c -k --keepParent --sequesterRsrc` — the only zip that leaves the code signature verifiable,
+which matters because the updater refuses any bundle it cannot prove is ours.
 
 A stable release publishes two more from the `universal` job, `Tinycast-Universal-<version>.dmg` and
 `.zip`, built from the same commit at the same version and bundle id but with both slices. They are
@@ -87,6 +87,8 @@ from `main` only ([signing.md](signing.md#2-the-release-secrets)). After `verify
 `Scripts/package-release.sh` packs and signs the DMG, submits it once with `notarytool --wait`, and
 staples the ticket to the DMG and to the app before zipping it, so the updater's zip is stapled too.
 Any status but `Accepted` prints Apple's log and stops the run before anything is published.
+`Scripts/sign-update.swift` then signs the zip, and fails the run if the built app trusts a different
+update key ([signing.md](signing.md#update-trust)).
 
 Channel builds override `TINYCAST_BUNDLE_IDENTIFIER`, not the target-wide `PRODUCT_BUNDLE_IDENTIFIER`.
 The Dictation helper derives its own identifier with a `.dictation` suffix; signature verification
