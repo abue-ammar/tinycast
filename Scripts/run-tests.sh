@@ -699,9 +699,6 @@ run settings-file-test     Tinycast/Features/Settings/Model/*.swift \
                            Tinycast/Features/Settings/Service/SettingsFileMonitor.swift \
                            Tinycast/Features/Settings/Service/SettingsFileRepository.swift \
                            Tinycast/Platform/AppPaths.swift
-run compact-favorites-migration-test Tinycast/Migrations/CompactFavoritesMigration.swift \
-                           Tinycast/Features/Settings/Model/*.swift \
-                           Tinycast/Platform/AppPaths.swift
 run backup-archive-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/Backup/Model/BackupArchive.swift \
                            Tinycast/Features/Backup/Model/BackupBundle.swift \

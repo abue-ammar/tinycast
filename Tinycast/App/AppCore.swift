@@ -288,7 +288,6 @@ final class AppCore {
         Signposts.interval("AppCore.start") {
             // Shorten AppKit's ~2–3s tooltip delay; registration domain, so a user default wins.
             UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 250])
-            CompactFavoritesMigration.run(settingsFileEnabled: settings.settingsFileEnabled)
             NSApp.setActivationPolicy(.accessory)
             dictationAudioDucker.recover()
             applyAppearance()
