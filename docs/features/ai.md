@@ -375,7 +375,7 @@ manually. A gateway can also list an incomplete catalog under any preset, so sea
 identifier whenever no loaded model is named by it exactly, even beside partial matches; Return still
 adds only an exact catalog match, so a typed prefix never becomes a stored identifier. Tinycast does
 not ship or guess an API catalog that can become stale. Codex gets its models and reasoning efforts
-from `model/list`; OpenCode gets identifiers, variants and input modalities from its server's
+from `model/list`; OpenCode gets identifiers, variants, input modalities and tool support from its server's
 `model.list`, through `opencode api GET /api/model --standalone`, and an OpenCode older than 2 fails
 the check with a message rather than reading as signed out. Claude answers an `initialize` control request — written to a
 stream-json `-p` run that then gets no prompt, so no model is called — with its own `/model` list;

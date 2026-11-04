@@ -49,6 +49,7 @@ final class OpenCodeMCPBridge {
                             default: break
                             }
                         }.run { [weak self] connection in
+                            defer { listener.newConnectionLimit += 1 }
                             await self?.receive(connection)
                         }
                     } catch {

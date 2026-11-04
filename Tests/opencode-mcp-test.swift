@@ -69,6 +69,12 @@ struct OpenCodeMCPTest {
         assert(unauthorized.0 == 403)
         let browser = try await request("tools/list", origin: "https://example.com")
         assert(browser.0 == 403)
+        for _ in 0..<20 {
+            let rejected = try await request("tools/list", authorization: "Bearer wrong")
+            assert(rejected.0 == 403)
+            let ping = try await request("ping")
+            assert(ping.0 == 200)
+        }
         let initialized = try await request("initialize", params: ["protocolVersion": "2025-06-18"])
         assert(initialized.1?.objectValue?["result"]?.objectValue?["protocolVersion"]
             == .string("2025-06-18"))

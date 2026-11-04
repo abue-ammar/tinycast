@@ -420,10 +420,10 @@ final class AIChatCoordinator {
         case .codex?: return .codex
         case .claude?: return .claudeCommand
         case .openCode(let model, _)?:
-            let images = core.installedAI.status(for: .openCode).models
-                .contains { $0.id == model && $0.acceptsImages }
+            let entry = core.installedAI.status(for: .openCode).models.first { $0.id == model }
             return AIModelCapabilities(
-                images: images, documents: false, webSearch: false, tools: true)
+                images: entry?.acceptsImages == true, documents: false, webSearch: false,
+                tools: entry?.supportsTools == true)
         case .grok?, .cursor?:
             return .none
         case .api(let connection, let model, _)?:

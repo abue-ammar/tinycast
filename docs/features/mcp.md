@@ -84,7 +84,8 @@ not read MCP settings. `AIChatCoordinator.send` is the one place the two meet.
   A stdio server is a resident process of someone else's making, and the 100 MB budget is the reason
   this is not "start at launch".
 - **Who runs the loop is the route's own answer, and it is the only thing that differs.**
-  `AIModelCapabilities.tools` is true for `.api`, Codex, Claude and OpenCode, and false
+  `AIModelCapabilities.tools` follows model support for `.api` and OpenCode, is true for Codex
+  and Claude, and is false
   for Apple Intelligence, Grok and Cursor. On an API route Tinycast is
   the MCP client and `AIToolLoopProvider` runs the loop. On the two subscription routes the vendor
   CLI is the MCP client: `AIModelSelection.runsItsOwnTools` says so, and `AIChatCoordinator` hands
