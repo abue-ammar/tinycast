@@ -73,6 +73,8 @@ final class PaletteState {
     /// True while a palette menu is open. See docs/features/palette.md#menu-open-input-freeze.
     @ObservationIgnored var menuOpen = false { didSet { onMenuOpenChanged?(menuOpen) } }
     var menuQuery = ""
+    /// Bumped when typing lands in an open menu whose field lost the field editor.
+    private(set) var menuFocusToken = UUID()
     /// Fired when `menuOpen` flips, so the panel can hide the caret without a focus swap.
     @ObservationIgnored var onMenuOpenChanged: ((Bool) -> Void)?
     /// A fresh presentation resets a long popover to the row it opens with.
@@ -171,6 +173,12 @@ final class PaletteState {
     func rewriteQuery(_ text: String) {
         query = text
         queryRewriteToken = UUID()
+    }
+
+    /// Types into an open menu's field even when the field is not first responder.
+    func typeMenuQuery(_ text: String) {
+        menuQuery += text
+        menuFocusToken = UUID()
     }
 
     func preserveSelection() {

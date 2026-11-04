@@ -1259,6 +1259,15 @@ struct RootPaletteView: View {
             break
         }
 
+        // Typing reaches the menu's own field even after the pointer or a row took the keyboard.
+        if !menuPanel.isSearchFieldFocused, let text = typedText(for: event) {
+            vm.typeMenuQuery(text)
+            menuPanel.putCaretAtEndOnNextFocus()
+            // The refocus selects all a turn later, so the caret is placed again past it.
+            Task { @MainActor in menuPanel.moveFieldEditorCaretToEnd() }
+            return true
+        }
+
         guard !modifiers.isDisjoint(with: [.command, .control]) else { return false }
         let character =
             ASCIIKeyboardLayout.character(for: event)?.lowercased()
@@ -1302,6 +1311,16 @@ struct RootPaletteView: View {
         } else {
             vm.menuQuery = ""
         }
+    }
+
+    /// What a plain key press would type; chords, navigation and function keys type nothing.
+    private func typedText(for event: NSEvent) -> String? {
+        guard event.modifierFlags.isDisjoint(with: [.command, .control, .option]),
+            event.specialKey == nil,
+            let characters = event.characters, !characters.isEmpty,
+            characters.unicodeScalars.allSatisfy({ !CharacterSet.controlCharacters.contains($0) })
+        else { return nil }
+        return characters
     }
 
     /// An action can remove the last visible pin; never leave an invisible menu owning input.

@@ -153,5 +153,6 @@ struct ExtensionMenuSearchField: View {
             .padding(.vertical, metrics.spacing.xxs / 2)
             .accessibilityLabel(placeholder)
             .onAppear { focused = true }
+            .onChange(of: palette.menuFocusToken) { focused = true }
     }
 }
