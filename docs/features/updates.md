@@ -124,8 +124,8 @@ One route, whatever the install came from:
    ours — through the release key, or through the running copy's own designated requirement.
 5. Offer Relaunch. At quit, by Relaunch or otherwise, `FileManager.replaceItemAt` swaps the staged
    bundle in. The staging folder is on the same volume as `/Applications`, which is what lets this be
-   atomic. A non-writable `/Applications` is reported, not worked around; there is no privileged
-   helper.
+   atomic. A copy Tinycast cannot write is reported before the download starts, not worked around;
+   there is no privileged helper.
 6. Relaunch spawns a detached waiter that reopens the app once this process exits — `open` on a
    bundle id that is still running would only re-activate the instance on its way out.
 

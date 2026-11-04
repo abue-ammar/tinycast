@@ -35,6 +35,11 @@ struct UpdateInstaller: Sendable {
     func prepare(
         _ release: AvailableRelease, onProgress: @escaping @Sendable (Phase) -> Void
     ) async throws -> URL {
+        let location = bundleURL.deletingLastPathComponent()
+        // The swap runs at quit, too late to report anything, so an unwritable copy is caught now.
+        guard FileManager.default.isWritableFile(atPath: location.path),
+            FileManager.default.isWritableFile(atPath: bundleURL.path)
+        else { throw UpdateFailure.replaceFailed(location.path) }
         try? FileManager.default.createDirectory(
             at: stagingDirectory, withIntermediateDirectories: true)
         let archive = stagingDirectory.appendingPathComponent("\(release.tag).zip")
