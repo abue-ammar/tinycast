@@ -1,14 +1,13 @@
 ---
 title: Install
-description: Homebrew, release channels, updates, and the extra step a direct download needs.
+description: Homebrew, release channels, direct downloads, and updates.
 ---
 
 Tinycast needs **macOS 26 or later**, on Apple silicon or Intel.
 
 ## Homebrew
 
-Homebrew is the easiest way to install Tinycast. It clears the macOS quarantine flag for you, so the
-app opens without a warning.
+Homebrew is the easiest way to install Tinycast.
 
 ```bash
 brew trust --tap abue-ammar/tinycast
@@ -54,15 +53,8 @@ can be installed at a time.
 
 Builds are also on the [Releases page](https://github.com/abue-ammar/tinycast/releases).
 
-Tinycast is **self-signed** because it doesn't have a paid Apple Developer ID yet. As a result, macOS
-quarantines a copy you download yourself and won't open it. After you drag the app to Applications,
-clear the flag once:
-
-```bash
-xattr -dr com.apple.quarantine "/Applications/Tinycast.app"
-```
-
-You **don't** need this step if you installed with Homebrew.
+Open the DMG and drag Tinycast to Applications. Every release is signed with Tinycast's Apple
+Developer ID and notarized by Apple, so macOS opens it without a warning.
 
 ## Updating
 

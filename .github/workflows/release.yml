@@ -21,9 +21,13 @@ permissions:
   # Dispatches the Website workflow, whose version and changelog are read at build time.
   actions: write
 
+env:
+  SIGNING_IDENTITY: "Developer ID Application: Md Abue Ammar (J656U8XZ93)"
+
 jobs:
   build:
     runs-on: xcode-27
+    environment: release
     # Consumed by the `universal` job, so the channel identity is derived in exactly one place.
     outputs:
       full_version: ${{ steps.meta.outputs.full_version }}
@@ -72,24 +76,11 @@ jobs:
             echo "prerelease=${PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
 
-      # The SAME cert on every release is what keeps users' Accessibility grant across updates.
       - name: Import signing certificate
         env:
-          P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
-        run: |
-          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          KPW="$(openssl rand -base64 24)"
-          echo "${P12_BASE64}" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security create-keychain -p "$KPW" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$KPW" "$KEYCHAIN"
-          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "${P12_PASSWORD}" -A -T /usr/bin/codesign
-          # Let codesign use the key without an interactive prompt.
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KPW" "$KEYCHAIN" >/dev/null
-          # Prepend to the search list so xcodebuild's codesign finds "Tinycast Self-Signed".
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed 's/"//g')
-          rm -f "$RUNNER_TEMP/cert.p12"
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: ./Scripts/import-signing-identity.sh
 
       - name: Build app
         env:
@@ -102,8 +93,8 @@ jobs:
           xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Tinycast Self-Signed" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" DEVELOPMENT_TEAM=J656U8XZ93 \
+            OTHER_CODE_SIGN_FLAGS="--timestamp" \
             PRODUCT_NAME="$DISPLAY_NAME" TINYCAST_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
@@ -128,21 +119,17 @@ jobs:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
         run: ./Scripts/verify-signature.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
 
-      # The zip is for the in-app updater, which expands it with `ditto` instead of mounting.
-      - name: Package DMG and ZIP
+      - name: Notarize DMG and ZIP
         env:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
           DMG_FILE: ${{ steps.meta.outputs.dmg_file }}
           ZIP_FILE: ${{ steps.meta.outputs.zip_file }}
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
         run: |
-          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
-          STAGE="$(mktemp -d)"
-          cp -R "$APP" "$STAGE/"
-          ln -s /Applications "$STAGE/Applications"
-          mkdir -p dist
-          diskutil image create from "$STAGE" --format UDZO --volumeName "$DISPLAY_NAME" "dist/${DMG_FILE}"
-          # Only `ditto` keeps the signature verifiable; plain `zip` drops symlinks and the seal.
-          ditto -c -k --keepParent --sequesterRsrc "$APP" "dist/${ZIP_FILE}"
+          ./Scripts/package-release.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
+            "dist/${DMG_FILE}" "dist/${ZIP_FILE}"
 
       - uses: actions/upload-artifact@v7
         with:
@@ -267,6 +254,7 @@ jobs:
     needs: build
     if: github.event.inputs.channel == 'stable'
     runs-on: xcode-27
+    environment: release
     env:
       VERSION: ${{ needs.build.outputs.full_version }}
       DISPLAY_NAME: ${{ needs.build.outputs.display_name }}
@@ -287,26 +275,11 @@ jobs:
           echo "Using $XCODE_PATH"
           echo "DEVELOPER_DIR=$XCODE_PATH/Contents/Developer" >> "$GITHUB_ENV"
 
-      # The SAME identity, or fail: the updater compares the staged bundle's leaf certificate.
       - name: Import signing certificate
         env:
-          P12_BASE64: ${{ secrets.SIGNING_P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.SIGNING_P12_PASSWORD }}
-        run: |
-          if [ -z "${P12_BASE64}" ]; then
-            echo "::error::SIGNING_P12_BASE64 not set — a differently-signed build cannot self-update."
-            exit 1
-          fi
-          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          KPW="$(openssl rand -base64 24)"
-          echo "${P12_BASE64}" | base64 --decode > "$RUNNER_TEMP/cert.p12"
-          security create-keychain -p "$KPW" "$KEYCHAIN"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN"
-          security unlock-keychain -p "$KPW" "$KEYCHAIN"
-          security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "${P12_PASSWORD}" -A -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "$KPW" "$KEYCHAIN" >/dev/null
-          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | sed 's/"//g')
-          rm -f "$RUNNER_TEMP/cert.p12"
+          P12_BASE64: ${{ secrets.DEVELOPER_ID_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
+        run: ./Scripts/import-signing-identity.sh
 
       - name: Build app
         env:
@@ -315,8 +288,8 @@ jobs:
           xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \
             -derivedDataPath "$RUNNER_TEMP/DerivedData" \
             ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
-            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Tinycast Self-Signed" \
-            OTHER_CODE_SIGN_FLAGS="--timestamp=none" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" DEVELOPMENT_TEAM=J656U8XZ93 \
+            OTHER_CODE_SIGN_FLAGS="--timestamp" \
             PRODUCT_NAME="$DISPLAY_NAME" TINYCAST_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
@@ -350,16 +323,14 @@ jobs:
       - name: Assert the signature is notarizable
         run: ./Scripts/verify-signature.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
 
-      - name: Package DMG and ZIP
+      - name: Notarize DMG and ZIP
+        env:
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
         run: |
-          APP="$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
-          STAGE="$(mktemp -d)"
-          cp -R "$APP" "$STAGE/"
-          ln -s /Applications "$STAGE/Applications"
-          mkdir -p dist
-          diskutil image create from "$STAGE" --format UDZO --volumeName "$DISPLAY_NAME" \
-            "dist/Tinycast-Universal-${VERSION}.dmg"
-          ditto -c -k --keepParent --sequesterRsrc "$APP" "dist/Tinycast-Universal-${VERSION}.zip"
+          ./Scripts/package-release.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
+            "dist/Tinycast-Universal-${VERSION}.dmg" "dist/Tinycast-Universal-${VERSION}.zip"
 
       - uses: actions/upload-artifact@v7
         with:

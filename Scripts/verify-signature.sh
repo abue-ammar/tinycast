@@ -34,6 +34,8 @@ for BIN in "$APP/Contents/MacOS/$NAME" "$APP/Contents/Helpers/ClipboardTextHelpe
     INFO="$(codesign -dv --verbose=2 "$BIN" 2>&1)"
     [[ "$INFO" =~ flags=0x[0-9a-f]+\([^\)]*runtime ]] ||
         fail "${BIN##*/}: hardened runtime not enabled"
+    [[ "$INFO" == *$'\nAuthority=Developer ID Application: '* && "$INFO" == *$'\nTimestamp='* ]] ||
+        fail "${BIN##*/}: not signed with a timestamped Developer ID"
 done
 
 APP_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Contents/Info.plist")"
