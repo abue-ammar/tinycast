@@ -2020,6 +2020,16 @@ struct AIProviderTests {
             openCodeCatalog.map(\.acceptsImages) == [true, true, false],
             "OpenCode takes images only where the model's input does")
         expect(
+            openCodeCatalog.allSatisfy(\.supportsTools),
+            "OpenCode retains advertised tool support")
+        let textOnlyModels = #"""
+            {"data":[{"id":"text","providerID":"local","capabilities":{"tools":false}},
+            {"id":"unknown","providerID":"local"}]}
+            """#
+        expect(
+            InstalledAIModel.openCodeCatalog(textOnlyModels).map(\.supportsTools) == [false, false],
+            "OpenCode models without advertised tool support do not offer tools")
+        expect(
             InstalledAIModel.openCodeCatalog("Error: server failed to start").isEmpty,
             "an OpenCode answer that is not the model list yields no models")
 

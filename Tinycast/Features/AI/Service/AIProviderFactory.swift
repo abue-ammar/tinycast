@@ -11,7 +11,8 @@ enum AIProviderFactory {
         installedAI: InstalledAIManager,
         keyStore: KeychainSecretStore = .aiAPIKeys,
         guardrails: SystemLanguageModel.Guardrails = .default,
-        toolServers: AIToolServerSession? = nil
+        toolServers: AIToolServerSession? = nil,
+        toolSession: AIToolSession? = nil
     ) throws -> any AIProvider {
         switch selection {
         case .appleIntelligence:
@@ -45,7 +46,8 @@ enum AIProviderFactory {
             guard settings.enabledInstalledProviders.contains(.openCode) else {
                 throw AIProviderError.unavailable(String(localized: "OpenCode is disabled in AI Settings."))
             }
-            return try installedAI.provider(kind: .openCode, model: model, effort: effort)
+            return try installedAI.provider(
+                kind: .openCode, model: model, effort: effort, toolSession: toolSession)
         case .cursor(let model, let effort):
             guard settings.enabledInstalledProviders.contains(.cursor) else {
                 throw AIProviderError.unavailable(String(localized: "Cursor is disabled in AI Settings."))

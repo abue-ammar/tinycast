@@ -39,7 +39,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   fallback for a path that was set: falling back would run another copy and hide the mistake the path
   was set to fix.
 - **A reader's variable never replaces one Tinycast sets.** `InstalledAIKind.managedEnvironment` is
-  what keeps a tool inside the chat — OpenCode's deny-all configuration, Claude's account MCP switch —
+  what keeps a tool inside the chat, including OpenCode's scoped permissions and Claude's account MCP switch,
   and `InstalledAILaunch.inherited(for:)` drops a reader's variable of the same name, along with
   `NO_COLOR` and the `TC_MCP_` names that carry MCP secrets to Codex. Names are stored in
   `aiInstalledOverrides` and values in the login Keychain (`KeychainSecretStore.installedAIEnvironment`),
@@ -207,7 +207,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   CLI routes' MCP launch encodings. Request
   bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
   conversation.
-- **Grok, OpenCode and Cursor are text transports, not agents, and so is Claude with no server to
+- **Grok and Cursor are text transports, not agents, and so is Claude with no server to
   run.** Claude runs one turn with no tools, browser integration, slash commands or persisted
   session — but never `--bare`, which reads neither
   OAuth nor the keychain and so refuses the very sign-in this route reuses. Given servers by
@@ -220,8 +220,12 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   Grok runs with `--deny *`,
   `dontAsk` permissions and a workspace sandbox, and never `--always-approve`, so a user's always-approve
   config cannot arm tools for this route. OpenCode 2 runs `--standalone`, so its private server
-  takes Tinycast's inline configuration, as a `tinycast` agent whose trailing deny-all rule drops
-  every tool from the request, with sharing and snapshots off and a private working directory. Cursor runs `agent -p --mode ask` with `--trust` against
+  takes Tinycast's inline configuration, as a `tinycast` agent with sharing and snapshots off and
+  a private working directory. Its deny-all rule drops every built-in and user-configured tool.
+  A chat with MCP enabled adds exact allow rules for a private per-turn loopback bridge, with
+  `codemode: false` so those tools do not require enabling `execute`. The bridge offers only the
+  chat's selected tools and routes calls through Tinycast's existing consent and execution path.
+  Cursor runs `agent -p --mode ask` with `--trust` against
   Tinycast's private workspace and never `--force` / `--yolo` / `--approve-mcps`; ask mode blocks edits.
   Each deletes the session or chat it created once the child exits, and Tinycast never reaches into the
   user's own config to do it. **Only Claude keeps the user's MCP servers out of the process**, through
@@ -232,8 +236,9 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   because their configs merge with no opt-out; what refuses the call is `--deny *` for Grok,
   the `tinycast` agent's deny-all rule for OpenCode and withheld MCP approval for Cursor. Cursor's is the only one resting
   on an approval prompt rather than an explicit deny, which is why its Providers row says so and the
-  others do not. That is also why none of the three may be handed a server: there is no way to offer
-  one without offering the reader's own. None of these routes offer web search, and only Claude and
+  others do not. Grok and Cursor are never handed a server. OpenCode's exact allow rules name only
+  the turn's randomly named, authenticated bridge, never the user's servers. None of these routes
+  offer web search, and only Claude and
   OpenCode take images: every Claude turn is one `--input-format stream-json` user message, the newest
   question's pictures as base64 `image` blocks beside the framed prompt. OpenCode gets the same
   pictures as private `0600` files in the workspace, one `--file` each, and only for a model whose
@@ -370,7 +375,7 @@ manually. A gateway can also list an incomplete catalog under any preset, so sea
 identifier whenever no loaded model is named by it exactly, even beside partial matches; Return still
 adds only an exact catalog match, so a typed prefix never becomes a stored identifier. Tinycast does
 not ship or guess an API catalog that can become stale. Codex gets its models and reasoning efforts
-from `model/list`; OpenCode gets identifiers, variants and input modalities from its server's
+from `model/list`; OpenCode gets identifiers, variants, input modalities and tool support from its server's
 `model.list`, through `opencode api GET /api/model --standalone`, and an OpenCode older than 2 fails
 the check with a message rather than reading as signed out. Claude answers an `initialize` control request — written to a
 stream-json `-p` run that then gets no prompt, so no model is called — with its own `/model` list;
@@ -731,6 +736,7 @@ window, and every chat action either surface sends — is the nineteenth feature
   think tags across content and SSE splits, persistence repair,
   Codex framing, on-device routing, the two MCP launch encodings and the two consent channels, the
   shown-model and switched-off-route rules, and a tool's override from settings to launch),
+  `opencode-mcp-test` (bridge authentication, scoped catalog, exact permissions, calls and limits),
   `syntax-highlight-test` (every grammar's tokens, language aliases, the size limit, and that every
   prefix of a streaming block scans in order and inside its own bounds),
   `ai-chat-test` (`ChatSession`, `MarkdownBlock` with its math delimiters, LaTeX subset and
@@ -839,6 +845,16 @@ Every other turn finishes on its own completion frame; the cleanups run detached
 housekeeping never holds the composer shut.
 Cancellation terminates the child process; only one installed-CLI turn can own a runner at a time.
 
+For OpenCode chat tools, `AIChatCoordinator` supplies an `AIToolSession` rather than a second
+`AIToolLoopProvider`. `OpenCodeMCPBridge` binds an ephemeral IPv4 loopback port for that turn and
+requires a random bearer credential carried only in `OPENCODE_CONFIG_CONTENT`. It rejects browser
+origins and offers only initialize, ping, tool listing and tool calls. Short indexed aliases keep
+OpenCode's prefixed tool names under provider limits while retaining the original tool routing and
+transcript labels. Calls run serially through Tinycast so permission dialogs cannot compete. The
+reader's round setting caps calls, and the normal tool-result size budgets still apply. Completion,
+failure and cancellation stop the listener and its pending calls. Rewrites and title requests get no
+tool session and retain the deny-all configuration.
+
 ## Web search and attachments
 
 `AIRequest.webSearch`, `AIMessage.images` and `AIMessage.documents` are provider-neutral; each
@@ -854,7 +870,7 @@ transport code at all.
 | Codex | thread-scoped `web_search` config | `image` input part | never — the app-server takes no document part | Tinycast's servers, added as launch overrides; the reader's own are disabled by name |
 | Claude command | never | base64 `image` block in its stream-json user message | never | Tinycast's servers, through `--strict-mcp-config` and a private config file — an empty one when there are none, and neither flag under a managed MCP policy |
 | Grok command | never | never | never | the global config still loads — `--deny *` refuses the call |
-| OpenCode command | never | a private file per picture, through `--file`, only for models whose catalog lists `image` input | never | the global config still loads — the `tinycast` agent's deny-all rule drops every tool |
+| OpenCode command | never | a private file per picture, through `--file`, only for models whose catalog lists `image` input | never | selected Tinycast tools through a per-turn authenticated loopback bridge; all other tools denied |
 | Cursor command | never | never | never | the global config still loads — ask mode and withheld approval refuse the call |
 | OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | never yet — its catalog publishes a `file` modality Tinycast does not read | `tools` + `role: "tool"` turns |
 | OpenAI | not offered | `image_url` part, assumed supported | `file` part with `filename` and a `file_data` data URL | `tools` + `role: "tool"` turns |

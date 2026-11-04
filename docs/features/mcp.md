@@ -4,9 +4,10 @@ Tinycast connects [Model Context Protocol](https://modelcontextprotocol.io) serv
 tools to the model during a chat. A server is either a remote HTTP endpoint or a command Tinycast
 runs on this Mac; either way it advertises tools, Tinycast namespaces them by the server's handle,
 and the model calls what it wants. On an API route Tinycast is the MCP client; on the Codex and
-Claude routes the vendor CLI is, and Tinycast supplies the servers and answers for them.
-`Features/MCP/` owns servers and knows nothing about chat; [AI](ai.md) owns tool calling and knows
-nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
+Claude routes the vendor CLI is, and Tinycast supplies the servers and answers for them. OpenCode
+runs its own model loop but calls selected tools through Tinycast's per-turn local MCP bridge.
+`Features/MCP/` owns servers and knows nothing about chat; [AI](ai.md) owns tool calling but does
+not read MCP settings. `AIChatCoordinator.send` is the one place the two meet.
 
 ## Invariants
 
@@ -68,8 +69,10 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   number bounds a CLI route, in the terms its own client counts in: Claude takes it as
   `--max-turns`, which bounds model requests exactly as the loop's rounds do, and Codex — which
   names no round at all — is interrupted once a turn has spent that many **calls**, which is
-  stricter, never looser. Neither result size is Tinycast's to cut there: the output goes back to
-  the model inside the CLI, and what the transcript keeps is the row. Unlimited reaches a CLI route
+  stricter, never looser. OpenCode also counts calls and uses Tinycast's normal per-result and
+  aggregate result budgets through its bridge. On Codex and Claude neither result size is Tinycast's
+  to cut: the output goes back to the model inside the CLI, and what the transcript keeps is the row.
+  Unlimited reaches a CLI route
   as an `AIToolServerSession.rounds` of `nil`: Claude is given no `--max-turns`, since it has no
   cap without one, and Codex counts nothing, so there too only the model or Stop ends the turn. A
   Claude turn with no server to run is a different case and keeps `--max-turns 1` whatever the
@@ -81,14 +84,18 @@ nothing about MCP. `AIChatCoordinator.send` is the one place the two meet.
   A stdio server is a resident process of someone else's making, and the 100 MB budget is the reason
   this is not "start at launch".
 - **Who runs the loop is the route's own answer, and it is the only thing that differs.**
-  `AIModelCapabilities.tools` is true for `.api`, for Codex and for the Claude command, and false
-  for Apple Intelligence, Grok, OpenCode and Cursor — the three CLIs whose configurations merge
-  with no opt-out, which is why none of them may be handed a server. On an API route Tinycast is
+  `AIModelCapabilities.tools` follows model support for `.api` and OpenCode, is true for Codex
+  and Claude, and is false
+  for Apple Intelligence, Grok and Cursor. On an API route Tinycast is
   the MCP client and `AIToolLoopProvider` runs the loop. On the two subscription routes the vendor
   CLI is the MCP client: `AIModelSelection.runsItsOwnTools` says so, and `AIChatCoordinator` hands
   the route an `AIToolServerSession` instead of wrapping it. The same servers — less an OAuth one
   nobody is signed into, which a CLI could not explain — the same `MCPTrust` and the same
-  `ChatToolUse` rows either way.
+  `ChatToolUse` rows either way. OpenCode receives an `AIToolSession` with the same narrowed catalog
+  and invoke closure the API loop uses. It connects only to that turn's authenticated loopback
+  bridge through exact allow rules after a deny-all rule. Its built-ins and user-configured tools
+  stay denied. `runsItsOwnTools` remains false because Tinycast still owns its server connections
+  and must keep them warm.
 - **A CLI is told what to run, never where to keep it.** Launch arguments, the child's environment
   and files inside Tinycast's own workspace are the whole surface; `~/.codex` and `~/.claude` are
   never written. The secrets Tinycast keeps never reach argv, where `ps` would show them: Codex
@@ -344,7 +351,9 @@ caught there rather than in the middle of a conversation.
   in the next; Always Allow survives a relaunch; Escape refuses only that call.
 - `@filesystem list my desktop` shows the tools glyph after the text, sends without the prefix, and
   offers only that server's tools. `@nosuch hello` is sent verbatim.
-- On Apple Intelligence, Grok, OpenCode or Cursor, no tool is offered and the reply streams as before.
+- On Apple Intelligence, Grok or Cursor, no tool is offered and the reply streams as before.
+- On OpenCode, selected tools use Tinycast's consent dialog and show the same rows. Its built-ins
+  and user-configured tools remain denied; titles and text rewrites offer no tools.
 - On Codex and on the Claude command the same question answers with the same rows, the same dialog
   and the same `@slug` scoping; `ps` during a turn shows no secret on either command line.
 - With Tool call rounds on Unlimited, `ps` shows no `--max-turns` on an armed Claude turn, and a

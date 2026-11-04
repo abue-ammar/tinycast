@@ -105,15 +105,17 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
     let name: String
     let efforts: [ChatGPTSubscription.Effort]
     let acceptsImages: Bool
+    let supportsTools: Bool
 
     init(
         id: String, name: String, efforts: [ChatGPTSubscription.Effort] = [],
-        acceptsImages: Bool = false
+        acceptsImages: Bool = false, supportsTools: Bool = false
     ) {
         self.id = id
         self.name = name
         self.efforts = efforts
         self.acceptsImages = acceptsImages
+        self.supportsTools = supportsTools
     }
 
     func resolvedEffort(_ preferred: String?) -> String? {
@@ -255,13 +257,15 @@ struct InstalledAIModel: Equatable, Identifiable, Sendable {
             else { return nil }
             let id = provider + "/" + model
             let variants = (entry["variants"] as? [[String: Any]] ?? []).compactMap { $0["id"] as? String }
-            let input = (entry["capabilities"] as? [String: Any])?["input"] as? [String] ?? []
+            let capabilities = entry["capabilities"] as? [String: Any] ?? [:]
+            let input = capabilities["input"] as? [String] ?? []
             return InstalledAIModel(
                 id: id, name: id,
                 efforts: variants.sorted(by: effortOrder).map {
                     ChatGPTSubscription.Effort(id: $0, detail: nil)
                 },
-                acceptsImages: input.contains("image"))
+                acceptsImages: input.contains("image"),
+                supportsTools: capabilities["tools"] as? Bool == true)
         }
         return models.sorted { $0.id.localizedStandardCompare($1.id) == .orderedAscending }
     }
