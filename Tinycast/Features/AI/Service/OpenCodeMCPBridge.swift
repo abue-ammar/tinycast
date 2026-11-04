@@ -174,7 +174,8 @@ final class OpenCodeMCPBridge {
         switch method {
         case "initialize":
             let requested = params["protocolVersion"]?.stringValue ?? ""
-            let version = ["2024-11-05", "2025-03-26", "2025-06-18"].contains(requested)
+            let version =
+                ["2024-11-05", "2025-03-26", "2025-06-18"].contains(requested)
                 ? requested : "2025-06-18"
             result = .object([
                 "protocolVersion": .string(version), "capabilities": .object(["tools": .object([:])]),
@@ -183,13 +184,16 @@ final class OpenCodeMCPBridge {
         case "ping":
             result = .object([:])
         case "tools/list":
-            result = .object(["tools": .array(session.tools.enumerated().map { index, tool in
-                .object([
-                    "name": .string(OpenCodeMCPLaunch.toolName(at: index)),
-                    "description": .string(tool.origin + ": " + tool.title + "\n" + tool.description),
-                    "inputSchema": tool.parameters
-                ])
-            })])
+            result = .object([
+                "tools": .array(
+                    session.tools.enumerated().map { index, tool in
+                        .object([
+                            "name": .string(OpenCodeMCPLaunch.toolName(at: index)),
+                            "description": .string(tool.origin + ": " + tool.title + "\n" + tool.description),
+                            "inputSchema": tool.parameters
+                        ])
+                    })
+            ])
         case "tools/call":
             result = try await call(params)
         default:
@@ -245,18 +249,8 @@ final class OpenCodeMCPBridge {
         try Task.checkCancellation()
         guard !stopped else { throw CancellationError() }
         event(.toolResult(id: id, isError: result.isError))
-        let allowance = min(
-            AIToolLoopProvider.maxResultBytes, AIToolLoopProvider.maxTurnResultBytes - spent)
-        let bytes = result.content.utf8
-        spent += min(bytes.count, allowance)
-        var prefix = bytes.prefix(allowance)
-        var text = String(bytes: prefix, encoding: .utf8)
-        while text == nil {
-            prefix = prefix.dropLast()
-            text = String(bytes: prefix, encoding: .utf8)
-        }
-        let content = (text ?? "") + (bytes.count > allowance ? "\n…truncated." : "")
-        return toolResult(content, isError: result.isError)
+        let bounded = AIToolLoopProvider.bounded(result, spent: &spent)
+        return toolResult(bounded.content, isError: bounded.isError)
     }
 
     private func toolResult(_ text: String, isError: Bool) -> JSONValue {
@@ -270,11 +264,10 @@ final class OpenCodeMCPBridge {
         _ connection: NetworkConnection<TCP>, status: String, body: Data?
     ) async throws {
         let body = body ?? Data()
-        var response = Data((
-            "HTTP/1.1 \(status)\r\nContent-Type: application/json\r\n"
-            + "Cache-Control: no-store\r\nConnection: close\r\n"
-            + "Content-Length: \(body.count)\r\n\r\n"
-        ).utf8)
+        var response = Data(
+            ("HTTP/1.1 \(status)\r\nContent-Type: application/json\r\n"
+                + "Cache-Control: no-store\r\nConnection: close\r\n"
+                + "Content-Length: \(body.count)\r\n\r\n").utf8)
         response.append(body)
         try await connection.send(response, endOfStream: true)
     }

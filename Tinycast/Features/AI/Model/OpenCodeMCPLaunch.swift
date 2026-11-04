@@ -12,14 +12,20 @@ enum OpenCodeMCPLaunch {
         }
         let config: [String: Any] = [
             "share": "disabled", "snapshots": false,
-            "agents": [InstalledAIKind.openCodeAgent: [
-                "system": "You are generating text inside Tinycast. Use only the supplied MCP tools.",
-                "permissions": permissions
-            ]],
-            "mcp": ["servers": [server: [
-                "type": "remote", "url": url, "oauth": false, "codemode": false,
-                "headers": ["Authorization": "Bearer " + bearer]
-            ]]]
+            "agents": [
+                InstalledAIKind.openCodeAgent: [
+                    "system": "You are generating text inside Tinycast. Use only the supplied MCP tools.",
+                    "permissions": permissions
+                ]
+            ],
+            "mcp": [
+                "servers": [
+                    server: [
+                        "type": "remote", "url": url, "oauth": false, "codemode": false,
+                        "headers": ["Authorization": "Bearer " + bearer]
+                    ]
+                ]
+            ]
         ]
         let data = try JSONSerialization.data(withJSONObject: config, options: [.sortedKeys])
         guard let text = String(bytes: data, encoding: .utf8) else {

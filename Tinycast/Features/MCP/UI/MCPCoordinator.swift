@@ -117,9 +117,8 @@ final class MCPCoordinator {
         guard await isPermitted(server, tool: route.tool, in: chat) else {
             return .failure(call.id, "The user declined this tool call.")
         }
+        manager.markUsed()
         do {
-            try Task.checkCancellation()
-            manager.markUsed()
             let (content, isError) = try await connection.call(
                 route.tool, arguments: JSONValue(data: Data(call.arguments.utf8)) ?? .object([:]))
             return AIToolResult(callID: call.id, content: content, isError: isError)
@@ -184,7 +183,6 @@ final class MCPCoordinator {
     }
 
     private func isPermitted(_ server: MCPServer, tool: String, in chat: UUID) async -> Bool {
-        guard !Task.isCancelled else { return false }
         switch MCPTrustPolicy.decide(
             trust: server.trust, isGrantedForChat: chatGrants[chat]?.contains(server.id) == true)
         {
@@ -192,9 +190,7 @@ final class MCPCoordinator {
         case .refuse: return false
         case .ask: break
         }
-        let choice = await ask(server, tool: tool)
-        guard !Task.isCancelled else { return false }
-        switch choice {
+        switch await ask(server, tool: tool) {
         case .always:
             store.setTrust(.always, for: server.id)
             return true

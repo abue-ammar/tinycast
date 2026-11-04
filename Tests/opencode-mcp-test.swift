@@ -14,7 +14,9 @@ struct OpenCodeMCPTest {
             await MainActor.run { calls.append(call) }
             return AIToolResult(callID: call.id, content: call.arguments, isError: false)
         }
-        let bridge = OpenCodeMCPBridge(session: session) { events.append($0) } failure: {
+        let bridge = OpenCodeMCPBridge(session: session) {
+            events.append($0)
+        } failure: {
             failures.append($0)
         }
         let configuration = try await bridge.start()
@@ -76,8 +78,9 @@ struct OpenCodeMCPTest {
             assert(ping.0 == 200)
         }
         let initialized = try await request("initialize", params: ["protocolVersion": "2025-06-18"])
-        assert(initialized.1?.objectValue?["result"]?.objectValue?["protocolVersion"]
-            == .string("2025-06-18"))
+        assert(
+            initialized.1?.objectValue?["result"]?.objectValue?["protocolVersion"]
+                == .string("2025-06-18"))
         let notification = try await request("notifications/initialized", notification: true)
         assert(notification.0 == 202)
         let list = try await request("tools/list")
@@ -85,16 +88,19 @@ struct OpenCodeMCPTest {
         let unknown = try await request("tools/call", params: ["name": "shell", "arguments": [:]])
         assert(unknown.1?.objectValue?["result"]?.objectValue?["isError"] == .bool(true))
         assert(calls.isEmpty && events.isEmpty)
-        let reply = try await request("tools/call", params: [
-            "name": wireName, "arguments": ["text": "hello"]
-        ])
+        let reply = try await request(
+            "tools/call",
+            params: [
+                "name": wireName, "arguments": ["text": "hello"]
+            ])
         assert(reply.1?.objectValue?["result"]?.objectValue?["isError"] == .bool(false))
         assert(calls.count == 1 && calls[0].name == tool.name)
         assert(JSONValue(data: Data(calls[0].arguments.utf8))?.objectValue?["text"] == .string("hello"))
-        assert(events == [
-            .toolCall(id: calls[0].id, origin: "Test", title: "Echo"),
-            .toolResult(id: calls[0].id, isError: false)
-        ])
+        assert(
+            events == [
+                .toolCall(id: calls[0].id, origin: "Test", title: "Echo"),
+                .toolResult(id: calls[0].id, isError: false)
+            ])
         _ = try await request("tools/call", params: ["name": wireName])
         do {
             _ = try await request("tools/call", params: ["name": wireName])
@@ -141,17 +147,23 @@ struct OpenCodeMCPTest {
         var cancelled: CheckedContinuation<Void, Never>?
         var cancellationEvents: [AIStreamEvent] = []
         let cancellationSession = AIToolSession(tools: [tool], maxCalls: nil) { call in
-            await MainActor.run { started?.resume(); started = nil }
+            await MainActor.run {
+                started?.resume(); started = nil
+            }
             do {
                 try await Task.sleep(for: .seconds(60))
             } catch {
-                await MainActor.run { cancelled?.resume(); cancelled = nil }
+                await MainActor.run {
+                    cancelled?.resume(); cancelled = nil
+                }
             }
             return .failure(call.id, "Cancelled")
         }
         let cancellationBridge = OpenCodeMCPBridge(session: cancellationSession) {
             cancellationEvents.append($0)
-        } failure: { _ in assertionFailure("Cancellation must not fail the turn") }
+        } failure: { _ in
+            assertionFailure("Cancellation must not fail the turn")
+        }
         let cancellationConfig = try await cancellationBridge.start()
         let pending = Task {
             try? await request("tools/call", params: ["name": wireName], configuration: cancellationConfig)
@@ -211,7 +223,9 @@ struct OpenCodeMCPTest {
                 kind: .openCode, executable: executable, model: "test/model", effort: nil,
                 workspace: directory, toolSession: tools)
             var events: [AIStreamEvent] = []
-            for try await event in provider.stream(AIRequest(messages: [AIMessage(role: .user, text: "Hello")])) {
+            for try await event in provider.stream(
+                AIRequest(messages: [AIMessage(role: .user, text: "Hello")]))
+            {
                 events.append(event)
             }
             assert(events.contains(.text("Complete")) && events.last == .finished)
