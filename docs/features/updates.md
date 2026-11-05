@@ -114,7 +114,9 @@ resumes the same schedule, with the startup delay and cached check time respecte
 always works independently of this preference, including while automatic checking is disabled.
 
 **Later means skip.** It records the version, so that release stops asking; a newer one still asks.
-Check for Updates ignores the record and always offers whatever is newer than what is running.
+Check for Updates ignores the record and always offers whatever is newer than what is running,
+unless an update is already downloading or waiting for quit. Then it shows that update instead, since
+offering it again would discard the download or the staged copy.
 
 ## Installing
 

@@ -63,16 +63,19 @@ final class UpdateCoordinator {
 
     // MARK: - Entry points
 
-    /// The manual action: always opens the window and always asks GitHub.
+    /// Always opens the window, but never re-offers an update under way: that would discard it.
     func checkForUpdates() {
         guard store.channel.updatesItself else {
             stage = .localBuild
             present()
             return
         }
-        if case .installing = stage {
+        switch stage {
+        case .installing, .readyToRelaunch:
             present()
             return
+        case .checking, .upToDate, .localBuild, .available, .blocked, .failed:
+            break
         }
         stage = .checking
         present()
