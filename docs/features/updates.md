@@ -1,8 +1,8 @@
 # Updates
 
 By default, Tinycast checks GitHub Releases once a day and offers the newest release for its own
-channel in a native window with its release notes, installs it and relaunches. There is no Sparkle and
-no appcast: the release feed the website already reads is the feed the app reads.
+channel in a pill in the palette, then installs it at the next relaunch or quit. There is no Sparkle
+and no appcast: the release feed the website already reads is the feed the app reads.
 
 ## Invariants
 
@@ -46,34 +46,35 @@ no appcast: the release feed the website already reads is the feed the app reads
   callback, so AppKit's nested termination loop can run the main-actor cleanup. The delegate returns
   `terminateLater` and replies when cleanup finishes, preserving system logout and shutdown requests.
   A reopen is scheduled once, only when termination is committed, and waits for the old process to exit.
-- **An automatic prompt defers to whatever the user is doing, and is never spent unshown.**
-  `UpdateReadiness` withholds it while a snippet is expanding, an extension command is running, an
-  uninstall is trashing, a shortcut is being recorded, a prompt or dialog is up, or the palette is
-  open. A withheld prompt is still owed: `presentIfAvailable` answers `false`, the version is left
-  unannounced, and the pump re-offers it every two minutes for half an hour before falling back to
-  the daily rhythm. That is what a hand-launched copy depends on — its one announcement falls 30 s
-  in, straight into the palette the user opened the app to use, where a launch-at-login copy would
-  have found the desktop idle. The window itself still appears at most once per version per launch:
-  `announcedVersion` is set the moment an offer lands, so re-offering can never turn into nagging.
-  Readiness is asked again at the click.
+- **An update never interrupts.** The automatic check only sets `UpdateCoordinator.stage`, and
+  `UpdatePill` shows it the next time the palette opens. `announcedVersion` limits an offer to once
+  per version per launch. Download and verification need no `UpdateReadiness` check, because nothing
+  changes until quit.
+- **Only `UpdatePill` reads `stage`.** It stands alone in the footer and the compact header, so a
+  download tick never re-renders the palette around it.
 - **Automatic checking is optional; manual checking stays available.** Settings → General →
   Automatically check for updates defaults on. Turning it off stops the background task and any
-  in-flight automatic request, so neither a response nor a cached release can raise a new prompt.
+  in-flight automatic request, so neither a response nor a cached release can make a new offer.
   The preference travels through settings backups and `general.automaticallyCheckForUpdates` in
   settings.json; release metadata and skipped versions stay in the feature's own cache file.
-- **The window shows the changelog and nothing else.** CI writes install instructions below
-  `<!-- tinycast:install -->`, and `ReleaseNotes.summary` — the single reader of that marker, called
-  where the feed is parsed so the cache holds the cut text too — drops them. An app that installs its
-  own updates has no use for a Homebrew command, and a body published before the marker existed has
-  none, so it comes back whole.
-- **The notes are laid out by `ReleaseNotesView`, which is this feature's own.** `AttributedString`
-  parses inline styling only; headings and bullets are placed by hand or they arrive as literal `##`
-  and `*`. `ExtensionMarkdownView` does the same job and is deliberately not reused — an extension's
-  views never leave `Features/Extensions/`.
-- **`@handle` and `#304` are linked by the app, never by the release body.** GitHub autolinks both on
-  the web, and a bare mention is what notifies the contributor, so the published body keeps them
-  plain and `ReleaseNotes` spells them as Markdown links on the way to the window. Both point at
-  `ReleaseFeed.repository`, the one place the repo is named.
+- **The app shows no release notes.** The Changelog item in the palette's app menu opens
+  `https://tinycast.dev/changelog/`.
+
+## The pill
+
+| Stage | Shows | Button | × |
+| --- | --- | --- | --- |
+| `available` | the version | Update | skips this version |
+| `installing` | a ring and percent for the download, then a spinner and the phase | none | cancels |
+| `readyToRelaunch` | Update ready | Relaunch | hides it; the update still installs at quit |
+| `failed` | Update failed | Details | hides it |
+| `idle`, `checking` | nothing | | |
+
+A pill cannot hold a failure's text, so Details opens a dialog with the reason and Try Again.
+
+The pill sits beside the menu circle in the footer. The compact bar has no footer, so there it ends
+the header row. It cannot reuse `ExtensionToastPill`, because extension views stay in
+`Features/Extensions/`, and an extension toast covers it.
 
 ## Channel and version
 
@@ -113,10 +114,13 @@ Disabling automatic checks takes effect immediately and survives relaunch. Turni
 resumes the same schedule, with the startup delay and cached check time respected. Check for Updates
 always works independently of this preference, including while automatic checking is disabled.
 
-**Later means skip.** It records the version, so that release stops asking; a newer one still asks.
-Check for Updates ignores the record and always offers whatever is newer than what is running,
-unless an update is already downloading or waiting for quit. Then it shows that update instead, since
-offering it again would discard the download or the staged copy.
+**× means skip.** On an offered version it records the version, so that release stops asking; a newer
+one still asks. Check for Updates ignores the record and always offers whatever is newer than what is
+running, unless an update is already downloading or waiting for quit. Then it shows that update
+instead, since offering it again would discard the download or the staged copy.
+
+Check for Updates reports in a HUD: progress while it asks, then up to date or unreachable. When there
+is an update, it opens the palette so the pill shows.
 
 ## Installing
 
@@ -163,8 +167,9 @@ which is the only zip that leaves the code signature verifiable — plain `zip` 
 breaks the seal, and the signature check above would then reject every update.
 
 The body it publishes is composed by `Scripts/release-notes.sh`: GitHub's generated changelog first,
-then `<!-- tinycast:install -->`, then the install text. Anything a release wants the update window to
-show has to go above that marker — see [release.md](../release.md#release-notes).
+then `<!-- tinycast:install -->`, then the install text. The app does not read the body. Anything a
+release wants the website's changelog to show has to go above that marker — see
+[release.md](../release.md#release-notes).
 
 **The casks must declare `auto_updates true`** in `abue-ammar/homebrew-tinycast`. Without it Homebrew
 compares its Caskroom receipt against the cask version, sees a self-updated app as outdated forever,

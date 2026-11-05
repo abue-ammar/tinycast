@@ -10,10 +10,7 @@ final class UpdateCheckStore {
     private static let refreshInterval: TimeInterval = 24 * 3600
     /// Shorter retry, so a machine offline at launch sees a release soon after it reconnects.
     private static let retryInterval: TimeInterval = 2 * 3600
-    /// A withheld prompt is re-offered this often, this many times, then left to the daily check.
-    private static let withheldInterval: TimeInterval = 120
-    private static let withheldRetryLimit = 15
-    /// Keeps the first check, and any window it raises, clear of the login rush.
+    /// Keeps the first check clear of the login rush.
     private static let startupDelay = Duration.seconds(30)
 
     let channel: ReleaseChannel
@@ -24,8 +21,7 @@ final class UpdateCheckStore {
     private(set) var lastCheckedAt: Date?
     private(set) var isChecking = false
 
-    /// Raised on an unskipped release; `false` answers that the prompt was withheld and is owed.
-    @ObservationIgnored var onUpdateAvailable: (@MainActor (AvailableRelease) -> Bool)?
+    @ObservationIgnored var onUpdateAvailable: (@MainActor (AvailableRelease) -> Void)?
 
     private let fileURL: URL
     @ObservationIgnored private let fetch: @Sendable () async -> Data?
@@ -33,7 +29,6 @@ final class UpdateCheckStore {
     private var installedVersion: AppVersion?
     /// At most one uninvited appearance per version per launch.
     @ObservationIgnored private var announcedVersion: AppVersion?
-    @ObservationIgnored private var withheldRetries = 0
     @ObservationIgnored private var pump: Task<Void, Never>?
 
     init(
@@ -58,13 +53,13 @@ final class UpdateCheckStore {
 
     deinit { pump?.cancel() }
 
-    /// Newer than what is running. What the window offers, including a version already skipped.
+    /// Newer than what is running. What a manual check offers, including a version already skipped.
     var update: AvailableRelease? {
         guard let runningVersion else { return nil }
         return ReleaseFeed.offer(latest, running: runningVersion, skipped: nil)
     }
 
-    /// The same, minus anything dismissed. Only this may interrupt the user.
+    /// The same, minus anything dismissed. Only this is offered unasked.
     var unskippedUpdate: AvailableRelease? {
         guard let runningVersion else { return nil }
         return ReleaseFeed.offer(latest, running: runningVersion, skipped: skippedVersion)
@@ -87,7 +82,6 @@ final class UpdateCheckStore {
     func stop() {
         pump?.cancel()
         pump = nil
-        withheldRetries = 0
     }
 
     /// The manual path: ignores freshness, and reports whether GitHub actually answered.
@@ -136,23 +130,15 @@ final class UpdateCheckStore {
         if wait <= 0 {
             wait = await check() ? Self.refreshInterval : Self.retryInterval
         }
-        if announce() {
-            withheldRetries = 0
-        } else if withheldRetries < Self.withheldRetryLimit {
-            // A launch straight into the palette must not spend the day's only announcement.
-            withheldRetries += 1
-            wait = min(wait, Self.withheldInterval)
-        }
+        announce()
         return wait
     }
 
-    /// `false` only when a pending release was withheld, so the pump comes back for it.
-    private func announce() -> Bool {
-        guard !Task.isCancelled else { return true }
-        guard let release = unskippedUpdate, announcedVersion != release.version else { return true }
-        guard onUpdateAvailable?(release) ?? true else { return false }
+    private func announce() {
+        guard !Task.isCancelled, let release = unskippedUpdate, announcedVersion != release.version
+        else { return }
         announcedVersion = release.version
-        return true
+        onUpdateAvailable?(release)
     }
 
     private func persist() {

@@ -20,10 +20,7 @@ struct UpdateCheckTests {
         let fixture = FetchFixture()
         let store = makeStore(file: file, fixture: fixture)
         var offers = 0
-        store.onUpdateAvailable = { _ in
-            offers += 1
-            return true
-        }
+        store.onUpdateAvailable = { _ in offers += 1 }
 
         store.start(after: .milliseconds(10))
         store.stop()
@@ -41,10 +38,7 @@ struct UpdateCheckTests {
         let fixture = FetchFixture()
         let store = makeStore(file: file, fixture: fixture)
         var offers = 0
-        store.onUpdateAvailable = { _ in
-            offers += 1
-            return true
-        }
+        store.onUpdateAvailable = { _ in offers += 1 }
         defer { store.stop() }
 
         store.start(after: .zero)
