@@ -97,9 +97,14 @@ enum SystemActionRunner {
                 at: URL(fileURLWithPath: "/System/Applications/Mission Control.app"),
                 configuration: configuration)
         case .toggleAppearance:
-            // The script returns the resulting state, so the confirmation can name it.
+            // `set` on an app property returns nothing, so read the state back.
             let result = try await runAppleScript(
-                "tell application \"System Events\" to tell appearance preferences to set dark mode to not dark mode"
+                """
+                tell application "System Events" to tell appearance preferences
+                    set dark mode to not dark mode
+                    return dark mode
+                end tell
+                """
             )
             let dark = result.flag
             return SystemActionFeedback(
