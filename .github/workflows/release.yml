@@ -166,7 +166,9 @@ jobs:
             --notes-file "$RUNNER_TEMP/notes.md" \
             $PRERELEASE_FLAG
 
+      # Stable is in homebrew/cask, where Homebrew's autobump bot bumps it.
       - name: Update Homebrew cask
+        if: github.event.inputs.channel == 'beta'
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           CASK: ${{ steps.meta.outputs.cask_name }}
@@ -218,9 +220,14 @@ jobs:
             echo "::warning::DISCORD_WEBHOOK_URL secret not set — skipping Discord announcement."
             exit 0
           fi
-          if [ "${CHANNEL}" = "stable" ]; then COLOR=3066993; else COLOR=15844367; fi
+          if [ "${CHANNEL}" = "stable" ]; then
+            COLOR=3066993
+            INSTALL="brew install --cask ${CASK}"
+          else
+            COLOR=15844367
+            INSTALL="brew install --cask abue-ammar/tinycast/${CASK}"
+          fi
           RELEASE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
-          INSTALL="brew install --cask abue-ammar/tinycast/${CASK}"
           # jq keeps backticks literal; Components V2 forbids top-level `content`, hence @everyone.
           jq -n \
             --argjson color "${COLOR}" \

@@ -52,10 +52,12 @@ CHANGELOG="$(printf '%s\n' "$GENERATED" | sed -E \
     if [ -n "$COMPARE_URL" ]; then printf ' [Full changelog](%s)' "$COMPARE_URL"; fi
     printf '\n\n'
     printf 'Install via Homebrew, or open the DMG below and drag %s to Applications:\n' "$DISPLAY_NAME"
-    printf '```sh\nbrew trust --tap abue-ammar/tinycast\nbrew install --cask abue-ammar/tinycast/%s\n```\n' "$CASK"
-    # The stable DMG is arm64-only; macOS 26 is the last release that boots on Intel.
     if [ "$CHANNEL" = "stable" ]; then
-        printf '%s\n' "On an **Intel** Mac, install \`abue-ammar/tinycast/tinycast-universal\` instead — same app, built with both slices."
+        printf '```sh\nbrew install --cask %s\n```\n' "$CASK"
+        # The stable DMG is arm64-only; macOS 26 is the last release that boots on Intel.
+        printf '%s\n' "On an **Intel** Mac, run \`brew trust --tap abue-ammar/tinycast\` and install \`abue-ammar/tinycast/tinycast-universal\` instead — same app, built with both slices."
+    else
+        printf '```sh\nbrew trust --tap abue-ammar/tinycast\nbrew install --cask abue-ammar/tinycast/%s\n```\n' "$CASK"
     fi
 } > "$BODY_OUT"
 

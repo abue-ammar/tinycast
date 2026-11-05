@@ -68,8 +68,8 @@ so the checkout fetches every commit without blobs.
 
 It builds on an `xcode-27` runner with the newest released Xcode 27 and publishes a GitHub Release
 tagged `v<full-version>` with a versioned DMG and zip asset, marked prerelease for beta. On success
-it also bumps the matching cask in the tap and announces the release on Discord. A stable run also
-dispatches the Website workflow, because the site reads the latest version and the
+it also bumps the matching cask in the tap, if it has one, and announces the release on Discord. A
+stable run also dispatches the Website workflow, because the site reads the latest version and the
 [changelog](https://tinycast.dev/changelog/) from GitHub at build time.
 
 A stable run then fans out to a second job, `universal`, which rebuilds the same commit with
@@ -121,13 +121,17 @@ pings `@everyone`.
 
 ### Homebrew tap automation
 
-Each job's final step rewrites the `version` + `sha256` of its cask (`tinycast`, `tinycast@beta` or
+Each job's final step rewrites the `version` + `sha256` of its cask (`tinycast@beta` or
 `tinycast-universal`) in the [`homebrew-tinycast`](https://github.com/abue-ammar/homebrew-tinycast) tap
 and pushes. It needs a `HOMEBREW_TAP_TOKEN` repo secret — a fine-grained PAT with **Contents:
 read/write** on the tap repo. Without the secret the step logs a warning and skips; the release still
 publishes. The `sed` is anchored to `^  version` / `^  sha256`, so a cask's two-space indent on those
 lines is load-bearing.
 
-Both stable casks install `Tinycast.app` under `com.tinycast.app`, so they `conflicts_with` one
-another and Homebrew routes each Mac by `depends_on`: `tinycast` requires `arch: :arm64`, and
-`tinycast-universal` takes the Intel Macs.
+`tinycast` is in [homebrew/cask](https://github.com/Homebrew/homebrew-cask/blob/main/Casks/t/tinycast.rb),
+so the stable job skips the step: Homebrew's autobump bot bumps it after a release. The tap's
+`tap_migrations.json` hands anyone who installed `tinycast` from the tap to that cask on `brew update`.
+
+Both stable casks install `Tinycast.app` under `com.tinycast.app`, so `tinycast-universal` declares
+`conflicts_with cask: "tinycast"`, and Homebrew routes each Mac by `depends_on`: `tinycast` requires
+`arch: :arm64`, and `tinycast-universal` takes the Intel Macs.

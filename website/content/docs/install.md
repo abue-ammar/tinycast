@@ -10,21 +10,24 @@ Tinycast needs **macOS 26 or later**, on Apple silicon or Intel.
 Homebrew is the easiest way to install Tinycast.
 
 ```bash
-brew trust --tap abue-ammar/tinycast
-brew install --cask abue-ammar/tinycast/tinycast
+brew install --cask tinycast
 ```
 
-You only run `brew trust` once. Homebrew won't install from a third-party tap until you trust it.
+Installed it from the `abue-ammar/tinycast` tap before? There is nothing to do: `brew update` moves it
+to Homebrew's own casks, without a reinstall.
 
 ### Intel Macs
 
 macOS 26 Tahoe is the last release that runs on Intel, so the stable build comes in two versions. The
 command above installs a smaller build for Apple silicon only. On an Intel Mac, install the universal
-cask instead:
+cask from Tinycast's own tap instead:
 
 ```bash
+brew trust --tap abue-ammar/tinycast
 brew install --cask abue-ammar/tinycast/tinycast-universal
 ```
+
+You only run `brew trust` once. Homebrew won't install from a third-party tap until you trust it.
 
 If you pick the wrong one, Homebrew stops you: `tinycast` won't install on an Intel Mac. Both casks
 give you the same `Tinycast.app`. The universal build also runs on Apple silicon; it's just a larger
@@ -40,6 +43,8 @@ side by side, so you can keep the stable version and try a beta at the same time
 | Stable  | `tinycast`           | `Tinycast.app`      |
 | Stable  | `tinycast-universal` | `Tinycast.app`      |
 | Beta    | `tinycast@beta`      | `Tinycast Beta.app` |
+
+The beta also comes from Tinycast's tap, so run the `brew trust` line above first:
 
 ```bash
 brew install --cask abue-ammar/tinycast/tinycast@beta

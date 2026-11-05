@@ -151,6 +151,6 @@ The body it publishes is composed by `Scripts/release-notes.sh`: GitHub's genera
 then `<!-- tinycast:install -->`, then the install text. Anything a release wants the update window to
 show has to go above that marker — see [release.md](../release.md#release-notes).
 
-**The casks must declare `auto_updates true`** in `abue-ammar/homebrew-tinycast`. Without it Homebrew
+**Every cask must declare `auto_updates true`**, in homebrew/cask and the tap. Without it Homebrew
 compares its Caskroom receipt against the cask version, sees a self-updated app as outdated forever,
 and re-installs over it on the next `brew upgrade`.
