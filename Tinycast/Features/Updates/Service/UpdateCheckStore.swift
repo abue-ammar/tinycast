@@ -19,7 +19,7 @@ final class UpdateCheckStore {
     /// The newest release on this channel, whether or not it is newer than what is running.
     private(set) var latest: AvailableRelease?
     private(set) var lastCheckedAt: Date?
-    private(set) var isChecking = false
+    var isChecking: Bool { checksInFlight > 0 }
 
     @ObservationIgnored var onUpdateAvailable: (@MainActor (AvailableRelease) -> Void)?
 
@@ -27,6 +27,7 @@ final class UpdateCheckStore {
     @ObservationIgnored private let fetch: @Sendable () async -> Data?
     private var skippedVersion: AppVersion?
     private var installedVersion: AppVersion?
+    private var checksInFlight = 0
     /// At most one uninvited appearance per version per launch.
     @ObservationIgnored private var announcedVersion: AppVersion?
     @ObservationIgnored private var pump: Task<Void, Never>?
@@ -87,9 +88,9 @@ final class UpdateCheckStore {
     /// The manual path: ignores freshness, and reports whether GitHub actually answered.
     @discardableResult
     func check() async -> Bool {
-        guard channel.updatesItself, !isChecking else { return false }
-        isChecking = true
-        defer { isChecking = false }
+        guard channel.updatesItself else { return false }
+        checksInFlight += 1
+        defer { checksInFlight -= 1 }
         guard let data = await fetch(), !Task.isCancelled else { return false }
         latest = ReleaseFeed.newest(from: data, channel: channel, architecture: .current)
         lastCheckedAt = Date()

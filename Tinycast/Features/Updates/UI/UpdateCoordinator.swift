@@ -16,7 +16,7 @@ final class UpdateCoordinator {
     private(set) var stage: Stage = .idle
 
     private let store: UpdateCheckStore
-    /// For reports and settings only — never for state this type owns.
+    /// For other features only — never for state this type owns.
     private unowned let core: AppCore
     @ObservationIgnored private var installTask: Task<Void, Never>?
     @ObservationIgnored private var staged: UpdateInstaller.Staged?
@@ -99,7 +99,6 @@ final class UpdateCoordinator {
         }
     }
 
-    /// Dismissing a version is what stops it asking again; a later one still will.
     func dismiss() {
         switch stage {
         case .available(let release):
