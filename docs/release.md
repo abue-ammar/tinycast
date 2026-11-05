@@ -21,11 +21,11 @@ opens without a Gatekeeper warning. Local builds, `build-dmg.sh` included, keep 
 
 ## How the in-app updater consumes a release
 
-Every release publishes two assets from one build: `Tinycast-<version>.dmg`, which people download by
-hand and which the cask installs, and `Tinycast-<version>.zip`, which the in-app updater installs. The
-zip is produced with `ditto -c -k --keepParent --sequesterRsrc` — the only zip that leaves the code
-signature verifiable, which matters because the updater refuses any bundle whose signature does not
-prove it is ours.
+Every release publishes three assets from one build: `Tinycast-<version>.dmg`, which people download
+by hand and which the cask installs, `Tinycast-<version>.zip`, which the in-app updater installs, and
+`Tinycast-<version>.zip.sig`, the zip's signature by the release key. The zip is produced with
+`ditto -c -k --keepParent --sequesterRsrc` — the only zip that leaves the code signature verifiable,
+which matters because the updater refuses any bundle it cannot prove is ours.
 
 A stable release publishes two more from the `universal` job, `Tinycast-Universal-<version>.dmg` and
 `.zip`, built from the same commit at the same version and bundle id but with both slices. They are
@@ -68,8 +68,8 @@ so the checkout fetches every commit without blobs.
 
 It builds on an `xcode-27` runner with the newest released Xcode 27 and publishes a GitHub Release
 tagged `v<full-version>` with a versioned DMG and zip asset, marked prerelease for beta. On success
-it also bumps the matching cask in the tap and announces the release on Discord. A stable run also
-dispatches the Website workflow, because the site reads the latest version and the
+it also bumps the matching cask in the tap, if it has one, and announces the release on Discord. A
+stable run also dispatches the Website workflow, because the site reads the latest version and the
 [changelog](https://tinycast.dev/changelog/) from GitHub at build time.
 
 A stable run then fans out to a second job, `universal`, which rebuilds the same commit with
@@ -87,6 +87,9 @@ from `main` only ([signing.md](signing.md#2-the-release-secrets)). After `verify
 `Scripts/package-release.sh` packs and signs the DMG, submits it once with `notarytool --wait`, and
 staples the ticket to the DMG and to the app before zipping it, so the updater's zip is stapled too.
 Any status but `Accepted` prints Apple's log and stops the run before anything is published.
+`Scripts/sign-update.swift` then signs the zip, and fails the run if the built app trusts a different
+update key. `Scripts/check-update-path.sh` runs just before notarizing, and fails the run unless the
+last release on the channel would install this build ([signing.md](signing.md#update-trust)).
 
 Channel builds override `TINYCAST_BUNDLE_IDENTIFIER`, not the target-wide `PRODUCT_BUNDLE_IDENTIFIER`.
 The Dictation helper derives its own identifier with a `.dictation` suffix; signature verification
@@ -121,12 +124,15 @@ pings `@everyone`.
 
 ### Homebrew tap automation
 
-Each job's final step rewrites the `version` + `sha256` of its cask (`tinycast`, `tinycast@beta` or
+Each job's final step rewrites the `version` + `sha256` of its cask (`tinycast@beta` or
 `tinycast-universal`) in the [`homebrew-tinycast`](https://github.com/abue-ammar/homebrew-tinycast) tap
 and pushes. It needs a `HOMEBREW_TAP_TOKEN` repo secret — a fine-grained PAT with **Contents:
 read/write** on the tap repo. Without the secret the step logs a warning and skips; the release still
 publishes. The `sed` is anchored to `^  version` / `^  sha256`, so a cask's two-space indent on those
 lines is load-bearing.
+
+`tinycast` is in [homebrew/cask](https://github.com/Homebrew/homebrew-cask/blob/main/Casks/t/tinycast.rb),
+so the stable job skips the step: Homebrew's autobump bot bumps it after a release.
 
 Both stable casks install `Tinycast.app` under `com.tinycast.app`, so they `conflicts_with` one
 another and Homebrew routes each Mac by `depends_on`: `tinycast` requires `arch: :arm64`, and

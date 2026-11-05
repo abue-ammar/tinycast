@@ -21,16 +21,25 @@ no appcast: the release feed the website already reads is the feed the app reads
 - **A downloaded update is never quarantined.** macOS sets that flag for sandboxed downloaders and
   for apps that opt in with `LSFileQuarantineEnabled`, and Tinycast is neither. `Quarantine` checks
   anyway, and an app that still carries the flag is refused rather than installed.
-- **The signature is the only integrity guarantee.** A downloaded bundle is trusted when its seal
-  validates, nested helper included, *and* it satisfies the Developer ID requirement pinned in
-  `BundleSignature`. The requirement names the team, so a certificate renewal strands nobody.
-  `notarized` is deliberately not in the requirement — it resolves the ticket through `syspolicyd`
-  or the network, so an offline Mac would refuse a bundle the chain already proves is ours.
+- **Two independent trust roots, either of which may change alone.** A downloaded bundle is trusted
+  when its seal passes strict validation, nested helpers included, *and* either its zip carries a
+  valid Ed25519 signature from the release key in `TinycastUpdatePublicKey` and the bundle is
+  Developer ID signed by any team, or it satisfies the running copy's own designated requirement.
+  Nothing is pinned: a new Apple team still updates through the key, and a new key through an
+  unchanged identity. Changing both in one release strands everyone. `notarized` is deliberately not
+  checked — it resolves the ticket through `syspolicyd` or the network, so an offline Mac would
+  refuse a bundle the signature already proves is ours.
 - **A build only ever updates within its own channel.** The channels are separate bundle ids installed
   side by side; crossing would mean installing a different app. `com.tinycast.app.dev` never updates
   at all, and does not advertise the command.
 - **Nothing is installed unless every check passes.** Bundle id, version and signature are all checked
-  on the expanded copy before `replaceItemAt` runs, and the running app survives any failure untouched.
+  on the expanded copy, and the running app survives any failure untouched.
+- **The swap waits for quit.** A verified update stays staged until Tinycast quits, by Relaunch or
+  any other way, so no old code ever loads a resource or helper from the new bundle.
+- **Only the exact bytes verified are installed.** Any process can write to Caches while the update
+  waits, so the swap re-runs the trust check and requires the code-directory hash recorded at
+  verification. It also skips the swap when the installed app is no longer the version running, so
+  a `brew upgrade` made meanwhile is never rolled back.
 - **Relaunching goes through `NSApp.terminate`, never `exit`.** That is what flushes a pending note
   draft and hands back the Hyper Key's HID-level caps remap, which outlives the process.
   Relaunch schedules termination through the main run loop, outside any Swift task or dispatch
@@ -105,29 +114,35 @@ resumes the same schedule, with the startup delay and cached check time respecte
 always works independently of this preference, including while automatic checking is disabled.
 
 **Later means skip.** It records the version, so that release stops asking; a newer one still asks.
-Check for Updates ignores the record and always offers whatever is newer than what is running.
+Check for Updates ignores the record and always offers whatever is newer than what is running,
+unless an update is already downloading or waiting for quit. Then it shows that update instead, since
+offering it again would discard the download or the staged copy.
 
 ## Installing
 
 One route, whatever the install came from:
 
 1. Stream the zip into `~/Library/Caches/<bundle-id>/Updates/`, with real byte progress and a Cancel
-   that actually aborts the transfer.
+   that actually aborts the transfer, then fetch its `.sig` and check it against the release key.
 2. `ditto -x -k` it into a staging folder, and take whatever `.app` lands there — the bundle is named
    for its channel, so it is `Tinycast Beta.app` on beta.
 3. Check quarantine natively; clear it if somehow present, and refuse the update if it survives.
 4. Verify the bundle id, the version, and that the code signature is valid and proves the bundle is
-   ours — by the pinned Developer ID requirement, or by the running app's own leaf certificate.
-5. `FileManager.replaceItemAt`. The staging folder is on the same volume as `/Applications`, which is
-   what lets this be atomic. A non-writable `/Applications` is reported, not worked around; there is
-   no privileged helper.
-6. Offer Relaunch, which spawns a detached waiter that reopens the app once this process exits —
-   `open` on a bundle id that is still running would only re-activate the instance on its way out.
+   ours — through the release key, or through the running copy's own designated requirement — and
+   record its code-directory hash. A `.sig` that fails to download is logged and treated as absent.
+5. Offer Relaunch. At quit, by Relaunch or otherwise, the staged bundle is checked again against
+   that hash, so a copy changed since staging is discarded, and `FileManager.replaceItemAt` swaps
+   it in. The staging folder is on the same volume as `/Applications`, which is what lets this be
+   atomic. A copy Tinycast cannot write is reported before the download starts, not worked around;
+   there is no privileged helper.
+6. Relaunch spawns a detached waiter that reopens the app once this process exits — `open` on a
+   bundle id that is still running would only re-activate the instance on its way out.
 
 A successful install records its version as `installedVersion`. The first launch running that
 version takes it and shows an "Updated to Tinycast <version>" HUD, whether it came from Relaunch or a
-later quit and reopen. A launch of any other version only clears it, so a brew or DMG install never
-reports.
+later quit and reopen. A launch of an older version shows that the update could not be installed,
+since the swap at quit has no window to report in. A newer version only clears it, so a brew or DMG
+install never reports.
 
 Nothing here touches `~/Library/Preferences`, `~/Library/Caches` or `Application Support`, so no
 setting, clipboard entry, note or snippet is affected by an update, by `brew upgrade`, or by both.

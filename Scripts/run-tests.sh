@@ -699,9 +699,6 @@ run settings-file-test     Tinycast/Features/Settings/Model/*.swift \
                            Tinycast/Features/Settings/Service/SettingsFileMonitor.swift \
                            Tinycast/Features/Settings/Service/SettingsFileRepository.swift \
                            Tinycast/Platform/AppPaths.swift
-run compact-favorites-migration-test Tinycast/Migrations/CompactFavoritesMigration.swift \
-                           Tinycast/Features/Settings/Model/*.swift \
-                           Tinycast/Platform/AppPaths.swift
 run backup-archive-test   Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/Backup/Model/BackupArchive.swift \
                            Tinycast/Features/Backup/Model/BackupBundle.swift \
@@ -795,7 +792,8 @@ run settings-history-test  Tinycast/Features/Settings/SettingsTab.swift \
                            $L/SearchRelevance.swift \
                            Tinycast/Platform/LocalizedResource.swift
 run updates-test           Tinycast/Features/Updates/Model/*.swift \
-                           Tinycast/Features/Updates/Service/BundleSignature.swift
+                           Tinycast/Features/Updates/Service/BundleSignature.swift \
+                           Tinycast/Features/Updates/Service/UpdateSignature.swift
 run update-check-test      Tinycast/Features/Updates/Model/*.swift \
                            Tinycast/Features/Updates/Service/UpdateCheckStore.swift \
                            Tinycast/Platform/AppPaths.swift

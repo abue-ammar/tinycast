@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import os
 
 /// The installer only performs an update the coordinator has decided is safe.
 @MainActor
@@ -27,6 +28,8 @@ final class UpdateCoordinator {
         title: String(localized: "Software Update"), contentSize: UpdateWindowView.initialSize,
         activation: core.activationPolicy)
     @ObservationIgnored private var installTask: Task<Void, Never>?
+    @ObservationIgnored private var staged: UpdateInstaller.Staged?
+    private static let logger = Logger(subsystem: "com.tinycast", category: "Updates")
 
     init(store: UpdateCheckStore, core: AppCore) {
         self.store = store
@@ -60,16 +63,19 @@ final class UpdateCoordinator {
 
     // MARK: - Entry points
 
-    /// The manual action: always opens the window and always asks GitHub.
+    /// Always opens the window, but never re-offers an update under way: that would discard it.
     func checkForUpdates() {
         guard store.channel.updatesItself else {
             stage = .localBuild
             present()
             return
         }
-        if case .installing = stage {
+        switch stage {
+        case .installing, .readyToRelaunch:
             present()
             return
+        case .checking, .upToDate, .localBuild, .available, .blocked, .failed:
+            break
         }
         stage = .checking
         present()
@@ -112,6 +118,7 @@ final class UpdateCoordinator {
             return
         }
         stage = .installing(release, .downloading(received: 0, expected: release.assetSize))
+        staged = nil
         let installer = self.installer
         // Hoisted: nesting the hop inside the task body would re-capture its weak `self`.
         let onProgress: @Sendable (UpdateInstaller.Phase) -> Void = { [weak self] phase in
@@ -119,7 +126,8 @@ final class UpdateCoordinator {
         }
         installTask = Task { [weak self] in
             do {
-                try await installer.install(release, onProgress: onProgress)
+                let staged = try await installer.prepare(release, onProgress: onProgress)
+                self?.staged = staged
                 self?.store.recordInstall(of: release.version)
                 self?.stage = .readyToRelaunch
             } catch is CancellationError {
@@ -154,6 +162,17 @@ final class UpdateCoordinator {
 
     func relaunch() {
         core.relaunch()
+    }
+
+    func installStagedUpdate() {
+        guard let staged else { return }
+        self.staged = nil
+        do {
+            try installer.install(staged)
+        } catch {
+            Self.logger.error(
+                "Installing the staged update failed: \(error.localizedDescription, privacy: .public)")
+        }
     }
 
     // MARK: - Private

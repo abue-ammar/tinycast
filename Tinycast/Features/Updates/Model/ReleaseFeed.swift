@@ -6,6 +6,7 @@ struct AvailableRelease: Codable, Hashable, Sendable {
     let notes: String
     let assetURL: URL
     let assetSize: Int64
+    let signatureURL: URL?
     let publishedAt: Date?
 }
 
@@ -52,6 +53,7 @@ enum ReleaseFeed {
             notes: ReleaseNotes.summary(of: entry.body ?? ""),
             assetURL: asset.browserDownloadURL,
             assetSize: asset.size,
+            signatureURL: entry.assets.first { $0.name == asset.name + ".sig" }?.browserDownloadURL,
             publishedAt: entry.publishedAt.flatMap { try? Date($0, strategy: .iso8601) })
     }
 

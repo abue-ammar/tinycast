@@ -95,16 +95,23 @@ struct UpdateCheckTests {
         let relaunched = makeStore(file: file, fixture: fixture, running: installed)
         expect(relaunched.latest?.version == installed, "recording an install keeps the cached release")
         expect(
-            relaunched.takeInstalledVersion() == installed, "the installed version's first launch reports it")
-        expect(relaunched.takeInstalledVersion() == nil, "the report is taken once")
+            relaunched.takeInstallReport() == .installed(installed),
+            "the installed version's first launch reports it")
+        expect(relaunched.takeInstallReport() == nil, "the report is taken once")
         let later = makeStore(file: file, fixture: fixture, running: installed)
-        expect(later.takeInstalledVersion() == nil, "a later launch reports nothing")
+        expect(later.takeInstallReport() == nil, "a later launch reports nothing")
 
         makeStore(file: file, fixture: fixture).recordInstall(of: installed)
         let unchanged = makeStore(file: file, fixture: fixture)
-        expect(unchanged.takeInstalledVersion() == nil, "a launch of another version reports nothing")
+        expect(
+            unchanged.takeInstallReport() == .notInstalled(installed),
+            "an older version still running reports the update that never landed")
         let afterwards = makeStore(file: file, fixture: fixture, running: installed)
-        expect(afterwards.takeInstalledVersion() == nil, "and clears the record")
+        expect(afterwards.takeInstallReport() == nil, "and clears the record")
+
+        makeStore(file: file, fixture: fixture).recordInstall(of: installed)
+        let newer = makeStore(file: file, fixture: fixture, running: AppVersion("1.2.0"))
+        expect(newer.takeInstallReport() == nil, "a newer version from elsewhere reports nothing")
     }
 
     static func seedCache(at file: URL) throws {

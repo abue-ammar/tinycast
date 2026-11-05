@@ -1,11 +1,11 @@
 import Foundation
+import os
 
 struct UpdateInstaller: Sendable {
     enum Phase: Sendable, Equatable {
         case downloading(received: Int64, expected: Int64)
         case extracting
         case verifying
-        case replacing
 
         var message: String {
             switch self {
@@ -13,7 +13,6 @@ struct UpdateInstaller: Sendable {
                 return String(localized: "Downloading… \(Self.size(received)) of \(Self.size(expected))")
             case .extracting: return String(localized: "Expanding…")
             case .verifying: return String(localized: "Verifying…")
-            case .replacing: return String(localized: "Replacing Tinycast…")
             }
         }
 
@@ -30,12 +29,26 @@ struct UpdateInstaller: Sendable {
         }
     }
 
+    struct Staged: Sendable {
+        let app: URL
+        let isReleaseSigned: Bool
+        let codeHash: Data
+    }
+
     let bundleURL: URL
     let stagingDirectory: URL
 
-    func install(
+    private static let logger = Logger(subsystem: "com.tinycast", category: "Updates")
+
+    /// Everything short of the swap, which waits for quit so no old code runs on new files.
+    func prepare(
         _ release: AvailableRelease, onProgress: @escaping @Sendable (Phase) -> Void
-    ) async throws {
+    ) async throws -> Staged {
+        let location = bundleURL.deletingLastPathComponent()
+        // The swap runs at quit, too late to report anything, so an unwritable copy is caught now.
+        guard FileManager.default.isWritableFile(atPath: location.path),
+            FileManager.default.isWritableFile(atPath: bundleURL.path)
+        else { throw UpdateFailure.replaceFailed(location.path) }
         try? FileManager.default.createDirectory(
             at: stagingDirectory, withIntermediateDirectories: true)
         let archive = stagingDirectory.appendingPathComponent("\(release.tag).zip")
@@ -48,22 +61,58 @@ struct UpdateInstaller: Sendable {
             onProgress(.downloading(received: received, expected: expected))
         }
 
+        let releaseSigned = try await isReleaseSigned(archive, by: release.signatureURL)
+
         onProgress(.extracting)
         let staged = try await expand(archive, into: expanded)
+        try? FileManager.default.removeItem(at: archive)
 
         onProgress(.verifying)
-        try verify(staged, is: release)
+        do {
+            let codeHash = try verify(staged, is: release, releaseSigned: releaseSigned)
+            try Task.checkCancellation()
+            return Staged(app: staged, isReleaseSigned: releaseSigned, codeHash: codeHash)
+        } catch {
+            try? FileManager.default.removeItem(at: expanded)
+            throw error
+        }
+    }
 
-        try Task.checkCancellation()
-        onProgress(.replacing)
+    /// Anything can write to Caches before quit, so only the exact bytes verified may land.
+    func install(_ staged: Staged) throws {
+        defer { try? FileManager.default.removeItem(at: staged.app.deletingLastPathComponent()) }
+        // Another install may have replaced the app since launch; never roll that back.
+        guard Self.info(at: bundleURL)?["CFBundleShortVersionString"] as? String == runningVersion else {
+            throw UpdateFailure.replaceFailed(bundleURL.path)
+        }
+        let codeHash = BundleSignature.trustedHash(
+            of: staged.app, releaseSigned: staged.isReleaseSigned)
+        guard codeHash == staged.codeHash else { throw UpdateFailure.replaceFailed(staged.app.path) }
         do {
             _ = try FileManager.default.replaceItemAt(
-                bundleURL, withItemAt: staged, options: .usingNewMetadataOnly)
+                bundleURL, withItemAt: staged.app, options: .usingNewMetadataOnly)
         } catch {
             throw UpdateFailure.replaceFailed(error.localizedDescription)
         }
-        try? FileManager.default.removeItem(at: archive)
-        try? FileManager.default.removeItem(at: expanded)
+    }
+
+    private var runningVersion: String? {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+    }
+
+    /// A missing signature is not fatal, since the running identity may still vouch for the bundle.
+    private func isReleaseSigned(_ archive: URL, by signatureURL: URL?) async throws -> Bool {
+        guard let signatureURL else { return false }
+        let signature: Data
+        do {
+            signature = try await UpdateDownloader.data(from: signatureURL)
+        } catch {
+            try Task.checkCancellation()
+            Self.logger.error(
+                "Fetching the update signature failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+        return UpdateSignature.isSigned(archive, by: signature)
     }
 
     private func expand(_ archive: URL, into directory: URL) async throws -> URL {
@@ -81,7 +130,9 @@ struct UpdateInstaller: Sendable {
         return app
     }
 
-    private func verify(_ staged: URL, is release: AvailableRelease) throws {
+    private func verify(
+        _ staged: URL, is release: AvailableRelease, releaseSigned: Bool
+    ) throws -> Data {
         if Quarantine.isSet(on: staged) { Quarantine.clear(from: staged) }
         // Refuse rather than install something the user would then have to unquarantine by hand.
         guard !Quarantine.isSet(on: staged) else { throw UpdateFailure.quarantined }
@@ -95,7 +146,9 @@ struct UpdateInstaller: Sendable {
             throw UpdateFailure.versionMismatch(
                 expected: release.version.description, found: found ?? String(localized: "unknown"))
         }
-        guard BundleSignature.isTrusted(staged) else { throw UpdateFailure.identityMismatch }
+        guard let codeHash = BundleSignature.trustedHash(of: staged, releaseSigned: releaseSigned)
+        else { throw UpdateFailure.identityMismatch }
+        return codeHash
     }
 
     /// Off disk, not through `Bundle`, whose cache would answer for the old copy.

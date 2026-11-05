@@ -114,12 +114,19 @@ final class UpdateCheckStore {
         persist()
     }
 
-    /// Taken once, so a later launch, or a version that came from elsewhere, reports nothing.
-    func takeInstalledVersion() -> AppVersion? {
+    enum InstallReport: Equatable {
+        case installed(AppVersion)
+        case notInstalled(AppVersion)
+    }
+
+    /// Taken once. A newer version running came from elsewhere, so it reports nothing.
+    func takeInstallReport() -> InstallReport? {
         guard let installed = installedVersion else { return nil }
         installedVersion = nil
         persist()
-        return installed == runningVersion ? installed : nil
+        guard let runningVersion else { return nil }
+        if installed == runningVersion { return .installed(installed) }
+        return installed > runningVersion ? .notInstalled(installed) : nil
     }
 
     private func advance() async -> TimeInterval {
