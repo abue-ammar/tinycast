@@ -27,7 +27,7 @@ struct UpdatesTests {
         rejectsUnusableFeeds()
         offersOnlyWhatIsWorthInstalling()
         picksTheSignatureBesideItsZip()
-        trustsASealedBundleThroughEitherPath()
+        refusesWhatNeitherTrustPathVouchesFor()
         verifiesTheReleaseSignature()
         keepsOnlyTheChangelog()
         laysOutTheChangelog()
@@ -319,21 +319,25 @@ struct UpdatesTests {
             "a release without a signature is still offered, for the identity path to judge")
     }
 
-    static func trustsASealedBundleThroughEitherPath() {
-        let sealed = URL(fileURLWithPath: "/System/Applications/Calculator.app")
+    static func refusesWhatNeitherTrustPathVouchesFor() {
+        var requirement: SecRequirement?
+        let status = SecRequirementCreateWithString(
+            BundleSignature.developerID as CFString, [], &requirement)
         expect(
-            BundleSignature.isTrusted(sealed, releaseSigned: true),
-            "a sealed bundle is trusted once the release key vouches for its archive")
+            status == errSecSuccess && requirement != nil,
+            "the Developer ID requirement compiles, or the release key would trust nothing")
+
+        let apple = URL(fileURLWithPath: "/System/Applications/Calculator.app")
         expect(
-            !BundleSignature.isTrusted(sealed, releaseSigned: false),
+            BundleSignature.trustedHash(of: apple, releaseSigned: true) == nil,
+            "the release key alone never trusts a bundle outside Developer ID")
+        expect(
+            BundleSignature.trustedHash(of: apple, releaseSigned: false) == nil,
             "without the key, a bundle signed by another identity is refused")
         expect(
-            !BundleSignature.isTrusted(URL(fileURLWithPath: "/nonexistent.app"), releaseSigned: true),
+            BundleSignature.trustedHash(of: URL(fileURLWithPath: "/nonexistent.app"), releaseSigned: true)
+                == nil,
             "and nothing is trusted without a seal to check")
-        expect(BundleSignature.isSealed(sealed), "the re-check before the swap passes an intact bundle")
-        expect(
-            !BundleSignature.isSealed(URL(fileURLWithPath: "/nonexistent.app")),
-            "and fails a missing one")
     }
 
     static func verifiesTheReleaseSignature() {

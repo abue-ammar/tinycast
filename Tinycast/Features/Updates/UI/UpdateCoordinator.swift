@@ -28,7 +28,7 @@ final class UpdateCoordinator {
         title: String(localized: "Software Update"), contentSize: UpdateWindowView.initialSize,
         activation: core.activationPolicy)
     @ObservationIgnored private var installTask: Task<Void, Never>?
-    @ObservationIgnored private var stagedApp: URL?
+    @ObservationIgnored private var staged: UpdateInstaller.Staged?
     private static let logger = Logger(subsystem: "com.tinycast", category: "Updates")
 
     init(store: UpdateCheckStore, core: AppCore) {
@@ -115,7 +115,7 @@ final class UpdateCoordinator {
             return
         }
         stage = .installing(release, .downloading(received: 0, expected: release.assetSize))
-        stagedApp = nil
+        staged = nil
         let installer = self.installer
         // Hoisted: nesting the hop inside the task body would re-capture its weak `self`.
         let onProgress: @Sendable (UpdateInstaller.Phase) -> Void = { [weak self] phase in
@@ -124,7 +124,7 @@ final class UpdateCoordinator {
         installTask = Task { [weak self] in
             do {
                 let staged = try await installer.prepare(release, onProgress: onProgress)
-                self?.stagedApp = staged
+                self?.staged = staged
                 self?.store.recordInstall(of: release.version)
                 self?.stage = .readyToRelaunch
             } catch is CancellationError {
@@ -162,10 +162,10 @@ final class UpdateCoordinator {
     }
 
     func installStagedUpdate() {
-        guard let stagedApp else { return }
-        self.stagedApp = nil
+        guard let staged else { return }
+        self.staged = nil
         do {
-            try installer.install(stagedApp)
+            try installer.install(staged)
         } catch {
             Self.logger.error("Installing the staged update failed: \(error.localizedDescription)")
         }

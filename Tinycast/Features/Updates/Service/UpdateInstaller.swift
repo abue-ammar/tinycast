@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 struct UpdateInstaller: Sendable {
     enum Phase: Sendable, Equatable {
@@ -28,13 +29,21 @@ struct UpdateInstaller: Sendable {
         }
     }
 
+    struct Staged: Sendable {
+        let app: URL
+        let isReleaseSigned: Bool
+        let codeHash: Data
+    }
+
     let bundleURL: URL
     let stagingDirectory: URL
+
+    private static let logger = Logger(subsystem: "com.tinycast", category: "Updates")
 
     /// Everything short of the swap, which waits for quit so no old code runs on new files.
     func prepare(
         _ release: AvailableRelease, onProgress: @escaping @Sendable (Phase) -> Void
-    ) async throws -> URL {
+    ) async throws -> Staged {
         let location = bundleURL.deletingLastPathComponent()
         // The swap runs at quit, too late to report anything, so an unwritable copy is caught now.
         guard FileManager.default.isWritableFile(atPath: location.path),
@@ -52,7 +61,7 @@ struct UpdateInstaller: Sendable {
             onProgress(.downloading(received: received, expected: expected))
         }
 
-        let releaseSigned = await isReleaseSigned(archive, by: release.signatureURL)
+        let releaseSigned = try await isReleaseSigned(archive, by: release.signatureURL)
 
         onProgress(.extracting)
         let staged = try await expand(archive, into: expanded)
@@ -60,30 +69,48 @@ struct UpdateInstaller: Sendable {
 
         onProgress(.verifying)
         do {
-            try verify(staged, is: release, releaseSigned: releaseSigned)
+            let codeHash = try verify(staged, is: release, releaseSigned: releaseSigned)
             try Task.checkCancellation()
+            return Staged(app: staged, isReleaseSigned: releaseSigned, codeHash: codeHash)
         } catch {
             try? FileManager.default.removeItem(at: expanded)
             throw error
         }
-        return staged
     }
 
-    /// Checked again first: Caches can be trimmed before quit, and a damaged copy must not land.
-    func install(_ staged: URL) throws {
-        defer { try? FileManager.default.removeItem(at: staged.deletingLastPathComponent()) }
-        guard BundleSignature.isSealed(staged) else { throw UpdateFailure.replaceFailed(staged.path) }
+    /// Anything can write to Caches before quit, so only the exact bytes verified may land.
+    func install(_ staged: Staged) throws {
+        defer { try? FileManager.default.removeItem(at: staged.app.deletingLastPathComponent()) }
+        // Homebrew or a manual copy may have replaced the app since launch; never roll that back.
+        guard Self.info(at: bundleURL)?["CFBundleShortVersionString"] as? String == runningVersion else {
+            throw UpdateFailure.replaceFailed(bundleURL.path)
+        }
+        let codeHash = BundleSignature.trustedHash(
+            of: staged.app, releaseSigned: staged.isReleaseSigned)
+        guard codeHash == staged.codeHash else { throw UpdateFailure.replaceFailed(staged.app.path) }
         do {
             _ = try FileManager.default.replaceItemAt(
-                bundleURL, withItemAt: staged, options: .usingNewMetadataOnly)
+                bundleURL, withItemAt: staged.app, options: .usingNewMetadataOnly)
         } catch {
             throw UpdateFailure.replaceFailed(error.localizedDescription)
         }
     }
 
-    private func isReleaseSigned(_ archive: URL, by signatureURL: URL?) async -> Bool {
-        guard let signatureURL, let signature = try? await UpdateDownloader.data(from: signatureURL)
-        else { return false }
+    private var runningVersion: String? {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
+    }
+
+    /// A missing signature is not fatal, since the running identity may still vouch for the bundle.
+    private func isReleaseSigned(_ archive: URL, by signatureURL: URL?) async throws -> Bool {
+        guard let signatureURL else { return false }
+        let signature: Data
+        do {
+            signature = try await UpdateDownloader.data(from: signatureURL)
+        } catch {
+            try Task.checkCancellation()
+            Self.logger.error("Fetching the update signature failed: \(error.localizedDescription)")
+            return false
+        }
         return UpdateSignature.isSigned(archive, by: signature)
     }
 
@@ -102,7 +129,9 @@ struct UpdateInstaller: Sendable {
         return app
     }
 
-    private func verify(_ staged: URL, is release: AvailableRelease, releaseSigned: Bool) throws {
+    private func verify(
+        _ staged: URL, is release: AvailableRelease, releaseSigned: Bool
+    ) throws -> Data {
         if Quarantine.isSet(on: staged) { Quarantine.clear(from: staged) }
         // Refuse rather than install something the user would then have to unquarantine by hand.
         guard !Quarantine.isSet(on: staged) else { throw UpdateFailure.quarantined }
@@ -116,9 +145,9 @@ struct UpdateInstaller: Sendable {
             throw UpdateFailure.versionMismatch(
                 expected: release.version.description, found: found ?? String(localized: "unknown"))
         }
-        guard BundleSignature.isTrusted(staged, releaseSigned: releaseSigned) else {
-            throw UpdateFailure.identityMismatch
-        }
+        guard let codeHash = BundleSignature.trustedHash(of: staged, releaseSigned: releaseSigned)
+        else { throw UpdateFailure.identityMismatch }
+        return codeHash
     }
 
     /// Off disk, not through `Bundle`, whose cache would answer for the old copy.

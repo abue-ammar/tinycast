@@ -124286,6 +124286,58 @@
         }
       }
     },
+    "Tinycast %@ could not be installed. Check for updates to try again." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast %@ konnte nicht installiert werden. Suche nach Updates, um es erneut zu versuchen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No se pudo instalar Tinycast %@. Busca actualizaciones para volver a intentarlo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast %@ n’a pas pu être installé. Recherchez les mises à jour pour réessayer."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast %@ をインストールできませんでした。もう一度アップデートを確認してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast %@을(를) 설치할 수 없습니다. 업데이트를 다시 확인해 보세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não foi possível instalar o Tinycast %@. Procure atualizações para tentar novamente."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Не удалось установить Tinycast %@. Проверьте обновления, чтобы повторить попытку."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "无法安装 Tinycast %@。请检查更新后重试。"
+          }
+        }
+      }
+    },
     "Tinycast Needs Accessibility Access" : {
       "localizations" : {
         "de" : {

@@ -119,6 +119,15 @@ jobs:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
         run: ./Scripts/verify-signature.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app"
 
+      # A build the last release cannot install strands every copy of it, so it never ships.
+      - name: Assert the last release can install this build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+        run: |
+          ./Scripts/check-update-path.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
+            "${{ github.event.inputs.channel }}"
+
       - name: Notarize DMG and ZIP
         env:
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}

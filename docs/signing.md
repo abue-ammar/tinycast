@@ -62,12 +62,15 @@ password. Then:
 
 ```sh
 base64 -i DeveloperID.p12 | gh secret set DEVELOPER_ID_P12_BASE64 --env release --repo abue-ammar/tinycast
-gh secret set DEVELOPER_ID_P12_PASSWORD --env release --repo abue-ammar/tinycast --body "<password>"
+gh secret set DEVELOPER_ID_P12_PASSWORD --env release --repo abue-ammar/tinycast
 base64 -i AuthKey_<key-id>.p8 | gh secret set NOTARY_KEY_P8_BASE64 --env release --repo abue-ammar/tinycast
 gh secret set NOTARY_KEY_ID --env release --repo abue-ammar/tinycast --body "<key-id>"
 gh secret set NOTARY_ISSUER_ID --env release --repo abue-ammar/tinycast --body "<issuer-id>"
-gh secret set UPDATE_SIGNING_KEY --env release --repo abue-ammar/tinycast --body "<private-key>"
+gh secret set UPDATE_SIGNING_KEY --env release --repo abue-ammar/tinycast
 ```
+
+The password and the private key go in at `gh`'s prompt, never through `--body`, which would leave
+them in your shell history.
 
 The release key is made once and never renewed. This prints its private half, then the public half
 that goes into `Info.plist` as `TinycastUpdatePublicKey`:
@@ -128,12 +131,17 @@ The updater trusts a downloaded bundle through either of two roots
 
 - **The release key.** `Scripts/sign-update.swift` signs every updater zip with
   `UPDATE_SIGNING_KEY`, and refuses unless the built app's `TinycastUpdatePublicKey` is its public
-  half, so a release can never ship trusting a key the next one is not signed with.
+  half, so a release can never ship trusting a key the next one is not signed with. The bundle must
+  still carry a Developer ID signature, from any team, so a leaked key alone cannot ship an ad-hoc
+  build.
 - **The running copy's designated requirement**, read at runtime rather than pinned. For a Developer
   ID build that is the team, so a certificate renewal still matches.
 
 **Never change both in one release.** A new Apple team ships signed by the old key, a new key under
-the old team, and the release after that may change the other.
+the old team, and the release after that may change the other. `Scripts/check-update-path.sh`
+enforces it: before notarizing, it downloads the last release on the channel and fails the run
+unless that release trusts the new build's key or the new build satisfies its designated
+requirement.
 
 ## The Developer ID switch
 

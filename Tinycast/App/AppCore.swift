@@ -464,11 +464,26 @@ final class AppCore {
             } else if launchedByUser {
                 paletteCoordinator.showPalette(mode: .launcher)
             }
-            if let version = updateChecker.takeInstalledVersion() {
-                showMessage(String(localized: "Updated to Tinycast \(version.description)"))
-            }
+            reportInstall(updateChecker.takeInstallReport())
         }
         openPendingURLs()
+    }
+
+    private func reportInstall(_ report: UpdateCheckStore.InstallReport?) {
+        switch report {
+        case .installed(let version):
+            showMessage(String(localized: "Updated to Tinycast \(version.description)"))
+        case .notInstalled(let version):
+            showMessage(
+                String(
+                    localized: """
+                        Tinycast \(version.description) could not be installed. \
+                        Check for updates to try again.
+                        """),
+                tone: .danger)
+        case nil:
+            break
+        }
     }
 
     private func openPendingURLs() {

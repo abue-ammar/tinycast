@@ -88,7 +88,8 @@ from `main` only ([signing.md](signing.md#2-the-release-secrets)). After `verify
 staples the ticket to the DMG and to the app before zipping it, so the updater's zip is stapled too.
 Any status but `Accepted` prints Apple's log and stops the run before anything is published.
 `Scripts/sign-update.swift` then signs the zip, and fails the run if the built app trusts a different
-update key ([signing.md](signing.md#update-trust)).
+update key. `Scripts/check-update-path.sh` runs just before notarizing, and fails the run unless the
+last release on the channel would install this build ([signing.md](signing.md#update-trust)).
 
 Channel builds override `TINYCAST_BUNDLE_IDENTIFIER`, not the target-wide `PRODUCT_BUNDLE_IDENTIFIER`.
 The Dictation helper derives its own identifier with a `.dictation` suffix; signature verification
