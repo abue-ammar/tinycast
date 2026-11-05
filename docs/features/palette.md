@@ -56,6 +56,14 @@ Opening the app summons the launcher too: a Dock click or a second open through 
 cold launch from Finder, Spotlight or a relaunch through `start(launchedByUser:)`. A login-item or URL
 launch shows nothing, and the very first launch shows onboarding instead.
 
+Both palette modes appear and disappear immediately at the controller's resolved frame. The native
+document-window bounce was a visual choice, not a positioning requirement; on a secondary 1× display
+it produced transient hairlines at the rounded upper corners. `PalettePanel` uses `.none` and does
+not conform to `AnimatedPanel`, so the global animation switch cannot restore that bounce.
+Compact's capsule and shortcut reveal still animate independently in SwiftUI; their state resets
+without animation as soon as the palette hides, ready even for a quick re-summon. The glass, root
+clip, native shadow and placement arithmetic are unchanged.
+
 ## Screens
 
 `PaletteState` (mode / query / selection / `focusToken`) is the bridge between the panel and the app.

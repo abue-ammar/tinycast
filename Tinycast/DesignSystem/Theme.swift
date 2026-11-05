@@ -348,8 +348,6 @@ enum Theme {
         static let glyphDelay: TimeInterval = 0.24
         static let glyphFade: TimeInterval = 0.16
         static let glyphBlur: CGFloat = 4
-        /// Past the window's own close animation, so parking the buttons is never seen.
-        static let parkAfterHide: TimeInterval = 0.3
         /// The capsule undershoots as it shortens, then settles.
         static let capsule = Animation.spring(response: 0.44, dampingFraction: 0.62)
         /// The buttons barely overshoot: the last rests on the window's edge, which would clip it.

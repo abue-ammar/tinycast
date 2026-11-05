@@ -71,7 +71,13 @@ struct CompactBar: View {
                 glyph(command, at: index, geometry: geometry, revealed: revealed)
             }
         }
-        .task(id: palette.isVisible) { await followVisibility() }
+        .onChange(of: palette.isVisible, initial: true) { _, visible in
+            if visible {
+                isRevealed = true
+            } else {
+                withTransaction(\.disablesAnimations, true) { isRevealed = false }
+            }
+        }
     }
 
     private func button(
@@ -134,14 +140,4 @@ struct CompactBar: View {
             .delay(BarMotion.revealDelay + BarMotion.glyphDelay + BarMotion.stagger * Double(index))
     }
 
-    /// Out on every summon, and parked only once the window has faded, so leaving fades it whole.
-    private func followVisibility() async {
-        guard !palette.isVisible else {
-            isRevealed = true
-            return
-        }
-        try? await Task.sleep(for: .seconds(Motion.duration(BarMotion.parkAfterHide)))
-        guard !Task.isCancelled else { return }
-        withTransaction(\.disablesAnimations, true) { isRevealed = false }
-    }
 }

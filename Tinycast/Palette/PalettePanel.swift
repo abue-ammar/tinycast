@@ -2,7 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftUI
 
-final class PalettePanel: NSPanel, AnimatedPanel {
+final class PalettePanel: NSPanel {
     enum HeaderFieldBoundary {
         case leading
         case trailing
@@ -271,7 +271,7 @@ final class PalettePanel: NSPanel, AnimatedPanel {
         isOpaque = false
         backgroundColor = .clear
         hasShadow = true
-        followMotion()
+        animationBehavior = .none
         isReleasedWhenClosed = false
 
         let hosting = NSHostingView(rootView: rootView)

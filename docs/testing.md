@@ -448,6 +448,11 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
 - General ▸ Escape Key Behavior set to `Close window and pop to root`: Escape on sub-screens closes
   the window, and reopening lands on the root search whatever Pop to Root Search says
 - Reopening focuses the search field with an empty query, in the same position and at the same size
+- On Retina and secondary 1× displays, both window modes open and close immediately at their resolved position,
+  without a bounce or upper-corner hairlines, including outside-click and app-launch dismissal.
+  Toggle Show animations off/on and switch Compact/Expanded: neither window may bounce; Compact's
+  capsule and shortcut bubbles must still reveal while animations are on, including a cold launch
+  and quick close/reopen, and neither mode may shift its content or anchor
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - Compact mode: the opening frames show no shortcut fill beneath the query before the buttons emerge
 - Compact mode: configure zero through four unique shortcuts, replace/remove them and move them up/down;

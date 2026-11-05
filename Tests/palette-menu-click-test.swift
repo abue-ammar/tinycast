@@ -50,6 +50,9 @@ private final class PressView: NSView {
     override func rightMouseDragged(with event: NSEvent) { received.append(event.type) }
 }
 
+@MainActor
+private final class DocumentPanel: NSPanel, AnimatedPanel {}
+
 @main
 @MainActor
 struct PaletteMenuClickTests {
@@ -67,6 +70,7 @@ struct PaletteMenuClickTests {
         let state = PaletteState()
         let panel = PalettePanel(rootView: Color.clear)
         panel.paletteState = state
+        presentationMotion(in: panel)
         let view = PressView(frame: panel.contentView?.bounds ?? .zero)
         panel.contentView = view
         panel.setFrameOrigin(CGPoint(x: -10000, y: -10000))
@@ -208,6 +212,34 @@ struct PaletteMenuClickTests {
 
         print("Palette menu click tests: \(failures) failure(s)")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    private static func presentationMotion(in panel: PalettePanel) {
+        let previousMotion = Motion.isEnabled
+        let frame = panel.frame
+        let bounds = panel.contentView?.bounds
+        defer { Motion.isEnabled = previousMotion }
+        check(panel.animationBehavior == .none, "both palette modes appear immediately")
+        let document = DocumentPanel(
+            contentRect: frame, styleMask: .borderless, backing: .buffered, defer: false)
+        document.isReleasedWhenClosed = false
+        defer { document.close() }
+        let windows: [NSWindow] = [panel, document]
+        for enabled in [true, false, true] {
+            Motion.isEnabled = enabled
+            for case let animated as any AnimatedPanel in windows {
+                animated.followMotion()
+            }
+            check(
+                panel.animationBehavior == .none,
+                "global motion toggles never re-enable the palette window bounce")
+            check(
+                panel.frame == frame && panel.contentView?.bounds == bounds,
+                "presentation motion never changes the frame or content bounds")
+            check(
+                document.animationBehavior == (enabled ? .documentWindow : .none),
+                "other panels keep their existing document-window animation policy")
+        }
     }
 
     private static func textField(in view: NSView) -> NSTextField? {
