@@ -177,7 +177,9 @@ jobs:
             --notes-file "$RUNNER_TEMP/notes.md" \
             $PRERELEASE_FLAG
 
+      # Stable is in homebrew/cask, where Homebrew's autobump bot bumps it.
       - name: Update Homebrew cask
+        if: github.event.inputs.channel == 'beta'
         env:
           TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           CASK: ${{ steps.meta.outputs.cask_name }}
