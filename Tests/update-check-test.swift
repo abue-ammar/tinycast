@@ -9,6 +9,7 @@ struct UpdateCheckTests {
     static func main() async throws {
         try await stopsBeforeFirstCheck()
         try await cancelsAndRestarts()
+        await manualCheckAnswersDuringAutomaticOne()
         try reportsInstalledVersionOnce()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -20,10 +21,7 @@ struct UpdateCheckTests {
         let fixture = FetchFixture()
         let store = makeStore(file: file, fixture: fixture)
         var offers = 0
-        store.onUpdateAvailable = { _ in
-            offers += 1
-            return true
-        }
+        store.onUpdateAvailable = { _ in offers += 1 }
 
         store.start(after: .milliseconds(10))
         store.stop()
@@ -41,10 +39,7 @@ struct UpdateCheckTests {
         let fixture = FetchFixture()
         let store = makeStore(file: file, fixture: fixture)
         var offers = 0
-        store.onUpdateAvailable = { _ in
-            offers += 1
-            return true
-        }
+        store.onUpdateAvailable = { _ in offers += 1 }
         defer { store.stop() }
 
         store.start(after: .zero)
@@ -82,6 +77,25 @@ struct UpdateCheckTests {
 
         let reopened = makeStore(file: file, fixture: fixture)
         expect(reopened.latest == store.latest, "manual checking persists the release")
+    }
+
+    static func manualCheckAnswersDuringAutomaticOne() async {
+        let file = makeFile()
+        defer { try? FileManager.default.removeItem(at: file) }
+        let fixture = FetchFixture()
+        let store = makeStore(file: file, fixture: fixture)
+        defer { store.stop() }
+
+        store.start(after: .zero)
+        await waitUntil { fixture.requests == 1 }
+        let manual = Task { await store.check() }
+        await waitUntil { fixture.requests == 2 }
+        fixture.respond(feed(version: "1.1.0"))
+        fixture.respond(feed(version: "1.1.0"))
+        let answered = await manual.value
+        expect(answered, "a manual check during an automatic one gets its own answer")
+        await waitUntil { !store.isChecking }
+        expect(store.update?.version == AppVersion("1.1.0"), "both checks leave the release in place")
     }
 
     static func reportsInstalledVersionOnce() throws {
@@ -170,19 +184,18 @@ struct UpdateCheckTests {
     final class FetchFixture {
         var requests = 0
         var wasCancelled = false
-        private var response: CheckedContinuation<Data?, Never>?
+        private var responses: [CheckedContinuation<Data?, Never>] = []
 
         func fetch() async -> Data? {
             requests += 1
-            let data = await withCheckedContinuation { response = $0 }
+            let data = await withCheckedContinuation { responses.append($0) }
             wasCancelled = Task.isCancelled
             return data
         }
 
         func respond(_ data: Data) {
-            let pending = response
-            response = nil
-            pending?.resume(returning: data)
+            guard !responses.isEmpty else { return }
+            responses.removeFirst().resume(returning: data)
         }
     }
 }

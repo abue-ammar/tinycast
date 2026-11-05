@@ -3,7 +3,6 @@ import Foundation
 struct AvailableRelease: Codable, Hashable, Sendable {
     let version: AppVersion
     let tag: String
-    let notes: String
     let assetURL: URL
     let assetSize: Int64
     let signatureURL: URL?
@@ -12,7 +11,6 @@ struct AvailableRelease: Codable, Hashable, Sendable {
 
 /// Nothing throws: an unusable body means nothing to install, and the pump retries.
 enum ReleaseFeed {
-    /// Where releases come from, and what every `@handle` and `#304` in their notes points at.
     static let repository = "abue-ammar/tinycast"
 
     /// The only artifact with an x86_64 slice, so the only one an Intel Mac can install.
@@ -29,12 +27,9 @@ enum ReleaseFeed {
             .max { $0.version < $1.version }
     }
 
-    /// The release worth offering: strictly newer than what runs, and not skipped.
-    static func offer(
-        _ release: AvailableRelease?, running: AppVersion, skipped: AppVersion?
-    ) -> AvailableRelease? {
+    /// The release worth offering: strictly newer than what runs.
+    static func offer(_ release: AvailableRelease?, running: AppVersion) -> AvailableRelease? {
         guard let release, release.version > running else { return nil }
-        if let skipped, release.version <= skipped { return nil }
         return release
     }
 
@@ -50,7 +45,6 @@ enum ReleaseFeed {
         return AvailableRelease(
             version: version,
             tag: entry.tagName,
-            notes: ReleaseNotes.summary(of: entry.body ?? ""),
             assetURL: asset.browserDownloadURL,
             assetSize: asset.size,
             signatureURL: entry.assets.first { $0.name == asset.name + ".sig" }?.browserDownloadURL,
@@ -73,13 +67,12 @@ enum ReleaseFeed {
         let tagName: String
         let prerelease: Bool
         let draft: Bool
-        let body: String?
         let publishedAt: String?
         let assets: [Asset]
 
         enum CodingKeys: String, CodingKey {
             case tagName = "tag_name"
-            case prerelease, draft, body, assets
+            case prerelease, draft, assets
             case publishedAt = "published_at"
         }
 

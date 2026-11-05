@@ -9,8 +9,7 @@ struct UpdateInstaller: Sendable {
 
         var message: String {
             switch self {
-            case .downloading(let received, let expected):
-                return String(localized: "Downloading… \(Self.size(received)) of \(Self.size(expected))")
+            case .downloading: return String(localized: "Downloading…")
             case .extracting: return String(localized: "Expanding…")
             case .verifying: return String(localized: "Verifying…")
             }
@@ -22,10 +21,6 @@ struct UpdateInstaller: Sendable {
                 return nil
             }
             return min(1, Double(received) / Double(expected))
-        }
-
-        private static func size(_ bytes: Int64) -> String {
-            bytes.formatted(.byteCount(style: .file))
         }
     }
 
