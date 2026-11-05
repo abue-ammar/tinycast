@@ -33,9 +33,9 @@ if [ -n "$OLD_KEY" ] && [ "$OLD_KEY" = "$(update_key "$APP")" ]; then
     exit 0
 fi
 
-REQUIREMENT="$(codesign -d -r- "$OLD" 2>/dev/null | sed -n 's/^#* *designated => //p')"
+REQUIREMENT="$(codesign -d -r- "$OLD" 2>/dev/null | sed -n 's/^#* *designated => //p' || true)"
 [ -n "$REQUIREMENT" ] || { echo "✗ cannot read $TAG's designated requirement" >&2 && exit 1; }
-if codesign --verify --strict -R="=$REQUIREMENT" "$APP"; then
+if codesign --verify --strict -R "=$REQUIREMENT" "$APP"; then
     echo "✓ this build satisfies $TAG's designated requirement"
     exit 0
 fi

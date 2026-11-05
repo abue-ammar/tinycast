@@ -81,7 +81,7 @@ struct UpdateInstaller: Sendable {
     /// Anything can write to Caches before quit, so only the exact bytes verified may land.
     func install(_ staged: Staged) throws {
         defer { try? FileManager.default.removeItem(at: staged.app.deletingLastPathComponent()) }
-        // Homebrew or a manual copy may have replaced the app since launch; never roll that back.
+        // Another install may have replaced the app since launch; never roll that back.
         guard Self.info(at: bundleURL)?["CFBundleShortVersionString"] as? String == runningVersion else {
             throw UpdateFailure.replaceFailed(bundleURL.path)
         }
@@ -108,7 +108,8 @@ struct UpdateInstaller: Sendable {
             signature = try await UpdateDownloader.data(from: signatureURL)
         } catch {
             try Task.checkCancellation()
-            Self.logger.error("Fetching the update signature failed: \(error.localizedDescription)")
+            Self.logger.error(
+                "Fetching the update signature failed: \(error.localizedDescription, privacy: .public)")
             return false
         }
         return UpdateSignature.isSigned(archive, by: signature)

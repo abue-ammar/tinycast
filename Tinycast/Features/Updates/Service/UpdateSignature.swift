@@ -13,9 +13,9 @@ enum UpdateSignature {
     }
 
     static func isSigned(_ data: Data, by signature: Data, key: Curve25519.Signing.PublicKey) -> Bool {
-        let encoded = String(decoding: signature, as: UTF8.self).trimmingCharacters(
-            in: .whitespacesAndNewlines)
-        guard let raw = Data(base64Encoded: encoded) else { return false }
+        guard let encoded = String(bytes: signature, encoding: .utf8),
+            let raw = Data(base64Encoded: encoded.trimmingCharacters(in: .whitespacesAndNewlines))
+        else { return false }
         return key.isValidSignature(raw, for: data)
     }
 

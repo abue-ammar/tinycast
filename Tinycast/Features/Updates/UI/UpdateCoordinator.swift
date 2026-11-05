@@ -170,7 +170,8 @@ final class UpdateCoordinator {
         do {
             try installer.install(staged)
         } catch {
-            Self.logger.error("Installing the staged update failed: \(error.localizedDescription)")
+            Self.logger.error(
+                "Installing the staged update failed: \(error.localizedDescription, privacy: .public)")
         }
     }
 
