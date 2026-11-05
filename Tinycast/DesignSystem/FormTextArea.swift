@@ -87,6 +87,9 @@ struct FormTextArea: NSViewRepresentable {
 
     func sizeThatFits(_ proposal: ProposedViewSize, nsView view: InputView, context: Context) -> CGSize? {
         guard let width = proposal.width, width > 0 else { return nil }
+        guard width.isFinite else {
+            return CGSize(width: width, height: max(minimumHeight, view.frame.height))
+        }
         view.setFrameSize(NSSize(width: width, height: max(view.frame.height, minimumHeight)))
         var height = view.font.map { $0.ascender - $0.descender + $0.leading } ?? 0
         if let layout = view.textLayoutManager {
