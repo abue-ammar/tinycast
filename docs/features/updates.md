@@ -56,7 +56,7 @@ and no appcast: the release feed the website already reads is the feed the app r
   Automatically check for updates defaults on. Turning it off stops the background task and any
   in-flight automatic request, so neither a response nor a cached release can make a new offer.
   The preference travels through settings backups and `general.automaticallyCheckForUpdates` in
-  settings.json; release metadata and skipped versions stay in the feature's own cache file.
+  settings.json; release metadata stays in the feature's own cache file.
 - **The app shows no release notes.** The Changelog item in the palette's app menu opens
   `https://tinycast.dev/changelog/`.
 
@@ -64,7 +64,7 @@ and no appcast: the release feed the website already reads is the feed the app r
 
 | Stage | Shows | Button | × |
 | --- | --- | --- | --- |
-| `available` | the version | Update | skips this version |
+| `available` | the version | Update | hides it until the next launch |
 | `installing` | a ring and percent for the download, then a spinner and the phase | none | cancels |
 | `readyToRelaunch` | Update ready | Relaunch | hides it; the update still installs at quit |
 | `failed` | Update failed | Details | hides it |
@@ -104,8 +104,7 @@ self-rescheduling pump, and one atomic JSON file.
 ~/Library/Caches/<bundle-id>/update-check.json
 ```
 
-It holds `lastCheckedAt`, the newest release seen, the version the user dismissed, and the version
-just installed. Freshness is
+It holds `lastCheckedAt`, the newest release seen, and the version just installed. Freshness is
 measured from `lastCheckedAt`, so relaunching never re-asks GitHub; the interval is 24 h, dropping to
 2 h after a failed attempt, and the first check waits 30 s so it never lands in the login rush. The
 request carries a `User-Agent`, which the GitHub API rejects requests without.
@@ -114,10 +113,10 @@ Disabling automatic checks takes effect immediately and survives relaunch. Turni
 resumes the same schedule, with the startup delay and cached check time respected. Check for Updates
 always works independently of this preference, including while automatic checking is disabled.
 
-**× means skip.** On an offered version it records the version, so that release stops asking; a newer
-one still asks. Check for Updates ignores the record and always offers whatever is newer than what is
-running, unless an update is already downloading or waiting for quit. Then it shows that update
-instead, since offering it again would discard the download or the staged copy.
+**× means later.** On an offered version it hides the pill and records nothing, so the pill comes back
+at the next launch, or sooner for a newer release. Check for Updates always offers whatever is newer
+than what is running, unless an update is already downloading or waiting for quit. Then it shows that
+update instead, since offering it again would discard the download or the staged copy.
 
 Check for Updates reports in a HUD: progress while it asks, then up to date or unreachable. When there
 is an update, it opens the palette so the pill shows.

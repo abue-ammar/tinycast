@@ -101,13 +101,10 @@ final class UpdateCoordinator {
 
     func dismiss() {
         switch stage {
-        case .available(let release):
-            store.skip(release)
-            stage = .idle
         case .installing:
             installTask?.cancel()
             installTask = nil
-        case .readyToRelaunch, .failed:
+        case .available, .readyToRelaunch, .failed:
             stage = .idle
         case .idle, .checking:
             break

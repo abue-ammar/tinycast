@@ -25,7 +25,6 @@ final class UpdateCheckStore {
 
     private let fileURL: URL
     @ObservationIgnored private let fetch: @Sendable () async -> Data?
-    private var skippedVersion: AppVersion?
     private var installedVersion: AppVersion?
     private var checksInFlight = 0
     /// At most one uninvited appearance per version per launch.
@@ -48,22 +47,15 @@ final class UpdateCheckStore {
         else { return }
         latest = cache.latest
         lastCheckedAt = cache.lastCheckedAt
-        skippedVersion = cache.skippedVersion
         installedVersion = cache.installedVersion
     }
 
     deinit { pump?.cancel() }
 
-    /// Newer than what is running. What a manual check offers, including a version already skipped.
+    /// Newer than what is running.
     var update: AvailableRelease? {
         guard let runningVersion else { return nil }
-        return ReleaseFeed.offer(latest, running: runningVersion, skipped: nil)
-    }
-
-    /// The same, minus anything dismissed. Only this is offered unasked.
-    var unskippedUpdate: AvailableRelease? {
-        guard let runningVersion else { return nil }
-        return ReleaseFeed.offer(latest, running: runningVersion, skipped: skippedVersion)
+        return ReleaseFeed.offer(latest, running: runningVersion)
     }
 
     func start(after delay: Duration = UpdateCheckStore.startupDelay) {
@@ -98,12 +90,6 @@ final class UpdateCheckStore {
         return true
     }
 
-    /// Dismissing a version is what stops it asking again; a later one still will.
-    func skip(_ release: AvailableRelease) {
-        skippedVersion = release.version
-        persist()
-    }
-
     func recordInstall(of version: AppVersion) {
         installedVersion = version
         persist()
@@ -136,7 +122,7 @@ final class UpdateCheckStore {
     }
 
     private func announce() {
-        guard !Task.isCancelled, let release = unskippedUpdate, announcedVersion != release.version
+        guard !Task.isCancelled, let release = update, announcedVersion != release.version
         else { return }
         announcedVersion = release.version
         onUpdateAvailable?(release)
@@ -144,8 +130,7 @@ final class UpdateCheckStore {
 
     private func persist() {
         let cache = Cache(
-            lastCheckedAt: lastCheckedAt, latest: latest, skippedVersion: skippedVersion,
-            installedVersion: installedVersion)
+            lastCheckedAt: lastCheckedAt, latest: latest, installedVersion: installedVersion)
         guard let data = try? JSONEncoder().encode(cache) else { return }
         try? data.write(to: fileURL, options: .atomic)
     }
@@ -153,7 +138,6 @@ final class UpdateCheckStore {
     private struct Cache: Codable {
         var lastCheckedAt: Date?
         var latest: AvailableRelease?
-        var skippedVersion: AppVersion?
         var installedVersion: AppVersion?
     }
 

@@ -254,23 +254,17 @@ struct UpdatesTests {
             signatureURL: nil, publishedAt: nil)
 
         expect(
-            ReleaseFeed.offer(newer, running: running, skipped: nil)?.version == newer.version,
+            ReleaseFeed.offer(newer, running: running)?.version == newer.version,
             "a newer release is offered")
         expect(
-            ReleaseFeed.offer(same, running: running, skipped: nil) == nil,
+            ReleaseFeed.offer(same, running: running) == nil,
             "the running version is not an update")
         expect(
-            ReleaseFeed.offer(nil, running: running, skipped: nil) == nil,
+            ReleaseFeed.offer(nil, running: running) == nil,
             "nothing in the feed offers nothing")
         expect(
-            ReleaseFeed.offer(newer, running: AppVersion("0.4.0")!, skipped: nil) == nil,
+            ReleaseFeed.offer(newer, running: AppVersion("0.4.0")!) == nil,
             "an older release never downgrades a newer install")
-        expect(
-            ReleaseFeed.offer(newer, running: running, skipped: AppVersion("0.3.0")) == nil,
-            "a skipped version stays skipped")
-        expect(
-            ReleaseFeed.offer(newer, running: running, skipped: AppVersion("0.2.5")) != nil,
-            "skipping one version does not skip the next one")
     }
 
     static func picksTheSignatureBesideItsZip() {

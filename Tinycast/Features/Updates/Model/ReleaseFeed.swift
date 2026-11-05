@@ -27,12 +27,9 @@ enum ReleaseFeed {
             .max { $0.version < $1.version }
     }
 
-    /// The release worth offering: strictly newer than what runs, and not skipped.
-    static func offer(
-        _ release: AvailableRelease?, running: AppVersion, skipped: AppVersion?
-    ) -> AvailableRelease? {
+    /// The release worth offering: strictly newer than what runs.
+    static func offer(_ release: AvailableRelease?, running: AppVersion) -> AvailableRelease? {
         guard let release, release.version > running else { return nil }
-        if let skipped, release.version <= skipped { return nil }
         return release
     }
 
