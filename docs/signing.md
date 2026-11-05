@@ -143,22 +143,14 @@ enforces it: before notarizing, it downloads the last release on the channel and
 unless that release trusts the new build's key or the new build satisfies its designated
 requirement.
 
-## The Developer ID switch
-
-Releases used to be signed with `Tinycast Self-Signed`. Copies up to 0.12.1 trust only their own
-self-signed leaf, or a team other than Tinycast's that an earlier requirement pinned, so they cannot
-install a Developer ID build themselves and are updated by hand once. 0.12.8 pins the Tinycast team;
-every release after it trusts the two roots above.
-
-macOS keys a TCC grant to the app's designated requirement, which changed with the identity, so the
-first Developer ID build asks for Accessibility once more. Renewals keep it.
+## Developer ID stays in CI
 
 **The Developer ID identity stays a CI-only fact.** It is named in the release workflow's
 `SIGNING_IDENTITY` and nowhere else: `project.yml` keeps signing with `Tinycast Self-Signed`, so a
 contributor builds with the one they created in §1 — same name, their own key, never shared.
 
-**Keep `Tinycast Self-Signed` in the login keychain.** It is the only identity a copy up to 0.12.1
-accepts, should those copies ever need a build they can install themselves.
+macOS keys a TCC grant to the app's designated requirement, so a certificate renewal keeps
+Accessibility and every other grant, while a new team asks for each one again.
 
 ## Quarantine
 
