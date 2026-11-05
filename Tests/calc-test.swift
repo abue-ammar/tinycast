@@ -469,6 +469,44 @@ struct CalcTests {
         expectDisplay("25 USD/hr * 8hr", "200.00 USD")
         expectDisplay("8hr * 25 USD/hr", "200.00 USD")
         expectDisplay("25 USD/hr to EUR/min", "0.3833333333 EUR/min")
+        // `per` is the spoken slash, and the arithmetic words are the spoken operators
+        expectDisplay("5 usd per gallon to eur per liter", "1.215191441 EUR/L")
+        expectDisplay("5 usd per gallon in eur per liter", "1.215191441 EUR/L")
+        expectDisplay("5 USD/gal to EUR/L", "1.215191441 EUR/L")
+        expectDisplay("60 miles per hour to km/h", "96.56064 km/h")
+        expectDisplay("50 usd per hour", "50 USD/hr")
+        expectDisplay("10 divided by 2", "5")
+        expectDisplay("10 plus 5", "15")
+        expectDisplay("10 minus 3", "7")
+        expectDisplay("6 times 7", "42")
+        expectDisplay("10 multiplied by 3", "30")
+        expectNil("pages per")
+        expectNil("world times 5")
+        // A rate with no target takes the Mac's own currency and keeps its unit
+        expectDisplay("5 usd per gallon", "3.95 GBP/gal", region: "GBP")
+        expectDisplay("$5/gal", "3.95 GBP/gal", region: "GBP")
+        expectDisplay("5 usd per gallon", "5 USD/gal")
+        expectDisplay("5 USD/gal to GBP/gal", "3.95 GBP/gal")
+        expectDisplay("100 USD / 4hr", "25 USD/hr", region: "GBP")
+        expectDisplay("5 usd per gallon to eur per liter", "1.215191441 EUR/L", region: "GBP")
+        // A shared amount keeps its unit or currency, and may be any form the calculator reads
+        expectDisplay("85 + 20% split 3", "34")
+        expectDisplay("split 120 between 4", "30")
+        expectDisplay("split $120 between 4", "30.00 USD")
+        expectDisplay("$120 split 4", "30.00 USD", region: "GBP")
+        expectDisplay("120 split 4 ways", "30")
+        expectDisplay("120 / 4 people", "30")
+        expectDisplay("20% tip on 85 split 3", "5.666666667")
+        expectDisplay("10 kg split 4", "2.5 kg")
+        expectDisplay("eur 99 among 3 friends", "33.00 EUR")
+        // The share divides the unrounded whole, and a timespan is shared in full
+        expectDisplay("$1 / 6 split 2", "0.08 USD")
+        expectDisplay("150 min to timespan split 2", "1 hr 15 min")
+        expectDisplay("$120 to eur split 4", "27.60 EUR")
+        expectBadges("85 + 20% split 3", source: "Expression", target: "Per Person")
+        expectNil("split screen")
+        expectNil("120 split 0")
+        expectNil("split")
         expectDisplay("25 USD/hr / 23 EUR/hr", "1")
         expectErrorWithoutRates("25 USD/hr to EUR/hr", "Exchange rates unavailable — check your connection.")
         expectError("2 celsius * 3m", "Multiplication of these unit values is not supported.")
@@ -660,6 +698,66 @@ struct CalcTests {
         expectBadgesAt(
             "days till july", source: "Friday, 24 July", target: "Thursday, 1 July, 2027")
         expectDisplayAt("days until tomorrow", "1 day")
+        // Ordinals and `of` fold away; a lone day and month after until/since is a date, not a decimal
+        expectDisplayAt("days until 29th of october", "97 days")
+        expectDisplayAt("days until the 29th of october", "97 days")
+        expectDisplayAt("days until 29.10", "97 days")
+        expectDisplayAt("days until 29.10.", "97 days")
+        expectDisplayAt("days until 29/10", "97 days")
+        expectDisplayAt("days until 10/29", "97 days")
+        expectDisplayAt("days since 20.7", "4 days")
+        expectDisplayAt("october 28th", "28 October")
+        expectDisplayAt("29th of october", "29 October")
+        expectDisplayAt("oct 28th at 1pm", "28 October at 1:00 PM")
+        expectNilAt("29.10")
+        expectNilAt("5th")
+        // `in 3 days`, a neighbouring period, and the edge of one
+        expectDisplayAt("in 3 days", "27 July")
+        expectDisplayAt("in 2 weeks", "7 August")
+        expectDisplayAt("in 90 min", "24 July at 1:48 AM")
+        expectNilAt("in 5 cm")
+        expectDisplayAt("10 in in cm", "25.4 cm")
+        expectDisplayAt("next week", "31 July")
+        expectDisplayAt("last month", "24 June")
+        expectDisplayAt("next year", "24 July, 2027")
+        expectDisplayAt("days until next week", "7 days")
+        expectDisplayAt("end of month", "31 July")
+        expectDisplayAt("start of the month", "1 July")
+        expectDisplayAt("end of next month", "31 August")
+        expectDisplayAt("beginning of year", "1 January")
+        expectDisplayAt("end of year", "31 December")
+        expectDisplayAt("days until end of month", "7 days")
+        expectNilAt("end of week")
+        // Fixed-date occasions; floating holidays differ by country and stay out
+        expectDisplayAt("days until christmas", "154 days")
+        expectDisplayAt("days until new years eve", "160 days")
+        expectDisplayAt("days until valentine's day", "205 days")
+        expectDisplayAt("days since halloween", "266 days")
+        expectDisplayAt("christmas + 3 days", "28 December")
+        expectNilAt("christmas")
+        expectNilAt("easter")
+        expectDisplayAt("new years eve + 3 days", "3 January, 2027")
+        expectDisplayAt("new year's eve + 3 days", "3 January, 2027")
+        expectDisplayAt("valentines day + 3 days", "17 February")
+        expectDisplayAt("valentine's day + 3 days", "17 February")
+        expectDisplayAt("valentine’s day + 3 days", "17 February")
+        let christmasNoon = clock.calendar.date(
+            from: DateComponents(year: 2026, month: 12, day: 25, hour: 12))!
+        expectDisplayAt("hrs till christmas at 9am", "8,757 hours", now: christmasNoon)
+        expectNilAt("new york")
+        // Facts about a date
+        expectDisplayAt("week number", "30")
+        expectDisplayAt("what week is it", "30")
+        expectDisplayAt("week number of christmas", "52")
+        expectDisplayAt("day of year", "205")
+        expectDisplayAt("day of the year for dec 31", "365")
+        expectBadgesAt("week number", source: "Friday, 24 July, 2026", target: "Week of the Year")
+        expectDisplayAt("age 1990-05-03", "36 years")
+        expectDisplayAt("born 3 may 1990", "36 years")
+        expectDisplayAt("age 1990-08-03", "35 years")
+        expectNilAt("age 3 may")
+        expectNilAt("age 2030-01-01")
+        expectNilAt("ages ago")
         expectDisplayAt("weeks till 9april", "37 weeks")
         expectDisplayAt("today + 3 weeks", "14 August")
         expectDisplayAt("now + 90 min", "24 July at 1:48 AM")
@@ -722,7 +820,27 @@ struct CalcTests {
         expectDisplay("100 mi / 4 gal to mpg", "25 mpg")
         expectDisplay("24.5 l / 350 km to l/100km", "7 L/100km")
         expectDisplay("1 / 36 mpg to l/100km", "6.533738426 L/100km")
-        expectError("6.5 l/100km to mpg", "Cannot convert Fuel Consumption to Fuel Economy.")
+        // Economy and consumption are reciprocals, as are speed and pace
+        expectDisplay("30 mpg to l/100km", "7.840486111 L/100km")
+        expectDisplay("6.5 l/100km to mpg", "36.18685897 mpg")
+        expectDisplay("8 l/100km to km/l", "12.5 km/L")
+        expectDisplay("10 km/h to min/km", "6 min/km")
+        expectDisplay("6 min/km to km/h", "10 km/h")
+        expectDisplay("10 mph to min/mi", "6 min/mi")
+        expectNil("0 mpg to l/100km")
+        expectError("1 hz to s", "Cannot convert Frequency to Time.")
+        expectError("10 km to min/km", "Cannot convert Length to Compound Units.")
+        expectError("10 mpg to kg", "Cannot convert Fuel Economy to Weight.")
+        // Area shares fuel's dimension and stays an error; a typed fuel ratio still inverts
+        expectError("1 m2 to mpg", "Cannot convert Area to Fuel Economy.")
+        expectError("10 mpg to m2", "Cannot convert Fuel Economy to Area.")
+        expectError("10 m2 to m^-2", "Cannot convert Area to Compound Units.")
+        expectError("1 ha to mpg", "Cannot convert Area to Fuel Economy.")
+        expectError("5m * 4m to mpg", "Cannot convert Area to Fuel Economy.")
+        expectDisplay("100 mi / 4 gal to l/100km", "9.408583333 L/100km")
+        expectDisplay("24.5 l / 350 km to mpg", "33.60208333 mpg")
+        expectDisplay("(24.5 l / 350 km) to km/l", "14.28571429 km/L")
+        expectNil("0 mi / 4 gal to l/100km")
 
         expectDisplay("5 mbar", "0.07251886887 psi")
         expectDisplay("5 kPa", "0.7251886887 psi")
@@ -1139,6 +1257,49 @@ struct CalcTests {
         expectDisplayAt("9:30am in nyc", "5:30 AM")
         expectDisplayAt("5pm in tokyo", "2:00 AM (tomorrow)")
         expectBadgesAt("5pm london in sf", source: "London", target: "Los Angeles")
+        // A day and a clock resolve on the source zone's own calendar, so DST follows the date
+        expectDisplayAt("oct 28 at 1pm et", "Wednesday, 28 October at 5:00 PM")
+        expectDisplayAt("October 28th at 1PM ET", "Wednesday, 28 October at 5:00 PM")
+        expectDisplayAt("nov 2 1pm et", "Monday, 2 November at 6:00 PM")
+        expectDisplayAt("2026-10-28 13:00 est", "Wednesday, 28 October at 5:00 PM")
+        expectDisplayAt("oct 28 1pm et in pst", "Wednesday, 28 October at 10:00 AM")
+        expectDisplayAt("oct 28 1pm new york in tokyo", "Thursday, 29 October at 2:00 AM")
+        expectDisplayAt("oct 28 1pm et + 2h", "Wednesday, 28 October at 7:00 PM")
+        expectDisplayAt("tomorrow 3pm pst", "Friday, 24 July at 10:00 PM")
+        expectDisplayAt("1pm et tomorrow", "Friday, 24 July at 5:00 PM")
+        expectBadgesAt("oct 28 at 1pm et", source: "New York", target: "UTC")
+        expectNilAt("oct 28 at 1pm junk")
+        expectNilAt("oct 28 et")
+        // Offsets are attached; a spaced `+` still shifts the answer
+        expectDisplayAt("10am utc+5", "5:00 AM")
+        expectDisplayAt("9am gmt-5 in tokyo", "11:00 PM")
+        expectDisplayAt("10am utc+5:30 in london", "5:30 AM")
+        expectBadgesAt("10am utc+5", source: "UTC+5", target: "UTC")
+        expectBadgesAt("10am utc+5:30 in london", source: "UTC+5:30", target: "London")
+        expectNilAt("10am utc+15")
+        // A span converts both ends, a list shares one card, and neither needs a date
+        expectDisplayAt("9am-5pm et in cet", "3:00 PM – 11:00 PM")
+        expectDisplayAt("9am to 5pm et in tokyo", "10:00 PM – 6:00 AM")
+        expectDisplayAt("10pm-2am london in sf", "2:00 PM – 6:00 PM")
+        expectDisplayAt("9am-5pm in tokyo", "6:00 PM – 2:00 AM")
+        expectDisplayAt("oct 28 9am-5pm et in london", "Wednesday, 28 October, 1:00 PM – 9:00 PM")
+        expectBadgesAt("9am-5pm et in cet", source: "New York", target: "Paris")
+        expectNilAt("9am-5pm")
+        expectNilAt("9am-5pm et in new york")
+        // A spaced meridiem joins a clock with minutes, and an overnight end advances in the source zone
+        expectDisplayAt("9:30 am to 5:30 pm et in cet", "3:30 PM – 11:30 PM")
+        expectDisplayAt("tomorrow at 1:30 pm et in tokyo", "Saturday, 25 July at 2:30 AM")
+        expectDisplayAt("oct 31 9pm-5am et in london", "Sunday, 1 November, 1:00 AM – 10:00 AM")
+        expectNilAt("2026-03-07 11pm-2:30am et in london")
+        expectDisplayAt("dec 31 10pm-2am et in london", "Friday, 1 January, 2027, 3:00 AM – 7:00 AM")
+        expectNilAt("2026-03-08 2:30am et in london")
+        expectDisplayAt(
+            "1pm et in london, tokyo, sydney", "6:00 PM · 2:00 AM (tomorrow) · 3:00 AM (tomorrow)")
+        expectBadgesAt(
+            "1pm et in london, tokyo, sydney", source: "New York", target: "London · Tokyo · Sydney")
+        expectCopyAt("1pm et in london, tokyo, sydney", "London 6:00 PM, Tokyo 2:00 AM, Sydney 3:00 AM")
+        expectDisplayAt("time in london, tokyo and sydney", "1:18 AM · 9:18 AM · 10:18 AM")
+        expectNilAt("1pm et in london, nowhere")
         // The locale's hour cycle, which the 24-hour switch overrides, picks the clock
         var hour24 = clock.calendar
         hour24.locale = Locale(identifier: "en_US@hours=h23")
@@ -1760,7 +1921,8 @@ struct CalcTests {
         // Dates, clocks and zones never reach the number rewrite
         for query in [
             "17.2.26 + 100 weekdays", "25.8.27", "25. aug", "25. aug + 3",
-            "time in Tokyo", "1970-01-01T00:00:00.125Z to unix ms", "1.2.3 + 1", "7:30 - 13:30"
+            "time in Tokyo", "1970-01-01T00:00:00.125Z to unix ms", "1.2.3 + 1", "7:30 - 13:30",
+            "days until 29.10", "days since 20.7."
         ] {
             expectSameAsEnglish(query, italian)
         }
@@ -1948,6 +2110,17 @@ struct CalcTests {
             return
         }
         check(query, expected: expected, got: display)
+    }
+
+    static func expectCopyAt(_ query: String, _ expected: String, calendar: Calendar? = nil) {
+        guard
+            case .value(_, let copy)? = CalcEngine.evaluate(
+                query, now: clock.now, calendar: calendar ?? clock.calendar)?.payload
+        else {
+            fail(query, expected: expected, got: "nil / error")
+            return
+        }
+        check(query + " [copy]", expected: expected, got: copy)
     }
 
     static func expectBadgesAt(

@@ -57,10 +57,35 @@ enum CalcUnits {
             return nil
         }
 
+        if from.category != to.category, reciprocal(from, to) {
+            guard let output = reciprocalValue(input, from: from, to: to) else { return nil }
+            return .value(input: input, from: from, to: to, output: output)
+        }
         guard from.category == to.category else { return .mismatch(from: from, to: to) }
         let output = (input * from.factor + from.offset - to.offset) / to.factor
         guard output.isFinite else { return nil }
         return .value(input: input, from: from, to: to, output: output)
+    }
+
+    private static let speed = CalcDimension(length: 1, time: -1)
+    private static let pace = CalcDimension(length: -1, time: 1)
+
+    /// `30 mpg to l/100km`, `10 km/h to min/km`; area shares fuel's dimension, so fuel goes by name.
+    static func reciprocal(_ from: UnitDef, _ to: UnitDef, fuelRatio: Bool = false) -> Bool {
+        guard let lhs = from.dimension, let rhs = to.dimension else { return false }
+        if isFuel(to), isFuel(from) || fuelRatio { return lhs.adding(rhs) == .scalar }
+        return (lhs == speed && rhs == pace) || (lhs == pace && rhs == speed)
+    }
+
+    private static func isFuel(_ unit: UnitDef) -> Bool {
+        unit.category == .fuelEconomy || unit.category == .fuelConsumption
+    }
+
+    static func reciprocalValue(_ amount: Double, from: UnitDef, to: UnitDef) -> Double? {
+        let base = amount * from.factor
+        guard base != 0 else { return nil }
+        let output = 1 / base / to.factor
+        return output.isFinite ? output : nil
     }
 
     /// `day s` → `1 day` in `s`. Same category only, so two-word searches don't produce a card.

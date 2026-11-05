@@ -78,7 +78,9 @@ struct CalcNumberFormat: Equatable, Sendable {
             let end = numberEnd(
                 scalars, from: index, decimal: decimalSeparator, grouping: groupingSeparator)
             let run = scalars[index..<end]
-            if Self.isClockFragment(scalars, run: index..<end) {
+            if Self.isClockFragment(scalars, run: index..<end)
+                || Self.isDayAndMonth(scalars, run: index..<end)
+            {
                 output.append(contentsOf: run)
             } else {
                 guard let number = canonicalNumber(run) else { return nil }
@@ -87,6 +89,23 @@ struct CalcNumberFormat: Equatable, Sendable {
             index = end
         }
         return String(output)
+    }
+
+    /// `29.10` and `29.10.` after `until`: no number there is a decimal, so the dot is not grouping.
+    private static func isDayAndMonth(_ scalars: [Unicode.Scalar], run: Range<Int>) -> Bool {
+        var parts = scalars[run].split(separator: ".", omittingEmptySubsequences: false)
+        if parts.count == 3, parts[2].isEmpty { parts.removeLast() }
+        return parts.count == 2 && parts.allSatisfy { (1...2).contains($0.count) }
+            && followsDateWord(scalars, before: run.lowerBound)
+    }
+
+    private static func followsDateWord(_ scalars: [Unicode.Scalar], before index: Int) -> Bool {
+        var end = index
+        while end > 0, scalars[end - 1].properties.isWhitespace { end -= 1 }
+        var start = end
+        while start > 0, scalars[start - 1].properties.isAlphabetic { start -= 1 }
+        let word = String(String.UnicodeScalarView(scalars[start..<end])).lowercased()
+        return word == "until" || word == "till" || word == "til" || word == "since"
     }
 
     private func canonicalNumber(_ run: ArraySlice<Unicode.Scalar>) -> [Unicode.Scalar]? {
@@ -171,7 +190,10 @@ struct CalcNumberFormat: Equatable, Sendable {
             let end = numberEnd(
                 scalars, from: index, decimal: ".", grouping: functionDepth == nil ? "," : nil)
             let run = scalars[index..<end]
-            if !Self.isClockFragment(scalars, run: index..<end), let number = localizedNumber(run) {
+            if !Self.isClockFragment(scalars, run: index..<end),
+                !Self.isDayAndMonth(scalars, run: index..<end),
+                let number = localizedNumber(run)
+            {
                 output.append(contentsOf: number)
             } else {
                 output.append(contentsOf: run)

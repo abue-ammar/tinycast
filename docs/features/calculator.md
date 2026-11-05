@@ -48,18 +48,20 @@ in (see Currency below).
 Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
 The one exception is the five words that name the current moment or its neighbours — see grammar G.
 
-1. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
+1. **Date facts** (`CalcDateFacts`: `week number`, `day of year`, `age 1990-05-03`)
+2. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
-2. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
+3. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
    because a zone phrase is words rather than calculator input
-3. Tokenize, then preserve the complete prefix of a trailing binary operator
-4. Base conversion
-5. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
+4. Tokenize, then a **shared amount** (`CalcSplit`: `$120 split 4`), which divides the amount before
+   step 6 formats it, then preserve the complete prefix of a trailing binary operator
+5. Base conversion
+6. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
    `100km / 2h to km/h`, `(1hr + 30min) to timespan`)
-6. Explicit unit conversion (`10km to mi`, `m to ft`, `day s`)
-7. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
-8. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
-9. Natural-language percent, ratio and list forms (`CalcPercent`)
+7. Explicit unit conversion (`10km to mi`, `m to ft`, `day s`)
+8. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
+9. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
+10. Natural-language percent, ratio and list forms (`CalcPercent`)
 
 `CalcExpressionParser` is the sole precedence-climbing evaluator, returning `CalcValue` for numbers,
 measurements, currencies and booleans. `CalcQuantity` turns those values into cards and applies display
@@ -70,6 +72,10 @@ there is no second arithmetic parser or fallback evaluation of a completed scala
 `CalcOperator` owns operator identity, binding power and spelling; `CalcMath` owns the function and
 constant catalog. Spoken roots use the typed parser too: `square root of 25m2` is `5 m`,
 and `cube root of -8m3` is `-2 m`.
+`per` is the spoken `/`, so `5 usd per gallon to eur per liter` is `5 usd/gal to eur/l` and
+`60 miles per hour` is `60 mi/hr`. `plus`, `minus`, `times`, `divided by` and `multiplied by` are the
+spoken operators. All of them are read only after an operand — a word at the start of a query is
+never an operator — and tokenize to the operator they spell, so no grammar learns them.
 Dimensionless results can feed base conversion too: `2m / 2m to hex` is `0x1`.
 `CalcNumberBase` owns radix names and prefixes for both tokens and results. A conversion target is
 checked before evaluating its source, so an ordinary unit conversion never attempts radix arithmetic.
@@ -126,12 +132,33 @@ which is the more common thing to type.
 The same convention writes an **ordinal dot** after the day, so `28. aug + 3` reads as 28 August.
 Only a trailing dot is dropped, which is why `28.5 aug` stays silent rather than becoming a date.
 
+An English **ordinal** is dropped the same way: `atomize` folds the `st`/`nd`/`rd`/`th` after a day,
+an `of` between a day and a month, and a `the` before a day, so `29th of october`, `october 28th` and
+`the 29th of october` read as `29 october`. A day alone (`the 29th`) names no month and stays silent.
+
+After `until` / `till` / `since` a lone **day and month** (`29.10`, `29.10.`, `29/10`) is a date, day
+first. No decimal follows those words, so the three-part rule above does not apply there; everywhere
+else `29.10` is still a number and `1.5 + 3` is still 4.5. A slashed pair stays month-first when that
+is a real date (`10/29`), and falls back to day-first only when it is not (`29/10`).
+
 Grammar G needs a qualifier for anything that recurs. `monday`, `july` and `noon` alone are app
 searches, so `at <time>` or a leading `next` / `last` earns a card. **`now`, `today`, `tomorrow`,
 `yesterday` and `time` are qualifier enough** — each names exactly one moment, so alone they answer.
 `time` is the Mac's own clock, badged with today's date and the calendar's zone the way `time in
 <place>` badges its city. The card takes row 0, so `time` + Enter copies the clock; Time Machine is
 one row down.
+
+**A period names a day too.** `in 3 days`, `in 90 min` and `in 2 weeks` are the duration followed by
+`from now` (`fromNow` rewrites the query before any grammar sees it, and only when everything after
+`in` is a duration, so `10 in in cm` is untouched). `next week`, `last month` and `next year` shift
+today by that period, and `end of month`, `start of next year` and `beginning of the year` land on a
+period's edge; both qualify on their own because a lead `next` / `last` / `end of` is never an app
+search. Weeks have no edge — Sunday or Friday is a locale's call — so `end of week` stays silent.
+
+Fixed-date occasions (`christmas`, `christmas eve`, `new year's eve`, `halloween`, `valentine's day`)
+are dates like any other: `days until christmas`, `christmas + 3 days`. Alone they stay app searches,
+as `monday` does. Easter, Thanksgiving and every other floating holiday differ by country and are
+left out, for the reason holidays are left out of workdays.
 **A written day is qualifier enough** too: `25. aug`, `aug 25` and `25.8.27` all answer, badged with
 their weekday, because nobody types a day-and-month pair looking for an app. A month alone still
 names no day, so `july` stays a search.
@@ -233,8 +260,16 @@ All factors share composable bases: cubic meters for volume and bytes per second
 To add a dimension, declare its signature on `UnitCategory`, add records to `CalcUnitCatalog`, and register
 one output in `baseUnits`. A new unit within a category only needs a table entry.
 Fuel economy (`mpg`, `km/L`) and fuel consumption (`L/100km`) register no base unit, so
-`100 km / 7 l` keeps the units typed. No rule converts one into the other: `6.5 l/100km to mpg` is a
-category error, while `1 / 36 mpg to l/100km` works through ordinary division.
+`100 km / 7 l` keeps the units typed. They are each other's reciprocal, so a conversion between the
+two inverts: `30 mpg to l/100km` is `7.840486111 L/100km` and `6.5 l/100km to mpg` is `36.18685897 mpg`.
+Speed and pace are the other pair — `10 km/h to min/km` is `6 min/km` — and `min/km` stays an ordinary
+compound unit with no category of its own. `CalcUnits.reciprocal` is the only place that decides. Fuel
+pairs by category, since area shares its dimension: `1 m2 to mpg` and `5m * 4m to mpg` stay category
+errors. A typed fuel ratio lands on that same dimension, so the division of a volume by a length, or
+the reverse, marks its value `isFuelRatio`: `24.5 l / 350 km to mpg` is `33.60208333 mpg` and
+`100 mi / 4 gal to l/100km` is `9.408583333 L/100km`. Speed and pace pair by dimension, which nothing
+else shares. Frequency and time are deliberately absent, so `1 hz to s` is still a category error. A
+zero amount has no reciprocal and stays silent.
 `m²` / `m2` and `m³` / `m3` name units; `(2m)^2` squares the entire quantity.
 `CalcUnits.productUnit` selects Wh/kWh for power multiplied by a minutes-or-larger time unit,
 and Ah/mAh for current multiplied by one; other derived products retain their base unit.
@@ -307,6 +342,17 @@ after the `e`. Like `10k`, it tokenizes as a shorthand rather than a plain liter
 still earns a card where a lone `100000` deliberately doesn't. A literal that overflows to infinity
 (`1e400`) is treated as non-calculator input, not as a card.
 
+## Date facts
+
+`CalcDateFacts` answers questions about a date rather than arithmetic on it: `week number`,
+`what week is it`, `day of year`, `day of the year for dec 31`, `age 1990-05-03`, `born 3 may 1990`.
+A trailing `of` / `for` / `on` names the date, read like any other (`week number of christmas`);
+without one it is today. Every answer is badged with its date and cannot chain. The week number is
+the **injected calendar's own** — its first weekday and minimal days, so a US Mac and a British one
+can differ by one — never a hard-coded ISO week. An age needs the year written, since `3 may` could
+be any birth year, and a birth date in the future is silent. The check is two words or more starting
+with one of `w d a b c`, so single app names never reach it.
+
 ## Time zones
 
 `CalcTimeZone` answers `time in Tokyo`, `SF time`, `time SF`, `Canada timezone`, `now in usa`,
@@ -343,6 +389,35 @@ The offset's unit may be left out — `time in sao paulo + 5` is five hours — 
 admits no other reading. The implication is the **offset's alone**: `time in 4` still names no zone
 and stays silent, and a bare `5 + 3` is arithmetic exactly as it was. It mirrors the bare number a
 moment already takes in grammar C.
+
+A **day and a clock** in a zone — `October 28th at 1PM ET`, `tomorrow 3pm pst`, `1pm et tomorrow`,
+`2026-10-28 13:00 est`, `next friday 9am london in tokyo` — is read by `datedMoment`, which runs
+before the clock-only path and steps aside whenever no day is left once the zone and clock are
+removed. The zone may sit anywhere in the phrase and the clock may lead or trail. The day phrase goes
+to `CalcDateTime.wallMoment` on a calendar copy whose zone is the **source** zone, so the date is
+resolved where the clock was spoken: `nov 2 1pm et` is an hour later than `oct 28 1pm et`, because
+US daylight time ends on 1 November, and no offset from today is reused. Relative words (`tomorrow`,
+`friday`) count from the source zone's own date. The answer leads with its date — `Wednesday, 28
+October at 7:00 PM` — and copies the same text, since a dated answer is meaningless without it.
+
+`utc+5`, `gmt-5` and `utc+5:30` are zones, attached with no space because a spaced `+` shifts the
+answer. They sit last in the lookup, so no curated name is shadowed, and a badge reads `UTC+5:30`.
+
+A **span** — `9am-5pm et in cet`, `9am to 5pm london in tokyo`, `oct 28 9am-5pm et in london` —
+converts both ends; the day is as spoken or today in the source zone, and an end that is not after its
+start rolls to the next day, so `10pm-2am` is overnight. The rolled end must still read the clock
+written, so an end that falls in a DST gap on the next day is silent rather than moved an hour. A span
+whose source and destination zone are the same is silent, since it converts nothing.
+
+A **list** of destinations — `1pm et in london, tokyo, sydney`, `time in london, tokyo and sydney` — is
+one card, because a card shows one answer: the times in order on the right, joined by ` · `, and the
+places in the same order in the badge. Copying yields `London 6:00 PM, Tokyo 2:00 AM, …`, naming each
+place. Each place is evaluated as its own `… in <place>` query, so every rule above applies to it, and
+one that does not resolve silences the whole list. Two to six places qualify.
+
+The dated, span and list forms live in `CalcZoneSchedule`, an extension of `CalcTimeZone`. Each is
+gated before it allocates — a comma, or a colon or am/pm after a digit — so a query with none of those
+costs nothing on its way past; `calc-performance` shows no change for units, currency or arithmetic.
 
 `diff paris` answers how far a zone runs from the Mac's own, and a duration may stand where a zone
 would (`time in 4 hours`, `time in 4 hours in san francisco`) — the zone table is tried first, so a
@@ -469,6 +544,18 @@ Each of these badges what its number **is** — `Tip`, `Discounted`, `Percentage
 `Average`, `Sum`, `Minimum`, `Maximum`, `Rounded` — rather than the bare `Result` that says nothing
 the card doesn't already show. `min` and `max` are only told apart by it.
 
+## Shared amounts
+
+`CalcSplit` divides an amount among people: `85 + 20% split 3`, `split 120 between 4`,
+`120 split 4 ways`, `120 / 4 people`, `eur 99 among 3 friends`, `20% tip on 85 split 3`. The amount is
+evaluated as written — a unit or currency is kept rather than auto-converted, so `10 kg split 4` is
+`2.5 kg` and `$120 split 4` is `30.00 USD` even on a Mac set to another currency — and may be anything
+the calculator reads, a tip or discount phrase included. The divide happens before any rounding or
+`to` target, so `$1 / 6 split 2` is `0.08 USD` like `$1 / 6 / 2`, and `150 min to timespan split 2` is
+`1 hr 15 min`. The share takes the badge `Per Person`. The headcount is
+a whole number from 1 to 10,000, and `split screen` or `120 split 0` stay silent. It runs on the tokens
+already produced, so a query without one of its words pays nothing.
+
 ## Modulo
 
 `mod` is a binary operator at `*` / `/` precedence, computed with `truncatingRemainder` so the sign
@@ -576,6 +663,12 @@ amount is still an app search. Where the region names no currency, names one the
 or names one the snapshot doesn't quote, the amount answers in the currency written rather than
 erroring about a code the user never typed — an unresolvable region still names no target.
 
+A **rate** with no target is the same lone amount: `5 usd per gallon` on a pound Mac is `3.95 GBP/gal`,
+`50 usd per hour` is `39.5 GBP/hr`. Only the currency changes — the unit is as typed, since choosing
+liters over gallons would be a guess about the person — and only when the quantity is exactly
+`<amount> <currency> ÷ <unit>`: `100 USD / 4hr` divides by a typed number, so it is an operator and
+keeps its currency.
+
 ### Exchange rates
 
 The fetch runs on a private **cacheless** `URLSession` (`.ephemeral`, `urlCache = nil`) rather than
@@ -659,6 +752,9 @@ it to canonical spelling or rejects the whole query. Rejection means **no card**
   no valid grouping can be a date, since a date's year has two or four digits and a group has three.
 - **Clock fragments survive.** A run touching `:` is left alone, so the fractional seconds in
   `1970-01-01T00:00:00.125Z` are never read as grouping.
+- **A day and month after `until`, `till` or `since` survive.** `days until 29.10` passes through
+  untouched, in both directions, because the date grammar reads that pair day-first and a localized
+  rewrite would echo it as `29,10`. Elsewhere `29.10` is still a number and is rejected as grouping.
 - **A trailing decimal separator is kept**, so `1 + 2,` still answers `3` while the fraction is typed.
 - A dot that is not the format's grouping separator (French, where grouping is a narrow no-break
   space) is the canonical decimal, so `1.5 + 1` answers `2,5`.

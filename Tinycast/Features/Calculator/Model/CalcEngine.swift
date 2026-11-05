@@ -65,6 +65,10 @@ enum CalcEngine {
             return CalcDateTime.namedMoment(query, now: now, calendar: calendar).map(unchained)
         }
 
+        if let fact = CalcDateFacts.evaluate(query, now: now, calendar: calendar) {
+            return unchained(fact)
+        }
+
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) {
             return unchained(dateTime)
         }
@@ -75,6 +79,10 @@ enum CalcEngine {
         }
 
         guard let tokens = CalcTokenizer.tokenize(query), !tokens.isEmpty else { return nil }
+
+        if CalcSplit.mentions(tokens), let share = CalcSplit.evaluate(query, rates: rates, region: region) {
+            return share
+        }
 
         if let partial = partialResult(
             tokens, query: query, now: now, calendar: calendar, rates: rates, region: region)

@@ -9,16 +9,24 @@ enum CalcPercent {
             ?? parseAggregate(tokens, query: query) ?? parseRoundToNearest(tokens, query: query)
     }
 
+    /// The money a discount or tip phrase comes to, unrounded, for a caller that shares it out.
+    static func amount(_ tokens: [CalcToken]) -> Double? {
+        offAmount(tokens) ?? tipAmount(tokens)
+    }
+
     /// `<pct>% off <value>` → the value reduced by pct percent (`20% off 500` → 400).
     private static func parseOff(_ tokens: [CalcToken], query: String) -> CalcResult? {
+        offAmount(tokens).map { card(query, .number($0), target: String(localized: "Discounted")) }
+    }
+
+    private static func offAmount(_ tokens: [CalcToken]) -> Double? {
         guard let off = tokens.firstIndex(of: .ident("off")), off >= 2,
             tokens[off - 1] == .op(.percent),
             let pct = CalcExpressionParser.scalar(Array(tokens[0..<(off - 1)])),
             let base = CalcExpressionParser.scalar(Array(tokens[(off + 1)...]))
         else { return nil }
         let result = base * (1 - pct / 100)
-        guard result.isFinite else { return nil }
-        return card(query, .number(result), target: String(localized: "Discounted"))
+        return result.isFinite ? result : nil
     }
 
     /// `<x> as % of <y>` → x / y × 100, rendered as a percentage (`50 as % of 200` → 25%).
@@ -47,6 +55,10 @@ enum CalcPercent {
 
     /// The tip alone, not the total: it is the number the phrase asks for.
     private static func parseTip(_ tokens: [CalcToken], query: String) -> CalcResult? {
+        tipAmount(tokens).map { card(query, .number($0), target: String(localized: "Tip")) }
+    }
+
+    private static func tipAmount(_ tokens: [CalcToken]) -> Double? {
         guard let tip = tokens.firstIndex(of: .ident("tip")), tip >= 2,
             tip + 2 < tokens.count, tokens[tip - 1] == .op(.percent),
             tokens[tip + 1] == .ident("on") || tokens[tip + 1] == .ident("of"),
@@ -54,8 +66,7 @@ enum CalcPercent {
             let bill = CalcExpressionParser.scalar(Array(tokens[(tip + 2)...]))
         else { return nil }
         let amount = bill * pct / 100
-        guard amount.isFinite else { return nil }
-        return card(query, .number(amount), target: String(localized: "Tip"))
+        return amount.isFinite ? amount : nil
     }
 
     private static func parseWhatPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
