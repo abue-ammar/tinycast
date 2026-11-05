@@ -129,7 +129,6 @@ enum CalcQuantity {
         return convertedResult(converted, expression: expressionText(tokens))
     }
 
-    /// A number beside a currency name, in either order.
     private static func isAmountOf(_ first: CalcToken, _ second: CalcToken) -> Bool {
         switch (first, second) {
         case (.number, .ident(let name)), (.ident(let name), .number):

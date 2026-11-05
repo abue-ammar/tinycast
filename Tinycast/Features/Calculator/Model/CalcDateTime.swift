@@ -9,7 +9,7 @@ enum CalcDateTime {
         -> CalcResult?
     {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let lowered = fromNow(echo.lowercased())
+        let lowered = fromNow(withoutApostrophes(echo.lowercased()))
         guard !lowered.isEmpty else { return nil }
 
         // One pass over the words, since an app search pays this on every keystroke.

@@ -52,14 +52,20 @@ extension CalcTimeZone {
             guard let begin = CalcDateTime.wallMoment(phrase + " at " + first, now: now, calendar: zoned),
                 var end = CalcDateTime.wallMoment(phrase + " at " + last, now: now, calendar: zoned)
             else { return nil }
-            if end <= begin, let next = zoned.date(byAdding: .day, value: 1, to: end) { end = next }
+            if end <= begin {
+                guard let next = zoned.date(byAdding: .day, value: 1, to: end),
+                    keepsClock(next, last, calendar: zoned)
+                else { return nil }
+                end = next
+            }
             let note = dayOffsetNote(
                 SourceMoment(date: begin, zone: source), target: target, calendar: calendar)
             guard let note else { return nil }
-            let lead = day.isEmpty ? "" : dayString(begin, zone: target, calendar: calendar) + ", "
+            let lead = day.isEmpty ? "" : dayString(begin, zone: target, now: now, calendar: calendar) + ", "
             let answer = lead + spanString(begin, end, zone: target, calendar: calendar)
             return CalcResult(
-                expression: (day.isEmpty ? "" : dayString(begin, zone: source, calendar: calendar) + ", ")
+                expression: (day.isEmpty
+                    ? "" : dayString(begin, zone: source, now: now, calendar: calendar) + ", ")
                     + spanString(begin, end, zone: source, calendar: calendar),
                 sourceBadge: label(for: source), targetBadge: label(for: target),
                 payload: .value(display: answer + (day.isEmpty ? note : ""), copyText: answer))
@@ -134,6 +140,13 @@ extension CalcTimeZone {
         return tokens
     }
 
+    /// A day added across a DST gap moves the clock, and a span must not end at a time never written.
+    private static func keepsClock(_ date: Date, _ clock: String, calendar: Calendar) -> Bool {
+        guard let wanted = parseClock(clock) else { return false }
+        let actual = calendar.dateComponents([.hour, .minute], from: date)
+        return actual.hour == wanted.hour && actual.minute == wanted.minute
+    }
+
     /// `9am-5pm` is three words, but `2026-10-28` stays one.
     private static func splitHyphen(_ word: Substring) -> [String] {
         let parts = word.split(whereSeparator: { $0 == "-" || $0 == "–" })
@@ -142,7 +155,6 @@ extension CalcTimeZone {
         return [String(parts[0]), "-", String(parts[1])]
     }
 
-    /// The first run of one to three words naming a zone whose remainder `accept` takes, longest first.
     private static func extractZone(
         _ tokens: [String], minimumRest: Int, accept: (TimeZone, [String]) -> CalcResult?
     ) -> CalcResult? {
@@ -158,7 +170,6 @@ extension CalcTimeZone {
         return nil
     }
 
-    /// The clock leads or trails; whatever is left names the day, and must be there.
     private static func dayAndClock(_ words: [String]) -> String? {
         let clock: String
         let day: ArraySlice<String>
@@ -173,8 +184,12 @@ extension CalcTimeZone {
         return day.joined(separator: " ") + " at " + clock
     }
 
-    private static func dayString(_ date: Date, zone: TimeZone, calendar: Calendar) -> String {
-        CalcDateFormatters.string(from: date, calendar: calendar, zone: zone, pattern: "EEEE, d MMMM")
+    private static func dayString(_ date: Date, zone: TimeZone, now: Date, calendar: Calendar) -> String {
+        let local = wall(zone, calendar)
+        let sameYear = local.component(.year, from: date) == local.component(.year, from: now)
+        return CalcDateFormatters.string(
+            from: date, calendar: calendar, zone: zone,
+            pattern: sameYear ? "EEEE, d MMMM" : "EEEE, d MMMM, yyyy")
     }
 
     private static func spanString(_ start: Date, _ end: Date, zone: TimeZone, calendar: Calendar) -> String {
@@ -183,11 +198,7 @@ extension CalcTimeZone {
     }
 
     private static func momentString(_ date: Date, zone: TimeZone, now: Date, calendar: Calendar) -> String {
-        let local = wall(zone, calendar)
-        let sameYear = local.component(.year, from: date) == local.component(.year, from: now)
-        let day = CalcDateFormatters.string(
-            from: date, calendar: calendar, zone: zone,
-            pattern: sameYear ? "EEEE, d MMMM" : "EEEE, d MMMM, yyyy")
+        let day = dayString(date, zone: zone, now: now, calendar: calendar)
         return String(localized: "\(day) at \(clockString(date, zone: zone, calendar: calendar))")
     }
 }

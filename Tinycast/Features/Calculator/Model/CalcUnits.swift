@@ -67,17 +67,18 @@ enum CalcUnits {
         return .value(input: input, from: from, to: to, output: output)
     }
 
-    /// Dimensions that are each other's inverse and mean the same thing read the other way up.
-    private static let reciprocalPairs: [(CalcDimension, CalcDimension)] = [
-        (UnitCategory.fuelEconomy.dimension!, UnitCategory.fuelConsumption.dimension!),
-        (UnitCategory.speed.dimension!, CalcDimension(length: -1, time: 1))
-    ]
+    private static let speed = CalcDimension(length: 1, time: -1)
+    private static let pace = CalcDimension(length: -1, time: 1)
 
-    /// `30 mpg to l/100km`, `10 km/h to min/km`; frequency and time are deliberately not a pair.
-    static func reciprocal(_ from: UnitDef, _ to: UnitDef) -> Bool {
-        guard from.currency == nil, to.currency == nil, let lhs = from.dimension, let rhs = to.dimension
-        else { return false }
-        return reciprocalPairs.contains { ($0 == lhs && $1 == rhs) || ($0 == rhs && $1 == lhs) }
+    /// `30 mpg to l/100km`, `10 km/h to min/km`; area shares fuel's dimension, so fuel goes by name.
+    static func reciprocal(_ from: UnitDef, _ to: UnitDef, fuelRatio: Bool = false) -> Bool {
+        guard let lhs = from.dimension, let rhs = to.dimension else { return false }
+        if isFuel(to), isFuel(from) || fuelRatio { return lhs.adding(rhs) == .scalar }
+        return (lhs == speed && rhs == pace) || (lhs == pace && rhs == speed)
+    }
+
+    private static func isFuel(_ unit: UnitDef) -> Bool {
+        unit.category == .fuelEconomy || unit.category == .fuelConsumption
     }
 
     static func reciprocalValue(_ amount: Double, from: UnitDef, to: UnitDef) -> Double? {

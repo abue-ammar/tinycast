@@ -243,7 +243,6 @@ enum CalcTokenizer {
         return "pmtdPMTD".utf8.contains(first)
     }
 
-    /// `per` divides, so `5 usd per gallon` is `5 usd / gallon`; the rest are the spoken operators.
     private static func wordOperator(
         _ word: String, _ chars: [Unicode.Scalar], after index: Int
     ) -> (op: CalcOperator, end: Int)? {

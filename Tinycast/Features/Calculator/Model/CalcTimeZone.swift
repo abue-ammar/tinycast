@@ -113,7 +113,6 @@ enum CalcTimeZone {
         return "time \(place.joined(separator: " ")) to \(target.joined(separator: " "))"
     }
 
-    /// Splits a trailing `+ 2h` / `- 30 min` off the zone phrase it shifts.
     /// A written clock has a colon or an am/pm after a digit; anything else skips the dated forms.
     private static func hintsAtClock(_ text: String) -> Bool {
         var previous: UInt8 = 0
@@ -130,6 +129,7 @@ enum CalcTimeZone {
         return false
     }
 
+    /// Splits a trailing `+ 2h` / `- 30 min` off the zone phrase it shifts.
     static func splitOffset(
         _ query: String
     ) -> (String, (count: Int, component: Calendar.Component)?) {

@@ -2,7 +2,7 @@ import Foundation
 
 /// A shared amount: `85 + 20% split 3`, `split $120 between 4`, `120 / 4 people`.
 enum CalcSplit {
-    struct Phrase {
+    private struct Phrase {
         let amount: String
         let count: Int
     }
@@ -20,8 +20,7 @@ enum CalcSplit {
         }
     }
 
-    /// The amount's own text and the headcount, or nil for anything that only resembles a split.
-    static func parse(_ query: String) -> Phrase? {
+    private static func parse(_ query: String) -> Phrase? {
         guard query.count <= 128 else { return nil }
         let words = query.split(whereSeparator: \.isWhitespace).map(String.init)
         let lower = words.map { $0.lowercased() }
@@ -56,25 +55,27 @@ enum CalcSplit {
         return Phrase(amount: amount.joined(separator: " "), count: count)
     }
 
-    /// Each share of an answer that is a number, with its unit or currency carried over.
-    static func share(of whole: CalcResult, among count: Int, query: String) -> CalcResult? {
-        guard case .value(_, let copy) = whole.payload, whole.canChain else { return nil }
-        let number = copy.prefix { !$0.isWhitespace }
-        guard let amount = Double(number) else { return nil }
-        let suffix = String(copy.dropFirst(number.count))
-        let each = amount / Double(count)
-        guard each.isFinite else { return nil }
-
-        let payload: CalcResult.Payload
-        if whole.isCurrency {
-            let text = CalcFormatter.currency(each)
-            payload = .value(display: CalcFormatter.grouped(text) + suffix, copyText: text + suffix)
-        } else {
-            payload = .number(each, suffix: suffix)
+    /// Divides before rounding and before any `to`, so `$1 / 6 split 2` matches `$1 / 6 / 2`.
+    static func evaluate(_ query: String, rates: CurrencyRates?, region: String?) -> CalcResult? {
+        guard let phrase = parse(query), let tokens = CalcTokenizer.tokenize(phrase.amount), !tokens.isEmpty
+        else { return nil }
+        let expression = query.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let count = Double(phrase.count)
+        if let amount = CalcPercent.amount(tokens) {
+            return CalcResult(
+                expression: expression, sourceBadge: String(localized: "Expression"),
+                targetBadge: String(localized: "Per Person"), payload: .number(amount / count))
         }
+        let end = CalcQuantity.conversionTarget(tokens, from: 0, to: tokens.count)?.start ?? tokens.count
+        let divided =
+            [.op(.open)] + tokens[..<end] + [.op(.close), .op(.divide), .number(count)] + tokens[end...]
+        guard
+            let each = CalcQuantity.evaluate(
+                divided, query: phrase.amount, rates: rates, region: region, preserveStandaloneUnit: true),
+            case .value = each.payload, each.canChain
+        else { return nil }
         return CalcResult(
-            expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
-            sourceBadge: whole.sourceBadge, targetBadge: String(localized: "Per Person"), payload: payload,
-            isCurrency: whole.isCurrency)
+            expression: expression, sourceBadge: each.sourceBadge,
+            targetBadge: String(localized: "Per Person"), payload: each.payload, isCurrency: each.isCurrency)
     }
 }

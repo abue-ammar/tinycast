@@ -53,8 +53,8 @@ The one exception is the five words that name the current moment or its neighbou
    `today + 3 weeks`)
 3. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
    because a zone phrase is words rather than calculator input
-4. Tokenize, then a **shared amount** (`CalcSplit`: `$120 split 4`), which hands its amount back to
-   the steps below, then preserve the complete prefix of a trailing binary operator
+4. Tokenize, then a **shared amount** (`CalcSplit`: `$120 split 4`), which divides the amount before
+   step 6 formats it, then preserve the complete prefix of a trailing binary operator
 5. Base conversion
 6. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
    `100km / 2h to km/h`, `(1hr + 30min) to timespan`)
@@ -73,7 +73,7 @@ there is no second arithmetic parser or fallback evaluation of a completed scala
 constant catalog. Spoken roots use the typed parser too: `square root of 25m2` is `5 m`,
 and `cube root of -8m3` is `-2 m`.
 `per` is the spoken `/`, so `5 usd per gallon to eur per liter` is `5 usd/gal to eur/l` and
-`60 miles per hour` is `60 mi/h`. `plus`, `minus`, `times`, `divided by` and `multiplied by` are the
+`60 miles per hour` is `60 mi/hr`. `plus`, `minus`, `times`, `divided by` and `multiplied by` are the
 spoken operators. All of them are read only after an operand — a word at the start of a query is
 never an operator — and tokenize to the operator they spell, so no grammar learns them.
 Dimensionless results can feed base conversion too: `2m / 2m to hex` is `0x1`.
@@ -263,9 +263,13 @@ Fuel economy (`mpg`, `km/L`) and fuel consumption (`L/100km`) register no base u
 `100 km / 7 l` keeps the units typed. They are each other's reciprocal, so a conversion between the
 two inverts: `30 mpg to l/100km` is `7.840486111 L/100km` and `6.5 l/100km to mpg` is `36.18685897 mpg`.
 Speed and pace are the other pair — `10 km/h to min/km` is `6 min/km` — and `min/km` stays an ordinary
-compound unit with no category of its own. `CalcUnits.reciprocalPairs` lists the pairs by dimension and
-is the only place that decides; frequency and time are deliberately absent, so `1 hz to s` is still a
-category error. A zero amount has no reciprocal and stays silent.
+compound unit with no category of its own. `CalcUnits.reciprocal` is the only place that decides. Fuel
+pairs by category, since area shares its dimension: `1 m2 to mpg` and `5m * 4m to mpg` stay category
+errors. A typed fuel ratio lands on that same dimension, so the division of a volume by a length, or
+the reverse, marks its value `isFuelRatio`: `24.5 l / 350 km to mpg` is `33.60208333 mpg` and
+`100 mi / 4 gal to l/100km` is `9.408583333 L/100km`. Speed and pace pair by dimension, which nothing
+else shares. Frequency and time are deliberately absent, so `1 hz to s` is still a category error. A
+zero amount has no reciprocal and stays silent.
 `m²` / `m2` and `m³` / `m3` name units; `(2m)^2` squares the entire quantity.
 `CalcUnits.productUnit` selects Wh/kWh for power multiplied by a minutes-or-larger time unit,
 and Ah/mAh for current multiplied by one; other derived products retain their base unit.
@@ -401,8 +405,9 @@ answer. They sit last in the lookup, so no curated name is shadowed, and a badge
 
 A **span** — `9am-5pm et in cet`, `9am to 5pm london in tokyo`, `oct 28 9am-5pm et in london` —
 converts both ends; the day is as spoken or today in the source zone, and an end that is not after its
-start rolls to the next day, so `10pm-2am` is overnight. A span whose source and destination zone are
-the same is silent, since it converts nothing.
+start rolls to the next day, so `10pm-2am` is overnight. The rolled end must still read the clock
+written, so an end that falls in a DST gap on the next day is silent rather than moved an hour. A span
+whose source and destination zone are the same is silent, since it converts nothing.
 
 A **list** of destinations — `1pm et in london, tokyo, sydney`, `time in london, tokyo and sydney` — is
 one card, because a card shows one answer: the times in order on the right, joined by ` · `, and the
@@ -545,7 +550,9 @@ the card doesn't already show. `min` and `max` are only told apart by it.
 `120 split 4 ways`, `120 / 4 people`, `eur 99 among 3 friends`, `20% tip on 85 split 3`. The amount is
 evaluated as written — a unit or currency is kept rather than auto-converted, so `10 kg split 4` is
 `2.5 kg` and `$120 split 4` is `30.00 USD` even on a Mac set to another currency — and may be anything
-the calculator reads, a tip phrase included. The share takes the badge `Per Person`. The headcount is
+the calculator reads, a tip or discount phrase included. The divide happens before any rounding or
+`to` target, so `$1 / 6 split 2` is `0.08 USD` like `$1 / 6 / 2`, and `150 min to timespan split 2` is
+`1 hr 15 min`. The share takes the badge `Per Person`. The headcount is
 a whole number from 1 to 10,000, and `split screen` or `120 split 0` stay silent. It runs on the tokens
 already produced, so a query without one of its words pays nothing.
 

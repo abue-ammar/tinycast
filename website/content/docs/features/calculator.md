@@ -33,6 +33,9 @@ multiply and divide, and keeps the sign of the first number: `-10 mod 3` is `-1`
 
 Spoken roots work with measurements: `square root of 25m2` is `5 m`.
 
+You can also write the operators as words: `10 plus 5`, `10 minus 3`, `6 times 7`,
+`10 divided by 2` and `10 multiplied by 3`. `per` means divide, so `60 miles per hour` is `60 mi/hr`.
+
 **A trailing operator keeps the last answer on screen.** `10 +` shows `10`, and `10kg + 500g +`
 shows `10,500 g`, so the card doesn't flicker while you type the next number.
 
@@ -157,24 +160,34 @@ is `12.5 MB/s`. Binary units like `MiB/s` and bit amounts like `kbit` also work.
 Other supported units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), horsepower (`hp`),
 BTU, `rpm` and pound-force (`lbf`).
 
-## Fuel
+## Fuel and pace
 
 Fuel economy uses `mpg` and `km/L`, and fuel consumption uses `L/100km`. `15 km/l to mpg` is
-`35.2821875 mpg`, and `100 mi / 4 gal to mpg` is `25 mpg`. To go from one to the other, divide:
-`1 / 36 mpg to l/100km` is `6.533738426 L/100km`.
+`35.2821875 mpg`, and `100 mi / 4 gal to mpg` is `25 mpg`. Economy and consumption convert directly
+into each other, as do speed and pace:
+
+| You type                    | You get               |
+| --------------------------- | --------------------- |
+| `30 mpg to l/100km`         | `7.840486111 L/100km` |
+| `6.5 l/100km to mpg`        | `36.18685897 mpg`     |
+| `8 l/100km to km/l`         | `12.5 km/L`           |
+| `100 mi / 4 gal to l/100km` | `9.408583333 L/100km` |
+| `10 km/h to min/km`         | `6 min/km`            |
+| `6 min/km to km/h`          | `10 km/h`             |
 
 ## Currency and crypto
 
-| You type                    | It means                   |
-| --------------------------- | -------------------------- |
-| `1 euro to dollars`         | Named currencies           |
-| `€20 to GBP` / `20€ to GBP` | Symbols, on either side    |
-| `eur to usd`                | An amount of 1             |
-| `1 btc to eur`              | Crypto                     |
-| `$10 + €5`                  | Mixed arithmetic           |
-| `(20 sgd to usd) * 30`      | Convert, then multiply     |
-| `100 USD / 4hr`             | `25 USD/hr`                |
-| `25 USD/hr to EUR/min`      | A rate in another currency |
+| You type                            | It means                   |
+| ----------------------------------- | -------------------------- |
+| `1 euro to dollars`                 | Named currencies           |
+| `€20 to GBP` / `20€ to GBP`         | Symbols, on either side    |
+| `eur to usd`                        | An amount of 1             |
+| `1 btc to eur`                      | Crypto                     |
+| `$10 + €5`                          | Mixed arithmetic           |
+| `(20 sgd to usd) * 30`              | Convert, then multiply     |
+| `100 USD / 4hr`                     | `25 USD/hr`                |
+| `25 USD/hr to EUR/min`              | A rate in another currency |
+| `5 usd per gallon to eur per liter` | A spoken rate, converted   |
 
 Tinycast supports 159 currencies and a selected list of cryptocurrencies.
 
@@ -182,6 +195,10 @@ Tinycast supports 159 currencies and a selected list of cryptocurrencies.
 shows `122.84 BDT`. If you type an amount in your own currency, it's converted to US dollars, or to
 euros if your currency is the dollar. Your currency comes from your Mac's region setting.
 **Tinycast never asks for your location.**
+
+A rate on its own converts the same way and keeps its unit: on a Mac set to the UK,
+`5 usd per gallon` shows `3.95 GBP/gal`. Add a target to pick the currency, as in
+`5 USD/gal to EUR/gal`.
 
 ### Words with two meanings
 
@@ -217,17 +234,23 @@ is always written out in full: `1 IDR to USD` is `0.00005539 USD`, never `5.539e
 
 ## Dates and times
 
-| What you want             | Example                                          |
-| ------------------------- | ------------------------------------------------ |
-| Time until a moment       | `hrs till 9am`, `days till 9april`               |
-| Time since a moment       | `days since 9jul`, `hrs since noon`              |
-| A moment plus or minus    | `today + 3 weeks`, `now + 90 min`                |
-| A chain of shifts         | `17.2.26 + 100 weekdays - 4 + 2`                 |
-| Months and years          | `31.1.26 + 1 month`, `29.2.24 + 1 year`          |
-| The gap between two       | `jul 4 - today`, `9:30 - 7:00 to minutes`        |
-| From or before a moment   | `3 days from next monday at 7:30`, `2 weeks ago` |
-| A weekday in a later week | `monday in 3 weeks`, `friday in 2 weeks`         |
-| A named moment            | `tomorrow at 9am`, `next monday`, `aug 25`       |
+| What you want                | Example                                          |
+| ---------------------------- | ------------------------------------------------ |
+| Time until a moment          | `hrs till 9am`, `days till 9april`               |
+| Time since a moment          | `days since 9jul`, `hrs since noon`              |
+| A moment plus or minus       | `today + 3 weeks`, `now + 90 min`                |
+| A chain of shifts            | `17.2.26 + 100 weekdays - 4 + 2`                 |
+| Months and years             | `31.1.26 + 1 month`, `29.2.24 + 1 year`          |
+| The gap between two          | `jul 4 - today`, `9:30 - 7:00 to minutes`        |
+| From or before a moment      | `3 days from next monday at 7:30`, `2 weeks ago` |
+| A weekday in a later week    | `monday in 3 weeks`, `friday in 2 weeks`         |
+| A named moment               | `tomorrow at 9am`, `next monday`, `aug 25`       |
+| A day from now               | `in 3 days`, `next week`, `last month`           |
+| The start or end of a period | `end of month`, `start of next year`             |
+| A day with an ordinal        | `days until 29th of october`, `october 28th`     |
+| A short day and month        | `days until 29.10`, `days since 20.7.`           |
+| A holiday                    | `days until christmas`, `halloween + 3 days`     |
+| A fact about a date          | `week number`, `day of year`, `age 3 may 1990`   |
 
 **When the answer is a date, Tinycast also shows the day of the week.**
 
@@ -243,6 +266,11 @@ the same clock time across daylight saving changes, while `+ 24 hours` adds exac
 Dates with dots are day first, like `19.2.27` for 19 February 2027, and `28. aug` also works. Dates
 with slashes are month first. Two-digit years from 00 to 68 mean the 2000s, and 69 to 99 mean the
 1900s. Simple fractions like `5/2 - 1/2` are still treated as arithmetic.
+
+Only holidays that fall on the same date everywhere work: Christmas, Christmas Eve, New Year's Day,
+New Year's Eve, Halloween and Valentine's Day. Holidays like Easter move from year to year and
+country to country, so Tinycast doesn't guess them. Week numbers follow your Mac's calendar
+settings, so they can differ by one between regions.
 
 ### Workdays
 
@@ -269,8 +297,15 @@ either a `Z` or an offset.
 | `time in sao paulo + 5`            | The time there in five hours       |
 | `diff paris`                       | The time difference to Paris       |
 | `time in 4 hours in san francisco` | San Francisco, four hours from now |
+| `oct 28 1pm et in cet`             | A time on a given day, in Paris    |
+| `tomorrow 3pm pst`                 | 3 PM tomorrow in Los Angeles, here |
+| `10am utc+5:30 in london`          | A UTC offset, in London            |
+| `9am-5pm et in cet`                | A span of time, in Paris           |
+| `1pm et in london, tokyo, sydney`  | Several places on one card         |
 
-If the answer falls on a different day, it says `(tomorrow)` or `(yesterday)`.
+If the answer falls on a different day, it says `(tomorrow)` or `(yesterday)`. A time with a date
+uses daylight saving for that date, not for today. In a span, an end before the start means the
+next day, so `10pm-2am` runs overnight.
 
 Cities come from the time zone database built into macOS, plus about a hundred common cities that it
 doesn't include, like Salzburg or Basel. Accents are optional, so `zurich` works. Common
@@ -294,6 +329,20 @@ Time zone answers work offline. Tinycast doesn't look up cities online.
 
 The card labels the answer, like **Tip**, **Discounted** or **Ratio**, instead of a generic
 "Result".
+
+## Splitting a bill
+
+| You type                 | You get       |
+| ------------------------ | ------------- |
+| `$120 split 4`           | `30.00 USD`   |
+| `split 120 between 4`    | `30`          |
+| `85 + 20% split 3`       | `34`          |
+| `20% tip on 85 split 3`  | `5.666666667` |
+| `eur 99 among 3 friends` | `33.00 EUR`   |
+| `120 / 4 people`         | `30`          |
+
+The card labels the answer **Per Person**. The amount keeps the currency or unit you typed, so
+`$120 split 4` is `30.00 USD` on any Mac.
 
 ## Functions and comparisons
 

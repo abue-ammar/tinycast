@@ -486,6 +486,7 @@ struct CalcTests {
         expectDisplay("5 usd per gallon", "3.95 GBP/gal", region: "GBP")
         expectDisplay("$5/gal", "3.95 GBP/gal", region: "GBP")
         expectDisplay("5 usd per gallon", "5 USD/gal")
+        expectDisplay("5 USD/gal to GBP/gal", "3.95 GBP/gal")
         expectDisplay("100 USD / 4hr", "25 USD/hr", region: "GBP")
         expectDisplay("5 usd per gallon to eur per liter", "1.215191441 EUR/L", region: "GBP")
         // A shared amount keeps its unit or currency, and may be any form the calculator reads
@@ -498,6 +499,10 @@ struct CalcTests {
         expectDisplay("20% tip on 85 split 3", "5.666666667")
         expectDisplay("10 kg split 4", "2.5 kg")
         expectDisplay("eur 99 among 3 friends", "33.00 EUR")
+        // The share divides the unrounded whole, and a timespan is shared in full
+        expectDisplay("$1 / 6 split 2", "0.08 USD")
+        expectDisplay("150 min to timespan split 2", "1 hr 15 min")
+        expectDisplay("$120 to eur split 4", "27.60 EUR")
         expectBadges("85 + 20% split 3", source: "Expression", target: "Per Person")
         expectNil("split screen")
         expectNil("120 split 0")
@@ -733,6 +738,9 @@ struct CalcTests {
         expectNilAt("easter")
         expectDisplayAt("new years eve + 3 days", "3 January, 2027")
         expectDisplayAt("new year's eve + 3 days", "3 January, 2027")
+        expectDisplayAt("valentines day + 3 days", "17 February")
+        expectDisplayAt("valentine's day + 3 days", "17 February")
+        expectDisplayAt("valentine’s day + 3 days", "17 February")
         let christmasNoon = clock.calendar.date(
             from: DateComponents(year: 2026, month: 12, day: 25, hour: 12))!
         expectDisplayAt("hrs till christmas at 9am", "8,757 hours", now: christmasNoon)
@@ -823,6 +831,16 @@ struct CalcTests {
         expectError("1 hz to s", "Cannot convert Frequency to Time.")
         expectError("10 km to min/km", "Cannot convert Length to Compound Units.")
         expectError("10 mpg to kg", "Cannot convert Fuel Economy to Weight.")
+        // Area shares fuel's dimension and stays an error; a typed fuel ratio still inverts
+        expectError("1 m2 to mpg", "Cannot convert Area to Fuel Economy.")
+        expectError("10 mpg to m2", "Cannot convert Fuel Economy to Area.")
+        expectError("10 m2 to m^-2", "Cannot convert Area to Compound Units.")
+        expectError("1 ha to mpg", "Cannot convert Area to Fuel Economy.")
+        expectError("5m * 4m to mpg", "Cannot convert Area to Fuel Economy.")
+        expectDisplay("100 mi / 4 gal to l/100km", "9.408583333 L/100km")
+        expectDisplay("24.5 l / 350 km to mpg", "33.60208333 mpg")
+        expectDisplay("(24.5 l / 350 km) to km/l", "14.28571429 km/L")
+        expectNil("0 mi / 4 gal to l/100km")
 
         expectDisplay("5 mbar", "0.07251886887 psi")
         expectDisplay("5 kPa", "0.7251886887 psi")
@@ -1272,6 +1290,9 @@ struct CalcTests {
         expectDisplayAt("9:30 am to 5:30 pm et in cet", "3:30 PM – 11:30 PM")
         expectDisplayAt("tomorrow at 1:30 pm et in tokyo", "Saturday, 25 July at 2:30 AM")
         expectDisplayAt("oct 31 9pm-5am et in london", "Sunday, 1 November, 1:00 AM – 10:00 AM")
+        expectNilAt("2026-03-07 11pm-2:30am et in london")
+        expectDisplayAt("dec 31 10pm-2am et in london", "Friday, 1 January, 2027, 3:00 AM – 7:00 AM")
+        expectNilAt("2026-03-08 2:30am et in london")
         expectDisplayAt(
             "1pm et in london, tokyo, sydney", "6:00 PM · 2:00 AM (tomorrow) · 3:00 AM (tomorrow)")
         expectBadgesAt(
