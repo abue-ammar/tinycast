@@ -52,11 +52,11 @@ enum CalcQuantity {
         }
 
         if let targetName = split.targetName {
-            if targetName == "timespan" || targetName == "duration" {
+            if let steps = timespanSteps(targetName) {
                 guard case .unit(let unit) = value.kind, unit.category == .time else { return nil }
                 let seconds = value.amount * unit.factor
                 guard seconds.isFinite else { return nil }
-                let text = CalcFormatter.timespan(seconds)
+                let text = CalcFormatter.timespan(seconds, steps: steps)
                 return CalcResult(
                     expression: expressionText(split.expressionTokens),
                     sourceBadge: parser.operationCount == 0 ? unit.name : String(localized: "Expression"),
@@ -172,13 +172,10 @@ enum CalcQuantity {
         _ amount: Double, definition: CurrencyDef, expression: String,
         sourceBadge: String = String(localized: "Expression")
     ) -> CalcResult {
-        let formatted = CalcFormatter.currency(amount)
-        return CalcResult(
+        CalcResult(
             expression: expression,
             sourceBadge: sourceBadge, targetBadge: definition.name,
-            payload: .value(
-                display: "\(CalcFormatter.grouped(formatted)) \(definition.code)",
-                copyText: "\(formatted) \(definition.code)"),
+            payload: .money(amount, code: definition.code),
             isCurrency: true)
     }
 
@@ -202,11 +199,28 @@ enum CalcQuantity {
             if tokens[index] == .op(.close) { depth -= 1 }
             guard depth == 0, index + 1 < end, CalcUnits.isConnector(tokens[index]) else { continue }
             if index + 2 == end, case .ident(let name) = tokens[index + 1] { return (index, name) }
+            if index + 4 == end, tokens[index + 2] == .ident("and") {
+                let pair = targetName(tokens[(index + 1)..<end])
+                if timespanSteps(pair) != nil { return (index, pair) }
+            }
             let target = Array(tokens[(index + 1)..<end])
             guard CalcUnitExpression.parse(target) != nil else { continue }
             return (index, targetName(tokens[(index + 1)..<end]))
         }
         return nil
+    }
+
+    /// `timespan`, or two time units such as `hours and minutes` that bound one.
+    private static func timespanSteps(_ target: String) -> ClosedRange<Double>? {
+        if target == "timespan" || target == "duration" { return CalcFormatter.everyTimespanStep }
+        let names = target.components(separatedBy: " and ")
+        guard names.count == 2, let largest = CalcUnits.byName[names[0]],
+            let smallest = CalcUnits.byName[names[1]], smallest.factor < largest.factor,
+            [largest, smallest].allSatisfy({ unit in
+                unit.category == .time && CalcFormatter.timespanSteps.contains { $0.seconds == unit.factor }
+            })
+        else { return nil }
+        return smallest.factor...largest.factor
     }
 
     static func conversionPrefix(_ tokens: [CalcToken], at start: Int) -> (name: String, end: Int)? {

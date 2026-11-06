@@ -6,14 +6,17 @@ enum CalcDateFacts {
         case week
         case dayOfYear
         case age
+        case weekday
+        case daysInMonth
 
         /// Longest first, so `what week number is it` is not read as `what week`.
         static let phrases: [(String, Fact)] = [
             ("what day of the year is it", .dayOfYear), ("what day of year is it", .dayOfYear),
             ("what week number is it", .week), ("what week of the year is it", .week),
             ("what week is it", .week), ("current week number", .week), ("week of the year", .week),
-            ("day of the year", .dayOfYear), ("week number", .week), ("day of year", .dayOfYear),
-            ("day number", .dayOfYear), ("born on", .age), ("born", .age), ("age of", .age), ("age", .age)
+            ("day of the year", .dayOfYear), ("day of the week", .weekday), ("week number", .week),
+            ("day of year", .dayOfYear), ("day number", .dayOfYear), ("weekday", .weekday),
+            ("days in", .daysInMonth), ("born on", .age), ("born", .age), ("age of", .age), ("age", .age)
         ]
     }
 
@@ -30,7 +33,14 @@ enum CalcDateFacts {
         }
 
         let date: Date
-        if rest.isEmpty {
+        if fact == .daysInMonth {
+            // The month's first day names it, so a bare `february` takes the nearest year.
+            guard !rest.isEmpty, let first = CalcDateTime.day("1 " + rest, now: now, calendar: calendar)
+            else {
+                return nil
+            }
+            date = first
+        } else if rest.isEmpty {
             guard fact != .age else { return nil }
             date = calendar.startOfDay(for: now)
         } else if let named = CalcDateTime.day(rest, now: now, calendar: calendar) {
@@ -39,8 +49,7 @@ enum CalcDateFacts {
             return nil
         }
 
-        let day = CalcDateFormatters.string(
-            from: date, calendar: calendar, zone: calendar.timeZone, pattern: "EEEE, d MMMM, yyyy")
+        let day = format(date, "EEEE, d MMMM, yyyy", calendar: calendar)
         switch fact {
         case .week:
             return card(
@@ -51,7 +60,24 @@ enum CalcDateFacts {
             return card(query, day, String(localized: "Day of the Year"), ordinal)
         case .age:
             return age(query, born: date, rest: rest, day: day, now: now, calendar: calendar)
+        case .weekday:
+            let name = format(date, "EEEE", calendar: calendar)
+            return CalcResult(
+                expression: query, sourceBadge: format(date, "d MMMM, yyyy", calendar: calendar),
+                targetBadge: String(localized: "Day of the Week"),
+                payload: .value(display: name, copyText: name), canChain: false)
+        case .daysInMonth:
+            guard let days = calendar.range(of: .day, in: .month, for: date)?.count else { return nil }
+            return CalcResult(
+                expression: query, sourceBadge: format(date, "MMMM yyyy", calendar: calendar),
+                targetBadge: String(localized: "Days in Month"),
+                payload: .number(Double(days), suffix: " days"),
+                canChain: false)
         }
+    }
+
+    private static func format(_ date: Date, _ pattern: String, calendar: Calendar) -> String {
+        CalcDateFormatters.string(from: date, calendar: calendar, zone: calendar.timeZone, pattern: pattern)
     }
 
     /// The phrase must end the query or be followed by a word, so `ages` and `agent` are not `age`.

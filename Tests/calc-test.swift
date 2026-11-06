@@ -1821,9 +1821,140 @@ struct CalcTests {
 
         localeTests()
         chainTests()
+        phraseTests()
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
+    }
+
+    // MARK: - Fractions, spoken forms and natural-language phrases
+
+    static func phraseTests() {
+        // A tight fraction before a unit is one amount; spaced division and bare fractions still divide
+        expectDisplay("5/16\" in mm", "7.9375 mm")
+        expectDisplay("5/16 inch in mm", "7.9375 mm")
+        expectDisplay("5/16 in to cm", "0.79375 cm")
+        expectDisplay("3/8 in to mm", "9.525 mm")
+        expectDisplay("1 1/2 cups to ml", "354.8823548 mL")
+        expectDisplay("2 1/4 lb to g", "1,020.582833 g")
+        expectDisplay("5'10\" in cm", "177.8 cm")
+        expectDisplay("6′2″ to m", "1.8796 m")
+        expectDisplay("1 / 20ms to hz", "50 Hz")
+        expectDisplay("1 / 1kg", "1 kg^-1")
+        expectDisplay("5/2 - 1/2", "2")
+        expectDisplay("120 / 4 people", "30")
+        expectNil("1 1/2")
+        expectNil("5 3")
+
+        expectDisplay("4 squared", "16")
+        expectDisplay("3 cubed + 1", "28")
+        expectDisplay("(2+1) squared", "9")
+        expectDisplay("2 to the power of 10", "1,024")
+        expectDisplay("10 km to m", "10,000 m")
+
+        // A magnitude letter only scales money, where it can't mean metre or byte
+        expectDisplay("$2M / 4", "500,000.00 USD")
+        expectDisplay("€1.5bn / 3", "500,000,000.00 EUR")
+        expectNil("$5mb")
+
+        expectDisplay("root 4 of 81", "3")
+        expectDisplay("root 3 of -27", "-3")
+        expectNil("root 2 of -4")
+        expectDisplay("log 81 base 3", "4")
+        expectDisplay("cos(60°)", "0.5")
+
+        expectDisplay("2 nautical miles to km", "3.704 km")
+        expectDisplay("250 sq ft to m2", "23.22576 m²")
+        expectDisplay("3 cubic feet to l", "84.95053978 L")
+
+        // A rate over time answers in its own numerator
+        expectDisplay("60 mph * 2.5 hours", "150 mi")
+        expectDisplay("90km/h * 20min", "30 km")
+        expectDisplay("10 l/min * 30 s", "5 L")
+        expectDisplay("12 kg/day * 1 week", "84 kg")
+
+        expectDisplay("256 as hex", "0x100")
+        expectDisplay("10 km as m", "10,000 m")
+        expectDisplay("150 min as timespan", "2 hr 30 min")
+
+        // Percent phrases keep the amount's money or unit
+        expectDisplay("15% on 80", "92")
+        expectBadges("15% on 80", source: "Expression", target: "Increased")
+        expectDisplay("25% off $60", "45.00 USD")
+        expectDisplay("90 is 10% off what", "100")
+        expectDisplay("$66 is 10% on what", "60.00 USD")
+        expectDisplay("30 as a % of 120", "25%")
+        expectDisplay("45 is what % off 50", "10%")
+        expectDisplay("66 is what % on 60", "10%")
+        expectDisplay("80 to 100 is what %", "25%")
+        expectDisplay("80 to 60 as %", "-25%")
+        expectBadges("80 to 100 is what %", source: "Expression", target: "Percent Change")
+        expectDisplay("0.125 as %", "12.5%")
+        expectDisplay("3/8 as percent", "37.5%")
+        expectDisplay("1/8 is what %", "12.5%")
+        expectDisplay("$30 is what % of $120", "25%")
+        expectDisplay("750 m as % of 3 km", "25%")
+        expectDisplay("half of 90", "45")
+        expectDisplay("half of $90", "45.00 USD")
+        expectDisplay("25% off $60 split 3", "15.00 USD")
+
+        expectDisplay("gcd of 12 and 18", "6")
+        expectDisplay("lcm of 4 and 6", "12")
+        expectDisplay("larger of 3 and 7", "7")
+        expectDisplay("smaller of 3 and 7", "3")
+        expectDisplay("midpoint between 10 and 30", "20")
+
+        expectDisplay("2/3 to 3 dp", "0.667")
+        expectDisplay("pi to 2 decimal places", "3.14")
+        expectDisplay("2.5 rounded", "3")
+        expectDisplay("2.5 rounded down", "2")
+        expectDisplay("2.1 rounded up", "3")
+        expectDisplay("44 to nearest 10", "40")
+        expectDisplay("44 rounded up to nearest 10", "50")
+        expectDisplay("$1,240 rounded to nearest hundred", "1,200.00 USD")
+        expectBadges("2.5 rounded", source: "Expression", target: "Rounded")
+        expectDisplay("0.625 as fraction", "5/8")
+        expectDisplay("6/8 as a fraction", "3/4")
+        expectDisplay("25% as fraction", "1/4")
+        expectNil("pi as fraction")
+        expectBadges("0.625 as fraction", source: "Expression", target: "Fraction")
+
+        expectDisplay("$2,000 after 5 years at 4%", "2,433.31 USD")
+        expectDisplay("$2,000 at 4% for 5 years compounding quarterly", "2,440.38 USD")
+        expectDisplay("interest on $2,000 after 5 years at 4%", "433.31 USD")
+        expectDisplay("$2,000 for 18 months at 4%", "2,121.19 USD")
+        expectDisplay("monthly payment on $20,000 over 5 years at 6%", "386.66 USD")
+        expectDisplay("total payment on $20,000 over 5 years at 6%", "23,199.36 USD")
+        expectDisplay("monthly payment on 12000 over 1 year at 0%", "1,000")
+        expectBadges("$2,000 after 5 years at 4%", source: "Expression", target: "Future Value")
+
+        expectDisplay("2.75 hours in hours and minutes", "2 hr 45 min")
+        expectDisplay("1.5 weeks in days and hours", "10 day 12 hr")
+        expectDisplay("200 s in minutes and seconds", "3 min 20 s")
+        expectNil("5 km in hours and minutes")
+
+        // Spans between two moments; the clock is Friday 24 July 2026
+        expectDisplayAt("may 1 to may 31", "30 days")
+        expectDisplayAt("may 1 through may 31", "31 days")
+        expectDisplayAt("weeks between june 1 and june 29", "4 weeks")
+        expectDisplayAt("from 9:15 to 17:45", "8 hr 30 min")
+        expectDisplayAt("10pm to 2am", "4 hr")
+        expectBadgesAt(
+            "10pm to 2am", source: "Friday, 24 July at 10:00 PM", target: "Saturday, 25 July at 2:00 AM")
+        expectDisplayAt("hours from 8am to 6pm", "10 hours")
+        expectDisplayAt("workdays between july 27 and august 7", "9 workdays")
+        expectDisplayAt("august 3 to august 14 in workdays", "9 workdays")
+        expectNilAt("5/2 to 1/2")
+        expectDisplayAt("2 weeks after august 3", "17 August")
+        expectDisplayAt("3 days before christmas", "22 December")
+
+        expectDisplayAt("weekday on 1 january 2030", "Tuesday")
+        expectBadgesAt("weekday on 1 january 2030", source: "1 January, 2030", target: "Day of the Week")
+        expectDisplayAt("days in february 2028", "29 days")
+        expectDisplayAt("days in april", "30 days")
+        expectDisplayAt("current timestamp", "1,784,852,280")
+        expectDisplayAt("1800000000 to date", "15 January, 2027 at 8:00 AM")
+        expectDisplayAt("1800000000000 to date", "15 January, 2027 at 8:00 AM")
     }
 
     // MARK: - Locale-aware input and output

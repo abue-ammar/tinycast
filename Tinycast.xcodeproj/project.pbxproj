@@ -431,6 +431,7 @@
 		7B32E6EE86458C854D76B0AF /* RoomWindowSweep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D1BD03E0327890BD4E68988 /* RoomWindowSweep.swift */; };
 		7BDB7CF7F1352015F6AC96C3 /* SnippetsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375734577C888260A8023181 /* SnippetsStore.swift */; };
 		7C2AA1D827EC87533021BD74 /* SpaceSwitcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C021D578082B4FE98D27CAC /* SpaceSwitcher.swift */; };
+		7C50BD05E665B2F5A07A5143 /* CalcFinance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86881DC289D026B2C0BC4442 /* CalcFinance.swift */; };
 		7C9A5A09B871FC42F3195AC8 /* AIScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27021D72339800AA6DA3D3FF /* AIScreen.swift */; };
 		7CC503824FDF49F788C85BB3 /* SettingsBackupCoverage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C5FFE395B9164BDC77B3470 /* SettingsBackupCoverage.swift */; };
 		7CD7AB9648B2222FB71C1989 /* SnippetEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C2E13EA78A8A8C9648E8C54 /* SnippetEditorView.swift */; };
@@ -768,6 +769,7 @@
 		E2AF601BD4C24721B2D61B69 /* DictationAudioDucker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24386713685FB65FB46A5516 /* DictationAudioDucker.swift */; };
 		E448C90CF3076440A4FA2CE4 /* RaycastQuicklinkImport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25EA21DCF61666DB736D5B82 /* RaycastQuicklinkImport.swift */; };
 		E457BC709D195B8F5D0C2A79 /* UninstallSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36B6DAC3B9FF387367C3FAB4 /* UninstallSession.swift */; };
+		E48C8D49C42BDB332C9D5A7E /* CalcRounding.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5E2383C65D01DBC2392A01F /* CalcRounding.swift */; };
 		E49FB7938D8D22AB09AE1D23 /* ExtensionMenuBarController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1F8AB48A3C8B78B04CBFF36B /* ExtensionMenuBarController.swift */; };
 		E4B18EBFFD009B2CAFF4BA9B /* PanelTransition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E25B87C692D5FEE1FBF994 /* PanelTransition.swift */; };
 		E4C40AC649B871B08B7F1B6E /* QuickActionPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEEF20B209EEEAB7ED97DF36 /* QuickActionPanel.swift */; };
@@ -1377,6 +1379,7 @@
 		85DAEE77ABAC4260C95F9AB5 /* AIProviderFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderFactory.swift; sourceTree = "<group>"; };
 		86545F54669A075FBDA5D1F1 /* CalculatorHistoryScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalculatorHistoryScreen.swift; sourceTree = "<group>"; };
 		867B0475618A01A765AC0DC5 /* WindowSwitchOrder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSwitchOrder.swift; sourceTree = "<group>"; };
+		86881DC289D026B2C0BC4442 /* CalcFinance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcFinance.swift; sourceTree = "<group>"; };
 		8756FBB625DFAE931D8D5D9D /* ColorSpaces.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorSpaces.swift; sourceTree = "<group>"; };
 		87A6FD8B9919D2B41CF35497 /* ExtensionGitHubPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionGitHubPanel.swift; sourceTree = "<group>"; };
 		87C6479121B0371B3491FA8A /* AIConnectionEditorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIConnectionEditorPanel.swift; sourceTree = "<group>"; };
@@ -1545,6 +1548,7 @@
 		B4984C964DC144E213DF4F63 /* Quarantine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Quarantine.swift; sourceTree = "<group>"; };
 		B580FD584B516AB666F1C81E /* SettingsSearchCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSearchCatalog.swift; sourceTree = "<group>"; };
 		B5BD1FBE1BBBAC5DDB1FE8A8 /* DictationTextFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationTextFormatter.swift; sourceTree = "<group>"; };
+		B5E2383C65D01DBC2392A01F /* CalcRounding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcRounding.swift; sourceTree = "<group>"; };
 		B6194BC8452745726E8572C0 /* MathSymbolCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathSymbolCatalog.swift; sourceTree = "<group>"; };
 		B620894347E87EC4130CA4C8 /* BackupStaging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupStaging.swift; sourceTree = "<group>"; };
 		B675C14B308FA33896A8AE49 /* RaycastImportError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RaycastImportError.swift; sourceTree = "<group>"; };
@@ -1909,6 +1913,7 @@
 				666E0A469BE1984BEF1A9A50 /* CalcDimension.swift */,
 				7817B7A8760B36FDA43F48FC /* CalcEngine.swift */,
 				934DBE501F116131DC1BF5CE /* CalcExpressionParser.swift */,
+				86881DC289D026B2C0BC4442 /* CalcFinance.swift */,
 				E582B93EFB1A2AA85B048A87 /* CalcFormatter.swift */,
 				7E0169384D8B376D4811D9D0 /* CalcMath.swift */,
 				50A8322A12267B2A82422281 /* CalcNumberBase.swift */,
@@ -1916,6 +1921,7 @@
 				CA97F3257C2FA99BF185ED8A /* CalcOperator.swift */,
 				92B4495E56754B05B5F3551D /* CalcPercent.swift */,
 				4EF9F16C3F5567240FF03122 /* CalcQuantity.swift */,
+				B5E2383C65D01DBC2392A01F /* CalcRounding.swift */,
 				A9B43F19A22B3C6264F9B787 /* CalcSplit.swift */,
 				EBBB8484C670351136F3C535 /* CalcTimestamp.swift */,
 				8BA109C429A1E4E7E2B55BDC /* CalcTimeZone.swift */,
@@ -4185,6 +4191,7 @@
 				ED62826E3D7CEB357865F9EB /* CalcDimension.swift in Sources */,
 				309B1313B6B40D1342362492 /* CalcEngine.swift in Sources */,
 				8921D962E6637C2EDB7508A5 /* CalcExpressionParser.swift in Sources */,
+				7C50BD05E665B2F5A07A5143 /* CalcFinance.swift in Sources */,
 				0FC4608F65D69D465EFBBCE0 /* CalcFormatter.swift in Sources */,
 				88B611047A870DB521EEB422 /* CalcMath.swift in Sources */,
 				24BDA1C2A8F9A6026D4EFA65 /* CalcNumberBase.swift in Sources */,
@@ -4192,6 +4199,7 @@
 				AF5FB32136A3DC18EC4E5E4C /* CalcOperator.swift in Sources */,
 				48AE2C9989F8FA2AA99D2D61 /* CalcPercent.swift in Sources */,
 				208FFC22E116E53E7BF3D147 /* CalcQuantity.swift in Sources */,
+				E48C8D49C42BDB332C9D5A7E /* CalcRounding.swift in Sources */,
 				91226444F0F2ABB5123F9A7A /* CalcSplit.swift in Sources */,
 				0B16FB98CFD5FC242DB69E70 /* CalcTimeZone.swift in Sources */,
 				1BC52F49830E021342C037CA /* CalcTimestamp.swift in Sources */,

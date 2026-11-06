@@ -17,4 +17,9 @@ struct CalcValue {
     var effective: Double {
         isPercent ? amount / 100 : amount
     }
+
+    var isCurrency: Bool {
+        if case .currency = kind { return true }
+        return false
+    }
 }

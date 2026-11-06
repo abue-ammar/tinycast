@@ -3,97 +3,141 @@ import Foundation
 /// Percentage phrasings the arithmetic parser misses: `20% off 500`, `50 as % of 200`.
 enum CalcPercent {
     static func evaluate(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        parseOff(tokens, query: query) ?? parseAsPercentOf(tokens, query: query)
-            ?? parseTip(tokens, query: query) ?? parseWhatPercentOf(tokens, query: query)
-            ?? parseIsPercentOfWhat(tokens, query: query) ?? parseRatio(tokens, query: query)
-            ?? parseAggregate(tokens, query: query) ?? parseRoundToNearest(tokens, query: query)
+        if let adjusted = adjusted(tokens) {
+            return .phrase(
+                query, .quantity(adjusted.value), target: adjusted.badge,
+                isCurrency: adjusted.value.isCurrency)
+        }
+        if let percentage = percentage(tokens) {
+            return .phrase(query, .number(percentage.value, suffix: "%"), target: percentage.badge)
+        }
+        return parseRatio(tokens, query: query) ?? parseAggregate(tokens, query: query)
     }
 
-    /// The money a discount or tip phrase comes to, unrounded, for a caller that shares it out.
-    static func amount(_ tokens: [CalcToken]) -> Double? {
-        offAmount(tokens) ?? tipAmount(tokens)
+    /// A discount, tip or markup phrase's amount, unrounded, for a caller that shares it out.
+    static func amount(_ tokens: [CalcToken]) -> CalcValue? {
+        adjusted(tokens)?.value
     }
 
-    /// `<pct>% off <value>` → the value reduced by pct percent (`20% off 500` → 400).
-    private static func parseOff(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        offAmount(tokens).map { card(query, .number($0), target: String(localized: "Discounted")) }
+    // MARK: - Phrase patterns
+
+    private typealias Pattern = [CalcToken?]
+
+    private static let percent = CalcToken.op(.percent)
+
+    private static func word(_ text: String) -> CalcToken { .ident(text) }
+
+    // MARK: - Amounts scaled by a percentage
+
+    /// The operand that keeps its unit, and the multiplier the percentage operand makes of it.
+    private struct Adjustment {
+        let pattern: Pattern
+        let badge: String
+        let amountIndex: Int
+        let factor: @Sendable (Double) -> Double
     }
 
-    private static func offAmount(_ tokens: [CalcToken]) -> Double? {
-        guard let off = tokens.firstIndex(of: .ident("off")), off >= 2,
-            tokens[off - 1] == .op(.percent),
-            let pct = CalcExpressionParser.scalar(Array(tokens[0..<(off - 1)])),
-            let base = CalcExpressionParser.scalar(Array(tokens[(off + 1)...]))
-        else { return nil }
-        let result = base * (1 - pct / 100)
-        return result.isFinite ? result : nil
+    private static let adjustments: [Adjustment] = [
+        Adjustment(
+            pattern: [nil, percent, word("tip"), word("on"), nil], badge: String(localized: "Tip"),
+            amountIndex: 1, factor: { $0 / 100 }),
+        Adjustment(
+            pattern: [nil, percent, word("tip"), word("of"), nil], badge: String(localized: "Tip"),
+            amountIndex: 1, factor: { $0 / 100 }),
+        Adjustment(
+            pattern: [nil, percent, word("off"), nil], badge: String(localized: "Discounted"),
+            amountIndex: 1, factor: { 1 - $0 / 100 }),
+        Adjustment(
+            pattern: [nil, percent, word("on"), nil], badge: String(localized: "Increased"),
+            amountIndex: 1, factor: { 1 + $0 / 100 }),
+        Adjustment(
+            pattern: [nil, word("is"), nil, percent, word("of"), word("what")],
+            badge: String(localized: "Total"),
+            amountIndex: 0, factor: { 100 / $0 }),
+        Adjustment(
+            pattern: [nil, word("is"), nil, percent, word("off"), word("what")],
+            badge: String(localized: "Total"),
+            amountIndex: 0, factor: { 1 / (1 - $0 / 100) }),
+        Adjustment(
+            pattern: [nil, word("is"), nil, percent, word("on"), word("what")],
+            badge: String(localized: "Total"),
+            amountIndex: 0, factor: { 1 / (1 + $0 / 100) })
+    ]
+
+    private static func adjusted(_ tokens: [CalcToken]) -> (value: CalcValue, badge: String)? {
+        for adjustment in adjustments {
+            guard let parts = tokens.operands(of: adjustment.pattern),
+                var amount = CalcExpressionParser.value(parts[adjustment.amountIndex]), !amount.isPercent,
+                let percentage = CalcExpressionParser.scalar(parts[1 - adjustment.amountIndex])
+            else { continue }
+            amount.amount *= adjustment.factor(percentage)
+            return amount.amount.isFinite ? (amount, adjustment.badge) : nil
+        }
+        return nil
     }
 
-    /// `<x> as % of <y>` → x / y × 100, rendered as a percentage (`50 as % of 200` → 25%).
-    private static func parseAsPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        guard let asIdx = tokens.firstIndex(of: .ident("as")), asIdx + 2 < tokens.count,
-            tokens[asIdx + 1] == .op(.percent), tokens[asIdx + 2] == .ident("of"),
-            let x = CalcExpressionParser.scalar(Array(tokens[0..<asIdx])),
-            let y = CalcExpressionParser.scalar(Array(tokens[(asIdx + 3)...])), y != 0
-        else { return nil }
-        let ratio = x / y * 100
-        guard ratio.isFinite else { return nil }
-        return card(query, .number(ratio, suffix: "%"), target: String(localized: "Percentage"))
+    // MARK: - Percentages of, between and as
+
+    private struct Ratio {
+        let pattern: Pattern
+        let badge: String
+        let percentage: @Sendable ([[CalcToken]]) -> Double?
     }
 
-    private static func card(
-        _ query: String, _ payload: CalcResult.Payload, target: String = String(localized: "Result"),
-        canChain: Bool = true
-    ) -> CalcResult {
-        CalcResult(
-            expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
-            sourceBadge: String(localized: "Expression"),
-            targetBadge: target,
-            payload: payload,
-            canChain: canChain)
+    private static let ratios: [Ratio] = [
+        Ratio(
+            pattern: [nil, word("as"), percent, word("of"), nil], badge: String(localized: "Percentage"),
+            percentage: { share($0[0], of: $0[1]) }),
+        Ratio(
+            pattern: [nil, word("as"), word("a"), percent, word("of"), nil],
+            badge: String(localized: "Percentage"),
+            percentage: { share($0[0], of: $0[1]) }),
+        Ratio(
+            pattern: [nil, word("is"), word("what"), percent, word("of"), nil],
+            badge: String(localized: "Percentage"), percentage: { share($0[0], of: $0[1]) }),
+        Ratio(
+            pattern: [nil, word("is"), word("what"), percent, word("off"), nil],
+            badge: String(localized: "Percent Change"),
+            percentage: { share($0[0], of: $0[1]).map { 100 - $0 } }),
+        Ratio(
+            pattern: [nil, word("is"), word("what"), percent, word("on"), nil],
+            badge: String(localized: "Percent Change"),
+            percentage: { share($0[0], of: $0[1]).map { $0 - 100 } }),
+        Ratio(
+            pattern: [nil, word("to"), nil, word("is"), word("what"), percent],
+            badge: String(localized: "Percent Change"),
+            percentage: { share($0[1], of: $0[0]).map { $0 - 100 } }),
+        Ratio(
+            pattern: [nil, word("to"), nil, word("as"), percent], badge: String(localized: "Percent Change"),
+            percentage: { share($0[1], of: $0[0]).map { $0 - 100 } }),
+        Ratio(
+            pattern: [nil, word("as"), percent], badge: String(localized: "Percentage"),
+            percentage: { CalcExpressionParser.scalar($0[0]).map { $0 * 100 } }),
+        Ratio(
+            pattern: [nil, word("as"), word("percent")], badge: String(localized: "Percentage"),
+            percentage: { CalcExpressionParser.scalar($0[0]).map { $0 * 100 } }),
+        Ratio(
+            pattern: [nil, word("is"), word("what"), percent], badge: String(localized: "Percentage"),
+            percentage: { CalcExpressionParser.scalar($0[0]).map { $0 * 100 } })
+    ]
+
+    private static func percentage(_ tokens: [CalcToken]) -> (value: Double, badge: String)? {
+        for ratio in ratios {
+            guard let parts = tokens.operands(of: ratio.pattern), let value = ratio.percentage(parts),
+                value.isFinite
+            else { continue }
+            return (value, ratio.badge)
+        }
+        return nil
     }
 
-    /// The tip alone, not the total: it is the number the phrase asks for.
-    private static func parseTip(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        tipAmount(tokens).map { card(query, .number($0), target: String(localized: "Tip")) }
+    /// As a percentage, divided by the parser so compatible units cancel: `500 m as % of 2 km` is 25%.
+    private static func share(_ part: [CalcToken], of whole: [CalcToken]) -> Double? {
+        let quotient = [.op(.open)] + part + [.op(.close), .op(.divide), .op(.open)] + whole + [.op(.close)]
+        return CalcExpressionParser.scalar(quotient).map { $0 * 100 }
     }
 
-    private static func tipAmount(_ tokens: [CalcToken]) -> Double? {
-        guard let tip = tokens.firstIndex(of: .ident("tip")), tip >= 2,
-            tip + 2 < tokens.count, tokens[tip - 1] == .op(.percent),
-            tokens[tip + 1] == .ident("on") || tokens[tip + 1] == .ident("of"),
-            let pct = CalcExpressionParser.scalar(Array(tokens[0..<(tip - 1)])),
-            let bill = CalcExpressionParser.scalar(Array(tokens[(tip + 2)...]))
-        else { return nil }
-        let amount = bill * pct / 100
-        return amount.isFinite ? amount : nil
-    }
-
-    private static func parseWhatPercentOf(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        guard let isIdx = tokens.firstIndex(of: .ident("is")), isIdx + 4 <= tokens.count,
-            isIdx + 3 < tokens.count,
-            tokens[isIdx + 1] == .ident("what"), tokens[isIdx + 2] == .op(.percent),
-            tokens[isIdx + 3] == .ident("of"),
-            let x = CalcExpressionParser.scalar(Array(tokens[0..<isIdx])),
-            let y = CalcExpressionParser.scalar(Array(tokens[(isIdx + 4)...])), y != 0
-        else { return nil }
-        let ratio = x / y * 100
-        guard ratio.isFinite else { return nil }
-        return card(query, .number(ratio, suffix: "%"), target: String(localized: "Percentage"))
-    }
-
-    private static func parseIsPercentOfWhat(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        guard tokens.count >= 6, tokens.last == .ident("what"),
-            tokens[tokens.count - 2] == .ident("of"), tokens[tokens.count - 3] == .op(.percent),
-            let isIdx = tokens.firstIndex(of: .ident("is")),
-            let x = CalcExpressionParser.scalar(Array(tokens[0..<isIdx])),
-            let pct = CalcExpressionParser.scalar(Array(tokens[(isIdx + 1)..<(tokens.count - 3)])),
-            pct != 0
-        else { return nil }
-        let whole = x / (pct / 100)
-        guard whole.isFinite else { return nil }
-        return card(query, .number(whole), target: String(localized: "Total"))
-    }
+    // MARK: - Ratios and lists
 
     /// Integers only, so the reduced pair stays exact.
     private static func parseRatio(_ tokens: [CalcToken], query: String) -> CalcResult? {
@@ -106,7 +150,7 @@ enum CalcPercent {
         let divisor = greatestCommonDivisor(abs(a), abs(b))
         guard divisor > 0 else { return nil }
         let text = "\(CalcFormatter.display(a / divisor)) : \(CalcFormatter.display(b / divisor))"
-        return card(
+        return .phrase(
             query, .value(display: text, copyText: text), target: String(localized: "Ratio"),
             canChain: false)
     }
@@ -118,43 +162,37 @@ enum CalcPercent {
     }
 
     private static func parseAggregate(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        guard tokens.count >= 3, case .ident(let name) = tokens[0],
-            let aggregate = aggregates[name], tokens[1] == .ident("of")
+        guard tokens.count >= 3, case .ident(let name) = tokens[0], let aggregate = aggregates[name],
+            tokens[1] == .ident(aggregate.joiner)
         else { return nil }
         let values = splitList(Array(tokens[2...]))
         guard values.count >= 2, let result = aggregate.reduce(values), result.isFinite
         else { return nil }
-        return card(query, .number(result), target: aggregate.name)
-    }
-
-    /// Snaps to a step, not to a digit count, so `nearest 5` means multiples of 5.
-    private static func parseRoundToNearest(_ tokens: [CalcToken], query: String) -> CalcResult? {
-        guard tokens.count >= 5, tokens[0] == .ident("round"),
-            let toIdx = tokens.firstIndex(of: .ident("to")), toIdx + 2 < tokens.count,
-            tokens[toIdx + 1] == .ident("nearest"),
-            let value = CalcExpressionParser.scalar(Array(tokens[1..<toIdx])),
-            let step = CalcExpressionParser.scalar(Array(tokens[(toIdx + 2)...])), step != 0
-        else { return nil }
-        let result = (value / step).rounded() * step
-        guard result.isFinite else { return nil }
-        return card(query, .number(result), target: String(localized: "Rounded"))
+        return .phrase(query, .number(result), target: aggregate.name)
     }
 
     /// The badge names which reduction ran, so `min` and `max` are told apart on the card.
     private struct Aggregate {
         let name: String
+        var joiner = "of"
         let reduce: @Sendable ([Double]) -> Double?
     }
 
-    private static let aggregates: [String: Aggregate] = [
-        "average": Aggregate(name: String(localized: "Average")) { $0.reduce(0, +) / Double($0.count) },
-        "avg": Aggregate(name: String(localized: "Average")) { $0.reduce(0, +) / Double($0.count) },
-        "mean": Aggregate(name: String(localized: "Average")) { $0.reduce(0, +) / Double($0.count) },
-        "sum": Aggregate(name: String(localized: "Sum")) { $0.reduce(0, +) },
-        "total": Aggregate(name: String(localized: "Sum")) { $0.reduce(0, +) },
-        "min": Aggregate(name: String(localized: "Minimum")) { $0.min() },
-        "max": Aggregate(name: String(localized: "Maximum")) { $0.max() }
-    ]
+    private static let aggregates: [String: Aggregate] = {
+        let average = Aggregate(name: String(localized: "Average")) { $0.reduce(0, +) / Double($0.count) }
+        let sum = Aggregate(name: String(localized: "Sum")) { $0.reduce(0, +) }
+        let minimum = Aggregate(name: String(localized: "Minimum")) { $0.min() }
+        let maximum = Aggregate(name: String(localized: "Maximum")) { $0.max() }
+        return [
+            "average": average, "avg": average, "mean": average,
+            "midpoint": Aggregate(name: average.name, joiner: "between", reduce: average.reduce),
+            "sum": sum, "total": sum,
+            "min": minimum, "smaller": minimum, "lesser": minimum,
+            "max": maximum, "larger": maximum, "greater": maximum,
+            "gcd": Aggregate(name: String(localized: "Result")) { CalcMath.evaluate("gcd", $0) },
+            "lcm": Aggregate(name: String(localized: "Result")) { CalcMath.evaluate("lcm", $0) }
+        ]
+    }()
 
     /// Each run is evaluated whole, so `sum of 2*3, 4` stays two operands.
     private static func splitList(_ tokens: [CalcToken]) -> [Double] {

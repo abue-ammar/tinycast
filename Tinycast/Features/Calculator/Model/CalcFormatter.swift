@@ -51,13 +51,13 @@ enum CalcFormatter {
         return "\(feetPart) \(inchPart)"
     }
 
-    /// Seconds as the largest units that fit: `8,700` → `2 hr 25 min`.
-    static func timespan(_ seconds: Double) -> String {
+    /// Seconds as the largest units within `steps` that fit: `8,700` → `2 hr 25 min`.
+    static func timespan(_ seconds: Double, steps: ClosedRange<Double> = everyTimespanStep) -> String {
         guard seconds.isFinite else { return display(seconds) }
         let sign = seconds < 0 ? "-" : ""
-        var remainder = abs(seconds).rounded()
+        var remainder = (abs(seconds) / steps.lowerBound).rounded() * steps.lowerBound
         var parts: [String] = []
-        for step in timespanSteps where remainder >= step.seconds {
+        for step in timespanSteps where steps.contains(step.seconds) && remainder >= step.seconds {
             let count = (remainder / step.seconds).rounded(.towardZero)
             remainder -= count * step.seconds
             parts.append("\(grouped(String(format: "%.0f", count))) \(step.symbol)")
@@ -67,8 +67,10 @@ enum CalcFormatter {
         return sign + parts.joined(separator: " ")
     }
 
+    static let everyTimespanStep: ClosedRange<Double> = 1...604_800
+
     /// Weeks are the largest step: a month is not a fixed number of seconds.
-    private static let timespanSteps: [(seconds: Double, symbol: String)] = [
+    static let timespanSteps: [(seconds: Double, symbol: String)] = [
         (604800, "wk"), (86400, "day"), (3600, "hr"), (60, "min"), (1, "s")
     ]
 

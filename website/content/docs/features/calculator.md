@@ -29,12 +29,14 @@ Use `mod` for the remainder, because `%` already means percent. It has the same 
 multiply and divide, and keeps the sign of the first number: `-10 mod 3` is `-1`.
 
 `10k` is `10,000`. Scientific notation works (`1e5`, `5e-3km`, `3e+2`), while `2e` and `2 e` mean
-2 × Euler's _e_.
+2 × Euler's _e_. Right after a currency, `M`, `bn` and `T` also work: `$2M / 4` is `500,000.00 USD`.
 
-Spoken roots work with measurements: `square root of 25m2` is `5 m`.
+Spoken roots work with measurements: `square root of 25m2` is `5 m`. `root 4 of 81` is `3`, and
+`log 81 base 3` is `4`.
 
 You can also write the operators as words: `10 plus 5`, `10 minus 3`, `6 times 7`,
-`10 divided by 2` and `10 multiplied by 3`. `per` means divide, so `60 miles per hour` is `60 mi/hr`.
+`10 divided by 2`, `10 multiplied by 3` and `2 to the power of 10`. `4 squared` is `16` and
+`3 cubed` is `27`. `per` means divide, so `60 miles per hour` is `60 mi/hr`.
 
 **A trailing operator keeps the last answer on screen.** `10 +` shows `10`, and `10kg + 500g +`
 shows `10,500 g`, so the card doesn't flicker while you type the next number.
@@ -56,6 +58,10 @@ shows `10,500 g`, so the card doesn't flicker while you type the next number.
 `5w * (3h 30min)`, and `90km / 1h 30min` gives `60 km/h`.
 
 A number without a unit takes the unit next to it: `5kg+5` is `10 kg`, and `$10 + 5` is `15.00 USD`.
+
+**A fraction right before a unit is one amount.** `5/16" in mm` is `7.9375 mm`, `1 1/2 cups to ml`
+works, and `5'10" in cm` is `177.8 cm`. With spaces around it, `/` still divides, so
+`1 / 20ms to hz` is `50 Hz`.
 
 With `+` and `-`, a percentage is relative (`10kg + 20%` is `12 kg`). With `*` and `/`, it's a plain
 fraction (`10kg * 3%` is `0.3 kg`, `10kg / 25%` is `40 kg`).
@@ -81,18 +87,21 @@ Measurements combine into area, volume, speed and more:
 | `cube root of -8m3`          | `-2 m`        |
 | `100km / 2h to km/h`         | `50 km/h`     |
 | `90km/h * 20min to km`       | `30 km`       |
+| `60 mph * 2.5 hours`         | `150 mi`      |
 | `100km / 40km/h to duration` | `2 hr 30 min` |
 | `1GB / 100mbps to s`         | `80 s`        |
 | `1500w * 2h to kwh`          | `3 kWh`       |
 | `1 / 20ms to hz`             | `50 Hz`       |
 
-Results use base units unless you name a unit with `to` or `in`. Power multiplied by minutes or
-hours gives Wh or kWh, and current multiplied by minutes or hours gives Ah or mAh. `m²` and `m2`
+Results use base units unless you name a unit with `to`, `in` or `as`. A rate multiplied by time
+keeps the rate's own unit, so `10 l/min * 30 s` is `5 L`. Power multiplied by minutes or hours gives
+Wh or kWh, and current multiplied by minutes or hours gives Ah or mAh. `m²` and `m2`
 both mean square meters, while `(2m)^2` squares the whole amount. Use `pi * (2m)^2` for the area of
 a circle.
 
 `to timespan` splits a duration into parts: `145 mins to timespan` is `2 hr 25 min`. The largest
-part is weeks, because months vary in length.
+part is weeks, because months vary in length. Name two units to choose the parts:
+`2.75 hours in hours and minutes` is `2 hr 45 min`.
 
 You can only add or subtract temperatures in the same scale. Other units combine freely:
 `2kg / 4m3` is `0.5 kg/m³`, and `1kg/m3 to g/cm3` is `0.001 g/cm³`.
@@ -157,8 +166,10 @@ you copy a `px`, `rem` or `em` result, the space is removed (`24px`) so you can 
 `MB/s` and `MBps` are megabytes per second and `Mbps` is megabits per second, so `100Mbps to MB/s`
 is `12.5 MB/s`. Binary units like `MiB/s` and bit amounts like `kbit` also work.
 
-Other supported units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), horsepower (`hp`),
-BTU, `rpm` and pound-force (`lbf`).
+Other supported units include tonnes (`t`), stone (`st`), nautical miles (`nmi`), light years
+(`ly`), horsepower (`hp`), BTU, `rpm` and pound-force (`lbf`). Spelled-out names work too, like
+`nautical miles`, `sq ft`, `square feet` and `cubic feet`. `°` means degrees, so `cos(60°)` is
+`0.5`.
 
 ## Fuel and pace
 
@@ -234,23 +245,28 @@ is always written out in full: `1 IDR to USD` is `0.00005539 USD`, never `5.539e
 
 ## Dates and times
 
-| What you want                | Example                                          |
-| ---------------------------- | ------------------------------------------------ |
-| Time until a moment          | `hrs till 9am`, `days till 9april`               |
-| Time since a moment          | `days since 9jul`, `hrs since noon`              |
-| A moment plus or minus       | `today + 3 weeks`, `now + 90 min`                |
-| A chain of shifts            | `17.2.26 + 100 weekdays - 4 + 2`                 |
-| Months and years             | `31.1.26 + 1 month`, `29.2.24 + 1 year`          |
-| The gap between two          | `jul 4 - today`, `9:30 - 7:00 to minutes`        |
-| From or before a moment      | `3 days from next monday at 7:30`, `2 weeks ago` |
-| A weekday in a later week    | `monday in 3 weeks`, `friday in 2 weeks`         |
-| A named moment               | `tomorrow at 9am`, `next monday`, `aug 25`       |
-| A day from now               | `in 3 days`, `next week`, `last month`           |
-| The start or end of a period | `end of month`, `start of next year`             |
-| A day with an ordinal        | `days until 29th of october`, `october 28th`     |
-| A short day and month        | `days until 29.10`, `days since 20.7.`           |
-| A holiday                    | `days until christmas`, `halloween + 3 days`     |
-| A fact about a date          | `week number`, `day of year`, `age 3 may 1990`   |
+| What you want                | Example                                              |
+| ---------------------------- | ---------------------------------------------------- |
+| Time until a moment          | `hrs till 9am`, `days till 9april`                   |
+| Time since a moment          | `days since 9jul`, `hrs since noon`                  |
+| A moment plus or minus       | `today + 3 weeks`, `now + 90 min`                    |
+| A chain of shifts            | `17.2.26 + 100 weekdays - 4 + 2`                     |
+| Months and years             | `31.1.26 + 1 month`, `29.2.24 + 1 year`              |
+| The gap between two          | `jul 4 - today`, `9:30 - 7:00 to minutes`            |
+| The span between two         | `may 1 to may 31`, `days between june 1 and june 29` |
+| The span between two times   | `from 9:15 to 17:45`, `10pm to 2am`                  |
+| From or before a moment      | `3 days from next monday at 7:30`, `2 weeks ago`     |
+| After or before a date       | `2 weeks after august 3`, `3 days before christmas`  |
+| A weekday in a later week    | `monday in 3 weeks`, `friday in 2 weeks`             |
+| A named moment               | `tomorrow at 9am`, `next monday`, `aug 25`           |
+| A day from now               | `in 3 days`, `next week`, `last month`               |
+| The start or end of a period | `end of month`, `start of next year`                 |
+| A day with an ordinal        | `days until 29th of october`, `october 28th`         |
+| A short day and month        | `days until 29.10`, `days since 20.7.`               |
+| A holiday                    | `days until christmas`, `halloween + 3 days`         |
+| A fact about a date          | `week number`, `day of year`, `age 3 may 1990`       |
+| The day of the week          | `weekday on 1 january 2030`                          |
+| Days in a month              | `days in february 2028`                              |
 
 **When the answer is a date, Tinycast also shows the day of the week.**
 
@@ -259,6 +275,9 @@ date three days in the past means three days ago, not next year.
 
 A number without a unit after a moment means hours after a time and days after a date: `3:45pm + 5`
 is 8:45 PM, and `august 5 + 5` is 10 August.
+
+In a span, `through` counts the last day too: `may 1 through may 31` is 31 days. Two times without a
+date run forward, so `10pm to 2am` is 4 hours.
 
 Adding months and years follows the calendar: `31.1.26 + 1 month` gives 28 February. `+ 1 day` keeps
 the same clock time across daylight saving changes, while `+ 24 hours` adds exactly 24 hours.
@@ -277,12 +296,16 @@ settings, so they can differ by one between regions.
 `weekdays`, `business days`, `work days` and `working days` skip Saturdays and Sundays, as in
 `today + 5 business days` or `5 weekdays from now`. Public holidays aren't skipped.
 
+To count workdays between two dates, use `workdays between july 27 and august 7` or
+`august 3 to august 14 in workdays`.
+
 As a unit on its own, a `workday` is eight hours: `55h in workdays`.
 
 ### Unix time
 
-`now to unix` gives whole seconds and `now to unix ms` gives milliseconds. `unix 0 to date` and
-`1000 unix ms` convert back to dates. Timestamps like `2026-07-24T07:30:00+02:00 + 30min` work with
+`now to unix` and `current timestamp` give whole seconds, and `now to unix ms` gives milliseconds.
+`unix 0 to date`, `1000 unix ms` and `1800000000 to date` convert back to dates. A 13-digit number
+is read as milliseconds. Timestamps like `2026-07-24T07:30:00+02:00 + 30min` work with
 either a `Z` or an offset.
 
 ## Time zones
@@ -316,19 +339,58 @@ Time zone answers work offline. Tinycast doesn't look up cities online.
 
 ## Percent, ratios and lists
 
-| You type                | You get  |
-| ----------------------- | -------- |
-| `20% off 500`           | `400`    |
-| `15% tip on 42`         | `6.3`    |
-| `50 as % of 200`        | `25%`    |
-| `50 is what % of 200`   | `25%`    |
-| `30 is 20% of what`     | `150`    |
-| `ratio of 1920 to 1080` | `16 : 9` |
-| `average of 10, 20, 30` | `20`     |
-| `round 47 to nearest 5` | `45`     |
+| You type                     | You get     |
+| ---------------------------- | ----------- |
+| `20% off 500`                | `400`       |
+| `25% off $60`                | `45.00 USD` |
+| `15% on 80`                  | `92`        |
+| `15% tip on 42`              | `6.3`       |
+| `50 as % of 200`             | `25%`       |
+| `30 as a % of 120`           | `25%`       |
+| `50 is what % of 200`        | `25%`       |
+| `750 m as % of 3 km`         | `25%`       |
+| `30 is 20% of what`          | `150`       |
+| `90 is 10% off what`         | `100`       |
+| `45 is what % off 50`        | `10%`       |
+| `80 to 100 is what %`        | `25%`       |
+| `0.125 as %`                 | `12.5%`     |
+| `half of $90`                | `45.00 USD` |
+| `ratio of 1920 to 1080`      | `16 : 9`    |
+| `average of 10, 20, 30`      | `20`        |
+| `gcd of 12 and 18`           | `6`         |
+| `larger of 3 and 7`          | `7`         |
+| `midpoint between 10 and 30` | `20`        |
 
-The card labels the answer, like **Tip**, **Discounted** or **Ratio**, instead of a generic
-"Result".
+The amount keeps its currency or unit. The card labels the answer, like **Tip**, **Discounted**,
+**Percent Change** or **Ratio**, instead of a generic "Result".
+
+## Rounding and fractions
+
+| You type                            | You get        |
+| ----------------------------------- | -------------- |
+| `2/3 to 3 dp`                       | `0.667`        |
+| `pi to 2 decimal places`            | `3.14`         |
+| `2.5 rounded`                       | `3`            |
+| `2.1 rounded up`                    | `3`            |
+| `round 47 to nearest 5`             | `45`           |
+| `44 rounded up to nearest 10`       | `50`           |
+| `$1,240 rounded to nearest hundred` | `1,200.00 USD` |
+| `0.625 as fraction`                 | `5/8`          |
+
+A number that has no simple fraction, like `pi as fraction`, shows no card.
+
+## Interest and loans
+
+| You type                                         | You get         |
+| ------------------------------------------------ | --------------- |
+| `$2,000 after 5 years at 4%`                     | `2,433.31 USD`  |
+| `$2,000 at 4% for 5 years compounding quarterly` | `2,440.38 USD`  |
+| `interest on $2,000 after 5 years at 4%`         | `433.31 USD`    |
+| `monthly payment on $20,000 over 5 years at 6%`  | `386.66 USD`    |
+| `total payment on $20,000 over 5 years at 6%`    | `23,199.36 USD` |
+
+Interest is added once a year unless you add `compounding monthly`, `quarterly` or `daily`. Loan
+payments are monthly; `annual payment` gives twelve of them.
 
 ## Splitting a bill
 
@@ -358,7 +420,8 @@ as in `max(2,5; 3)`.
 `==`, `!=`, `<`, `<=`, `>` and `>=` compare numbers or compatible units: `1km == 1000m` is `true`.
 Whole numbers support `&`, `|`, `xor`, `~`, `<<` and `>>`. `^` always means a power.
 
-Base conversion works both ways: `0xff` shows Hexadecimal → Decimal, and `2m / 2m to hex` is `0x1`.
+Base conversion works both ways: `0xff` shows Hexadecimal → Decimal, `256 as hex` is `0x100`, and
+`2m / 2m to hex` is `0x1`.
 
 ## Errors
 

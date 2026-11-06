@@ -15,7 +15,7 @@ enum CalcMath {
     ]
 
     static let constants: [String: Double] = [
-        "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2
+        "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2, "half": 0.5
     ]
 
     /// Factorial for non-negative integers; 170! is the last value representable as a Double.

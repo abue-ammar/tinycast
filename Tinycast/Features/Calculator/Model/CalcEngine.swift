@@ -20,6 +20,19 @@ struct CalcResult: Equatable, Sendable {
                 display: "\(CalcFormatter.grouped(text)) \(unit.symbol)",
                 copyText: text + copySeparator + unit.symbol)
         }
+
+        static func money(_ amount: Double, code: String) -> Self {
+            let text = CalcFormatter.currency(amount)
+            return .value(display: "\(CalcFormatter.grouped(text)) \(code)", copyText: "\(text) \(code)")
+        }
+
+        static func quantity(_ value: CalcValue) -> Self {
+            switch value.kind {
+            case .scalar: .number(value.effective)
+            case .unit(let unit): .measurement(value.amount, unit: unit)
+            case .currency(let currency): .money(value.amount, code: currency.code)
+            }
+        }
     }
 
     /// Normalized echo of what was evaluated, shown on the card's left side ("3×3", "10 km").
@@ -42,6 +55,16 @@ struct CalcResult: Equatable, Sendable {
         self.payload = payload
         self.canChain = canChain
         self.isCurrency = isCurrency
+    }
+
+    /// A phrase's card: the query echoed with its spacing collapsed, badged by what it answers.
+    static func phrase(
+        _ query: String, _ payload: Payload, target: String, canChain: Bool = true, isCurrency: Bool = false
+    ) -> CalcResult {
+        CalcResult(
+            expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
+            sourceBadge: String(localized: "Expression"), targetBadge: target, payload: payload,
+            canChain: canChain, isCurrency: isCurrency)
     }
 
     /// True only for a copyable value; an error card has no primary action and no actions menu.
@@ -139,14 +162,11 @@ enum CalcEngine {
         if let conversion = CalcCurrency.parseConversion(tokens, rates: rates) {
             switch conversion {
             case .value(let input, let from, let to, let output):
-                let amount = CalcFormatter.currency(output)
                 return CalcResult(
                     expression: "\(CalcFormatter.display(input)) \(from.code)",
                     sourceBadge: from.name,
                     targetBadge: to.name,
-                    payload: .value(
-                        display: "\(CalcFormatter.grouped(amount)) \(to.code)",
-                        copyText: "\(amount) \(to.code)"),
+                    payload: .money(output, code: to.code),
                     isCurrency: true)
             case .mismatch(let from, let to):
                 return CalcResult(
@@ -179,9 +199,8 @@ enum CalcEngine {
                 payload: payload)
         }
 
-        if let percent = CalcPercent.evaluate(tokens, query: query) { return percent }
-
-        return nil
+        return CalcPercent.evaluate(tokens, query: query) ?? CalcRounding.evaluate(tokens, query: query)
+            ?? CalcFinance.evaluate(tokens, query: query)
     }
 
     // MARK: - Partial expressions

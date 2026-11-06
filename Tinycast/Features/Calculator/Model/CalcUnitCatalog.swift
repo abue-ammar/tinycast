@@ -76,7 +76,8 @@ enum CalcUnitCatalog {
         ft|Feet|0.3048|ft,foot,feet
         yd|Yards|0.9144|yd,yard,yards
         mi|Miles|1609.344|mi,mile,miles
-        nmi|Nautical Miles|1852.0|nmi,nauticalmile,nauticalmiles
+        nmi|Nautical Miles|1852.0|nmi,nauticalmile,nauticalmiles,nautical mile,nautical miles
+        ly|Light Years|9460730472580800.0|ly,lightyear,lightyears,light year,light years
         pixels
         px|Pixels|1.0|px,pixel,pixels
         rem|REM|16.0|rem,rems
@@ -113,15 +114,15 @@ enum CalcUnitCatalog {
         yr|Years|31556952.0|yr,year,years
         workdays|Workdays|28800.0|workday,workdays,businessday,businessdays
         area
-        mm²|Square Millimeters|1e-06|mm2,sqmm
-        cm²|Square Centimeters|0.0001|cm2,sqcm
+        mm²|Square Millimeters|1e-06|mm2,sqmm,sq mm,square millimeter,square millimeters,square millimetre,square millimetres
+        cm²|Square Centimeters|0.0001|cm2,sqcm,sq cm,square centimeter,square centimeters,square centimetre,square centimetres
         dm²|Square Decimeters|0.01|dm2,sqdm
-        m²|Square Meters|1.0|m2,sqm
-        km²|Square Kilometers|1000000.0|km2,sqkm
-        in²|Square Inches|0.00064516|in2,sqin
-        ft²|Square Feet|0.09290304|ft2,sqft
-        yd²|Square Yards|0.83612736|yd2,sqyd
-        mi²|Square Miles|2589988.110336|mi2,sqmi
+        m²|Square Meters|1.0|m2,sqm,sq m,square meter,square meters,square metre,square metres
+        km²|Square Kilometers|1000000.0|km2,sqkm,sq km,square kilometer,square kilometers,square kilometre,square kilometres
+        in²|Square Inches|0.00064516|in2,sqin,sq in,square inch,square inches
+        ft²|Square Feet|0.09290304|ft2,sqft,sq ft,square foot,square feet
+        yd²|Square Yards|0.83612736|yd2,sqyd,sq yd,square yard,square yards
+        mi²|Square Miles|2589988.110336|mi2,sqmi,sq mi,square mile,square miles
         acre|Acres|4046.8564224|acre,acres
         ha|Hectares|10000.0|ha,hectare,hectares
         volume
@@ -137,12 +138,12 @@ enum CalcUnitCatalog {
         pt|Pints|0.000473176473|pt,pint,pints
         fl oz|Fluid Ounces|2.95735295625e-05|floz,fl oz
         mm³|Cubic Millimeters|1e-09|mm3
-        cm³|Cubic Centimeters|1e-06|cm3,cc
+        cm³|Cubic Centimeters|1e-06|cm3,cc,cubic centimeter,cubic centimeters,cubic centimetre,cubic centimetres
         dm³|Cubic Decimeters|0.001|dm3
-        m³|Cubic Meters|1.0|m3
-        in³|Cubic Inches|1.6387064e-05|in3
-        ft³|Cubic Feet|0.028316846592|ft3
-        yd³|Cubic Yards|0.764554857984|yd3
+        m³|Cubic Meters|1.0|m3,cu m,cubic meter,cubic meters,cubic metre,cubic metres
+        in³|Cubic Inches|1.6387064e-05|in3,cu in,cubic inch,cubic inches
+        ft³|Cubic Feet|0.028316846592|ft3,cu ft,cubic foot,cubic feet
+        yd³|Cubic Yards|0.764554857984|yd3,cu yd,cubic yard,cubic yards
         volumeFlow
         L/s|Liters per Second|0.001|l/s,l/sec
         L/min|Liters per Minute|1.6666666666666667e-05|l/min,lpm
@@ -169,7 +170,7 @@ enum CalcUnitCatalog {
         TiB|Tebibytes|1099511627776.0|tib,tebibyte,tebibytes
         angle
         rad|Radians|1.0|rad,radian,radians
-        deg|Degrees|0.017453292519943295|deg,degree,degrees
+        deg|Degrees|0.017453292519943295|deg,degree,degrees,°
         grad|Gradians|0.015707963267948967|grad,grads,gradian,gradians,gon
         arcmin|Arcminutes|0.0002908882086657216|arcmin,arcminute,arcminutes
         arcsec|Arcseconds|4.84813681109536e-06|arcsec,arcsecond,arcseconds
