@@ -103,7 +103,10 @@ enum AIModelDiscovery {
                             AIConnection.ReasoningOptions(
                                 efforts: $0.supportedEfforts ?? [],
                                 defaultEffort: $0.defaultEffort)
-                        })
+                        }
+                            ?? $0.capabilities?.effort.map {
+                                AIConnection.ReasoningOptions(efforts: $0.levels, defaultEffort: nil)
+                            })
                 })
         case .gemini:
             let response = try JSONDecoder().decode(GeminiResponse.self, from: data)
@@ -229,15 +232,44 @@ enum AIModelDiscovery {
             }
         }
 
+        struct Capabilities: Decodable {
+            struct Effort: Decodable {
+                private struct Level: CodingKey {
+                    let stringValue: String
+                    var intValue: Int? { nil }
+                    init(stringValue: String) { self.stringValue = stringValue }
+                    init?(intValue: Int) { nil }
+                }
+
+                private struct Support: Decodable {
+                    let supported: Bool
+                }
+
+                let levels: [String]
+
+                init(from decoder: Decoder) throws {
+                    let container = try decoder.container(keyedBy: Level.self)
+                    let supported = Set(
+                        container.allKeys.filter {
+                            (try? container.decode(Support.self, forKey: $0))?.supported == true
+                        }.map(\.stringValue))
+                    levels = AIConnection.ReasoningOptions.ladder.filter(supported.contains)
+                }
+            }
+
+            let effort: Effort?
+        }
+
         struct Model: Decodable {
             let id: String
             let name: String?
             let displayName: String?
             let architecture: Architecture?
             let reasoning: Reasoning?
+            let capabilities: Capabilities?
 
             enum CodingKeys: String, CodingKey {
-                case id, name, architecture, reasoning
+                case id, name, architecture, reasoning, capabilities
                 case displayName = "display_name"
             }
 
@@ -249,6 +281,7 @@ enum AIModelDiscovery {
                 displayName = try? container.decodeIfPresent(String.self, forKey: .displayName)
                 architecture = try? container.decodeIfPresent(Architecture.self, forKey: .architecture)
                 reasoning = try? container.decodeIfPresent(Reasoning.self, forKey: .reasoning)
+                capabilities = try? container.decodeIfPresent(Capabilities.self, forKey: .capabilities)
             }
         }
 

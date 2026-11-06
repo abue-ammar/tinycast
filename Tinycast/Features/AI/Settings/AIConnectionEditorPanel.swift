@@ -334,7 +334,7 @@ struct AIConnectionEditorPanel: View {
     private func reasoningLevelsMenu(_ model: String) -> some View {
         let declared = connection.declaredLevels(for: model)
         return Menu {
-            ForEach(AIConnection.ReasoningOptions.ladder, id: \.self) { level in
+            ForEach(connection.declarableLevels, id: \.self) { level in
                 Toggle(
                     ChatGPTSubscription.Effort(id: level, detail: nil).title,
                     isOn: Binding(
@@ -495,11 +495,13 @@ struct AIConnectionEditorPanel: View {
         if acceptsImages == true, !connection.visionModels.contains(model) {
             connection.visionModels.append(model)
         }
-        if connection.provider == .openRouter, let reasoningOptions,
-            !reasoningOptions.efforts.isEmpty
-        {
-            if connection.reasoningOptions == nil { connection.reasoningOptions = [:] }
-            connection.reasoningOptions?[model] = reasoningOptions
+        if let reasoningOptions, !reasoningOptions.efforts.isEmpty {
+            if connection.takesDeclaredLevels {
+                connection.declareLevels(Set(reasoningOptions.efforts), for: model)
+            } else {
+                if connection.reasoningOptions == nil { connection.reasoningOptions = [:] }
+                connection.reasoningOptions?[model] = reasoningOptions
+            }
         }
         modelQuery = ""
     }

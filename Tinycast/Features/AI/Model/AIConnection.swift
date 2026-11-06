@@ -42,7 +42,7 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     struct ReasoningOptions: Codable, Equatable, Sendable {
         static let noEffort = "none"
         static let providerDefault = "default"
-        static let ladder = ["minimal", "low", "medium", "high"]
+        static let ladder = ["minimal", "low", "medium", "high", "xhigh", "max"]
 
         let efforts: [String]
         let defaultEffort: String?
@@ -50,13 +50,6 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         /// Named for OpenRouter's own spelling, where `none` likewise disables reasoning entirely.
         static let thinkingSwitch = ReasoningOptions(
             efforts: [providerDefault, noEffort], defaultEffort: providerDefault)
-
-        static func declaring(_ levels: some Collection<String>) -> ReasoningOptions? {
-            let chosen = ladder.filter(levels.contains)
-            guard !chosen.isEmpty else { return nil }
-            return ReasoningOptions(
-                efforts: [providerDefault] + chosen + [noEffort], defaultEffort: providerDefault)
-        }
 
         func resolvedEffort(_ preferred: String?) -> String? {
             guard !efforts.isEmpty else { return nil }
@@ -95,14 +88,23 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
             && baseURL.trimmingCharacters(in: .whitespacesAndNewlines) != provider.defaultBaseURL
     }
 
-    /// OpenRouter's catalog names each model's levels, so only another gateway takes declared ones.
-    var takesDeclaredLevels: Bool {
-        takesThinkingField && provider != .openRouter
+    /// A gateway's `none` is its thinking switch, offered without a declaration.
+    var declarableLevels: [String] {
+        let none = ReasoningOptions.noEffort
+        switch provider {
+        case .openRouter: return []
+        case _ where takesThinkingField: return ReasoningOptions.ladder
+        case .anthropic: return ["low", "medium", "high", "xhigh", "max"]
+        case .gemini: return ["minimal", "low", "medium", "high", none]
+        case .openAI, .openAICompatible: return ReasoningOptions.ladder + [none]
+        }
     }
 
+    /// OpenRouter's catalog names each model's levels, so every other connection takes declared ones.
+    var takesDeclaredLevels: Bool { !declarableLevels.isEmpty }
+
     func reasoningOptions(for model: String) -> ReasoningOptions? {
-        guard provider == .openRouter || takesThinkingField else { return nil }
-        return reasoningOptions?[model] ?? (takesThinkingField ? .thinkingSwitch : nil)
+        reasoningOptions?[model] ?? (takesThinkingField ? .thinkingSwitch : nil)
     }
 
     /// A chat keeps the effort it was given, so one this model no longer offers is never sent.
@@ -119,16 +121,20 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     }
 
     func declaredLevels(for model: String) -> Set<String> {
-        Set(reasoningOptions?[model]?.efforts.filter(ReasoningOptions.ladder.contains) ?? [])
+        Set(reasoningOptions?[model]?.efforts.filter(declarableLevels.contains) ?? [])
     }
 
     mutating func declareLevels(_ levels: Set<String>, for model: String) {
-        if let options = ReasoningOptions.declaring(levels) {
-            if reasoningOptions == nil { reasoningOptions = [:] }
-            reasoningOptions?[model] = options
-        } else {
+        var efforts = declarableLevels.filter(levels.contains)
+        guard !efforts.isEmpty else {
             reasoningOptions?[model] = nil
+            return
         }
+        if takesThinkingField { efforts.append(ReasoningOptions.noEffort) }
+        if reasoningOptions == nil { reasoningOptions = [:] }
+        reasoningOptions?[model] = ReasoningOptions(
+            efforts: [ReasoningOptions.providerDefault] + efforts,
+            defaultEffort: ReasoningOptions.providerDefault)
     }
 
     var title: String {
@@ -383,6 +389,11 @@ struct AIHTTPConfiguration: Equatable, Sendable {
     }
 
     var shape: APIShape { provider.apiShape(for: baseURL) }
+
+    /// A body that named the default would 400 on every endpoint, so it is never sent.
+    var requestedEffort: String? {
+        effort == AIConnection.ReasoningOptions.providerDefault ? nil : effort
+    }
 
     var endpointURL: URL {
         switch shape {
