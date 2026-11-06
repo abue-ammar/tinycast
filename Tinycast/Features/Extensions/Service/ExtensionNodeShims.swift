@@ -550,13 +550,18 @@ final class ExtensionNodeShims: @unchecked Sendable {
             task.environment = ProcessInfo.processInfo.environment
         }
 
-        let stdout = Pipe()
-        let stderr = Pipe()
-        task.standardOutput = stdout
-        task.standardError = stderr
+        let redirects = stdioRedirects(spec["stdio"])
+        let stdout = redirects[1] == nil ? Pipe() : nil
+        let stderr = redirects[2] == nil ? Pipe() : nil
+        task.standardOutput = redirects[1] ?? stdout
+        task.standardError = redirects[2] ?? stderr
         let input = (spec["input"] as? String).flatMap { Data(base64Encoded: $0) }
-        let stdin = input.map { _ in Pipe() }
-        if let stdin { task.standardInput = stdin }
+        let stdin = redirects[0] == nil ? input.map { _ in Pipe() } : nil
+        if let source = redirects[0] {
+            task.standardInput = source
+        } else if let stdin {
+            task.standardInput = stdin
+        }
 
         let exit: ProcessExit
         do {
@@ -566,6 +571,13 @@ final class ExtensionNodeShims: @unchecked Sendable {
         }
         if let input, let stdin { feed(input, to: stdin) }
         return ExtensionAsyncProcess.Child(task: task, exit: exit, stdout: stdout, stderr: stderr)
+    }
+
+    private func stdioRedirects(_ value: Any?) -> [FileHandle?] {
+        let entries = value as? [Any] ?? []
+        return (0..<3).map { index in
+            (entries[safe: index] as? NSNumber).flatMap { fileHandles[$0.int32Value] }
+        }
     }
 
     /// A pipe holds 64 KB, so a larger input written before the child reads it would never finish.
