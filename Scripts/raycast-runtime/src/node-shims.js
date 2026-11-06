@@ -723,7 +723,7 @@ const childProcess = {
       args = [];
     }
     const raw = hostCallSync("proc", "run", [
-      { shell: !!options.shell, command: String(file), args: args.map(String), cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null },
+      { shell: !!options.shell, command: String(file), args: args.map(String), cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null, stdio: stdioDescriptors(options.stdio) },
     ]);
     const result = normalizeExecResult(raw, options);
     return { ...result, pid: 0, output: [null, result.stdout, result.stderr], error: undefined };
@@ -1062,6 +1062,7 @@ class ChildProcess extends EventEmitter {
       env: childEnv(options.env),
       timeout: options.timeout,
       input,
+      stdio: stdioDescriptors(options.stdio),
       // `detached` only makes a process group; only an unread child may answer before it exits.
       detached: !!options.detached && (Array.isArray(options.stdio) ? options.stdio[1] : options.stdio) === "ignore",
     }, (pid) => Promise.all([pipeChild(pid, 1, this.stdout), pipeChild(pid, 2, this.stderr)]));
@@ -1133,6 +1134,10 @@ childProcess.execFile[PROMISIFY_CUSTOM] = (file, args, options) =>
       }
     });
   });
+
+function stdioDescriptors(stdio) {
+  return Array.isArray(stdio) ? [0, 1, 2].map((index) => (typeof stdio[index] === "number" ? stdio[index] : null)) : null;
+}
 
 function pickRunOptions(options = {}) {
   return { cwd: options.cwd, env: childEnv(options.env), timeout: options.timeout, input: options.input ? bytesToBase64(Buffer.from(options.input)) : null };

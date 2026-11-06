@@ -166,15 +166,15 @@ enum ExtensionAsyncProcess {
     struct Child: Sendable {
         let task: Process
         let exit: ProcessExit
-        let stdout: Pipe
-        let stderr: Pipe
+        let stdout: Pipe?
+        let stderr: Pipe?
 
         /// A child filling the 64 KB pipe blocks before it can exit, so the drain comes first.
         func collect(timeout: Double?) -> [String: Any] {
             var watchdog: DispatchSourceTimer?
             if let timeout, timeout > 0 { watchdog = terminationWatchdog(after: timeout / 1000) }
-            let outData = stdout.fileHandleForReading.readDataToEndOfFile()
-            let errData = stderr.fileHandleForReading.readDataToEndOfFile()
+            let outData = stdout?.fileHandleForReading.readDataToEndOfFile() ?? Data()
+            let errData = stderr?.fileHandleForReading.readDataToEndOfFile() ?? Data()
             exit.wait()
             watchdog?.cancel()
 
@@ -234,7 +234,9 @@ enum ExtensionAsyncProcess {
         guard let pid = arguments.first?.doubleValue.flatMap({ Int32(exactly: $0) }),
             let child = uncollected.withLock({ $0[pid]?.child })
         else { throw ProcessError.notStarted }
-        let pipe = arguments[safe: 1]?.doubleValue == 2 ? child.stderr : child.stdout
+        guard let pipe = arguments[safe: 1]?.doubleValue == 2 ? child.stderr : child.stdout else {
+            return nil
+        }
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 let data = pipe.fileHandleForReading.availableData

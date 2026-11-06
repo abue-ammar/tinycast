@@ -1499,6 +1499,7 @@ struct ExtensionTests {
 
         await swiftHelperChecks()
         await processKillChecks()
+        await stdioDescriptorChecks()
         zlibChecks()
     }
 
@@ -2012,6 +2013,61 @@ struct ExtensionTests {
                 == "true,failed,false,EPERM,ESRCH,ERR_UNKNOWN_SIGNAL",
             recorder.trees.last?.activeRoot?.string("markdown") ?? "no tree")
         await runtime.stop(session: "sKill")
+    }
+
+    @MainActor
+    static func stdioDescriptorChecks() async {
+        let file = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-stdio-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: file) }
+
+        let (runtime, _, recorder) = makeRuntime()
+        try? await runtime.boot(
+            config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        let command = """
+            "use strict";
+            const { Detail } = require("@raycast/api");
+            const React = require("react");
+            const fs = require("fs");
+            const { spawn, spawnSync } = require("child_process");
+            const run = (file, args, stdio) => new Promise((resolve) => {
+              const child = spawn(file, args, { stdio });
+              let out = "";
+              child.stdout.on("data", (chunk) => (out += chunk));
+              child.on("close", (code) => resolve(code + ":" + out.trim()));
+            });
+            module.exports.default = function Command() {
+              const [state, setState] = React.useState("pending");
+              React.useEffect(() => {
+                (async () => {
+                  const output = fs.openSync("\(file.path)", "wx");
+                  const wrote = await run("/bin/echo", ["hello"], ["ignore", output, "pipe"]);
+                  fs.closeSync(output);
+                  const input = fs.openSync("\(file.path)", "r");
+                  const read = await run("/bin/cat", [], [input, "pipe", "pipe"]);
+                  fs.closeSync(input);
+                  const syncInput = fs.openSync("\(file.path)", "r");
+                  const sync = spawnSync("/bin/cat", [], { stdio: [syncInput, "pipe", "pipe"] });
+                  fs.closeSync(syncInput);
+                  setState([wrote, read, sync.stdout.toString().trim()].join(","));
+                })().catch((error) => setState("threw:" + error.message));
+              }, []);
+              return React.createElement(Detail, { markdown: state });
+            };
+            """
+        await runtime.start(
+            session: "sStdio", code: command, file: URL(fileURLWithPath: "/tmp/stdio-descriptors.js"),
+            mode: .view, context: launchContext())
+        await settle(until: { recorder.trees.last?.activeRoot?.string("markdown") == "0:,0:hello,hello" })
+
+        check(
+            "a stdout descriptor receives the child's output",
+            (try? String(contentsOf: file, encoding: .utf8)) == "hello\n")
+        check(
+            "a stdin descriptor feeds spawn and spawnSync",
+            recorder.trees.last?.activeRoot?.string("markdown") == "0:,0:hello,hello",
+            recorder.trees.last?.activeRoot?.string("markdown") ?? "no tree")
+        await runtime.stop(session: "sStdio")
     }
 
     /// `zlib` is the one node shim with no JS-side implementation to lean on.
