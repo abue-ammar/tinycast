@@ -28,7 +28,7 @@ enum CalcQuestion {
         switch lead {
         case "convert":
             let rest = tokens.dropFirst().map { $0 == .ident("into") ? .ident("to") : $0 }
-            return rest.contains(where: CalcUnits.isConnector) ? rest : nil
+            return rest.contains(where: CalcUnits.isConnector) || CalcCurrency.isPair(rest) ? rest : nil
         case "how":
             return howMany(tokens)
         case "exchange", "rate":

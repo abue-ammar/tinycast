@@ -76,7 +76,7 @@ so `what is the time in tokyo` still reaches the zone grammar.
 6. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
    `100km / 2h to km/h`, `(1hr + 30min) to timespan`)
 7. Explicit unit conversion (`10km to mi`, `m to ft`, `day s`)
-8. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`)
+8. Currency conversion (`1 euro to dollars`, `€20 to GBP`, `1 btc to eur`, `100 usd nzd`)
 9. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
 10. Natural-language percent, ratio and list forms (`CalcPercent`)
 11. Rounding and fraction phrases (`CalcRounding`: `1/3 to 2 dp`, `0.75 as fraction`)
@@ -677,8 +677,8 @@ parser, so an amount keeps its money or unit: `25% off $60` is `45.00 USD`.
 - `$50/hr for 3 hours` → `150.00 USD`, `60 km/h for 30 min` → `30 km`, `download 20 GB at 10 MB/s` →
   `33 min 20 s`, `1 hour at 2x` → `0.5 hr`, `time saved 1 hour at 1.5x`, and `$50/hr is what per day` →
   `1,200.00 USD/day` (`CalcRatePhrases`)
-- Worded conversions (`CalcQuestion`): `convert 5 km into miles`, `5 km is what in miles`,
-  `5 km is how many miles`, `how many feet in a mile`, `seconds in 3 days`, `exchange rate for usd to
+- Worded conversions (`CalcQuestion`): `convert 5 km into miles`, `convert 100 usd eur`,
+  `5 km is what in miles`, `5 km is how many miles`, `how many feet in a mile`, `seconds in 3 days`, `exchange rate for usd to
   eur`. A unit asked about needs an amount or `a` / `an` after `in`, so `m in ft` keeps meaning one metre
 - Number forms (`CalcNumberForm`): `1234567 to sci` → `1.234567e6` (which reads back as the same
   number), `51.4772° to dms` → `51° 28′ 37.92″`, `5400 s to hms` → `1h 30m 0s`, `75.5 s to laptime` →
@@ -739,6 +739,11 @@ echoes the typed text (`10km to mi ×`) rather than the conversion's own shorten
 `CalcCurrency` mirrors `CalcUnits`' shape: a lookup table plus a `parseConversion` over the same
 `expr from (to|in|->) to` token shape, so `eur to usd` implies an amount of 1 exactly like `m to ft`.
 A leading sign is swapped back into amount-first order, so `€20 to GBP` and `20€ to GBP` parse alike.
+The connector may be dropped (`100 usd nzd`) only behind an amount: lowercase codes double as words,
+so `try all` stays an app search, and without a connector a side that is only a unit gets no card.
+A currency pair also outranks a typed-arithmetic error. Typed arithmetic reads `100/4 usd to eur` as
+`100 / (4 usd)` and `-5 pounds to eur` as weight; the pair reads 25 USD, and pounds sterling as
+`5 pounds to eur` already does. A unit-only side keeps its error: `10 lb to gbp` cannot convert.
 
 The table is **generated except for the judgement calls**. `node Scripts/gen-currencies.js` joins three
 sources on the ISO code and emits `CurrencyData.generated.swift`:
