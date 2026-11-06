@@ -142,7 +142,9 @@ enum CalcEngine {
         if let form = CalcNumberForm.evaluate(tokens, query: query) { return form }
 
         // Typed arithmetic first, so aliases such as `pounds` keep winning in multi-term exprs.
-        if let quantity = CalcQuantity.evaluate(tokens, query: query, rates: rates, region: region) {
+        if let quantity = CalcQuantity.evaluate(tokens, query: query, rates: rates, region: region),
+            quantity.isActionable || !CalcCurrency.isPair(tokens)
+        {
             return quantity
         }
 
