@@ -14,8 +14,8 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
 ## Invariants
 
 - **AI is off out of the box, and off means fully off.** `AppSettings.aiEnabled` is the flag:
-  no `Quick AI` or `AI Chat` command in the launcher, no history database opened or created, no Codex
-  helper for chat, no stop for it on Tab's ring, the palette leaves `.ai` and the window closes.
+  no `Quick AI` or `AI Chat` command in the launcher, no history database opened or created, no
+  `chat-presets.json` read, no Codex helper for chat, no stop for it on Tab's ring, the palette leaves `.ai` and the window closes.
   Installed providers may still remain available for Quick Actions, which has its own switch and route. Turning AI off cancels
   every streaming reply and drops both transcripts, but touches neither the saved conversations in
   `ai-chats.sqlite3` nor a Keychain key. `aiEnabled` is excluded from settings backups like every
@@ -52,7 +52,8 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   Tinycast over anything else. It is not shown in the pane, and `AIPreamble.swift` holds the only
   copy of it — edit the prompt there, not here. `compose` returns `nil` when the user has turned
   the system prompt off or the chat is on Apple Intelligence, and every transport drops a nil
-  instruction, so a turn then carries none. The on-device model is small enough that any standing
+  instruction, so a turn then carries none. A preset's text still rides with the switch off, never
+  on device. The on-device model is small enough that any standing
   instruction — the preamble, the choices request or the user's own text — steers every answer
   toward it, so that route always gets the conversation alone.
 - **API keys live only in the login Keychain.** `AIConnection` persists the provider, endpoint and
@@ -119,19 +120,23 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   answer carries its sources without a second request.
 - **Tools are chosen per chat.** The Tools submenu under the composer's `+` switches MCP off for the
   chat or turns
-  single servers off (`ChatToolScope`, held on `AIChatState`, not stored — only a preset's choice
-  rides its stamp and comes back on reopen); `@server` still narrows
+  single servers off (`ChatToolScope`, held on `AIChatState`, not stored — only a preset chat's
+  stamp keeps the scope of its last send and restores it on reopen); `@server` still narrows
   one turn inside that. The scope binds both shapes alike: Tinycast's loop is offered only the
   allowed servers' tools, and a Codex or Claude turn is handed only the allowed servers. A route that
   cannot call tools shows the menu disabled and says why.
 - **A preset is stamped on the chat it starts, never linked.** `AIChatState.usePreset` copies the
   preset's name, glyph, instructions and tools into `ChatSession.preset` (`ChatPreset.Stamp`) and its
-  model into `ChatSession.model`, and refuses once the chat has a message. `conversation_presets`
-  keeps the stamp, so editing or deleting the preset never changes what an older chat sends. The
-  stamp's instructions take the user prompt's place in `AIInstructions.compose(presetInstructions:…)`
-  and are sent even with the system prompt off and on Apple Intelligence — picking a preset is the
-  reader asking for them — while the preamble still follows its own switch and route. See
-  [Chat presets](#chat-presets).
+  model into `ChatSession.model`, and refuses once the chat has a message. Until then the empty chat
+  follows its preset: `AIChatCoordinator` hands every edit and deletion to `followPreset`, so the
+  first send carries the preset as it stands. `conversation_presets` keeps the stamp, so editing or
+  deleting the preset never changes what a started chat sends; only the stamp's tools move, to the
+  scope of the chat's last send. The stamp's instructions take the user prompt's place in
+  `AIInstructions.compose(presetInstructions:…)` and are sent even with the system prompt off —
+  picking a preset is the reader asking for them — while the preamble still follows its own switch.
+  **Apple Intelligence has no presets:** `compose` returns `nil` on device, the composer hides the
+  preset menu while the chat's route is on device, and the preset editor never offers that route as
+  a preset's model. See [Chat presets](#chat-presets).
 - **A reply can end on choices, and a choice is only ever a message.** The preamble lets the model
   close a reply with a fenced `choices` block, one option per line. `ChatChoices.split` lifts the
   fence out of the prose (an unclosed one mid-stream too, so it never flashes as code). A small
@@ -754,8 +759,15 @@ window, and every chat action either surface sends — is the nineteenth feature
   chat's preset menu: the composer names the preset, the model and the tools menu match it, and
   asking "what are your instructions?" quotes the preset. After a relaunch the chat reopens on the
   same instructions, model and tools.
-- Edit that preset's instructions: the old chat still answers with the old ones; a new one gets the
-  new ones. With `Send a system prompt` off, a preset chat still follows its instructions.
+- Edit that preset's instructions: the old chat still answers with the old ones; a new one, and an
+  empty chat that had already picked it, gets the new ones. With `Send a system prompt` off, a
+  preset chat still follows its instructions.
+- In a preset chat, switch a server the preset turned off back on and send. After a relaunch the chat
+  reopens with that server on.
+- Switch an empty chat to Apple Intelligence: the preset menu goes away, and the preset editor's model
+  menu offers no Apple Intelligence.
+- Pick a preset in an empty chat and press ⌘N: the chat goes back to No Preset. Pick it again, close
+  the window and reopen it with Recent Conversation set: the preset is still picked.
 - In an empty chat, pick a preset from the composer menu, then No Preset: the model and tools go back
   to the defaults. After the first message the menu is a label and cannot be changed.
 - Delete a preset: the dialog asks first, the row leaves Settings and the composer menu, and chats it
@@ -770,7 +782,8 @@ window, and every chat action either surface sends — is the nineteenth feature
   `syntax-highlight-test` (every grammar's tokens, language aliases, the size limit, and that every
   prefix of a streaming block scans in order and inside its own bounds),
   `ai-chat-test` (`ChatSession`, `MarkdownBlock` with its math delimiters, LaTeX subset and
-  mid-stream hold-back, `ChatHistoryStore` with renames, pins and preset stamps,
+  mid-stream hold-back, `ChatHistoryStore` with renames, pins and preset stamps, an empty chat
+  following its preset,
   `AIToolLoopProvider`, regenerate, `ChatReasoning`'s display text, the window's open policy and
   `AIChatSurfacesState`'s one-live-place rule),
   and `apple-intelligence-test` (status copy, snapshot deltas,
@@ -1019,11 +1032,14 @@ asks through a `confirmationDialog` first. Chats a deleted preset started keep t
 A preset is picked only from the composer's preset menu, beside `+`, while the chat has no message —
 never from the launcher, a shortcut or a deep link. The menu offers No Preset, every preset and
 Manage Presets…; with none saved it offers only Add Chat Preset…, which reveals the Settings section.
-Once the first message is sent the menu becomes a plain label naming the chat's preset.
+Once the first message is sent the menu becomes a plain label naming the chat's preset. Neither
+shows while the chat's route is Apple Intelligence.
 
 A plain chat started after a preset chat, in the same state, goes back to every tool server on.
-Presets live outside `UserDefaults` and so never travel in a settings backup or `settings.json`, for
-the reason the system prompt does not: standing instructions must not arrive on another Mac unread.
+⌘N in an empty chat drops the preset picked in it, and the window's open policy never replaces an
+empty chat that has one. Presets live outside `UserDefaults` and so never travel in a settings backup
+or `settings.json`, for the reason the system prompt stays out of backups: standing instructions must
+not arrive on another Mac unread.
 
 ## Settings and backup boundary
 

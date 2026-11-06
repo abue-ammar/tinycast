@@ -4,12 +4,13 @@ import Foundation
 struct ChatPreset: Codable, Hashable, Identifiable, Sendable {
     static let sfSymbol = "text.bubble"
 
-    /// What a chat keeps of the preset that started it; editing or deleting the preset leaves it be.
+    /// What a started chat keeps of its preset, and the tools it last sent with.
     struct Stamp: Codable, Equatable, Sendable {
+        let presetID: UUID
         let name: String
         let symbol: String
         let instructions: String
-        let toolScope: ChatToolScope
+        var toolScope: ChatToolScope
     }
 
     let id: UUID
@@ -38,7 +39,9 @@ struct ChatPreset: Codable, Hashable, Identifiable, Sendable {
     var symbol: String { iconSymbol ?? Self.sfSymbol }
 
     var stamp: Stamp {
-        Stamp(name: name, symbol: symbol, instructions: instructions, toolScope: toolScope)
+        Stamp(
+            presetID: id, name: name, symbol: symbol, instructions: instructions,
+            toolScope: toolScope)
     }
 
     static func precedes(_ lhs: ChatPreset, _ rhs: ChatPreset) -> Bool {

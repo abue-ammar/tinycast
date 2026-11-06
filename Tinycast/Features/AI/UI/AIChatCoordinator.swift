@@ -47,6 +47,7 @@ final class AIChatCoordinator {
             return
         }
         core.applyInstalledAILifecycle()
+        core.chatPresets.load()
         // Deferred off the launch path like the clipboard's own read; history fills in behind it.
         Task {
             core.chatHistory.load()
@@ -232,18 +233,25 @@ final class AIChatCoordinator {
 
     var presets: [ChatPreset] { core.chatPresets.presets }
 
+    /// The on-device model takes no standing instructions, so its chats show no preset.
+    func offersPresets(for chat: AIChatState) -> Bool {
+        model(for: chat)?.isOnDevice != true
+    }
+
     func addChatPreset(_ draft: ChatPreset) throws(ChatPresetError) {
         try core.chatPresets.add(draft)
     }
 
     func updateChatPreset(_ draft: ChatPreset) throws(ChatPresetError) {
         try core.chatPresets.update(draft)
+        chats.followPreset(id: draft.id, to: core.chatPresets.preset(id: draft.id))
     }
 
     /// Chats it started keep their stamp; only the preset goes.
     func deleteChatPreset(id: UUID) {
         do {
             try core.chatPresets.remove(id: id)
+            chats.followPreset(id: id, to: nil)
         } catch {
             core.showMessage(error.localizedDescription, tone: .danger)
         }

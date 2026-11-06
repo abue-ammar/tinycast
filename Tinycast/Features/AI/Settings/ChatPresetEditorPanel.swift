@@ -7,7 +7,7 @@ struct ChatPresetEditRequest: Identifiable {
 
 struct ChatPresetEditorPanel: View {
     @Environment(\.settingsEditorDismiss) private var dismiss
-    @Environment(AppCore.self) private var core
+    @Environment(AIChatCoordinator.self) private var coordinator
 
     private let existing: ChatPreset?
     @State private var name: String
@@ -53,7 +53,7 @@ struct ChatPresetEditorPanel: View {
 
             modelField
 
-            if !core.aiChatCoordinator.mcpServers.isEmpty {
+            if !coordinator.mcpServers.isEmpty {
                 toolsField
             }
 
@@ -119,7 +119,7 @@ struct ChatPresetEditorPanel: View {
                             .allowsHitTesting(false)
                     }
                 }
-            Text("Sent even when the system prompt is off, and on Apple Intelligence.")
+            Text("Sent even when the system prompt is off, but never to Apple Intelligence.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -133,6 +133,7 @@ struct ChatPresetEditorPanel: View {
                 AIModelSelectionRows(
                     selection: model,
                     inheritedTitle: String(localized: "Same as AI Chat"),
+                    excludesOnDevice: true,
                     select: { model = $0 },
                     modelLabel: { Text("Model") },
                     effortLabel: { Text("Reasoning effort") })
@@ -145,7 +146,7 @@ struct ChatPresetEditorPanel: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Toggle("Use Tools", isOn: $toolScope.isEnabled)
                 .font(.callout.weight(.medium))
-            ForEach(core.aiChatCoordinator.mcpServers) { server in
+            ForEach(coordinator.mcpServers) { server in
                 Toggle(
                     server.name.isEmpty ? server.slug : server.name,
                     isOn: Binding(
@@ -181,9 +182,9 @@ struct ChatPresetEditorPanel: View {
             createdAt: existing?.createdAt ?? Date())
         do {
             if existing == nil {
-                try core.aiChatCoordinator.addChatPreset(draft)
+                try coordinator.addChatPreset(draft)
             } else {
-                try core.aiChatCoordinator.updateChatPreset(draft)
+                try coordinator.updateChatPreset(draft)
             }
             dismiss()
         } catch {

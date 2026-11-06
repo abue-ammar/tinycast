@@ -1,9 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "" : {
-
-    },
+    "" : {},
     "%@ (%lld items)" : {
       "localizations" : {
         "de" : {
@@ -108904,54 +108902,54 @@
         }
       }
     },
-    "Sent even when the system prompt is off, and on Apple Intelligence." : {
+    "Sent even when the system prompt is off, but never to Apple Intelligence." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Wird auch gesendet, wenn der System-Prompt aus ist, und mit Apple Intelligence."
+            "value" : "Wird auch gesendet, wenn der System-Prompt aus ist, aber nie an Apple Intelligence."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Se envían incluso con las instrucciones del sistema desactivadas, y con Apple Intelligence."
+            "value" : "Se envían incluso con las instrucciones del sistema desactivadas, pero nunca a Apple Intelligence."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Envoyées même quand les instructions système sont désactivées, et avec Apple Intelligence."
+            "value" : "Envoyées même quand les instructions système sont désactivées, mais jamais à Apple Intelligence."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "システムプロンプトがオフのときも、Apple Intelligenceでも送信されます。"
+            "value" : "システムプロンプトがオフのときも送信されますが、Apple Intelligenceには送信されません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "시스템 프롬프트가 꺼져 있어도, Apple Intelligence에서도 전송됩니다."
+            "value" : "시스템 프롬프트가 꺼져 있어도 전송되지만, Apple Intelligence에는 전송되지 않습니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Enviadas mesmo com o prompt do sistema desativado, e com a Apple Intelligence."
+            "value" : "Enviadas mesmo com o prompt do sistema desativado, mas nunca para a Apple Intelligence."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Отправляются, даже если системные инструкции выключены, и с Apple Intelligence."
+            "value" : "Отправляются, даже если системные инструкции выключены, но никогда — в Apple Intelligence."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "即使关闭了系统提示词，或使用 Apple Intelligence，也会发送。"
+            "value" : "即使关闭了系统提示词也会发送，但绝不会发送给 Apple Intelligence。"
           }
         }
       }

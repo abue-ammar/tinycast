@@ -574,7 +574,7 @@ final class ChatHistoryStore {
             AIModelSelection.self, from: Data(text(statement, 0).utf8))
     }
 
-    /// Written whole on every save; a stamp never changes once the chat has a message to save.
+    /// Written whole on every save, since the stamp's tools follow the chat's last send.
     private func savePreset(of session: ChatSession, in database: OpaquePointer) -> Bool {
         guard let preset = session.preset else { return true }
         guard let json = try? JSONEncoder().encode(preset),

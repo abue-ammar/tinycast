@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ChatPresetsSection: View {
-    @Environment(AppCore.self) private var core
+    @Environment(AIChatCoordinator.self) private var coordinator
     @Environment(ChatPresetStore.self) private var store
     @State private var editing: ChatPresetEditRequest?
     @State private var pendingDeletion: ChatPreset?
@@ -39,7 +39,7 @@ struct ChatPresetsSection: View {
             isPresented: deletionBinding, presenting: pendingDeletion
         ) { preset in
             Button("Delete", role: .destructive) {
-                core.aiChatCoordinator.deleteChatPreset(id: preset.id)
+                coordinator.deleteChatPreset(id: preset.id)
             }
         } message: { _ in
             Text("Chats it started keep their instructions.")
@@ -75,7 +75,6 @@ struct ChatPresetsSection: View {
 
     private func modelTitle(of preset: ChatPreset) -> String? {
         guard let model = preset.model else { return nil }
-        let coordinator = core.aiChatCoordinator
         return coordinator.modelTitle(of: model, among: coordinator.modelOptions)
     }
 }

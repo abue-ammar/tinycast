@@ -66,8 +66,8 @@ struct AIProviderTests {
             AIInstructions.compose(
                 presetInstructions: "Review for SEO.", preambleEnabled: true, offersChoices: true,
                 model: .appleIntelligence)
-                == "Review for SEO.",
-            "the on-device model gets the preset's text and nothing else")
+                == nil,
+            "the on-device model gets no preset")
     }
 
     static func presetsPersistAndNeverOverwriteAnUnreadableFile() {

@@ -74,6 +74,12 @@ final class AIChatState {
         return true
     }
 
+    /// An empty chat follows its preset's edits and deletion; a started one keeps its stamp.
+    func followPreset(id: UUID, to preset: ChatPreset?) {
+        guard session.preset?.presetID == id else { return }
+        usePreset(preset)
+    }
+
     /// Asks again for the last reply; the question and its attachments go out as they first did.
     @discardableResult
     func regenerate(
@@ -97,6 +103,7 @@ final class AIChatState {
             messages: session.requestMessages(textBudget: contextBudget), webSearch: webSearch,
             conversationID: session.id)
         session.append(ChatMessage(role: .assistant, text: "", state: .streaming))
+        session.preset?.toolScope = toolScope
         isStreaming = true
         isThinking = false
         reasoningStartedAt = nil

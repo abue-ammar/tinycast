@@ -202,7 +202,7 @@ private struct AIChatComposer: View {
         let canChangePreset = chat.session.messages.isEmpty && !chat.isStreaming
         return HStack(spacing: Theme.Spacing.xxs) {
             AIAddMenu(chat: chat, coordinator: coordinator, settings: settings, offersSearch: searches)
-            if stamp != nil || canChangePreset {
+            if coordinator.offersPresets(for: chat), stamp != nil || canChangePreset {
                 AIPresetPicker(
                     chat: chat, stamp: stamp, canChange: canChangePreset, coordinator: coordinator
                 )
@@ -412,7 +412,7 @@ private struct AIPresetPicker: View {
         ForEach(coordinator.presets) { preset in
             Toggle(
                 isOn: Binding(
-                    get: { stamp == preset.stamp },
+                    get: { stamp?.presetID == preset.id },
                     set: { if $0 { chat.usePreset(preset) } })
             ) {
                 Label(preset.name, systemImage: preset.symbol)

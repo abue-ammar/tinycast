@@ -10,9 +10,7 @@ final class ChatPresetStore {
     private let fileURL: URL
 
     init(directory: URL? = nil) {
-        let base = directory ?? Self.defaultDirectory
-        fileURL = base.appendingPathComponent("chat-presets.json")
-        try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
+        fileURL = (directory ?? Self.defaultDirectory).appendingPathComponent("chat-presets.json")
     }
 
     private static var defaultDirectory: URL {
@@ -22,7 +20,10 @@ final class ChatPresetStore {
             .appendingPathComponent(bundleID, isDirectory: true)
     }
 
+    /// Runs each time AI is switched on, so it starts over rather than keep an old refusal.
     func load() {
+        presets = []
+        isAvailable = true
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         // A file that exists but won't read is authored data: report, never write over it.
         guard let data = try? Data(contentsOf: fileURL),
@@ -83,6 +84,8 @@ final class ChatPresetStore {
         guard ordered != presets else { return }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try? FileManager.default.createDirectory(
+            at: fileURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         guard let data = try? encoder.encode(ordered),
             (try? data.write(to: fileURL, options: .atomic)) != nil
         else { throw .storageUnavailable }

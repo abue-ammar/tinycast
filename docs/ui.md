@@ -43,7 +43,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **The expanded panel corner is clipped once, at the root.** `RootPaletteView.body` ends with `.background(GlassEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. The clip is last; neither palette mode adds a scrim over its glass. Compact uses zero root corner radius and a four-point drawing outset so its native glass shapes own their contours without touching the window boundary.
 - **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`, or a gradient `mask` where a surface owns its own fade — `scrollEdgeEffectStyle` draws a _material_ where a scroll view meets a safe area, so over a surface that already has `GlassEffectView` it composites to nothing. Tried and rejected on `QuickActionResultView`, with and without `safeAreaBar`. This is a rule about the borderless panels; the Settings window is a titled `NSWindow` whose system titlebar draws the band itself (see "Settings").
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
-- **No `NSAlert` or system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
+- **No `NSAlert` or system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). The Settings window is the one exception (see "Settings"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
 - **Animations follow one switch.** General → Appearance → **Show animations**
   (`AppSettings.animationsEnabled`, on by default) reaches `Motion.isEnabled` through
   `AppCore.applyMotion()`. It is global for the reason `IconCache` is: a missed injection would animate
@@ -479,7 +479,8 @@ Glass is normally for floating controls. The dialog root is the one modal-surfac
 Source: `Windows/Dialog/`, `Windows/HUD/`.
 
 Tinycast owns its dialogs; `NSAlert` is never used. `DialogController` is owned by `AppCore` (the
-sole owner rule) and is the only presenter, so every confirmation in the app looks and behaves alike.
+sole owner rule) and is the only presenter outside Settings, so every confirmation looks and behaves
+alike.
 
 - **Three independent axes.** The **icon** says _what_, the **tone** says _how serious_, the **button
   role** says _what happens if you click_. None of them derives another — that separation is the
@@ -683,6 +684,9 @@ apps) with real traffic lights and a lifecycle wholly its own. It does not share
 `Form` with `.formStyle(.grouped)`**, so the cards, headers, row insets and hairlines are all
 system-drawn and a pane reads exactly as macOS System Settings does.
 
+- **A pane asks with SwiftUI's `confirmationDialog` or `alert`, not `DialogController`.** The window
+  is a stock titled one, so a system sheet on it reads as macOS does, and a sheet is window-modal
+  rather than a `runModal` loop, so Carbon hotkeys never fire underneath it.
 - **A row is a stock control.** `LabeledContent`, `Toggle` or `Picker`, each with a two-view label —
   the first view is the title, the rest become the secondary subtitle. Never a hand-built `HStack`
   with its own padding.
