@@ -9,11 +9,12 @@ enum CalcDateTime {
         -> CalcResult?
     {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        let lowered = fromNow(withoutApostrophes(echo.lowercased()))
+        var lowered = fromNow(withoutApostrophes(echo.lowercased()))
         guard !lowered.isEmpty else { return nil }
 
         // One pass over the words, since an app search pays this on every keystroke.
         let signals = keywordSignals(lowered)
+        if signals.contains(.synonym) { lowered = canonicalWords(lowered) }
         let hasDigit = signals.contains(.digit)
         let hasUntil = signals.contains(.until)
         let hasSince = signals.contains(.since)
@@ -21,12 +22,16 @@ enum CalcDateTime {
         let hasFromAgo = signals.contains(.fromAgo)
         let hasIn = signals.contains(.inWord)
         let hasTimestamp = signals.contains(.timestamp)
+        let hasSpan = signals.contains(.span) && signals.contains(.moment)
         // A named moment needs a qualifier: a lone `tomorrow` is an app search.
         let isBareMoment =
             signals.contains(.at) || signals.contains(.nextOrLast)
+            || (hasDigit && signals.contains(.moment) && holidayYear(lowered) != nil)
             || (hasDigit && signals.contains(.dayName) && namesADay(lowered))
             || CalcTimestamp.looksLikeISO(lowered) || namesBoundary(lowered)
-        guard hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment || hasTimestamp else {
+        guard
+            hasUntil || hasSince || hasArith || hasFromAgo || hasIn || isBareMoment || hasTimestamp || hasSpan
+        else {
             return nil
         }
 
@@ -43,6 +48,9 @@ enum CalcDateTime {
             return result
         }
         if hasArith, let result = parseArithmetic(query, echo: echo, now: now, calendar: calendar) {
+            return result
+        }
+        if hasSpan, let result = parseSpan(query, echo: echo, now: now, calendar: calendar) {
             return result
         }
         if hasFromAgo, let result = parseOffset(query, echo: echo, now: now, calendar: calendar) {
@@ -89,6 +97,8 @@ enum CalcDateTime {
         static let timestamp = Signals(rawValue: 1 << 8)
         static let moment = Signals(rawValue: 1 << 9)
         static let dayName = Signals(rawValue: 1 << 10)
+        static let span = Signals(rawValue: 1 << 11)
+        static let synonym = Signals(rawValue: 1 << 12)
     }
 
     /// `in 3 days` is `3 days from now`; an `in` that leads anything but a duration is left alone.
@@ -97,6 +107,14 @@ enum CalcDateTime {
         let rest = String(query.dropFirst(3))
         return parseDurations(rest) == nil ? query : rest + " from now"
     }
+
+    private static func canonicalWords(_ query: String) -> String {
+        query.replacingOccurrences(of: "a.m.", with: "am").replacingOccurrences(of: "p.m.", with: "pm")
+            .split(separator: " ", omittingEmptySubsequences: false)
+            .map { synonyms[String($0)] ?? String($0) }.joined(separator: " ")
+    }
+
+    private static let synonyms = ["previous": "last", "midday": "noon"]
 
     private struct Boundary {
         let atEnd: Bool
@@ -143,14 +161,21 @@ enum CalcDateTime {
             case "till", "until", "til": if !isFirst, !isLast { signals.insert(.until) }
             case "since": if !isFirst, !isLast { signals.insert(.since) }
             case "+", "-": if !isFirst, !isLast { signals.insert(.arithmetic) }
-            case "from": if !isFirst, !isLast { signals.insert(.fromAgo) }
+            case "from", "after", "before": if !isFirst, !isLast { signals.insert(.fromAgo) }
+            case "to", "through", "between": if !isLast { signals.insert(.span) }
             case "ago": if !isFirst { signals.insert(.fromAgo) }
             case "in": if !isFirst, !isLast { signals.insert(.inWord) }
             case "at": if !isFirst, !isLast { signals.insert(.at) }
             case "new":
                 if index + 1 < words.count, words[index + 1].hasPrefix("year") { signals.insert(.moment) }
-            case "next", "last": if isFirst { signals.insert(.nextOrLast) }
+            case "next", "last", "this": if isFirst { signals.insert(.nextOrLast) }
+            case "previous":
+                signals.insert(.synonym)
+                if isFirst { signals.insert(.nextOrLast) }
+            case "midday": signals.formUnion([.synonym, .moment])
             case "unix", "timestamp": signals.formUnion([.timestamp, .moment])
+            case "date", "iso", "iso8601":
+                if isLast, index > 0, words[index - 1] == "to" { signals.insert(.timestamp) }
             default: break
             }
             var dots = 0
@@ -161,17 +186,20 @@ enum CalcDateTime {
                 if byte == 45 { dashes += 1 }
                 if byte == 58 || byte == 47 { signals.insert(.moment) }
             }
-            if dots >= 2 { signals.formUnion([.dayName, .moment]) }
+            if dots >= 2 {
+                signals.formUnion([.dayName, .moment])
+                if word.hasSuffix(".m.") { signals.insert(.synonym) }
+            }
             if dashes >= 2 { signals.insert(.moment) }
             for letters in word.utf8.split(whereSeparator: { !(97...122).contains($0) }) {
                 let name = String(bytes: letters, encoding: .utf8)!
                 if monthByName[name] != nil { signals.formUnion([.dayName, .moment]) }
                 if weekdayByName[name] != nil { signals.insert(.moment) }
                 switch name {
-                case "now", "today", "tomorrow", "yesterday", "noon", "midnight", "am", "pm", "christmas",
-                    "halloween", "valentines":
+                case "now", "today", "tomorrow", "yesterday", "noon", "midnight", "am", "pm":
                     signals.insert(.moment)
-                default: break
+                default:
+                    if CalcHolidays.signalWords.contains(name) { signals.insert(.moment) }
                 }
             }
         }
@@ -266,10 +294,13 @@ enum CalcDateTime {
         let durationText: String
         let anchorText: String
         let sign: Int
-        if let range = query.range(of: " from ") {
+        let connectors = [(" from ", 1), (" after ", 1), (" before ", -1)]
+        if let (range, direction) = connectors.lazy.compactMap({ connector, direction in
+            query.range(of: connector).map { ($0, direction) }
+        }).first {
             durationText = String(query[..<range.lowerBound])
             anchorText = String(query[range.upperBound...])
-            sign = 1
+            sign = direction
         } else if query.hasSuffix(" ago") {
             durationText = String(query.dropLast(4))
             anchorText = ""
@@ -319,18 +350,9 @@ enum CalcDateTime {
             let moment = parseMoment(parts[1], now: now, calendar: calendar, bias: bias)
                 ?? dayAndMonth(parts[1], now: now, calendar: calendar, bias: bias)
         else { return nil }
-        let reference = unit.subDay ? now : calendar.startOfDay(for: now)
-        let target = unit.subDay ? moment.date : calendar.startOfDay(for: moment.date)
-        let start = past ? target : reference
-        let end = past ? reference : target
-        let value: Double
-        switch unit.kind {
-        case .day, .week:
-            let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
-            value = Double(days) / (unit.kind == .week ? 7 : 1)
-        case .subSecond:
-            value = end.timeIntervalSince(start) / unit.seconds
-        }
+        let start = past ? moment.date : now
+        let end = past ? now : moment.date
+        let value = measure(from: start, to: end, in: unit, calendar: calendar)
         let word = abs(value) == 1 ? unit.singular : unit.plural
         return CalcResult(
             expression: echo,
@@ -404,29 +426,200 @@ enum CalcDateTime {
         else {
             return nil
         }
-        let hasTime = base.hasTime || other.hasTime
-        let seconds = base.date.timeIntervalSince(other.date)
-        let payload: CalcResult.Payload
-        if let unit = targetUnit {
-            payload = .measurement(seconds / unit.factor, unit: unit)
-        } else if hasTime {
-            let text = CalcFormatter.timespan(seconds)
-            payload = .value(display: text, copyText: text)
-        } else {
-            let days =
-                calendar.dateComponents(
-                    [.day], from: calendar.startOfDay(for: other.date),
-                    to: calendar.startOfDay(for: base.date)
-                ).day ?? 0
-            let text = "\(days) \(abs(days) == 1 ? "day" : "days")"
-            payload = .value(display: text, copyText: text)
-        }
+        let payload: CalcResult.Payload =
+            if let unit = targetUnit {
+                .measurement(base.date.timeIntervalSince(other.date) / unit.factor, unit: unit)
+            } else {
+                difference(from: other, to: base, calendar: calendar)
+            }
         return CalcResult(
             expression: echo,
             sourceBadge: momentString(base.date, hasTime: base.hasTime, now: now, calendar: calendar),
             targetBadge: targetUnit?.name
                 ?? momentString(other.date, hasTime: other.hasTime, now: now, calendar: calendar),
             payload: payload)
+    }
+
+    // MARK: - Grammar H: the span between two moments
+
+    private enum SpanUnit {
+        case duration(DurUnit)
+        case workdays
+    }
+
+    private static func parseSpan(
+        _ query: String, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        var phrase = query
+        let midpoint = phrase.hasPrefix("halfway ") || phrase.hasPrefix("midpoint ")
+        if midpoint, let space = phrase.firstIndex(of: " ") {
+            phrase = String(phrase[phrase.index(after: space)...])
+        }
+        let whole = !midpoint && phrase.hasPrefix("whole ")
+        if whole { phrase.removeFirst(6) }
+        var unit: SpanUnit?
+        if let range = phrase.range(of: " in ", options: .backwards),
+            let named = spanUnit(String(phrase[range.upperBound...]))
+        {
+            unit = named
+            phrase = String(phrase[..<range.lowerBound])
+        }
+        var led = false
+        if unit == nil, let space = phrase.firstIndex(of: " "), let named = spanUnit(String(phrase[..<space]))
+        {
+            unit = named
+            led = true
+            phrase = String(phrase[phrase.index(after: space)...])
+        }
+        guard let ends = spanEnds(phrase, led: led),
+            let start = parseMoment(ends.start, now: now, calendar: calendar, bias: .nearest),
+            let end = parseMoment(ends.end, now: now, calendar: calendar, bias: .nearest),
+            unit != nil || start.hasTime || end.hasTime || (ends.start + ends.end).contains(where: \.isLetter)
+                || (ends.start + ends.end).contains("-") || isDottedDate(atomize(ends.start))
+        else { return nil }
+
+        var span = (start: start, end: end)
+        if isBareClock(ends.start), isBareClock(ends.end) {
+            guard let opening = clockToday(start.date, now: now, calendar: calendar),
+                var closing = clockToday(end.date, now: now, calendar: calendar)
+            else { return nil }
+            if closing <= opening, let tomorrow = shift(closing, days: 1, calendar: calendar) {
+                closing = tomorrow
+            }
+            span = (Moment(date: opening, hasTime: true), Moment(date: closing, hasTime: true))
+        }
+        let badges = (
+            momentString(span.start.date, hasTime: span.start.hasTime, now: now, calendar: calendar),
+            momentString(span.end.date, hasTime: span.end.hasTime, now: now, calendar: calendar)
+        )
+        if midpoint {
+            guard unit == nil, !ends.inclusive else { return nil }
+            return halfway(from: span.start, to: span.end, echo: echo, now: now, calendar: calendar)
+        }
+        if ends.inclusive, !start.hasTime, !end.hasTime {
+            guard let next = shift(end.date, days: 1, calendar: calendar) else { return nil }
+            span.end = Moment(date: next, hasTime: false)
+        }
+        guard !whole || unit != nil else { return nil }
+        return spanResult(
+            from: span.start, to: span.end, unit: unit, whole: whole, echo: echo, badges: badges,
+            calendar: calendar)
+    }
+
+    /// The moment halfway along a span; between two days, the day nearest the middle.
+    private static func halfway(
+        from start: Moment, to end: Moment, echo: String, now: Date, calendar: Calendar
+    ) -> CalcResult? {
+        let hasTime = start.hasTime || end.hasTime
+        let middle: Date?
+        if hasTime {
+            middle = start.date.addingTimeInterval(end.date.timeIntervalSince(start.date) / 2)
+        } else {
+            let days = calendar.dateComponents([.day], from: start.date, to: end.date).day ?? 0
+            middle = shift(start.date, days: Int((Double(days) / 2).rounded()), calendar: calendar)
+        }
+        guard let middle else { return nil }
+        let text = answerString(middle, hasTime: hasTime, now: now, calendar: calendar)
+        return CalcResult(
+            expression: echo, sourceBadge: String(localized: "Midpoint"),
+            targetBadge: weekdayName(middle, calendar: calendar),
+            payload: .value(display: text, copyText: text))
+    }
+
+    private static func spanResult(
+        from start: Moment, to end: Moment, unit: SpanUnit?, whole: Bool, echo: String,
+        badges: (String, String),
+        calendar: Calendar
+    ) -> CalcResult? {
+        let payload: CalcResult.Payload
+        switch unit {
+        case nil:
+            payload = difference(from: start, to: end, calendar: calendar)
+        case .workdays:
+            guard let count = businessDays(from: start.date, to: end.date, calendar: calendar) else {
+                return nil
+            }
+            payload = .number(Double(count), suffix: abs(count) == 1 ? " workday" : " workdays")
+        case .duration(let unit):
+            let measured = measure(from: start.date, to: end.date, in: unit, calendar: calendar)
+            let value = whole ? measured.rounded(.towardZero) : measured
+            payload = .number(value, suffix: " \(abs(value) == 1 ? unit.singular : unit.plural)")
+        }
+        return CalcResult(expression: echo, sourceBadge: badges.0, targetBadge: badges.1, payload: payload)
+    }
+
+    private static func spanUnit(_ name: String) -> SpanUnit? {
+        if businessDayPhrases.contains(name.replacingOccurrences(of: " ", with: "")) { return .workdays }
+        guard !name.contains(" ") else { return nil }
+        return durationUnit(name).map(SpanUnit.duration)
+    }
+
+    /// A leading unit needs `between` or `from`, so `days march 5` is not read as a span.
+    private static func spanEnds(
+        _ phrase: String, led: Bool
+    ) -> (start: String, end: String, inclusive: Bool)? {
+        func split(_ text: some StringProtocol, on separator: String) -> (String, String)? {
+            let parts = text.components(separatedBy: separator)
+            return parts.count == 2 ? (parts[0], parts[1]) : nil
+        }
+        if phrase.hasPrefix("between "), let (start, end) = split(phrase.dropFirst(8), on: " and ") {
+            return (start, end, false)
+        }
+        if phrase.hasPrefix("from ") {
+            if let (start, end) = split(phrase.dropFirst(5), on: " to ") { return (start, end, false) }
+            if let (start, end) = split(phrase.dropFirst(5), on: " through ") { return (start, end, true) }
+        }
+        guard !led else { return nil }
+        if let (start, end) = split(phrase, on: " through ") { return (start, end, true) }
+        return split(phrase, on: " to ").map { ($0.0, $0.1, false) }
+    }
+
+    private static func isBareClock(_ phrase: String) -> Bool {
+        let atoms = atomize(phrase)
+        switch atoms.count {
+        case 1:
+            return atoms[0] == "noon" || atoms[0] == "midnight"
+                || (atoms[0].contains(":") && parseClock(atoms[0]) != nil)
+        case 2:
+            return (atoms[1] == "am" || atoms[1] == "pm") && parseClock(atoms[0]) != nil
+        default:
+            return false
+        }
+    }
+
+    /// A bare clock read on today, so `4pm to 3am` runs forward into tomorrow whatever the bias picked.
+    private static func clockToday(_ date: Date, now: Date, calendar: Calendar) -> Date? {
+        let clock = calendar.dateComponents([.hour, .minute], from: date)
+        guard let hour = clock.hour, let minute = clock.minute else { return nil }
+        return calendar.date(bySettingHour: hour, minute: minute, second: 0, of: now)
+    }
+
+    /// A clock on either side measures elapsed time; two dates count calendar days.
+    private static func difference(
+        from start: Moment, to end: Moment, calendar: Calendar
+    ) -> CalcResult.Payload {
+        if start.hasTime || end.hasTime {
+            let text = CalcFormatter.timespan(end.date.timeIntervalSince(start.date))
+            return .value(display: text, copyText: text)
+        }
+        let days =
+            calendar.dateComponents(
+                [.day], from: calendar.startOfDay(for: start.date), to: calendar.startOfDay(for: end.date)
+            ).day ?? 0
+        let text = "\(days) \(abs(days) == 1 ? "day" : "days")"
+        return .value(display: text, copyText: text)
+    }
+
+    /// Whole calendar days for day and week units, elapsed time for anything shorter.
+    private static func measure(
+        from start: Date, to end: Date, in unit: DurUnit, calendar: Calendar
+    ) -> Double {
+        guard !unit.subDay else { return end.timeIntervalSince(start) / unit.seconds }
+        let days =
+            calendar.dateComponents(
+                [.day], from: calendar.startOfDay(for: start), to: calendar.startOfDay(for: end)
+            ).day ?? 0
+        return Double(days) / (unit.kind == .week ? 7 : 1)
     }
 
     /// Nil unless every term is a duration, so grammar D still sees a trailing moment.
@@ -486,6 +679,13 @@ enum CalcDateTime {
         return result
     }
 
+    private static func shiftedMoment(_ source: String, now: Date, calendar: Calendar) -> Moment? {
+        let (term, op, tail) = splitTerm(source[...])
+        guard let moment = parseMoment(term, now: now, calendar: calendar, bias: .nearest) else { return nil }
+        guard let op else { return moment }
+        return applyShifts(op, String(tail), to: moment, calendar: calendar)
+    }
+
     // MARK: - Moment parsing
 
     private struct Moment {
@@ -495,22 +695,27 @@ enum CalcDateTime {
     }
 
     private static func parseTimestamp(
-        _ query: String, echo: String, now: Date, calendar: Calendar
+        _ phrase: String, echo: String, now: Date, calendar: Calendar
     ) -> CalcResult? {
+        let current: Set<String> = ["current timestamp", "current unix timestamp", "new timestamp"]
+        let query = current.contains(phrase) ? "now to unix" : phrase
+        if let range = query.range(of: " to ", options: .backwards),
+            ["iso", "iso8601"].contains(query[range.upperBound...])
+        {
+            guard let moment = shiftedMoment(String(query[..<range.lowerBound]), now: now, calendar: calendar)
+            else { return nil }
+            let text = CalcDateFormatters.string(
+                from: moment.date, calendar: calendar, zone: calendar.timeZone,
+                pattern: "yyyy-MM-dd'T'HH:mm:ssxxx")
+            return CalcResult(
+                expression: echo, sourceBadge: String(localized: "Date"), targetBadge: "ISO 8601",
+                payload: .value(display: text, copyText: text))
+        }
         if let range = query.range(of: " to ", options: .backwards),
             let scale = CalcTimestamp.scale(String(query[range.upperBound...]))
         {
-            let source = String(query[..<range.lowerBound])
-            let (term, op, tail) = splitTerm(source[...])
-            guard var moment = parseMoment(term, now: now, calendar: calendar, bias: .nearest) else {
-                return nil
-            }
-            if let op {
-                guard let shifted = applyShifts(op, String(tail), to: moment, calendar: calendar) else {
-                    return nil
-                }
-                moment = shifted
-            }
+            guard let moment = shiftedMoment(String(query[..<range.lowerBound]), now: now, calendar: calendar)
+            else { return nil }
             let timestamp = moment.date.timeIntervalSince1970 * scale
             let rounded = timestamp.rounded()
             let tolerance = moment.date.timeIntervalSinceReferenceDate.ulp * scale
@@ -524,19 +729,43 @@ enum CalcDateTime {
                     ? String(localized: "Unix Seconds") : String(localized: "Unix Milliseconds"),
                 payload: .value(display: CalcFormatter.grouped(text), copyText: text))
         }
-        let source = query.hasSuffix(" to date") ? String(query.dropLast(8)) : query
+        var source = query.hasSuffix(" to date") ? String(query.dropLast(8)) : query
+        if source != query, let seconds = Double(source) {
+            // Past year 5138 in seconds, so a thirteen-digit stamp is milliseconds.
+            source = abs(seconds) >= 1e11 ? "unix \(source) ms" : "unix \(source)"
+        }
         guard CalcTimestamp.isoDate(source) != nil || CalcTimestamp.epochDate(source) != nil else {
             return nil
         }
         return bareMoment(source, echo: echo, now: now, calendar: calendar)
     }
 
-    /// Dates that fall on one day everywhere; floating holidays differ by country and are left out.
-    private static let fixedDays: [String: (month: Int, day: Int)] = [
-        "christmas": (12, 25), "christmas day": (12, 25), "christmas eve": (12, 24),
-        "new year": (1, 1), "new years": (1, 1), "new years day": (1, 1), "new years eve": (12, 31),
-        "halloween": (10, 31), "valentines": (2, 14), "valentines day": (2, 14)
-    ]
+    /// `easter 2027`: a holiday read in the year written, which needs no other qualifier.
+    private static func holidayYear(_ phrase: String) -> (name: String, year: Int)? {
+        guard let space = phrase.lastIndex(of: " ") else { return nil }
+        let name = String(phrase[..<space])
+        guard let year = Int(phrase[phrase.index(after: space)...]), (1000...9999).contains(year),
+            CalcHolidays.isHoliday(name)
+        else { return nil }
+        return (name, year)
+    }
+
+    private static func holidayMoment(
+        _ name: String, now: Date, calendar: Calendar, bias: MomentBias
+    ) -> Moment? {
+        let year = calendar.component(.year, from: now)
+        guard let thisYear = CalcHolidays.date(name, year: year, calendar: calendar) else { return nil }
+        let sod = calendar.startOfDay(for: now)
+        let date: Date?
+        switch bias {
+        case .future:
+            date = thisYear >= sod ? thisYear : CalcHolidays.date(name, year: year + 1, calendar: calendar)
+        case .past:
+            date = thisYear <= sod ? thisYear : CalcHolidays.date(name, year: year - 1, calendar: calendar)
+        case .nearest: date = thisYear
+        }
+        return date.map { Moment(date: $0, hasTime: false) }
+    }
 
     private static func withoutApostrophes(_ phrase: String) -> String {
         phrase.unicodeScalars.contains { $0 == "'" || $0 == "’" }
@@ -565,15 +794,21 @@ enum CalcDateTime {
         if let edge = boundary(phrase) {
             return boundaryDate(edge, now: now, calendar: calendar).map { Moment(date: $0, hasTime: false) }
         }
-        if let day = fixedDays[withoutApostrophes(phrase)] {
-            return monthDayMoment(month: day.month, day: day.day, now: now, calendar: calendar, bias: bias)
+        let name = withoutApostrophes(phrase)
+        if CalcHolidays.isHoliday(name) {
+            return holidayMoment(name, now: now, calendar: calendar, bias: bias)
+        }
+        if let (holiday, year) = holidayYear(name) {
+            return CalcHolidays.date(holiday, year: year, calendar: calendar).map {
+                Moment(date: $0, hasTime: false)
+            }
         }
         if let range = phrase.range(of: " at ") {
             let dayPhrase = String(phrase[..<range.lowerBound])
             let atoms = atomize(dayPhrase)
             let recurring =
                 weekdayByName[dayPhrase] != nil || monthByName[dayPhrase] != nil
-                || fixedDays[withoutApostrophes(dayPhrase)] != nil
+                || CalcHolidays.isHoliday(withoutApostrophes(dayPhrase))
                 || (atoms.count == 2 && namesADay(dayPhrase))
                 || (atoms.count == 1 && dayPhrase.split(separator: "/").count == 2)
             guard let clock = parseMeridiemClock(String(phrase[range.upperBound...])),
@@ -672,6 +907,14 @@ enum CalcDateTime {
             let adjusted = b == "pm" ? (hour % 12) + 12 : hour % 12
             return clockMoment(
                 hour: adjusted, minute: minute, now: now, calendar: calendar, bias: bias)
+        }
+        if a == "this" {
+            if let weekday = weekdayByName[b] {
+                return nextWeekday(weekday, offsetToFuture: false, now: now, calendar: calendar)
+            }
+            return monthByName[b].flatMap {
+                monthDayMoment(month: $0, day: 1, now: now, calendar: calendar, bias: .nearest)
+            }
         }
         if a == "next" || a == "last" {
             if let period = ["week": Calendar.Component.weekOfYear, "month": .month, "year": .year][b] {
@@ -1024,6 +1267,25 @@ enum CalcDateTime {
             if !isWeekend(cursor, calendar: calendar) { remaining -= 1 }
         }
         return cursor
+    }
+
+    /// Weekdays from `start` up to `end`, jumping whole weeks so a long span stays cheap.
+    /// Weekdays from `start` up to `end`, whole weeks jumped so a long span stays cheap.
+    static func businessDays(from start: Date, to end: Date, calendar: Calendar) -> Int? {
+        let first = calendar.startOfDay(for: min(start, end))
+        guard
+            let length = calendar.dateComponents(
+                [.day], from: first, to: calendar.startOfDay(for: max(start, end))
+            ).day,
+            length <= 10_000, var cursor = shift(first, days: length / 7 * 7, calendar: calendar)
+        else { return nil }
+        var count = length / 7 * 5
+        for _ in 0..<(length % 7) {
+            if !isWeekend(cursor, calendar: calendar) { count += 1 }
+            guard let next = shift(cursor, days: 1, calendar: calendar) else { return nil }
+            cursor = next
+        }
+        return start <= end ? count : -count
     }
 
     private static func isWeekend(_ date: Date, calendar: Calendar) -> Bool {

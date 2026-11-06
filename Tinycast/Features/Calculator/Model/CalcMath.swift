@@ -15,7 +15,7 @@ enum CalcMath {
     ]
 
     static let constants: [String: Double] = [
-        "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2
+        "pi": .pi, "π": .pi, "e": M_E, "tau": 2 * .pi, "τ": 2 * .pi, "phi": (1 + sqrt(5.0)) / 2, "half": 0.5
     ]
 
     /// Factorial for non-negative integers; 170! is the last value representable as a Double.
@@ -32,10 +32,10 @@ enum CalcMath {
 
     static let multipleArguments: Set<String> = [
         "hypot", "round", "log", "gcd", "lcm", "atan2", "pow", "root", "fmod",
-        "min", "max", "sum", "avg", "mean", "average"
+        "min", "max", "sum", "avg", "mean", "average", "median", "count", "stddev", "stdev"
     ]
     static let measurements: Set<String> = [
-        "hypot", "round", "min", "max", "sum", "avg", "mean", "average"
+        "hypot", "round", "min", "max", "sum", "avg", "mean", "average", "median", "stddev", "stdev"
     ]
 
     static func isFunction(_ name: String) -> Bool {
@@ -51,6 +51,17 @@ enum CalcMath {
         case "max": result = values.max() ?? first
         case "sum": result = values.reduce(0, +)
         case "avg", "mean", "average": result = values.reduce(0) { $0 + $1 / Double(values.count) }
+        case "median":
+            let sorted = values.sorted()
+            let middle = sorted.count / 2
+            result = sorted.count % 2 == 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+        case "count": result = Double(values.count)
+        case "stddev", "stdev":
+            // The sample deviation, as spreadsheets' STDEV: a typed list is a sample, not a population.
+            guard values.count >= 2 else { return nil }
+            let mean = values.reduce(0) { $0 + $1 / Double(values.count) }
+            let squares = values.reduce(0) { $0 + ($1 - mean) * ($1 - mean) }
+            result = (squares / Double(values.count - 1)).squareRoot()
         case "hypot": result = values.reduce(0) { hypot($0, $1) }
         case "gcd", "lcm":
             var accumulator: Int64 = name == "gcd" ? 0 : 1

@@ -5,7 +5,8 @@ enum CalcUnits {
         var units: [CalcDimension: UnitDef] = [:]
         for name in [
             "m", "kg", "s", "m2", "m3", "b", "m/s", "pa", "bps", "m/s2", "n", "j", "w", "hz",
-            "a", "v", "ohm", "as", "m3/s", "px", "px2", "ppi"
+            "a", "v", "ohm", "as", "m3/s", "px", "px2", "ppi", "farad", "henry", "siemens", "wb", "tesla",
+            "mol"
         ] {
             if let unit = byName[name], let dimension = unit.category.dimension {
                 units[dimension] = unit
@@ -16,13 +17,29 @@ enum CalcUnits {
 
     static func productUnit(_ lhs: UnitDef, _ rhs: UnitDef) -> UnitDef? {
         let (measure, duration) = lhs.category == .time ? (rhs, lhs) : (lhs, rhs)
-        guard duration.category == .time, duration.factor >= 60 else { return nil }
+        guard duration.category == .time else { return nil }
+        if let accrued = accruedUnit(measure) { return accrued }
+        guard duration.factor >= 60 else { return nil }
         switch measure.category {
         case .power: return byName[measure.factor >= 1000 ? "kwh" : "wh"]
         case .electricCurrent: return byName[measure.factor <= 0.001 ? "mah" : "ah"]
         default: return nil
         }
     }
+
+    /// A rate over time accrues in its own numerator, so `60 mph * 2 h` is miles rather than meters.
+    private static func accruedUnit(_ rate: UnitDef) -> UnitDef? {
+        let symbol = rate.symbol.replacingOccurrences(of: "²", with: "2").replacingOccurrences(
+            of: "³", with: "3")
+        guard let numerator = rateNumerators[symbol] ?? symbol.split(separator: "/").first.map(String.init),
+            numerator != symbol, let unit = byName[numerator] ?? byName[numerator.lowercased()],
+            let rateDimension = rate.dimension, let unitDimension = unit.dimension,
+            unitDimension == rateDimension.adding(CalcDimension(time: 1))
+        else { return nil }
+        return unit
+    }
+
+    private static let rateNumerators = ["mph": "mi", "kn": "nmi"]
 
     enum ConversionParse: Equatable {
         case value(input: Double, from: UnitDef, to: UnitDef, output: Double)
@@ -120,7 +137,7 @@ enum CalcUnits {
 
     static func isConnector(_ token: CalcToken) -> Bool {
         switch token {
-        case .arrow, .ident("to"), .ident("in"): return true
+        case .arrow, .ident("to"), .ident("in"), .ident("as"): return true
         default: return false
         }
     }

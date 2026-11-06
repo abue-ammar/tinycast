@@ -61,10 +61,12 @@ enum CalcSplit {
         else { return nil }
         let expression = query.split(whereSeparator: \.isWhitespace).joined(separator: " ")
         let count = Double(phrase.count)
-        if let amount = CalcPercent.amount(tokens) {
+        if var share = CalcPercent.amount(tokens) {
+            share.amount /= count
             return CalcResult(
                 expression: expression, sourceBadge: String(localized: "Expression"),
-                targetBadge: String(localized: "Per Person"), payload: .number(amount / count))
+                targetBadge: String(localized: "Per Person"), payload: .quantity(share),
+                isCurrency: share.isCurrency)
         }
         let end = CalcQuantity.conversionTarget(tokens, from: 0, to: tokens.count)?.start ?? tokens.count
         let divided =
