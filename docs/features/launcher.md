@@ -631,15 +631,6 @@ Only the display name is indexed. Activation resolves the stable UUID through th
 to `ShellCommandRunner`; see [custom-commands.md](custom-commands.md) for persistence, hotkeys and
 execution semantics.
 
-## Chat presets
-
-`AppEntry.Kind.chatPreset` is its own section, between Custom Commands and Quick Actions. The slice
-arrives through `AppIndex.setChatPresets` as `chat-preset:<uuid>` entries, sorted by when they were
-made, and is empty while AI is off. Activation hides the palette and hands the id to
-`AIChatCoordinator.startChat(presetID:)`; the shortcut is `HotKeyAction.chatPreset(id:)`. The AI pane
-lists the rows' controls itself, so there is no category toggle. See
-[ai.md](ai.md#chat-presets).
-
 ## Quick Actions
 
 `AppEntry.Kind.quickAction` is one section holding both halves. `CommandID.fixGrammar`, `.rewrite`,

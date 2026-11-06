@@ -32,7 +32,7 @@ enum DeepLinkConsentPolicy {
         switch action {
         case .command(let id):
             requiresConsent(id)
-        case .togglePalette, .settingsPane, .chatPreset:
+        case .togglePalette, .settingsPane:
             false
         case .dictation, .app, .customCommand, .systemAction, .windowCommand, .windowLayout,
             .windowRoom, .customWindowSize, .quicklink, .quickAction, .appleShortcut, .snippet,

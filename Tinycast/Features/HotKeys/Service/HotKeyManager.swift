@@ -32,7 +32,6 @@ final class HotKeyManager {
     var onRunCustomWindowSize: ((UUID) -> Void)?
     var onOpenQuicklink: ((UUID) -> Void)?
     var onRunQuickAction: ((UUID) -> Void)?
-    var onStartChatPreset: ((UUID) -> Void)?
     var onRunAppleShortcut: ((UUID) -> Void)?
     var onExpandSnippet: ((StoredSnippet.ID) -> Void)?
     var onRunExtensionCommand: ((String) -> Void)?
@@ -85,7 +84,6 @@ final class HotKeyManager {
     private let boundCustomCommandKey = "boundCustomCommandIDs"
     private let boundQuicklinkKey = "boundQuicklinkIDs"
     private let boundQuickActionKey = "boundQuickActionIDs"
-    private let boundChatPresetKey = "boundChatPresetIDs"
     private let boundWindowLayoutKey = "boundWindowLayoutIDs"
     private let boundWindowRoomKey = "boundWindowRoomIDs"
     private let boundCustomWindowSizeKey = "boundCustomWindowSizeIDs"
@@ -99,8 +97,7 @@ final class HotKeyManager {
 
     func start(
         customCommandIDs: Set<UUID>, quicklinkIDs: Set<UUID>, windowLayoutIDs: Set<UUID>,
-        windowRoomIDs: Set<UUID>, customWindowSizeIDs: Set<UUID>, quickActionIDs: Set<UUID>,
-        chatPresetIDs: Set<UUID>
+        windowRoomIDs: Set<UUID>, customWindowSizeIDs: Set<UUID>, quickActionIDs: Set<UUID>
     ) {
         prune(key: boundCustomCommandKey, live: customCommandIDs) { .customCommand(id: $0) }
         prune(key: boundQuicklinkKey, live: quicklinkIDs) { .quicklink(id: $0) }
@@ -110,7 +107,6 @@ final class HotKeyManager {
             .customWindowSize(id: $0)
         }
         prune(key: boundQuickActionKey, live: quickActionIDs) { .quickAction(id: $0) }
-        prune(key: boundChatPresetKey, live: chatPresetIDs) { .chatPreset(id: $0) }
         // After the prunes, so a dropped record can't survive in memory this session.
         for action in candidateActions { bindings[action] = storedBinding(for: action) }
         revision &+= 1
@@ -156,8 +152,6 @@ final class HotKeyManager {
     var boundCustomWindowSizeIDs: [UUID] { boundIDs(key: boundCustomWindowSizeKey) }
 
     var boundQuickActionIDs: [UUID] { boundIDs(key: boundQuickActionKey) }
-
-    var boundChatPresetIDs: [UUID] { boundIDs(key: boundChatPresetKey) }
 
     /// Pruned by `AppleShortcutCoordinator` after a successful read, never here at launch.
     var boundAppleShortcutIDs: [UUID] { boundIDs(key: boundAppleShortcutKey) }
@@ -225,8 +219,6 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundQuicklinkKey)
         case .quickAction(let id):
             index(id, bound: binding != nil, key: boundQuickActionKey)
-        case .chatPreset(let id):
-            index(id, bound: binding != nil, key: boundChatPresetKey)
         case .windowLayout(let id):
             index(id, bound: binding != nil, key: boundWindowLayoutKey)
         case .windowRoom(let id):
@@ -353,7 +345,6 @@ final class HotKeyManager {
         actions += boundCustomCommandIDs.map { .customCommand(id: $0) }
         actions += boundQuicklinkIDs.map { .quicklink(id: $0) }
         actions += boundQuickActionIDs.map { .quickAction(id: $0) }
-        actions += boundChatPresetIDs.map { .chatPreset(id: $0) }
         actions += boundWindowLayoutIDs.map { .windowLayout(id: $0) }
         actions += boundWindowRoomIDs.map { .windowRoom(id: $0) }
         actions += boundCustomWindowSizeIDs.map { .customWindowSize(id: $0) }
@@ -392,8 +383,6 @@ final class HotKeyManager {
             return displayName?(action) ?? String(localized: "Quicklink")
         case .quickAction:
             return displayName?(action) ?? String(localized: "Quick Action")
-        case .chatPreset:
-            return displayName?(action) ?? String(localized: "Chat Preset")
         case .appleShortcut:
             return displayName?(action) ?? String(localized: "Apple Shortcut")
         case .snippet:
@@ -449,7 +438,6 @@ final class HotKeyManager {
         case .customWindowSize(let id): onRunCustomWindowSize?(id)
         case .quicklink(let id): onOpenQuicklink?(id)
         case .quickAction(let id): onRunQuickAction?(id)
-        case .chatPreset(let id): onStartChatPreset?(id)
         case .appleShortcut(let id): onRunAppleShortcut?(id)
         case .snippet(let id): onExpandSnippet?(id)
         case .extensionCommand(let entryID): onRunExtensionCommand?(entryID)

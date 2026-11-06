@@ -552,7 +552,6 @@ enum CommandCatalog {
 enum HotKeyAction: Hashable, Sendable {
     case togglePalette, dictation, command(CommandID)
     case app(bundleID: String), settingsPane(bundleID: String), quickAction(id: UUID)
-    case chatPreset(id: UUID)
     case customCommand(id: UUID), systemAction(id: SystemAction.ID), windowCommand(id: WindowCommand.ID)
     case customWindowSize(id: UUID), windowLayout(id: UUID), windowRoom(id: UUID), quicklink(id: UUID)
     case appleShortcut(id: UUID), snippet(id: UUID), extensionCommand(entryID: String)
@@ -574,7 +573,6 @@ enum LayoutTag: Sendable {}
 enum RoomTag: Sendable {}
 enum SizeTag: Sendable {}
 enum QuickActionTag: Sendable {}
-enum ChatPresetTag: Sendable {}
 enum CommandTag: Sendable {}
 enum QuicklinkTag: Sendable {}
 enum ShortcutTag: Sendable {}
@@ -582,7 +580,6 @@ typealias WindowLayout = OtherEntry<LayoutTag>
 typealias Room = OtherEntry<RoomTag>
 typealias CustomWindowSize = OtherEntry<SizeTag>
 typealias CustomQuickAction = OtherEntry<QuickActionTag>
-typealias ChatPreset = OtherEntry<ChatPresetTag>
 typealias CustomCommand = OtherEntry<CommandTag>
 typealias Quicklink = OtherEntry<QuicklinkTag>
 typealias AppleShortcut = OtherEntry<ShortcutTag>

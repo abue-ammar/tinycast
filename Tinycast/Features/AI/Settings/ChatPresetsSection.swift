@@ -1,11 +1,10 @@
 import SwiftUI
 
-/// Each preset is also a launcher row, so its alias, shortcut and visibility live on its own row.
 struct ChatPresetsSection: View {
     @Environment(AppCore.self) private var core
     @Environment(ChatPresetStore.self) private var store
-    @Environment(VisibilityStore.self) private var visibility
     @State private var editing: ChatPresetEditRequest?
+    @State private var pendingDeletion: ChatPreset?
 
     private static let iconSize: CGFloat = 14
 
@@ -17,13 +16,7 @@ struct ChatPresetsSection: View {
                         .frame(width: Theme.Size.settingsRowIcon)
                 } trailing: {
                     editButton(for: preset)
-                    AliasField(key: preset.entryID, name: preset.name)
-                    ShortcutRecorder(action: .chatPreset(id: preset.id), isQuiet: true)
-                    Toggle("", isOn: launcherBinding(AppEntry(preset)))
-                        .labelsHidden()
-                        .toggleStyle(.checkbox)
-                        .launcherVisibilityHelp()
-                        .accessibilityLabel("Show \(preset.name) in launcher")
+                    deleteButton(for: preset)
                 }
             }
             Button {
@@ -41,6 +34,20 @@ struct ChatPresetsSection: View {
         .settingsEditorPanel(item: $editing) { request in
             ChatPresetEditorPanel(request: request)
         }
+        .confirmationDialog(
+            pendingDeletion.map { String(localized: "Delete “\($0.name)”?") } ?? "",
+            isPresented: deletionBinding, presenting: pendingDeletion
+        ) { preset in
+            Button("Delete", role: .destructive) {
+                core.aiChatCoordinator.deleteChatPreset(id: preset.id)
+            }
+        } message: { _ in
+            Text("Chats it started keep their instructions.")
+        }
+    }
+
+    private var deletionBinding: Binding<Bool> {
+        Binding(get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } })
     }
 
     private func editButton(for preset: ChatPreset) -> some View {
@@ -54,15 +61,21 @@ struct ChatPresetsSection: View {
         .accessibilityLabel("Edit \(preset.name)")
     }
 
+    private func deleteButton(for preset: ChatPreset) -> some View {
+        Button {
+            pendingDeletion = preset
+        } label: {
+            SymbolImage(name: "trash", size: Self.iconSize)
+                .foregroundStyle(Theme.Colors.destructive)
+        }
+        .buttonStyle(.plain)
+        .help("Delete \(preset.name)")
+        .accessibilityLabel("Delete \(preset.name)")
+    }
+
     private func modelTitle(of preset: ChatPreset) -> String? {
         guard let model = preset.model else { return nil }
         let coordinator = core.aiChatCoordinator
         return coordinator.modelTitle(of: model, among: coordinator.modelOptions)
-    }
-
-    private func launcherBinding(_ entry: AppEntry) -> Binding<Bool> {
-        Binding(
-            get: { visibility.isItemVisible(entry) },
-            set: { visibility.setItemVisible($0, for: entry) })
     }
 }

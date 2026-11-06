@@ -6,7 +6,6 @@ final class ChatPresetStore {
     private(set) var presets: [ChatPreset] = []
     /// False when the file wouldn't read; every mutation then refuses rather than pretends.
     private(set) var isAvailable = true
-    @ObservationIgnored var onChange: (([ChatPreset]) -> Void)?
 
     private let fileURL: URL
 
@@ -88,6 +87,5 @@ final class ChatPresetStore {
             (try? data.write(to: fileURL, options: .atomic)) != nil
         else { throw .storageUnavailable }
         presets = ordered
-        onChange?(ordered)
     }
 }

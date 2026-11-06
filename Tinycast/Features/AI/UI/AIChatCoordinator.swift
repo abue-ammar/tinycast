@@ -35,7 +35,6 @@ final class AIChatCoordinator {
 
     func applyEnabled() {
         appIndex.setCommandsVisible([.aiChat, .quickAI], settings.aiEnabled)
-        applyChatPresetsPresence()
         guard settings.aiEnabled else {
             for request in naming.values { request.cancel() }
             naming = [:]
@@ -233,22 +232,6 @@ final class AIChatCoordinator {
 
     var presets: [ChatPreset] { core.chatPresets.presets }
 
-    func applyChatPresetsPresence() {
-        appIndex.setChatPresets(settings.aiEnabled ? core.chatPresets.presets : [])
-    }
-
-    /// A chat that has begun is never re-stamped: the preset goes on a new one.
-    func startChat(presetID id: UUID) {
-        guard settings.aiEnabled, let preset = core.chatPresets.preset(id: id) else { return }
-        chats.newWindowChat()
-        chats.window.usePreset(preset)
-        showWindow()
-    }
-
-    func usePreset(_ preset: ChatPreset?, in chat: AIChatState) {
-        chat.usePreset(preset)
-    }
-
     func addChatPreset(_ draft: ChatPreset) throws(ChatPresetError) {
         try core.chatPresets.add(draft)
     }
@@ -257,32 +240,13 @@ final class AIChatCoordinator {
         try core.chatPresets.update(draft)
     }
 
-    /// Chats it started keep their stamp; only the preset and what points at it go.
-    func deleteChatPreset(id: UUID) async {
-        guard let preset = core.chatPresets.preset(id: id) else { return }
-        guard
-            await core.confirm(
-                title: String(localized: "Delete “\(preset.name)”?"),
-                message: String(localized: "Chats it started keep their instructions."),
-                symbol: preset.symbol, confirmTitle: String(localized: "Delete"))
-        else { return }
+    /// Chats it started keep their stamp; only the preset goes.
+    func deleteChatPreset(id: UUID) {
         do {
-            guard let removed = try core.chatPresets.remove(id: id) else { return }
-            removeChatPresetReferences(removed)
+            try core.chatPresets.remove(id: id)
         } catch {
             core.showMessage(error.localizedDescription, tone: .danger)
         }
-    }
-
-    /// Unwound only once the record is gone, so a kept preset never loses its shortcut.
-    private func removeChatPresetReferences(_ preset: ChatPreset) {
-        let hotKeyAction = HotKeyAction.chatPreset(id: preset.id)
-        if core.hotKeys.recordingAction == hotKeyAction { core.hotKeys.recordingAction = nil }
-        core.hotKeys.setBinding(nil, for: hotKeyAction)
-        core.favorites.remove(keys: [preset.entryID])
-        core.visibility.removeItemKeys([preset.entryID])
-        core.aliases.removeKeys([preset.entryID])
-        core.launcherRanking.reset(itemKey: preset.entryID)
     }
 
     // MARK: - Titles
@@ -776,8 +740,16 @@ final class AIChatCoordinator {
     }
 
     func showSettings() {
+        showSettings(revealing: nil)
+    }
+
+    func showChatPresetSettings() {
+        showSettings(revealing: .section(.aiChatPresets))
+    }
+
+    private func showSettings(revealing target: SettingsTarget?) {
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
-        settingsCoordinator.showSettings(tab: .ai)
+        settingsCoordinator.showSettings(tab: .ai, revealing: target)
     }
 
     func availability(for chat: AIChatState) -> String? {

@@ -748,16 +748,18 @@ window, and every chat action either surface sends — is the nineteenth feature
 - Escape closes AI Chat with the composer focused, preserving its draft and any streaming reply.
   Menus and rename fields cancel first; the sidebar clears a nonempty filter, then closes on the
   next Escape. Find in Chat cancels before a second Escape closes the window.
-- Add a chat preset with its own model and one tool server switched off, bind a shortcut, and start
-  it from ⌘Space and from the shortcut: the window opens on an empty chat whose composer names the
-  preset, the model and the tools menu match it, and asking "what are your instructions?" quotes the
-  preset. After a relaunch the chat reopens on the same instructions, model and tools.
+- On a fresh install, an empty chat's preset menu offers only Add Chat Preset…, which opens Settings
+  → AI on the Chat Presets section.
+- Add a chat preset with its own model and one tool server switched off, and pick it from an empty
+  chat's preset menu: the composer names the preset, the model and the tools menu match it, and
+  asking "what are your instructions?" quotes the preset. After a relaunch the chat reopens on the
+  same instructions, model and tools.
 - Edit that preset's instructions: the old chat still answers with the old ones; a new one gets the
   new ones. With `Send a system prompt` off, a preset chat still follows its instructions.
 - In an empty chat, pick a preset from the composer menu, then No Preset: the model and tools go back
   to the defaults. After the first message the menu is a label and cannot be changed.
-- Delete a preset with a shortcut bound: the dialog asks first, the row leaves Settings and ⌘Space,
-  and the chord is free for something else to take.
+- Delete a preset: the dialog asks first, the row leaves Settings and the composer menu, and chats it
+  started keep their instructions.
 - Harnesses: `ai-provider-test` (instruction composition and its enable/disable setting, a preset's
   instructions, `ChatPresetStore`'s validation and unreadable-file refusal, endpoints,
   request bodies, stream decoding including leading
@@ -1011,21 +1013,13 @@ by `createdAt`, under the same rules as `CustomQuickActionStore`: name and instr
 non-empty, a write lands on disk before the list moves, and a file that will not decode makes every
 mutation refuse rather than write over it.
 
-Settings → AI → **Chat Presets** lists them. Each row carries its alias, its shortcut
-(`HotKeyAction.chatPreset(id:)`, indexed in `boundChatPresetIDs` so a binding whose preset was deleted
-while Tinycast was off is pruned at launch) and its launcher checkbox; the pencil opens
-`ChatPresetEditorPanel`. Deleting confirms first and unwinds the shortcut, favorite, visibility key,
-alias and ranking only once the record is gone. Chats a deleted preset started keep their stamp.
+Settings → AI → **Chat Presets** lists them; the pencil opens `ChatPresetEditorPanel` and the trash
+asks through a `confirmationDialog` first. Chats a deleted preset started keep their stamp.
 
-A preset is started three ways, and all of them land on an empty chat:
-
-- **The launcher row or its shortcut** — `AppEntry.Kind.chatPreset`, its own section — calls
-  `AIChatCoordinator.startChat(presetID:)`. It reuses the window's chat only while that chat is empty,
-  so a half-typed line or staged files carry into the preset, and starts a new one otherwise. A
-  deep link to it asks no consent: it opens an empty chat and sends nothing.
-- **The composer's preset menu**, beside `+`, while the chat has no message. It offers No Preset,
-  every preset and Manage Presets…, and is hidden when there are none. Once the first message is
-  sent the menu becomes a plain label naming the chat's preset.
+A preset is picked only from the composer's preset menu, beside `+`, while the chat has no message —
+never from the launcher, a shortcut or a deep link. The menu offers No Preset, every preset and
+Manage Presets…; with none saved it offers only Add Chat Preset…, which reveals the Settings section.
+Once the first message is sent the menu becomes a plain label naming the chat's preset.
 
 A plain chat started after a preset chat, in the same state, goes back to every tool server on.
 Presets live outside `UserDefaults` and so never travel in a settings backup or `settings.json`, for

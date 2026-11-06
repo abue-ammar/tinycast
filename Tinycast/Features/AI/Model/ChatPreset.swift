@@ -2,7 +2,6 @@ import Foundation
 
 /// A saved way to start a chat: its own instructions, and optionally its own model and tools.
 struct ChatPreset: Codable, Hashable, Identifiable, Sendable {
-    static let entryIDPrefix = "chat-preset:"
     static let sfSymbol = "text.bubble"
 
     /// What a chat keeps of the preset that started it; editing or deleting the preset leaves it be.
@@ -40,13 +39,6 @@ struct ChatPreset: Codable, Hashable, Identifiable, Sendable {
 
     var stamp: Stamp {
         Stamp(name: name, symbol: symbol, instructions: instructions, toolScope: toolScope)
-    }
-
-    var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
-
-    static func id(fromEntryID entryID: String) -> UUID? {
-        guard entryID.hasPrefix(entryIDPrefix) else { return nil }
-        return UUID(uuidString: String(entryID.dropFirst(entryIDPrefix.count)))
     }
 
     static func precedes(_ lhs: ChatPreset, _ rhs: ChatPreset) -> Bool {

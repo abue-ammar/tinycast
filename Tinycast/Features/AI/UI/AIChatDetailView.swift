@@ -202,7 +202,7 @@ private struct AIChatComposer: View {
         let canChangePreset = chat.session.messages.isEmpty && !chat.isStreaming
         return HStack(spacing: Theme.Spacing.xxs) {
             AIAddMenu(chat: chat, coordinator: coordinator, settings: settings, offersSearch: searches)
-            if stamp != nil || (canChangePreset && !coordinator.presets.isEmpty) {
+            if stamp != nil || canChangePreset {
                 AIPresetPicker(
                     chat: chat, stamp: stamp, canChange: canChangePreset, coordinator: coordinator
                 )
@@ -385,23 +385,13 @@ private struct AIPresetPicker: View {
         }
         if canChange {
             Menu {
-                Toggle(
-                    "No Preset",
-                    isOn: Binding(
-                        get: { stamp == nil },
-                        set: { if $0 { coordinator.usePreset(nil, in: chat) } }))
-                Divider()
-                ForEach(coordinator.presets) { preset in
-                    Toggle(
-                        isOn: Binding(
-                            get: { stamp == preset.stamp },
-                            set: { if $0 { coordinator.usePreset(preset, in: chat) } })
-                    ) {
-                        Label(preset.name, systemImage: preset.symbol)
-                    }
+                if coordinator.presets.isEmpty {
+                    Button("Add Chat Preset…", action: coordinator.showChatPresetSettings)
+                } else {
+                    presetToggles
+                    Divider()
+                    Button("Manage Presets…", action: coordinator.showChatPresetSettings)
                 }
-                Divider()
-                Button("Manage Presets…", action: coordinator.showSettings)
             } label: {
                 label
             }
@@ -409,6 +399,24 @@ private struct AIPresetPicker: View {
             .help("Start this chat from a preset")
         } else {
             label.help("This chat's preset")
+        }
+    }
+
+    @ViewBuilder private var presetToggles: some View {
+        Toggle(
+            "No Preset",
+            isOn: Binding(
+                get: { stamp == nil },
+                set: { if $0 { chat.usePreset(nil) } }))
+        Divider()
+        ForEach(coordinator.presets) { preset in
+            Toggle(
+                isOn: Binding(
+                    get: { stamp == preset.stamp },
+                    set: { if $0 { chat.usePreset(preset) } })
+            ) {
+                Label(preset.name, systemImage: preset.symbol)
+            }
         }
     }
 }

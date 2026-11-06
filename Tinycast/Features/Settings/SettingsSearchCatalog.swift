@@ -311,7 +311,7 @@ enum SettingsSearchCatalog {
             keywords: ["instructions", "persona"]),
         .init(
             group: .aiChatPresets, "Chat Presets",
-            keywords: ["persona", "instructions", "system prompt", "shortcut", "alias"]),
+            keywords: ["persona", "instructions", "system prompt"]),
         .init(
             .aiChatPresets, "Add Chat Preset",
             keywords: ["new", "persona", "instructions", "system prompt"]),

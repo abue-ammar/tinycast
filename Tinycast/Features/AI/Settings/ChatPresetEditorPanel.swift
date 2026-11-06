@@ -27,7 +27,7 @@ struct ChatPresetEditorPanel: View {
     ]
 
     private static let placeholder = String(
-        localized: "You review blog posts for SEO: titles, headings, keywords and links.")
+        localized: "Describe the role, tone and format the model should follow in these chats.")
 
     init(request: ChatPresetEditRequest) {
         existing = request.preset
@@ -74,7 +74,7 @@ struct ChatPresetEditorPanel: View {
         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             Text("Name")
                 .font(.callout.weight(.medium))
-            TextField("SEO Review", text: $name)
+            TextField("Writing Assistant", text: $name)
                 .settingsEditorTextField()
         }
     }
@@ -159,14 +159,6 @@ struct ChatPresetEditorPanel: View {
 
     private var buttons: some View {
         HStack(spacing: Theme.Spacing.md) {
-            if let existing {
-                Button("Delete", role: .destructive) {
-                    dismiss()
-                    Task { await core.aiChatCoordinator.deleteChatPreset(id: existing.id) }
-                }
-                .buttonStyle(.modalAction(.destructive, fillsWidth: false))
-            }
-            Spacer()
             Button("Cancel") { dismiss() }
                 .buttonStyle(.modalAction(.cancel))
                 .keyboardShortcut(.cancelAction)

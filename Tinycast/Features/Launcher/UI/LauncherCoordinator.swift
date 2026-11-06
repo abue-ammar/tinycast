@@ -93,12 +93,6 @@ final class LauncherCoordinator {
             core.quickActionCoordinator.run(id: id)
             return
         }
-        if app.kind == .chatPreset {
-            guard let id = ChatPreset.id(fromEntryID: app.id) else { return }
-            dismissPalette()
-            core.aiChatCoordinator.startChat(presetID: id)
-            return
-        }
         if app.kind == .customCommand {
             guard let id = CustomCommand.id(fromEntryID: app.id) else { return }
             customCommandCoordinator.runCustomCommand(id: id, values: arguments)
@@ -162,8 +156,8 @@ final class LauncherCoordinator {
         case .snippet:
             guard let snippetID = StoredSnippet.id(fromEntryID: app.id) else { return }
             snippetCoordinator.expandSnippet(id: snippetID, target: previous)
-        case .command, .quickAction, .chatPreset, .customCommand, .systemAction, .windowCommand,
-            .windowLayout, .windowRoom, .quicklink, .appleShortcut, .extensionCommand, .meeting:
+        case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
+            .windowRoom, .quicklink, .appleShortcut, .extensionCommand, .meeting:
             break  // handled above
         }
     }
