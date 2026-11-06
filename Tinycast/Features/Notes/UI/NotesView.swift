@@ -18,11 +18,10 @@ struct NotesView: View {
         }
     }
 
-    /// The hosting view hides the real title bar, so this band drags the window itself.
+    /// Lies over the real title bar and leaves its presses alone, so the system drags the window.
     private var titleBar: some View {
         HStack(spacing: 0) {
             Color.clear
-                .contentShape(Rectangle())
                 .overlay { NoteTitlebarDragRegion(onDoubleClick: notes.moveToTopRight) }
             NoteTitlebarActions()
         }
@@ -128,15 +127,25 @@ private struct NoteTitlebarDragRegion: NSViewRepresentable {
     }
 }
 
+/// Measures the band only: macOS 27.2 starts no move from `performDrag(with:)`.
 private final class NoteTitlebarDragView: NSView {
     var onDoubleClick: (() -> Void)?
 
-    override func mouseDown(with event: NSEvent) {
-        if event.clickCount == 2 {
-            onDoubleClick?()
-            return
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func viewDidMoveToWindow() {
+        (window as? NotesPanel)?.claimsTitleBarDoubleClick = { [weak self] event in
+            self?.claimDoubleClick(event) ?? false
         }
-        window?.performDrag(with: event)
+    }
+
+    private func claimDoubleClick(_ event: NSEvent) -> Bool {
+        guard let window, bounds.contains(convert(event.locationInWindow, from: nil)),
+            // The traffic lights sit inside the band; a double-click on one stays theirs.
+            !(window.contentView?.superview?.hitTest(event.locationInWindow) is NSButton)
+        else { return false }
+        onDoubleClick?()
+        return true
     }
 }
 
