@@ -4,9 +4,15 @@ enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
         guard raw.count <= 128, raw.contains(where: \.isWhitespace) else { return nil }
         let inputWords = raw.split(whereSeparator: \.isWhitespace)
-        if let query = currentTimeQuery(inputWords.map { $0.lowercased() }) {
+        let typedWords = inputWords.map { $0.lowercased() }
+        let lowerWords = withoutFillers(typedWords)
+        if lowerWords != typedWords {
+            return evaluate(lowerWords.joined(separator: " "), now: now, calendar: calendar)
+        }
+        if let query = whenQuery(lowerWords) ?? currentTimeQuery(lowerWords) {
             return evaluate(query, now: now, calendar: calendar)
         }
+        if let date = currentDate(lowerWords, now: now, calendar: calendar) { return date }
         if raw.utf8.contains(44), let list = worldClock(raw.lowercased(), now: now, calendar: calendar) {
             return list
         }
@@ -195,17 +201,20 @@ enum CalcTimeZone {
 
     private static let connectors: Set<String> = ["in", "to", "at", "diff", "difference"]
 
-    /// `diff paris`, `time diff paris` — how far a zone runs from the Mac's own.
+    /// `diff paris` runs from the Mac's own zone; `diff london and tokyo` from the first place named.
     private static func offsetBetween(
         _ query: String, now: Date, calendar: Calendar
     ) -> CalcResult? {
         var words = query.split(whereSeparator: \.isWhitespace).map(String.init)
         if words.first == "time" { words.removeFirst() }
-        guard words.count >= 2, words[0] == "diff" || words[0] == "difference",
-            let target = zone(named: Array(words.dropFirst()))
-        else { return nil }
+        guard words.count >= 2, words[0] == "diff" || words[0] == "difference" else { return nil }
+        words.removeFirst()
+        if words.first == "between" { words.removeFirst() }
+        guard let (home, target) = zonePair(words) ?? zone(named: words).map({ (calendar.timeZone, $0) })
+        else {
+            return nil
+        }
 
-        let home = calendar.timeZone
         let minutes =
             (target.secondsFromGMT(for: now) - home.secondsFromGMT(for: now)) / 60
         let sign = minutes < 0 ? "-" : "+"
@@ -220,6 +229,75 @@ enum CalcTimeZone {
             payload: .value(
                 display: "\(clockString(now, zone: target, calendar: calendar)) (\(text))",
                 copyText: text))
+    }
+
+    /// Two places, split at `and` / `&` or, failing that, wherever both halves name a zone.
+    private static func zonePair(_ words: [String]) -> (TimeZone, TimeZone)? {
+        if let joiner = words.firstIndex(where: { $0 == "and" || $0 == "&" }) {
+            guard let first = zone(named: Array(words[..<joiner])),
+                let second = zone(named: Array(words[(joiner + 1)...]))
+            else { return nil }
+            return (first, second)
+        }
+        guard words.count >= 2 else { return nil }
+        for split in 1..<words.count {
+            if let first = zone(named: Array(words[..<split])),
+                let second = zone(named: Array(words[split...]))
+            {
+                return (first, second)
+            }
+        }
+        return nil
+    }
+
+    // MARK: - Worded questions
+
+    private static func withoutFillers(_ words: [String]) -> [String] {
+        guard words.count > 2 else { return words }
+        var words = words
+        if words[0] == "local", words[1] == "time" {
+            words.removeFirst()
+        } else if words.suffix(2) == ["local", "time"] {
+            words.remove(at: words.count - 2)
+        }
+        guard words.first == "time", words.count > 2 else { return words }
+        if words[1] == "now" {
+            words.remove(at: 1)
+        } else if words.last == "now" {
+            words.removeLast()
+        }
+        return words
+    }
+
+    /// `time in tokyo when it's 5pm in london` asks what `5pm london in tokyo` answers.
+    private static func whenQuery(_ words: [String]) -> String? {
+        guard let when = words.firstIndex(of: "when") else { return nil }
+        let fillers: Set<String> = ["what", "whats", "is", "it", "its", "it's", "it’s"]
+        var asked = words[..<when].filter { !fillers.contains($0) }
+        guard asked.first == "time" else { return nil }
+        asked.removeFirst()
+        if asked.first == "in" || asked.first == "at" { asked.removeFirst() }
+        let given = words[(when + 1)...].filter { !fillers.contains($0) && $0 != "in" && $0 != "at" }
+        guard !asked.isEmpty, given.count >= 2, zone(named: Array(asked)) != nil else { return nil }
+        return given.joined(separator: " ") + " in " + asked.joined(separator: " ")
+    }
+
+    private static func currentDate(_ words: [String], now: Date, calendar: Calendar) -> CalcResult? {
+        var place = words
+        if place.first == "date" {
+            place.removeFirst()
+            if place.first == "in" || place.first == "at" { place.removeFirst() }
+        } else if place.last == "date" {
+            place.removeLast()
+        } else {
+            return nil
+        }
+        guard !place.isEmpty, let zone = zone(named: place) else { return nil }
+        let text = CalcDateFormatters.string(
+            from: now, calendar: calendar, zone: zone, pattern: "EEEE, d MMMM")
+        return CalcResult(
+            expression: words.joined(separator: " "), sourceBadge: String(localized: "Date"),
+            targetBadge: label(for: zone), payload: .value(display: text, copyText: text))
     }
 
     private static func sourceMoment(

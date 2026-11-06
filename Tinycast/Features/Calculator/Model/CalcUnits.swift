@@ -5,7 +5,8 @@ enum CalcUnits {
         var units: [CalcDimension: UnitDef] = [:]
         for name in [
             "m", "kg", "s", "m2", "m3", "b", "m/s", "pa", "bps", "m/s2", "n", "j", "w", "hz",
-            "a", "v", "ohm", "as", "m3/s", "px", "px2", "ppi"
+            "a", "v", "ohm", "as", "m3/s", "px", "px2", "ppi", "farad", "henry", "siemens", "wb", "tesla",
+            "mol"
         ] {
             if let unit = byName[name], let dimension = unit.category.dimension {
                 units[dimension] = unit

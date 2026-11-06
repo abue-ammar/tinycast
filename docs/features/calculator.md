@@ -40,6 +40,18 @@ in (see Currency below).
   a different one (ISO 4217 calls CNY "Yuan Renminbi"); `signCodes`, the codes daily use spells from
   CLDR's sign instead (`NT$` makes TWD `ntd`); and `crypto`, which no standards body names.
   Do not add slang or synonyms to any of them — no source of truth, so they rot.
+- **`CalcSubstance.gramsPerCup` is the one curated data table**, and its source is stated: grams per US
+  cup from USDA FoodData Central's household measures. An ingredient joins it only with such a figure;
+  no densities are estimated, and no table of tax rates, inflation or anything else that changes yearly
+  is carried at all.
+- **A named day is the same date everywhere or it is not named.** `CalcHolidays` derives Easter by the
+  Gregorian computus, Orthodox Easter by the Julian one, and Chinese New Year, Ramadan, the two Eids and
+  Hanukkah from Foundation's `chinese`, `islamicUmmAlQura` and `hebrew` calendars on the injected
+  calendar's zone. The Islamic days are the one estimate: where a crescent sighting decides the month,
+  the local day can fall one either side, so every date answer naming one shows `(±1 day)` after it
+  while its copy text stays the computed day.
+  Country-specific days — Thanksgiving, Black Friday, bank holidays — stay out, for the reason
+  workdays skip public holidays.
 
 ## Evaluation pipeline
 
@@ -47,15 +59,20 @@ in (see Currency below).
 
 Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
 The one exception is the five words that name the current moment or its neighbours — see grammar G.
+A trailing `?` is dropped, and a leading `what is`, `what's`, `how much is`, `calculate`, `compute` or
+`evaluate` is tried first on what follows it (`CalcQuestion.asked`), falling back to the whole query —
+so `what is the time in tokyo` still reaches the zone grammar.
 
-1. **Date facts** (`CalcDateFacts`: `week number`, `day of year`, `age 1990-05-03`)
+1. **Date facts** (`CalcDateFacts`: `week number`, `day of year`, `age 1990-05-03`, `days left in 2026`)
 2. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
 3. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
    because a zone phrase is words rather than calculator input
-4. Tokenize, then a **shared amount** (`CalcSplit`: `$120 split 4`), which divides the amount before
-   step 6 formats it, then preserve the complete prefix of a trailing binary operator
-5. Base conversion
+4. Tokenize, rewrite a **worded conversion** (`CalcQuestion.conversion`: `convert 5 km into miles`,
+   `how many feet in a mile`), then a **shared amount** (`CalcSplit`: `$120 split 4`), which divides the
+   amount before step 6 formats it, then preserve the complete prefix of a trailing binary operator
+5. Base conversion (`to hex`, `to base 7`), then **number forms** (`CalcNumberForm`: `to sci`, `to dms`,
+   `to hms`, `to multiplier`)
 6. **Typed quantity arithmetic** (`10kg + 500g`, `$10 + €5`, `5m * 4m`,
    `100km / 2h to km/h`, `(1hr + 30min) to timespan`)
 7. Explicit unit conversion (`10km to mi`, `m to ft`, `day s`)
@@ -63,7 +80,14 @@ The one exception is the five words that name the current moment or its neighbou
 9. Bare-unit auto-conversion (`1m` → feet + inches, `1hr` → 60 min)
 10. Natural-language percent, ratio and list forms (`CalcPercent`)
 11. Rounding and fraction phrases (`CalcRounding`: `1/3 to 2 dp`, `0.75 as fraction`)
-12. Compound growth and loan payments (`CalcFinance`: `$1,000 after 3 years at 7%`)
+12. Compound growth, loans and returns (`CalcFinance`: `$1,000 after 3 years at 7%`)
+13. Steady change (`CalcGrowth`: `20 after 5 years at 5% every year`)
+14. Spoken math (`CalcSpokenMath`: `is 97 prime`, `5 choose 3`, `6 is to 600 as 8 is to what`)
+15. List statistics (`CalcStatistics`: `median of 3, 1, 2`)
+16. Rates over time (`CalcRatePhrases`: `$50/hr for 3 hours`, `download 20 GB at 10 MB/s`)
+17. Ingredients between weight and volume (`CalcSubstance`: `1 cup of flour in grams`)
+18. Pixels against physical size (`CalcPixelDensity`: `3000 px to inches at 300 ppi`)
+19. Musical pitch (`CalcPitch`: `440 hz to pitch`, `c4 to hz`)
 
 `CalcExpressionParser` is the sole precedence-climbing evaluator, returning `CalcValue` for numbers,
 measurements, currencies and booleans. `CalcQuantity` turns those values into cards and applies display
@@ -77,8 +101,10 @@ constant catalog. Spoken roots use the typed parser too: `square root of 25m2` i
 `log 81 base 3` takes its base after the argument, and `half` is a constant, so `half of $90` is
 `45.00 USD` through the ordinary `of`.
 `per` is the spoken `/`, so `5 usd per gallon to eur per liter` is `5 usd/gal to eur/l` and
-`60 miles per hour` is `60 mi/hr`. `plus`, `minus`, `times`, `divided by`, `multiplied by` and
-`to the power of` are the spoken operators, and `squared` / `cubed` raise what precedes them. All of them are read only after an operand — a word at the start of a query is
+`60 miles per hour` is `60 mi/hr`. `plus`, `minus`, `times`, `divided by`, `multiplied by`,
+`to the power of`, `raised to`, `exponent` and `to the` before a digit (`3 to the 4`) are the spoken
+operators, `percent`, `per cent` and `percentage` are `%`, and `squared` / `cubed` raise what precedes
+them. `squared root of` and `cubed root of` read as the spoken roots. All of them are read only after an operand — a word at the start of a query is
 never an operator — and tokenize to the operator they spell, so no grammar learns them.
 Dimensionless results can feed base conversion too: `2m / 2m to hex` is `0x1`.
 `CalcNumberBase` owns radix names and prefixes for both tokens and results. A conversion target is
@@ -111,7 +137,8 @@ parser, while the separator still chooses ISO, month-first or day-first interpre
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
 - **G** — a named moment: `today`, `now`, `time`, `tomorrow at 9am`, `next monday`, `last friday`
 - **H** — the span between two moments: `may 1 to may 31`, `days between june 1 and june 29`,
-  `from 9:15 to 17:45`, `may 1 through may 31` (inclusive), `august 3 to august 14 in workdays`
+  `from 9:15 to 17:45`, `may 1 through may 31` and `from may 1 through may 31` (inclusive),
+  `august 3 to august 14 in workdays`
 
 Grammar E also reads `after` and `before`: `2 weeks after august 3`, `3 days before christmas`.
 
@@ -120,6 +147,9 @@ Grammar H reads both ends with the nearest bias. A unit may lead (`hours from 8a
 forward, so `10pm to 2am` is 4 hours. Like grammar D it needs a letter, clock, ISO or dotted date
 on one side, so `5/2 to 1/2` stays silent. `workdays` counts weekdays from the first day up to the
 last, jumping whole weeks so a long span stays cheap.
+A leading `whole` floors the count (`whole weeks between jan 1 and mar 1` is `8 weeks`), and
+`halfway between` / `midpoint between` two moments answer the moment in the middle — between two days,
+the day nearest it. Both need grammar H's moment signal, so `halfway between 2 and 32` stays a statistic.
 **An answered moment badges its weekday.** Grammars C and E resolve to a date, and the day of the
 week is the thing a date does not say out loud — so `5 weekdays from now` reads `4 September` under
 a `Friday` pill rather than repeating the weekday inside the date and badging it `Result`.
@@ -168,10 +198,19 @@ today by that period, and `end of month`, `start of next year` and `beginning of
 period's edge; both qualify on their own because a lead `next` / `last` / `end of` is never an app
 search. Weeks have no edge — Sunday or Friday is a locale's call — so `end of week` stays silent.
 
-Fixed-date occasions (`christmas`, `christmas eve`, `new year's eve`, `halloween`, `valentine's day`)
-are dates like any other: `days until christmas`, `christmas + 3 days`. Alone they stay app searches,
-as `monday` does. Easter, Thanksgiving and every other floating holiday differ by country and are
-left out, for the reason holidays are left out of workdays.
+Named days are dates like any other: `days until christmas`, `christmas + 3 days`, `days until easter`.
+`CalcHolidays` owns every name — the fixed ones (`christmas`, `xmas`, `boxing day`, `new year's eve`,
+`nye`, `halloween`, `valentine's day`, `orthodox christmas`) and the derived ones (`easter`,
+`good friday`, `easter monday`, `orthodox easter`, `chinese new year`, `ramadan`, `end of ramadan`,
+`eid al-fitr`, `eid al-adha` (also `eid ul fitr`, `eid-ul-azha` and the other common spellings),
+`hanukkah`, `end of hanukkah`); see the invariant above for why the list stops there. A bare `eid`
+could be either and names neither, the way `krona` names no currency. Alone they stay
+app searches, as `monday` does, but a year is qualifier enough: `easter 2027` is 28 March. Hanukkah
+starts on the evening of 24 Kislev, the night the first candle is lit, and ends eight days later.
+Ramadan and the Eids follow Umm al-Qura, so a sighting-based local day can differ by one; the card
+says `(±1 day)` after any answer that depends on one, `days until eid al-adha` included, and copying
+it gives the bare answer. `CalcEngine` adds the note to date-fact and date-time answers whose query
+carries a word only those days use, so nothing else pays for the check.
 **A written day is qualifier enough** too: `25. aug`, `aug 25` and `25.8.27` all answer, badged with
 their weekday, because nobody types a day-and-month pair looking for an app. A month alone still
 names no day, so `july` stays a search.
@@ -180,6 +219,10 @@ A bare date takes the year it is **nearest**, not the next one — three days be
 date meant than the same day twelve months out. Grammar C shifts a moment, so it reads the year the
 same way and `25. aug` and `25. aug + 3` can never disagree. Grammar D measures _to_ a moment,
 where the documented forward bias still decides: `jul 4 - today` keeps looking ahead.
+
+`previous` is `last`, `midday` is `noon`, `a.m.` and `p.m.` are `am` and `pm`, and a leading `this`
+names the weekday or month of the current one (`this friday` is today on a Friday). The rewrite runs
+only when the one signal pass already saw such a word, so other queries pay nothing for it.
 
 `parseMoment` owns `at <time>` for every grammar, so `next monday at 7:30 + 5`,
 `hours till tomorrow at 7:30` and `3 days from next monday at 7:30` compose the same way.
@@ -316,7 +359,10 @@ Volume flow adds length³/time to the same dimension table, with `m³/s` as its 
 `150l / 10l/min to duration` → `15 min`. Its units also include L/s, L/h, m³/h and gal/min (`gpm`).
 
 Pixels have their own dimension, so `3000px to cm` cannot assume a physical size.
-An explicit density supplies it: `3000px / 300ppi to inches` → `10 in`,
+An explicit density supplies it: `3000px / 300ppi to inches` → `10 in`, or in words
+`3000 px to inches at 300 ppi` and `10 cm to px at 300 ppi` (`CalcPixelDensity` divides pixels by the
+density and multiplies lengths by it); `ppi of 27 inch display at 3840x2160` → `163.1783089 ppi` takes
+the diagonal's pixels over its length, a bare size being inches;
 `5in * 300ppi` → `1,500 px`, and `3000px / 10in` → `300 ppi`.
 Density defaults to `ppi` (also `px/in`); `px/cm`, `px/mm` and `px/m` are conversion targets.
 Square pixels (`px²` / `px2`) let the ordinary powers and roots calculate a display's diagonal:
@@ -331,8 +377,12 @@ the space (`24px`) so it pastes straight into CSS; the card keeps the space ever
 
 `to timespan` / `to duration` formats any evaluated time quantity, including
 `(1hr + 30min) to timespan` and `100km / 40km/h to duration`. It uses the typed parser directly.
-Two time units joined by `and` bound the timespan instead: `2.75 hours in hours and minutes` is
-`2 hr 45 min`, and `1.5 weeks in days and hours` is `10 day 12 hr`.
+Any two units of one kind name a **mixed target** (`CalcMixedUnits`): the larger whole, the remainder
+in the smaller, joined by `and`, `&` or nothing. `1.75 m to feet and inches` is `5 ft 8.897637795 in`,
+`2.5 kg to lb oz` is `5 lb 8.184904874 oz` and `100 months to years and months` is `8 yr 4 mo`. Time
+keeps whole smaller units as `timespan` does, so `2.75 hours in hours and minutes` is `2 hr 45 min` and
+`1.5 weeks in days and hours` is `10 day 12 hr`; anything else keeps its fraction. Temperature and
+compound units have no mixed form.
 
 `to`, `in` and `as` are the conversion connectors, so `256 as hex` and `10 km as m` convert.
 Affine temperatures may only be added or subtracted when both operands use the same scale; treating
@@ -347,8 +397,8 @@ An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace kee
 target makes the intent unambiguous (`273.15K to C`).
 
 A whole magnitude word after a literal scales it the same way, spaced or attached and in any case:
-`thousand`, `million` and `billion` (`13 million idr to usd`, `1.5 billion`). The set is closed and
-short-scale — a billion is 10⁹, since the engine reads canonical English. It scales only the literal it
+`thousand`, `million`, `billion`, `trillion` and `quadrillion` (`13 million idr to usd`, `1.5 billion`).
+The set is closed and short-scale — a billion is 10⁹, since the engine reads canonical English. It scales only the literal it
 follows, so `2 * million` and `(2 + 3) million` stay silent, and plurals (`13 millions`) are not read.
 Abbreviations are deliberately absent: `m`, `b` and `k` already mean metre, byte and Kelvin. The one
 exception is money: attached right after a currency, `M`/`m`, `B`/`b`/`bn` and `T`/`t`/`tn` scale
@@ -383,8 +433,17 @@ A trailing `of` / `for` / `on` names the date, read like any other (`week number
 without one it is today. Every answer is badged with its date and cannot chain. The week number is
 the **injected calendar's own** — its first weekday and minimal days, so a US Mac and a British one
 can differ by one — never a hard-coded ISO week. An age needs the year written, since `3 may` could
-be any birth year, and a birth date in the future is silent. The check is two words or more starting
-with one of `w d a b c`, so single app names never reach it.
+be any birth year, and a birth date in the future is silent. `week of month` and `day of month` read
+the injected calendar's own components the same way, and `week of year` is `week number`.
+
+**Counts over a period** — `days left in 2026`, `days remaining in this month`, `hours left in today`,
+`workdays left in the month`, `days in 2028`, `weeks in 2026`, `workdays in march` — take a unit
+(seconds through weeks, or workdays), an optional `left` / `remaining`, and a period: `the year`,
+`this month`, `today`, a four-digit year, or a month read as its first day. What remains starts at
+tomorrow for day-sized units, since part of today is no whole day, and at now for the rest; a period
+already over is silent, one not yet begun counts whole. `days in a week` names no period, so it falls
+through to the worded conversion. The check is two words or more starting with one of
+`w d a b c h m s`, so single app names never reach it.
 
 ## Time zones
 
@@ -452,7 +511,14 @@ The dated, span and list forms live in `CalcZoneSchedule`, an extension of `Calc
 gated before it allocates — a comma, or a colon or am/pm after a digit — so a query with none of those
 costs nothing on its way past; `calc-performance` shows no change for units, currency or arithmetic.
 
-`diff paris` answers how far a zone runs from the Mac's own, and a duration may stand where a zone
+`date in tokyo` and `tokyo date` answer today's date there. `local time in tokyo`, `tokyo local time`,
+`time now in tokyo` and `time in tokyo now` drop their filler word and ask `time in tokyo`; the filler is
+only read beside a leading `time`, so `SF time now` stays silent. `time in tokyo when it's 5pm in
+london` is rewritten to `5pm london in tokyo`, the form that already answers it.
+
+`diff paris` answers how far a zone runs from the Mac's own, and two places measure from the first:
+`time difference between london and tokyo`, `diff london & tokyo`, `diff london tokyo` (split wherever
+both halves name a zone), and a duration may stand where a zone
 would (`time in 4 hours`, `time in 4 hours in san francisco`) — the zone table is tried first, so a
 city always outranks a duration. City names are matched **diacritic-folded**, because the identifiers
 carry no accents while the cities do: `são paulo` and `zürich` resolve alongside their bare
@@ -562,7 +628,18 @@ all of which run after the unit and currency paths so a spelled-out word never o
 A phrase is a token pattern (`[CalcToken].operands(of:)`) whose open slots are evaluated by the typed
 parser, so an amount keeps its money or unit: `25% off $60` is `45.00 USD`.
 
-- `20% off 500` → 400, `15% on 80` → 92, and `50 as % of 200` / `30 as a % of 120` → 25%
+- `20% off 500` → 400, `15% on 80` → 92, and `50 as % of 200` / `30 as a % of 120` → 25%; also
+  `take 20% off 100`, `20% off of 100` and `20% from 100`. A single word between the percentage and
+  `of` / `on` / `off` only names it (`20% discount off $100`, `20% markup on 50`), except `tip`
+- `10% tax on 100` → 110, `10% tax of 110` → 11, `20% vat in 120` → 20 (the tax inside a price) and
+  `$100 + 10% tax` → `110.00 USD`; `tax`, `sales tax`, `vat` and `gst` all read so
+- `20% of what is 30` → 150 and its `off` / `on` forms, the classic order of `30 is 20% of what`
+- `what % is 25 of 100`, `10 is % of 20`, `10 as % 20`, `10 is what % with 20` (a share of the two
+  together), `4 out of 10` → 40%, and `10 as discount off 20` → 50%
+- `% change from 10 to 20`, `% increase …`, `% decrease …` and `what % change is 10 to 20`; `15 as %
+  after adding 3` → 25%, the growth that reached 15
+- Rule of three, with or without `if` and its comma: `if 30 is 20%, what is 50%` → 75,
+  `if 30 is 20% what is 60` → 40%, `if 20% is 30, what is 50%` → 75
 - `15% tip on 42` → 6.3 — the tip alone, which is what the phrase asks for
 - `50 is what % of 200` → 25%, the spoken form of `as % of`; units cancel, so
   `750 m as % of 3 km` is 25%
@@ -571,16 +648,43 @@ parser, so an amount keeps its money or unit: `25% off $60` is `45.00 USD`.
 - `45 is what % off 50` → 10%, `80 to 100 is what %` → 25%, `80 to 60 as %` → -25%
 - `0.125 as %` → 12.5%, `3/8 as percent` and `1/8 is what %` read a fraction as a percentage
 - `ratio of 1920 to 1080` → `16 : 9`, reduced by GCD; integers only
-- `average|sum|min|max of 10, 20, 30`, separated by `,` or `and`; also `gcd of`, `lcm of`,
-  `larger|greater of`, `smaller|lesser of` and `midpoint between 10 and 30`
+- `average|sum|min|max|median|count of 10, 20, 30`, separated by `,` or `and`; also `standard deviation
+  of` (the sample deviation, as spreadsheets' `STDEV`), `gcd|gcf|greatest common divisor of`,
+  `lcm|lowest common multiple of`, `larger|greater of`, `smaller|lesser of` and
+  `midpoint|halfway between 10 and 30`. `CalcStatistics` lowers each to the function call, so a list keeps
+  units exactly as `sum(1km, 500m)` does and `median(…)`, `count(…)` and `stddev(…)` work directly
+- `remainder of 20 divided by 3`, `is 97 prime` (deterministic Miller–Rabin, instant up to 2⁵³),
+  `clamp 20 between 5 and 15`, `6 is to 600 as 8 is to what`, `5 choose 3`, `5 permutation 3`,
+  `3 combinations of 5`, `logarithm 20 base 4`, `log base 2 of 1024`, `20 is 4 to the power of what`,
+  `5 root of 32`, and multipliers: `5 as multiplier of 1` → 5x, `… on 1` → 4x, `10 to 20 as multiplier`
 - `round 47 to nearest 5` → 45, `44 rounded up to nearest 10` → 50, `$1,240 rounded to nearest
-  hundred` → `1,200.00 USD`, `2/3 to 3 dp` → 0.667, `pi to 2 decimal places`, `2.5 rounded down`
-- `0.625 as fraction` → `5/8`, the continued-fraction convergent within a billionth with a
+  hundred` → `1,200.00 USD`, `2/3 to 3 dp` → 0.667, `pi to 2 decimal places`, `2.5 rounded down`,
+  `round 56.2 up`, `round 51 to next 10`, `round 59 down to last 10`, `round 56 up to 10` and
+  `3.3 to nearest quarter` (or `half`, `third`, `tenth`, `8th`). A bare `to 10` is a step only after
+  `up` or `down`, so `round 56 to 10` stays silent rather than guessing places
+- `0.625 as fraction` (or `to|in fraction`, `as frac`) → `5/8`, the continued-fraction convergent within a billionth with a
   denominator up to 10,000; `pi as fraction` has none and stays silent
 - `$2,000 after 5 years at 4%` compounds yearly, or `compounding monthly|quarterly|daily`;
   `interest on …` answers the growth alone, and the term and rate may come in either order
 - `monthly|annual|total payment on $20,000 over 5 years at 6%` amortises monthly; `repayment`
-  reads the same
+  reads the same, and `total|monthly|annual interest on …` is what those payments add to the principal
+- `present value of $1,000 after 5 years at 5%`; `500 invested 1000 returned` → 100%, and
+  `annual return on 500 invested 1000 returned after 5 years` (or `that grew to 1000 over …`) → the CAGR;
+  `investment required for $50,000/year at 4%` → the capital whose yield pays it
+- `20 after 5 years at 5% every year`, `… decay every …`, `time from 20 to 30 at 5% every year`, the
+  linear `time from 20 to 30 at 2 every day`, and `growth every year from 20 to 30 over 5 years` → the
+  steady rate (`CalcGrowth`)
+- `$50/hr for 3 hours` → `150.00 USD`, `60 km/h for 30 min` → `30 km`, `download 20 GB at 10 MB/s` →
+  `33 min 20 s`, `1 hour at 2x` → `0.5 hr`, `time saved 1 hour at 1.5x`, and `$50/hr is what per day` →
+  `1,200.00 USD/day` (`CalcRatePhrases`)
+- Worded conversions (`CalcQuestion`): `convert 5 km into miles`, `5 km is what in miles`,
+  `5 km is how many miles`, `how many feet in a mile`, `seconds in 3 days`, `exchange rate for usd to
+  eur`. A unit asked about needs an amount or `a` / `an` after `in`, so `m in ft` keeps meaning one metre
+- Number forms (`CalcNumberForm`): `1234567 to sci` → `1.234567e6` (which reads back as the same
+  number), `51.4772° to dms` → `51° 28′ 37.92″`, `5400 s to hms` → `1h 30m 0s`, `75.5 s to laptime` →
+  `00:01:15.5`, `2 to multiplier` → 2x; `255 to base 7` → 513 for any radix from 2 to 36
+- `440 hz to pitch` → A4, the nearest equal-tempered note with A4 at 440 Hz, and back: `c4 to hz`,
+  `bb3 to hz`. A note is a natural or flat letter and an octave, since the tokenizer has no `#`
 
 `CalcToken.comma` separates these lists and function arguments. Outside function parentheses,
 a comma **between digits** remains a grouping separator, so `1,000 + 234` is unchanged and a bare
@@ -589,8 +693,18 @@ a comma **between digits** remains a grouping separator, so `1,000 + 234` is unc
 
 Each of these badges what its number **is** — `Tip`, `Discounted`, `Increased`, `Percentage`,
 `Percent Change`, `Total`, `Ratio`, `Average`, `Sum`, `Minimum`, `Maximum`, `Rounded`, `Fraction`,
-`Future Value`, `Interest` and the payment badges — rather than the bare `Result` that says nothing
-the card doesn't already show. `min` and `max` are only told apart by it.
+`Future Value`, `Interest`, `Present Value`, `Return`, `Median`, `Prime Number`, `Proportion`,
+`Combinations`, `Multiplier`, `Tax`, `Remaining` and the payment badges — rather than the bare `Result`
+that says nothing the card doesn't already show. `min` and `max` are only told apart by it.
+
+### Ingredients
+
+`CalcSubstance` converts an ingredient between weight and volume: `1 cup of flour in grams` is
+`125 g`, `200 g butter in cups` is `0.8810572687 cup`, `2 tbsp honey to g` is `42.375 g`, and
+`density of honey` / `olive oil density` answer in g/cm³. The ingredient sits between the amount and
+the target, an `of` before it is optional, and multi-word names match longest first (`brown sugar`,
+`all purpose flour`). It runs last, so `1 cup to ml` stays a plain volume and an unknown word
+(`1 cup of unicorn in grams`) stays silent.
 
 ## Shared amounts
 
@@ -824,17 +938,29 @@ Binary rates such as `MiB/s` and bit amounts such as `kbit` also work.
 SI prefixes expand for meters, grams, seconds, hertz, newtons, joules, watts and pascals,
 including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings.
 
-Other units include tonnes (`t`), stone (`st`), nautical miles (`nmi`, `nautical miles`), light years
-(`ly`), mechanical horsepower (`hp`),
+Other units include tonnes (`t`), stone (`st`), carats (`ct`), troy ounces (`ozt`), nautical miles
+(`nmi`, `nautical miles`), light years (`ly`), parsecs (`pc`), astronomical units (`au`), fathoms,
+furlongs, µL/kL, cubic kilometers and miles, bushels (`bu`), oil barrels (`bbl`), acre-feet, metric
+cups, UK tablespoons and teaspoons, GWh/TWh, poundals (`pdl`), `ksi`, `rps` and `rad/s` beside `rpm`,
+`ft/s²`, the exa-, zetta- and yottabytes, mechanical horsepower (`hp`),
 BTU (international table), `rpm`, pound-force (`lbf`), US/UK tons and UK liquid measures
-(`ukgal`, `ukqt`, `ukpint`, `ukfloz`). Plain gallons and pints remain US measures.
+(`ukgal`, `ukqt`, `ukpint`, `ukfloz`, or `imperial gallons` and the like). Plain gallons and pints
+remain US measures.
+
+Capacitance (farads), inductance (henries), conductance (siemens), magnetic flux (webers), flux density
+(teslas, gauss), torque (`Nm`, `lb ft`, `lbin`, `ozin`) and amount of substance (moles, with its own
+`CalcDimension.substance`) are categories with dimension signatures, so they compose through the typed
+path: `12 V * 2 s` is `24 Wb` and `1 microfarad * 1 kiloohm` is `0.001 s`. Torque shares energy's
+dimension but not its category, so `10 Nm to J` is a category error. They are spelled out or prefixed
+only: bare `F`, `H`, `S` and `T` keep Fahrenheit, hours, seconds and tonnes, and `lb in` / `oz in` stay
+`5 lb in kg` rather than becoming a torque.
 
 ## Functions and comparisons
 
 Functions accept comma-separated arguments: `hypot(3,4)`, `round(3.14159,2)`, `log(8,2)`,
 `gcd(12,18)`, `lcm(4,6)`, `atan2(1,1)`, `pow(2,10)` and `root(-8,3)`.
-A one-argument `log` remains base 10. `min`, `max`, `sum`, `avg`, `mean` and `average` accept lists,
-including compatible measurements: `sum(1km,500m)` gives `1.5 km`, and `hypot(3m,400cm)` gives `5 m`.
+A one-argument `log` remains base 10. `min`, `max`, `sum`, `avg`, `mean`, `average`, `median` and
+`stddev` accept lists, including compatible measurements, and `count` counts one: `sum(1km,500m)` gives `1.5 km`, and `hypot(3m,400cm)` gives `5 m`.
 `round(2.567km,1)` keeps the unit. Inside function arguments, commas separate values;
 write `1000` rather than `1,000` there.
 
@@ -853,7 +979,8 @@ exchange snapshot; changing currency uses the same injected rates as ordinary mo
 A compound quantity can carry one currency factor or its reciprocal, but not currency squared.
 
 `now to unix` returns whole Unix seconds; `now to unix ms` returns whole milliseconds, and
-`current timestamp` is `now to unix`. A bare `1800000000 to date` reads seconds, and thirteen digits
+`current timestamp` and `new timestamp` are `now to unix`. `to iso` / `to iso8601` writes the moment in
+the calendar's zone with its offset (`2026-07-24T00:18:00+00:00`), after any `± duration` terms. A bare `1800000000 to date` reads seconds, and thirteen digits
 read as milliseconds, since that many seconds would land past the year 5000.
 `unix 0 to date` and `1000 unix ms` convert back to a local date/time.
 RFC 3339 input accepts an explicit `Z` or `±HH:MM` offset and optional fractional seconds:

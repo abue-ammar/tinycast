@@ -78,6 +78,10 @@ enum CalcUnitCatalog {
         mi|Miles|1609.344|mi,mile,miles
         nmi|Nautical Miles|1852.0|nmi,nauticalmile,nauticalmiles,nautical mile,nautical miles
         ly|Light Years|9460730472580800.0|ly,lightyear,lightyears,light year,light years
+        pc|Parsecs|3.0856775814913673e16|pc,parsec,parsecs
+        au|Astronomical Units|149597870700.0|au,astronomical unit,astronomical units
+        fathom|Fathoms|1.8288|fathom,fathoms
+        furlong|Furlongs|201.168|furlong,furlongs
         pixels
         px|Pixels|1.0|px,pixel,pixels
         rem|REM|16.0|rem,rems
@@ -96,6 +100,8 @@ enum CalcUnitCatalog {
         oz|Ounces|0.028349523125|oz,ounce,ounces
         lb|Pounds|0.45359237|lb,lbs,pound,pounds
         t|Tonnes|1000.0|t,ton,tons,tonne,tonnes
+        ct|Carats|0.0002|ct,carat,carats
+        ozt|Troy Ounces|0.0311034768|ozt,troy ounce,troy ounces,troy oz
         st|Stone|6.35029318|st,stone
         short ton|US Tons|907.18474|shortton,uston
         long ton|UK Tons|1016.0469088|longton,ukton
@@ -127,9 +133,16 @@ enum CalcUnitCatalog {
         ha|Hectares|10000.0|ha,hectare,hectares
         volume
         mL|Milliliters|1e-06|ml,milliliter,milliliters,millilitre,millilitres
+        µL|Microliters|1e-09|ul,µl,μl,microliter,microliters,microlitre,microlitres
         cL|Centiliters|1e-05|cl,centiliter,centiliters,centilitre,centilitres
         dL|Deciliters|0.0001|dl,deciliter,deciliters,decilitre,decilitres
         L|Liters|0.001|l,liter,liters,litre,litres
+        kL|Kiloliters|1.0|kl,kiloliter,kiloliters,kilolitre,kilolitres
+        ML|Megaliters|1000.0|megaliter,megaliters,megalitre,megalitres
+        metric cup|Metric Cups|0.00025|metric cup,metric cups
+        bu|Bushels|0.03523907016688|bu,bushel,bushels
+        bbl|Barrels|0.158987294928|bbl,barrel,barrels
+        acre ft|Acre-Feet|1233.48183754752|acre foot,acre feet
         cup|Cups|0.0002365882365|cup,cups
         tbsp|Tablespoons|1.478676478125e-05|tbsp,tablespoon,tablespoons
         tsp|Teaspoons|4.92892159375e-06|tsp,teaspoon,teaspoons
@@ -144,6 +157,8 @@ enum CalcUnitCatalog {
         in³|Cubic Inches|1.6387064e-05|in3,cu in,cubic inch,cubic inches
         ft³|Cubic Feet|0.028316846592|ft3,cu ft,cubic foot,cubic feet
         yd³|Cubic Yards|0.764554857984|yd3,cu yd,cubic yard,cubic yards
+        km³|Cubic Kilometers|1000000000.0|km3,cubic km,cubic kilometer,cubic kilometers,cubic kilometre,cubic kilometres
+        mi³|Cubic Miles|4168181825.440579584|mi3,cubic mi,cubic mile,cubic miles
         volumeFlow
         L/s|Liters per Second|0.001|l/s,l/sec
         L/min|Liters per Minute|1.6666666666666667e-05|l/min,lpm
@@ -168,6 +183,11 @@ enum CalcUnitCatalog {
         MiB|Mebibytes|1048576.0|mib,mebibyte,mebibytes
         GiB|Gibibytes|1073741824.0|gib,gibibyte,gibibytes
         TiB|Tebibytes|1099511627776.0|tib,tebibyte,tebibytes
+        PiB|Pebibytes|1125899906842624.0|pib,pebibyte,pebibytes
+        EB|Exabytes|1e18|eb,exabyte,exabytes
+        EiB|Exbibytes|1152921504606846976.0|eib,exbibyte,exbibytes
+        ZB|Zettabytes|1e21|zb,zettabyte,zettabytes
+        YB|Yottabytes|1e24|yb,yottabyte,yottabytes
         angle
         rad|Radians|1.0|rad,radian,radians
         deg|Degrees|0.017453292519943295|deg,degree,degrees,°
@@ -205,6 +225,7 @@ enum CalcUnitCatalog {
         TBps|Terabytes per Second|1000000000000.0|TBps
         acceleration
         m/s²|Meters per Second Squared|1.0|m/s2,mps2
+        ft/s²|Feet per Second Squared|0.3048|ft/s2,fps2
         force
         N|Newtons|1.0|n,newton,newtons
         energy
@@ -214,6 +235,8 @@ enum CalcUnitCatalog {
         mWh|Milliwatt Hours|3.6|mwh
         kWh|Kilowatt Hours|3600000.0|kwh
         MWh|Megawatt Hours|3600000000.0|MWh,megawatthour,megawatthours
+        GWh|Gigawatt Hours|3600000000000.0|GWh,gwh,gigawatthour,gigawatthours
+        TWh|Terawatt Hours|3600000000000000.0|TWh,twh,terawatthour,terawatthours
         cal|Calories|4.184|cal,calorie,calories
         kcal|Kilocalories|4184.0|kcal,kilocalorie,kilocalories
         power
@@ -226,16 +249,19 @@ enum CalcUnitCatalog {
         mA|Milliamperes|0.001|ma,milliamp,milliamps,milliampere,milliamperes
         MA|Megaamperes|1000000.0|MA,megaamp,megaamps
         µA|Microamperes|1e-06|ua,µa,μa,microamp,microamps
+        kA|Kiloamperes|1000.0|kA,kiloamp,kiloamps,kiloampere,kiloamperes
         voltage
         V|Volts|1.0|v,volt,volts
         mV|Millivolts|0.001|mv,millivolt,millivolts
         kV|Kilovolts|1000.0|kv,kilovolt,kilovolts
         MV|Megavolts|1000000.0|MV,megavolt,megavolts
+        µV|Microvolts|1e-06|uv,µv,μv,microvolt,microvolts
         resistance
         Ω|Ohms|1.0|ω,ohm,ohms
         mΩ|Milliohms|0.001|mω,milliohm,milliohms
-        kΩ|Kilohms|1000.0|kω,kohm,kohms,kilohm,kilohms
+        kΩ|Kilohms|1000.0|kω,kohm,kohms,kilohm,kilohms,kiloohm,kiloohms
         MΩ|Megohms|1000000.0|MΩ,megohm,megohms
+        µΩ|Microohms|1e-06|µω,μω,microohm,microohms
         electricCharge
         As|Coulombs|1.0|as,coulomb,coulombs
         Ah|Ampere Hours|3600.0|ah,amphour,amphours
@@ -246,17 +272,56 @@ enum CalcUnitCatalog {
         kHz|Kilohertz|1000.0|khz,kilohertz
         MHz|Megahertz|1000000.0|mhz,megahertz
         volume
-        UK gal|UK Gallons|0.00454609|ukgal,ukgallon,ukgallons
-        UK qt|UK Quarts|0.0011365225|ukqt,ukquart,ukquarts
-        UK pt|UK Pints|0.00056826125|ukpt,ukpint,ukpints
+        UK gal|UK Gallons|0.00454609|ukgal,ukgallon,ukgallons,imperial gallon,imperial gallons
+        UK qt|UK Quarts|0.0011365225|ukqt,ukquart,ukquarts,imperial quart,imperial quarts
+        UK pt|UK Pints|0.00056826125|ukpt,ukpint,ukpints,imperial pint,imperial pints
         UK fl oz|UK Fluid Ounces|2.84130625e-05|ukfloz
+        UK tbsp|UK Tablespoons|1.7758164062499998e-05|uktbsp,imperial tablespoon,imperial tablespoons
+        UK tsp|UK Teaspoons|5.919388020833333e-06|uktsp,imperial teaspoon,imperial teaspoons
         power
         hp|Horsepower|745.6998715822702|hp,horsepower
         energy
         BTU|British Thermal Units|1055.05585262|btu
         frequency
         rpm|Revolutions per Minute|0.016666666666666666|rpm
+        rps|Revolutions per Second|1.0|rps,rev/s
+        rad/s|Radians per Second|0.15915494309189535|rad/s
         force
         lbf|Pounds Force|4.4482216152605|lbf,poundforce
+        pdl|Poundals|0.138254954376|pdl,poundal,poundals
+        pressure
+        ksi|KSI|6894757.293168|ksi
+        capacitance
+        F|Farads|1.0|farad,farads
+        mF|Millifarads|0.001|mF,millifarad,millifarads
+        µF|Microfarads|1e-06|uf,µf,μf,microfarad,microfarads
+        nF|Nanofarads|1e-09|nf,nanofarad,nanofarads
+        pF|Picofarads|1e-12|pf,picofarad,picofarads
+        inductance
+        H|Henries|1.0|henry,henries,henrys
+        mH|Millihenries|0.001|mH,millihenry,millihenries,millihenrys
+        µH|Microhenries|1e-06|uh,µh,μh,microhenry,microhenries,microhenrys
+        conductance
+        S|Siemens|1.0|siemens
+        mS|Millisiemens|0.001|millisiemens
+        µS|Microsiemens|1e-06|microsiemens
+        magneticFlux
+        Wb|Webers|1.0|wb,weber,webers
+        mWb|Milliwebers|0.001|mwb,milliweber,milliwebers
+        magneticFluxDensity
+        T|Teslas|1.0|tesla,teslas
+        mT|Milliteslas|0.001|mT,millitesla,milliteslas
+        µT|Microteslas|1e-06|µt,μt,microtesla,microteslas
+        G|Gauss|0.0001|gauss
+        torque
+        N·m|Newton Meters|1.0|Nm,newtonmeter,newtonmeters,newton meter,newton meters,newton metre,newton metres
+        lb·ft|Pound Feet|1.3558179483314004|lbft,lb ft,lbf ft,pound foot,pound feet
+        lb·in|Pound Inches|0.1129848290276167|lbin
+        oz·in|Ounce Inches|0.00706155176214271|ozin
+        substance
+        mol|Moles|1.0|mol,mole,moles
+        mmol|Millimoles|0.001|mmol,millimole,millimoles
+        µmol|Micromoles|1e-06|umol,µmol,μmol,micromole,micromoles
+        nmol|Nanomoles|1e-09|nmol,nanomole,nanomoles
         """
 }

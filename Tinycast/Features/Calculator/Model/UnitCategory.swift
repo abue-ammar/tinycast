@@ -4,6 +4,7 @@ enum UnitCategory: String, CaseIterable, Sendable {
     case length, weight, temperature, time, area, volume, digitalStorage
     case angle, speed, pressure, dataRate, acceleration, force, energy, power, frequency
     case electricCurrent, voltage, resistance, electricCharge, volumeFlow
+    case capacitance, inductance, conductance, magneticFlux, magneticFluxDensity, torque, substance
     case fuelEconomy, fuelConsumption
     case pixels, pixelArea, pixelDensity, compound
 
@@ -30,6 +31,13 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .resistance: return String(localized: "Resistance")
         case .electricCharge: return String(localized: "Electric Charge")
         case .volumeFlow: return String(localized: "Volume Flow Rate")
+        case .capacitance: return String(localized: "Capacitance")
+        case .inductance: return String(localized: "Inductance")
+        case .conductance: return String(localized: "Conductance")
+        case .magneticFlux: return String(localized: "Magnetic Flux")
+        case .magneticFluxDensity: return String(localized: "Magnetic Flux Density")
+        case .torque: return String(localized: "Torque")
+        case .substance: return String(localized: "Amount of Substance")
         case .fuelEconomy: return String(localized: "Fuel Economy")
         case .fuelConsumption: return String(localized: "Fuel Consumption")
         case .compound: return String(localized: "Compound Units")
@@ -60,6 +68,13 @@ enum UnitCategory: String, CaseIterable, Sendable {
         case .resistance: return CalcDimension(length: 2, mass: 1, time: -3, electricCurrent: -2)
         case .electricCharge: return CalcDimension(time: 1, electricCurrent: 1)
         case .volumeFlow: return CalcDimension(length: 3, time: -1)
+        case .capacitance: return CalcDimension(length: -2, mass: -1, time: 4, electricCurrent: 2)
+        case .inductance: return CalcDimension(length: 2, mass: 1, time: -2, electricCurrent: -2)
+        case .conductance: return CalcDimension(length: -2, mass: -1, time: 3, electricCurrent: 2)
+        case .magneticFlux: return CalcDimension(length: 2, mass: 1, time: -2, electricCurrent: -1)
+        case .magneticFluxDensity: return CalcDimension(mass: 1, time: -2, electricCurrent: -1)
+        case .torque: return CalcDimension(length: 2, mass: 1, time: -2)
+        case .substance: return CalcDimension(substance: 1)
         case .fuelEconomy: return CalcDimension(length: -2)
         case .fuelConsumption: return CalcDimension(length: 2)
         case .pixels: return CalcDimension(pixels: 1)

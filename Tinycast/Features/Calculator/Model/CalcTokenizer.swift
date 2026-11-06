@@ -132,6 +132,12 @@ enum CalcTokenizer {
                     i = word.end
                     continue
                 }
+                if let head = spokenRootHead(text.lowercased()),
+                    followingWords(["root"], chars, after: i) != nil
+                {
+                    tokens.append(.ident(head))
+                    continue
+                }
                 if let unit = compoundUnit(chars, after: i, prefix: text) {
                     tokens.append(.ident(unit.name))
                     i = unit.end
@@ -254,7 +260,15 @@ enum CalcTokenizer {
     /// Every spoken operator is two to ten letters and starts with one of these.
     private static func mayBeWordOperator(_ text: String) -> Bool {
         guard (2...10).contains(text.utf8.count), let first = text.utf8.first else { return false }
-        return "pmtdscPMTDSC".utf8.contains(first)
+        return "pmtdscrePMTDSCRE".utf8.contains(first)
+    }
+
+    private static func spokenRootHead(_ word: String) -> String? {
+        switch word {
+        case "squared": "square"
+        case "cubed": "cube"
+        default: nil
+        }
     }
 
     private static func wordOperator(
@@ -263,7 +277,14 @@ enum CalcTokenizer {
         let attached = index < chars.count && (chars[index].isNumber || chars[index].isCombiningMark)
         guard !attached else { return nil }
         switch word {
-        case "per": return ([.op(.divide)], index)
+        case "per":
+            if let end = followingWords(["cent"], chars, after: index) { return ([.op(.percent)], end) }
+            return ([.op(.divide)], index)
+        case "percent", "percentage": return ([.op(.percent)], index)
+        case "exponent": return ([.op(.power)], index)
+        case "raised":
+            guard let end = followingWords(["to"], chars, after: index) else { return nil }
+            return ([.op(.power)], followingWords(["the", "power", "of"], chars, after: end) ?? end)
         case "plus": return ([.op(.add)], index)
         case "minus": return ([.op(.subtract)], index)
         case "times": return ([.op(.multiply)], index)
@@ -273,7 +294,14 @@ enum CalcTokenizer {
             guard let end = followingWords(["by"], chars, after: index) else { return nil }
             return ([.op(word == "divided" ? .divide : .multiply)], end)
         case "to":
-            guard let end = followingWords(["the", "power", "of"], chars, after: index) else { return nil }
+            if let end = followingWords(["the", "power", "of"], chars, after: index) {
+                return ([.op(.power)], end)
+            }
+            // `3 to the 9`: only a digit after `the`, so `to the nearest 10` keeps rounding.
+            guard let end = followingWords(["the"], chars, after: index), end < chars.count,
+                chars[end].isWhitespace,
+                chars[(end + 1)...].first(where: { !$0.isWhitespace })?.isNumber == true
+            else { return nil }
             return ([.op(.power)], end)
         default: return nil
         }
@@ -390,7 +418,9 @@ enum CalcTokenizer {
     }
 
     /// Short scale only: the engine reads canonical English, where a billion is 10⁹.
-    private static let magnitudes: [String: Double] = ["thousand": 1e3, "million": 1e6, "billion": 1e9]
+    private static let magnitudes: [String: Double] = [
+        "thousand": 1e3, "million": 1e6, "billion": 1e9, "trillion": 1e12, "quadrillion": 1e15
+    ]
 
     /// The scale of a whole magnitude word following a literal (`13 million`), and where it ends.
     private static func magnitudeWord(

@@ -33,6 +33,13 @@ struct CalcPerformance {
         Group(name: "zones", queries: ["time in Tokyo", "5pm ldn in sf", "diff tokyo"]),
         Group(name: "partial", queries: ["2+", "(123+456)/", "10kg +", "$10 +", "255 to hex +"]),
         Group(
+            name: "phrases",
+            queries: [
+                "how many feet in a mile", "is 97 prime", "median of 3, 1, 2", "1 cup of flour in grams",
+                "$50/hr for 3 hours", "1.75 m to feet and inches", "days left in 2026", "easter 2027",
+                "if 30 is 20%, what is 50%"
+            ]),
+        Group(
             name: "advanced",
             queries: [
                 "5m * 4m to ft2", "100km / 2h to km/h", "sqrt(25m2)", "12V / 6ohm", "hypot(3,4)",
