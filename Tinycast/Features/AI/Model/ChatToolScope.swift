@@ -1,7 +1,7 @@
 import Foundation
 
 /// Which MCP servers one chat may call; the composer's tools menu edits it.
-struct ChatToolScope: Equatable, Sendable {
+struct ChatToolScope: Codable, Hashable, Sendable {
     var isEnabled = true
     /// Servers switched off for this chat, by slug; one added later arrives switched on.
     var excluded: Set<String> = []

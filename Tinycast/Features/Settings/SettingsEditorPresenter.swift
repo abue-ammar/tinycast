@@ -201,6 +201,9 @@ final class SettingsEditorPresenter: NSObject {
             self, selector: #selector(parentWillClose(_:)),
             name: NSWindow.willCloseNotification, object: window)
         observeResize(of: window)
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(hostDidChangeFrame(_:)),
+            name: NSWindow.didMoveNotification, object: window)
         flushPending()
     }
 
@@ -293,12 +296,12 @@ final class SettingsEditorPresenter: NSObject {
 
     private func observeResize(of window: NSWindow) {
         NotificationCenter.default.addObserver(
-            self, selector: #selector(hostDidResize(_:)),
+            self, selector: #selector(hostDidChangeFrame(_:)),
             name: NSWindow.didResizeNotification, object: window)
     }
 
     /// Outermost first, so a nested panel centres on a parent that has already settled.
-    @objc private func hostDidResize(_ notification: Notification) {
+    @objc private func hostDidChangeFrame(_ notification: Notification) {
         presentations.forEach(layout)
     }
 
@@ -307,10 +310,20 @@ final class SettingsEditorPresenter: NSObject {
         let parentContent = parent.convertToScreen(parent.contentLayoutRect)
         presentation.blocker.setFrame(parent.frame, display: false)
         let panelSize = presentation.panel.frame.size
-        presentation.panel.setFrameOrigin(
-            NSPoint(
-                x: parentContent.midX - panelSize.width / 2,
-                y: parentContent.midY - panelSize.height / 2))
+        let centred = NSPoint(
+            x: parentContent.midX - panelSize.width / 2, y: parentContent.midY - panelSize.height / 2)
+        guard let visible = parent.screen?.visibleFrame else {
+            presentation.panel.setFrameOrigin(centred)
+            return
+        }
+        presentation.panel.setFrameOrigin(Self.origin(centred, size: panelSize, keptIn: visible))
+    }
+
+    /// A parent dragged into a corner must not carry the editor's buttons off screen; the top wins.
+    private static func origin(_ origin: NSPoint, size: NSSize, keptIn visible: NSRect) -> NSPoint {
+        NSPoint(
+            x: max(min(origin.x, visible.maxX - size.width), visible.minX),
+            y: min(max(origin.y, visible.minY), visible.maxY - size.height))
     }
 
     private func blockerCornerRadius(for parent: NSWindow) -> CGFloat {
@@ -399,6 +412,8 @@ extension View {
             .environment(core.mcpCoordinator)
             .environment(core.quickActionSettings)
             .environment(core.customQuickActions)
+            .environment(core.chatPresets)
+            .environment(core.aiChatCoordinator)
             .environment(core.chatGPTSubscription)
             .environment(core.installedAI)
             .scrollContentBackground(.hidden)

@@ -48,6 +48,61 @@ struct AIProviderTests {
             "the preamble stays within its per-turn budget")
     }
 
+    static func presetInstructionsReplaceTheUserPrompt() {
+        let cloud = AIModelSelection.codex(model: "gpt-5", effort: nil)
+        expect(
+            AIInstructions.compose(
+                presetInstructions: " Review for SEO. ", preambleEnabled: true, offersChoices: false,
+                model: cloud)
+                == AIPreamble.text + "\n\nReview for SEO.",
+            "a preset's text follows the preamble in place of the user prompt")
+        expect(
+            AIInstructions.compose(
+                presetInstructions: "Review for SEO.", preambleEnabled: false, offersChoices: true,
+                model: cloud)
+                == "Review for SEO.",
+            "with the system prompt off, the preset's text still rides, alone")
+        expect(
+            AIInstructions.compose(
+                presetInstructions: "Review for SEO.", preambleEnabled: true, offersChoices: true,
+                model: .appleIntelligence)
+                == nil,
+            "the on-device model gets no preset")
+    }
+
+    static func presetsPersistAndNeverOverwriteAnUnreadableFile() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-presets-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ChatPresetStore(directory: directory)
+        expect(
+            (try? store.add(ChatPreset(name: " ", instructions: "Review."))) == nil,
+            "a blank name is refused")
+        expect(
+            (try? store.add(ChatPreset(name: "SEO", instructions: " \n"))) == nil,
+            "blank instructions are refused")
+        let saved = try? store.add(
+            ChatPreset(name: "  SEO  ", iconSymbol: " ", instructions: " Review. "))
+        expect(
+            saved?.name == "SEO" && saved?.iconSymbol == nil && saved?.instructions == "Review.",
+            "a saved preset is trimmed")
+        let reopened = ChatPresetStore(directory: directory)
+        reopened.load()
+        expect(reopened.presets == store.presets, "presets survive a relaunch")
+        if let saved { _ = try? store.remove(id: saved.id) }
+        let afterDelete = ChatPresetStore(directory: directory)
+        afterDelete.load()
+        expect(afterDelete.presets.isEmpty, "a deleted preset stays deleted")
+
+        try? Data("not json".utf8).write(to: directory.appendingPathComponent("chat-presets.json"))
+        let unreadable = ChatPresetStore(directory: directory)
+        unreadable.load()
+        expect(
+            !unreadable.isAvailable
+                && (try? unreadable.add(ChatPreset(name: "SEO", instructions: "Review."))) == nil,
+            "an unreadable file is reported, never written over")
+    }
+
     /// A wrong document shape must fail here rather than mid-conversation.
     static func requestBodiesCarryDocuments() {
         let pdf = AIDocument(
@@ -119,6 +174,8 @@ struct AIProviderTests {
             return
         }
         instructionsFollowTheSetting()
+        presetInstructionsReplaceTheUserPrompt()
+        presetsPersistAndNeverOverwriteAnUnreadableFile()
         providerPresetsResolveEndpoints()
         modelCatalogBuildsProviderRequests()
         requestHeadersAreValidated()

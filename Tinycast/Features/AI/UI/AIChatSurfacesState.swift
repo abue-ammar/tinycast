@@ -64,16 +64,20 @@ final class AIChatSurfacesState {
         return true
     }
 
-    /// An empty chat is already new; replacing it would only drop what is staged in it.
+    /// An empty chat is already new, so it only drops a preset picked in it; staged files stay.
     func newWindowChat() {
-        guard !window.session.messages.isEmpty else { return }
-        show(makeState())
+        guard window.session.messages.isEmpty else {
+            show(makeState())
+            return
+        }
+        if window.session.preset != nil { window.usePreset(nil) }
     }
 
     func applyWindowOpenPolicy(opensTo: AIOpensTo, newAfter: AINewChatAfter, now: Date = Date()) {
         guard !window.isStreaming else { return }
         guard window.draft.isEmpty, window.pendingAttachments.isEmpty else { return }
         let hasTranscript = !window.session.messages.isEmpty
+        guard hasTranscript || window.session.preset == nil else { return }
         let recent = history.conversations.first
         let decision = AIConversationOpenPolicy.decide(
             opensTo: opensTo, newAfter: newAfter,
@@ -121,6 +125,10 @@ final class AIChatSurfacesState {
     }
 
     // MARK: - Every surface
+
+    func followPreset(id: UUID, to preset: ChatPreset?) {
+        for state in live { state.followPreset(id: id, to: preset) }
+    }
 
     func delete(id: UUID) {
         (holder(of: id) ?? window).delete(id: id)

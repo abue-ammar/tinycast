@@ -47,6 +47,7 @@ final class AIChatCoordinator {
             return
         }
         core.applyInstalledAILifecycle()
+        core.chatPresets.load()
         // Deferred off the launch path like the clipboard's own read; history fills in behind it.
         Task {
             core.chatHistory.load()
@@ -228,6 +229,34 @@ final class AIChatCoordinator {
         chats.deleteAll()
     }
 
+    // MARK: - Presets
+
+    var presets: [ChatPreset] { core.chatPresets.presets }
+
+    /// The on-device model takes no standing instructions, so its chats show no preset.
+    func offersPresets(for chat: AIChatState) -> Bool {
+        model(for: chat)?.isOnDevice != true
+    }
+
+    func addChatPreset(_ draft: ChatPreset) throws(ChatPresetError) {
+        try core.chatPresets.add(draft)
+    }
+
+    func updateChatPreset(_ draft: ChatPreset) throws(ChatPresetError) {
+        try core.chatPresets.update(draft)
+        chats.followPreset(id: draft.id, to: core.chatPresets.preset(id: draft.id))
+    }
+
+    /// Chats it started keep their stamp; only the preset goes.
+    func deleteChatPreset(id: UUID) {
+        do {
+            try core.chatPresets.remove(id: id)
+            chats.followPreset(id: id, to: nil)
+        } catch {
+            core.showMessage(error.localizedDescription, tone: .danger)
+        }
+    }
+
     // MARK: - Titles
 
     /// Asked on the first send, again after an answer if that failed, and never over a rename.
@@ -330,9 +359,16 @@ final class AIChatCoordinator {
     }
 
     private func instructions(for chat: AIChatState) -> String? {
-        AIInstructions.compose(
-            userPrompt: core.aiSettings.systemPrompt,
-            isEnabled: core.aiSettings.systemPromptEnabled,
+        guard let preset = chat.session.preset else {
+            return AIInstructions.compose(
+                userPrompt: core.aiSettings.systemPrompt,
+                isEnabled: core.aiSettings.systemPromptEnabled,
+                offersChoices: core.aiSettings.choicesEnabled,
+                model: model(for: chat))
+        }
+        return AIInstructions.compose(
+            presetInstructions: preset.instructions,
+            preambleEnabled: core.aiSettings.systemPromptEnabled,
             offersChoices: core.aiSettings.choicesEnabled,
             model: model(for: chat))
     }
@@ -453,7 +489,7 @@ final class AIChatCoordinator {
             stagedFiles: chat.pendingAttachments.count,
             stagedBytes: chat.pendingAttachments.reduce(0) { $0 + $1.payload.byteCount },
             usage: chat.usage,
-            systemPrompt: core.aiSettings.systemPromptEnabled,
+            systemPrompt: session.preset != nil || core.aiSettings.systemPromptEnabled,
             webSearch: core.aiSettings.webSearchEnabled && can.webSearch,
             toolServers: can.tools && scope.isEnabled
                 ? mcpServers.count { scope.allows($0.slug) } : 0)
@@ -712,8 +748,16 @@ final class AIChatCoordinator {
     }
 
     func showSettings() {
+        showSettings(revealing: nil)
+    }
+
+    func showChatPresetSettings() {
+        showSettings(revealing: .section(.aiChatPresets))
+    }
+
+    private func showSettings(revealing target: SettingsTarget?) {
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
-        settingsCoordinator.showSettings(tab: .ai)
+        settingsCoordinator.showSettings(tab: .ai, revealing: target)
     }
 
     func availability(for chat: AIChatState) -> String? {

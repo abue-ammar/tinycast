@@ -7,16 +7,20 @@ struct ChatSession: Equatable, Sendable {
     private(set) var messages: [ChatMessage]
     /// The route this chat talks to, so coming back to it comes back to the same model.
     var model: AIModelSelection?
+    /// The preset that started the chat; it can change only until the first message is sent.
+    var preset: ChatPreset.Stamp?
 
     init(
         id: UUID = UUID(), createdAt: Date = Date(), updatedAt: Date? = nil,
-        messages: [ChatMessage] = [], model: AIModelSelection? = nil
+        messages: [ChatMessage] = [], model: AIModelSelection? = nil,
+        preset: ChatPreset.Stamp? = nil
     ) {
         self.id = id
         self.createdAt = createdAt
         self.updatedAt = updatedAt ?? createdAt
         self.messages = messages
         self.model = model
+        self.preset = preset
     }
 
     var title: String {

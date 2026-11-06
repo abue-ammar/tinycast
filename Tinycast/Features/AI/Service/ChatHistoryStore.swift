@@ -70,6 +70,11 @@ final class ChatHistoryStore {
           pinned INTEGER NOT NULL DEFAULT 0,
           model TEXT
         );
+        CREATE TABLE IF NOT EXISTS conversation_presets(
+          conversation_id TEXT PRIMARY KEY NOT NULL
+            REFERENCES conversations(id) ON DELETE CASCADE,
+          preset TEXT NOT NULL
+        );
         CREATE TABLE IF NOT EXISTS message_details(
           message_id TEXT PRIMARY KEY NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
           tool_scope TEXT,
@@ -235,14 +240,15 @@ final class ChatHistoryStore {
         }
         return ChatSession(
             id: id, createdAt: createdAt, updatedAt: updatedAt, messages: messages,
-            model: model(forConversation: id, in: database))
+            model: model(forConversation: id, in: database),
+            preset: preset(forConversation: id, in: database))
     }
 
     func save(_ session: ChatSession) {
         guard !session.messages.isEmpty, ensureDatabase(), let database else { return }
         guard sqlite3_exec(database, "BEGIN IMMEDIATE", nil, nil, nil) == SQLITE_OK else { return }
         guard saveConversation(session, in: database), rewriteTail(of: session, database: database),
-            saveModel(of: session)
+            saveModel(of: session), savePreset(of: session, in: database)
         else {
             sqlite3_exec(database, "ROLLBACK", nil, nil, nil)
             return
@@ -566,6 +572,35 @@ final class ChatHistoryStore {
         guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
         return try? JSONDecoder().decode(
             AIModelSelection.self, from: Data(text(statement, 0).utf8))
+    }
+
+    /// Written whole on every save, since the stamp's tools follow the chat's last send.
+    private func savePreset(of session: ChatSession, in database: OpaquePointer) -> Bool {
+        guard let preset = session.preset else { return true }
+        guard let json = try? JSONEncoder().encode(preset),
+            let encoded = String(bytes: json, encoding: .utf8),
+            let statement = prepare(
+                """
+                INSERT INTO conversation_presets(conversation_id, preset) VALUES(?, ?)
+                ON CONFLICT(conversation_id) DO UPDATE SET preset = excluded.preset;
+                """, in: database)
+        else { return false }
+        defer { sqlite3_finalize(statement) }
+        bind(session.id.uuidString, to: statement, at: 1)
+        bind(encoded, to: statement, at: 2)
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+
+    /// An unreadable stamp is dropped, so the chat falls back to the global system prompt.
+    private func preset(forConversation id: UUID, in database: OpaquePointer) -> ChatPreset.Stamp? {
+        guard
+            let statement = prepare(
+                "SELECT preset FROM conversation_presets WHERE conversation_id = ?;", in: database)
+        else { return nil }
+        defer { sqlite3_finalize(statement) }
+        bind(id.uuidString, to: statement, at: 1)
+        guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
+        return try? JSONDecoder().decode(ChatPreset.Stamp.self, from: Data(text(statement, 0).utf8))
     }
 
     /// A chat already saved changes model between turns; one not yet saved takes it on its first.

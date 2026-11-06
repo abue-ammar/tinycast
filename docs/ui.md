@@ -43,7 +43,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **The expanded panel corner is clipped once, at the root.** `RootPaletteView.body` ends with `.background(GlassEffectView()) → .clipShape(RoundedRectangle(26, .continuous))`. The clip is last; neither palette mode adds a scrim over its glass. Compact uses zero root corner radius and a four-point drawing outset so its native glass shapes own their contours without touching the window boundary.
 - **Don't use the native scroll edge effect.** Inside a transparent panel it renders a hard-bounded rectangle. Use `edgeDissolve()`, or a gradient `mask` where a surface owns its own fade — `scrollEdgeEffectStyle` draws a _material_ where a scroll view meets a safe area, so over a surface that already has `GlassEffectView` it composites to nothing. Tried and rejected on `QuickActionResultView`, with and without `safeAreaBar`. This is a rule about the borderless panels; the Settings window is a titled `NSWindow` whose system titlebar draws the band itself (see "Settings").
 - **Test over a light desktop.** Transparency and corner masking bugs only show over bright wallpaper. Dark wallpaper hides them.
-- **No `NSAlert` or system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
+- **No `NSAlert` or system popovers.** Every confirmation, failure report, value prompt and transient readout is Tinycast's own SwiftUI surface (see "Dialogs & HUD"). The Settings window is the one exception (see "Settings"). An Aqua alert on an alpha-over-vibrancy app reads as a different product, and its `runModal` run loop keeps Carbon hotkeys firing underneath.
 - **Animations follow one switch.** General → Appearance → **Show animations**
   (`AppSettings.animationsEnabled`, on by default) reaches `Motion.isEnabled` through
   `AppCore.applyMotion()`. It is global for the reason `IconCache` is: a missed injection would animate
@@ -221,25 +221,25 @@ it is an explicitly-sized glyph treatment, not a system text style, so scaling p
 The **Dark column is the design and is frozen**; each value is the literal the forced-dark build
 shipped. Light is the same stop with the ink inverted, and is the only column open to retuning.
 
-| Token             | Dark           | Light          | Use                                               |
-| ----------------- | -------------- | -------------- | ------------------------------------------------- |
-| `selection`       | white 0.10     | black 0.09     | selected row fill (keyboard/active selection)     |
-| `rowHover`        | white 0.05     | black 0.045    | mouse-hover fill (always fainter than selection)  |
-| `menuHover`       | white 0.10     | black 0.09     | popover-menu row hover                            |
-| `separator`       | white 0.10     | black 0.12     | a list↔preview hairline (clipboard, file search)  |
-| `controlSurface`  | white 0.10     | black 0.08     | filled keycaps, glyph tiles                       |
-| `border`          | white 0.20     | black 0.18     | outlined keycap borders                           |
-| `textPrimary`     | white 1.00     | black 1.00     | search text and caret, volume fill and knob       |
-| `textSecondary`   | white 0.60     | black 0.60     | secondary labels                                  |
-| `textTertiary`    | white 0.40     | black 0.42     | placeholders, trailing kind labels                |
-| `menuSymbol`      | white 0.70     | black 0.70     | native popover-menu symbols                       |
-| `iconPlaceholder` | white 0.06     | black 0.06     | the empty tile a row paints while an icon decodes |
-| `sheen`           | white 0.04     | black 0.04     | the wash behind the Onboarding header             |
-| `cardFill`        | white 0.05     | black 0.04     | settings/calc card fill                           |
-| `cardStroke`      | white 0.10     | black 0.10     | settings/calc card border + inset dividers        |
-| `noteText`        | white 0.90     | black 0.85     | Notes body text                                   |
-| `dropGuide`       | white 0.35     | black 0.35     | the palette's drop guides while dragging          |
-| `composerSend`    | white 0.92     | black 0.92     | AI Chat's Send disc                               |
+| Token             | Dark       | Light       | Use                                               |
+| ----------------- | ---------- | ----------- | ------------------------------------------------- |
+| `selection`       | white 0.10 | black 0.09  | selected row fill (keyboard/active selection)     |
+| `rowHover`        | white 0.05 | black 0.045 | mouse-hover fill (always fainter than selection)  |
+| `menuHover`       | white 0.10 | black 0.09  | popover-menu row hover                            |
+| `separator`       | white 0.10 | black 0.12  | a list↔preview hairline (clipboard, file search)  |
+| `controlSurface`  | white 0.10 | black 0.08  | filled keycaps, glyph tiles                       |
+| `border`          | white 0.20 | black 0.18  | outlined keycap borders                           |
+| `textPrimary`     | white 1.00 | black 1.00  | search text and caret, volume fill and knob       |
+| `textSecondary`   | white 0.60 | black 0.60  | secondary labels                                  |
+| `textTertiary`    | white 0.40 | black 0.42  | placeholders, trailing kind labels                |
+| `menuSymbol`      | white 0.70 | black 0.70  | native popover-menu symbols                       |
+| `iconPlaceholder` | white 0.06 | black 0.06  | the empty tile a row paints while an icon decodes |
+| `sheen`           | white 0.04 | black 0.04  | the wash behind the Onboarding header             |
+| `cardFill`        | white 0.05 | black 0.04  | settings/calc card fill                           |
+| `cardStroke`      | white 0.10 | black 0.10  | settings/calc card border + inset dividers        |
+| `noteText`        | white 0.90 | black 0.85  | Notes body text                                   |
+| `dropGuide`       | white 0.35 | black 0.35  | the palette's drop guides while dragging          |
+| `composerSend`    | white 0.92 | black 0.92  | AI Chat's Send disc                               |
 
 `composerSendInk` is an `adaptive` pair, black 0.85 on the dark disc and white on the light one.
 `brand`, `primaryAction`, `destructive`, `success` and `dropGuideArmed` are fixed hues and adapt on
@@ -479,7 +479,8 @@ Glass is normally for floating controls. The dialog root is the one modal-surfac
 Source: `Windows/Dialog/`, `Windows/HUD/`.
 
 Tinycast owns its dialogs; `NSAlert` is never used. `DialogController` is owned by `AppCore` (the
-sole owner rule) and is the only presenter, so every confirmation in the app looks and behaves alike.
+sole owner rule) and is the only presenter outside Settings, so every confirmation looks and behaves
+alike.
 
 - **Three independent axes.** The **icon** says _what_, the **tone** says _how serious_, the **button
   role** says _what happens if you click_. None of them derives another — that separation is the
@@ -683,6 +684,9 @@ apps) with real traffic lights and a lifecycle wholly its own. It does not share
 `Form` with `.formStyle(.grouped)`**, so the cards, headers, row insets and hairlines are all
 system-drawn and a pane reads exactly as macOS System Settings does.
 
+- **A pane asks with SwiftUI's `confirmationDialog` or `alert`, not `DialogController`.** The window
+  is a stock titled one, so a system sheet on it reads as macOS does, and a sheet is window-modal
+  rather than a `runModal` loop, so Carbon hotkeys never fire underneath it.
 - **A row is a stock control.** `LabeledContent`, `Toggle` or `Picker`, each with a two-view label —
   the first view is the title, the rest become the secondary subtitle. Never a hand-built `HStack`
   with its own padding.
@@ -752,7 +756,9 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   including its titlebar, so a press on it drags the parent; nested editors form one stack owned by the
   Settings-window session. As with a sheet, a drag on an editor's empty space moves the Settings window:
   the surface puts `WindowDragBackground` behind its content, and the panel hands `performDrag(with:)`
-  up to its parent. The
+  up to its parent. The panel centres on its parent but is kept inside the screen's visible frame, and
+  is laid out again whenever the Settings window moves or resizes, so a window dragged into a corner
+  never carries the editor's buttons off screen. The
   presenting binding remains the dismissal source of truth, while launcher handoffs are consumed into
   pane-local state so opening an editor does not repaint the split view. A list that can keep growing
   scrolls at a stated row count instead — Custom Commands caps its arguments at `visibleArgumentRows` —

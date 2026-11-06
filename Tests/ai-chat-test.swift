@@ -61,6 +61,8 @@ struct AIChatTests {
         await reasoningFoldsIntoTheReplyAndIsNeverResent()
         reasoningShowsWithoutItsClosingBlankLines()
         chatsKeepTheirOwnModel()
+        presetsAreStampedOnTheChatTheyStart()
+        anEmptyWindowChatKeepsItsPresetUntilAskedForANewOne()
         choicesComeOutOfTheirFence()
         referencesAreTheLinksAReplyCites()
         titlesAreCleanedAndNeverBeatARename()
@@ -1573,6 +1575,64 @@ extension AIChatTests {
         let reopened = AIChatState(history: ChatHistoryStore(directory: directory))
         expect(reopened.open(id: chat.session.id), "the chat reopens")
         expect(reopened.session.model == sonnet, "a later pick is what the chat reopens on")
+    }
+
+    static func presetsAreStampedOnTheChatTheyStart() {
+        let (store, directory) = temporaryStore("preset")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let opus = AIModelSelection.claude(model: "opus", effort: nil)
+        var tools = ChatToolScope()
+        tools.toggle("files")
+        let preset = ChatPreset(
+            name: "SEO", instructions: "Review for SEO.", model: opus, toolScope: tools)
+        let chat = AIChatState(history: store)
+        expect(chat.usePreset(preset), "an empty chat takes a preset")
+        expect(
+            chat.session.model == opus && !chat.toolScope.allows("files"),
+            "the preset's model and tools come with it")
+        var edited = preset
+        edited.instructions = "Review for tone."
+        chat.followPreset(id: preset.id, to: edited)
+        expect(
+            chat.session.preset?.instructions == "Review for tone.",
+            "an empty chat follows an edit to its preset")
+        chat.toolScope.toggle("files")
+        chat.send("Hi", using: ScriptedProvider(rounds: []), model: opus)
+        expect(!chat.usePreset(nil), "a chat that has begun keeps its preset")
+        chat.followPreset(id: preset.id, to: nil)
+        expect(chat.session.preset != nil, "deleting the preset leaves a started chat its stamp")
+        let reopened = AIChatState(history: ChatHistoryStore(directory: directory))
+        expect(reopened.open(id: chat.session.id), "the chat reopens")
+        expect(
+            reopened.session.preset?.instructions == "Review for tone."
+                && reopened.session.preset?.presetID == preset.id,
+            "the chat keeps the instructions it was first sent with")
+        expect(reopened.toolScope.allows("files"), "reopening restores the tools it last sent with")
+        reopened.startNewChat()
+        expect(
+            reopened.session.preset == nil && reopened.toolScope.allows("files"),
+            "the next chat starts plain, with every server on")
+    }
+
+    static func anEmptyWindowChatKeepsItsPresetUntilAskedForANewOne() {
+        let (store, directory) = temporaryStore("preset-window")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let chats = AIChatSurfacesState(history: store)
+        _ = saved(store, "last question", at: Date().addingTimeInterval(-60))
+        let empty = chats.window
+        let preset = ChatPreset(name: "SEO", instructions: "Review for SEO.")
+        empty.usePreset(preset)
+        chats.applyWindowOpenPolicy(opensTo: .recent, newAfter: .fiveMinutes)
+        expect(
+            chats.window === empty && empty.session.preset != nil,
+            "an empty chat with a preset picked is not traded for a saved chat")
+        chats.followPreset(id: preset.id, to: nil)
+        expect(empty.session.preset == nil, "deleting the preset leaves the empty chat plain")
+        empty.usePreset(preset)
+        chats.newWindowChat()
+        expect(
+            chats.window === empty && empty.session.preset == nil,
+            "a new chat asked for in an empty one drops its preset")
     }
 
     static func titlesAreCleanedAndNeverBeatARename() {
