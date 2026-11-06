@@ -306,7 +306,6 @@ enum AIModelDiscovery {
 }
 
 extension AIConnection {
-    /// Fills what a saved model lacks, so a connection saved before a catalog was read needs no re-add.
     mutating func adoptCatalog(_ catalog: [AIModelDiscovery.Model]) {
         for entry in catalog where models.contains(entry.id) {
             if let limit = entry.maxOutputTokens {

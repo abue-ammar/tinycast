@@ -67,7 +67,6 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     /// Models the catalog marked as taking images — only OpenRouter's says, so only it is gated.
     var visionModels: [String]
     var reasoningOptions: [String: ReasoningOptions]?
-    /// Each model's output ceiling where the catalog states one; only Anthropic's does.
     var outputLimits: [String: Int]?
 
     init(
@@ -395,7 +394,6 @@ struct AIHTTPConfiguration: Equatable, Sendable {
 
     var shape: APIShape { provider.apiShape(for: baseURL) }
 
-    /// A body that named the default would 400 on every endpoint, so it is never sent.
     var requestedEffort: String? {
         effort == AIConnection.ReasoningOptions.providerDefault ? nil : effort
     }
