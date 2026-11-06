@@ -564,7 +564,7 @@ struct AIProviderTests {
         let catalog = Data(
             """
             {"data":[
-                {"id":"claude-a","display_name":"Claude A","capabilities":{
+                {"id":"claude-a","display_name":"Claude A","max_tokens":128000,"capabilities":{
                     "effort":{"supported":true,"max":{"supported":true},
                               "low":{"supported":true},"xhigh":{"supported":false}}}},
                 {"id":"claude-b","capabilities":{"effort":{"supported":false}}}
@@ -577,6 +577,37 @@ struct AIProviderTests {
         expect(
             models?.last?.reasoningOptions?.efforts == [],
             "a model without effort support names none")
+        expect(
+            models?.map(\.maxOutputTokens) == [128_000, nil],
+            "and each model's output ceiling where it states one")
+
+        var saved = AIConnection(provider: .anthropic, models: ["claude-a", "claude-b", "claude-c"])
+        saved.declareLevels(["high"], for: "claude-c")
+        saved.adoptCatalog(
+            (models ?? [])
+                + [
+                    .init(
+                        id: "claude-c", name: "C",
+                        reasoningOptions: .init(efforts: ["low"], defaultEffort: nil))
+                ])
+        expect(
+            saved.declaredLevels(for: "claude-a") == ["low", "max"],
+            "a model saved before its catalog was read takes the catalog's levels")
+        expect(saved.reasoningOptions?["claude-b"] == nil, "a model with no effort support takes none")
+        expect(saved.declaredLevels(for: "claude-c") == ["high"], "a reader's own declaration stays")
+        expect(saved.outputLimits == ["claude-a": 128_000], "only a stated ceiling is stored")
+
+        let url = URL(string: AIProviderKind.anthropic.defaultBaseURL)!
+        let known = AIRequestBody.make(
+            turn,
+            configuration: AIHTTPConfiguration(
+                provider: .anthropic, baseURL: url, model: "claude-a", maxOutputTokens: 128_000))
+        expect(known["max_tokens"] as? Int == 128_000, "a known model may answer up to its ceiling")
+        let unknown = AIRequestBody.make(
+            turn, configuration: AIHTTPConfiguration(provider: .anthropic, baseURL: url, model: "x"))
+        expect(
+            unknown["max_tokens"] as? Int == AIRequest.defaultMaxOutputTokens,
+            "an unknown one keeps the cap every Claude model accepts")
     }
 
     static func providerPresetsResolveEndpoints() {

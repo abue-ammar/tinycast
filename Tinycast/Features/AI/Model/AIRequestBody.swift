@@ -109,7 +109,7 @@ enum AIRequestBody {
         var body: [String: Any] = [
             "model": configuration.model,
             "messages": anthropicMessages(input.messages),
-            "max_tokens": input.maxOutputTokens,
+            "max_tokens": configuration.maxOutputTokens ?? input.maxOutputTokens,
             "stream": true
         ]
         if !systemParts.isEmpty { body["system"] = systemParts.joined(separator: "\n\n") }

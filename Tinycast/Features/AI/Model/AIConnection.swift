@@ -67,11 +67,13 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
     /// Models the catalog marked as taking images — only OpenRouter's says, so only it is gated.
     var visionModels: [String]
     var reasoningOptions: [String: ReasoningOptions]?
+    /// Each model's output ceiling where the catalog states one; only Anthropic's does.
+    var outputLimits: [String: Int]?
 
     init(
         id: UUID = UUID(), name: String = "", provider: AIProviderKind = .openAI,
         baseURL: String? = nil, models: [String] = [], visionModels: [String] = [],
-        reasoningOptions: [String: ReasoningOptions]? = nil
+        reasoningOptions: [String: ReasoningOptions]? = nil, outputLimits: [String: Int]? = nil
     ) {
         self.id = id
         self.name = name
@@ -80,6 +82,7 @@ struct AIConnection: Codable, Equatable, Identifiable, Sendable {
         self.models = models
         self.visionModels = visionModels
         self.reasoningOptions = reasoningOptions
+        self.outputLimits = outputLimits
     }
 
     /// A preset pointed away from its own API is a gateway, and only a gateway takes a thinking field.
@@ -374,17 +377,19 @@ struct AIHTTPConfiguration: Equatable, Sendable {
     let model: String
     let effort: String?
     let disablesThinking: Bool
+    let maxOutputTokens: Int?
     let headers: [String: String]
 
     init(
         provider: AIProviderKind, baseURL: URL, model: String, effort: String? = nil,
-        disablesThinking: Bool = false, headers: [String: String] = [:]
+        disablesThinking: Bool = false, maxOutputTokens: Int? = nil, headers: [String: String] = [:]
     ) {
         self.provider = provider
         self.baseURL = baseURL
         self.model = model
         self.effort = effort
         self.disablesThinking = disablesThinking
+        self.maxOutputTokens = maxOutputTokens
         self.headers = headers
     }
 

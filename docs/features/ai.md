@@ -399,11 +399,15 @@ each destination defines, so no vendor is sent a field it does not: a gateway ta
 `max` with its `None` always appended; OpenAI takes `minimal` through `max` plus its own `none`;
 Gemini `minimal` through `high` plus `none`; Anthropic `low` through `max` and no `None`. Anthropic's
 `/v1/models` names each model's supported efforts under `capabilities.effort`, so adding a model
-from its catalog pre-ticks them; OpenAI's and Gemini's catalogs do not, so their levels are never
-inferred. A picked level is sent as Responses' `reasoning.effort`, Chat Completions'
+from its catalog, or opening the editor on one saved earlier (`adoptCatalog`), pre-ticks them; OpenAI's
+and Gemini's catalogs do not, so their levels are never inferred. The same answer states each model's
+`max_tokens`, kept in `AIConnection.outputLimits` and sent as the Anthropic body's `max_tokens`, so a
+thinking model is never cut off by a cap below its own; a model whose ceiling was never read gets
+`AIRequest.defaultMaxOutputTokens` (32,000, the highest every Claude model accepts). `max_tokens`
+does not count against Anthropic's output rate limit, so the ceiling costs nothing unused. A picked level is sent as Responses' `reasoning.effort`, Chat Completions'
 `reasoning_effort` or Anthropic's `output_config.effort`; `Default` sends nothing, so the model keeps
-the provider's own default. Levels are dropped whenever the base URL or provider changes, because
-they describe one destination. A chat and a Quick Action keep their own effort, so
+the provider's own default. Levels and output limits are dropped whenever the base URL or provider
+changes, because they describe one destination. A chat and a Quick Action keep their own effort, so
 `AIProviderFactory` sends only one the model still offers (`offeredEffort`): an unticked level, or one
 left behind by a changed provider, is dropped rather than sent. The choice rides in
 `AIModelSelection.effort` like every other route's.

@@ -7,15 +7,17 @@ enum AIModelDiscovery {
         /// `nil` when the catalog doesn't say; OpenRouter lists `text`, `image`, `file`, `audio`.
         var inputModalities: [String]? = nil
         var reasoningOptions: AIConnection.ReasoningOptions?
+        var maxOutputTokens: Int?
 
         init(
             id: String, name: String, inputModalities: [String]? = nil,
-            reasoningOptions: AIConnection.ReasoningOptions? = nil
+            reasoningOptions: AIConnection.ReasoningOptions? = nil, maxOutputTokens: Int? = nil
         ) {
             self.id = id
             self.name = name
             self.inputModalities = inputModalities
             self.reasoningOptions = reasoningOptions
+            self.maxOutputTokens = maxOutputTokens
         }
 
         var acceptsImages: Bool? { inputModalities?.contains("image") }
@@ -106,7 +108,8 @@ enum AIModelDiscovery {
                         }
                             ?? $0.capabilities?.effort.map {
                                 AIConnection.ReasoningOptions(efforts: $0.levels, defaultEffort: nil)
-                            })
+                            },
+                        maxOutputTokens: $0.maxTokens)
                 })
         case .gemini:
             let response = try JSONDecoder().decode(GeminiResponse.self, from: data)
@@ -200,7 +203,7 @@ enum AIModelDiscovery {
             return Model(
                 id: id, name: name.isEmpty ? id : name,
                 inputModalities: model.inputModalities,
-                reasoningOptions: model.reasoningOptions)
+                reasoningOptions: model.reasoningOptions, maxOutputTokens: model.maxOutputTokens)
         }
     }
 
@@ -267,10 +270,12 @@ enum AIModelDiscovery {
             let architecture: Architecture?
             let reasoning: Reasoning?
             let capabilities: Capabilities?
+            let maxTokens: Int?
 
             enum CodingKeys: String, CodingKey {
                 case id, name, architecture, reasoning, capabilities
                 case displayName = "display_name"
+                case maxTokens = "max_tokens"
             }
 
             // A shape we cannot read is dropped, never the entry.
@@ -282,6 +287,7 @@ enum AIModelDiscovery {
                 architecture = try? container.decodeIfPresent(Architecture.self, forKey: .architecture)
                 reasoning = try? container.decodeIfPresent(Reasoning.self, forKey: .reasoning)
                 capabilities = try? container.decodeIfPresent(Capabilities.self, forKey: .capabilities)
+                maxTokens = try? container.decodeIfPresent(Int.self, forKey: .maxTokens)
             }
         }
 
@@ -296,5 +302,26 @@ enum AIModelDiscovery {
         }
 
         let models: [Model]
+    }
+}
+
+extension AIConnection {
+    /// Fills what a saved model lacks, so a connection saved before a catalog was read needs no re-add.
+    mutating func adoptCatalog(_ catalog: [AIModelDiscovery.Model]) {
+        for entry in catalog where models.contains(entry.id) {
+            if let limit = entry.maxOutputTokens {
+                if outputLimits == nil { outputLimits = [:] }
+                outputLimits?[entry.id] = limit
+            }
+            guard reasoningOptions?[entry.id] == nil, let options = entry.reasoningOptions,
+                !options.efforts.isEmpty
+            else { continue }
+            if takesDeclaredLevels {
+                declareLevels(Set(options.efforts), for: entry.id)
+            } else {
+                if reasoningOptions == nil { reasoningOptions = [:] }
+                reasoningOptions?[entry.id] = options
+            }
+        }
     }
 }
