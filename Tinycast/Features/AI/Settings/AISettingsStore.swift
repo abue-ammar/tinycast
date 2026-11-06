@@ -416,6 +416,8 @@ final class AISettingsStore {
             seen.contains($0.key) && !$0.value.efforts.isEmpty
         }
         if connection.reasoningOptions?.isEmpty == true { connection.reasoningOptions = nil }
+        connection.outputLimits = connection.outputLimits?.filter { seen.contains($0.key) }
+        if connection.outputLimits?.isEmpty == true { connection.outputLimits = nil }
         return connection
     }
 

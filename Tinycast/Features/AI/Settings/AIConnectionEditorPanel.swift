@@ -156,6 +156,7 @@ struct AIConnectionEditorPanel: View {
         .onChange(of: headers) { discoveryRevision += 1 }
         .onChange(of: connection.baseURL) {
             connection.dropDeclaredLevels()
+            connection.outputLimits = nil
             discoveryRevision += 1
         }
         .onChange(of: connection.provider) { oldProvider, newProvider in
@@ -163,6 +164,7 @@ struct AIConnectionEditorPanel: View {
                 connection.baseURL = newProvider.defaultBaseURL
             }
             connection.reasoningOptions = nil
+            connection.outputLimits = nil
             discoveryRevision += 1
         }
     }
@@ -334,7 +336,7 @@ struct AIConnectionEditorPanel: View {
     private func reasoningLevelsMenu(_ model: String) -> some View {
         let declared = connection.declaredLevels(for: model)
         return Menu {
-            ForEach(AIConnection.ReasoningOptions.ladder, id: \.self) { level in
+            ForEach(connection.declarableLevels, id: \.self) { level in
                 Toggle(
                     ChatGPTSubscription.Effort(id: level, detail: nil).title,
                     isOn: Binding(
@@ -406,6 +408,7 @@ struct AIConnectionEditorPanel: View {
         connection.models.removeAll { $0 == model }
         connection.visionModels.removeAll { $0 == model }
         connection.reasoningOptions?[model] = nil
+        connection.outputLimits?[model] = nil
     }
 
     private func discoverModels() async {
@@ -453,6 +456,7 @@ struct AIConnectionEditorPanel: View {
                 headers: requestHeaders)
             guard !Task.isCancelled else { return }
             discovery = .loaded(models)
+            connection.adoptCatalog(models)
         } catch is CancellationError {
             return
         } catch {
@@ -480,26 +484,16 @@ struct AIConnectionEditorPanel: View {
     }
 
     private func addModel(_ model: AIModelDiscovery.Model) {
-        addModel(
-            model.id, acceptsImages: model.acceptsImages,
-            reasoningOptions: model.reasoningOptions)
+        addModel(model.id, acceptsImages: model.acceptsImages)
+        connection.adoptCatalog([model])
     }
 
-    private func addModel(
-        _ value: String, acceptsImages: Bool? = nil,
-        reasoningOptions: AIConnection.ReasoningOptions? = nil
-    ) {
+    private func addModel(_ value: String, acceptsImages: Bool? = nil) {
         let model = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !model.isEmpty else { return }
         if !connection.models.contains(model) { connection.models.append(model) }
         if acceptsImages == true, !connection.visionModels.contains(model) {
             connection.visionModels.append(model)
-        }
-        if connection.provider == .openRouter, let reasoningOptions,
-            !reasoningOptions.efforts.isEmpty
-        {
-            if connection.reasoningOptions == nil { connection.reasoningOptions = [:] }
-            connection.reasoningOptions?[model] = reasoningOptions
         }
         modelQuery = ""
     }

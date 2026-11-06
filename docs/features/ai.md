@@ -387,21 +387,29 @@ has it. The same answer carries the account, which `claudeAccount` reads for the
 from `agent --list-models` after `agent status --format json` confirms a login.
 
 Turning thinking off is a reasoning effort, not a second control: `reasoningOptions(for:)` answers with
-the connection's catalogued efforts, or — for a connection with no catalog to publish one — `Default`
+the connection's catalogued or declared efforts, or — for a gateway with nothing declared — `Default`
 and `None`. `takesThinkingField` decides who gets that pair: an OpenAI-shaped preset whose base URL is
 not that preset's own, because a preset pointed away from its own API is a gateway, and a gateway is
-the only destination Tinycast can offer the switch to honestly. Picking `None` sends
+the only destination Tinycast can offer the switch to honestly. Picking a gateway's `None` sends
 `"thinking": {"type": "disabled"}`, which is how DeepSeek and the endpoints that copied its contract
-answer without reasoning first. A vendor API is never offered the pair, nor levels declared while its
-base URL pointed elsewhere, and so is never sent a field it does not define — which matters precisely
-because the preset alone says nothing about the destination when every base URL is editable. A
-gateway's model may also carry levels the reader declares in the connection editor (`minimal`, `low`,
-`medium`, `high`, never inferred), kept between `Default` and `None`; a picked level is sent as
-OpenAI's `reasoning_effort`. OpenRouter is left out at any URL (`takesDeclaredLevels`), because its
-catalog already names each model's levels. A chat and a Quick Action keep their own effort, so
+answer without reasoning first. Every connection but OpenRouter (`takesDeclaredLevels`) takes levels
+the reader declares per model in the connection editor, kept after `Default`; OpenRouter is left out
+at any URL because its catalog already names each model's levels. `declarableLevels` is the ladder
+each destination defines, so no vendor is sent a field it does not: a gateway takes `minimal` through
+`max` with its `None` always appended; OpenAI takes `minimal` through `max` plus its own `none`;
+Gemini `minimal` through `high` plus `none`; Anthropic `low` through `max` and no `None`. Anthropic's
+`/v1/models` names each model's supported efforts under `capabilities.effort`, so adding a model
+from its catalog, or opening the editor on one saved earlier (`adoptCatalog`), pre-ticks them; OpenAI's
+and Gemini's catalogs do not, so their levels are never inferred. The same answer states each model's
+`max_tokens`, kept in `AIConnection.outputLimits` and sent as the Anthropic body's `max_tokens`, so a
+thinking model is never cut off by a cap below its own; a model whose ceiling was never read gets
+`AIRequest.defaultMaxOutputTokens` (32,000, the highest every Claude model accepts). `max_tokens`
+does not count against Anthropic's output rate limit, so the ceiling costs nothing unused. A picked level is sent as Responses' `reasoning.effort`, Chat Completions'
+`reasoning_effort` or Anthropic's `output_config.effort`; `Default` sends nothing, so the model keeps
+the provider's own default. Levels and output limits are dropped whenever the base URL or provider
+changes, because they describe one destination. A chat and a Quick Action keep their own effort, so
 `AIProviderFactory` sends only one the model still offers (`offeredEffort`): an unticked level, or one
-left behind by a changed provider, is dropped rather than sent. With nothing declared the only field
-ever written is the `None` one, so every other body is the one it always was, and the choice rides in
+left behind by a changed provider, is dropped rather than sent. The choice rides in
 `AIModelSelection.effort` like every other route's.
 
 ## Provider interface
@@ -420,7 +428,7 @@ terminal failures behind the same SSE parser. It releases function calls only af
 `response.completed`, using the complete `response.output` items rather than partially streamed
 arguments. A failed, incomplete or truncated response cannot release a tool call. Tool definitions
 set `strict: false` so the MCP server's optional parameters retain their existing meaning.
-The direct OpenAI route keeps the model's default reasoning and does not request visible summaries;
+The direct OpenAI route sends a declared reasoning effort and does not request visible summaries;
 its encrypted reasoning items are replayed between tool rounds independently of the thinking indicator.
 
 `AIProviderFactory` resolves the selection, validates an API endpoint, reads an API key at the last

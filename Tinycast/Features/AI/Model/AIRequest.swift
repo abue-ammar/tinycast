@@ -94,7 +94,8 @@ struct AIMessage: Equatable, Sendable {
 }
 
 struct AIRequest: Equatable, Sendable {
-    static let defaultMaxOutputTokens = 4_096
+    /// The highest every Claude model accepts, for one whose own ceiling the catalog never named.
+    static let defaultMaxOutputTokens = 32_000
 
     let conversationID: UUID?
     let instructions: String?

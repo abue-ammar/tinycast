@@ -22,6 +22,7 @@ enum AIRequestBody {
             "store": false
         ]
         if let instructions = input.instructions?.nonEmpty { body["instructions"] = instructions }
+        if let effort = configuration.requestedEffort { body["reasoning"] = ["effort": effort] }
         if !input.tools.isEmpty {
             body["tools"] = input.tools.map {
                 [
@@ -74,12 +75,10 @@ enum AIRequestBody {
         if input.webSearch, configuration.provider == .openRouter {
             body["plugins"] = [["id": "web"]]
         }
-        if let effort = configuration.effort {
+        if let effort = configuration.requestedEffort {
             if configuration.provider == .openRouter {
                 body["reasoning"] = ["effort": effort]
-            } else if effort != AIConnection.ReasoningOptions.providerDefault,
-                effort != AIConnection.ReasoningOptions.noEffort
-            {
+            } else if !configuration.disablesThinking {
                 body["reasoning_effort"] = effort
             }
         }
@@ -110,10 +109,11 @@ enum AIRequestBody {
         var body: [String: Any] = [
             "model": configuration.model,
             "messages": anthropicMessages(input.messages),
-            "max_tokens": input.maxOutputTokens,
+            "max_tokens": configuration.maxOutputTokens ?? input.maxOutputTokens,
             "stream": true
         ]
         if !systemParts.isEmpty { body["system"] = systemParts.joined(separator: "\n\n") }
+        if let effort = configuration.requestedEffort { body["output_config"] = ["effort": effort] }
         if !input.tools.isEmpty {
             body["tools"] = input.tools.map {
                 [
