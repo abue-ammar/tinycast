@@ -1220,11 +1220,9 @@ struct RootPaletteView: View {
         if presenting, let hostWindow {
             menuPanel.show(
                 view, corner: corner, parent: hostWindow, core: core,
-                clipPath: content.clipPath,
                 onKeyDown: handleMenuPanelKey, onDismiss: closeMenus)
         } else {
-            menuPanel.update(
-                view, corner: corner, core: core, clipPath: content.clipPath)
+            menuPanel.update(view, corner: corner, core: core)
         }
     }
 
