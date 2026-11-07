@@ -1,5 +1,7 @@
 import { PolarCore } from "@polar-sh/sdk/core.js";
 import { checkoutsCreate } from "@polar-sh/sdk/funcs/checkoutsCreate.js";
+import { cryptoRates, fiatRates } from "./currencies";
+import { json } from "./http";
 import { countSupporters } from "./supporters";
 
 // Absent in a contributor's local run, which must still serve the site.
@@ -10,18 +12,6 @@ type Plan = "monthly" | "one-time";
 // A count that lags a few minutes is fine, and it keeps Polar out of most page loads.
 const SUPPORTERS_CACHE_SECONDS = 600;
 const MAX_AMOUNT = 10_000;
-
-function json(body: unknown, status = 200, cacheSeconds = 0): Response {
-  return Response.json(body, {
-    status,
-    headers: {
-      "Cache-Control": cacheSeconds
-        ? `public, max-age=${cacheSeconds}`
-        : "no-store",
-      "X-Robots-Tag": "noindex",
-    },
-  });
-}
 
 function polar(env: WorkerEnv, accessToken: string): PolarCore {
   // .dev.vars may say "sandbox"; the generated type only knows the deployed value.
@@ -109,6 +99,12 @@ export default {
     }
     if (pathname === "/api/checkout" && method === "POST") {
       return checkout(request, env);
+    }
+    if (pathname === "/api/v1/currencies" && method === "GET") {
+      return fiatRates(request, ctx);
+    }
+    if (pathname === "/api/v1/currencies/crypto" && method === "GET") {
+      return cryptoRates(request, ctx);
     }
     return env.ASSETS.fetch(request);
   },

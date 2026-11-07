@@ -32,7 +32,7 @@ generated and not committed.
 | ------------------ | ---------------------------------------------------------------------- |
 | `src/app/`         | Routes. `page.tsx` is the marketing page; `docs/` is the documentation |
 | `src/lib/`         | Build-time GitHub reads: the version, stars and the stable changelog   |
-| `worker/`          | The Worker behind `/support`'s API                                     |
+| `worker/`          | The Worker behind `/support`'s API and the app's exchange rates        |
 | `src/components/`  | Page sections, with shared primitives in `ui/`                         |
 | `src/data/`        | All copy and content, so components stay free of prose                 |
 | `src/index.css`    | **The only design-token source.** Colors, type scale, shadows          |
@@ -71,6 +71,14 @@ to `.dev.vars` (gitignored), fill it in, and run `npm run preview` (http://local
 The crypto addresses live in `src/data/support.ts`. Each one has a mark and a QR code in
 `public/wallets/`, and the root README shows the same codes. A code encodes its address verbatim,
 so changing an address means replacing its codes and scanning them before you commit.
+
+## Exchange rates
+
+`/api/v1/currencies` and `/api/v1/currencies/crypto?symbols=` serve the calculator's rates in the
+shape `CurrencyFeed` decodes. The Worker pulls exchange-api's daily USD snapshot from Cloudflare
+Pages, falling back to jsDelivr, and keeps it in the edge cache: an hour-old copy still answers at
+once while a fresh one loads, and the last good copy outlives an upstream outage by a week. The fiat
+list in `worker/currencies.ts` is the set `Scripts/gen-currencies.js` builds the app's table from.
 
 ## Media
 
