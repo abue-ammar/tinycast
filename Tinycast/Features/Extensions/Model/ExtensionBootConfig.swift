@@ -87,6 +87,7 @@ struct ExtensionLaunchContext: Sendable {
     var supportPath: String
     var preferences: [String: ExtensionPreferenceValue]
     var caches: [String: [String: String]]
+    var formValues: [String: String] = [:]
     var arguments: [String: String]
     var fallbackText: String?
     var launchType: ExtensionLaunchType = .userInitiated
@@ -120,6 +121,7 @@ struct ExtensionLaunchContext: Sendable {
                 "environment": environment,
                 "preferences": preferences.mapValues(\.jsonValue),
                 "caches": caches,
+                "formValues": formValues,
                 "launchProps": launchProps
             ])
     }

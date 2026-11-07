@@ -479,6 +479,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
             preferences: storage.resolvedPreferences(
                 extension: owner.manifest.name, schemas: schemas),
             caches: storage.caches(extension: owner.manifest.name),
+            formValues: storage.formValues(extension: owner.manifest.name, command: command.name),
             arguments: command.completeArguments(arguments),
             fallbackText: fallbackText,
             launchType: launchType,

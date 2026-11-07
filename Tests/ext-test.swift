@@ -24,6 +24,7 @@ struct ExtensionTests {
         var calls: [String] = []
         var toasts: [String] = []
         var huds: [String] = []
+        var storedForms: [(command: String, values: [String: String])] = []
         private let fetcher = ExtensionFetcher()
         private let sockets = ExtensionWebSocketBridge()
 
@@ -52,6 +53,13 @@ struct ExtensionTests {
                 return "1"
             case "feedback.showHUD":
                 huds.append(arguments.first?.stringValue ?? "")
+                return ""
+            case "form.store":
+                storedForms.append(
+                    (
+                        arguments.first?.stringValue ?? "",
+                        arguments.dropFirst().first?.objectValue?.compactMapValues(\.stringValue) ?? [:]
+                    ))
                 return ""
             case "storage.get", "clipboard.readText":
                 return #""""#
@@ -116,14 +124,14 @@ struct ExtensionTests {
     static func launchContext(
         extensionName: String = "fixture", command: String = "fixture",
         mode: ExtensionCommandMode = .view, assets: String = "/tmp",
-        preferences: [String: ExtensionPreferenceValue] = [:],
+        preferences: [String: ExtensionPreferenceValue] = [:], formValues: [String: String] = [:],
         arguments: [String: String] = [:], isDarkAppearance: Bool = true
     ) -> ExtensionLaunchContext {
         ExtensionLaunchContext(
             extensionName: extensionName, extensionTitle: extensionName, commandName: command,
             commandMode: mode, assetsPath: assets, supportPath: "/tmp",
-            preferences: preferences, caches: [:], arguments: arguments, fallbackText: nil,
-            isDarkAppearance: isDarkAppearance)
+            preferences: preferences, caches: [:], formValues: formValues, arguments: arguments,
+            fallbackText: nil, isDarkAppearance: isDarkAppearance)
     }
 
     /// `EXT_TEST_ARGS="hours=0,minutes=5"` — stands in for the palette's inline argument fields.
@@ -193,6 +201,7 @@ struct ExtensionTests {
         await bundledModuleChecks()
         await navigationSearchRuntimeChecks()
         await searchAccessoryRuntimeChecks()
+        await formStoreValueRuntimeChecks()
         await nodeContractChecks()
         await bufferEventChecks()
         await sharedArrayBufferChecks()
@@ -1584,6 +1593,101 @@ struct ExtensionTests {
                 ExtensionSearchAccessory(node: $0.activeRoot?.node("searchBarAccessory"))?.nodeID
             } == accessory.nodeID)
         await runtime.stop(session: "sAccessory")
+    }
+
+    static let storeValueCommand = """
+        "use strict";
+        const { Form, ActionPanel, Action, showToast } = require("@raycast/api");
+        const React = require("react");
+        const h = React.createElement;
+        module.exports.default = function Command() {
+          return h(Form, {
+            actions: h(ActionPanel, null, h(Action.SubmitForm, {
+              title: "Generate",
+              onSubmit: (values) => showToast({ title: values.format + "|" + values.scratch + "|" + values.remember }),
+            })),
+          },
+            h(Form.TextField, { id: "format", storeValue: true }),
+            h(Form.TextField, { id: "scratch", defaultValue: "blank" }),
+            h(Form.Checkbox, { id: "remember", label: "Remember", storeValue: true }));
+        };
+        """
+
+    @MainActor
+    static func formStoreValueRuntimeChecks() async {
+        func field(_ id: String, in tree: RenderTree?) -> RenderNode? {
+            tree?.activeRoot?.children.first { $0.string("id") == id }
+        }
+
+        let (first, host, recorder) = makeRuntime()
+        try? await first.boot(config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        await first.start(
+            session: "sStore", code: storeValueCommand, file: URL(fileURLWithPath: "/tmp/store.js"),
+            mode: .view, context: launchContext(command: "generate"))
+        await settle(until: { field("format", in: recorder.trees.last) != nil })
+        check(
+            "a storeValue field without a saved value starts empty",
+            field("format", in: recorder.trees.last)?.string("value") == "")
+
+        for (id, value) in [("format", "{word}-{number:4}" as Any), ("scratch", "typed"), ("remember", true)]
+        {
+            guard let handler = field(id, in: recorder.trees.last)?.handler("onTinycastChange") else {
+                check("form field \(id) exposes a change handler", false)
+                return
+            }
+            await first.dispatch(
+                session: "sStore", handler: handler, payload: ExtensionRuntime.jsonString(from: [value]))
+        }
+        await settle()
+        check("editing a form stores nothing", host.storedForms.isEmpty)
+
+        guard
+            let submit = recorder.trees.last?.activeRoot?.firstDescendant(ofType: "Action")?.handler(
+                "onAction")
+        else {
+            check("the form exposes its submit action", false)
+            return
+        }
+        await first.dispatch(session: "sStore", handler: submit, payload: "[]")
+        await settle(until: { !host.storedForms.isEmpty })
+        let stored = host.storedForms.last
+        check("submitting stores under the running command", stored?.command == "generate")
+        check(
+            "submitting stores only the storeValue fields",
+            stored?.values == ["format": #""{word}-{number:4}""#, "remember": "true"],
+            String(describing: stored?.values))
+        await first.stop(session: "sStore")
+        first.shutdown()
+
+        let (second, secondHost, secondRecorder) = makeRuntime()
+        try? await second.boot(config: .current(supportDirectory: FileManager.default.temporaryDirectory))
+        await second.start(
+            session: "sRestore", code: storeValueCommand, file: URL(fileURLWithPath: "/tmp/store.js"),
+            mode: .view,
+            context: launchContext(
+                command: "generate",
+                formValues: (stored?.values ?? [:]).merging(["scratch": #""leaked""#]) { $1 }))
+        await settle(until: { field("format", in: secondRecorder.trees.last) != nil })
+        let tree = secondRecorder.trees.last
+        check(
+            "a fresh runtime restores the submitted text",
+            field("format", in: tree)?.string("value") == "{word}-{number:4}",
+            field("format", in: tree)?.string("value") ?? "nil")
+        check("a fresh runtime restores the checkbox", field("remember", in: tree)?.bool("value") == true)
+        check(
+            "a field without storeValue ignores a saved value",
+            field("scratch", in: tree)?.string("value") == "blank")
+
+        if let submit = tree?.activeRoot?.firstDescendant(ofType: "Action")?.handler("onAction") {
+            await second.dispatch(session: "sRestore", handler: submit, payload: "[]")
+            await settle(until: { !secondHost.toasts.isEmpty })
+        }
+        check(
+            "a restored value reaches onSubmit",
+            secondHost.toasts == ["{word}-{number:4}|blank|true"],
+            secondHost.toasts.joined(separator: ","))
+        await second.stop(session: "sRestore")
+        second.shutdown()
     }
 
     @MainActor

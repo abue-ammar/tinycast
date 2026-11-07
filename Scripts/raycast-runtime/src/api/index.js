@@ -17,6 +17,8 @@ Action.Style = flatEnums.ActionStyle;
 
 // The convenience actions run their effect through the system APIs rather than duplicating them.
 setActionEffects({
+  storedFormValue: system.storedFormValue,
+  storeFormValues: system.storeFormValues,
   copy: async ({ content, concealed }) => {
     await system.Clipboard.copy(content, { concealed });
     await system.closeMainWindow();

@@ -38,6 +38,7 @@ struct ExtensionSearchAccessoryTests {
         parsing()
         seeding()
         storageIsolation()
+        formValueStorage()
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         print("\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -199,6 +200,28 @@ struct ExtensionSearchAccessoryTests {
         check(
             "a store with no accessory section keeps its preferences",
             older.preference(extension: "older", key: "token") == .string("secret"))
+    }
+
+    static func formValueStorage() {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("tinycast-ext-form-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let storage = ExtensionStorage(directory: directory)
+        storage.setFormValues(extension: "sample", command: "generate", values: ["a": "1", "b": "2"])
+        storage.setFormValues(extension: "sample", command: "generate", values: ["b": "3"])
+        storage.setFormValues(extension: "sample", command: "other", values: ["a": "9"])
+        storage.flush()
+
+        let reloaded = ExtensionStorage(directory: directory)
+        check(
+            "form values merge per field and survive a reload",
+            reloaded.formValues(extension: "sample", command: "generate") == ["a": "1", "b": "3"])
+        check(
+            "form values are kept per command",
+            reloaded.formValues(extension: "sample", command: "other") == ["a": "9"])
+        check(
+            "form values never land in the namespace JavaScript reads",
+            reloaded.allLocalStorage(extension: "sample").isEmpty)
     }
 
     static func check(_ label: String, _ condition: Bool, _ detail: String = "") {
