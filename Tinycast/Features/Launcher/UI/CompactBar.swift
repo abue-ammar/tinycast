@@ -8,11 +8,13 @@ struct CompactBarGeometry {
     let height: CGFloat
     let diameter: CGFloat
     let gap: CGFloat
+    let cornerRadius: CGFloat
     let count: Int
 
     init(metrics: InterfaceMetrics, count: Int) {
         width = metrics.size.panelWidth
         height = metrics.size.compactHeight
+        cornerRadius = metrics.radius.panel
         // A point inside the bar's height, so the last button clears the window's rounded end.
         diameter = height - metrics.scaled(1) * 2
         gap = metrics.spacing.lg
@@ -33,50 +35,103 @@ struct CompactBarGeometry {
     var parked: CGPoint {
         CGPoint(x: capsuleWidth(revealed: true) - diameter / 2, y: height / 2)
     }
+
+    func outline(at elapsed: TimeInterval, in rect: CGRect) -> Path {
+        let capsule = CompactBarReveal.capsule(at: elapsed)
+        let shortened = width + (capsuleWidth(revealed: true) - width) * capsule
+        var path = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            .path(in: CGRect(x: rect.minX, y: rect.minY, width: shortened, height: height))
+        for index in 0..<count {
+            let progress = CompactBarReveal.button(index, at: elapsed)
+            let size = diameter * (BarMotion.parkedScale + (1 - BarMotion.parkedScale) * progress)
+            let target = center(of: index)
+            let x = rect.minX + parked.x + (target.x - parked.x) * progress
+            let y = rect.minY + parked.y + (target.y - parked.y) * progress
+            let circle = CGRect(x: x - size / 2, y: y - size / 2, width: size, height: size)
+            path = path.union(Path(ellipseIn: circle))
+        }
+        return path
+    }
 }
 
-/// The compact bar's glass: a capsule the buttons bead off, with their glyphs drawn above it.
+/// The reveal's progress at a moment, from the same springs the glyphs animate with.
+enum CompactBarReveal {
+    static func duration(count: Int) -> TimeInterval {
+        max(
+            BarMotion.revealDelay + BarMotion.capsule.settlingDuration,
+            buttonDelay(max(count - 1, 0)) + BarMotion.button.settlingDuration)
+    }
+
+    static func buttonDelay(_ index: Int) -> TimeInterval {
+        BarMotion.revealDelay + BarMotion.stagger * Double(index)
+    }
+
+    static func capsule(at elapsed: TimeInterval) -> CGFloat {
+        progress(of: BarMotion.capsule, at: elapsed - BarMotion.revealDelay)
+    }
+
+    static func button(_ index: Int, at elapsed: TimeInterval) -> CGFloat {
+        progress(of: BarMotion.button, at: elapsed - buttonDelay(index))
+    }
+
+    private static func progress(of spring: Spring, at time: TimeInterval) -> CGFloat {
+        guard time > 0 else { return 0 }
+        guard time < spring.settlingDuration else { return 1 }
+        return spring.value(target: 1, time: time)
+    }
+}
+
+struct PaletteOutline: Shape {
+    let cornerRadius: CGFloat
+    let bar: CompactBarGeometry?
+    var elapsed: TimeInterval
+
+    var animatableData: TimeInterval {
+        get { elapsed }
+        set { elapsed = newValue }
+    }
+
+    func path(in rect: CGRect) -> Path {
+        guard let bar else {
+            return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).path(in: rect)
+        }
+        return bar.outline(at: elapsed, in: rect)
+    }
+}
+
 struct CompactBar: View {
     let commands: [CommandID]
     let selection: CommandID?
+    let isRevealed: Bool
     let onRun: (CommandID) -> Void
-    @Environment(PaletteState.self) private var palette
     @Environment(\.metrics) private var metrics
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isRevealed = false
 
     var body: some View {
         let geometry = CompactBarGeometry(metrics: metrics, count: commands.count)
-        let revealed = isRevealed
-        let capsule = Capsule(style: .continuous)
-        // One container, or the buttons could never bead off the capsule they come out of.
-        GlassEffectContainer(spacing: metrics.scaled(BarMotion.blend)) {
-            ZStack(alignment: .topLeading) {
-                capsule.fill(.clear)
-                    .frame(width: geometry.capsuleWidth(revealed: revealed))
-                    .frame(maxHeight: .infinity)
-                    .glassEffect(.regular, in: capsule)
-                    .animation(
-                        reduceMotion ? nil : BarMotion.capsule.delay(BarMotion.revealDelay),
-                        value: revealed)
-                ForEach(Array(commands.enumerated()), id: \.element) { index, command in
-                    button(command, at: index, geometry: geometry, revealed: revealed)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        }
-        .overlay { scrim(geometry: geometry, revealed: revealed) }
-        // Above the glass rather than inside it, where a morph would smear them.
-        .overlay(alignment: .topLeading) {
+        ZStack(alignment: .topLeading) {
+            selectionFace(geometry: geometry)
             ForEach(Array(commands.enumerated()), id: \.element) { index, command in
-                glyph(command, at: index, geometry: geometry, revealed: revealed)
+                glyph(command, at: index, geometry: geometry)
+                button(command, at: index, geometry: geometry)
             }
         }
-        .task(id: palette.isVisible) { await followVisibility() }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    @ViewBuilder
+    private func selectionFace(geometry: CompactBarGeometry) -> some View {
+        if let selection, let index = commands.firstIndex(of: selection) {
+            Circle().fill(Theme.Colors.compactShortcutSelectionTint)
+                .frame(width: geometry.diameter, height: geometry.diameter)
+                .position(geometry.center(of: index))
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+        }
     }
 
     private func button(
-        _ command: CommandID, at index: Int, geometry: CompactBarGeometry, revealed: Bool
+        _ command: CommandID, at index: Int, geometry: CompactBarGeometry
     ) -> some View {
         Button {
             onRun(command)
@@ -90,44 +145,13 @@ struct CompactBar: View {
         .help(command.name)
         .accessibilityLabel(command.name)
         .accessibilityAddTraits(selection == command ? [.isSelected] : [])
-        .accessibilityHidden(!revealed)
-        .glassEffect(
-            .regular.tint(selection == command ? Theme.Colors.compactShortcutSelectionTint : nil)
-                .interactive(), in: .circle
-        )
-        .scaleEffect(revealed ? 1 : BarMotion.parkedScale)
-        .position(revealed ? geometry.center(of: index) : geometry.parked)
-        .allowsHitTesting(revealed)
-        .animation(travel(index), value: revealed)
-    }
-
-    /// The selected button stays out of the mask, so its tint reads undimmed.
-    private func scrim(geometry: CompactBarGeometry, revealed: Bool) -> some View {
-        Theme.Colors.panelScrim
-            .mask {
-                ZStack(alignment: .topLeading) {
-                    Capsule().fill(.white)
-                        .frame(width: geometry.capsuleWidth(revealed: revealed))
-                        .frame(maxHeight: .infinity)
-                        .animation(
-                            reduceMotion ? nil : BarMotion.capsule.delay(BarMotion.revealDelay),
-                            value: revealed)
-                    ForEach(Array(commands.enumerated()), id: \.element) { index, command in
-                        Circle().fill(.white)
-                            .frame(width: geometry.diameter, height: geometry.diameter)
-                            .opacity(revealed && selection != command ? 1 : 0)
-                            .scaleEffect(revealed ? 1 : BarMotion.parkedScale)
-                            .position(revealed ? geometry.center(of: index) : geometry.parked)
-                            .animation(travel(index), value: revealed)
-                    }
-                }
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+        .accessibilityHidden(!isRevealed)
+        .position(geometry.center(of: index))
+        .allowsHitTesting(isRevealed)
     }
 
     private func glyph(
-        _ command: CommandID, at index: Int, geometry: CompactBarGeometry, revealed: Bool
+        _ command: CommandID, at index: Int, geometry: CompactBarGeometry
     ) -> some View {
         SymbolImage(
             name: command.sfSymbol, size: metrics.scaled(Theme.Typography.headerIconSize),
@@ -138,11 +162,11 @@ struct CompactBar: View {
             selection == command ? Theme.Colors.compactShortcutSelectedInk : Theme.Colors.textSecondary
         )
         .animation(fade(index)) {
-            $0.opacity(revealed ? 1 : 0).blur(radius: revealed ? 0 : BarMotion.glyphBlur)
+            $0.opacity(isRevealed ? 1 : 0).blur(radius: isRevealed ? 0 : BarMotion.glyphBlur)
         }
         // Shrinks with its circle but never travels: glyphs sent home would pile into one blot.
         .animation(travel(index)) {
-            $0.scaleEffect(revealed ? 1 : BarMotion.parkedScale)
+            $0.scaleEffect(isRevealed ? 1 : BarMotion.parkedScale)
         }
         .position(geometry.center(of: index))
         .allowsHitTesting(false)
@@ -151,23 +175,12 @@ struct CompactBar: View {
 
     private func travel(_ index: Int) -> Animation? {
         guard !reduceMotion else { return nil }
-        return BarMotion.button.delay(BarMotion.revealDelay + BarMotion.stagger * Double(index))
+        return .spring(BarMotion.button).delay(CompactBarReveal.buttonDelay(index))
     }
 
     private func fade(_ index: Int) -> Animation? {
         guard !reduceMotion else { return nil }
         return .easeOut(duration: BarMotion.glyphFade)
-            .delay(BarMotion.revealDelay + BarMotion.glyphDelay + BarMotion.stagger * Double(index))
-    }
-
-    /// Out on every summon, and parked only once the window has faded, so leaving fades it whole.
-    private func followVisibility() async {
-        guard !palette.isVisible else {
-            isRevealed = true
-            return
-        }
-        try? await Task.sleep(for: .seconds(Motion.duration(BarMotion.parkAfterHide)))
-        guard !Task.isCancelled else { return }
-        withTransaction(\.disablesAnimations, true) { isRevealed = false }
+            .delay(CompactBarReveal.buttonDelay(index) + BarMotion.glyphDelay)
     }
 }

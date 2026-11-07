@@ -95,7 +95,7 @@ enum Theme {
         /// Room above the search row, constant so typing never shifts the bar.
         static let headerPadding: CGFloat = 10
         static let compactHeight: CGFloat = headerHeight + headerPadding * 2
-        /// Native glass contours and interaction effects draw outside their layout bounds.
+        /// The compact glass extends this far past the window edge, for a button's spring overshoot.
         static let paletteGlassOutset: CGFloat = 4
         /// How close a dragged palette must be to the invisible vertical centre line.
         static let paletteSnapDistance: CGFloat = 8
@@ -336,8 +336,6 @@ enum Theme {
     }
 
     enum CompactBarMotion {
-        /// Under the 10pt gap, so resting buttons stand apart and only moving ones fuse.
-        static let blend: CGFloat = 8
         /// Parked inside the capsule's end this small, so each button pinches out of it.
         static let parkedScale: CGFloat = 0.36
         /// One button after another, beaded off the capsule.
@@ -351,9 +349,9 @@ enum Theme {
         /// Past the window's own close animation, so parking the buttons is never seen.
         static let parkAfterHide: TimeInterval = 0.3
         /// The capsule undershoots as it shortens, then settles.
-        static let capsule = Animation.spring(response: 0.44, dampingFraction: 0.62)
+        static let capsule = Spring(response: 0.44, dampingRatio: 0.62)
         /// The buttons barely overshoot: the last rests on the window's edge, which would clip it.
-        static let button = Animation.spring(response: 0.44, dampingFraction: 0.86)
+        static let button = Spring(response: 0.44, dampingRatio: 0.86)
     }
 
     enum MenuMotion {
