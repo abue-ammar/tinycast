@@ -132,6 +132,24 @@ function cacheSnapshot(namespace) {
   return boot.caches?.[namespace] ?? {};
 }
 
+// ─── Form values ────────────────────────────────────────────────────
+
+export function storedFormValue(id) {
+  const json = boot.formValues?.[id];
+  if (json === undefined) return undefined;
+  try {
+    return JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+}
+
+export function storeFormValues(values) {
+  if (Object.keys(values).length === 0) return;
+  boot = { ...boot, formValues: { ...boot.formValues, ...values } };
+  hostCall("form", "store", [boot.environment?.commandName ?? "", values]).catch(() => {});
+}
+
 // ─── Preferences & environment ──────────────────────────────────────
 
 export function getPreferenceValues() {

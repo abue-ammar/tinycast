@@ -151,6 +151,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         case "clipboard": return try clipboard(method: method, arguments: arguments)
         case "storage": return try storage(method: method, arguments: arguments)
         case "cache": return try cache(method: method, arguments: arguments)
+        case "form": return try form(method: method, arguments: arguments)
         case "window": return window(method: method, arguments: arguments)
         case "feedback": return try await feedback(method: method, arguments: arguments)
         case "system": return try await system(method: method, arguments: arguments)
@@ -344,6 +345,19 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         default:
             throw ExtensionHostError.unknown("cache.\(method)")
         }
+    }
+
+    // MARK: - Form
+
+    private func form(method: String, arguments: [RenderValue]) throws -> Any? {
+        let (context, name) = try requireContext()
+        guard method == "store" else { throw ExtensionHostError.unknown("form.\(method)") }
+        guard let command = arguments.first?.stringValue, !command.isEmpty,
+            let values = arguments[safe: 1]?.objectValue?.compactMapValues(\.stringValue),
+            !values.isEmpty
+        else { return nil }
+        context.storage.setFormValues(extension: name, command: command, values: values)
+        return nil
     }
 
     // MARK: - Window

@@ -87,15 +87,19 @@ export function NavigationRoot({ initial, onStackChange, controls }) {
 
 const FormContext = createContext(null);
 
-function useFormRegistration(id, value, setValue) {
+function useFormRegistration(id, value, setValue, storeValue) {
   const form = useContext(FormContext);
-  if (form && id) form.fields.set(id, { value, setValue });
+  if (form && id) form.fields.set(id, { value, setValue, storeValue });
   return form;
 }
 
 /// A field's local value, or the controlled `value` prop when the extension supplies one.
-function useFieldValue(props, fallback) {
-  const [local, setLocal] = useState(() => (props.value !== undefined ? props.value : props.defaultValue ?? fallback));
+function useFieldValue(props, fallback, restore) {
+  const [local, setLocal] = useState(() => {
+    if (props.value !== undefined) return props.value;
+    const stored = props.storeValue && props.id ? effects.storedFormValue(props.id) : undefined;
+    return (stored == null ? undefined : restore(stored)) ?? props.defaultValue ?? fallback;
+  });
   const controlled = props.value !== undefined;
   const value = controlled ? props.value : local;
   const setValue = useCallback(
@@ -104,7 +108,7 @@ function useFieldValue(props, fallback) {
     },
     [controlled],
   );
-  useFormRegistration(props.id, value, setLocal);
+  useFormRegistration(props.id, value, setLocal, props.storeValue === true);
   return [value, setValue];
 }
 
@@ -248,7 +252,14 @@ ListItemDetail.Metadata = DetailMetadata;
 
 function Form(props) {
   const fields = useRef(new Map()).current;
-  const context = useMemo(() => ({ fields, values: () => collectValues(fields) }), [fields]);
+  const context = useMemo(
+    () => ({
+      fields,
+      values: () => collectValues(fields),
+      storeValues: () => effects.storeFormValues(storedValues(fields)),
+    }),
+    [fields],
+  );
   return h(
     FormContext.Provider,
     { value: context },
@@ -268,9 +279,18 @@ function collectValues(fields) {
   return values;
 }
 
+function storedValues(fields) {
+  const values = {};
+  for (const [id, field] of fields) {
+    if (field.storeValue && field.value != null) values[id] = JSON.stringify(field.value);
+  }
+  return values;
+}
+
 function makeField(type, fallback) {
+  const restore = type === "Form.DatePicker" ? decodeDate : (value) => value;
   return function Field(props) {
-    const [value, setValue] = useFieldValue(props, fallback);
+    const [value, setValue] = useFieldValue(props, fallback, restore);
     useFieldRef(props.ref, { setValue, initial: props.defaultValue ?? fallback, id: props.id });
     const rest = omit(props, ["children", "ref", "value", "defaultValue", "onChange", "onBlur", "onFocus"]);
     return h(
@@ -453,7 +473,11 @@ Action.SubmitForm = function ActionSubmitForm(props) {
     shortcut: props.shortcut,
     style: props.style,
     autoFocus: props.autoFocus,
-    onAction: () => props.onSubmit?.(form ? form.values() : {}),
+    onAction: () => {
+      if (!form) return props.onSubmit?.({});
+      form.storeValues();
+      return props.onSubmit?.(form.values());
+    },
   });
 };
 

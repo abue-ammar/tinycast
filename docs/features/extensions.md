@@ -308,7 +308,10 @@ screens hold (see [palette.md](palette.md)).
   The feature's own fills live in `ExtensionColors` — never in `Theme`.
 - **Form** — label-left/control-right rows. Field values live in the extension (React owns them); every
   edit dispatches `onTinycastChange` and the resulting re-render is what updates the control, so
-  `defaultValue`, a controlled `value`, and `ref.reset()` all behave. **A form takes the whole
+  `defaultValue`, a controlled `value`, and `ref.reset()` all behave. `Action.SubmitForm` saves each
+  `storeValue` field to `ExtensionStorage.formValues`, keyed by command and field id, and the launch
+  context hands them back so the field starts from the saved value on its first render; a controlled
+  `value` always wins. **A form takes the whole
   keyboard**: its fields _are_ the palette's rows, so the search field is hidden and the header left
   empty. `ExtensionFormField` says what each `Form.*` node is —
   which of them focus lands on, which keys the control keeps, and which need a focus ring drawn — and
