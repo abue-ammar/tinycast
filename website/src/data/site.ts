@@ -10,6 +10,7 @@ export const summary =
 export const site = {
   name: "Tinycast",
   repo: "https://github.com/abue-ammar/tinycast",
+  intelTap: "https://github.com/abue-ammar/homebrew-tinycast",
   url: "https://tinycast.dev",
   // The R2 bucket behind cdn.tinycast.dev. Anything over Workers' 25 MiB
   // per-asset cap lives here instead of `public/` — see website/README.md.
@@ -48,11 +49,9 @@ export const nav = [
   { label: "Changelog", href: "/changelog" },
 ] as const;
 
-// The hero's two lines. Every other channel lives in docs/install.md, which is
+// The hero's line. Every other channel lives in docs/install.md, which is
 // where both install CTAs point.
-export const brewTrustCommand = "brew trust --tap abue-ammar/tinycast";
-export const brewInstallCommand =
-  "brew install --cask abue-ammar/tinycast/tinycast";
+export const brewInstallCommand = "brew install --cask tinycast";
 
 // The logo wall under the hero, in render order. The track starts at the first
 // entry with the left edge under the mask, so the two least-known names lead

@@ -1,5 +1,5 @@
-import { ArrowRight, Download } from "lucide-react";
-import { brewInstallCommand, brewTrustCommand, hero, site } from "../data/site";
+import { ArrowRight, ArrowUpRight, Download } from "lucide-react";
+import { brewInstallCommand, hero, site } from "../data/site";
 import { latestVersion } from "../lib/version";
 import { Badges } from "./badges";
 import { HeroPalette } from "./hero-palette";
@@ -33,7 +33,7 @@ export async function Hero() {
               aria-hidden="true"
               className="size-1.5 rounded-full bg-violet"
             />
-            {version} · {site.platform} · Apple silicon &amp; Intel
+            {version} · {site.platform} · Apple silicon
           </p>
 
           <h1
@@ -68,8 +68,16 @@ export async function Hero() {
             className="blur-in mt-8 max-w-xl space-y-2"
             style={{ animationDelay: "180ms" }}
           >
-            <CommandLine command={brewTrustCommand} />
             <CommandLine command={brewInstallCommand} />
+            <a
+              href={site.intelTap}
+              target="_blank"
+              rel="noreferrer"
+              className="flex w-fit items-center gap-1 pl-1 text-small text-fg-subtle transition-colors hover:text-fg"
+            >
+              Intel Mac? Install from our Homebrew tap
+              <ArrowUpRight size={13} aria-hidden="true" />
+            </a>
           </div>
 
           <div

@@ -6,23 +6,23 @@ and no appcast: the release feed the website already reads is the feed the app r
 
 ## Invariants
 
-- **Tinycast installs its own updates, and Homebrew stays out of the way.** Both casks declare
+- **Tinycast installs its own updates, and Homebrew stays out of the way.** Every cask declares
   `auto_updates true`, which is Homebrew's own flag for an app that manages its own version. `brew
-  update && brew upgrade` therefore skips Tinycast entirely — it is never reported outdated, never
+update && brew upgrade` therefore skips Tinycast entirely — it is never reported outdated, never
   re-downloaded, and a self-updated copy is never trashed or rolled back. `brew install`, `brew
-  uninstall` and `brew list` keep working unchanged.
+uninstall` and `brew list` keep working unchanged.
 - **The archive is a zip, never the DMG.** A zip expands with `ditto`; a DMG would have to be mounted,
   which means a volume, a Spotlight handle and a detach that can fail. A release published without a
   zip is not installable and is not offered.
 - **The zip is chosen by architecture.** A stable release carries a thin arm64 zip and a
-  `-Universal-` one. Intel takes the universal zip and is offered *nothing* if it is missing, since a
+  `-Universal-` one. Intel takes the universal zip and is offered _nothing_ if it is missing, since a
   thin build would install and then refuse to launch; Apple silicon prefers the thin zip and falls
   back to universal.
 - **A downloaded update is never quarantined.** macOS sets that flag for sandboxed downloaders and
   for apps that opt in with `LSFileQuarantineEnabled`, and Tinycast is neither. `Quarantine` checks
   anyway, and an app that still carries the flag is refused rather than installed.
 - **Two independent trust roots, either of which may change alone.** A downloaded bundle is trusted
-  when its seal passes strict validation, nested helpers included, *and* either its zip carries a
+  when its seal passes strict validation, nested helpers included, _and_ either its zip carries a
   valid Ed25519 signature from the release key in `TinycastUpdatePublicKey` and the bundle is
   Developer ID signed by any team, or it satisfies the running copy's own designated requirement.
   Nothing is pinned: a new Apple team still updates through the key, and a new key through an
@@ -62,13 +62,13 @@ and no appcast: the release feed the website already reads is the feed the app r
 
 ## The pill
 
-| Stage | Shows | Button | × |
-| --- | --- | --- | --- |
-| `available` | the version | Update | hides it until the next launch |
-| `installing` | a ring and percent for the download, then a spinner and the phase | none | cancels |
-| `readyToRelaunch` | Update ready | Relaunch | hides it; the update still installs at quit |
-| `failed` | Update failed | Details | hides it |
-| `idle`, `checking` | nothing | | |
+| Stage              | Shows                                                             | Button   | ×                                           |
+| ------------------ | ----------------------------------------------------------------- | -------- | ------------------------------------------- |
+| `available`        | the version                                                       | Update   | hides it until the next launch              |
+| `installing`       | a ring and percent for the download, then a spinner and the phase | none     | cancels                                     |
+| `readyToRelaunch`  | Update ready                                                      | Relaunch | hides it; the update still installs at quit |
+| `failed`           | Update failed                                                     | Details  | hides it                                    |
+| `idle`, `checking` | nothing                                                           |          |                                             |
 
 A pill cannot hold a failure's text, so Details opens a dialog with the reason and Try Again.
 
@@ -80,18 +80,18 @@ the header row. It cannot reuse `ExtensionToastPill`, because extension views st
 
 `ReleaseChannel` is derived from the bundle id, and nothing else:
 
-| Bundle id | Channel | Takes |
-| --- | --- | --- |
-| `com.tinycast.app` | `.stable` | releases |
-| `com.tinycast.app.beta` | `.beta` | prereleases |
-| anything else | `.development` | nothing |
+| Bundle id               | Channel        | Takes       |
+| ----------------------- | -------------- | ----------- |
+| `com.tinycast.app`      | `.stable`      | releases    |
+| `com.tinycast.app.beta` | `.beta`        | prereleases |
+| anything else           | `.development` | nothing     |
 
 `AppVersion` parses `MAJOR.MINOR.PATCH` and `MAJOR.MINOR.PATCH-beta.N` with semver precedence: a
 prerelease sorts below the release it leads to, and `beta.10` above `beta.9`. Everything else parses
 to nil, so an off-shape tag can never be offered as an update. A release whose tag disagrees with
 its `prerelease` flag is treated as mis-published and skipped.
 
-The Intel build is *not* a channel. It shares the stable tag, version, bundle id and signature, so it
+The Intel build is _not_ a channel. It shares the stable tag, version, bundle id and signature, so it
 resolves to `.stable` like any other; `ReleaseArchitecture` picks its asset, and nothing about
 identity changes.
 
@@ -170,6 +170,6 @@ then `<!-- tinycast:install -->`, then the install text. The app does not read t
 release wants the website's changelog to show has to go above that marker — see
 [release.md](../release.md#release-notes).
 
-**The casks must declare `auto_updates true`** in `abue-ammar/homebrew-tinycast`. Without it Homebrew
+**Every cask must declare `auto_updates true`**, in homebrew/cask and in the tap. Without it Homebrew
 compares its Caskroom receipt against the cask version, sees a self-updated app as outdated forever,
 and re-installs over it on the next `brew upgrade`.

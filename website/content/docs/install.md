@@ -3,51 +3,32 @@ title: Install
 description: Homebrew, release channels, direct downloads, and updates.
 ---
 
-Tinycast needs **macOS 26 or later**, on Apple silicon or Intel.
+Tinycast needs an Apple silicon Mac with **macOS 26 or later**.
 
 ## Homebrew
 
 Homebrew is the easiest way to install Tinycast.
 
 ```bash
-brew trust --tap abue-ammar/tinycast
-brew install --cask abue-ammar/tinycast/tinycast
+brew install --cask tinycast
 ```
-
-You only run `brew trust` once. Homebrew won't install from a third-party tap until you trust it.
-
-### Intel Macs
-
-macOS 26 Tahoe is the last release that runs on Intel, so the stable build comes in two versions. The
-command above installs a smaller build for Apple silicon only. On an Intel Mac, install the universal
-cask instead:
-
-```bash
-brew install --cask abue-ammar/tinycast/tinycast-universal
-```
-
-If you pick the wrong one, Homebrew stops you: `tinycast` won't install on an Intel Mac. Both casks
-give you the same `Tinycast.app`. The universal build also runs on Apple silicon; it's just a larger
-download.
 
 ### Channels
 
 Each channel is a **separate app** with its own settings, permissions and login item. They can run
 side by side, so you can keep the stable version and try a beta at the same time.
 
-| Channel | Cask                 | App                 |
-| ------- | -------------------- | ------------------- |
-| Stable  | `tinycast`           | `Tinycast.app`      |
-| Stable  | `tinycast-universal` | `Tinycast.app`      |
-| Beta    | `tinycast@beta`      | `Tinycast Beta.app` |
+| Channel | Cask            | App                 |
+| ------- | --------------- | ------------------- |
+| Stable  | `tinycast`      | `Tinycast.app`      |
+| Beta    | `tinycast@beta` | `Tinycast Beta.app` |
 
 ```bash
-brew install --cask abue-ammar/tinycast/tinycast@beta
+brew install --cask tinycast@beta
 ```
 
 The beta doesn't share settings with the stable version. To move your setup over, use
-[Backup](/docs/reference/backup). The two stable casks install the _same_ app, so only one of them
-can be installed at a time.
+[Backup](/docs/reference/backup).
 
 ## Downloading directly
 
@@ -75,20 +56,17 @@ after an update.
 ## Uninstalling
 
 ```bash
-brew uninstall --cask abue-ammar/tinycast/tinycast
+brew uninstall --cask tinycast
 ```
 
-To remove the files Tinycast created, delete its Application Support and Caches folders, and its
-settings:
+To also remove the files Tinycast created, add `--zap`:
 
 ```bash
-rm -rf ~/Library/Application\ Support/com.tinycast.app
-rm -rf ~/Library/Caches/com.tinycast.app
-defaults delete com.tinycast.app
+brew uninstall --zap --cask tinycast
 ```
 
-The Application Support folder holds your snippets, notes, quicklinks, clipboard history and AI
-chats, so copy out anything you want to keep first. The beta uses `com.tinycast.app.beta` instead.
+That deletes your snippets, notes, quicklinks, clipboard history and AI chats too, so copy out
+anything you want to keep first. For the beta, use `tinycast@beta`.
 
 API keys you saved for AI providers or MCP servers, and extension sign-ins, are stored in your login
 Keychain. Remove them in Keychain Access if you want them gone too.

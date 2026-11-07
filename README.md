@@ -70,25 +70,15 @@ For anything private, email [iabueammar@gmail.com](mailto:iabueammar@gmail.com).
 
 ## Install
 
-First, add the tap:
+On an Apple silicon Mac with macOS 26 or newer:
 
 ```sh
-brew trust --tap abue-ammar/tinycast   # required for third-party taps
-brew tap abue-ammar/tinycast
+brew install --cask tinycast
 ```
 
-Then run the one line that matches your Mac:
-
-| Your Mac                         | Install                                  |
-| -------------------------------- | ---------------------------------------- |
-| Apple silicon, macOS 26 or newer | `brew install --cask tinycast`           |
-| Intel, macOS 26                  | `brew install --cask tinycast-universal` |
-
-Not sure which Mac you have? **Apple menu → About This Mac.**
-
 - **Early builds:** `brew install --cask tinycast@beta` installs `Tinycast Beta.app` beside the stable app.
-- **DMG from [Releases](https://github.com/abue-ammar/tinycast/releases)?** Drag Tinycast to
-  Applications. It's notarized by Apple, so it opens without a warning.
+- **DMG:** notarized, download from [Releases](https://github.com/abue-ammar/tinycast/releases). Drag `Tinycast.app` to `/Applications`.
+- **Intel Mac:** install from [our Homebrew tap](https://github.com/abue-ammar/homebrew-tinycast).
 
 ## Building from source
 

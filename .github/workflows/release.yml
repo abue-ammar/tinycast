@@ -177,39 +177,6 @@ jobs:
             --notes-file "$RUNNER_TEMP/notes.md" \
             $PRERELEASE_FLAG
 
-      # Stable is in homebrew/cask, where Homebrew's autobump bot bumps it.
-      - name: Update Homebrew cask
-        if: github.event.inputs.channel == 'beta'
-        env:
-          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-          CASK: ${{ steps.meta.outputs.cask_name }}
-          VERSION: ${{ steps.meta.outputs.full_version }}
-          DMG_FILE: ${{ steps.meta.outputs.dmg_file }}
-        run: |
-          if [ -z "${TAP_TOKEN}" ]; then
-            echo "::warning::HOMEBREW_TAP_TOKEN secret not set — skipping cask bump. Add it to enable auto-updates of the tap."
-            exit 0
-          fi
-          SHA="$(shasum -a 256 "dist/${DMG_FILE}" | awk '{print $1}')"
-          git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/abue-ammar/homebrew-tinycast.git" tap
-          CASK_FILE="tap/Casks/${CASK}.rb"
-          if [ ! -f "$CASK_FILE" ]; then
-            echo "::error::$CASK_FILE not found in tap."
-            exit 1
-          fi
-          sed -i '' -E "s|^  version \".*\"|  version \"${VERSION}\"|" "$CASK_FILE"
-          sed -i '' -E "s|^  sha256 \".*\"|  sha256 \"${SHA}\"|" "$CASK_FILE"
-          cd tap
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "Casks/${CASK}.rb"
-          if git diff --cached --quiet; then
-            echo "No cask changes to commit."
-          else
-            git commit -m "${CASK} ${VERSION}"
-            git push
-          fi
-
       # A dispatch is the one event GITHUB_TOKEN may start another workflow with.
       - name: Rebuild the website
         if: github.event.inputs.channel == 'stable'
@@ -233,7 +200,7 @@ jobs:
           fi
           if [ "${CHANNEL}" = "stable" ]; then COLOR=3066993; else COLOR=15844367; fi
           RELEASE_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
-          INSTALL="brew install --cask abue-ammar/tinycast/${CASK}"
+          INSTALL="brew install --cask ${CASK}"
           # jq keeps backticks literal; Components V2 forbids top-level `content`, hence @everyone.
           jq -n \
             --argjson color "${COLOR}" \
