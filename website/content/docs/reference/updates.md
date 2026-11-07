@@ -41,9 +41,6 @@ Each version is offered at most once per launch.
 The stable version only updates to stable releases, and the beta only to beta releases. They're
 separate apps, and an update never switches you from one to the other.
 
-On an Intel Mac, Tinycast only installs the universal build. If a release doesn't include one,
-Tinycast doesn't offer it, so it never installs a build that won't open.
-
 ## Safety checks
 
 Nothing is installed unless every check passes. If any check fails, the app you're running stays
