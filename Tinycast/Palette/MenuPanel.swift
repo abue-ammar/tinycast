@@ -67,21 +67,18 @@ final class MenuPanelController {
     private var panel: MenuPanel?
     private var hosting: NSHostingView<AnyView>?
     private weak var parent: NSWindow?
-    private var clipPath: MenuPanelClipPath?
     private var placement: Placement?
 
     var isOpen: Bool { panel?.isVisible ?? false }
 
     func show(
         _ content: AnyView, corner: MenuPanelCorner, parent: NSWindow, core: AppCore,
-        clipPath: @escaping MenuPanelClipPath,
         onKeyDown: @escaping (NSEvent) -> Bool, onDismiss: @escaping () -> Void
     ) {
         let panel = ensurePanel(state: core.palette)
         configureCallbacks(
             for: panel, core: core, onKeyDown: onKeyDown, onDismiss: onDismiss)
-        let root = AnyView(content.paletteEnvironment(core))
-        setContent(root, clipPath: clipPath, in: panel)
+        setContent(AnyView(content.paletteEnvironment(core)), in: panel)
         self.parent = parent
         (parent as? PalettePanel)?.onDismissMenu = onDismiss
         // Open disarmed: a menu opened by click lands under the pointer, which chose no row of it.
@@ -95,31 +92,21 @@ final class MenuPanelController {
     }
 
     /// Rebuilds the hosted tree in place: the panel keeps its window, so nothing flickers.
-    func update(
-        _ content: AnyView, corner: MenuPanelCorner, core: AppCore,
-        clipPath: @escaping MenuPanelClipPath
-    ) {
+    func update(_ content: AnyView, corner: MenuPanelCorner, core: AppCore) {
         guard let panel, panel.isVisible, let parent else { return }
-        setContent(
-            AnyView(content.paletteEnvironment(core)),
-            clipPath: clipPath, in: panel)
+        setContent(AnyView(content.paletteEnvironment(core)), in: panel)
         layout(
             corner: corner, parent: parent, metrics: core.settings.interfaceSize.metrics,
             force: false)
     }
 
-    private func setContent(
-        _ root: AnyView, clipPath: @escaping MenuPanelClipPath, in panel: MenuPanel
-    ) {
-        self.clipPath = clipPath
+    private func setContent(_ root: AnyView, in panel: MenuPanel) {
         if let hosting {
             hosting.rootView = root
             return
         }
         let view = NSHostingView(rootView: root)
         view.sizingOptions = [.intrinsicContentSize]
-        view.wantsLayer = true
-        view.layer?.allowsEdgeAntialiasing = true
         let container = NSView(frame: .zero)
         container.addSubview(view)
         panel.contentView = container
@@ -192,22 +179,7 @@ final class MenuPanelController {
         guard force || next != placement else { return }
         placement = next
         panel.setFrame(frame, display: true)
-        configureHosting(contentSize: size, corner: corner, metrics: metrics)
+        hosting.frame = NSRect(origin: .zero, size: size)
         refreshShadow(panel)
-    }
-
-    private func configureHosting(
-        contentSize: NSSize, corner: MenuPanelCorner, metrics: InterfaceMetrics
-    ) {
-        guard let hosting, let layer = hosting.layer, let clipPath else { return }
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        hosting.frame = NSRect(origin: .zero, size: contentSize)
-        let mask = (layer.mask as? CAShapeLayer) ?? CAShapeLayer()
-        mask.frame = NSRect(origin: .zero, size: contentSize)
-        mask.isGeometryFlipped = layer.isGeometryFlipped
-        mask.path = clipPath(mask.bounds, metrics, corner)
-        layer.mask = mask
-        CATransaction.commit()
     }
 }

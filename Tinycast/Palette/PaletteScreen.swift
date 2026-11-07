@@ -5,16 +5,10 @@ enum PaletteAxis {
     case horizontal
 }
 
-typealias MenuPanelClipPath =
-    @MainActor (
-        _ bounds: CGRect, _ metrics: InterfaceMetrics, _ corner: MenuPanelCorner
-    ) -> CGPath
-
 @MainActor struct PaletteMenuContent {
     let rowCount: Int
     let preferredSelection: Int?
     let isSelectable: (Int) -> Bool
-    let clipPath: MenuPanelClipPath
     /// Built on demand: `moveMenu` resolves the open menu on every arrow key.
     let view: (MenuPanelCorner) -> AnyView
     /// Bounds-checked by the caller against `rowCount`, so a row index is always one this menu has.
@@ -24,15 +18,13 @@ typealias MenuPanelClipPath =
         rowCount: Int, preferredSelection: Int? = nil,
         view: @escaping (MenuPanelCorner) -> AnyView,
         activate: @escaping (Int) -> Void,
-        isSelectable: @escaping (Int) -> Bool = { _ in true },
-        clipPath: @escaping MenuPanelClipPath
+        isSelectable: @escaping (Int) -> Bool = { _ in true }
     ) {
         self.rowCount = rowCount
         self.preferredSelection = preferredSelection
         self.view = view
         self.activate = activate
         self.isSelectable = isSelectable
-        self.clipPath = clipPath
     }
 
     init(
@@ -52,13 +44,7 @@ typealias MenuPanelClipPath =
                         extraRowsHeight: extraRowsHeight))
             },
             activate: { popover.items[$0].action() },
-            isSelectable: { popover.items[$0].isSelectable },
-            clipPath: { bounds, metrics, corner in
-                PopoverMenu.SurfaceShape(
-                    attachment: corner.popoverAttachment, radius: metrics.radius.menuPanel,
-                    attachedRadius: metrics.size.menuButton / 2
-                ).path(in: bounds).cgPath
-            })
+            isSelectable: { popover.items[$0].isSelectable })
     }
 }
 

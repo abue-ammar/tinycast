@@ -21,6 +21,7 @@ struct ExtensionPickerList: View {
     /// Moves the highlight under the pointer, so mouse and keyboard share one selection.
     let onHighlight: (Int) -> Void
     var body: some View {
+        let shape = RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
         VStack(alignment: .leading, spacing: 0) {
             if let searchPlaceholder {
                 ExtensionMenuSearchField(
@@ -36,9 +37,8 @@ struct ExtensionPickerList: View {
                 .padding(searchPlaceholder == nil ? metrics.spacing.sm : 0)
         }
         .frame(width: width ?? form.controlWidth)
-        .glassEffect(
-            .regular, in: RoundedRectangle(cornerRadius: metrics.radius.menuPanel, style: .continuous)
-        )
+        .glassEffect(.regular, in: shape)
+        .clipShape(shape)
     }
 
     @ViewBuilder

@@ -91,6 +91,7 @@ struct ExtensionActionsPanel: View {
         }
         .frame(width: panel.width)
         .glassEffect(.regular, in: shape)
+        .clipShape(shape)
     }
 
     @ViewBuilder
