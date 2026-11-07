@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The volume box: glyph, bar, number, on the palette's surface recipe rather than glass.
 struct VolumeHUDView: View {
     let state: VolumeState
 

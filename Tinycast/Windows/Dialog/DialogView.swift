@@ -60,7 +60,6 @@ struct DialogView: View {
         .padding(metrics.spacing.dialogInset)
         .frame(width: width, alignment: .leading)
         .background(Theme.Colors.panelScrim, in: shape)
-        // Behind the scrim rather than wrapping it, so the scrim dims the glass's rim too.
         .background { Color.clear.glassEffect(.regular, in: shape) }
     }
 

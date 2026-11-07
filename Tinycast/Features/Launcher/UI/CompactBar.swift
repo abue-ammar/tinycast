@@ -101,7 +101,7 @@ struct CompactBar: View {
         .animation(travel(index), value: revealed)
     }
 
-    /// The panel's scrim on the capsule and buttons; the selected one keeps its tint undimmed.
+    /// The selected button stays out of the mask, so its tint reads undimmed.
     private func scrim(geometry: CompactBarGeometry, revealed: Bool) -> some View {
         Theme.Colors.panelScrim
             .mask {

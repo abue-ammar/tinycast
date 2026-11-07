@@ -100,7 +100,6 @@ final class MenuPanelController {
             force: false)
     }
 
-    /// The content clips itself to its glass, and the system shadow traces that outline.
     private func setContent(_ root: AnyView, in panel: MenuPanel) {
         if let hosting {
             hosting.rootView = root
