@@ -342,11 +342,14 @@ struct RootPaletteView: View {
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Identity rather than removed, so expanding never rebuilds the tree it sits on.
-                .glassEffect(
-                    isCollapsed ? .identity : .regular,
-                    in: RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
-                )
+                // Compact, the bar's own glass shapes are the surface and the window is bare.
+                .background(isCollapsed ? .clear : Theme.Colors.panelScrim)
+                // Behind the scrim, so it dims the rim too; identity, not removed, while compact.
+                .background {
+                    Color.clear.glassEffect(
+                        isCollapsed ? .identity : .regular,
+                        in: RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))
+                }
                 .overlay {
                     Theme.Colors.dialogDimming
                         .opacity(core.isDimmingPaletteForDialog && !isCollapsed ? 1 : 0)

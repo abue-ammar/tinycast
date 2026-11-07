@@ -1,5 +1,6 @@
 import SwiftUI
 
+/// The volume box: glyph, bar, number, on the palette's surface recipe rather than glass.
 struct VolumeHUDView: View {
     let state: VolumeState
 
@@ -36,6 +37,7 @@ struct VolumeHUDView: View {
         .padding(.vertical, Theme.Spacing.xxl)
         .padding(.horizontal, Theme.Spacing.xl)
         .frame(width: Theme.Size.hudWidth, height: Theme.Size.hudHeight)
+        .background(Theme.Colors.panelScrim)
         .background(GlassEffectView())
         .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
         .panelEntrance()

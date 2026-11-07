@@ -273,8 +273,9 @@ Mouse and keyboard activation synchronously call `LauncherCoordinator.runCommand
 with animations disabled. No merge animation or delayed activation survives beneath the destination
 screen. Palette screens push over root search as before; Show Notes closes the palette and opens
 its existing window. The summon reveal still animates independently.
-Both compact and expanded surfaces use native regular glass without a custom scrim.
-The compact capsule and buttons have no additional surface mask or painted fill.
+The compact bar lays `panelScrim` over its capsule and buttons through a mask that follows the
+reveal, as the expanded panel lays it over its glass; the selected button stays out of the mask so
+its tint reads undimmed.
 
 At expanded launcher root, Escape clears the query while setting `forceExpanded`, so clearing and
 collapsing remain separate presses. The next Escape clears that flag and collapses; another closes.
