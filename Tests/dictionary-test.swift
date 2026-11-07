@@ -47,6 +47,46 @@ struct DictionaryEntryTests {
         </d:entry></body></html>
         """
 
+    /// Trimmed from the Oxford Chinese record for `good`: the bilingual schema every Oxford pair shares.
+    static let bilingual = """
+        <d:entry xmlns:d="x" id="e_20131" d:title="good" class="entry"><span class="hwg">\
+        <span d:dhw="1" role="text" class="hw">good<span class="gp tg_hw"> </span></span>\
+        <span dialect="BrE" class="prx"><span class="gp tg_prx"> | </span><span class="gp tg_prx">BrE \
+        </span><span class="ph">ɡʊd</span><span class="gp tg_prx">, </span></span>\
+        <span dialect="AmE" class="prx"><span class="gp tg_prx">AmE </span><span class="ph">ɡʊd</span>\
+        <span class="gp tg_prx"> | </span></span><span class="gp tg_hwg"> </span></span>\
+        <span class="gramb hasSn"><span class="gp ty_label tg_gramb">A.</span>\
+        <span class="gp tg_gramb"> </span><span class="ps">adjective</span><span class="frmg">\
+        <span class="gp tg_frmg">(</span><span class="gr">comparative form </span>\
+        <span class="frm">better</span><span class="gp tg_frmg">) </span></span>\
+        <span class="semb hasSn"><span class="gp ty_label tg_semb">①</span><span class="gp tg_semb"> </span>\
+        <span class="ind"><span class="gp tg_ind">(</span>enjoyable<span class="gp tg_ind">)</span></span>\
+        <span class="trg"><span class="trans">好的 </span><span class="trans ty_pinyin">hǎo de </span>\
+        <span class="co"><span class="gp tg_co">‹</span>book<span class="gp tg_co">›</span></span></span>\
+        <span class="exg"><span class="ex">a good joke</span><span class="trg"><span class="trans">有趣的笑话 \
+        </span></span></span><span class="xrg"> <span class="gp tg_xrg">→ </span>\
+        <span class="xr">riddance</span> </span></span></span></d:entry>
+        """
+
+    /// Trimmed from the Oxford Spanish record for `casa`: a sense nested before any text of its own.
+    static let nestedSenses = """
+        <d:entry xmlns:d="x" class="entry"><span class="gramb"><span class="ps"> f  </span>\
+        <span class="semb hasSn"><span class="gp ty_label tg_semb">1 </span>\
+        <span class="semb hasSn"><span class="gp ty_label tg_semb">a </span><span class="trg">\
+        <span class="ind"><span class="gp tg_ind">(</span>vivienda<span class="gp tg_ind">) </span></span>\
+        <span class="trans">house </span></span></span><span class="semb hasSn">\
+        <span class="gp ty_label tg_semb">b </span><span class="trg"><span class="trans">home</span>\
+        </span></span></span></span></d:entry>
+        """
+
+    /// Trimmed from the Korean record for `사랑`, whose spans abut and lead with their separator.
+    static let abutting = """
+        <d:entry xmlns:d="x" class="entry"><span class="gramb"><span class="semb">\
+        <span class="trg"><span class="trans">love</span></span><span class="trg"><span class="gp">; </span>\
+        <span class="trans">affection</span></span><span class="exg"><span class="ex">사랑의 신</span>\
+        <span class="trg"><span class="trans">the god of love</span></span></span></span></span></d:entry>
+        """
+
     static func main() {
         let blocks = DictionaryMarkup.blocks(fromXHTML: mango)
         let expected: [Block] = [
@@ -88,6 +128,49 @@ struct DictionaryEntryTests {
         expect(
             homograph, [.headword("light", homograph: "1", pronunciation: "līt, lite")],
             "a homograph number and every pronunciation stay on the headword")
+
+        expect(
+            DictionaryMarkup.blocks(fromXHTML: bilingual),
+            [
+                .headword("good", homograph: nil, pronunciation: "BrE ɡʊd, AmE ɡʊd"),
+                .partOfSpeech([
+                    Run(text: "A. ", style: .plain), Run(text: "adjective", style: .label),
+                    Run(text: " (", style: .plain), Run(text: "comparative form ", style: .label),
+                    Run(text: "better", style: .strong), Run(text: ")", style: .plain)
+                ]),
+                .sense(
+                    number: "①",
+                    [
+                        Run(text: "(enjoyable)", style: .label), Run(text: " 好的 ", style: .plain),
+                        Run(text: "hǎo de ‹book›", style: .label)
+                    ]),
+                .paragraph([
+                    Run(text: "a good joke", style: .example), Run(text: " 有趣的笑话", style: .plain)
+                ]),
+                .paragraph([Run(text: "→ riddance", style: .plain)])
+            ],
+            "a bilingual entry splits into headword, part of speech, sense and one line per example")
+
+        expect(
+            DictionaryMarkup.blocks(fromXHTML: nestedSenses),
+            [
+                .partOfSpeech([Run(text: "f", style: .label)]),
+                .sense(
+                    number: "1 a",
+                    [Run(text: "(vivienda) ", style: .label), Run(text: "house", style: .plain)]),
+                .sense(number: "b", [Run(text: "home", style: .plain)])
+            ],
+            "a nested sense shares its parent's number until its parent has text")
+
+        expect(
+            DictionaryMarkup.blocks(fromXHTML: abutting),
+            [
+                .paragraph([Run(text: "love; affection", style: .plain)]),
+                .paragraph([
+                    Run(text: "사랑의 신", style: .example), Run(text: " the god of love", style: .plain)
+                ])
+            ],
+            "abutting spans get a word break, never one ahead of punctuation")
 
         let plain = DictionaryEntry(
             term: "hello",

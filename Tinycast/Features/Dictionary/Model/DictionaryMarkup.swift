@@ -32,29 +32,50 @@ private final class Reader: NSObject, XMLParserDelegate {
 
     /// Elements that end an auto-opened paragraph: the etymology, a sub-entry, a sense group.
     private static let containers: Set<String> = [
-        "entry", "sg", "se1", "se2", "etym", "subEntry", "subEntryBlock"
+        "entry", "sg", "se1", "se2", "etym", "subEntry", "subEntryBlock",
+        "semb", "idmsec", "pvsec", "csec", "drvsec"
     ]
 
-    /// The `| … |` a pronunciation is printed between.
-    private static let pronunciationFrame = CharacterSet.whitespaces.union(["|"])
+    private static let blocks: Set<String> = [
+        "posg", "gramb", "msDict", "note", "box", "cn", "exg", "x_xoh", "idm", "pvg", "cwg", "drvg"
+    ]
+
+    private static let sectionLabels: Set<String> = ["tg_idmb", "tg_pvb", "tg_cb"]
+
+    /// Spans the stylesheet sets apart by margin alone, so their text abuts its neighbour's.
+    private static let spacedBefore: Set<String> = [
+        "trg", "ind", "frmg", "ps", "u", "xrg", "xrlabelGroup"
+    ]
+
+    private static let unspacedBefore: Set<Character> = [
+        ",", ".", ";", ":", "!", "?", ")", "]", "、", "，", "。", "；", "：", "！", "？", "）", "】", "〕"
+    ]
+
+    /// The `| … |` or `/ … /` a pronunciation is printed between.
+    private static let pronunciationFrame = CharacterSet.whitespaces.union(["|", "/"])
 
     private static let styles: [String: Style] = [
         "eg": .example, "ex": .example,
         "gg": .label, "lg": .label, "reg": .label, "ge": .label, "sy": .label, "pos": .label,
-        "inf": .strong, "f": .strong, "v": .strong, "l": .strong, "bold": .strong,
-        "ff": .italic, "tx": .italic
+        "ps": .label, "ind": .label, "co": .label, "lev": .label, "fld": .label, "gr": .label,
+        "cnt": .label, "usage": .label, "oup_label": .label, "ty_pinyin": .label,
+        "inf": .strong, "f": .strong, "v": .strong, "l": .strong, "bold": .strong, "frm": .strong,
+        "idm": .strong, "pv": .strong, "cw": .strong, "drv": .strong,
+        "ff": .italic, "tx": .italic, "italic": .italic
     ]
 
     private(set) var blocks: [DictionaryEntry.Block] = []
     private var stack: [Frame] = []
     private var open: (kind: Kind, runs: [Run], depth: Int)?
 
+    private var headwordPending = false
     private var headword = ""
     private var syllables = ""
     private var homograph = ""
     private var pronunciation: String?
     private var sectionLabel = ""
     private var senseNumber: String?
+    private var wordBreakDue = false
 
     func parser(
         _ parser: XMLParser, didStartElement name: String, namespaceURI: String?,
@@ -63,19 +84,25 @@ private final class Reader: NSObject, XMLParserDelegate {
         let classes = Set((attributes["class"] ?? "").split(separator: " ").map(String.init))
         let role = role(for: classes)
         let style = classes.lazy.compactMap { Self.styles[$0] }.first
+        if !classes.isDisjoint(with: Self.spacedBefore) { wordBreakDue = true }
         switch role {
         case .headGroup:
+            headwordPending = true
             headword = ""
             syllables = ""
             homograph = ""
             pronunciation = nil
         case .senseNumber:
-            senseNumber = ""
+            close()
+            // A sense nested before any text of its parent's shares its line: `1 a`.
+            senseNumber = senseNumber.map { $0 + " " } ?? ""
         case .sectionLabel:
             close()
             sectionLabel = ""
         case .block:
             openBlock(kind(for: classes))
+        case .container:
+            if case .partOfSpeech = open?.kind { close() }
         default:
             break
         }
@@ -89,13 +116,8 @@ private final class Reader: NSObject, XMLParserDelegate {
         guard let frame = stack.popLast() else { return }
         switch frame.role {
         case .headGroup:
+            emitHeadword()
             close()
-            let word = syllables.isEmpty ? headword : syllables
-            blocks.append(
-                .headword(
-                    word.collapsingWhitespace, homograph: homograph.collapsingWhitespace.nilIfEmpty,
-                    pronunciation: pronunciation?.trimmingCharacters(in: Self.pronunciationFrame)
-                        .nilIfEmpty))
         case .senseNumber:
             senseNumber = senseNumber?.collapsingWhitespace.nilIfEmpty
         case .sectionLabel:
@@ -115,9 +137,13 @@ private final class Reader: NSObject, XMLParserDelegate {
         case .syllables: syllables += string
         case .homograph: homograph += string
         case .pronunciation: pronunciation = (pronunciation ?? "") + string
-        case .senseNumber: senseNumber? += string.filter(\.isNumber)
+        case .senseNumber: senseNumber? += string.filter { $0.isNumber || $0.isLetter || $0 == " " }
         case .sectionLabel: sectionLabel += string
-        case .headGroup, .ignored: break
+        case .ignored: break
+        case .headGroup:
+            // A usage note or cross-reference in the head group follows the headword it qualifies.
+            if !string.allSatisfy(\.isWhitespace) { emitHeadword() }
+            append(string)
         default: append(string)
         }
     }
@@ -125,27 +151,50 @@ private final class Reader: NSObject, XMLParserDelegate {
     private func role(for classes: Set<String>) -> Role {
         if stack.contains(where: { $0.role == .headGroup }) {
             if classes.contains("ty_hom") { return .homograph }
-            if classes.contains("hw") { return .headword }
+            if !classes.isDisjoint(with: ["hw", "hvg"]) { return .headword }
             if classes.contains("syl_txt") { return .syllables }
-            if !classes.isDisjoint(with: ["prx", "pr"]), pronunciation == nil { return .pronunciation }
+            if !classes.isDisjoint(with: ["prx", "pr"]) { return .pronunciation }
             return .none
         }
-        if classes.contains("hg") { return .headGroup }
+        if !classes.isDisjoint(with: ["hg", "hwg"]) { return .headGroup }
         if classes.contains("x_xoLblBlk") { return .sectionLabel }
+        if classes.contains("ty_label"), !classes.isDisjoint(with: Self.sectionLabels) {
+            return .sectionLabel
+        }
         // A sense's `sn` is its number; a sub-sense's is the `•` its block already implies.
-        if classes.contains("sn") { return classes.contains("tg_se2") ? .senseNumber : .ignored }
-        if !classes.isDisjoint(with: ["posg", "msDict", "note", "x_xoh"]) { return .block }
+        if classes.contains("sn") { return classes.contains("tg_msDict") ? .ignored : .senseNumber }
+        if classes.isSuperset(of: ["ty_label", "tg_semb"]) { return .senseNumber }
+        if !classes.isDisjoint(with: Self.blocks) { return .block }
         if !classes.isDisjoint(with: Self.containers) { return .container }
         return .none
     }
 
     private func kind(for classes: Set<String>) -> Kind {
-        if classes.contains("posg") { return .partOfSpeech }
-        if classes.contains("note") { return .note }
-        if classes.contains("x_xoh") { return .phrase }
+        if !classes.isDisjoint(with: ["posg", "gramb"]) { return .partOfSpeech }
+        if !classes.isDisjoint(with: ["note", "box", "cn"]) { return .note }
+        if !classes.isDisjoint(with: ["x_xoh", "idm", "pvg", "cwg", "drvg"]) { return .phrase }
         if classes.contains("t_subsense") { return .subsense }
+        if classes.contains("exg") { return looseKind() }
         defer { senseNumber = nil }
         return .sense(number: senseNumber)
+    }
+
+    private func looseKind() -> Kind {
+        guard let number = senseNumber else { return .paragraph }
+        senseNumber = nil
+        return .sense(number: number)
+    }
+
+    private func emitHeadword() {
+        guard headwordPending else { return }
+        headwordPending = false
+        close()
+        let word = syllables.isEmpty ? headword : syllables
+        blocks.append(
+            .headword(
+                word.collapsingWhitespace, homograph: homograph.collapsingWhitespace.nilIfEmpty,
+                pronunciation: pronunciation?.trimmingCharacters(in: Self.pronunciationFrame)
+                    .collapsingWhitespace.nilIfEmpty))
     }
 
     private func openBlock(_ kind: Kind) {
@@ -153,12 +202,17 @@ private final class Reader: NSObject, XMLParserDelegate {
         open = (kind, [], stack.count)
     }
 
-    private func append(_ string: String) {
+    private func append(_ text: String) {
+        var string = text
+        if wordBreakDue, let first = string.first(where: { !$0.isWhitespace }) {
+            wordBreakDue = false
+            if !Self.unspacedBefore.contains(first) { string = " " + string }
+        }
         if open == nil {
             guard !string.allSatisfy(\.isWhitespace) else { return }
             // Loose text belongs to the nearest container, so it closes when that does.
             let depth = stack.lastIndex { $0.role == .container } ?? 0
-            open = (.paragraph, [], depth)
+            open = (looseKind(), [], depth)
         }
         let style = stack.last { $0.style != nil }?.style ?? .plain
         guard var block = open else { return }
