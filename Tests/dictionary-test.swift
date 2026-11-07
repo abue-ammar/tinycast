@@ -79,6 +79,33 @@ struct DictionaryEntryTests {
         </span></span></span></span></d:entry>
         """
 
+    /// Trimmed from the Vietnamese record for `good`, whose examples carry a `▸` in an `sn`.
+    static let bulletedExamples = """
+        <d:entry xmlns:d="x" class="entry"><span class="gramb x_xd0"><span class="ps x_xdh">tính từ </span>\
+        <span class="semb x_xd1 hasSn"><span class="sn x_xdh">1 </span><span class="trg x_xd2">\
+        <span class="trans">tốt; hay </span></span><span class="exg x_xd2 hasSn"><span class="x_xdh">\
+        <span class="sn">▸ </span><span class="ex">It’s good to talk. </span></span>\
+        <span class="trg x_xd3"><span class="trans">Nên nói. </span></span></span></span></span></d:entry>
+        """
+
+    /// Trimmed from the Oxford American Writer's Thesaurus record for `good`.
+    static let thesaurus = """
+        <d:entry xmlns:d="x" class="entry"><span class="sg"><span class="se1"><span class="gp tg_se1">▶</span>\
+        <span role="text" class="posg"><span class="pos"><span class="gp tg_pos">adjective</span></span></span>\
+        <span class="se2"> <span class="gp ty_label tg_se2">  1 </span><span class="msThes t_core">\
+        <span class="eg"><span class="ex">a good product</span><span class="gp tg_eg">: </span></span>\
+        <span class="synList"><span class="syn t_core">fine<span class="gp tg_syn">, </span></span>\
+        <span class="syn">superior</span></span></span></span></span></span></d:entry>
+        """
+
+    /// Trimmed from the Duden record for `Haus`, whose examples follow a definition with no colon.
+    static let definitionThenExamples = """
+        <d:entry xmlns:d="x" class="entry"><span class="se2"><span class="msDict">\
+        <span role="text" class="df">Gebäude, das Menschen zum Wohnen dient </span>\
+        <span role="text" class="eg"><span class="ex">ein großes Haus</span><span class="lbl"> | </span>\
+        <span class="ex">das Haus seiner Eltern</span></span></span></span></d:entry>
+        """
+
     /// Trimmed from the Korean record for `사랑`, whose spans abut and lead with their separator.
     static let abutting = """
         <d:entry xmlns:d="x" class="entry"><span class="gramb"><span class="semb">\
@@ -144,7 +171,7 @@ struct DictionaryEntryTests {
                         Run(text: "(enjoyable)", style: .label), Run(text: " 好的 ", style: .plain),
                         Run(text: "hǎo de ‹book›", style: .label)
                     ]),
-                .paragraph([
+                .example([
                     Run(text: "a good joke", style: .example), Run(text: " 有趣的笑话", style: .plain)
                 ]),
                 .paragraph([Run(text: "→ riddance", style: .plain)])
@@ -166,11 +193,43 @@ struct DictionaryEntryTests {
             DictionaryMarkup.blocks(fromXHTML: abutting),
             [
                 .paragraph([Run(text: "love; affection", style: .plain)]),
-                .paragraph([
+                .example([
                     Run(text: "사랑의 신", style: .example), Run(text: " the god of love", style: .plain)
                 ])
             ],
             "abutting spans get a word break, never one ahead of punctuation")
+
+        expect(
+            DictionaryMarkup.blocks(fromXHTML: bulletedExamples),
+            [
+                .partOfSpeech([Run(text: "tính từ", style: .label)]),
+                .sense(number: "1", [Run(text: "tốt; hay", style: .plain)]),
+                .example([
+                    Run(text: "It’s good to talk. ", style: .example), Run(text: "Nên nói.", style: .plain)
+                ])
+            ],
+            "an example's bullet never reads as a sense number")
+
+        expect(
+            DictionaryMarkup.blocks(fromXHTML: thesaurus),
+            [
+                .partOfSpeech([Run(text: "adjective", style: .label)]),
+                .sense(
+                    number: "1",
+                    [
+                        Run(text: "a good product: ", style: .example),
+                        Run(text: "fine, superior", style: .plain)
+                    ])
+            ],
+            "a thesaurus sense takes its label as its number")
+
+        expect(
+            DictionaryMarkup.blocks(fromXHTML: definitionThenExamples),
+            [
+                .sense(number: nil, [Run(text: "Gebäude, das Menschen zum Wohnen dient", style: .plain)]),
+                .example([Run(text: "ein großes Haus | das Haus seiner Eltern", style: .example)])
+            ],
+            "examples after a definition with no colon start their own line")
 
         let plain = DictionaryEntry(
             term: "hello",

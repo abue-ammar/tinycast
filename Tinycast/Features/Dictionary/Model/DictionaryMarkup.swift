@@ -16,7 +16,7 @@ private final class Reader: NSObject, XMLParserDelegate {
     private typealias Style = DictionaryEntry.Style
 
     private enum Kind {
-        case partOfSpeech, sense(number: String?), subsense, note, phrase, paragraph
+        case partOfSpeech, sense(number: String?), subsense, note, phrase, example, paragraph
     }
 
     /// What an element started, so its end knows what to close.
@@ -28,16 +28,17 @@ private final class Reader: NSObject, XMLParserDelegate {
     private struct Frame {
         let role: Role
         let style: Style?
+        let isDefinition: Bool
     }
 
     /// Elements that end an auto-opened paragraph: the etymology, a sub-entry, a sense group.
     private static let containers: Set<String> = [
         "entry", "sg", "se1", "se2", "etym", "subEntry", "subEntryBlock",
-        "semb", "idmsec", "pvsec", "csec", "drvsec"
+        "semb", "idmsec", "pvsec", "csec", "drvsec", "x_xo1"
     ]
 
     private static let blocks: Set<String> = [
-        "posg", "gramb", "msDict", "note", "box", "cn", "exg", "x_xoh", "idm", "pvg", "cwg", "drvg"
+        "posg", "gramb", "msDict", "msThes", "note", "box", "cn", "exg", "x_xoh", "idm", "pvg", "cwg", "drvg"
     ]
 
     private static let sectionLabels: Set<String> = ["tg_idmb", "tg_pvb", "tg_cb"]
@@ -76,13 +77,20 @@ private final class Reader: NSObject, XMLParserDelegate {
     private var sectionLabel = ""
     private var senseNumber: String?
     private var wordBreakDue = false
+    private var definitionJustEnded = false
 
     func parser(
         _ parser: XMLParser, didStartElement name: String, namespaceURI: String?,
         qualifiedName: String?, attributes: [String: String] = [:]
     ) {
         let classes = Set((attributes["class"] ?? "").split(separator: " ").map(String.init))
-        let role = role(for: classes)
+        let followsDefinition = definitionJustEnded
+        definitionJustEnded = false
+        var role = role(for: classes)
+        // A colon runs examples on from their definition; without one they start their own line.
+        if role == .none, classes.contains("eg"), followsDefinition, !openEndsWithColon {
+            role = .block
+        }
         let style = classes.lazy.compactMap { Self.styles[$0] }.first
         if !classes.isDisjoint(with: Self.spacedBefore) { wordBreakDue = true }
         switch role {
@@ -106,7 +114,7 @@ private final class Reader: NSObject, XMLParserDelegate {
         default:
             break
         }
-        stack.append(Frame(role: role, style: style))
+        stack.append(Frame(role: role, style: style, isDefinition: classes.contains("df")))
     }
 
     func parser(
@@ -114,6 +122,7 @@ private final class Reader: NSObject, XMLParserDelegate {
         qualifiedName: String?
     ) {
         guard let frame = stack.popLast() else { return }
+        definitionJustEnded = frame.isDefinition
         switch frame.role {
         case .headGroup:
             emitHeadword()
@@ -161,9 +170,14 @@ private final class Reader: NSObject, XMLParserDelegate {
         if classes.contains("ty_label"), !classes.isDisjoint(with: Self.sectionLabels) {
             return .sectionLabel
         }
-        // A sense's `sn` is its number; a sub-sense's is the `•` its block already implies.
-        if classes.contains("sn") { return classes.contains("tg_msDict") ? .ignored : .senseNumber }
-        if classes.isSuperset(of: ["ty_label", "tg_semb"]) { return .senseNumber }
+        // A sense's `sn` is its number; a sub-sense's or example's is the bullet its block implies.
+        if classes.contains("sn") {
+            return classes.contains("tg_msDict") || isInExample ? .ignored : .senseNumber
+        }
+        if classes.contains("ty_label"), !classes.isDisjoint(with: ["tg_semb", "tg_se2"]) {
+            return .senseNumber
+        }
+        if classes.contains("tg_se1") { return .ignored }
         if !classes.isDisjoint(with: Self.blocks) { return .block }
         if !classes.isDisjoint(with: Self.containers) { return .container }
         return .none
@@ -174,13 +188,23 @@ private final class Reader: NSObject, XMLParserDelegate {
         if !classes.isDisjoint(with: ["note", "box", "cn"]) { return .note }
         if !classes.isDisjoint(with: ["x_xoh", "idm", "pvg", "cwg", "drvg"]) { return .phrase }
         if classes.contains("t_subsense") { return .subsense }
-        if classes.contains("exg") { return looseKind() }
+        if classes.contains("eg") { return .example }
+        if classes.contains("exg") { return pendingSense(or: .example) }
         defer { senseNumber = nil }
         return .sense(number: senseNumber)
     }
 
-    private func looseKind() -> Kind {
-        guard let number = senseNumber else { return .paragraph }
+    private var openEndsWithColon: Bool {
+        open?.runs.last?.text.trimmingCharacters(in: .whitespaces).hasSuffix(":") ?? false
+    }
+
+    private var isInExample: Bool {
+        if case .example = open?.kind { return true }
+        return false
+    }
+
+    private func pendingSense(or fallback: Kind) -> Kind {
+        guard let number = senseNumber else { return fallback }
         senseNumber = nil
         return .sense(number: number)
     }
@@ -212,7 +236,7 @@ private final class Reader: NSObject, XMLParserDelegate {
             guard !string.allSatisfy(\.isWhitespace) else { return }
             // Loose text belongs to the nearest container, so it closes when that does.
             let depth = stack.lastIndex { $0.role == .container } ?? 0
-            open = (looseKind(), [], depth)
+            open = (pendingSense(or: .paragraph), [], depth)
         }
         let style = stack.last { $0.style != nil }?.style ?? .plain
         guard var block = open else { return }
@@ -235,6 +259,7 @@ private final class Reader: NSObject, XMLParserDelegate {
         case .subsense: blocks.append(.subsense(runs))
         case .note: blocks.append(.note(runs))
         case .phrase: blocks.append(.phrase(runs))
+        case .example: blocks.append(.example(runs))
         case .paragraph: blocks.append(.paragraph(runs))
         }
     }
@@ -248,6 +273,8 @@ extension [DictionaryEntry.Run] {
         for run in self {
             var text = ""
             for character in run.text {
+                // A separator that trailed the previous block's text never leads this one.
+                if result.isEmpty, text.isEmpty, character == "," || character == ";" { continue }
                 if character.isWhitespace {
                     if !endsInSpace { text.append(" ") }
                     endsInSpace = true

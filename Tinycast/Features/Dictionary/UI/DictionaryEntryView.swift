@@ -6,9 +6,10 @@ struct DictionaryEntryView: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: metrics.spacing.md) {
+            LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(entry.blocks.indices, id: \.self) { index in
                     DictionaryBlockView(block: entry.blocks[index], leadsPage: index == 0)
+                        .padding(.top, gap(before: index))
                 }
             }
             .textSelection(.enabled)
@@ -21,6 +22,13 @@ struct DictionaryEntryView: View {
         .thinScrollbar()
         // A new term starts at its headword, not wherever the last one was scrolled to.
         .id(entry.term)
+    }
+
+    /// Examples hug the sense they illustrate, so a long entry still reads one sense at a time.
+    private func gap(before index: Int) -> CGFloat {
+        guard index > 0 else { return 0 }
+        if case .example = entry.blocks[index] { return metrics.spacing.xxs }
+        return metrics.spacing.md
     }
 }
 
@@ -100,6 +108,10 @@ private struct DictionaryBlockView: View {
             Text(runs.attributed())
                 .font(metrics.typography.rowTitle)
                 .padding(.top, metrics.spacing.xs)
+        case .example(let runs):
+            Text(runs.attributed())
+                .font(metrics.typography.rowTitle)
+                .padding(.leading, textColumn + metrics.spacing.md)
         case .paragraph(let runs):
             Text(runs.attributed())
                 .font(metrics.typography.rowTitle)

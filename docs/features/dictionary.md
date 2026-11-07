@@ -18,15 +18,19 @@ no bundled word list.
   Dictionary.app itself reads. They are found with `dlsym`, never linked: a macOS that drops one loses
   the layout and falls back to the public plain text, rather than failing to launch.
 - **The span classes are the only structure, and `DictionaryMarkup` is the only reader of them.**
-  `hg` is the headword, `posg` the part of speech, `se2` a numbered sense, `msDict` its definition or a
-  `t_subsense` bullet, `note` an aside, `x_xoLblBlk` a section label (`ORIGIN`, `PHRASES`). Every
-  Oxford bilingual pair (Chinese, Japanese, Korean, French, Spanish, German, …) shares a second
-  schema mapped onto the same blocks: `hwg` the headword, `gramb` the part of speech, `semb` a sense
-  numbered by its `ty_label tg_semb`, `exg` one example per line, `idm`/`pvg`/`cwg`/`drvg` a phrase
-  under an `IDIOMS`-style label. That schema separates spans by stylesheet margin alone, so
-  `DictionaryMarkup` restores the word break before a translation or indicator. Unknown markup reads
-  as plain text in the nearest block, so a format change degrades rather than drops words.
-  `dictionary-test` holds real records from both schemas as its fixtures.
+  `hg` is the headword, `posg` the part of speech, `se2` a numbered sense, `msDict` (`msThes` in a
+  thesaurus) its definition or a `t_subsense` bullet, `note` an aside, `x_xoLblBlk` a section label
+  (`ORIGIN`, `PHRASES`). Every Oxford bilingual pair (Chinese, Japanese, Korean, Vietnamese, French,
+  Spanish, German, …) shares a second schema mapped onto the same blocks: `hwg` the headword,
+  `gramb` the part of speech, `semb` a sense numbered by its `ty_label tg_semb` or `sn`, `exg` an
+  example, `idm`/`pvg`/`cwg`/`drvg` a phrase under an `IDIOMS`-style label. An `sn` inside an example
+  is its bullet, never a sense number. Line breaks follow each dictionary's own `DefaultStyle.css`:
+  `x_xo1` is a block everywhere, and examples after a definition with no colon (Duden) start their
+  own line. The bilingual stylesheets separate spans by margin alone, so `DictionaryMarkup` restores
+  the word break before a translation or indicator. An example sits tight under its sense, the way
+  the stylesheets space `exg`. Unknown markup reads as plain text in the nearest block, so a format
+  change degrades rather than drops words. `dictionary-test` holds real records from each schema as
+  its fixtures.
 - **Lookups run off the main actor.** A long entry (`run`, `take`) is a few hundred blocks, so
   `DictionarySession` debounces the query and looks it up detached, the way `FileSearchSession` does.
   The previous page stays up until the next resolves, and ↵ and ⌘K act on that page — what is shown

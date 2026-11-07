@@ -18,6 +18,8 @@ struct DictionaryEntry: Equatable, Identifiable, Sendable {
         /// A titled part after the senses: `ORIGIN`, `PHRASES`, `DERIVATIVES`.
         case section(String)
         case phrase([Run])
+        /// A usage and its translation, set tight under the sense it illustrates.
+        case example([Run])
         case paragraph([Run])
     }
 
@@ -75,7 +77,8 @@ extension DictionaryEntry.Block {
             return [number, runs.text].compactMap { $0 }.joined(separator: " ")
         case .subsense(let runs): return "• " + runs.text
         case .section(let title): return "\n" + title
-        case .partOfSpeech(let runs), .note(let runs), .phrase(let runs), .paragraph(let runs):
+        case .partOfSpeech(let runs), .note(let runs), .phrase(let runs), .example(let runs),
+            .paragraph(let runs):
             return runs.text
         }
     }
