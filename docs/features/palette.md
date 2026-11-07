@@ -280,6 +280,8 @@ its tint reads undimmed.
 At expanded launcher root, Escape clears the query while setting `forceExpanded`, so clearing and
 collapsing remain separate presses. The next Escape clears that flag and collapses; another closes.
 Menus and argument fields still take precedence, and sub-screen navigation keeps its own behavior.
+A summon clears `forceExpanded` whenever the field is empty, so a launcher Pop to Root Search
+restores still opens as the bar; a kept query, screen or extension restores expanded as before.
 
 The glass is a background of the header, not a wrapper around it: the field keeps its one structural
 position, and a container never paints its merged glass over the row. While compact the row is
