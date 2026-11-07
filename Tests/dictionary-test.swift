@@ -106,6 +106,13 @@ struct DictionaryEntryTests {
         <span class="ex">das Haus seiner Eltern</span></span></span></span></d:entry>
         """
 
+    /// The Apple Dictionary's record for `Siri`: the plain template, with no classes and no entry span.
+    static let plainTemplate = """
+        <html xmlns:d="x"><body><d:entry id="Siri"><h1>Siri</h1>\
+        <p>An intelligent personal assistant.</p><p>See also <a href="x"><b>Apple TV</b></a>.</p>\
+        </d:entry></body></html>
+        """
+
     /// Trimmed from the Korean record for `사랑`, whose spans abut and lead with their separator.
     static let abutting = """
         <d:entry xmlns:d="x" class="entry"><span class="gramb"><span class="semb">\
@@ -230,6 +237,15 @@ struct DictionaryEntryTests {
                 .example([Run(text: "ein großes Haus | das Haus seiner Eltern", style: .example)])
             ],
             "examples after a definition with no colon start their own line")
+
+        expect(
+            DictionaryMarkup.blocks(fromXHTML: plainTemplate),
+            [
+                .headword("Siri", homograph: nil, pronunciation: nil),
+                .paragraph([Run(text: "An intelligent personal assistant.", style: .plain)]),
+                .paragraph([Run(text: "See also Apple TV.", style: .plain)])
+            ],
+            "the plain template reads its h1 as the headword and each p as a paragraph")
 
         let plain = DictionaryEntry(
             term: "hello",

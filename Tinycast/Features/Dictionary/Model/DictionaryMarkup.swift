@@ -21,8 +21,8 @@ private final class Reader: NSObject, XMLParserDelegate {
 
     /// What an element started, so its end knows what to close.
     private enum Role {
-        case none, ignored, headGroup, headword, syllables, homograph, pronunciation, senseNumber
-        case sectionLabel, block, container
+        case none, ignored, headGroup, title, headword, syllables, homograph, pronunciation
+        case senseNumber, sectionLabel, block, container
     }
 
     private struct Frame {
@@ -86,7 +86,7 @@ private final class Reader: NSObject, XMLParserDelegate {
         let classes = Set((attributes["class"] ?? "").split(separator: " ").map(String.init))
         let followsDefinition = definitionJustEnded
         definitionJustEnded = false
-        var role = role(for: classes)
+        var role = role(for: classes, element: name)
         // A colon runs examples on from their definition; without one they start their own line.
         if role == .none, classes.contains("eg"), followsDefinition, !openEndsWithColon {
             role = .block
@@ -94,7 +94,7 @@ private final class Reader: NSObject, XMLParserDelegate {
         let style = classes.lazy.compactMap { Self.styles[$0] }.first
         if !classes.isDisjoint(with: Self.spacedBefore) { wordBreakDue = true }
         switch role {
-        case .headGroup:
+        case .headGroup, .title:
             headwordPending = true
             headword = ""
             syllables = ""
@@ -124,7 +124,7 @@ private final class Reader: NSObject, XMLParserDelegate {
         guard let frame = stack.popLast() else { return }
         definitionJustEnded = frame.isDefinition
         switch frame.role {
-        case .headGroup:
+        case .headGroup, .title:
             emitHeadword()
             close()
         case .senseNumber:
@@ -142,7 +142,7 @@ private final class Reader: NSObject, XMLParserDelegate {
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
         switch stack.last(where: { $0.role != .none })?.role {
-        case .headword: headword += string
+        case .headword, .title: headword += string
         case .syllables: syllables += string
         case .homograph: homograph += string
         case .pronunciation: pronunciation = (pronunciation ?? "") + string
@@ -157,7 +157,12 @@ private final class Reader: NSObject, XMLParserDelegate {
         }
     }
 
-    private func role(for classes: Set<String>) -> Role {
+    func parserDidEndDocument(_ parser: XMLParser) {
+        close()
+    }
+
+    /// A record built from the plain Dictionary Development Kit template has no classes at all.
+    private func role(for classes: Set<String>, element: String) -> Role {
         if stack.contains(where: { $0.role == .headGroup }) {
             if classes.contains("ty_hom") { return .homograph }
             if !classes.isDisjoint(with: ["hw", "hvg"]) { return .headword }
@@ -166,6 +171,7 @@ private final class Reader: NSObject, XMLParserDelegate {
             return .none
         }
         if !classes.isDisjoint(with: ["hg", "hwg"]) { return .headGroup }
+        if element == "h1" { return .title }
         if classes.contains("x_xoLblBlk") { return .sectionLabel }
         if classes.contains("ty_label"), !classes.isDisjoint(with: Self.sectionLabels) {
             return .sectionLabel
@@ -179,7 +185,7 @@ private final class Reader: NSObject, XMLParserDelegate {
         }
         if classes.contains("tg_se1") { return .ignored }
         if !classes.isDisjoint(with: Self.blocks) { return .block }
-        if !classes.isDisjoint(with: Self.containers) { return .container }
+        if !classes.isDisjoint(with: Self.containers) || element == "p" { return .container }
         return .none
     }
 

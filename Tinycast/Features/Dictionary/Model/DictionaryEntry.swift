@@ -18,7 +18,6 @@ struct DictionaryEntry: Equatable, Identifiable, Sendable {
         /// A titled part after the senses: `ORIGIN`, `PHRASES`, `DERIVATIVES`.
         case section(String)
         case phrase([Run])
-        /// A usage and its translation, set tight under the sense it illustrates.
         case example([Run])
         case paragraph([Run])
     }

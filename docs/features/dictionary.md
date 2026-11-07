@@ -29,8 +29,14 @@ no bundled word list.
   own line. The bilingual stylesheets separate spans by margin alone, so `DictionaryMarkup` restores
   the word break before a translation or indicator. An example sits tight under its sense, the way
   the stylesheets space `exg`. Unknown markup reads as plain text in the nearest block, so a format
-  change degrades rather than drops words. `dictionary-test` holds real records from each schema as
-  its fixtures.
+  change degrades rather than drops words. A record built from the plain Dictionary Development Kit
+  template has no classes at all, so its `h1` is the headword and each `p` a paragraph.
+  `dictionary-test` holds real records from each schema as its fixtures.
+- **Dictionary is the default scope, and it is the lookup that always was.** The header's selector
+  (⌘P) switches to Thesaurus, which asks only the enabled dictionaries whose `CFBundleName` names a
+  thesaurus — no Info.plist key marks one — and skips the public plain-text fallback, which reads
+  every dictionary. The selector shows only while a thesaurus is enabled in Dictionary.app, re-read
+  each time the screen opens. The scope lives on `DictionarySession` until quit, never on disk.
 - **Lookups run off the main actor.** A long entry (`run`, `take`) is a few hundred blocks, so
   `DictionarySession` debounces the query and looks it up detached, the way `FileSearchSession` does.
   The previous page stays up until the next resolves, and ↵ and ⌘K act on that page — what is shown
@@ -43,5 +49,5 @@ no bundled word list.
 | ↵ | Copy Definition — the whole entry, one line per block, then the palette closes |
 | ⌘↵ | Open in Dictionary — `dict://<term>`, for every other enabled dictionary |
 
-The first enabled dictionary that knows the term answers, in Dictionary.app's own order. A term none of
-them knows reads "No definition found".
+The first enabled dictionary that knows the term answers, in Dictionary.app's own order, unless the
+header's selector (⌘P) is set to Thesaurus. A term none of them knows reads "No definition found".
