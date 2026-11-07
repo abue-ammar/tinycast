@@ -342,8 +342,11 @@ struct RootPaletteView: View {
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Hidden rather than unmounted, so expanding never shows a frame without glass.
-                .background(GlassEffectView().opacity(isCollapsed ? 0 : 1))
+                // Identity rather than removed, so expanding never rebuilds the tree it sits on.
+                .glassEffect(
+                    isCollapsed ? .identity : .regular,
+                    in: RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
+                )
                 .overlay {
                     Theme.Colors.dialogDimming
                         .opacity(core.isDimmingPaletteForDialog && !isCollapsed ? 1 : 0)
@@ -355,6 +358,7 @@ struct RootPaletteView: View {
                             ? Theme.Duration.dialogEnter : Theme.Duration.dialogExit),
                     value: core.isDimmingPaletteForDialog
                 )
+                // Also the window's shape: without it, macOS shadows the default window outline.
                 .clipShape(
                     RoundedRectangle(
                         cornerRadius: isCollapsed ? 0 : metrics.radius.panel, style: .continuous
