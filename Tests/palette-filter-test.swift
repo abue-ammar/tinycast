@@ -36,6 +36,9 @@ struct PaletteFilterTests {
             resolve(mode: .emoji), .emojiCategory,
             "the emoji picker exposes its category selector through ⌘P")
         expect(
+            resolve(mode: .dictionary), .dictionaryScope,
+            "the dictionary screen switches between dictionary and thesaurus through ⌘P")
+        expect(
             resolve(mode: .ai), .aiModel,
             "Quick AI opens its model selector through ⌘P")
         expect(
