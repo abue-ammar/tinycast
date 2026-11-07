@@ -73,6 +73,11 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             // Once per summon, and from `previousApp`, so the label names the paste target.
             core.palette.pasteTarget = PasteTarget(app: previousApp)
             let panel = ensurePanel()
+            core.inputSourceSwitcher.beginSession(
+                preferredInputSourceID: core.settings.autoSwitchInputSourceID)
+            if let context = panel.fieldEditorContext {
+                core.inputSourceSwitcher.applySession(to: context)
+            }
             // Undo a sink a modal left behind, unless one is still up.
             if NSApp.modalWindow == nil { panel.level = .palette }
             // Open disarmed: a pointer already over a row must not highlight it.
@@ -83,8 +88,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             positionPanel(panel, collapsed: core.paletteCoordinator.paletteIsCollapsed)
             // Flush first-mount layout off-screen, so the safe-area settle isn't visible.
             panel.contentView?.layoutSubtreeIfNeeded()
-            core.inputSourceSwitcher.beginSession(
-                preferredInputSourceID: core.settings.autoSwitchInputSourceID)
             // Events go stale while the palette is closed, and the countdown only ticks while up.
             core.calendarCoordinator.paletteDidShow()
             core.palette.noteVisible(true)
