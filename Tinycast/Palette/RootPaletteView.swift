@@ -26,6 +26,7 @@ struct RootPaletteView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.metrics) private var metrics
     @Environment(\.openURL) private var openURL
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @FocusState private var searchFocused: Bool
     /// Kept apart from the search field's own focus. See docs/features/palette.md.
     @FocusState private var argumentFocused: String?
@@ -43,6 +44,8 @@ struct RootPaletteView: View {
     /// The pending scroll request; modes are exclusive, so one piece of state serves all.
     @State private var scroll = ScrollIntent(kind: .top)
     @State private var compactSelection = CompactBarSelection()
+    /// Seconds into the compact reveal; animated linearly, so `PaletteOutline` plays its springs.
+    @State private var compactRevealElapsed: TimeInterval = 0
 
     /// Compact vs. full; the source of truth is on `AppCore`, so the two can't disagree.
     private var isCollapsed: Bool { core.paletteCoordinator.paletteIsCollapsed }
@@ -353,14 +356,16 @@ struct RootPaletteView: View {
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(isCollapsed ? .clear : Theme.Colors.panelScrim)
+                // Sideways into the compact margin for a button's overshoot; the top keeps the rim light.
+                .background { Theme.Colors.panelScrim.padding(.horizontal, -renderingOutset) }
                 // Square, as rounded glass feathers its edge; the clip alone cuts a crisp corner.
                 .background {
-                    Color.clear.glassEffect(isCollapsed ? .identity : .regular, in: Rectangle())
+                    Color.clear.glassEffect(.regular, in: Rectangle())
+                        .padding(.horizontal, -renderingOutset)
                 }
                 .overlay {
                     Theme.Colors.dialogDimming
-                        .opacity(core.isDimmingPaletteForDialog && !isCollapsed ? 1 : 0)
+                        .opacity(core.isDimmingPaletteForDialog ? 1 : 0)
                         .allowsHitTesting(false)
                 }
                 .animation(
@@ -371,13 +376,13 @@ struct RootPaletteView: View {
                 )
                 // Also the window's shape: without it, macOS shadows the default window outline.
                 .clipShape(
-                    RoundedRectangle(
-                        cornerRadius: isCollapsed ? 0 : metrics.radius.panel, style: .continuous
-                    )
-                    .inset(by: -renderingOutset))),
+                    PaletteOutline(
+                        cornerRadius: metrics.radius.panel, bar: compactBarGeometry,
+                        elapsed: compactRevealElapsed))),
             selection: sel
         )
         .padding(renderingOutset)
+        .task(id: vm.isVisible && isCollapsed) { await followCompactReveal() }
     }
 
     /// The emoji grid's observers, split out so `stateObservers` stays within type-checker reach.
@@ -734,7 +739,7 @@ struct RootPaletteView: View {
                 if isCollapsed {
                     CompactBar(
                         commands: compactCommands, selection: compactSelection.command,
-                        onRun: runCompactCommand)
+                        isRevealed: compactRevealElapsed > 0, onRun: runCompactCommand)
                 }
             }
             // Next turn, once the show's `land()` and search refocus are done, so neither undoes it.
@@ -774,11 +779,29 @@ struct RootPaletteView: View {
         }
     }
 
-    /// Where the compact capsule ends beside its buttons; nil while expanded.
-    private var compactCapsuleWidth: CGFloat? {
+    private var compactBarGeometry: CompactBarGeometry? {
         guard isCollapsed else { return nil }
         return CompactBarGeometry(metrics: metrics, count: compactCommands.count)
-            .capsuleWidth(revealed: true)
+    }
+
+    /// Where the compact capsule ends beside its buttons; nil while expanded.
+    private var compactCapsuleWidth: CGFloat? {
+        compactBarGeometry?.capsuleWidth(revealed: true)
+    }
+
+    /// Out on every compact summon, and parked only once the window has faded, so leaving fades whole.
+    private func followCompactReveal() async {
+        guard vm.isVisible, isCollapsed else {
+            let park = Motion.duration(Theme.CompactBarMotion.parkAfterHide)
+            try? await Task.sleep(for: .seconds(park))
+            guard !Task.isCancelled else { return }
+            withTransaction(\.disablesAnimations, true) { compactRevealElapsed = 0 }
+            return
+        }
+        let duration = CompactBarReveal.duration(count: compactCommands.count)
+        withAnimation(reduceMotion ? nil : .linear(duration: duration)) {
+            compactRevealElapsed = duration
+        }
     }
 
     private var headerBar: some View {
