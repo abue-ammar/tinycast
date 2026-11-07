@@ -16533,6 +16533,58 @@
         }
       }
     },
+    "A native macOS launcher for everyday productivity. Lightweight and open source." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ein nativer macOS-Launcher für die tägliche Produktivität. Leichtgewichtig und Open Source."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un lanzador nativo de macOS para la productividad diaria. Ligero y de código abierto."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Un lanceur macOS natif pour la productivité au quotidien. Léger et open source."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "毎日の生産性を高めるネイティブなmacOSランチャー。軽量でオープンソースです。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일상의 생산성을 위한 네이티브 macOS 런처. 가볍고 오픈 소스입니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Um iniciador nativo do macOS para a produtividade do dia a dia. Leve e de código aberto."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нативный лаунчер macOS для повседневной продуктивности. Лёгкий и с открытым исходным кодом."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "为日常效率打造的原生 macOS 启动器。轻巧且开源。"
+          }
+        }
+      }
+    },
     "A preset's instructions replace the system prompt in the chats it starts." : {
       "localizations" : {
         "de" : {
@@ -16845,58 +16897,7 @@
         }
       }
     },
-    "A tiny, native macOS launcher." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ein winziger, nativer macOS-Launcher."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un lanzador de macOS diminuto y nativo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Un lanceur léger conçu pour macOS."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "小さくてネイティブなmacOSランチャー。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "작고 네이티브한 macOS 런처."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Um iniciador minúsculo e nativo para macOS."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Крошечный нативный лаунчер для macOS."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "小巧的原生 macOS 启动器。"
-          }
-        }
-      }
-    },
+    
     "A window layout with this name already exists." : {
       "localizations" : {
         "de" : {

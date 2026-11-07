@@ -9,6 +9,7 @@ import { CryptoPanel } from "./crypto-panel";
 import { ThankYou } from "./thank-you";
 
 const THANKS_PARAM = "thanks";
+const METHOD_PARAM = "method";
 
 const methodIcons: Record<Method, LucideIcon> = {
   crypto: Bitcoin,
@@ -17,6 +18,10 @@ const methodIcons: Record<Method, LucideIcon> = {
 
 function parsePlan(value: string | null): Plan | null {
   return value === "monthly" || value === "one-time" ? value : null;
+}
+
+function parseMethod(value: string | null): Method | null {
+  return methods.find((method) => method.id === value)?.id ?? null;
 }
 
 function MethodTabs({
@@ -98,6 +103,14 @@ export function SupportFlow({ intro }: Props) {
     window.history.replaceState(window.history.state, "", url);
     // oxlint-disable-next-line react/set-state-in-effect -- URL is only readable after hydration
     setReturned(plan);
+  }, []);
+
+  useEffect(() => {
+    const linked = parseMethod(
+      new URL(window.location.href).searchParams.get(METHOD_PARAM),
+    );
+    // oxlint-disable-next-line react/set-state-in-effect -- URL is only readable after hydration
+    if (linked) setMethod(linked);
   }, []);
 
   return (
