@@ -21,15 +21,13 @@
 const fs = require("fs");
 const path = require("path");
 
-const RATES = "https://backend.raycast.com/api/v1/currencies";
+const RATES = "https://tinycast.dev/api/v1/currencies";
 const CLDR = "https://raw.githubusercontent.com/unicode-org/cldr-json/main/cldr-json";
 const CLDR_NAMES = `${CLDR}/cldr-numbers-full/main/en/currencies.json`;
 const CLDR_CURRENCY_DATA = `${CLDR}/cldr-core/supplemental/currencyData.json`;
 
 // The feed serves ~170 codes and ~159 survive the filter; well below that is a bad response.
 const MIN_EXPECTED = 150;
-// The crypto table in CalcCurrency.swift owns this one, and prices it from the dedicated feed.
-const CRYPTO_OWNED = new Set(["BTC"]);
 // CLDR carries no name for the Crown Dependencies' pounds, and the feed supplies no names at all.
 const UNNAMED = { GGP: "Guernsey Pound", IMP: "Isle of Man Pound", JEP: "Jersey Pound" };
 
@@ -118,9 +116,9 @@ async function main() {
 
   const stillInUse = inUse(supplemental.supplemental.currencyData);
   const codes = [...quoted]
-    .filter((code) => /^[A-Z]{3}$/.test(code) && !CRYPTO_OWNED.has(code) && stillInUse(code))
+    .filter((code) => /^[A-Z]{3}$/.test(code) && stillInUse(code))
     .sort();
-  const retired = quoted.size - CRYPTO_OWNED.size - codes.length;
+  const retired = quoted.size - codes.length;
   const asOf = new Date((feed.timestamp || Date.now() / 1000) * 1000).toISOString().slice(0, 10);
   if (codes.length < MIN_EXPECTED) throw new Error(`suspiciously few currencies: ${codes.length}`);
 

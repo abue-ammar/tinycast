@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "tinycast-website",
   "compatibility_date": "2026-09-17",
-  // Code runs for the Polar routes only; every other path is served from `out/` without it.
+  // Code runs for the Polar and currency routes only; every other path is served from `out/` without it.
   "main": "./worker/index.ts",
   "assets": {
     "directory": "./out",
@@ -10,7 +10,12 @@
     // `trailingSlash: true` exports every route as a directory index, so /docs/install/ resolves.
     "html_handling": "auto-trailing-slash",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/supporters", "/api/checkout"],
+    "run_worker_first": [
+      "/api/supporters",
+      "/api/checkout",
+      "/api/v1/currencies",
+      "/api/v1/currencies/crypto",
+    ],
   },
   // Per visitor; namespace_id is any number unique within the Cloudflare account.
   "ratelimits": [

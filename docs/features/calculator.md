@@ -843,6 +843,10 @@ The fetch runs on a private **cacheless** `URLSession` (`.ephemeral`, `urlCache 
 `Cache-Control: public, max-age=…`, so the shared session would keep a second copy in the on-disk
 `URLCache` that deleting the snapshot doesn't touch.
 
+Both feeds are served by the website's Worker at `tinycast.dev/api/v1/currencies`, which reshapes the
+CC0 [exchange-api](https://github.com/fawazahmed0/exchange-api) daily snapshot and edge-caches it
+(see `website/worker/currencies.ts`).
+
 Rates come from `CurrencyRateStore` (`Calculator/Service/`, owned by `AppCore`), which issues two
 requests concurrently: the fiat table, keyed `<base><code>` with the base's own row omitted, and the
 coin table, which quotes the **inverse** — one coin priced in the base. `CurrencyFeed` folds both

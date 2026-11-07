@@ -5,10 +5,10 @@ import Foundation
 @Observable
 final class CurrencyRateStore {
     private nonisolated static let fiatEndpoint = URL(
-        string: "https://backend.raycast.com/api/v1/currencies")!
+        string: "https://tinycast.dev/api/v1/currencies")!
     /// Asked for by the app's own crypto table, so the request and the table cannot drift apart.
     private nonisolated static let cryptoEndpoint = URL(
-        string: "https://backend.raycast.com/api/v1/currencies/crypto?symbols="
+        string: "https://tinycast.dev/api/v1/currencies/crypto?symbols="
             + CalcCurrency.cryptoCodes.joined(separator: ","))!
     /// Daily, measured from `completedAt`, so relaunching never re-fetches a snapshot still fresh.
     private static let refreshInterval: TimeInterval = 24 * 3600
