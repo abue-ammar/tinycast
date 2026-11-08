@@ -481,16 +481,14 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         positionPanel(panel, collapsed: core.paletteCoordinator.paletteIsCollapsed)
     }
 
-    /// Expanded height in both modes: glass renders thinner when smaller, so compact only clips it.
+    /// Size to height and place against the session anchor, so the list grows downward.
     private func positionPanel(_ panel: NSPanel, collapsed: Bool) {
         guard let anchor = resolveAnchor() else { return }
         let size = metrics.size
+        let height = collapsed ? size.compactHeight : size.panelHeight
         renderingOutset = collapsed ? Theme.Size.paletteGlassOutset : 0
-        // AppKit would pop the panel-tall window from its centre; the bar reveals itself instead.
-        panel.animationBehavior = collapsed || !Motion.isEnabled ? .none : .documentWindow
         let frame = PalettePlacement.frame(
-            at: anchor, size: CGSize(width: size.panelWidth, height: size.panelHeight),
-            outset: renderingOutset)
+            at: anchor, size: CGSize(width: size.panelWidth, height: height), outset: renderingOutset)
         panel.setFrame(frame, display: true)
     }
 
