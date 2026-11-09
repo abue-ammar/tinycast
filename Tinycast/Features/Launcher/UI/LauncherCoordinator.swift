@@ -81,6 +81,25 @@ final class LauncherCoordinator {
                 AppLauncher.open(app.url)
                 return
             }
+            // Query-driven: a folder opens, a file is revealed — pasting a file's path
+            // asks where it lives, not for its contents.
+            if id == .showInFinder {
+                paletteCoordinator.hidePalette(restoreFocus: false)
+                var isDirectory: ObjCBool = false
+                if FileManager.default.fileExists(atPath: app.url.path, isDirectory: &isDirectory),
+                    isDirectory.boolValue
+                {
+                    AppLauncher.open(app.url)
+                } else {
+                    AppLauncher.showInFinder(app.url)
+                }
+                return
+            }
+            if id == .connectToServer {
+                paletteCoordinator.hidePalette(restoreFocus: false)
+                AppLauncher.open(app.url)
+                return
+            }
             runCommand(id)
             return
         }
@@ -199,7 +218,7 @@ final class LauncherCoordinator {
             Task { await core.cameraCoordinator.show() }
         case .define:
             core.dictionaryCoordinator.show()
-        case .openInBrowser, .runShellCommand:
+        case .openInBrowser, .showInFinder, .connectToServer, .runShellCommand:
             break  // Query-driven: each runs where the typed text is, never through this funnel.
         case .joinNextMeeting:
             calendarCoordinator.joinNextMeeting()

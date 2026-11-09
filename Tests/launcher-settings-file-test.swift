@@ -18,6 +18,7 @@ struct LauncherSettingsFileTest {
         testWaitingRecords()
         testDeletedWaitingRecord()
         testMovedShortcut()
+        testContextualRows()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
         exit(failures == 0 ? 0 : 1)
@@ -178,6 +179,59 @@ struct LauncherSettingsFileTest {
         check("the launcher receives the chord", fixture.hotKeys.binding(for: .togglePalette) == chord)
         check(
             "Clipboard History releases it", fixture.hotKeys.binding(for: .command(.clipboardHistory)) == nil)
+    }
+
+    // The contextual factories: the same detector the quicklinks use, gated for paths
+    // on existence, so a path that names nothing earns no row.
+    private static func testContextualRows() {
+        let exists: (String) -> Bool = { $0 == "/tmp/report.pdf" || $0.hasPrefix(NSHomeDirectory()) }
+
+        let show = CommandCatalog.showInFinder(for: "/tmp/report.pdf", fileExists: exists)
+        check(
+            "an existing file path earns a Show in Finder row",
+            show?.id == CommandID.showInFinder.rawValue)
+        check(
+            "the Show in Finder row carries the file URL",
+            show?.url == URL(fileURLWithPath: "/tmp/report.pdf"))
+        check(
+            "a missing path earns no row",
+            CommandCatalog.showInFinder(for: "/tmp/gone.pdf", fileExists: exists) == nil)
+        check(
+            "a tilde path expands before the existence check",
+            CommandCatalog.showInFinder(for: "~/Documents", fileExists: exists)?.url.path
+                == NSHomeDirectory() + "/Documents")
+        check(
+            "a relative path earns no row",
+            CommandCatalog.showInFinder(for: "Downloads/report.pdf", fileExists: exists) == nil)
+        check(
+            "a web address is not a show row",
+            CommandCatalog.showInFinder(for: "github.com", fileExists: exists) == nil)
+
+        let server = CommandCatalog.connectToServer(for: "smb://nas/share")
+        check(
+            "a share address earns a connect row",
+            server?.id == CommandID.connectToServer.rawValue)
+        check("the connect row carries the share URL", server?.url.absoluteString == "smb://nas/share")
+        check(
+            "a local path is not a connect row",
+            CommandCatalog.connectToServer(for: "/tmp/report.pdf") == nil)
+        check(
+            "a web address is not a connect row",
+            CommandCatalog.connectToServer(for: "https://example.com") == nil)
+
+        check(
+            "contextual resolves a share address",
+            CommandCatalog.contextual(for: "smb://nas/share")?.id
+                == CommandID.connectToServer.rawValue)
+        check(
+            "contextual resolves a web address as before",
+            CommandCatalog.contextual(for: "github.com")?.id == CommandID.openInBrowser.rawValue)
+        check(
+            "contextual resolves the root folder, which always exists",
+            CommandCatalog.contextual(for: "/")?.id == CommandID.showInFinder.rawValue)
+        check(
+            "contextual leaves an ordinary search alone",
+            CommandCatalog.contextual(for: "report") == nil)
     }
 
     private static func entry(_ bundleID: String, kind: AppEntry.Kind) -> AppEntry {

@@ -61,11 +61,11 @@ struct LauncherScreen: PaletteScreen {
                 query: vm.query, visibility: visibility, favorites: favorites, hotKeys: core.hotKeys)
         var results = ordered.entries
         var matchCount = ordered.matchCount
-        // A typed web address leads: nothing the index holds answers it better.
-        if pinned == nil, let browser = CommandCatalog.openInBrowser(for: vm.query),
-            visibility.isVisible(browser)
+        // A typed address leads: nothing the index holds answers it better.
+        if pinned == nil, let contextual = CommandCatalog.contextual(for: vm.query),
+            visibility.isVisible(contextual)
         {
-            results.insert(browser, at: 0)
+            results.insert(contextual, at: 0)
             matchCount += 1
         }
         // No card over a pinned row: its fields hang off the selection, which must start on it.

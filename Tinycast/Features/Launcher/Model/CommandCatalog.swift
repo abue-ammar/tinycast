@@ -32,6 +32,31 @@ enum CommandCatalog {
         return makeEntry(.openInBrowser, url: url, subtitle: String(localized: "URL"))
     }
 
+    /// The row a typed local path earns, once the path is known to exist: a path that
+    /// names nothing must not shadow the name search the text would otherwise get.
+    /// `fileExists` is injected so a harness can decide what exists.
+    static func showInFinder(
+        for query: String,
+        fileExists: (String) -> Bool = { FileManager.default.fileExists(atPath: $0) }
+    ) -> AppEntry? {
+        guard case .path(let path)? = QuicklinkDestination.detect(query), fileExists(path)
+        else { return nil }
+        return makeEntry(.showInFinder, url: URL(fileURLWithPath: path), subtitle: path)
+    }
+
+    /// The row a typed share address earns. Existence cannot be probed without mounting,
+    /// so the shape alone decides and the Finder's own mount prompt is the check.
+    static func connectToServer(for query: String) -> AppEntry? {
+        guard case .network(let url)? = QuicklinkDestination.detect(query) else { return nil }
+        return makeEntry(.connectToServer, url: url, subtitle: url.absoluteString)
+    }
+
+    /// The contextual row a query earns, if any. The detector's cases are exclusive,
+    /// so at most one of the three resolves for a given query.
+    static func contextual(for query: String) -> AppEntry? {
+        openInBrowser(for: query) ?? showInFinder(for: query) ?? connectToServer(for: query)
+    }
+
     /// A command's row, built rather than looked up — `all` holds none of the query-driven ones.
     nonisolated static func makeEntry(
         _ id: CommandID, url: URL? = nil, subtitle: String? = nil
