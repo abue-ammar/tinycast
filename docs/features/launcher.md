@@ -301,12 +301,19 @@ category browsing cannot teach every window command the same search term.
 A **contextual** command is one the query itself supplies the target for, so it exists only while a
 query resolves and never sits in the index. `CommandCatalog.contextual` names them, `all` filters
 them out, and `LauncherScreen` offers the row per keystroke — ahead of the ranked matches, because
-nothing the index holds answers a typed address better. There is one today: typing a web address or
-a bare host puts **Open in Browser** on top, and activating it hands the URL to the system's default
-handler through `AppLauncher.open`.
+nothing the index holds answers a typed address better. There are three today. Typing a web address
+or a bare host puts **Open in Browser** on top, and activating it hands the URL to the system's
+default handler through `AppLauncher.open`. Typing a local path that exists puts **Show in Finder**
+on top: a folder opens through `AppLauncher.open`, a file is revealed through
+`AppLauncher.showInFinder`. Typing a share address puts **Connect to Server** on top, and activating
+it hands the URL to the default handler, which mounts the share in the Finder.
 
-The shape a query has to have is `QuicklinkDestination.detect` returning `.web`, reused rather than
-re-written so `github.com` and `https://…` mean the same thing here as they do in a quicklink. The
+The shape a query has to have is `QuicklinkDestination.detect` returning `.web`, `.path` or
+`.network`, reused rather than re-written so `github.com` and `https://…` — and a path, and a share
+— mean the same thing here as they do in a quicklink. The path row is gated on more than shape:
+`CommandCatalog.showInFinder` also requires the path to exist, so text that names nothing keeps the
+name search it would otherwise get. A share address cannot be probed without mounting it, so its
+shape alone decides. The
 entry is an ordinary `.command`, so `VisibilityStore` still gates it — Commands off hides the row —
 and its `url` carries the destination instead of the catalog's `tinycast://` placeholder. Nothing
 learns from it and nothing pins it: `LauncherCoordinator.launch` records no visit for a contextual

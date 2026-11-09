@@ -44,6 +44,10 @@ appear around it:
   [calculation](/docs/features/calculator), like `12% of 80` or `time in Tokyo`.
 - **A color card** when you paste a color like `#FF5733`.
 - **Open in Browser** at the top when you type a web address or a bare domain, like `github.com`.
+- **Show in Finder** at the top when you type the path of a file or folder that exists, like
+  `/Users/me/Downloads/report.pdf` or `~/Documents`. A folder opens; a file appears selected in
+  the Finder.
+- **Connect to Server** at the top when you type a share address, like `smb://nas/share`.
 - **Files** below the results, when [File Search](/docs/features/file-search#in-the-launcher) has
   **Show in launcher** on and you type three or more characters. Favorite files and folders whose
   names match appear there too, even with **Show in launcher** off.

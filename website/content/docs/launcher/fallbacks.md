@@ -48,5 +48,10 @@ Open in Browser works the other way around. When your text looks like a web addr
 `https://…` or `github.com/user/repo`, **Open in Browser** appears at the **top** of the results and
 opens the address in your default browser.
 
+Two more rows work the same way. When your text is the path of a file or folder that exists, like
+`/Users/me/Downloads/report.pdf` or `~/Documents`, **Show in Finder** appears at the top: a folder
+opens, and a file appears selected in the Finder. When your text is a share address, like
+`smb://nas/share`, **Connect to Server** appears at the top and connects to the share.
+
 It doesn't affect learned ranking and can't be a favorite, because it only exists for the text you
 typed.
