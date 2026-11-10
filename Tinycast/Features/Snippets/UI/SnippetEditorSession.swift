@@ -37,7 +37,7 @@ final class SnippetEditorSession {
         return Snippet(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines), text: text,
             keyword: keyword.isEmpty ? nil : keyword, isEnabled: isEnabled,
-            showsConfirmation: showsConfirmation)
+            showsConfirmation: showsConfirmation, isPinned: record?.snippet.isPinned ?? false)
     }
 
     func advanceFocus(backwards: Bool) {

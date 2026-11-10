@@ -98,7 +98,8 @@ Template body
 ```
 
 `name` is optional when reading and defaults from the filename, and `keyword` is optional. `enabled`
-defaults to `true`; `show_confirmation` defaults to `false`.
+defaults to `true`; `show_confirmation` defaults to `false`. `pinned` defaults to `false` and is
+written, last, only when `true`, so a library with no pins serializes exactly as before.
 
 String values must use double quotes. The codec escapes and decodes `\\`, `\"`, `\n`, `\r`, and
 `\t`; unsupported escapes, unquoted strings, duplicate or unknown keys, non-exact delimiters, and
@@ -228,6 +229,10 @@ The list is every **enabled** snippet — a disabled one is absent here exactly 
 launcher — filtered by name *or* keyword. Substring matching, not the launcher's fuzzy scorer: this is
 a library being browsed rather than a query racing apps and commands for a rank.
 
+Pinned snippets lead the list, each marked with a pin badge, and keep the store's name order within
+their block. A pin is the `pinned` frontmatter key, so it lives in the file and follows it across a
+folder change; toggling it is an ordinary revision-checked save. Launcher search ignores pins.
+
 The preview shows the **raw template**, never an expansion. Expanding per selection would capture the
 clipboard, read the target's selected text and burn a `{uuid}` on every arrow key, and a snippet
 carrying `{argument}` would raise its prompt just to draw a pane. Beside it sits the name, keyword,
@@ -237,10 +242,17 @@ shortcut, file name and character count.
 which reads `previousApp` before hiding the panel and then calls the same `expandSnippet` funnel a
 launcher row does — so template expansion, cursor placement, the Accessibility prompt, the
 confirmation HUD and the pasteboard lease are the ones described below, not a second copy of them.
-The rest of the menu is **Edit Snippet** (⌘E) and **Create Snippet** (⌘N), which open the launcher
-editor, **Show in Finder** (⌘↵), and **Delete Snippet** (⌃X), separated at the bottom in red. Deletion
-always confirms before removing the snippet file and reports a failure without losing the record.
-These shortcuts also work with the menu closed; ⌘N works even when the browser has no rows.
+
+⌘↵ and **Copy to Clipboard** go through `copySnippetFromPalette`: the same expansion, arguments
+prompt included, put on the clipboard unmarked so it enters history like any copy, then a
+"Copied" HUD. `{selection}` reads only through Accessibility there — no ⌘C is borrowed — and
+`{cursor}` is dropped.
+
+The menu opens with **Pin Snippet** / **Unpin Snippet** (⌘.). The rest is **Edit Snippet** (⌘E) and
+**Create Snippet** (⌘N), which open the launcher editor, **Show in Finder** (⌘F), and
+**Delete Snippet** (⌃X), separated at the bottom in red. Deletion always confirms before removing the
+snippet file and reports a failure without losing the record. These shortcuts also work with the
+menu closed; ⌘N works even when the browser has no rows.
 
 `Create Snippet` is a launcher command as well as a menu row because the palette swallows ⌘K when a
 screen has no rows: an empty library would otherwise open a browser with nothing to do.

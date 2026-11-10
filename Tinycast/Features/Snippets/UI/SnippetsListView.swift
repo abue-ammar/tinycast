@@ -69,6 +69,12 @@ private struct SnippetRow: View {
                 .font(metrics.typography.rowTitle)
                 .lineLimit(1)
             Spacer(minLength: metrics.spacing.lg)
+            if record.snippet.isPinned {
+                Image(systemName: "pin.fill")
+                    .font(metrics.typography.keyCap)
+                    .foregroundStyle(Theme.Colors.textTertiary)
+                    .help("Pinned to the top")
+            }
             if let keyword = record.snippet.keyword, !keyword.isEmpty {
                 Text(keyword)
                     .font(metrics.typography.keyCap)
