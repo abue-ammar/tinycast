@@ -35,6 +35,7 @@ enum SettingsFileSchema {
         case .automaticallyCheckForUpdates: return bind(settings, \.automaticallyCheckForUpdates)
         case .popToRootTimeout: return bind(settings, \.popToRootTimeout)
         case .escapeKeyBehavior: return bind(settings, \.escapeKeyBehavior)
+        case .numberShortcutsOpenItems: return bind(settings, \.numberShortcutsOpenItems)
         case .autoSwitchInputSource: return bind(settings, \.autoSwitchInputSourceID)
         case .supportReminders: return bind(settings, \.supportRemindersEnabled)
         case .language: return bind(settings, \.language)

@@ -25,6 +25,8 @@ struct LauncherList: View {
     var files: FileSection?
     /// The `Use "…" with` section, always last; nil when nothing is typed.
     var fallbacks: FallbackSection?
+    /// ⌘1–⌘9 badge the first rows rather than the favorites.
+    var numbersItems = false
     @Environment(RunningAppsMonitor.self) private var runningApps
 
     /// What the fallback section draws and where its rows go, addressed by position.
@@ -153,8 +155,24 @@ struct LauncherList: View {
         return rows + fileRows + fallbackRows
     }
 
+    /// The digit each of the first selectable rows answers to; a lead card is never numbered.
+    private func itemSlots(in rows: [Row]) -> [String: Character] {
+        guard numbersItems else { return [:] }
+        let items = rows.filter {
+            switch $0 {
+            case .header, .fallbackHeader, .card: false
+            default: true
+            }
+        }
+        return Dictionary(
+            uniqueKeysWithValues: items.prefix(FavoriteSlots.itemCount).enumerated().compactMap {
+                index, row in FavoriteSlots.digit(at: index).map { (row.id, $0) }
+            })
+    }
+
     var body: some View {
         let rows = rows
+        let itemSlots = itemSlots(in: rows)
         return Group {
             if results.isEmpty && favorites.isEmpty && card == nil && files == nil && fallbacks == nil {
                 EmptyResults(text: String(localized: "No apps found"))
@@ -183,14 +201,16 @@ struct LauncherList: View {
                                         app: app,
                                         selected: app.id == selectedRowID,
                                         running: runningApps.isRunning(app),
-                                        slot: nil
+                                        slot: itemSlots[row.id]
                                     )
                                     .contentShape(Rectangle())
                                     .onRowTap(drag: drag(for: app)) { onActivate(app) }
                                     .onRightClick { onActions(app) }
                                     .selectionFrame(app.id == selectedRowID)
                                 case .favorite(let favorite, let index):
-                                    favoriteRow(favorite, index: index)
+                                    favoriteRow(
+                                        favorite, slot: numbersItems
+                                            ? itemSlots[row.id] : FavoriteSlots.digit(at: index))
                                         .contentShape(Rectangle())
                                         .onRowTap(drag: drag(for: favorite)) { onActivateFavorite(index) }
                                         .onRightClick { onFavoriteActions(index) }
@@ -198,7 +218,7 @@ struct LauncherList: View {
                                 case .file(let result, let index):
                                     FileSearchRow(
                                         result: result, selected: row.id == selectedRowID,
-                                        showsLocation: true
+                                        showsLocation: true, slot: itemSlots[row.id]
                                     )
                                     .contentShape(Rectangle())
                                     .onRowTap(drag: result.rowDrag(dropped: onDropped)) {
@@ -209,7 +229,7 @@ struct LauncherList: View {
                                 case .fallback(let app, let index):
                                     AppRow(
                                         app: app, selected: row.id == selectedRowID, running: false,
-                                        slot: nil
+                                        slot: itemSlots[row.id]
                                     )
                                     .contentShape(Rectangle())
                                     .onTapGesture { fallbacks?.onActivate(index) }
@@ -235,8 +255,7 @@ struct LauncherList: View {
     }
 
     @ViewBuilder
-    private func favoriteRow(_ favorite: FavoritesStore.Item, index: Int) -> some View {
-        let slot = FavoriteSlots.digit(at: index)
+    private func favoriteRow(_ favorite: FavoritesStore.Item, slot: Character?) -> some View {
         switch favorite {
         case .entry(let entry):
             AppRow(

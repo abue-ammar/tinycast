@@ -332,7 +332,9 @@ struct LauncherScreen: PaletteScreen {
         case .edit: return editItem(at: selection)
         case .copyPath: return copyQuicklink(at: selection)
         case .copyFile: return copyDeepLink(at: selection)
-        case .favoriteSlot(let index): return launchFavorite(at: index)
+        case .favoriteSlot(let index):
+            return core.settings.numberShortcutsOpenItems
+                ? launchItem(at: index) : launchFavorite(at: index)
         case .copyCalculation: return copyCalculation(at: selection)
         case .openInApp, .showDetails:
             guard let meeting = meeting(at: selection) else { return false }
@@ -415,6 +417,14 @@ struct LauncherScreen: PaletteScreen {
     private func launchFavorite(at index: Int) -> Bool {
         guard pinnedFavorites.indices.contains(index) else { return false }
         activate(at: index + (leadCard == nil ? 0 : 1))
+        return true
+    }
+
+    /// ⌘1–⌘9 with numbered items on — the Nth row below any lead card, which carries no number.
+    private func launchItem(at index: Int) -> Bool {
+        let row = index + (leadCard == nil ? 0 : 1)
+        guard index < FavoriteSlots.itemCount, rows.indices.contains(row) else { return false }
+        activate(at: row)
         return true
     }
 
@@ -546,7 +556,8 @@ struct LauncherScreen: PaletteScreen {
             },
             onDropped: { core.paletteCoordinator.dragLanded() },
             files: fileSection,
-            fallbacks: fallbackSection
+            fallbacks: fallbackSection,
+            numbersItems: core.settings.numberShortcutsOpenItems
         )
     }
 

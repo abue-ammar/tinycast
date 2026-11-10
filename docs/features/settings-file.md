@@ -101,6 +101,7 @@ because the app rewrites the file.
     "automaticallyCheckForUpdates": true,
     "popToRootSeconds": 0,
     "escapeKeyBehavior": "navigateBackOrClose",
+    "numberShortcutsOpenItems": false,
     "autoSwitchInputSource": null,
     "supportReminders": true
   },

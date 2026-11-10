@@ -53,6 +53,10 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalGeneral, "Escape Key Behavior")
                     Text("When the search field is empty.")
                 }
+                Toggle(isOn: $settings.numberShortcutsOpenItems) {
+                    SettingsRowTitle(.generalGeneral, "Open items with ⌘1–9")
+                    Text("Opens the launcher’s top results instead of your favorites.")
+                }
                 // Empty only when TIS fails; one layout still lists, so the row stays put.
                 if !inputSources.isEmpty {
                     Picker(selection: $settings.autoSwitchInputSourceID) {

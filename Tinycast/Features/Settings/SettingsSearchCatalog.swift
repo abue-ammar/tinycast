@@ -135,6 +135,9 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Escape Key Behavior",
             keywords: ["escape", "esc", "back", "close", "navigate"]),
         .init(
+            .generalGeneral, "Open items with ⌘1–9",
+            keywords: ["command", "number", "digit", "shortcut", "favorites", "quick open"]),
+        .init(
             .generalGeneral, "Auto-switch input source",
             keywords: ["keyboard", "layout", "language", "abc"]),
         .init(

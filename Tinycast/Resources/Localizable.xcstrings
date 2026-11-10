@@ -89611,6 +89611,58 @@
         }
       }
     },
+    "Open items with ⌘1–9" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einträge mit ⌘1–9 öffnen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir elementos con ⌘1–9"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir les éléments avec ⌘1–9"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘1〜9で項目を開く"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘1–9로 항목 열기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir itens com ⌘1–9"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывать элементы по ⌘1–9"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 ⌘1–9 打开列表项"
+          }
+        }
+      }
+    },
     "Open saved links and searches from the launcher." : {
       "localizations" : {
         "de" : {
@@ -90179,6 +90231,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "打开日期列表"
+          }
+        }
+      }
+    },
+    "Opens the launcher’s top results instead of your favorites." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnet die obersten Ergebnisse des Launchers statt deiner Favoriten."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre los primeros resultados del lanzador en lugar de tus favoritos."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvre les premiers résultats du lanceur au lieu de vos favoris."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "お気に入りの代わりに、ランチャーの上位の結果を開きます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "즐겨찾기 대신 런처의 상위 결과를 엽니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abre os primeiros resultados do iniciador em vez dos seus favoritos."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывает верхние результаты лаунчера вместо избранного."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开启动器中排在前面的结果，而不是收藏项。"
           }
         }
       }
