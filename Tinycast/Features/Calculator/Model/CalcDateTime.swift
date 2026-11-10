@@ -35,7 +35,7 @@ enum CalcDateTime {
             return nil
         }
 
-        let query = lowered.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let query = lowered.split(whereSeparator: \.isBlank).joined(separator: " ")
         if hasTimestamp || query.hasSuffix(" to date") && CalcTimestamp.looksLikeISO(query),
             let result = parseTimestamp(query, echo: echo, now: now, calendar: calendar)
         {
@@ -153,7 +153,7 @@ enum CalcDateTime {
 
     private static func keywordSignals(_ query: String) -> Signals {
         var signals: Signals = []
-        let words = query.split(whereSeparator: \.isWhitespace)
+        let words = query.split(whereSeparator: \.isBlank)
         for (index, word) in words.enumerated() {
             let isFirst = index == 0
             let isLast = index == words.count - 1
@@ -192,7 +192,7 @@ enum CalcDateTime {
             }
             if dashes >= 2 { signals.insert(.moment) }
             for letters in word.utf8.split(whereSeparator: { !(97...122).contains($0) }) {
-                let name = String(bytes: letters, encoding: .utf8)!
+                let name = String(decoding: letters, as: UTF8.self)
                 if monthByName[name] != nil { signals.formUnion([.dayName, .moment]) }
                 if weekdayByName[name] != nil { signals.insert(.moment) }
                 switch name {

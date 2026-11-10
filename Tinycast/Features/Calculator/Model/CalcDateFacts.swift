@@ -29,7 +29,7 @@ enum CalcDateFacts {
         guard raw.utf8.count <= 64, let first = raw.utf8.first, "wdabchmsWDABCHMS".utf8.contains(first),
             raw.utf8.contains(32)
         else { return nil }
-        let query = raw.lowercased().split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let query = raw.lowercased().split(whereSeparator: \.isBlank).joined(separator: " ")
         if let count = periodCount(query, now: now, calendar: calendar) { return count }
         if query.hasPrefix("week "), let week = weekSpan(query, now: now, calendar: calendar) { return week }
         guard let (phrase, fact) = Fact.phrases.first(where: { matches(query, $0.0) }) else { return nil }

@@ -22,7 +22,7 @@ enum CalcSplit {
 
     private static func parse(_ query: String) -> Phrase? {
         guard query.count <= 128 else { return nil }
-        let words = query.split(whereSeparator: \.isWhitespace).map(String.init)
+        let words = query.split(whereSeparator: \.isBlank).map(String.init)
         let lower = words.map { $0.lowercased() }
         guard words.count >= 3 else { return nil }
 
@@ -59,7 +59,7 @@ enum CalcSplit {
     static func evaluate(_ query: String, rates: CurrencyRates?, region: String?) -> CalcResult? {
         guard let phrase = parse(query), let tokens = CalcTokenizer.tokenize(phrase.amount), !tokens.isEmpty
         else { return nil }
-        let expression = query.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let expression = query.split(whereSeparator: \.isBlank).joined(separator: " ")
         let count = Double(phrase.count)
         if var share = CalcPercent.amount(tokens) {
             share.amount /= count

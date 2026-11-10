@@ -62,7 +62,7 @@ struct CalcResult: Equatable, Sendable {
         _ query: String, _ payload: Payload, target: String, canChain: Bool = true, isCurrency: Bool = false
     ) -> CalcResult {
         CalcResult(
-            expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
+            expression: query.split(whereSeparator: \.isBlank).joined(separator: " "),
             sourceBadge: String(localized: "Expression"), targetBadge: target, payload: payload,
             canChain: canChain, isCurrency: isCurrency)
     }
@@ -106,7 +106,8 @@ enum CalcEngine {
         }
 
         // Before tokenizing: `5pm ldn in sf` is words, which the tokenizer would reject.
-        if let zone = CalcTimeZone.evaluate(query, now: now, calendar: calendar) {
+        let mayNameZone = query.utf8.contains { (97...122).contains($0 | 0x20) || $0 >= 128 || $0 == 58 }
+        if mayNameZone, let zone = CalcTimeZone.evaluate(query, now: now, calendar: calendar) {
             return unchained(zone)
         }
 
@@ -361,7 +362,7 @@ enum CalcEngine {
         guard let target = radixTarget(tokens) else { return nil }
 
         let valueTokens = Array(tokens[..<target.start])
-        let literalText = query.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? query
+        let literalText = query.split(whereSeparator: \.isBlank).first.map(String.init) ?? query
         let source: UInt64
         let sourceBadge: String
         let sourceText: String

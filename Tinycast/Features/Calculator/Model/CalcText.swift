@@ -6,8 +6,8 @@ enum CalcText {
             open < close
         else { return nil }
         let text = String(query[query.index(after: open)..<close])
-        let before = query[..<open].lowercased().split(whereSeparator: \.isWhitespace)
-        let after = query[query.index(after: close)...].lowercased().split(whereSeparator: \.isWhitespace)
+        let before = query[..<open].lowercased().split(whereSeparator: \.isBlank)
+        let after = query[query.index(after: close)...].lowercased().split(whereSeparator: \.isBlank)
         var words = before.map(String.init)
         if words.last == "of" || words.last == "in" { words.removeLast() }
         if words.isEmpty, let connector = after.first, ["to", "in", "as"].contains(connector) {
@@ -48,7 +48,7 @@ enum CalcText {
             "count characters":
             return .count(text.count, badge: String(localized: "Characters"))
         case "word count", "words", "count words":
-            return .count(text.split(whereSeparator: \.isWhitespace).count, badge: String(localized: "Words"))
+            return .count(text.split(whereSeparator: \.isBlank).count, badge: String(localized: "Words"))
         case "uppercase", "upper case", "upper", "caps": return .text(text.uppercased())
         case "lowercase", "lower case", "lower": return .text(text.lowercased())
         case "capitalize", "capitalized", "title case": return .text(text.capitalized)
@@ -64,7 +64,7 @@ enum CalcText {
             return .text(String(first ? text.prefix(count) : text.suffix(count)))
         }
         guard wordWords.contains(words[2]) else { return nil }
-        let split = text.split(whereSeparator: \.isWhitespace)
+        let split = text.split(whereSeparator: \.isBlank)
         return .text((first ? split.prefix(count) : split.suffix(count)).joined(separator: " "))
     }
 }
