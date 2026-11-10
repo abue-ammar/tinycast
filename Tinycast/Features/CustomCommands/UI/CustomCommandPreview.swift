@@ -38,6 +38,9 @@ struct CustomCommandPreview: View {
             rows.append(
                 InfoRow(label: String(localized: "Arguments"), value: arguments.joined(separator: ", ")))
         }
+        if let pattern = command.inputPattern {
+            rows.append(InfoRow(label: String(localized: "Alias"), value: pattern))
+        }
         if command.requiresConfirmation {
             rows.append(
                 InfoRow(

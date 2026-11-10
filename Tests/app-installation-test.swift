@@ -565,9 +565,14 @@ struct OtherEntry<Tag: Sendable>: Sendable {
     var isEnabled = true
     var showsInRootSearch = true
     var link = ""
+    var inputPattern: String?
+    func matchedInput(for query: String) -> String? { nil }
     static var sfSymbol: String { "" }
     static func id(fromEntryID id: String) -> UUID? { nil }
     static func precedes(_ lhs: Self, _ rhs: Self) -> Bool { lhs.name < rhs.name }
+}
+extension OtherEntry: Equatable {
+    static func == (lhs: Self, rhs: Self) -> Bool { lhs.id == rhs.id }
 }
 enum LayoutTag: Sendable {}
 enum RoomTag: Sendable {}

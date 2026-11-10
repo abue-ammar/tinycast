@@ -16897,7 +16897,6 @@
         }
       }
     },
-    
     "A window layout with this name already exists." : {
       "localizations" : {
         "de" : {
@@ -20892,6 +20891,58 @@
         }
       }
     },
+    "Alias" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エイリアス"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "별칭"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Псевдоним"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "别名"
+          }
+        }
+      }
+    },
     "Alias for %@" : {
       "localizations" : {
         "de" : {
@@ -20940,6 +20991,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 的别名"
+          }
+        }
+      }
+    },
+    "Alias regular expression" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias als regulärer Ausdruck"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias como expresión regular"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias en expression régulière"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エイリアスの正規表現"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "별칭 정규식"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Alias como expressão regular"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Псевдоним в виде регулярного выражения"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "别名正则表达式"
           }
         }
       }
@@ -98983,6 +99086,58 @@
         }
       }
     },
+    "Regular expression, e.g. [A-Z]+-\\d+" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Regulärer Ausdruck, z. B. [A-Z]+-\\d+"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expresión regular, p. ej. [A-Z]+-\\d+"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expression régulière, p. ex. [A-Z]+-\\d+"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正規表現（例: [A-Z]+-\\d+）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "정규식 (예: [A-Z]+-\\d+)"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expressão regular, p. ex. [A-Z]+-\\d+"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Регулярное выражение, например [A-Z]+-\\d+"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "正则表达式，例如 [A-Z]+-\\d+"
+          }
+        }
+      }
+    },
     "Reinstall" : {
       "localizations" : {
         "de" : {
@@ -106455,6 +106610,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "搜索日历…"
+          }
+        }
+      }
+    },
+    "Search can match the whole query against this as well as the name. The match reaches the command as $TINYCAST_INPUT." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Suche kann die gesamte Eingabe neben dem Namen auch mit diesem Ausdruck abgleichen. Der Treffer erreicht den Befehl als $TINYCAST_INPUT."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La búsqueda puede comparar toda la consulta con esto además del nombre. La coincidencia llega al comando como $TINYCAST_INPUT."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "La recherche peut comparer toute la saisie à ceci, en plus du nom. La correspondance parvient à la commande sous la forme $TINYCAST_INPUT."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "検索では名前に加えて、入力全体をこの式と照合できます。一致した内容は $TINYCAST_INPUT としてコマンドに渡されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "검색은 이름 외에 입력 전체를 이 식과도 비교할 수 있습니다. 일치한 내용은 $TINYCAST_INPUT으로 명령에 전달됩니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A pesquisa pode comparar toda a consulta com isto, além do nome. A correspondência chega ao comando como $TINYCAST_INPUT."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Поиск может сопоставлять с этим выражением весь запрос, а не только имя. Совпавший текст передаётся команде как $TINYCAST_INPUT."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "搜索除了匹配名称，也可以用它匹配整个输入。匹配到的内容会以 $TINYCAST_INPUT 传给命令。"
           }
         }
       }
@@ -119589,6 +119796,58 @@
         }
       }
     },
+    "The alias is not a valid regular expression." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Alias ist kein gültiger regulärer Ausdruck."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El alias no es una expresión regular válida."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’alias n’est pas une expression régulière valide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "エイリアスは有効な正規表現ではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "별칭이 올바른 정규식이 아닙니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O alias não é uma expressão regular válida."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Псевдоним не является допустимым регулярным выражением."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "别名不是有效的正则表达式。"
+          }
+        }
+      }
+    },
     "The app this quicklink opens with isn't installed any more." : {
       "localizations" : {
         "de" : {
@@ -126453,6 +126712,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "这是本地构建版本，请重新构建以更新。"
+          }
+        }
+      }
+    },
+    "This is not a valid regular expression." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Das ist kein gültiger regulärer Ausdruck."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No es una expresión regular válida."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce n’est pas une expression régulière valide."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "有効な正規表現ではありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "올바른 정규식이 아닙니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Não é uma expressão regular válida."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Это недопустимое регулярное выражение."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这不是有效的正则表达式。"
           }
         }
       }

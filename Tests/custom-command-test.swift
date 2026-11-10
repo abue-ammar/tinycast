@@ -21,6 +21,30 @@ struct CustomCommandTests {
             }
         }
 
+        // MARK: Alias pattern
+
+        let aliased = CustomCommand(
+            name: "Ticket", command: "echo", inputPattern: #"jira\s+[A-Z]+-\d+"#)
+        check(
+            "a pattern matches the whole query with its inner spaces",
+            aliased.matchedInput(for: "  jira   ABC-12 ") == "jira   ABC-12")
+        check("a pattern is anchored at both ends", aliased.matchedInput(for: "jira ABC-12 now") == nil)
+        check("a pattern ignores case", aliased.matchedInput(for: "JIRA abc-12") == "JIRA abc-12")
+        check("no pattern never matches", CustomCommand(name: "A", command: "x").matchedInput(for: "a") == nil)
+        check("a bad pattern is invalid", !CustomCommand.isValidPattern("(["))
+        let patternStore = CustomCommandStore(defaults: isolatedDefaults(suiteName + ".pattern"))
+        check("a bad pattern is refused", (try? patternStore.add(CustomCommand(
+            name: "Bad", command: "x", inputPattern: "(["))) == nil)
+        _ = try? patternStore.add(aliased)
+        check("the store finds a command by pattern", patternStore.matching("jira ABC-1").count == 1)
+        check("the pattern survives a round trip",
+            (try? JSONDecoder().decode(CustomCommand.self, from: JSONEncoder().encode(aliased)))?
+                .inputPattern == aliased.inputPattern)
+        let echoed = await ShellCommandRunner.run(
+            #"printf '%s' "$TINYCAST_INPUT" >&2; exit 3"#,
+            extraEnvironment: [CustomCommand.inputEnvironmentName: "a  b; c"])
+        check("the matched input reaches the script verbatim", echoed.standardError == "a  b; c")
+
         // MARK: Editor
 
         let editor = CustomCommandEditorSession(command: nil)

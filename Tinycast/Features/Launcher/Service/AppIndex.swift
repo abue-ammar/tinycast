@@ -378,6 +378,8 @@ final class AppIndex {
 
     private var discoveredEntries: [AppEntry] = []
     private var customCommandEntries: [AppEntry] = []
+    /// The commands a typed regex can reach, which no name match would.
+    private var patternCommands: [CustomCommand] = []
     private var windowCommandEntries: [AppEntry] = []
     private var customWindowSizeEntries: [AppEntry] = []
     private var windowLayoutEntries: [AppEntry] = []
@@ -445,7 +447,9 @@ final class AppIndex {
     func setCustomCommands(_ commands: [CustomCommand]) {
         let entries = commands.filter { $0.isEnabled && $0.showsInRootSearch }.map(AppEntry.init)
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-        guard entries != customCommandEntries else { return }
+        let patterned = commands.filter { $0.isEnabled && $0.showsInRootSearch && $0.inputPattern != nil }
+        guard entries != customCommandEntries || patterned != patternCommands else { return }
+        patternCommands = patterned
         customCommandEntries = entries
         publishEntries()
     }
@@ -707,10 +711,19 @@ final class AppIndex {
             if let kind = AppEntry.Kind.named(by: category) {
                 return Results(entries: categoryListing(kind, query: category.name))
             }
-            let ranked = rank(q, limit: limit)
+            let patterned = patternMatches(q)
+            let ranked = patterned + rank(q, limit: limit).filter { entry in
+                !patterned.contains { $0.id == entry.id }
+            }
             let listed = categoryRemainder(AppEntry.Kind.matching(by: category), excluding: ranked)
             return Results(entries: ranked + listed, matchCount: ranked.count)
         }
+    }
+
+    /// Led by what the user wrote a pattern for: a regex hit is the answer, not one more fuzzy guess.
+    private func patternMatches(_ query: String) -> [AppEntry] {
+        let ids = Set(patternCommands.filter { $0.matchedInput(for: query) != nil }.map(\.entryID))
+        return customCommandEntries.filter { ids.contains($0.id) }
     }
 
     /// Slice order is section order, so filtering keeps sections and selection aligned.

@@ -39,13 +39,18 @@ enum CustomCommandArgumentsAccessory {
         )
     }
 
-    /// The typed values keyed by field, stripped of blanks — what the run funnel is handed.
+    /// The typed values keyed by field, stripped of blanks, plus the matched alias input.
     static func values(for command: CustomCommand, vm: PaletteState) -> [String: String] {
         var values: [String: String] = [:]
         for index in command.arguments.indices {
             let id = CustomCommandArgument.fieldID(at: index)
             let typed = vm.commandArguments[PaletteState.argumentKey(command.entryID, id)] ?? ""
             if !typed.isEmpty { values[id] = typed }
+        }
+        // Stored when a shortcut-less run was sent back to the fields, where the query is just the name.
+        let kept = vm.commandArguments[PaletteState.argumentKey(command.entryID, CustomCommand.inputValueKey)]
+        if let input = command.matchedInput(for: vm.query) ?? kept {
+            values[CustomCommand.inputValueKey] = input
         }
         return values
     }

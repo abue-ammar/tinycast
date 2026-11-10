@@ -42,6 +42,8 @@ struct CustomCommandEditorView: View {
                         "Arguments", alignment: .top,
                         labelInset: editor.arguments.isEmpty ? 0 : metrics.spacing.lg
                     ) { argumentsSection }
+                    FormRow("Alias", alignment: .top) { inputPatternField }
+                        .id(CustomCommandEditorSession.Field.inputPattern)
                     FormRow {
                         VStack(alignment: .leading, spacing: metrics.spacing.lg) {
                             option(
@@ -258,9 +260,29 @@ struct CustomCommandEditorView: View {
         }
     }
 
+    private var inputPatternField: some View {
+        VStack(alignment: .leading, spacing: metrics.spacing.md) {
+            FormTextInput(
+                text: $editor.inputPattern, focused: focusBinding(.inputPattern),
+                placeholder: String(localized: "Regular expression, e.g. [A-Z]+-\\d+"),
+                label: String(localized: "Alias regular expression"), moveFocus: editor.advanceFocus
+            )
+            .frame(height: metrics.size.dialogButtonHeight)
+            .formFieldChrome(focused: focusedField == .inputPattern)
+            detail(
+                editor.hasInvalidPattern
+                    ? String(localized: "This is not a valid regular expression.")
+                    : String(
+                        localized: """
+                            Search can match the whole query against this as well as the name. \
+                            The match reaches the command as $TINYCAST_INPUT.
+                            """))
+        }
+    }
+
     private func isTextField(_ field: CustomCommandEditorSession.Field) -> Bool {
         switch field {
-        case .name, .command, .workingDirectory, .argumentName: true
+        case .name, .command, .workingDirectory, .argumentName, .inputPattern: true
         default: false
         }
     }

@@ -52,13 +52,16 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     var workingDirectory: String?
     /// The launcher glyph; nil falls back to the shared terminal symbol.
     var iconSymbol: String?
+    /// A regex the whole query may match instead of the name, handed to the script as `$TINYCAST_INPUT`.
+    var inputPattern: String?
 
     init(
         id: UUID = UUID(), name: String, command: String, isEnabled: Bool = true,
         showsInRootSearch: Bool = true, loadsShellEnvironment: Bool = false,
         requiresConfirmation: Bool = false, showsConfirmation: Bool = false,
         arguments: [CustomCommandArgument] = [],
-        showsOutput: Bool = false, workingDirectory: String? = nil, iconSymbol: String? = nil
+        showsOutput: Bool = false, workingDirectory: String? = nil, iconSymbol: String? = nil,
+        inputPattern: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -72,6 +75,7 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
         self.showsOutput = showsOutput
         self.workingDirectory = workingDirectory
         self.iconSymbol = iconSymbol
+        self.inputPattern = inputPattern
     }
 
     var symbol: String { iconSymbol ?? Self.sfSymbol }
@@ -87,6 +91,24 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
         return complete ? positional : nil
     }
 
+    /// The environment variable and the reserved value key that carry what matched the pattern.
+    static let inputEnvironmentName = "TINYCAST_INPUT"
+    static let inputValueKey = "$input"
+
+    /// The trimmed query when it matches the pattern from end to end; inner spaces stay as typed.
+    func matchedInput(for query: String) -> String? {
+        guard let inputPattern, !inputPattern.isEmpty else { return nil }
+        let input = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !input.isEmpty, let regex = try? Regex(inputPattern).ignoresCase(),
+            (try? regex.wholeMatch(in: input)) != nil
+        else { return nil }
+        return input
+    }
+
+    static func isValidPattern(_ pattern: String) -> Bool {
+        (try? Regex(pattern)) != nil
+    }
+
     static func id(fromEntryID entryID: String) -> UUID? {
         guard entryID.hasPrefix(entryIDPrefix) else { return nil }
         return UUID(uuidString: String(entryID.dropFirst(entryIDPrefix.count)))
@@ -96,7 +118,7 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
     private enum CodingKeys: String, CodingKey {
         case id, name, command, isEnabled, showsInRootSearch, loadsShellEnvironment
         case requiresConfirmation, showsConfirmation, arguments, showsOutput, workingDirectory
-        case iconSymbol
+        case iconSymbol, inputPattern
     }
 
     init(from decoder: Decoder) throws {
@@ -118,6 +140,7 @@ struct CustomCommand: Codable, Hashable, Identifiable, Sendable {
         showsOutput = try container.decodeIfPresent(Bool.self, forKey: .showsOutput) ?? false
         workingDirectory = try container.decodeIfPresent(String.self, forKey: .workingDirectory)
         iconSymbol = try container.decodeIfPresent(String.self, forKey: .iconSymbol)
+        inputPattern = try container.decodeIfPresent(String.self, forKey: .inputPattern)
     }
 }
 
@@ -134,6 +157,7 @@ enum CustomCommandValidationError: LocalizedError {
     case emptyCommand
     case duplicateName
     case invalidCharacter
+    case invalidPattern
 
     var errorDescription: String? {
         switch self {
@@ -141,6 +165,7 @@ enum CustomCommandValidationError: LocalizedError {
         case .emptyCommand: return String(localized: "Enter a command to run.")
         case .duplicateName: return String(localized: "A custom command with this name already exists.")
         case .invalidCharacter: return String(localized: "Names and commands cannot contain null characters.")
+        case .invalidPattern: return String(localized: "The alias is not a valid regular expression.")
         }
     }
 }
@@ -174,7 +199,9 @@ final class CustomCommandStore {
     func matching(_ query: String) -> [CustomCommand] {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         return commands.filter {
-            $0.isEnabled && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query))
+            $0.isEnabled
+                && (query.isEmpty || $0.name.localizedCaseInsensitiveContains(query)
+                    || $0.matchedInput(for: query) != nil)
         }
     }
 
@@ -252,6 +279,10 @@ final class CustomCommandStore {
         value.arguments = CustomCommandArgument.sanitized(draft.arguments)
         value.workingDirectory = draft.workingDirectory?.cleanedPathComponent
         value.iconSymbol = draft.iconSymbol?.cleanedPathComponent
+        value.inputPattern = draft.inputPattern?.cleanedPathComponent
+        if let pattern = value.inputPattern, !CustomCommand.isValidPattern(pattern) {
+            throw CustomCommandValidationError.invalidPattern
+        }
         guard !value.name.isEmpty else { throw CustomCommandValidationError.emptyName }
         guard !value.command.isEmpty else { throw CustomCommandValidationError.emptyCommand }
         guard !value.name.contains("\0"), !value.command.contains("\0") else {
@@ -290,6 +321,8 @@ final class CustomCommandStore {
             cleaned.arguments = CustomCommandArgument.sanitized(value.arguments)
             cleaned.workingDirectory = value.workingDirectory?.cleanedPathComponent
             cleaned.iconSymbol = value.iconSymbol?.cleanedPathComponent
+            cleaned.inputPattern = value.inputPattern?.cleanedPathComponent
+                .flatMap { CustomCommand.isValidPattern($0) ? $0 : nil }
             let foldedName = cleaned.name.folding(options: [.caseInsensitive], locale: .current)
             guard !cleaned.name.isEmpty, !cleaned.command.isEmpty, !cleaned.name.contains("\0"),
                 !cleaned.command.contains("\0"), ids.insert(cleaned.id).inserted,

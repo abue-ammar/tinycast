@@ -70,7 +70,7 @@ enum ShellCommandRunner {
     /// Fire-and-forget, keeping only the error tail; shown output goes through `stream`.
     nonisolated static func run(
         _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false,
-        workingDirectory: String? = nil
+        workingDirectory: String? = nil, extraEnvironment: [String: String] = [:]
     ) async -> ShellCommandResult {
         await withCheckedContinuation { continuation in
             queue.async {
@@ -78,14 +78,14 @@ enum ShellCommandRunner {
                     returning: execute(
                         command, arguments: arguments,
                         loadingShellEnvironment: loadingShellEnvironment,
-                        workingDirectory: workingDirectory))
+                        workingDirectory: workingDirectory, extraEnvironment: extraEnvironment))
             }
         }
     }
 
     nonisolated private static func execute(
         _ command: String, arguments: [String], loadingShellEnvironment: Bool,
-        workingDirectory: String?
+        workingDirectory: String?, extraEnvironment: [String: String]
     ) -> ShellCommandResult {
         let launch: Launch
         do {
@@ -102,9 +102,9 @@ enum ShellCommandRunner {
         process.arguments = launch.arguments
         process.currentDirectoryURL = URL(fileURLWithPath: launch.directory)
         // Lets a shell config skip slow sections when Tinycast is the caller.
-        process.environment = ProcessInfo.processInfo.environment.merging(["TINYCAST": "1"]) { _, new in
-            new
-        }
+        process.environment = ProcessInfo.processInfo.environment.merging(
+            extraEnvironment.merging(["TINYCAST": "1"]) { _, new in new }
+        ) { _, new in new }
         // Load-bearing: a config that prompts reads EOF and moves on, never hanging.
         process.standardInput = FileHandle.nullDevice
 
@@ -134,7 +134,7 @@ enum ShellCommandRunner {
     /// Runs under a pseudo-terminal; see `PseudoTerminal` for why a pipe cannot do this.
     nonisolated static func stream(
         _ command: String, arguments: [String] = [], loadingShellEnvironment: Bool = false,
-        workingDirectory: String? = nil
+        workingDirectory: String? = nil, extraEnvironment: [String: String] = [:]
     ) -> ShellCommandSession {
         let launch: Launch
         do {
@@ -145,7 +145,7 @@ enum ShellCommandRunner {
             return failedSession(error.reason)
         }
 
-        var environment = ProcessInfo.processInfo.environment
+        var environment = ProcessInfo.processInfo.environment.merging(extraEnvironment) { _, new in new }
         environment["TINYCAST"] = "1"
         // A terminal makes tools colour output, so ask for colour the window can draw.
         environment["TERM"] = "xterm-256color"

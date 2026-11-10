@@ -4,7 +4,7 @@ import SwiftUI
 @Observable
 final class CustomCommandEditorSession {
     enum Field: Hashable {
-        case name, icon, command, workingDirectory, chooseDirectory, addArgument
+        case name, icon, command, workingDirectory, chooseDirectory, addArgument, inputPattern
         case argumentName(UUID), argumentOptional(UUID), removeArgument(UUID)
         case rootSearch, shellEnvironment, confirmation, successConfirmation, output
     }
@@ -21,6 +21,7 @@ final class CustomCommandEditorSession {
     var shellCommand: String
     var workingDirectory: String
     var iconSymbol: String?
+    var inputPattern: String
     var arguments: [ArgumentDraft]
     var showsInRootSearch: Bool
     var loadsShellEnvironment: Bool
@@ -38,6 +39,7 @@ final class CustomCommandEditorSession {
         shellCommand = command?.command ?? ""
         workingDirectory = command?.workingDirectory ?? ""
         iconSymbol = command?.iconSymbol
+        inputPattern = command?.inputPattern ?? ""
         arguments = (command?.arguments ?? []).map {
             ArgumentDraft(name: $0.name, isOptional: $0.isOptional)
         }
@@ -46,6 +48,12 @@ final class CustomCommandEditorSession {
         requiresConfirmation = command?.requiresConfirmation ?? false
         showsConfirmation = command?.showsConfirmation ?? false
         showsOutput = command?.showsOutput ?? false
+    }
+
+    /// Empty is fine: it just means no alias.
+    var hasInvalidPattern: Bool {
+        let pattern = inputPattern.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !pattern.isEmpty && !CustomCommand.isValidPattern(pattern)
     }
 
     var canSave: Bool {
@@ -60,13 +68,15 @@ final class CustomCommandEditorSession {
             loadsShellEnvironment: loadsShellEnvironment, requiresConfirmation: requiresConfirmation,
             showsConfirmation: showsConfirmation,
             arguments: arguments.map { CustomCommandArgument(name: $0.name, isOptional: $0.isOptional) },
-            showsOutput: showsOutput, workingDirectory: workingDirectory, iconSymbol: iconSymbol)
+            showsOutput: showsOutput, workingDirectory: workingDirectory, iconSymbol: iconSymbol,
+            inputPattern: inputPattern.isEmpty ? nil : inputPattern)
     }
 
     var focusOrder: [Field] {
         [.name, .icon, .command, .workingDirectory, .chooseDirectory]
             + arguments.flatMap { [.argumentName($0.id), .argumentOptional($0.id), .removeArgument($0.id)] }
             + (arguments.count < CustomCommandArgument.limit ? [.addArgument] : [])
+            + [.inputPattern]
             + [.rootSearch, .shellEnvironment, .confirmation, .successConfirmation, .output]
     }
 

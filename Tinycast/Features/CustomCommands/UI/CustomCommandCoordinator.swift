@@ -256,7 +256,7 @@ final class CustomCommandCoordinator {
             paletteCoordinator.showArguments(of: AppEntry(command), values: values)
             return
         }
-        perform(command, arguments: arguments)
+        perform(command, arguments: arguments, input: values[CustomCommand.inputValueKey])
     }
 
     /// The launcher fallback: a one-off shell line, streamed into the window every run uses.
@@ -284,7 +284,7 @@ final class CustomCommandCoordinator {
         outputPresenter.focusExisting()
     }
 
-    private func perform(_ command: CustomCommand, arguments: [String]) {
+    private func perform(_ command: CustomCommand, arguments: [String], input: String?) {
         guard settings.customCommandsEnabled else { return }
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
         Task {
@@ -300,23 +300,27 @@ final class CustomCommandCoordinator {
                 else { return }
             }
             guard !command.showsOutput else {
-                await streamOutput(of: command, arguments: arguments)
+                await streamOutput(of: command, arguments: arguments, input: input)
                 return
             }
             let result = await ShellCommandRunner.run(
                 command.command, arguments: arguments,
                 loadingShellEnvironment: command.loadsShellEnvironment,
-                workingDirectory: command.workingDirectory)
+                workingDirectory: command.workingDirectory,
+                extraEnvironment: Self.environment(input: input))
             await report(command, result: result)
         }
     }
 
     /// Opens the window before the first byte, so a long command is visible while it works.
-    private func streamOutput(of command: CustomCommand, arguments: [String]) async {
+    private func streamOutput(
+        of command: CustomCommand, arguments: [String], input: String? = nil
+    ) async {
         let session = ShellCommandRunner.stream(
             command.command, arguments: arguments,
             loadingShellEnvironment: command.loadsShellEnvironment,
-            workingDirectory: command.workingDirectory)
+            workingDirectory: command.workingDirectory,
+            extraEnvironment: Self.environment(input: input))
         let runID = outputPresenter.begin(
             commandID: command.id, name: command.name, commandText: command.command,
             symbol: command.symbol)
@@ -336,6 +340,10 @@ final class CustomCommandCoordinator {
                     for: runID)
             }
         }
+    }
+
+    private static func environment(input: String?) -> [String: String] {
+        input.map { [CustomCommand.inputEnvironmentName: $0] } ?? [:]
     }
 
     private func stopOutputRun(id: UUID) {

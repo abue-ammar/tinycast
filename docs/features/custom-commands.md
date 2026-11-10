@@ -186,6 +186,19 @@ Values reach zsh as **positional parameters**, never as text substituted into th
 so the script reads them as `$1`, `$2`, and a value containing `; rm -rf ~` is a string, not a second
 command. An optional argument submitted empty still occupies its slot, so `$2` never becomes `$3`.
 
+### Alias pattern
+
+A command may carry an optional **Alias**: a regular expression (Swift `Regex`, case-insensitive) the
+**whole** trimmed query is matched against, from end to end, in root search and in Search Custom
+Commands. A hit lists the command first, ahead of the fuzzy matches, as well as its name does.
+It is separate from the launcher alias in Settings, which is a short fuzzy keyword. Inner spaces
+are kept as typed, so write `\s+` where any run of spaces should do. An invalid pattern is refused on save,
+and one that arrives invalid by import is dropped.
+
+The matched text reaches the script as the environment variable `$TINYCAST_INPUT` — an environment
+value, never spliced into the command text, so it follows the argument rule above. A hotkey or favorite
+run has no query and leaves it unset.
+
 ### Show output
 
 Off by default. With it on the run goes through `ShellCommandRunner.stream` and a
