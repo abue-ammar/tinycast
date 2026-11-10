@@ -266,6 +266,8 @@ final class DeepLinkCoordinator {
             return openQuicklink(id: id, with: input)
         case .customCommand(let id):
             return runCustomCommand(id: id, with: input)
+        case .appleShortcut(let id):
+            return runAppleShortcut(id: id, with: input)
         case .systemAction(.setVolume):
             return setVolume(with: input)
         default:
@@ -369,6 +371,13 @@ final class DeepLinkCoordinator {
         let names = SnippetTemplateEngine.declaredArguments(in: quicklink.link).map(\.name)
         let values = input.fieldValues(names: names, fieldID: { names[$0] })
         core.quicklinkCoordinator.openQuicklink(id: id, values: values)
+        return true
+    }
+
+    private func runAppleShortcut(id: UUID, with input: DeepLinkInput) -> Bool {
+        let field = AppleShortcut.inputFieldID
+        let values = input.fieldValues(names: [field], fieldID: { _ in field })
+        core.appleShortcutCoordinator.run(id: id, input: values[field])
         return true
     }
 

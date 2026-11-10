@@ -30,6 +30,18 @@ struct AppleShortcutTest {
         check("sorted by name, not listing order", listed.map(\.id) == [recipes, volume, pdf])
         check("the name loses its identifier", listed.first?.name == "Leftover Recipes")
 
+        let bare = AppleShortcut.invocation(id: volume, input: nil)
+        check("no input runs the shortcut alone", bare.arguments == ["run", volume.uuidString])
+        check("no input opens no standard input", bare.standardInput == nil)
+        check(
+            "a blank field is no input",
+            AppleShortcut.invocation(id: volume, input: " \n") == bare)
+        let typed = AppleShortcut.invocation(id: volume, input: " 25 ")
+        check(
+            "typed input is read from standard input",
+            typed.arguments == ["run", volume.uuidString, "--input-path", "-"])
+        check("typed input arrives as typed", typed.standardInput == Data(" 25 ".utf8))
+
         let parenthesised = AppleShortcut.parseList("Log (Work) Hours (\(volume.uuidString))")
         check("a name may carry parentheses", parenthesised.first?.name == "Log (Work) Hours")
         check("the trailing identifier still resolves", parenthesised.first?.id == volume)

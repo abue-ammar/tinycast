@@ -4,6 +4,14 @@ import Foundation
 struct AppleShortcut: Hashable, Identifiable, Sendable {
     static let entryIDPrefix = "apple-shortcut:"
     static let sfSymbol = "square.2.layers.3d"
+    /// The launcher's one inline field: nothing says which shortcuts read input, so every row has it.
+    static let inputFieldID = "input"
+
+    /// What `shortcuts run` is handed; nil `standardInput` leaves the shortcut with no input.
+    struct Invocation: Equatable, Sendable {
+        let arguments: [String]
+        let standardInput: Data?
+    }
 
     let id: UUID
     let name: String
@@ -15,6 +23,15 @@ struct AppleShortcut: Hashable, Identifiable, Sendable {
     static func id(fromEntryID entryID: String) -> UUID? {
         guard entryID.hasPrefix(entryIDPrefix) else { return nil }
         return UUID(uuidString: String(entryID.dropFirst(entryIDPrefix.count)))
+    }
+
+    /// A blank field is no input, so a shortcut that ignores input runs exactly as it always did.
+    static func invocation(id: UUID, input: String?) -> Invocation {
+        let run = ["run", id.uuidString]
+        guard let input, !input.allSatisfy(\.isWhitespace) else {
+            return Invocation(arguments: run, standardInput: nil)
+        }
+        return Invocation(arguments: run + ["--input-path", "-"], standardInput: Data(input.utf8))
     }
 
     /// Reads `shortcuts list --show-identifiers`, one `Name (UUID)` per line, sorted by name.

@@ -25,6 +25,11 @@ Every row shows the Shortcuts app's icon.
 The launcher closes before the shortcut runs, so a shortcut that works on the front app works on
 the app you were using.
 
+Select a shortcut and an optional **Input** field appears beside the search field. Press
+<kbd>tab</kbd> to reach it, and what you type is passed to the shortcut as its input. Leave it empty
+to run the shortcut with no input. Every shortcut shows the field, because macOS doesn't say which
+ones use input. A global shortcut runs with no input.
+
 A shortcut can take as long as it needs, including waiting on a dialog of its own. When it
 succeeds, Tinycast shows nothing. When it fails, Tinycast shows **Couldn’t Run** with the
 shortcut's name and the last lines of the error.

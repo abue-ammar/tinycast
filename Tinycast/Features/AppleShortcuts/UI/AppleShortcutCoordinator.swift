@@ -98,14 +98,14 @@ final class AppleShortcutCoordinator {
     // MARK: - Running
 
     /// The one funnel for a launcher row and a global shortcut, so the switch can't be bypassed.
-    func run(id: UUID) {
+    func run(id: UUID, input: String? = nil) {
         guard settings.appleShortcutsEnabled else { return }
         // Focus goes back first: a shortcut usually acts on whatever the user was in.
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette() }
         let name = name(of: id) ?? String(localized: "Shortcut")
         Task {
             do throws(AppleShortcutRunner.Failure) {
-                try await AppleShortcutRunner.run(id: id)
+                try await AppleShortcutRunner.run(id: id, input: input)
             } catch {
                 await core.showNotice(
                     title: String(localized: "Couldn’t Run \(name)"), message: error.localizedDescription,

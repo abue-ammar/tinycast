@@ -62,6 +62,16 @@ a shortcut usually acts on the app the user was in. There is **no timeout** — 
 dialog of its own for as long as it likes. Success is silent; a non-zero exit shows the tool's last
 lines in Tinycast's own dialog.
 
+### Input
+
+Selecting a row shows one optional **Input** field beside the search field. Neither
+`shortcuts list` nor any public API says which shortcuts read input, so every row has it. A blank
+field is no input: the invocation stays `shortcuts run <uuid>`, so a shortcut that ignores input
+runs as it always did, and a global shortcut has no field and never passes any. Typed text adds
+`--input-path -` and goes in on standard input through `ToolRunner`. `AppleShortcut.invocation`
+holds that rule, pure, for the harness. A deeplink's `arguments` or `fallbackText` fills the same
+field.
+
 ## Launcher and Settings
 
 `AppEntry.Kind.appleShortcut` is its own section, published right after Quicklinks. It is file-backed

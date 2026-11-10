@@ -14,16 +14,19 @@ enum AppleShortcutRunner {
     }
 
     /// Never timed out: a shortcut can legitimately sit waiting on a dialog of its own.
-    static func run(id: UUID) async throws(Failure) {
-        _ = try await invoke(["run", id.uuidString], timeout: nil)
+    static func run(id: UUID, input: String?) async throws(Failure) {
+        let invocation = AppleShortcut.invocation(id: id, input: input)
+        _ = try await invoke(
+            invocation.arguments, standardInput: invocation.standardInput, timeout: nil)
     }
 
     private static func invoke(
-        _ arguments: [String], timeout: TimeInterval?
+        _ arguments: [String], standardInput: Data? = nil, timeout: TimeInterval?
     ) async throws(Failure) -> ToolRunner.Result {
         let result: ToolRunner.Result
         do {
-            result = try await ToolRunner.run(executable, arguments, timeout: timeout)
+            result = try await ToolRunner.run(
+                executable, arguments, standardInput: standardInput, timeout: timeout)
         } catch {
             throw Failure(errorDescription: error.localizedDescription)
         }

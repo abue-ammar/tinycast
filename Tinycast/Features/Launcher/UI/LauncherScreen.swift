@@ -192,6 +192,11 @@ struct LauncherScreen: PaletteScreen {
                 metrics: core.settings.interfaceSize.metrics, focus: focus,
                 onSubmit: { activate(at: selection) })
         }
+        if entry.kind == .appleShortcut {
+            return AppleShortcutArgumentsAccessory.make(
+                entryID: entry.id, vm: vm, metrics: core.settings.interfaceSize.metrics,
+                focus: focus, onSubmit: { activate(at: selection) })
+        }
         return ExtensionArgumentsAccessory.make(
             entry: entry, coordinator: core.extensionCoordinator,
             values: { name in headerFieldBinding(entry: entry, name: name) },

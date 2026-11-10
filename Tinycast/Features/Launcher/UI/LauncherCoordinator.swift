@@ -142,7 +142,8 @@ final class LauncherCoordinator {
         }
         if app.kind == .appleShortcut {
             guard let id = AppleShortcut.id(fromEntryID: app.id) else { return }
-            core.appleShortcutCoordinator.run(id: id)
+            core.appleShortcutCoordinator.run(
+                id: id, input: arguments[AppleShortcut.inputFieldID])
             return
         }
         let previous = windowController.previousTarget
@@ -301,6 +302,8 @@ final class LauncherCoordinator {
         case .customCommand:
             guard let command = core.customCommands.command(entryID: entry.id) else { return [:] }
             return CustomCommandArgumentsAccessory.values(for: command, vm: palette)
+        case .appleShortcut:
+            return AppleShortcutArgumentsAccessory.values(forEntryID: entry.id, vm: palette)
         default:
             var values: [String: String] = [:]
             for argument in extensionCoordinator.commandArguments(for: entry) ?? [] {
