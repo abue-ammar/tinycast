@@ -50,9 +50,30 @@ struct CompactBar: View {
     var body: some View {
         let geometry = CompactBarGeometry(metrics: metrics, count: commands.count)
         let revealed = isRevealed
+        Group {
+            // Glass casting its own shadow would give the window's shadow that soft halo to trace.
+            if Theme.glassCastsShadow {
+                glass(geometry: geometry, revealed: revealed)
+                    .mask { silhouette(geometry: geometry, revealed: revealed, sparing: nil) }
+            } else {
+                glass(geometry: geometry, revealed: revealed)
+            }
+        }
+        .overlay { scrim(geometry: geometry, revealed: revealed) }
+        // Above the glass rather than inside it, where a morph would smear them.
+        .overlay(alignment: .topLeading) {
+            ForEach(Array(commands.enumerated()), id: \.element) { index, command in
+                glyph(command, at: index, geometry: geometry, revealed: revealed)
+            }
+        }
+        .task(id: palette.isVisible) { await followVisibility() }
+    }
+
+    /// Left unmasked where it can be: any mask also clips the rim glass draws past its shape.
+    private func glass(geometry: CompactBarGeometry, revealed: Bool) -> some View {
         let capsule = Capsule(style: .continuous)
         // One container, or the buttons could never bead off the capsule they come out of.
-        GlassEffectContainer(spacing: metrics.scaled(BarMotion.blend)) {
+        return GlassEffectContainer(spacing: metrics.scaled(BarMotion.blend)) {
             ZStack(alignment: .topLeading) {
                 capsule.fill(.clear)
                     .frame(width: geometry.capsuleWidth(revealed: revealed))
@@ -67,22 +88,6 @@ struct CompactBar: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        // Glass that casts its own shadow would give the window's shadow that soft halo to trace.
-        .mask {
-            if Theme.glassCastsShadow {
-                silhouette(geometry: geometry, revealed: revealed, sparing: nil)
-            } else {
-                Color.white
-            }
-        }
-        .overlay { scrim(geometry: geometry, revealed: revealed) }
-        // Above the glass rather than inside it, where a morph would smear them.
-        .overlay(alignment: .topLeading) {
-            ForEach(Array(commands.enumerated()), id: \.element) { index, command in
-                glyph(command, at: index, geometry: geometry, revealed: revealed)
-            }
-        }
-        .task(id: palette.isVisible) { await followVisibility() }
     }
 
     private func button(
