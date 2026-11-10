@@ -867,6 +867,8 @@ caches, TCC grants and login item, so this cannot disturb an installed copy.
   the moved row. Remove a favorite through either path; selection stays within Favorites.
 - Hold ⌘ and check that each displayed ⌘1–⌘0 opens that favorite, including with the meeting card
   above Favorites and from the compact palette.
+- Turn on General ▸ Open items with ⌘1–9: holding ⌘ numbers the first nine rows below any card,
+  each chord opens its row with and without a query, ⌘0 does nothing, and clipboard pins still work.
 - Search for a saved filename, including a short query and accented text: the favorite appears once.
   Turn Show in launcher off: saved files remain available; disable File Search: they disappear.
   Re-enable it: their order returns.

@@ -3,6 +3,8 @@ import Foundation
 /// ⌘1…⌘9 then ⌘0 for the tenth; favorites past it are listed but carry no chord.
 enum FavoriteSlots {
     static let digits: [Character] = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+    /// With numbered items on, ⌘1…⌘9 address list rows instead, and ⌘0 has no row.
+    static let itemCount = 9
 
     /// ANSI number-row key codes in visual order 1…9,0. This is layout-independent.
     private static let numberRowKeyCodes: [UInt16] = [18, 19, 20, 21, 23, 22, 26, 28, 25, 29]

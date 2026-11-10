@@ -17,6 +17,7 @@ enum SettingsBackupCoverage {
         "emojiGridColumns": .emojiGridColumns,
         "popToRootSeconds": .popToRootTimeout,
         "escapeKeyBehavior": .escapeKeyBehavior,
+        "numberShortcutsOpenItems": .numberShortcutsOpenItems,
         "appearance": .appearance,
         "language": .language,
         "calcNumberStyle": .calcNumberStyle,

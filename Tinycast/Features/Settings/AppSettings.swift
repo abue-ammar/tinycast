@@ -215,6 +215,13 @@ final class AppSettings {
         didSet { defaults.set(escapeKeyBehavior.rawValue, forKey: Key.escapeKeyBehavior.rawValue) }
     }
 
+    /// On, ⌘1–⌘9 open the launcher's Nth row instead of its Nth favorite.
+    var numberShortcutsOpenItems: Bool {
+        didSet {
+            defaults.set(numberShortcutsOpenItems, forKey: Key.numberShortcutsOpenItems.rawValue)
+        }
+    }
+
     /// Follow macOS, or pin Tinycast to one appearance. Applied by `AppCore.applyAppearance()`.
     var appearance: AppAppearance {
         didSet { defaults.set(appearance.rawValue, forKey: Key.appearance.rawValue) }
@@ -739,6 +746,7 @@ final class AppSettings {
         escapeKeyBehavior =
             defaults.string(forKey: Key.escapeKeyBehavior.rawValue).flatMap(EscapeKeyBehavior.init)
             ?? .navigateBackOrClose
+        numberShortcutsOpenItems = defaults.bool(forKey: Key.numberShortcutsOpenItems.rawValue)
         appearance =
             defaults.string(forKey: Key.appearance.rawValue).flatMap(AppAppearance.init) ?? .system
         language = Self.storedLanguage

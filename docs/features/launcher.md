@@ -767,6 +767,12 @@ press, where a row-level read re-runs only the handful of rows the `LazyVStack` 
 digit each row shows is carried on its `Row` case from the section build, so no row searches for its
 own position.
 
+**Open items with ⌘1–9** (`AppSettings.numberShortcutsOpenItems`, off by default) repoints the
+same chords at the list: `LauncherScreen.launchItem` opens the Nth row below any lead card, for any
+query, and ⌘0 is dropped. `LauncherList.itemSlots` numbers the first `FavoriteSlots.itemCount`
+non-header, non-card rows, so the badges and the chords count the same rows. Clipboard pins keep
+their slots either way.
+
 ## Hiding one result
 
 **Hide from Search**, on a result's ⌘K menu and on **⇧⌘H**, writes exactly what the checkbox in

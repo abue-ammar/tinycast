@@ -66,8 +66,6 @@ launchers. We accept that to keep the app simple.
 
 - **Search history.** There is no list of past searches, and ↑ won't bring one back. The launcher
   already learns what you open and moves it higher. ([#59](https://github.com/abue-ammar/tinycast/issues/59), [#772](https://github.com/abue-ammar/tinycast/issues/772), [#1446](https://github.com/abue-ammar/tinycast/issues/1446))
-- **⌘1–⌘9 to open any result.** Number shortcuts work only on Favorites in the launcher and on
-  pinned items in Clipboard History. ([#1090](https://github.com/abue-ammar/tinycast/issues/1090), [#1357](https://github.com/abue-ammar/tinycast/issues/1357), [#951](https://github.com/abue-ammar/tinycast/issues/951), [#396](https://github.com/abue-ammar/tinycast/issues/396), [#278](https://github.com/abue-ammar/tinycast/issues/278), [#1508](https://github.com/abue-ammar/tinycast/issues/1508))
 - **Space to act like Tab or Enter.** Space always types a space. After an alias, press **Tab** to
   fill in its inputs. Space in an empty search box won't open File Search either.
   ([#696](https://github.com/abue-ammar/tinycast/issues/696), [#908](https://github.com/abue-ammar/tinycast/issues/908), [#923](https://github.com/abue-ammar/tinycast/issues/923), [#1128](https://github.com/abue-ammar/tinycast/issues/1128), [#1185](https://github.com/abue-ammar/tinycast/issues/1185), [#1070](https://github.com/abue-ammar/tinycast/issues/1070))

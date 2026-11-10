@@ -52,6 +52,11 @@ you start typing, the list shows ranked results, so a position number wouldn't b
 
 In the clipboard screen, the same number keys paste your pinned entries instead.
 
+**Settings → General → Open items with ⌘1–9** changes what the numbers do in the launcher:
+<kbd>⌘</kbd><kbd>1</kbd>–<kbd>⌘</kbd><kbd>9</kbd> open the first nine rows of the list, whatever
+section they are in and with or without a search, and <kbd>⌘</kbd><kbd>0</kbd> does nothing. A
+calculator, color or meeting card above the list isn't counted. The clipboard keeps its own numbers.
+
 ## In compact mode
 
 The slim search bar of [compact mode](/docs/palette#appearance) doesn't show your favorites, but the
