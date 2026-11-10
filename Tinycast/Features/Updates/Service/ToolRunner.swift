@@ -18,7 +18,8 @@ enum ToolRunner {
 
     /// A nil `timeout` never kills: the tool may be waiting on a person rather than wedged.
     static func run(
-        _ executable: URL, _ arguments: [String], timeout: TimeInterval? = 120
+        _ executable: URL, _ arguments: [String], standardInput: Data? = nil,
+        timeout: TimeInterval? = 120
     ) async throws -> Result {
         let process = Process()
         process.executableURL = executable
@@ -29,6 +30,13 @@ enum ToolRunner {
         process.standardError = pipe
         let collector = OutputCollector()
         pipe.fileHandleForReading.readabilityHandler = { collector.absorb($0.availableData) }
+
+        let inputPipe = standardInput.map { _ in Pipe() }
+        if let inputPipe {
+            process.standardInput = inputPipe
+            // A tool that exits before reading must fail the write, not SIGPIPE Tinycast.
+            _ = fcntl(inputPipe.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1)
+        }
 
         return try await withCheckedThrowingContinuation { continuation in
             process.terminationHandler = { finished in
@@ -45,6 +53,13 @@ enum ToolRunner {
                 process.terminationHandler = nil
                 continuation.resume(throwing: error)
                 return
+            }
+            if let writer = inputPipe?.fileHandleForWriting, let standardInput {
+                // Off-main: a tool waiting on a person isn't reading, and a full pipe blocks the write.
+                Task.detached {
+                    try? writer.write(contentsOf: standardInput)
+                    try? writer.close()
+                }
             }
             guard let timeout else { return }
             Task {

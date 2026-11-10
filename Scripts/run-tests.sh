@@ -177,6 +177,7 @@ run launcher-settings-file-test \
                            Tinycast/Features/Snippets/Model/Snippet.swift \
                            Tinycast/Platform/LocalizedResource.swift
 run apple-shortcut-test    Tinycast/Features/AppleShortcuts/Model/*.swift
+run tool-runner-test       Tinycast/Features/Updates/Service/ToolRunner.swift
 run calc-test              Tinycast/Features/Calculator/Model/*.swift
 run index calc-performance Tinycast/Features/Calculator/Model/*.swift
 run calendar-test          Tinycast/Features/Calendar/Model/*.swift \
