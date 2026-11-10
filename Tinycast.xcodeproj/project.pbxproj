@@ -186,6 +186,8 @@
 		362651FE29DD01EC4D846F5F /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F64F4362989516482853CDB /* AppSettings.swift */; };
 		364CB97064000DC67178DDE8 /* EdgeDissolve.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F6F59F3C88C49BDED945F25 /* EdgeDissolve.swift */; };
 		36784C964DB27B94A62EEAA3 /* tinycast.icon in Resources */ = {isa = PBXBuildFile; fileRef = 6621A88681E993D49EEF07A3 /* tinycast.icon */; };
+		45D98AE23479711AA2AE7149 /* CalcScience.swift in Sources */ = {isa = PBXBuildFile; fileRef = A51BD2EC4F3E29285419096E /* CalcScience.swift */; };
+		25F7B214080897514E97CC5C /* CalcText.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2F4334CA7874C3B45986989 /* CalcText.swift */; };
 		368B6A0847A9E428A3D17743 /* CalcPitch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07F1737DC01BDFD90B7E7CE0 /* CalcPitch.swift */; };
 		36968DFA1E201E681F0BCD42 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1306524F57602D90FCF153C /* Theme.swift */; };
 		36A6FC9C41CDBD4ADA1F8E87 /* AIModelDiscovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = A68649D40F987D1CD24D1112 /* AIModelDiscovery.swift */; };
@@ -962,6 +964,8 @@
 		066784959D573010621D0709 /* DictionaryScope.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictionaryScope.swift; sourceTree = "<group>"; };
 		06B5C0B83C3645AC90639B85 /* AppleIntelligenceProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleIntelligenceProvider.swift; sourceTree = "<group>"; };
 		072DA32B7365FAAB7C38F25C /* AppleShortcutsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleShortcutsSettingsView.swift; sourceTree = "<group>"; };
+		A51BD2EC4F3E29285419096E /* CalcScience.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcScience.swift; sourceTree = "<group>"; };
+		B2F4334CA7874C3B45986989 /* CalcText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcText.swift; sourceTree = "<group>"; };
 		07F1737DC01BDFD90B7E7CE0 /* CalcPitch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcPitch.swift; sourceTree = "<group>"; };
 		0805655B4808B5B407C7BE7A /* CustomWindowSizeEditorPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomWindowSizeEditorPanel.swift; sourceTree = "<group>"; };
 		0814A6707E67A3BD3772E119 /* MCPServerEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerEditor.swift; sourceTree = "<group>"; };
@@ -1962,6 +1966,8 @@
 				92B4495E56754B05B5F3551D /* CalcPercent.swift */,
 				07F1737DC01BDFD90B7E7CE0 /* CalcPitch.swift */,
 				5BA971B2C770866F611163C6 /* CalcPixelDensity.swift */,
+				B2F4334CA7874C3B45986989 /* CalcText.swift */,
+				A51BD2EC4F3E29285419096E /* CalcScience.swift */,
 				4EF9F16C3F5567240FF03122 /* CalcQuantity.swift */,
 				21C13EC38CAAF82D9B6A5F34 /* CalcQuestion.swift */,
 				5E7CACFDE8DE0678D8CDC5E7 /* CalcRatePhrases.swift */,
@@ -4258,6 +4264,8 @@
 				48AE2C9989F8FA2AA99D2D61 /* CalcPercent.swift in Sources */,
 				368B6A0847A9E428A3D17743 /* CalcPitch.swift in Sources */,
 				869B442A98DF604937CD641B /* CalcPixelDensity.swift in Sources */,
+				25F7B214080897514E97CC5C /* CalcText.swift in Sources */,
+				45D98AE23479711AA2AE7149 /* CalcScience.swift in Sources */,
 				208FFC22E116E53E7BF3D147 /* CalcQuantity.swift in Sources */,
 				11E7418278383F0FC8CCFCFC /* CalcQuestion.swift in Sources */,
 				25F408BBBED869F0493C56E0 /* CalcRatePhrases.swift in Sources */,

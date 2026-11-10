@@ -136,8 +136,19 @@ enum CalcPercent {
             amountIndex: 1, factor: { $0 / (100 + $0) })
     }
 
+    private static let changes: [Adjustment] = ["from", "on", "of"].flatMap { relation in
+        [
+            Adjustment(
+                pattern: [nil, percent, word("increase"), word(relation), nil],
+                badge: String(localized: "Increased"), amountIndex: 1, factor: { 1 + $0 / 100 }),
+            Adjustment(
+                pattern: [nil, percent, word("decrease"), word(relation), nil],
+                badge: String(localized: "Decreased"), amountIndex: 1, factor: { 1 - $0 / 100 })
+        ]
+    }
+
     private static func adjusted(_ tokens: [CalcToken]) -> (value: CalcValue, badge: String)? {
-        for adjustment in [adjustments, includedTax].joined() {
+        for adjustment in [adjustments, includedTax, changes].joined() {
             guard let parts = tokens.operands(of: adjustment.pattern),
                 var amount = CalcExpressionParser.value(parts[adjustment.amountIndex]), !amount.isPercent,
                 let percentage = CalcExpressionParser.scalar(parts[1 - adjustment.amountIndex])

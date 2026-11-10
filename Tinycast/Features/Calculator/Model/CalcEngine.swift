@@ -81,11 +81,14 @@ enum CalcEngine {
         region: String? = nil, format: CalcNumberFormat = .english
     ) -> CalcResult? {
         let trimmed = withoutQuestionMark(raw.trimmingCharacters(in: .whitespacesAndNewlines))
-        guard !trimmed.isEmpty, trimmed.count <= 256, let query = format.canonical(trimmed) else {
-            return nil
+        guard !trimmed.isEmpty, trimmed.count <= 256 else { return nil }
+        if trimmed.utf8.contains(where: { $0 == 0x22 || $0 == 0xE2 }), let text = CalcText.evaluate(trimmed) {
+            return text
         }
+        guard let query = format.canonical(trimmed) else { return nil }
         if query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) {
             return CalcDateTime.namedMoment(query, now: now, calendar: calendar).map(unchained)
+                ?? (query.utf8.count <= 3 ? constant(.ident(query.lowercased()), query: query) : nil)
         }
         // The remainder is already canonical, so it must not be re-read in the localized format.
         if let asked = CalcQuestion.asked(query),
@@ -107,7 +110,13 @@ enum CalcEngine {
             return unchained(zone)
         }
 
-        guard let typed = CalcTokenizer.tokenize(query), !typed.isEmpty else { return nil }
+        if let science = CalcScience.evaluate(
+            query, solve: { evaluate($0, now: now, calendar: calendar, rates: rates, region: region) })
+        {
+            return science
+        }
+
+        guard let typed = CalcTokenizer.tokenize(paceInMinutes(query)), !typed.isEmpty else { return nil }
         let tokens = CalcQuestion.conversion(typed) ?? typed
 
         if CalcSplit.mentions(tokens), let share = CalcSplit.evaluate(query, rates: rates, region: region) {
@@ -135,7 +144,7 @@ enum CalcEngine {
                     sourceBadge: String(localized: "Expression"), targetBadge: String(localized: "Result"),
                     payload: .number(value))
             }
-            return nil
+            return constant(tokens[0], query: query)
         }
 
         if let base = baseConversion(tokens, query: query) { return base }
@@ -215,6 +224,25 @@ enum CalcEngine {
             ?? CalcStatistics.evaluate(tokens, query: query) ?? CalcRatePhrases.evaluate(tokens, query: query)
             ?? CalcSubstance.evaluate(tokens, query: query) ?? CalcPixelDensity.evaluate(tokens, query: query)
             ?? CalcPitch.evaluate(tokens, query: query)
+    }
+
+    private static func constant(_ token: CalcToken, query: String) -> CalcResult? {
+        guard case .ident(let name) = token, name != "half", let value = CalcMath.constants[name] else {
+            return nil
+        }
+        return CalcResult(
+            expression: query, sourceBadge: String(localized: "Expression"),
+            targetBadge: String(localized: "Result"), payload: .number(value))
+    }
+
+    private static func paceInMinutes(_ query: String) -> String {
+        guard query.utf8.contains(0x3A), query.utf8.contains(0x2F),
+            let range = query.range(
+                of: #"(?<![\d:])\d{1,2}:[0-5]\d(?=\s*min\s*/)"#, options: .regularExpression)
+        else { return query }
+        let parts = query[range].split(separator: ":")
+        guard let minutes = Double(parts[0]), let seconds = Double(parts[1]) else { return query }
+        return query.replacingCharacters(in: range, with: CalcFormatter.copyText(minutes + seconds / 60))
     }
 
     private static func withoutQuestionMark(_ text: String) -> String {

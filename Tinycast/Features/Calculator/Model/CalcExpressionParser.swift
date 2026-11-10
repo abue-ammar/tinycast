@@ -32,6 +32,16 @@ struct CalcExpressionParser {
         position < tokens.count ? tokens[position] : nil
     }
 
+    /// `12 % 5` is a remainder; `12 % of 5` stays a percent.
+    private var modulusFollows: Bool {
+        guard position + 1 < tokens.count else { return false }
+        switch tokens[position + 1] {
+        case .number, .compactNumber, .intLiteral:
+            return position + 2 == tokens.count || tokens[position + 2] != .op(.percent)
+        default: return false
+        }
+    }
+
     mutating func parse() -> CalcValue? {
         guard var value = parseExpression(minBindingPower: 0), position == tokens.count,
             value.effective.isFinite
@@ -94,6 +104,8 @@ struct CalcExpressionParser {
                 op: op, bindingPower: power,
                 rightBindingPower: power + (op == .power ? 0 : 1), consumesToken: true)
         case .ident("mod"):
+            return BinaryOp(op: .percent, bindingPower: 20, rightBindingPower: 21, consumesToken: true)
+        case .op(.percent) where modulusFollows:
             return BinaryOp(op: .percent, bindingPower: 20, rightBindingPower: 21, consumesToken: true)
         case .ident("power"):
             return BinaryOp(op: .power, bindingPower: 30, rightBindingPower: 30, consumesToken: true)
@@ -402,6 +414,7 @@ struct CalcExpressionParser {
                 dimensionCount += 1
                 position = next.end
             case .op(.percent):
+                if modulusFollows { return value }
                 guard isScalar(value.kind), !value.isPercent, !value.isBoolean else { return nil }
                 value.isPercent = true
                 position += 1

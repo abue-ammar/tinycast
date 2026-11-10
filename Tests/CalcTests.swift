@@ -168,7 +168,14 @@ struct CalcTests {
         expectDisplay("-10 mod 3", "-1")  // fmod semantics: the sign follows the dividend
         expectDisplay("2 + 10 mod 3", "3")  // same precedence as * and /, binds tighter than +
         expectNil("10 mod 0")
-        expectNil("10 % 3")  // "%" stays percent, whatever follows it
+        expectDisplay("10 % 3", "1")  // a number right after "%" makes it a remainder
+        expectDisplay("12 % 5", "2")
+        expectDisplay("12%(2+3)", "0.6")
+        expectNil("10% 20%")
+        expectNil("molar mass of cococococococococococococococococococococococococococococococox")
+        expectNil("molar mass of H99999999999999999999")
+        expectDisplay("15% decrease from 813", "691.05")
+        expectDisplay("15% increase on 813", "934.95")
         expectDisplay("450 + 20% - 5", "535")
 
         expectDisplay("10km to mi", "6.213711922 mi")
@@ -238,8 +245,9 @@ struct CalcTests {
         expectNil("1password")
         expectNil("45")
         expectNil("3.14")
-        expectNil("pi")
-        expectNil("e")
+        expectDisplay("pi", "3.141592654")
+        expectDisplay("e", "2.718281828")
+        expectNil("half")
         expectNil("10km to")  // half-typed conversion
         expectNil("10 to mi")
         expectDisplay("45+", "45")  // safe trailing operators keep the last complete result
@@ -773,6 +781,11 @@ struct CalcTests {
         // A slash date still reads as a date when the other side names a keyword
         expectDisplayAt("9/4 - today", "42 days")
         expectDisplayAt("today - 9/4", "-42 days")
+        expectDisplayAt("today - 1.1.2026 + 3", "207 days")
+        expectDisplayAt("today - 1.1.2026 + 1 week - 1", "210 days")
+        expectDisplayAt("week 44 2026", "Sun, 25 Oct – Sat, 31 Oct, 2026")
+        expectDisplayAt("week 1", "Sun, 28 Dec – Sat, 3 Jan, 2026")
+        expectNilAt("week 54 2026")
         // A lone word naming one moment answers; one that recurs is still an app search
         expectDisplayAt("today", "24 July")
         expectDisplayAt("tomorrow", "25 July")
@@ -2152,6 +2165,34 @@ struct CalcTests {
         expectDisplay("c4 to hz", "261.6255653 Hz")
         expectDisplay("bb3 to hz", "233.0818808 Hz")
         expectNil("a4 paper")
+        expectDisplay("1.75 as improper", "7/4")
+        expectDisplay("1.75 as mixed number", "1 3/4")
+        expectDisplay("0.5 as mixed", "1/2")
+
+        expectDisplay("speed of light in km/s", "299,792.458 km/s")
+        expectBadges("speed of light in km/s", source: "Speed Of Light", target: "Kilometers per Second")
+        expectDisplay("speed of light", "299,792,458 m/s")
+        expectDisplay("absolute zero in f", "-459.67 °F")
+        expectDisplay("boltzmann constant", "1.380649e-23 J/K")
+        expectNil("gravity falls")
+        expectDisplay("molar mass of C6H12O6", "180.156 g/mol")
+        expectDisplay("molar mass of CuSO4·5H2O", "249.677 g/mol")
+        expectDisplay("Ca(OH)2 molar mass", "74.092 g/mol")
+        expectDisplay("molar mass of co2", "44.009 g/mol")
+        expectDisplay("molar mass of nacl", "58.44 g/mol")
+        expectNil("molar mass of Xx2")
+        expectDisplay("5:00 min/km in km/h", "12 km/h")
+        expectDisplay("4:30 min/mi to km/h", "21.45792 km/h")
+        expectDisplay("first 10 characters of \"hello\"", "hello")
+        expectDisplay("last 2 words of \"one two three\"", "two three")
+        expectDisplay("length of \"hello world\"", "11")
+        expectDisplay("\"hello\" in uppercase", "HELLO")
+        expectDisplay("5\" to cm", "12.7 cm")
+        expectNil("5\" + 3\"x")
+        expectDisplay("100 eV to J", "1.602176634e-17 J")
+        expectDisplay("1 angstrom to nm", "0.1 nm")
+        expectDisplay("1 therm to kWh", "29.30011111 kWh")
+        expectDisplay("1 decade to years", "10 yr")
 
         // Pixels against physical size
         expectDisplay("3000 px to inches at 300 ppi", "10 in")
