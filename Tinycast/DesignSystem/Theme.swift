@@ -2,6 +2,12 @@ import SwiftUI
 
 /// Central design tokens; every dark colour is the literal the forced-dark build shipped.
 enum Theme {
+    /// macOS 26 glass casts its own shadow; on 27 bare glass has none and needs the window's.
+    static var glassCastsShadow: Bool {
+        if #available(macOS 27, *) { return false }
+        return true
+    }
+
     enum Spacing {
         static let xxs: CGFloat = 2
         static let dictationWaveGap: CGFloat = 3
@@ -348,6 +354,8 @@ enum Theme {
         static let glyphDelay: TimeInterval = 0.24
         static let glyphFade: TimeInterval = 0.16
         static let glyphBlur: CGFloat = 4
+        /// Both springs rest within this, so the window's shadow is recut from the settled shapes.
+        static let settle: TimeInterval = 0.9
         /// Past the window's own close animation, so parking the buttons is never seen.
         static let parkAfterHide: TimeInterval = 0.3
         /// The capsule undershoots as it shortens, then settles.
