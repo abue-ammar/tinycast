@@ -6,19 +6,22 @@ struct Snippet: Sendable, Hashable {
     var keyword: String?
     var isEnabled: Bool
     var showsConfirmation: Bool
+    var isPinned: Bool
 
     init(
         name: String,
         text: String,
         keyword: String? = nil,
         isEnabled: Bool = true,
-        showsConfirmation: Bool = false
+        showsConfirmation: Bool = false,
+        isPinned: Bool = false
     ) {
         self.name = name
         self.text = text
         self.keyword = keyword
         self.isEnabled = isEnabled
         self.showsConfirmation = showsConfirmation
+        self.isPinned = isPinned
     }
 }
 

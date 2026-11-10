@@ -192,6 +192,19 @@ struct SnippetsTests {
             content: "---\nname: \"No HUD\"\n---\nBody",
             fileURL: fileURL)
         check("missing show_confirmation defaults false", !missingHUD.showsConfirmation)
+        check("missing pinned defaults false", !missingHUD.isPinned)
+        check(
+            "serializer omits pinned while unset",
+            !SnippetMarkdownSerializer.serialize(missingHUD).contains("pinned"))
+        let pinned = Snippet(name: "Pinned", text: "Body", isPinned: true)
+        let pinnedSource = SnippetMarkdownSerializer.serialize(pinned)
+        check(
+            "serializer writes pinned last",
+            pinnedSource.hasPrefix("---\nname: \"Pinned\"\nenabled: true\nshow_confirmation: false\npinned: true\n---\n"))
+        let parsedPinned = try SnippetMarkdownSerializer.parse(content: pinnedSource, fileURL: fileURL)
+        check("pinned round-trips", parsedPinned == pinned)
+        expectParseError(
+            "pinned uses strict booleans", content: "---\npinned: yes\n---\n", fileURL: fileURL)
         expectParseError(
             "show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n",
             fileURL: fileURL)
