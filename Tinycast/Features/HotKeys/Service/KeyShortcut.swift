@@ -31,6 +31,9 @@ struct KeyShortcut: Hashable, Sendable {
 
     var modifierFlags: NSEvent.ModifierFlags { Self.modifierFlags(from: carbonModifiers) }
 
+    static let characterViewerSpace = KeyShortcut(
+        carbonKeyCode: kVK_Space, carbonModifiers: controlKey | cmdKey)
+
     static func modifierFlags(from carbonModifiers: Int) -> NSEvent.ModifierFlags {
         var flags: NSEvent.ModifierFlags = []
         if carbonModifiers & controlKey != 0 { flags.insert(.control) }

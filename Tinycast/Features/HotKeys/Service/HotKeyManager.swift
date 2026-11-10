@@ -395,8 +395,10 @@ final class HotKeyManager {
     /// Hands a combo to Carbon; a modifier-only binding has no per-action registration.
     private func register(_ action: HotKeyAction) {
         guard let shortcut = binding(for: action)?.shortcut else { return }
+        // Character Viewer can take keyboard focus when it receives the same chord.
+        let exclusive = action == .command(.searchEmoji) && shortcut == .characterViewerSpace
         center.register(
-            id: action.defaultsKey, shortcut: shortcut,
+            id: action.defaultsKey, shortcut: shortcut, exclusive: exclusive,
             onKeyDown: { [weak self] _ in self?.perform(action) },
             onKeyUp: action == .dictation ? { [weak self] in self?.onDictationReleased?() } : nil)
     }

@@ -2,6 +2,7 @@ import Foundation
 
 enum CommandID: String, CaseIterable, Sendable {
     case sample
+    case searchEmoji = "command:search-emoji"
     var name: String { rawValue }
     var hotKeyAction: HotKeyAction? { .command(self) }
 }
@@ -44,6 +45,7 @@ final class ShortcutCaptureSession {
 final class HotKeyCenter {
     struct Entry {
         let shortcut: KeyShortcut
+        let exclusive: Bool
         let onKeyDown: (UInt64) -> Void
         let onKeyUp: (() -> Void)?
     }
@@ -52,9 +54,10 @@ final class HotKeyCenter {
     var isPaused = false
     init() { Self.current = self }
     func register(
-        id: String, shortcut: KeyShortcut, onKeyDown: @escaping (UInt64) -> Void, onKeyUp: (() -> Void)? = nil
+        id: String, shortcut: KeyShortcut, exclusive: Bool = false,
+        onKeyDown: @escaping (UInt64) -> Void, onKeyUp: (() -> Void)? = nil
     ) {
-        entries[id] = Entry(shortcut: shortcut, onKeyDown: onKeyDown, onKeyUp: onKeyUp)
+        entries[id] = Entry(shortcut: shortcut, exclusive: exclusive, onKeyDown: onKeyDown, onKeyUp: onKeyUp)
     }
     func unregister(id: String) { entries[id] = nil }
 }

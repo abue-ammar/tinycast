@@ -27,6 +27,7 @@ private func hotKeyCarbonEventHandler(
 final class HotKeyCenter {
     private struct Entry {
         let shortcut: KeyShortcut
+        let exclusive: Bool
         let onKeyDown: (UInt64) -> Void
         let onKeyUp: (() -> Void)?
         let carbonID: UInt32
@@ -51,13 +52,14 @@ final class HotKeyCenter {
 
     /// Registers `shortcut` under `id`, dropping any previous one so no combo leaks.
     func register(
-        id: String, shortcut: KeyShortcut, onKeyDown: @escaping (UInt64) -> Void,
+        id: String, shortcut: KeyShortcut, exclusive: Bool = false,
+        onKeyDown: @escaping (UInt64) -> Void,
         onKeyUp: (() -> Void)? = nil
     ) {
         unregister(id: id)
         nextCarbonID += 1
         entries[id] = Entry(
-            shortcut: shortcut, onKeyDown: onKeyDown, onKeyUp: onKeyUp,
+            shortcut: shortcut, exclusive: exclusive, onKeyDown: onKeyDown, onKeyUp: onKeyUp,
             carbonID: nextCarbonID, ref: nil)
         idToKey[nextCarbonID] = id
         if !isPaused { activate(id) }
@@ -78,7 +80,7 @@ final class HotKeyCenter {
             UInt32(entry.shortcut.carbonModifiers),
             EventHotKeyID(signature: signature, id: entry.carbonID),
             GetEventDispatcherTarget(),
-            0,
+            UInt32(entry.exclusive ? kEventHotKeyExclusive : kEventHotKeyNoOptions),
             &ref
         )
         // Another app may own the combo; the binding stays visible but doesn't fire.
