@@ -778,3 +778,293 @@
     animation: none;
   }
 }
+
+/* ── Feature scenes ────────────────────────────────────────────────────────
+   The vector demos in the Features section. Base styles are each scene's last
+   frame; the animations below only replay the steps that lead there. */
+.scene * {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.scene-out,
+.scene-flash,
+.scene-travel {
+  opacity: 0;
+}
+
+.scene-draw {
+  stroke-dasharray: 1;
+}
+
+.scene-clip-select {
+  transform: translateY(50px);
+}
+
+.scene-window {
+  left: 51%;
+  width: 47%;
+}
+
+.scene-layout-label:not(:last-child) {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .scene-type {
+    animation: scene-type 40ms linear var(--d) both;
+  }
+
+  .scene-caret {
+    animation:
+      scene-type 40ms linear var(--d, 0ms) both,
+      caret-blink 1.05s steps(1) var(--d, 0ms) infinite;
+  }
+
+  .scene-in {
+    animation: scene-in 0.6s var(--ease-settle) var(--d) both;
+  }
+
+  .scene-out {
+    animation: scene-out 0.35s var(--ease-settle) var(--d) both;
+  }
+
+  .scene-pop {
+    animation: scene-pop 0.55s var(--ease-pop) var(--d) both;
+  }
+
+  .scene-grow {
+    transform-origin: left center;
+    animation: scene-grow 0.6s var(--ease-settle) var(--d) both;
+  }
+
+  .scene-draw {
+    animation: scene-draw 0.6s var(--ease-settle) var(--d) both;
+  }
+
+  .scene-spin {
+    animation: scene-spin 0.7s var(--ease-pop) var(--d) both;
+  }
+
+  .scene-flash {
+    animation: scene-flash 0.9s ease-out var(--d) both;
+  }
+
+  .scene-travel {
+    animation: scene-travel 0.8s ease-in-out var(--d) both;
+  }
+
+  .scene-launcher-select {
+    animation: scene-launcher-select 3.6s var(--ease-glide) var(--d) both;
+  }
+
+  .scene-clip-select {
+    animation: scene-clip-select 0.5s var(--ease-glide) var(--d) both;
+  }
+
+  .scene-window {
+    animation: scene-window 5.6s var(--ease-glide) 300ms both;
+  }
+
+  .scene-layout-label {
+    animation: 5.6s linear 300ms both;
+  }
+  .scene-layout-label:nth-child(1) {
+    animation-name: scene-label-1;
+  }
+  .scene-layout-label:nth-child(2) {
+    animation-name: scene-label-2;
+  }
+  .scene-layout-label:nth-child(3) {
+    animation-name: scene-label-3;
+  }
+  .scene-layout-label:nth-child(4) {
+    animation-name: scene-label-4;
+  }
+
+  .feature-progress {
+    animation: feature-progress 6.5s linear both;
+  }
+
+  .feature-showcase[data-paused] .feature-progress,
+  .feature-showcase[data-offscreen] :is(.feature-progress, .feature-stage *) {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes scene-type {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(4px);
+  }
+}
+
+@keyframes scene-out {
+  from {
+    opacity: 1;
+    filter: none;
+  }
+  to {
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+@keyframes scene-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+@keyframes scene-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+@keyframes scene-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes scene-spin {
+  from {
+    opacity: 0;
+    transform: rotate(-90deg) scale(0.4);
+  }
+}
+
+@keyframes scene-flash {
+  25% {
+    opacity: 1;
+  }
+}
+
+@keyframes scene-travel {
+  from {
+    transform: translateX(0);
+  }
+  15%,
+  85% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(36px);
+  }
+}
+
+@keyframes scene-launcher-select {
+  0% {
+    opacity: 0;
+    transform: none;
+  }
+  8%,
+  28% {
+    opacity: 1;
+    transform: none;
+  }
+  38%,
+  55% {
+    transform: translateY(38px);
+  }
+  65%,
+  78% {
+    transform: translateY(102px);
+  }
+  90%,
+  100% {
+    transform: none;
+  }
+}
+
+@keyframes scene-clip-select {
+  from {
+    transform: none;
+  }
+}
+
+@keyframes scene-window {
+  0%,
+  18% {
+    left: 2%;
+    width: 47%;
+  }
+  26%,
+  44% {
+    left: 34.5%;
+    width: 31%;
+  }
+  52%,
+  70% {
+    left: 2%;
+    width: 63%;
+  }
+}
+
+@keyframes scene-label-1 {
+  0%,
+  20% {
+    opacity: 1;
+  }
+  24%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes scene-label-2 {
+  0%,
+  20% {
+    opacity: 0;
+  }
+  24%,
+  46% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes scene-label-3 {
+  0%,
+  46% {
+    opacity: 0;
+  }
+  50%,
+  72% {
+    opacity: 1;
+  }
+  76%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes scene-label-4 {
+  0%,
+  72% {
+    opacity: 0;
+  }
+  76%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes feature-progress {
+  from {
+    transform: scaleX(0);
+  }
+}

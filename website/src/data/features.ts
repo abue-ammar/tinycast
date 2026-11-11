@@ -17,24 +17,20 @@ export type Feature = {
   /** Deep link into the docs page that covers this feature. */
   href: string;
   preview: FeaturePreview;
-  /** Spans two columns of the bento on wide screens. */
-  isWide: boolean;
 };
 
 export type MinorFeature = Pick<Feature, "icon" | "title" | "href">;
 
 // Everything Tinycast does, in plain language. Kept true to what the app
 // actually ships — each maps to a real feature in the source, and each links
-// to the docs page that covers it. Order sets the bento: every row adds up to
-// four columns, with wide cards counting as two.
+// to the docs page that covers it. Order is the showcase's tab order.
 export const coreFeatures: Feature[] = [
   {
     icon: "launch",
     title: "App launcher",
-    body: "Find any app by typing a few letters and open it from the keyboard. Pin favorites, see what's running, and quit or restart apps.",
+    body: "Open any app in a few keystrokes. Pin favorites, and quit or restart running apps.",
     href: "/docs/launcher",
     preview: "launcher",
-    isWide: true,
   },
   {
     icon: "calculator",
@@ -42,7 +38,6 @@ export const coreFeatures: Feature[] = [
     body: "Math, units, currencies, time zones, and dates like “days till 9 Apr”.",
     href: "/docs/features/calculator",
     preview: "calculator",
-    isWide: false,
   },
   {
     icon: "clipboard",
@@ -50,7 +45,6 @@ export const coreFeatures: Feature[] = [
     body: "Search the text, images, files and colors you've copied, then paste them back.",
     href: "/docs/features/clipboard",
     preview: "clipboard",
-    isWide: false,
   },
   {
     icon: "aiChat",
@@ -58,7 +52,6 @@ export const coreFeatures: Feature[] = [
     body: "Use Apple Intelligence, Claude, Codex, Cursor, Grok, OpenCode or your own API key.",
     href: "/docs/ai",
     preview: "aiChat",
-    isWide: false,
   },
   {
     icon: "quickActions",
@@ -66,31 +59,27 @@ export const coreFeatures: Feature[] = [
     body: "Select text in any app and fix, rewrite, translate or summarize it.",
     href: "/docs/ai/quick-actions",
     preview: "quickActions",
-    isWide: false,
   },
   {
     icon: "windows",
     title: "Window management",
-    body: "35 keyboard commands for halves, thirds, nudges and moving between displays, plus layouts you save.",
+    body: "35 keyboard commands for halves, thirds, nudges and displays, plus saved layouts.",
     href: "/docs/features/window-management",
     preview: "windows",
-    isWide: true,
   },
   {
     icon: "extensions",
     title: "Raycast extensions",
-    body: "Install them from the Raycast Store without Node or a build step. They run in JavaScriptCore and render in SwiftUI.",
+    body: "Install from the Raycast Store with no Node or build step. They render in SwiftUI.",
     href: "/docs/extensions",
     preview: "extensions",
-    isWide: true,
   },
   {
     icon: "snippets",
     title: "Snippets",
-    body: "Type a keyword in any app and it expands into text. Snippets can use Markdown and placeholders.",
+    body: "Type a keyword in any app to expand it into text, with Markdown and placeholders.",
     href: "/docs/features/snippets",
     preview: "snippets",
-    isWide: true,
   },
 ];
 

@@ -1,40 +1,44 @@
 import { ArrowUpRight } from "lucide-react";
 import Link from "next/link";
-import { coreFeatures, moreFeatures, type Feature } from "../data/features";
-import { cn } from "../lib/cn";
-import { FeaturePreviewArt } from "./feature-previews";
-import { Button } from "./ui/button";
+import { coreFeatures, moreFeatures } from "../data/features";
+import { FeatureShowcase } from "./feature-showcase";
 import { featureIcons } from "./ui/feature-icons";
 import { Section } from "./ui/section";
 
-function FeatureCard({ title, body, href, preview, isWide }: Feature) {
+function MoreFeatures() {
   return (
-    <Link
-      href={href}
-      className={cn(
-        "group flex min-w-0 flex-col rounded-2xl bg-tint/4 p-2 transition-colors hover:bg-tint/6",
-        isWide && "sm:col-span-2",
-      )}
-    >
-      {/* Decorative: the title and body below say the same thing in words. */}
-      <div
-        aria-hidden="true"
-        className="h-44 overflow-hidden rounded-xl bg-canvas p-4"
-      >
-        <FeaturePreviewArt preview={preview} />
+    <div className="mt-16">
+      <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-border pb-4">
+        <h3 className="text-title font-semibold text-fg">Also in Tinycast</h3>
+        <Link
+          href="/docs"
+          className="inline-flex items-center gap-1 text-small font-medium text-violet-bright transition-colors hover:text-fg"
+        >
+          Browse the docs
+          <ArrowUpRight size={14} aria-hidden="true" />
+        </Link>
       </div>
-      <div className="px-3 pb-3 pt-4">
-        <h3 className="flex items-center gap-1 text-title font-semibold text-fg">
-          {title}
-          <ArrowUpRight
-            size={15}
-            aria-hidden="true"
-            className="text-fg-subtle opacity-0 transition-opacity group-hover:opacity-100"
-          />
-        </h3>
-        <p className="mt-1 text-small text-fg-muted">{body}</p>
-      </div>
-    </Link>
+      <ul className="grid gap-x-8 sm:grid-cols-2 lg:grid-cols-3">
+        {moreFeatures.map(({ icon, title, href }) => {
+          const Icon = featureIcons[icon];
+          return (
+            <li key={title} className="border-b border-border">
+              <Link
+                href={href}
+                className="group flex items-center gap-3 py-3 text-body text-fg-muted transition-colors hover:text-fg"
+              >
+                <Icon
+                  size={16}
+                  className="shrink-0 text-fg-subtle transition-colors group-hover:text-violet-bright"
+                  aria-hidden="true"
+                />
+                {title}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -47,41 +51,8 @@ export function Features() {
       title="One palette for the things you do all day."
       intro="Most features are off until you turn them on, so Tinycast only runs what you use."
     >
-      <div className="grid grid-cols-[minmax(0,1fr)] gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {coreFeatures.map((feature) => (
-          <FeatureCard key={feature.title} {...feature} />
-        ))}
-      </div>
-
-      <div className="mt-4 rounded-2xl bg-tint/4 p-5 sm:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-title font-semibold text-fg">Also included</h3>
-          <Button href="/docs" variant="outline">
-            Browse the docs
-          </Button>
-        </div>
-        <ul className="mt-4 flex flex-wrap gap-2">
-          {moreFeatures.map(({ icon, title, href }) => {
-            const Icon = featureIcons[icon];
-            return (
-              <li key={title}>
-                <Link
-                  href={href}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-canvas px-3 py-1.5 text-small text-fg-muted transition-colors hover:text-fg"
-                >
-                  <Icon
-                    size={13}
-                    strokeWidth={2}
-                    className="text-violet-bright"
-                    aria-hidden="true"
-                  />
-                  {title}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      <FeatureShowcase features={coreFeatures} />
+      <MoreFeatures />
     </Section>
   );
 }
