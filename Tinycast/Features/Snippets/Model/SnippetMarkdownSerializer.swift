@@ -26,6 +26,7 @@ struct SnippetMarkdownSerializer {
         var keyword: String?
         var isEnabled = true
         var showsConfirmation = false
+        var isPinned = false
         var seenKeys = Set<String>()
 
         for lineIndex in 1..<closingIndex {
@@ -60,6 +61,8 @@ struct SnippetMarkdownSerializer {
                 isEnabled = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
             case "show_confirmation":
                 showsConfirmation = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
+            case "pinned":
+                isPinned = try decodeBoolean(rawValue, fileURL: fileURL, line: lineNumber)
             default:
                 preconditionFailure("Canonical keys are exhaustively handled")
             }
@@ -71,7 +74,8 @@ struct SnippetMarkdownSerializer {
             text: String(content[bodyStart...]),
             keyword: keyword,
             isEnabled: isEnabled,
-            showsConfirmation: showsConfirmation
+            showsConfirmation: showsConfirmation,
+            isPinned: isPinned
         )
     }
 
@@ -85,6 +89,8 @@ struct SnippetMarkdownSerializer {
         }
         lines.append("enabled: \(snippet.isEnabled)")
         lines.append("show_confirmation: \(snippet.showsConfirmation)")
+        // Only when set, so an unpinned snippet's file stays byte-identical.
+        if snippet.isPinned { lines.append("pinned: true") }
         lines.append("---")
         return lines.joined(separator: "\n") + "\n" + snippet.text
     }
@@ -134,7 +140,7 @@ struct SnippetMarkdownSerializer {
     private static func canonicalKey(for rawKey: String) -> String? {
         let key = rawKey.lowercased()
         switch key {
-        case "name", "keyword", "enabled", "show_confirmation":
+        case "name", "keyword", "enabled", "show_confirmation", "pinned":
             return key
         default:
             return nil

@@ -133,6 +133,18 @@ final class SnippetsStore {
         snippets.first(where: { $0.id == id })
     }
 
+    /// A disabled snippet is off everywhere, so the browser lists exactly what the launcher does.
+    func browserRows(matching query: String) -> [StoredSnippet] {
+        let query = query.trimmingCharacters(in: .whitespaces)
+        let matches = snippets.filter { record in
+            record.snippet.isEnabled
+                && (query.isEmpty
+                    || record.snippet.name.localizedCaseInsensitiveContains(query)
+                    || record.snippet.keyword?.localizedCaseInsensitiveContains(query) == true)
+        }
+        return matches.filter(\.snippet.isPinned) + matches.filter { !$0.snippet.isPinned }
+    }
+
     private enum RepositoryResult<Value: Sendable>: Sendable {
         case success(Value)
         case failure(SnippetRepository.RepositoryError)

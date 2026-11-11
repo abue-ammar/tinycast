@@ -36,7 +36,7 @@ enum Theme {
     enum Radius {
         static let panel: CGFloat = 26
         static let row: CGFloat = 10
-        static let formField: CGFloat = 12
+        static let formField: CGFloat = 10
         /// Emoji tiles are roomier than list rows, so their corners take one larger step.
         static let emojiCell: CGFloat = 12
         static let menu: CGFloat = 6
@@ -127,7 +127,7 @@ enum Theme {
         /// Fixed so the recorder can't resize as its binding changes.
         static let shortcutRecorder: CGFloat = 120
         static let shortcutPopoverLine: CGFloat = 14
-        /// Summed from the laid-out bands; the width is pinned by `callout-test`.
+        /// Summed from the laid-out bands; the width is pinned by `CalloutTests`.
         static let shortcutPopover = CGSize(
             width: 176,
             height: Spacing.sm * 2 + heroKeyCap + Spacing.sm + shortcutPopoverLine * 2 + Spacing.sm

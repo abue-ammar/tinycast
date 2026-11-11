@@ -15,7 +15,7 @@ every shortcut without re-registering.
 - **Quicklinks are authored data, and their store never deletes.** A database that will not open is
   **reported, never discarded** — `ClipboardStore`'s delete-and-recreate is only sound because history is
   regenerable, and a link library is not. The database lives in **Application Support**, not Caches.
-- **`Model/` stays Foundation-only (plus SQLite3) and pure** for `quicklink-test` — the home directory is
+- **`Model/` stays Foundation-only (plus SQLite3) and pure** for `QuicklinkTests` — the home directory is
   injected, never read. `Service/QuicklinkLauncher` owns every `NSWorkspace` call.
 - **Drawing an argument field reads nothing.** The header's chips come from
   `SnippetTemplateEngine.declaredArguments(in:)`, a parse of the template alone, so moving the
@@ -38,7 +38,7 @@ its form is open makes Save report the missing item without recreating it or dis
 ## Destinations
 
 `QuicklinkDestination.detect` decides what a link is from its shape alone — no filesystem or Launch
-Services read — which is what keeps it pure and covered by `Tests/quicklink-test.swift`. In order:
+Services read — which is what keeps it pure and covered by `Tests/QuicklinkTests.swift`. In order:
 
 | Shape                                                  | Result                                                            |
 | ------------------------------------------------------ | ----------------------------------------------------------------- |
@@ -92,7 +92,7 @@ normally prevents that, which is why `| raw` is a deliberate authoring choice an
 
 `{selectedText}` is accepted as an alias for `{selection}`, so a link pasted from Raycast's docs
 works unchanged. `{selection}` stays the canonical spelling and is the only one the editor's
-**Insert…** menu writes. `{query}` is accepted as an alias for `{argument}` for the same reason;
+**Insert Placeholder** menu writes. `{query}` is accepted as an alias for `{argument}` for the same reason;
 a Raycast import rewrites it to `{argument}` before the row is stored.
 
 ## Arguments
@@ -249,7 +249,7 @@ prepared statements, an `isolated deinit`):
 - **A database that won't open is never deleted.** `ClipboardStore` discards and recreates a corrupt
   file because a history is captured rather than authored; doing that here would destroy the user's
   library. The store publishes `isAvailable == false`, every mutation refuses with
-  `QuicklinkError.storageUnavailable`, and the pane says so. `Tests/quicklink-test.swift` asserts the
+  `QuicklinkError.storageUnavailable`, and the pane says so. `Tests/QuicklinkTests.swift` asserts the
   file survives byte-for-byte.
 
 `CREATE TABLE IF NOT EXISTS` leaves an existing table alone, so a new column arrives as an unchecked
@@ -295,5 +295,5 @@ one turns the feature on — the switch grants no permission class.
 ## Standalone harness
 
 ```sh
-./Scripts/run-tests.sh quicklink-test
+./Scripts/run-tests.sh QuicklinkTests
 ```

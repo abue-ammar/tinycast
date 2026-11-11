@@ -328,19 +328,19 @@ file was removed, loading chooses a remaining note, or the empty state when none
 
 ## Verification
 
-`Tests/notes-test.swift` compiles the shipped Notes model and service sources with the real fuzzy
+`Tests/NotesTests.swift` compiles the shipped Notes model and service sources with the real fuzzy
 matcher. It covers repository safety, unique-name claiming, derived titles, search, selection,
 autosave, external reloads, draft preservation, empty collections, switcher interaction, and
 cancellation, plus the Markdown parser, every edit plan, the formatting each selection reports and the
 reveal policy.
 
-`Tests/notes-editor-test.swift` uses real TextKit 2 and AppKit undo objects. It runs the native
+`Tests/NotesEditorTests.swift` uses real TextKit 2 and AppKit undo objects. It runs the native
 Cut/Copy/Paste, the native find bar, Unicode and marked-text cases with rendering off and on, and covers
 undo isolation, undo and redo shortcut routing, source publication and character count, linear history,
 exact source after styling, hidden and revealed markers, restyling after edits and after undo, block
 decorations and layout fragments, list keys, chords, the task rule, checkbox toggles, link schemes,
 pasting a URL, and the formatting reports and `format(_:)` the formatting bar uses.
-`Tests/notes-editor-performance.swift` times install, typing, the window fit's height read and caret
+`Tests/NotesEditorPerformanceTests.swift` times install, typing, the window fit's height read and caret
 moves on a 100,000-character note; its budget is in `docs/testing.md`. Window chrome is not automated:
 the Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher, focus restoration,
 Finder, Trash recovery, and accessibility.

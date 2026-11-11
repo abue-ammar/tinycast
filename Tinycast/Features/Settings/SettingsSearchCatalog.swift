@@ -417,6 +417,9 @@ enum SettingsSearchCatalog {
             .snippetsSnippets, "Enable snippets",
             keywords: ["expansion", "keystrokes", "accessibility"]),
         .init(
+            .snippetsSnippets, "Default action",
+            keywords: ["enter", "return", "paste", "copy", "primary"]),
+        .init(
             group: .snippetsCommands, "Snippet commands",
             keywords: ["shortcut", "hotkey", "launcher", "browser"]),
         .init(

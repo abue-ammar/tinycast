@@ -13,7 +13,7 @@ another app.
   `snippetsEnabled` is excluded from settings backups, and Accessibility — the only permission it needs,
   since the listen-only tap needs nothing more — may be requested **only** from that explicit Settings
   gesture, never from startup, callbacks, watchers or health checks.
-- **All of `Model/` and `Service/` compiles into `snippets-test`** (it globs both), so the model, Markdown
+- **All of `Model/` and `Service/` compiles into `SnippetsTests`** (it globs both), so the model, Markdown
   serializer, template engine, repository and keyword policies stay Foundation-only, and the AppKit files
   there keep their dependencies to what the harness can stub.
 - **Expansion goes where the caret is, which is not the frontmost application.** Our panels are
@@ -98,7 +98,8 @@ Template body
 ```
 
 `name` is optional when reading and defaults from the filename, and `keyword` is optional. `enabled`
-defaults to `true`; `show_confirmation` defaults to `false`.
+defaults to `true`; `show_confirmation` defaults to `false`. `pinned` defaults to `false` and is
+written, last, only when `true`, so an unpinned snippet serializes exactly as before.
 
 String values must use double quotes. The codec escapes and decodes `\\`, `\"`, `\n`, `\r`, and
 `\t`; unsupported escapes, unquoted strings, duplicate or unknown keys, non-exact delimiters, and
@@ -120,25 +121,25 @@ require a prompt, the same context is reused afterward, so nothing can drift whi
 The token set follows [Raycast's dynamic placeholders](https://manual.raycast.com/dynamic-placeholders)
 so a migrated snippet keeps working.
 
-| Token                                      | Result                                                                                                                                                                                                             |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `{clipboard}`                              | Captured plain-text clipboard value                                                                                                                                                                                |
-| `{clipboard offset=1}`                     | Nth most recent clipboard text; `offset=1` is the one before the current                                                                                                                                           |
-| `{selection}` · `{selectedText}`           | Captured selected text from the target app, when Accessibility can read it. `{selectedText}` is Raycast's spelling, accepted on the way in; `{selection}` is the canonical one and the only one **Insert…** writes |
-| `{date}` · `{time}` · `{datetime}`         | Captured date / time / both, in the context locale                                                                                                                                                                 |
-| `{day}`                                    | Weekday name                                                                                                                                                                                                       |
-| `{uuid}`                                   | A fresh UUID per token                                                                                                                                                                                             |
-| `{date format="yyyy-MM-dd"}`               | Any `DateFormatter` format                                                                                                                                                                                         |
-| `{date locale="fr-FR"}`                    | Renders in another locale; cannot be combined with `format`                                                                                                                                                        |
-| `{time offset="+3h +30m"}`                 | Signed offsets, space-separated: `m` minutes, `h` hours, `d` days, `M` months, `y` years                                                                                                                           |
-| `{argument}` · `{query}`                   | An argument named `Argument`. `{query}` is Raycast's spelling, accepted on the way in; `{argument}` is the canonical one and the only one **Insert…** writes                                                         |
-| `{argument name="Recipient"}`              | A named argument requested before expansion                                                                                                                                                                        |
-| `{argument default="Hi"}`                  | Optional argument — the default expands without prompting                                                                                                                                                          |
-| `{argument options="a, b, c"}`             | The prompt offers a picker instead of a text field                                                                                                                                                                 |
-| `{snippet:Name}` · `{snippet name="Name"}` | Another snippet resolved by name, then keyword                                                                                                                                                                     |
-| `{cursor}`                                 | Final insertion point                                                                                                                                                                                              |
+| Token                                      | Result                                                                                                                                                                                                                        |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `{clipboard}`                              | Captured plain-text clipboard value                                                                                                                                                                                           |
+| `{clipboard offset=1}`                     | Nth most recent clipboard text; `offset=1` is the one before the current                                                                                                                                                      |
+| `{selection}` · `{selectedText}`           | Captured selected text from the target app, when Accessibility can read it. `{selectedText}` is Raycast's spelling, accepted on the way in; `{selection}` is the canonical one and the only one **Insert Placeholder** writes |
+| `{date}` · `{time}` · `{datetime}`         | Captured date / time / both, in the context locale                                                                                                                                                                            |
+| `{day}`                                    | Weekday name                                                                                                                                                                                                                  |
+| `{uuid}`                                   | A fresh UUID per token                                                                                                                                                                                                        |
+| `{date format="yyyy-MM-dd"}`               | Any `DateFormatter` format                                                                                                                                                                                                    |
+| `{date locale="fr-FR"}`                    | Renders in another locale; cannot be combined with `format`                                                                                                                                                                   |
+| `{time offset="+3h +30m"}`                 | Signed offsets, space-separated: `m` minutes, `h` hours, `d` days, `M` months, `y` years                                                                                                                                      |
+| `{argument}` · `{query}`                   | An argument named `Argument`. `{query}` is Raycast's spelling, accepted on the way in; `{argument}` is the canonical one and the only one **Insert Placeholder** writes                                                       |
+| `{argument name="Recipient"}`              | A named argument requested before expansion                                                                                                                                                                                   |
+| `{argument default="Hi"}`                  | Optional argument — the default expands without prompting                                                                                                                                                                     |
+| `{argument options="a, b, c"}`             | The prompt offers a picker instead of a text field                                                                                                                                                                            |
+| `{snippet:Name}` · `{snippet name="Name"}` | Another snippet resolved by name, then keyword                                                                                                                                                                                |
+| `{cursor}`                                 | Final insertion point                                                                                                                                                                                                         |
 
-The editor's **Insert…** menu lists every token above; parameters and modifiers are typed by hand. A
+The editor's **Insert Placeholder** menu lists every token above; parameters and modifiers are typed by hand. A
 parameter value needs quotes only to carry a `|`: an unquoted one runs to the next `key=`, so
 `{date format=MMMM d, yyyy}` keeps its spaces the way Raycast writes it.
 
@@ -224,23 +225,39 @@ global shortcut recorded in **Settings → Snippets**. Like Search Quicklinks it
 cycle and exits with Escape or a bare backspace, and like the clipboard it splits into a list and a
 preview.
 
-The list is every **enabled** snippet — a disabled one is absent here exactly as it is absent from the
-launcher — filtered by name *or* keyword. Substring matching, not the launcher's fuzzy scorer: this is
-a library being browsed rather than a query racing apps and commands for a rank.
+The list is `SnippetsStore.browserRows(matching:)`: every **enabled** snippet — a disabled one is
+absent here exactly as it is absent from the launcher — filtered by name *or* keyword, pinned ones
+first, each block in the store's name order under a **Pinned** or **Snippets** header, as Quicklinks
+does. Substring matching, not the launcher's fuzzy scorer: this is a library being browsed rather
+than a query racing apps and commands for a rank. Launcher search ignores pins.
+
+A pin is the `pinned` frontmatter key, so it lives in the file and follows it across a folder change.
+`toggleSnippetPinned` (⌘.) is an ordinary revision-checked save; afterwards the selection follows the
+row into or out of the pinned block, as the clipboard's does.
 
 The preview shows the **raw template**, never an expansion. Expanding per selection would capture the
 clipboard, read the target's selected text and burn a `{uuid}` on every arrow key, and a snippet
 carrying `{argument}` would raise its prompt just to draw a pane. Beside it sits the name, keyword,
 shortcut, file name and character count.
 
-↵ and the ⌘K menu's **Paste Snippet** both go through `SnippetCoordinator.expandSnippetFromPalette`,
-which reads `previousApp` before hiding the panel and then calls the same `expandSnippet` funnel a
-launcher row does — so template expansion, cursor placement, the Accessibility prompt, the
-confirmation HUD and the pasteboard lease are the ones described below, not a second copy of them.
-The rest of the menu is **Edit Snippet** (⌘E) and **Create Snippet** (⌘N), which open the launcher
-editor, **Show in Finder** (⌘↵), and **Delete Snippet** (⌃X), separated at the bottom in red. Deletion
-always confirms before removing the snippet file and reports a failure without losing the record.
-These shortcuts also work with the menu closed; ⌘N works even when the browser has no rows.
+↵ runs `AppSettings.snippetDefaultAction` and ⌘↵ the other one, exactly as the clipboard's
+**Default action** swaps its chords; the ⌘K menu lists the two in that order with those keycaps.
+**Paste Snippet** goes through `SnippetCoordinator.expandSnippetFromPalette`, which reads
+`previousApp` before hiding the panel and then calls the same `expandSnippet` funnel a launcher row
+does — so template expansion, cursor placement, the Accessibility prompt, the confirmation HUD and the
+pasteboard lease are the ones described below, not a second copy of them.
+
+**Copy Snippet** goes through `copySnippetFromPalette`: the same template expansion and argument
+prompt, then `Paster.copyPlainText`, unmarked so the result enters clipboard history like any copy.
+It needs no Accessibility and borrows no ⌘C, so `{selection}` reads only through Accessibility and
+`{cursor}` is dropped. `show_confirmation` raises a "Copied" HUD instead of "Inserted". Keyword
+expansion, snippet hotkeys and launcher rows always paste.
+
+The rest of the menu is **Edit Snippet** (⌘E), **Create Snippet** (⌘N), which open the launcher
+editor, **Pin Snippet** / **Unpin Snippet** (⌘.), **Show in Finder** (⌘F), and **Delete Snippet**
+(⌃X), separated at the bottom in red. Deletion always confirms before removing the snippet file and
+reports a failure without losing the record. These shortcuts also work with the menu closed; ⌘N works
+even when the browser has no rows.
 
 `Create Snippet` is a launcher command as well as a menu row because the palette swallows ⌘K when a
 screen has no rows: an empty library would otherwise open a browser with nothing to do.
@@ -254,7 +271,7 @@ second editor. The **Create Snippet** command alone — from the launcher, a hot
 from the text selected in the app in front, read through `AccessibilityText.selection(in:)` and never
 by sending ⌘C; the browser's ⌘N and Settings start empty. The fields stay inside `Features/Snippets/UI/`, not in the palette shell or the extension form.
 
-The template is on the left, with its own **Insert…** placeholder menu, separate from Actions.
+The template is on the left, with its own **Insert Placeholder** placeholder menu, separate from Actions.
 It uses the palette's searchable popup, keeping its existing placeholder groups.
 **Name**, **Keyword**, **Enabled** and **Show confirmation** are on the right. The draft keeps the
 loaded record and its source revision; no file is created or changed before **Save Snippet**.
@@ -422,7 +439,7 @@ Run the real model, codec, template engine, repository, keyword listener with a 
 main-actor watcher against temporary roots:
 
 ```sh
-./Scripts/run-tests.sh snippets-test
+./Scripts/run-tests.sh SnippetsTests
 ```
 
 The delivery contract's two judgements — `keywordState` and `confirmsReplacement` — are pure, so the

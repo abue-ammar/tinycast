@@ -167,7 +167,7 @@ window's app quit between the sweep and the ↵.
 
 ## Testing
 
-`Tests/window-switch-test.swift` covers the pure half: the handle-derived id, the untitled-window
+`Tests/WindowSwitchTests.swift` covers the pure half: the handle-derived id, the untitled-window
 fallback, the name/owner split in the search fields, the MRU order and its totality under a shuffled
 sweep, the minimized run at the end, which windows the sweep offers, ranking, and the 200-row cap
 under both an empty and a matching query.

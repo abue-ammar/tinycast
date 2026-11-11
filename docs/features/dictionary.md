@@ -31,7 +31,7 @@ no bundled word list.
   the stylesheets space `exg`. Unknown markup reads as plain text in the nearest block, so a format
   change degrades rather than drops words. A record built from the plain Dictionary Development Kit
   template has no classes at all, so its `h1` is the headword and each `p` a paragraph.
-  `dictionary-test` holds real records from each schema as its fixtures.
+  `DictionaryTests` holds real records from each schema as its fixtures.
 - **Dictionary is the default scope, and it is the lookup that always was.** The header's selector
   (⌘P) switches to Thesaurus, which asks only the enabled dictionaries whose `CFBundleName` names a
   thesaurus — no Info.plist key marks one — and skips the public plain-text fallback, which reads

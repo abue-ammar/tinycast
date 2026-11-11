@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SnippetEditorScreen: PaletteScreen {
     let coordinator: SnippetCoordinator
+    let openMenuCorner: MenuPanelCorner?
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
     var rows: [StoredSnippet] { [] }
@@ -28,8 +29,10 @@ struct SnippetEditorScreen: PaletteScreen {
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
         guard let editor = coordinator.editor else { return AnyView(Color.clear) }
         return AnyView(
-            SnippetEditorView(editor: editor, openInputMenu: openInputMenu)
-                .id(ObjectIdentifier(editor))
-                .environment(coordinator))
+            SnippetEditorView(
+                editor: editor, openMenuCorner: openMenuCorner, openInputMenu: openInputMenu
+            )
+            .id(ObjectIdentifier(editor))
+            .environment(coordinator))
     }
 }

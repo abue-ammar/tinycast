@@ -15,7 +15,7 @@ without re-registering. "Show in launcher" only hides the section; shortcuts kee
 ## Invariants
 
 - **`Model/CustomCommand.swift` and `Service/ShellCommandRunner.swift` stay free of AppKit and
-  SwiftUI** (Foundation plus Darwin for `mkstemp`) so `custom-command-test` can compile them standalone. That is why the confirmation gate
+  SwiftUI** (Foundation plus Darwin for `mkstemp`) so `CustomCommandTests` can compile them standalone. That is why the confirmation gate
   lives in `CustomCommandCoordinator` and not in the runner.
 - A command that runs arbitrary shell is a security surface: the confirmation step cannot be bypassed, and
   an import of executable commands warns before it applies.
@@ -25,7 +25,7 @@ without re-registering. "Show in launcher" only hides the section; shortcuts kee
   **Settings → Commands** row is the one place that turns it back on.
 - **An argument value is never spliced into the command text.** It is handed to zsh as a positional
   parameter, so a value carrying `;`, backticks or `$(…)` is data the script reads, never syntax the
-  shell runs. `custom-command-test` asserts this directly.
+  shell runs. `CustomCommandTests` asserts this directly.
 
 ## Ownership and persistence
 

@@ -12,7 +12,7 @@ version cannot replace it. Restart also reopens the selected path. Bundle-ID-bas
 Window Layouts retain macOS's default running-application substitution. Uninstall is unavailable while
 indexed copies share the bundle ID, because their support files and preferences may be shared.
 
-`./Scripts/run-tests.sh app-installation-test` covers the shipped index and app-wide preferences.
+`./Scripts/run-tests.sh AppInstallationTests` covers the shipped index and app-wide preferences.
 Set `TINYCAST_TEST_APP_LAUNCH=1` for temporary native-app launch, quit and restart checks; the harness
 reports notification-dependent checks as skipped when the session cannot deliver workspace events.
 
@@ -37,7 +37,7 @@ reports notification-dependent checks as skipped when the session cannot deliver
   not name belongs to Settings › Commands and answers to that switch.
 - **The ranking lives in pure files.** `Model/LauncherMatch.swift` (the scorer),
   `Model/LauncherOrder.swift` (the comparator) and `Model/LauncherSuggestions.swift` are
-  Foundation-only and pure, so `fuzz-test` compiles the shipped code. Changing a rule means changing
+  Foundation-only and pure, so `FuzzTests` compiles the shipped code. Changing a rule means changing
   [Ranking](#ranking), never adding a tuning constant.
 - **`Model/EntryNaming.swift` is the only place a name is decided, for every kind alike.** A producer
   fills `EntryNaming.Sources` — title, alternate titles, subtitle, keywords — and `profile(for:)`
@@ -53,7 +53,7 @@ reports notification-dependent checks as skipped when the session cannot deliver
 - **The fields stay separate.** Which field matched is half of what the comparator reads — an exact
   subtitle, an exact alternate title and a keyword hit are three different rules.
 - **`Model/SearchScopes.swift` and `Model/LauncherRankingStore.swift` are pure too** — the ranking store
-  takes its clock via `now` and its path via `fileURL`, for `scopes-test` and `ranking-test`.
+  takes its clock via `now` and its path via `fileURL`, for `ScopesTests` and `RankingTests`.
 
 ## Search scopes
 
@@ -110,7 +110,7 @@ executable names are not matched.
 
 ## Ranking
 
-`fuzz-test` pins the scorer's values and every rule of the comparator.
+`FuzzTests` pins the scorer's values and every rule of the comparator.
 
 ### The scorer
 
@@ -367,7 +367,7 @@ could arm shell execution from the launcher, which is the line `snippetsEnabled`
 a flag that grants a capability is never carried by a backup.
 
 `FallbackStore` is a thin persistence shell over `Fallback.ordered(_:by:)`, which is pure and covered
-by `fallback-test`: stored ids first, then anything the order has never seen, and a stored id with
+by `FallbackTests`: stored ids first, then anything the order has never seen, and a stored id with
 nothing behind it — a deleted quicklink — is skipped rather than resurrected. Settings ▸ Fallbacks
 lists exactly `FallbackCoordinator.available`, so a fallback whose feature is off is absent from the
 pane as well as from the launcher, and reorders through ↑/↓ buttons like a favorite rather than
@@ -502,7 +502,7 @@ off (`launcherShowsSuggestions`, carried by a settings backup). `HotKeyManager.r
 
 `SystemActionCatalog` is a Foundation-only inventory of the macOS actions Tinycast exposes. Its
 stable entry IDs, labels, symbols and confirmation policy are covered by
-`Tests/system-action-test.swift`; platform side effects live separately in `SystemActionRunner`.
+`Tests/SystemActionTests.swift`; platform side effects live separately in `SystemActionRunner`.
 `SystemActionCoordinator.runSystemAction(id:)` remains the one execution funnel — shared by palette activation and a
 global hotkey — hiding the floating palette before any confirmation or value dialog and surfacing
 permission-aware failures. With the palette closed it targets the frontmost app, so Hide Others and
@@ -538,7 +538,7 @@ Volume slider all render through `DialogController` rather than an `NSAlert`
 `arrow.clockwise`, Empty Trash `trash.slash` — so the dialog is recognizably about the row that
 opened it. Output volume and mute actions also show Tinycast's transient volume HUD, since macOS only draws
 its own for real media keys. Volume Up/Down walk a 5% grid (`VolumeLevel.stepped`, covered by
-`Tests/volume-test.swift`): each press moves one line from the level's nearest line, so from 37% up
+`Tests/VolumeTests.swift`): each press moves one line from the level's nearest line, so from 37% up
 lands on 40% and down on 30%, and repeated presses stay on round numbers. Stepping from the nearest
 line matters for devices that store a level slightly off the one set (45.1% for 45%): stepping from
 the read-back level alone would aim at the same line again and never move.
@@ -690,7 +690,7 @@ entries — no new `AppEntry.Kind` and no `VisibilityStore` category — owned b
 through `SettingsTab.ownedCommands`, so `navigationEnabled` is their switch. Their invariants and
 internals live in [navigation.md](navigation.md) and [menu-search.md](menu-search.md).
 
-> **Invariant:** `Tests/fuzz-test.swift` compiles the real `Launcher/Model/LauncherMatch.swift` and
+> **Invariant:** `Tests/FuzzTests.swift` compiles the real `Launcher/Model/LauncherMatch.swift` and
 > `LauncherOrder.swift`, so both must stay Foundation-only and pure. There is no copy of the ranking
 > to keep in sync.
 

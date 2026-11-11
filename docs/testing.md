@@ -22,13 +22,13 @@ end of this file is the sixth, judged by what you touched.
 
 ```sh
 ./Scripts/run-tests.sh              # all of them
-./Scripts/run-tests.sh calc-test    # just one, while iterating
+./Scripts/run-tests.sh CalcTests    # just one, while iterating
 ```
 
-`apple-intelligence-test` runs deterministic checks by default. Its real model generation is opt-in:
+`AppleIntelligenceTests` runs deterministic checks by default. Its real model generation is opt-in:
 
 ```sh
-TINYCAST_TEST_APPLE_INTELLIGENCE=1 ./Scripts/run-tests.sh apple-intelligence-test
+TINYCAST_TEST_APPLE_INTELLIGENCE=1 ./Scripts/run-tests.sh AppleIntelligenceTests
 ```
 
 The opt-in check still skips with a reason if the Mac cannot run the on-device model.
@@ -46,7 +46,7 @@ through a stand-in for the hosted redirect page and confirms that a callback who
 repeated, stale or wrong is refused, for each redirect method and for custom `{ url }` requests. The
 runtime fixture suite runs both as well.
 
-`ext-test` exercises `SharedArrayBuffer` allocation at command load and finite waits in JavaScriptCore
+`ExtensionTests` exercises `SharedArrayBuffer` allocation at command load and finite waits in JavaScriptCore
 through the shipped synchronous host bridge.
 
 The suite runs four harnesses at a time by default to reduce CPU usage. `TINYCAST_TEST_JOBS` overrides
@@ -66,12 +66,16 @@ a compiler diagnostic is far longer than `PIPE_BUF`, so eleven workers streaming
 interleave into nonsense.
 
 A `run` line takes optional markers before the harness name. `-O` compiles that harness optimised,
-which is worth it only where the run dominates the compile — `raycast-test` spends 47 seconds in
+which is worth it only where the run dominates the compile — `RaycastTests` spends 47 seconds in
 scrypt at `-Onone` and one second at `-O`. `slow` dispatches it in the first wave, so the longest
 harnesses are not still running after everything else has finished.
 
 The script is the **only** place the harness set is written down. Nothing runs it for you, so run it
 before you open a PR. Adding a harness means adding one `run` line.
+
+A harness is `Tests/<Subject>Tests.swift`, and its `@main` type has the same name, which is also what
+`run` and `./Scripts/run-tests.sh` call it. A benchmark is `<Subject>PerformanceTests`, stubs shared
+by harnesses are `<Subject>Fixtures`, and a file that extends another harness is `<Harness>+<Topic>`.
 
 Each harness compiles the **shipped sources** it guards rather than a copy of them, which is what makes
 the pure-layer boundary real: a harness that stops *compiling* means AppKit or SwiftUI has leaked into a
@@ -81,10 +85,10 @@ assertion, and it is the more important one.
 A harness also runs in your own login session against the real system, with no sandbox and no fixture
 world, so it must never mutate state the machine shares with the apps you use. `NSPasteboard.general`
 is the trap: a running Tinycast records every write to it as a genuine copy, so a fixture left there
-lands in clipboard history looking like something the user copied. `notes-editor-test` seeded one on
+lands in clipboard history looking like something the user copied. `NotesEditorTests` seeded one on
 every run from #232 onward by calling the native `copy:`/`cut:`/`paste:` actions; it now drives the
 `writeSelection(to:types:)` and `readSelection(from:)` primitives those actions delegate to, against
-`NSPasteboard.withUniqueName()`. Same AppKit path, no shared side effect. `pasteboard-test` is the
+`NSPasteboard.withUniqueName()`. Same AppKit path, no shared side effect. `PasteboardTests` is the
 second case, and it is why `ClipboardManager.fileURLs(on:volatileRoots:)` and `Paster.write(_:store:to:)`
 each take the thing they act on as a parameter: a seam that exists so the harness never has to reach
 for the shared board. Its scratch tree lives under `temporaryDirectory`, which is itself a volatile
@@ -106,105 +110,105 @@ If a change touches anything in the right column, the harness on the left is man
 
 | Harness | Guards |
 | --- | --- |
-| `fuzz-test` | `Launcher/Model/LauncherMatch.swift`, `LauncherOrder.swift`, `LauncherSuggestions.swift`, `EntryNaming.swift`, `ScriptRomanization.swift`, `SearchRelevance.swift`, `LauncherRankingStore.swift` — **a new ranking complaint is a new case in its `denseIndex`** |
-| `file-search-test` | `FileSearch/Model/`: folding, masks, scoring, ignore rules, priors, scopes |
-| `file-index-test` | `FileIndexCrawler`, `FileIndexSnapshot`, `FileIndex`: a real fixture crawled, written, mapped, searched and live-updated |
-| `file-search-session-test` | serialized query execution, coalescing, cancellation and refresh |
-| `menu-search-test` | `MenuSearch/Model/` decisions, `MenuSearch/Service/` session filtering, the shared `FuzzyMatch` scorer |
-| `action-menu-search-test` | Action-menu query normalization and shared fuzzy matching |
-| `app-installation-test` | Multiple app copies and app-wide preferences; file-favorite persistence, mixed ordering, hidden slots and restoration through the existing favorite key list |
-| `ranking-test` | `Launcher/Model/LauncherRankingStore.swift` |
-| `scopes-test` | `Launcher/Model/SearchScopes.swift` |
-| `app-name-test` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
-| `language-test` | `AppLanguage` and both string catalogs — compile every language, load privacy prompts, and select plural forms and independent counts at runtime |
-| `localized-resource-test` | `Platform/LocalizedResource.swift` — `resolved()` matches `String(localized:)` in every language, for plain, contextual, interpolated, plural and missing keys |
-| `relaunch-test` | The shipped app delegate and relaunch helper — asynchronous cleanup, repeated quit requests, and a responsive replacement process |
-| `calc-test` | all of `Calculator/Model/` |
-| `calendar-test` | all of `Calendar/Model/` plus `EventEditorSession` — links, join window, day buckets, draft and form focus |
-| `clipboard-search-test` | Ordinary and OCR result ordering, opt-in lifecycle, cancellation, pins and type filters |
-| `clipboard-text-test` | Apple Vision/PDF extraction, scheduling, retry backoff and recovery |
-| `paste-sequence-test` | `Clipboard/Model/PasteSequence.swift` — the walk's order, its end, and what starts it over |
-| `clipboard-test` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
-| `clipboard-coordinator-test` | Edit Entry selection across query/type changes and pins, failed writes, deletion during editing and cancellation; isolated database and recorded clipboard effects |
-| `clipboard-thumbnail-test` | `Platform/Images/ImageThumbnail.swift` copies against the real store — a remove or clear mid-copy leaves none, same-named JPEG/PNG copies stay apart, a timeout or cancel frees the queue, and a failed or unreadable copy falls back to the original; a stand-in script plays the helper |
-| `pasteboard-test` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file or image entry writes back |
-| `emoji-test` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data and keyword packs |
-| `emoji-search-test` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format, multilingual search |
-| `command-escape-tap-test` | `Palette/CommandEscapeTap.swift` — dedicated run-loop dispatch while main is blocked, timeout recovery, stale actions, installation cancellation and teardown; private ports and unposted events only |
-| `palette-navigation-test` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` — and hover arming, pointer drift, scroll disarming and highlight tokens |
-| `compact-bar-test` | Compact shortcut order, selection boundaries, zero-to-four slots, identifiers, isolated preferences and invalid settings-file rejection |
-| `palette-selection-test` | `Features/PaletteRowIndex.swift` |
-| `interface-size-test` | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift` |
-| `form-input-test` | Native field/textarea sizing, editing alignment, placeholders, Tab, Unicode selection, undo and code fonts |
-| `palette-placement-test` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
-| `palette-menu-click-test` | `Palette/PalettePanel.swift` — complete click-away presses and subsequent control activation |
-| `hyper-key-engine-test` | Hyper chord transitions for every physical key, device-bit holds, own-bit and other-Shift residue, released modifiers, the Quick Press rule, repeats and interruption recovery |
-| `hotkey-test` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `ModifierKey.swift`, `ModifierKeyDetector.swift`, `HotKeyBinding.swift`, `HotKeySpelling.swift`, `HyperKey.swift`, `HIDKeyMapping.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
-| `hyper-key-test` | `HotKeys/Model/HIDKeyMapping.swift`, `HyperKeyConflictPolicy.swift`, `Service/KeyboardRemapper.swift`, `RemapInstanceLock.swift` — mapping ownership, refused writes, crash recovery, device reconnection, Caps Lock and 🎤 remaps sharing a keyboard, conflict severities, Modifier Keys and Karabiner parsing, another app taking over Caps Lock, one process per Hyper Key |
-| `hotkey-dispatch-test` | `HotKeys/Service/HotKeyManager.swift` — Secure Input side isolation, shared Control registrations, press/release routing, recording and cancellation; isolated preferences and simulated Carbon registration |
-| `deeplink-test` | `DeepLinks/Model/`, `HotKeys/Model/HotKeyAction+EntryID.swift`, `Settings/SettingsTab.swift` — every bindable command, window command and system action round-trips through its link and its entry ID, stored rows by UUID, snippet paths through percent-encoding, case folding, the channel's scheme, the links that must not resolve (Raycast schemes, the `extensions` host), input decoding, encoding and its refusals (bytes, not characters), batches, field filling, consent classes and keys, the quicklink loop rule, note, chat and window-size links, and every Settings tab slug |
-| `dictation-key-test` | `HotKeys/Service/DictationKeyManager.swift` — shared and separate preference domains, ownership handoff through the real health ticker, and retry cancellation on unbind or termination; isolated preferences, lock files and simulated keyboards |
-| `dictation-test` | `Dictation/Model/DictationModel.swift`, `DictationTextFormatter.swift` — model paths and text formatting |
-| `dictation-field-test` | Composer rebinding and teardown, field-scoped dictation cancellation, and queued insertion validity; synthetic capture and real AppKit editors |
-| `dictation-cue-test` | System dictation sound paths, stop-before-play ordering and missing resources, without playing audio |
-| `dictation-volume-test` | Volume recovery across fade steps, user changes, output switching, failed writes and cancellation; injected audio controls only |
-| `dictation-inference-test` | Dictation byte BPE, Fourier/mel features and non-overlapping audio chunks; no downloaded models |
-| `dictation-worker-test` | Dictation's framed channel, worker reuse/switching, removal, cancellation and broken pipes with a fixture helper |
-| `fallback-test` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
-| `dictionary-test` | `Dictionary/Model/DictionaryEntry.swift`, `DictionaryMarkup.swift` — a real XHTML record and the plain-text fallback, read into page blocks |
-| `callout-test` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
-| `system-action-test` | `SystemActions/Model/SystemAction.swift` |
-| `microphone-mute-test` | Native input mute, delayed confirmation, device switches and failures; injected CoreAudio calls only |
-| `volume-test` | `SystemActions/Model/VolumeLevel.swift` |
-| `window-command-test` | `WindowManagement/WindowCommand.swift`, `WindowPlacementEngine.swift`, `WindowActionMemory.swift` |
-| `window-layout-test` | `WindowManagement/Model/WindowLayout*.swift` and `CustomWindowSize*.swift` — the layout record, its geometry and its inverse, the plan and the store; custom sizes' units, frames and store |
-| `window-room-test` | `WindowManagement/Model/Room*.swift` — every room layout and its minimum sizes, the grid, arrangement reading, window matching, parking, the plan, Tab's choices and the three stores |
-| `custom-command-test` | Command storage and execution, editor drafts, argument identities and dynamic keyboard focus |
-| `custom-command-list-test` | Browser result snapshots, observation, row actions and empty-library messages |
-| `uninstall-test` | all five pure files in `Uninstall/Model/` |
-| `uninstall-coordinator-test` | Confirmation and the post-confirmation quit gate; recorded quit and Trash effects only |
-| `quicklink-test` | all of `Quicklinks/Model/`, plus editor drafts and placeholder selection |
-| `quicklink-coordinator-test` | Opening and requested arguments, launcher editing, current enabled-state preservation, deletion during editing and feature gates; no platform effects or on-screen focus checks |
-| `apple-shortcut-test` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |
-| `snippets-test` | all of `Snippets/Model/` and `Snippets/Service/`, plus editor drafts, placeholder selection and `Platform/HealthTicker.swift` |
-| `notes-test` | all of `Notes/Model/` and `Notes/Service/`, including the Markdown parser, edit plans and reveal policy, plus the real fuzzy matcher and signposts |
-| `notes-editor-test` | the Notes editor, rendered and literal, with real TextKit 2 and AppKit editing objects: styling, reveal, layout fragments, keys, chords, checkboxes and links |
-| `raycast-test` | `Backup/Service/RaycastDecoder.swift`, `Scrypt.swift`, `Platform/Compression/Zlib.swift`, `Clipboard/Model/RaycastClipboardImport.swift` and import-time clipboard retention |
-| `symbols-test` | `Extensions/Service/SymbolCatalog.swift`, against this machine's CoreGlyphs |
-| `ext-store-test` | `Extensions/Model/` — GitHub source parsing and URLs, the store and Git tree parsers |
-| `ext-refresh-test` | `Extensions/Model/ExtensionRefreshPolicy.swift` — interval parsing, due dates, backoff, subtitle fallback, indicator state, Refresh Now refusals |
-| `ext-version-test` | `Extensions/Service/ExtensionVersionStore.swift` — what an update check reports, adopts and forgets |
-| `ext-metadata-test` | `Extensions/Service/ExtensionCommandMetadataStore.swift` — round-trip, failure runs, uninstall |
-| `ext-test` | the extension runtime and native menu-bar lifecycle — boots shipped sources in JavaScriptCore; menu tests cover restoration, refresh serialization, actions and teardown; fetch tests cover HTTP connection cleanup, cancellation and request isolation |
-| `ext-icon-test` | `Extensions/Service/ExtensionIconCache.swift` — artwork sizing and its fallback |
-| `ext-sign-in-test` | `Extensions/Service/ExtensionSignInSession.swift` — browser start failures, completion, cancellation without a callback, and late callbacks after teardown |
-| `icon-cache-test` | `Platform/Images/IconCache.swift` — row sizing at 1×/2×, warm reuse, stamp and style invalidation, bitmap release, fitted geometry across all 256 alpha values, and that a row icon draws identically to the 96px one |
-| `entry-icon-test` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |
-| `text-diff-test` | `QuickActions/Model/TextDiffEngine.swift` — exact chunks, coalescing, Unicode, ties, token-cap boundaries and fast paths |
-| `settings-backup-test` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
-| `settings-file-test` | `Settings/Model/` and `Settings/Service/` — key paths, value tokens, the printer and parser, and the repository's import, replace, save, reload and symlink handling on a scratch folder |
-| `window-file-test` | `WindowManagement/Model/WindowManagementFileFormat.swift` — command shortcuts, custom sizes, layouts and rooms as settings.json spells them, hand edits and bad records |
-| `launcher-settings-file-test` | Launcher settings application — invalid records, partial edits, deferred bundles, shortcut moves and records outside search scopes; isolated preferences and in-memory scan/Carbon effects |
-| `backup-archive-test` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
-| `updates-test` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
-| `update-check-test` | `UpdateCheckStore` — stopping, in-flight cancellation, cached offer suppression, restart and independent manual checking |
-| `support-test` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
-| `ai-provider-test` | `AI/Model/` and `AISettingsStore` — instruction composition, provider requests and streams, route settings, protocol framing, CLI launch encodings and queued Codex writes across cancellation, timeout and Stop |
-| `opencode-mcp-test` | OpenCode's per-turn MCP bridge and installed CLI launch, authentication, scoped catalog, consent dispatch, serial calls, result budgets and cancellation |
-| `apple-intelligence-test` | On-device status, snapshot deltas, transcript assembly and error mapping; real generation is opt-in |
-| `syntax-highlight-test` | `AI/Model/SyntaxGrammar.swift`, `SyntaxHighlighter.swift`, `SyntaxStructuredLexers.swift` — every grammar's tokens, language aliases, the size limit and streaming prefixes |
-| `mcp-test` | `MCP/Model/` and `MCPSettingsStore` — JSON-RPC framing, handles, tool names, output flattening, trust, `@server` addressing, the shape a vendor CLI is handed, and which servers Tinycast leaves to that CLI |
-| `mcp-stdio-test` | `MCP/Service/` against a stub server — handshake, listing, calling, and every way one can go away |
-| `mcp-oauth-test` | OAuth parsing, RFC 7636 PKCE, discovery and resource binding, loopback callback validation/cancellation, dynamic registration, supplied client credentials and their token-endpoint authentication, Keychain token rotation, concurrent refresh, the wider margin for a token lent to a CLI, redirects and one-retry 401 handling |
+| `FuzzTests` | `Launcher/Model/LauncherMatch.swift`, `LauncherOrder.swift`, `LauncherSuggestions.swift`, `EntryNaming.swift`, `ScriptRomanization.swift`, `SearchRelevance.swift`, `LauncherRankingStore.swift` — **a new ranking complaint is a new case in its `denseIndex`** |
+| `FileSearchTests` | `FileSearch/Model/`: folding, masks, scoring, ignore rules, priors, scopes |
+| `FileIndexTests` | `FileIndexCrawler`, `FileIndexSnapshot`, `FileIndex`: a real fixture crawled, written, mapped, searched and live-updated |
+| `FileSearchSessionTests` | serialized query execution, coalescing, cancellation and refresh |
+| `MenuSearchTests` | `MenuSearch/Model/` decisions, `MenuSearch/Service/` session filtering, the shared `FuzzyMatch` scorer |
+| `ActionMenuSearchTests` | Action-menu query normalization and shared fuzzy matching |
+| `AppInstallationTests` | Multiple app copies and app-wide preferences; file-favorite persistence, mixed ordering, hidden slots and restoration through the existing favorite key list |
+| `RankingTests` | `Launcher/Model/LauncherRankingStore.swift` |
+| `ScopesTests` | `Launcher/Model/SearchScopes.swift` |
+| `AppNameTests` | `Platform/AppDisplayName.swift` — every path that names a scanned bundle |
+| `LanguageTests` | `AppLanguage` and both string catalogs — compile every language, load privacy prompts, and select plural forms and independent counts at runtime |
+| `LocalizedResourceTests` | `Platform/LocalizedResource.swift` — `resolved()` matches `String(localized:)` in every language, for plain, contextual, interpolated, plural and missing keys |
+| `RelaunchTests` | The shipped app delegate and relaunch helper — asynchronous cleanup, repeated quit requests, and a responsive replacement process |
+| `CalcTests` | all of `Calculator/Model/` |
+| `CalendarTests` | all of `Calendar/Model/` plus `EventEditorSession` — links, join window, day buckets, draft and form focus |
+| `ClipboardSearchTests` | Ordinary and OCR result ordering, opt-in lifecycle, cancellation, pins and type filters |
+| `ClipboardTextTests` | Apple Vision/PDF extraction, scheduling, retry backoff and recovery |
+| `PasteSequenceTests` | `Clipboard/Model/PasteSequence.swift` — the walk's order, its end, and what starts it over |
+| `ClipboardTests` | `Clipboard/Model/ClipboardStore.swift`, `ClipboardFilter.swift`, `ClipboardFileKind.swift`, the colour trio |
+| `ClipboardCoordinatorTests` | Edit Entry selection across query/type changes and pins, failed writes, deletion during editing and cancellation; isolated database and recorded clipboard effects |
+| `ClipboardThumbnailTests` | `Platform/Images/ImageThumbnail.swift` copies against the real store — a remove or clear mid-copy leaves none, same-named JPEG/PNG copies stay apart, a timeout or cancel frees the queue, and a failed or unreadable copy falls back to the original; a stand-in script plays the helper |
+| `PasteboardTests` | `Clipboard/Service/ClipboardManager.swift` capture and `Paster.write` — what a Finder copy reads as, and what a file or image entry writes back |
+| `EmojiTests` | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data and keyword packs |
+| `EmojiSearchTests` | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format, multilingual search |
+| `CommandEscapeTapTests` | `Palette/CommandEscapeTap.swift` — dedicated run-loop dispatch while main is blocked, timeout recovery, stale actions, installation cancellation and teardown; private ports and unposted events only |
+| `PaletteNavigationTests` | `Palette/PaletteState.swift`'s screen motions — `prepare`, `replace`, `push`, `pop` — and hover arming, pointer drift, scroll disarming and highlight tokens |
+| `CompactBarTests` | Compact shortcut order, selection boundaries, zero-to-four slots, identifiers, isolated preferences and invalid settings-file rejection |
+| `PaletteSelectionTests` | `Features/PaletteRowIndex.swift` |
+| `InterfaceSizeTests` | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift` |
+| `FormInputTests` | Native field/textarea sizing, editing alignment, placeholders, Tab, Unicode selection, undo and code fonts |
+| `PalettePlacementTests` | `DesignSystem/Theme.swift`, `Palette/PalettePlacement.swift` |
+| `PaletteMenuClickTests` | `Palette/PalettePanel.swift` — complete click-away presses and subsequent control activation |
+| `HyperKeyEngineTests` | Hyper chord transitions for every physical key, device-bit holds, own-bit and other-Shift residue, released modifiers, the Quick Press rule, repeats and interruption recovery |
+| `HotKeyTests` | `HotKeys/Model/DoubleTapModifier.swift`, `DoubleTapDetector.swift`, `ModifierKey.swift`, `ModifierKeyDetector.swift`, `HotKeyBinding.swift`, `HotKeySpelling.swift`, `HyperKey.swift`, `HIDKeyMapping.swift`, `HotKeyAction.swift`, `Service/KeyShortcut.swift`, and the command→action mapping in `Launcher/Model/CommandID.swift` |
+| `HyperKeyTests` | `HotKeys/Model/HIDKeyMapping.swift`, `HyperKeyConflictPolicy.swift`, `Service/KeyboardRemapper.swift`, `RemapInstanceLock.swift` — mapping ownership, refused writes, crash recovery, device reconnection, Caps Lock and 🎤 remaps sharing a keyboard, conflict severities, Modifier Keys and Karabiner parsing, another app taking over Caps Lock, one process per Hyper Key |
+| `HotKeyDispatchTests` | `HotKeys/Service/HotKeyManager.swift` — Secure Input side isolation, shared Control registrations, press/release routing, recording and cancellation; isolated preferences and simulated Carbon registration |
+| `DeepLinkTests` | `DeepLinks/Model/`, `HotKeys/Model/HotKeyAction+EntryID.swift`, `Settings/SettingsTab.swift` — every bindable command, window command and system action round-trips through its link and its entry ID, stored rows by UUID, snippet paths through percent-encoding, case folding, the channel's scheme, the links that must not resolve (Raycast schemes, the `extensions` host), input decoding, encoding and its refusals (bytes, not characters), batches, field filling, consent classes and keys, the quicklink loop rule, note, chat and window-size links, and every Settings tab slug |
+| `DictationKeyTests` | `HotKeys/Service/DictationKeyManager.swift` — shared and separate preference domains, ownership handoff through the real health ticker, and retry cancellation on unbind or termination; isolated preferences, lock files and simulated keyboards |
+| `DictationTests` | `Dictation/Model/DictationModel.swift`, `DictationTextFormatter.swift` — model paths and text formatting |
+| `DictationFieldTests` | Composer rebinding and teardown, field-scoped dictation cancellation, and queued insertion validity; synthetic capture and real AppKit editors |
+| `DictationCueTests` | System dictation sound paths, stop-before-play ordering and missing resources, without playing audio |
+| `DictationVolumeTests` | Volume recovery across fade steps, user changes, output switching, failed writes and cancellation; injected audio controls only |
+| `DictationInferenceTests` | Dictation byte BPE, Fourier/mel features and non-overlapping audio chunks; no downloaded models |
+| `DictationWorkerTests` | Dictation's framed channel, worker reuse/switching, removal, cancellation and broken pipes with a fixture helper |
+| `FallbackTests` | `Launcher/Model/Fallback.swift`, plus the `CommandID` and `Quicklink` ids it is built from |
+| `DictionaryTests` | `Dictionary/Model/DictionaryEntry.swift`, `DictionaryMarkup.swift` — a real XHTML record and the plain-text fallback, read into page blocks |
+| `CalloutTests` | `DesignSystem/Theme.swift`, `HotKeys/UI/CalloutPlacement.swift` |
+| `SystemActionTests` | `SystemActions/Model/SystemAction.swift` |
+| `MicrophoneMuteTests` | Native input mute, delayed confirmation, device switches and failures; injected CoreAudio calls only |
+| `VolumeTests` | `SystemActions/Model/VolumeLevel.swift` |
+| `WindowCommandTests` | `WindowManagement/WindowCommand.swift`, `WindowPlacementEngine.swift`, `WindowActionMemory.swift` |
+| `WindowLayoutTests` | `WindowManagement/Model/WindowLayout*.swift` and `CustomWindowSize*.swift` — the layout record, its geometry and its inverse, the plan and the store; custom sizes' units, frames and store |
+| `WindowRoomTests` | `WindowManagement/Model/Room*.swift` — every room layout and its minimum sizes, the grid, arrangement reading, window matching, parking, the plan, Tab's choices and the three stores |
+| `CustomCommandTests` | Command storage and execution, editor drafts, argument identities and dynamic keyboard focus |
+| `CustomCommandListTests` | Browser result snapshots, observation, row actions and empty-library messages |
+| `UninstallTests` | all five pure files in `Uninstall/Model/` |
+| `UninstallCoordinatorTests` | Confirmation and the post-confirmation quit gate; recorded quit and Trash effects only |
+| `QuicklinkTests` | all of `Quicklinks/Model/`, plus editor drafts and placeholder selection |
+| `QuicklinkCoordinatorTests` | Opening and requested arguments, launcher editing, current enabled-state preservation, deletion during editing and feature gates; no platform effects or on-screen focus checks |
+| `AppleShortcutTests` | all of `AppleShortcuts/Model/` — the `shortcuts list` parser and entry ids |
+| `SnippetsTests` | all of `Snippets/Model/` and `Snippets/Service/`, plus editor drafts, placeholder selection and `Platform/HealthTicker.swift` |
+| `NotesTests` | all of `Notes/Model/` and `Notes/Service/`, including the Markdown parser, edit plans and reveal policy, plus the real fuzzy matcher and signposts |
+| `NotesEditorTests` | the Notes editor, rendered and literal, with real TextKit 2 and AppKit editing objects: styling, reveal, layout fragments, keys, chords, checkboxes and links |
+| `RaycastTests` | `Backup/Service/RaycastDecoder.swift`, `Scrypt.swift`, `Platform/Compression/Zlib.swift`, `Clipboard/Model/RaycastClipboardImport.swift` and import-time clipboard retention |
+| `SymbolsTests` | `Extensions/Service/SymbolCatalog.swift`, against this machine's CoreGlyphs |
+| `ExtensionStoreTests` | `Extensions/Model/` — GitHub source parsing and URLs, the store and Git tree parsers |
+| `ExtensionRefreshTests` | `Extensions/Model/ExtensionRefreshPolicy.swift` — interval parsing, due dates, backoff, subtitle fallback, indicator state, Refresh Now refusals |
+| `ExtensionVersionTests` | `Extensions/Service/ExtensionVersionStore.swift` — what an update check reports, adopts and forgets |
+| `ExtensionMetadataTests` | `Extensions/Service/ExtensionCommandMetadataStore.swift` — round-trip, failure runs, uninstall |
+| `ExtensionTests` | the extension runtime and native menu-bar lifecycle — boots shipped sources in JavaScriptCore; menu tests cover restoration, refresh serialization, actions and teardown; fetch tests cover HTTP connection cleanup, cancellation and request isolation |
+| `ExtensionIconTests` | `Extensions/Service/ExtensionIconCache.swift` — artwork sizing and its fallback |
+| `ExtensionSignInTests` | `Extensions/Service/ExtensionSignInSession.swift` — browser start failures, completion, cancellation without a callback, and late callbacks after teardown |
+| `IconCacheTests` | `Platform/Images/IconCache.swift` — row sizing at 1×/2×, warm reuse, stamp and style invalidation, bitmap release, fitted geometry across all 256 alpha values, and that a row icon draws identically to the 96px one |
+| `EntryIconTests` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |
+| `TextDiffTests` | `QuickActions/Model/TextDiffEngine.swift` — exact chunks, coalescing, Unicode, ties, token-cap boundaries and fast paths |
+| `SettingsBackupTests` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
+| `SettingsFileTests` | `Settings/Model/` and `Settings/Service/` — key paths, value tokens, the printer and parser, and the repository's import, replace, save, reload and symlink handling on a scratch folder |
+| `WindowFileTests` | `WindowManagement/Model/WindowManagementFileFormat.swift` — command shortcuts, custom sizes, layouts and rooms as settings.json spells them, hand edits and bad records |
+| `LauncherSettingsFileTests` | Launcher settings application — invalid records, partial edits, deferred bundles, shortcut moves and records outside search scopes; isolated preferences and in-memory scan/Carbon effects |
+| `BackupArchiveTests` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
+| `UpdatesTests` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
+| `UpdateCheckTests` | `UpdateCheckStore` — stopping, in-flight cancellation, cached offer suppression, restart and independent manual checking |
+| `SupportTests` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
+| `AIProviderTests` | `AI/Model/` and `AISettingsStore` — instruction composition, provider requests and streams, route settings, protocol framing, CLI launch encodings and queued Codex writes across cancellation, timeout and Stop |
+| `OpenCodeMCPTests` | OpenCode's per-turn MCP bridge and installed CLI launch, authentication, scoped catalog, consent dispatch, serial calls, result budgets and cancellation |
+| `AppleIntelligenceTests` | On-device status, snapshot deltas, transcript assembly and error mapping; real generation is opt-in |
+| `SyntaxHighlightTests` | `AI/Model/SyntaxGrammar.swift`, `SyntaxHighlighter.swift`, `SyntaxStructuredLexers.swift` — every grammar's tokens, language aliases, the size limit and streaming prefixes |
+| `MCPTests` | `MCP/Model/` and `MCPSettingsStore` — JSON-RPC framing, handles, tool names, output flattening, trust, `@server` addressing, the shape a vendor CLI is handed, and which servers Tinycast leaves to that CLI |
+| `MCPStdioTests` | `MCP/Service/` against a stub server — handshake, listing, calling, and every way one can go away |
+| `MCPOAuthTests` | OAuth parsing, RFC 7636 PKCE, discovery and resource binding, loopback callback validation/cancellation, dynamic registration, supplied client credentials and their token-endpoint authentication, Keychain token rotation, concurrent refresh, the wider margin for a token lent to a CLI, redirects and one-retry 401 handling |
 
-`mcp-stdio-test` copies `Tests/ai-fixtures/mcp-stub.js` into a scratch directory. The stub
+`MCPStdioTests` copies `Tests/ai-fixtures/mcp-stub.js` into a scratch directory. The stub
 reads fd 0 synchronously and writes replies with `fs.writeSync`, so a reply reaches the pipe before
 an exit mode finishes.
 
 Completion checks use bounded state waits; exclusion windows and intentional timeout cases keep their
 observation delays.
 
-`mcp-oauth-test` starts `Tests/ai-fixtures/mcp-oauth-stub.js` on `127.0.0.1:4963` and tests the
+`MCPOAuthTests` starts `Tests/ai-fixtures/mcp-oauth-stub.js` on `127.0.0.1:4963` and tests the
 single-use callback on `127.0.0.1:4962`. Both ports must be free; the harness never chooses another
 port. Its Keychain scope is unique to each run and removed on completion.
 
@@ -290,8 +294,8 @@ swiftc -O -wmo -swift-version 6 Tinycast/Features/FileSearch/Model/*.swift \
     Tinycast/Features/FileSearch/Service/FileIndex.swift \
     Tinycast/Features/FileSearch/Service/FileIndexSnapshot.swift \
     Tinycast/Features/FileSearch/Service/FileIndexCrawler.swift \
-    Tests/file-search-performance.swift -o /tmp/file-search-performance
-/tmp/file-search-performance
+    Tests/FileSearchPerformanceTests.swift -o /tmp/FileSearchPerformanceTests
+/tmp/FileSearchPerformanceTests
 ```
 
 It prints the crawl and write times, the index size, and first and median latency per query.
@@ -301,17 +305,17 @@ timing harness rather than an assertion one, and stays out of `run-tests.sh` for
 
 ```sh
 swiftc -O -swift-version 6 Tinycast/Features/Calculator/Model/*.swift \
-    Tests/calc-performance.swift -o /tmp/calc-performance
-/tmp/calc-performance          # µs per query, by grammar
-/tmp/calc-performance --probe  # every answer as JSON, to diff two builds
-/tmp/calc-performance --cold "10kg to lb"   # first query, including catalog decode
+    Tests/CalcPerformanceTests.swift -o /tmp/CalcPerformanceTests
+/tmp/CalcPerformanceTests          # µs per query, by grammar
+/tmp/CalcPerformanceTests --probe  # every answer as JSON, to diff two builds
+/tmp/CalcPerformanceTests --cold "10kg to lb"   # first query, including catalog decode
 ```
 
-`Tests/text-diff-performance.swift` is the same shape for `TextDiffEngine`: build it with `-O`
+`Tests/TextDiffPerformanceTests.swift` is the same shape for `TextDiffEngine`: build it with `-O`
 against the engine, pass a token count, a workload (`dense`, `sparse`, `equal`, `empty`) and an
 iteration count for timings, or `--probe` to diff every chunk between two builds.
 
-`Tests/clipboard-file-performance.swift` measures file capture with private pasteboards and temporary
+`Tests/ClipboardFilePerformanceTests.swift` measures file capture with private pasteboards and temporary
 fixtures. It reports wall and process CPU time as JSON for modern and legacy formats, including
 32/1,000/10,000 durable files, rejected-input controls and an uncapped-reader control that guards
 the attachment path against the bounded reader it now delegates to. Compare three fresh processes
@@ -321,11 +325,11 @@ per build with identical `-O` settings:
 swiftc -O -swift-version 6 Tinycast/Platform/PasteboardFiles.swift \
     Tinycast/Features/Clipboard/Model/{ClipboardStore,ClipboardFilter,ClipboardFileKind,ColorValue,ColorFormat,ColorSpaces}.swift \
     Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
-    Tests/clipboard-file-performance.swift -o /tmp/clipboard-file-performance
-/tmp/clipboard-file-performance
+    Tests/ClipboardFilePerformanceTests.swift -o /tmp/ClipboardFilePerformanceTests
+/tmp/ClipboardFilePerformanceTests
 ```
 
-`Tests/clipboard-thumbnail-performance.swift` draws 10 image rows at once, then 10 previews one by one,
+`Tests/ClipboardThumbnailPerformanceTests.swift` draws 10 image rows at once, then 10 previews one by one,
 as Clipboard History does, and prints the times with the footprint and its peak as JSON. `--fixtures`
 writes 10 seeded synthetic Display P3 screenshots up to 3456 × 2234, so no real clipboard is needed.
 `--original` decodes the blobs as before the copies existed; `--copies` makes and reads the
@@ -333,19 +337,19 @@ writes 10 seeded synthetic Display P3 screenshots up to 3456 × 2234, so no real
 helper must sit at `Contents/Helpers` beside the benchmark:
 
 ```sh
-D=/tmp/clipboard-thumbnail-performance; mkdir -p $D/Contents/Helpers
+D=/tmp/ClipboardThumbnailPerformanceTests; mkdir -p $D/Contents/Helpers
 swiftc -O -swift-version 6 -parse-as-library \
     Tinycast/Features/Clipboard/Service/{ClipboardTextExtractor,ClipboardTextHelper}.swift \
     -o $D/Contents/Helpers/ClipboardTextHelper
 swiftc -O -swift-version 6 Tinycast/Platform/ProcessExit.swift \
     Tinycast/Platform/Images/{ImageThumbnail,ImageDerivative,ThumbnailCache}.swift \
-    Tests/clipboard-thumbnail-performance.swift -o $D/clipboard-thumbnail-performance
-$D/clipboard-thumbnail-performance /tmp/ctp --fixtures
-$D/clipboard-thumbnail-performance /tmp/ctp --original
-$D/clipboard-thumbnail-performance /tmp/ctp --copies
+    Tests/ClipboardThumbnailPerformanceTests.swift -o $D/ClipboardThumbnailPerformanceTests
+$D/ClipboardThumbnailPerformanceTests /tmp/ctp --fixtures
+$D/ClipboardThumbnailPerformanceTests /tmp/ctp --original
+$D/ClipboardThumbnailPerformanceTests /tmp/ctp --copies
 ```
 
-`Tests/emoji-search-performance.swift` times uncached queries, typing prefixes and memo hits against
+`Tests/EmojiSearchPerformanceTests.swift` times uncached queries, typing prefixes and memo hits against
 the loaded catalog, with process RSS and footprint as JSON; `--names` also lists every catalog name
 missing from its own top five results, and `--languages fr,ja` loads those keyword packs first (run it
 from the repo root):
@@ -354,12 +358,12 @@ from the repo root):
 swiftc -O -swift-version 6 Tinycast/Features/Emoji/Model/{EmojiCatalog,EmojiData.generated}.swift \
     Tinycast/Features/Emoji/Service/{EmojiIndex,FrequentEmojiStore}.swift \
     Tinycast/Features/Launcher/Model/SearchRelevance.swift Tinycast/Platform/{AppPaths,Memo}.swift \
-    Tests/emoji-search-performance.swift -o /tmp/emoji-search-performance
-/tmp/emoji-search-performance --names
-/tmp/emoji-search-performance --languages fr,ja
+    Tests/EmojiSearchPerformanceTests.swift -o /tmp/EmojiSearchPerformanceTests
+/tmp/EmojiSearchPerformanceTests --names
+/tmp/EmojiSearchPerformanceTests --languages fr,ja
 ```
 
-`Tests/notes-editor-performance.swift` installs a 100,000-character note in a real rendered editor and
+`Tests/NotesEditorPerformanceTests.swift` installs a 100,000-character note in a real rendered editor and
 prints, as JSON, the median over 30 runs of the install with its full restyle, one typed character at
 the end, middle and start, the window fit's height read after an install and after each of those
 characters, and a caret move between distant lines. The budget is 150 ms, 8 ms (end and middle) and
@@ -378,8 +382,8 @@ swiftc -O -swift-version 6 Tinycast/Platform/{Signposts,Appearance,NotificationT
     $N/UI/{NoteMarkdownTypography,NoteBlockDecoration,NoteMarkdownStyler,NoteMarkdownRenderer}.swift \
     $N/UI/{NoteCheckboxGeometry,NoteBlockLayoutFragment,NoteLayoutFragmentProvider}.swift \
     $N/UI/{NoteTextViewEditing,NoteTextView,NoteEditorView}.swift \
-    Tests/notes-editor-performance.swift -o /tmp/notes-editor-performance
-/tmp/notes-editor-performance
+    Tests/NotesEditorPerformanceTests.swift -o /tmp/NotesEditorPerformanceTests
+/tmp/NotesEditorPerformanceTests
 ```
 
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
@@ -406,7 +410,7 @@ Measured at the end of the 2026 refactor, on `main`. Useful as orders of magnitu
 | Largest view / owner | `RootPaletteView` 662 lines, `AppCore` 284 lines |
 | Comment density | 1,653 of 27,289 source lines (6.1%) |
 | The harness suite | ~15 s wall clock, 11-way parallel (~98 s serial, ~140 s before either) |
-| `palette-selection-test` | 111,684 assertions — a tripwire: a change in this count means the row-order model moved |
+| `PaletteSelectionTests` | 111,684 assertions — a tripwire: a change in this count means the row-order model moved |
 | `SnippetKeywordPolicy` match | 7 µs/keystroke at 50 keywords, 59 µs at 1,000 — the `lowercased()` is 0.09 µs of it |
 | `ClipboardStore.pinnedItems` | 27–127 µs per uncached search, 1,000-row window — no cache earns its invalidation yet |
 | Rendered Notes editor, 100,000 characters | 30 ms install and full restyle; 7.5, 5.9 and 3.3 ms per character typed at the end, middle and start (5.2, 3.1 and 0.6 ms with rendering off); 0.6 ms per caret move |

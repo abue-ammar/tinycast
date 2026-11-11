@@ -6,14 +6,14 @@ between them are both gone, deleted rather than carried, as of **v0.10.5**.
 
 ## Invariants
 
-- **`RaycastDecoder` stays platform-UI-free** so `raycast-test` compiles it standalone. Which is why the
+- **`RaycastDecoder` stays platform-UI-free** so `RaycastTests` compiles it standalone. Which is why the
   decoder returns the payload's own bytes and `RaycastImportReader`, not the decoder, validates them
   against `PopToRootTimeout` / `EmojiSkinTone` / `HyperKeyPhysicalKey` / `KeyShortcut`.
 - **Recognition is the container signature and nothing else.** `RaycastDecoder.isExport` needs no
   passphrase, so the Backup pane runs it the moment a file is chosen and a wrong passphrase reports a
   wrong passphrase instead of "not a Raycast export".
 - **Never commit a real `.rayconfig` as a fixture.** The harness builds its own.
-- **Every scrypt derive costs seconds in the unoptimized harness.** `raycast-test` derives once for its
+- **Every scrypt derive costs seconds in the unoptimized harness.** `RaycastTests` derives once for its
   fixture and keeps the cases that reach key derivation to the few that need it; anything testing the
   container's framing is written to fail before it.
 - **The payload gunzip cap is a memory bound, not a zip-bomb guard.** AES-GCM has already authenticated
@@ -68,7 +68,7 @@ have their own importer, described in
 those into Tinycast's domain types. That is the same pure-layer / platform-layer split
 `Features/WindowManagement/` uses — the reader needs AppKit, so it lives in `Service/` and is covered by
 the app build. `RaycastClipboardImport` holds the clipboard mapping with an injected clock and file
-existence check; `raycast-test` compiles it alongside the real `ClipboardStore` to cover pin metadata
+existence check; `RaycastTests` compiles it alongside the real `ClipboardStore` to cover pin metadata
 and import-time retention.
 
 `RaycastImport` is only the data: `Result`, `selecting(_:)` and `RaycastImportOptions`.
