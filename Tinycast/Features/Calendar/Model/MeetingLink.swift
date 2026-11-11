@@ -95,6 +95,7 @@ extension MeetingLink {
         case gotoMeeting
         case blueJeans
         case skype
+        case telemost
         /// Any other http(s) link the event carries — joinable, just not identifiable.
         case generic
 
@@ -110,6 +111,7 @@ extension MeetingLink {
             case .gotoMeeting: return "GoTo Meeting"
             case .blueJeans: return "BlueJeans"
             case .skype: return "Skype"
+            case .telemost: return "Yandex Telemost"
             case .generic: return String(localized: "Meeting Link")
             }
         }
@@ -128,7 +130,8 @@ extension MeetingLink {
             .chime: ["chime.aws"],
             .gotoMeeting: ["gotomeeting.com", "gotomeet.me", "app.goto.com"],
             .blueJeans: ["bluejeans.com"],
-            .skype: ["join.skype.com"]
+            .skype: ["join.skype.com"],
+            .telemost: ["telemost.yandex.ru", "telemost.yandex.com", "telemost.360.yandex.ru"]
         ]
 
         init?(host: String) {
@@ -149,6 +152,8 @@ extension MeetingLink {
                 return segments.count == 1 && segments[0] != "tel"
             case .teams:
                 return segments.contains("meetup-join") || segments.contains("meet")
+            case .telemost:
+                return segments.first == "j" && segments.count > 1
             case .webex, .jitsi, .whereby, .chime, .gotoMeeting, .blueJeans, .skype, .generic:
                 return !segments.isEmpty
             }

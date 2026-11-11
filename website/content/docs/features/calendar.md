@@ -55,7 +55,7 @@ row.
 
 Tinycast checks the event's URL, location and notes, in that order. It recognizes **Zoom**,
 **Google Meet**, **Microsoft Teams**, **Webex**, **Jitsi**, **Whereby**, **Amazon Chime**,
-**GoTo Meeting**, **BlueJeans** and **Skype**, and falls back to any other web link in the event.
+**GoTo Meeting**, **BlueJeans**, **Skype** and **Yandex Telemost**, and falls back to any other web link in the event.
 
 - **A link to a known service always takes priority over a plain link**, so a "reset your password"
   link at the top of an invite never wins over the Meet link below it.
