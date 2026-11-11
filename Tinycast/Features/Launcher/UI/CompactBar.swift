@@ -40,6 +40,8 @@ struct CompactBar: View {
     let commands: [CommandID]
     let selection: CommandID?
     let onRun: (CommandID) -> Void
+    /// The window caches its shadow from the shapes it first drew, before the buttons beaded out.
+    let onSettled: () -> Void
     @Environment(PaletteState.self) private var palette
     @Environment(\.metrics) private var metrics
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -48,9 +50,30 @@ struct CompactBar: View {
     var body: some View {
         let geometry = CompactBarGeometry(metrics: metrics, count: commands.count)
         let revealed = isRevealed
+        Group {
+            // Glass casting its own shadow would give the window's shadow that soft halo to trace.
+            if Theme.glassCastsShadow {
+                glass(geometry: geometry, revealed: revealed)
+                    .mask { silhouette(geometry: geometry, revealed: revealed, sparing: nil) }
+            } else {
+                glass(geometry: geometry, revealed: revealed)
+            }
+        }
+        .overlay { scrim(geometry: geometry, revealed: revealed) }
+        // Above the glass rather than inside it, where a morph would smear them.
+        .overlay(alignment: .topLeading) {
+            ForEach(Array(commands.enumerated()), id: \.element) { index, command in
+                glyph(command, at: index, geometry: geometry, revealed: revealed)
+            }
+        }
+        .task(id: palette.isVisible) { await followVisibility() }
+    }
+
+    /// Left unmasked where it can be: any mask also clips the rim glass draws past its shape.
+    private func glass(geometry: CompactBarGeometry, revealed: Bool) -> some View {
         let capsule = Capsule(style: .continuous)
         // One container, or the buttons could never bead off the capsule they come out of.
-        GlassEffectContainer(spacing: metrics.scaled(BarMotion.blend)) {
+        return GlassEffectContainer(spacing: metrics.scaled(BarMotion.blend)) {
             ZStack(alignment: .topLeading) {
                 capsule.fill(.clear)
                     .frame(width: geometry.capsuleWidth(revealed: revealed))
@@ -65,14 +88,6 @@ struct CompactBar: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
-        .overlay { scrim(geometry: geometry, revealed: revealed) }
-        // Above the glass rather than inside it, where a morph would smear them.
-        .overlay(alignment: .topLeading) {
-            ForEach(Array(commands.enumerated()), id: \.element) { index, command in
-                glyph(command, at: index, geometry: geometry, revealed: revealed)
-            }
-        }
-        .task(id: palette.isVisible) { await followVisibility() }
     }
 
     private func button(
@@ -104,26 +119,31 @@ struct CompactBar: View {
     /// The selected button stays out of the mask, so its tint reads undimmed.
     private func scrim(geometry: CompactBarGeometry, revealed: Bool) -> some View {
         Theme.Colors.panelScrim
-            .mask {
-                ZStack(alignment: .topLeading) {
-                    Capsule().fill(.white)
-                        .frame(width: geometry.capsuleWidth(revealed: revealed))
-                        .frame(maxHeight: .infinity)
-                        .animation(
-                            reduceMotion ? nil : BarMotion.capsule.delay(BarMotion.revealDelay),
-                            value: revealed)
-                    ForEach(Array(commands.enumerated()), id: \.element) { index, command in
-                        Circle().fill(.white)
-                            .frame(width: geometry.diameter, height: geometry.diameter)
-                            .opacity(revealed && selection != command ? 1 : 0)
-                            .scaleEffect(revealed ? 1 : BarMotion.parkedScale)
-                            .position(revealed ? geometry.center(of: index) : geometry.parked)
-                            .animation(travel(index), value: revealed)
-                    }
-                }
-            }
+            .mask { silhouette(geometry: geometry, revealed: revealed, sparing: selection) }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
+    }
+
+    /// The capsule and its buttons as they move, less the one `sparing` names.
+    private func silhouette(
+        geometry: CompactBarGeometry, revealed: Bool, sparing spared: CommandID?
+    ) -> some View {
+        ZStack(alignment: .topLeading) {
+            Capsule().fill(.white)
+                .frame(width: geometry.capsuleWidth(revealed: revealed))
+                .frame(maxHeight: .infinity)
+                .animation(
+                    reduceMotion ? nil : BarMotion.capsule.delay(BarMotion.revealDelay),
+                    value: revealed)
+            ForEach(Array(commands.enumerated()), id: \.element) { index, command in
+                Circle().fill(.white)
+                    .frame(width: geometry.diameter, height: geometry.diameter)
+                    .opacity(revealed && spared != command ? 1 : 0)
+                    .scaleEffect(revealed ? 1 : BarMotion.parkedScale)
+                    .position(revealed ? geometry.center(of: index) : geometry.parked)
+                    .animation(travel(index), value: revealed)
+            }
+        }
     }
 
     private func glyph(
@@ -164,6 +184,11 @@ struct CompactBar: View {
     private func followVisibility() async {
         guard !palette.isVisible else {
             isRevealed = true
+            guard Theme.glassCastsShadow else { return }
+            let reveal = BarMotion.revealDelay + BarMotion.stagger * Double(commands.count) + BarMotion.settle
+            try? await Task.sleep(for: .seconds(Motion.duration(reveal)))
+            guard !Task.isCancelled else { return }
+            onSettled()
             return
         }
         try? await Task.sleep(for: .seconds(Motion.duration(BarMotion.parkAfterHide)))
