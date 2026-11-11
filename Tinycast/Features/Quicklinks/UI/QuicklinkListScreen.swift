@@ -9,11 +9,7 @@ struct QuicklinkListScreen: PaletteScreen {
     let openActions: () -> Void
     let openArgumentOptions: (String) -> Void
 
-    var rows: [Quicklink] {
-        let query = vm.query.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return store.enabled }
-        return store.enabled.filter { $0.name.localizedCaseInsensitiveContains(query) }
-    }
+    var rows: [Quicklink] { store.enabled(matching: vm.query) }
 
     var primaryActionTitle: String { String(localized: "Open Quicklink") }
 

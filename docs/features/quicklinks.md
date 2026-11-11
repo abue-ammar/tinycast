@@ -138,7 +138,9 @@ row, with its first empty chip focused — carried across by `PaletteState.pendi
 `landingSelection` reads that ID, so the show's reset stays on the row instead of returning to the
 top. One argument surface, whether the row is reached from root search, from Search Quicklinks or from
 a hotkey. A ⌘↵ "open with default app" override survives that trip on `pendingDefaultAppOverride`,
-keyed by the quicklink it applies to.
+keyed by the quicklink it applies to. Pressing the shortcut again while Search Quicklinks has that
+row selected hides the palette, as the Snippets and Clipboard History shortcuts do; any other row or
+screen still lands on it.
 
 **A launcher fallback fills the first argument.** Declaring a placeholder is exactly what puts a
 quicklink in the `Use “…” with…` section (see [launcher.md](launcher.md#fallbacks));
