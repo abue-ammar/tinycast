@@ -134,9 +134,9 @@ not read MCP settings. `AIChatCoordinator.send` is the one place the two meet.
   the server out, because it is never passed.
 - **Tinycast exposes nothing back.** A server request — sampling, elicitation, roots — is declined
   with a JSON-RPC error. The client advertises no capabilities in `initialize`.
-- **`Model/` stays Foundation-only.** `mcp-test` compiles the shipped models and pins the framing,
-  handles, tool names, output flattening, trust and addressing; `mcp-stdio-test` drives a real
-  subprocess. `mcp-oauth-test` pins OAuth parsing, PKCE, endpoint binding, callback lifetime,
+- **`Model/` stays Foundation-only.** `MCPTests` compiles the shipped models and pins the framing,
+  handles, tool names, output flattening, trust and addressing; `MCPStdioTests` drives a real
+  subprocess. `MCPOAuthTests` pins OAuth parsing, PKCE, endpoint binding, callback lifetime,
   dynamic and supplied client registration, refresh coalescing, redirects and bounded 401 recovery.
 
 ## Transports
@@ -367,7 +367,7 @@ caught there rather than in the middle of a conversation.
 - Switching MCP off, then AI off, leaves no server process resident — including right after a
   Codex turn that used a local server.
 - A settings backup carries neither a server nor the flag.
-- Harnesses: `mcp-test`, `mcp-stdio-test` and `mcp-oauth-test`, plus the tool halves of `ai-provider-test`
+- Harnesses: `MCPTests`, `MCPStdioTests` and `MCPOAuthTests`, plus the tool halves of `AIProviderTests`
   (catalog and turn encoding, fragmented argument decoding, both CLIs' launch encodings and their
-  two consent channels), `ai-chat-test` (the loop, its cap, its output bounds, and tool-use
+  two consent channels), `AIChatTests` (the loop, its cap, its output bounds, and tool-use
   persistence).

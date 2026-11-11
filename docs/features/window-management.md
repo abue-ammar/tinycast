@@ -57,8 +57,8 @@ applied in one pass — and **[Rooms](window-rooms.md)**, named sets of windows 
 display you are on while everything else steps back. Both share this feature's switch, its
 Accessibility grant and its gap setting.
 
-The first four compile into `Tests/window-command-test.swift` and `SpaceGesture.swift` compiles into
-`Tests/space-gesture-test.swift`, so none of them may gain an AppKit, SwiftUI or `NSScreen`
+The first four compile into `Tests/WindowCommandTests.swift` and `SpaceGesture.swift` compiles into
+`Tests/SpaceGestureTests.swift`, so none of them may gain an AppKit, SwiftUI or `NSScreen`
 dependency, and all must stay pure — `WindowActionMemory` takes `now` as a parameter rather than
 reading a clock. CoreGraphics is needed only because `CGRect`'s `Equatable` conformance lives in that
 overlay rather than in Foundation.
@@ -422,7 +422,7 @@ and every shortcut stays editable afterwards.
 
 ## Testing
 
-`Tests/window-command-test.swift` (545 assertions) covers the catalog, the AX-space convention lock,
+`Tests/WindowCommandTests.swift` (545 assertions) covers the catalog, the AX-space convention lock,
 tiling on divisible and non-divisible screens, off-origin and negative-coordinate displays, gap
 arithmetic including degenerate values, sizing, the Make Larger/Smaller round trip, nudges, edge
 moves, display moves and wrapping, both cycling modes including the strip walk, its wrap and a run of
@@ -430,16 +430,16 @@ real presses across displays, restore recovery, every `WindowActionMemory` rule,
 command × gap × screen × cycle × step × degenerate window frame checking for non-finite output,
 negative dimensions, off-screen results, non-determinism and, at step 0, drift on repeat.
 
-`Tests/window-preset-test.swift` covers the preset tables (no key used twice, a commanding modifier
+`Tests/WindowPresetTests.swift` covers the preset tables (no key used twice, a commanding modifier
 on each) and `WindowShortcutPresetPlan`: a fresh apply, a repeat apply, a replaced user key, a
 displaced command and an unrelated one left alone, plus when `matching` names a preset.
 
-`Tests/space-gesture-test.swift` (121 assertions) covers the other pure half: the fixed-point encoding
+`Tests/SpaceGestureTests.swift` (121 assertions) covers the other pure half: the fixed-point encoding
 and its ±1 floor, both field tables and the sign convention shared between them, the ended-only fling
 on the augmented path, the payload's size, record offsets and every scalar in it, and the big-endian
 framing of the field-4205 record.
 
-Custom sizes are covered in `Tests/window-layout-test.swift`, beside the anchor grid they share: the
+Custom sizes are covered in `Tests/WindowLayoutTests.swift`, beside the anchor grid they share: the
 entry id, unit clamping and conversion, exact frames on every fixture display, gap and offset
 arithmetic, the host-display placement, and store CRUD, validation, import sanitising and
 persistence.

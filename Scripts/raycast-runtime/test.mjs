@@ -524,7 +524,7 @@ async function runExtension(dir, commandName) {
           ]),
         ),
         // `EXT_TEST_PREFS={"version":"v8"}` stands in for what the user set in Settings — plenty of
-        // extensions branch on a preference that has no manifest default. Same knob as ext-test.
+        // extensions branch on a preference that has no manifest default. Same knob as ExtensionTests.
         ...JSON.parse(process.env.EXT_TEST_PREFS ?? "{}"),
       },
     }),

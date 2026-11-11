@@ -1,6 +1,6 @@
 import Foundation
 
-/// What counts as fighting the Hyper Key. Pure, so the app and `hyper-key-test` read one rule.
+/// What counts as fighting the Hyper Key. Pure, so the app and `HyperKeyTests` read one rule.
 enum HyperKeyConflictPolicy {
     enum Severity: String, Sendable {
         case blocking

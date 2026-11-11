@@ -14,7 +14,7 @@ resolution-independent by construction.
   inverse `describe` lives beside it so the two cannot drift. The editor's preview calls the same
   `resolve` the runner does; a view that derived a rect itself would draw a lie.
 - **`resolve(describe(frame)) == frame` for any whole-point frame inside the box.** That identity is
-  what makes Capture trustworthy, and `window-layout-test` sweeps it over four displays and three
+  what makes Capture trustworthy, and `WindowLayoutTests` sweeps it over four displays and three
   gaps. The converse does **not** hold — `resolve` clamps and floors — so only idempotence
   (`resolve(describe(resolve(e))) == resolve(e)`) is asserted for degenerate entries.
 - **A display is matched by `CGDisplayCreateUUIDFromDisplayID` and nothing else.** No name fallback,
@@ -53,7 +53,7 @@ resolution-independent by construction.
 | `UI/WindowLayoutCoordinator.swift` | AppKit | The one run funnel, the library, the editor handoff |
 | `Settings/WindowLayout*.swift` | SwiftUI | The pane's section and the editor panel |
 
-The first seven compile into `Tests/window-layout-test.swift`, so none of them may gain an AppKit,
+The first seven compile into `Tests/WindowLayoutTests.swift`, so none of them may gain an AppKit,
 SwiftUI or `NSScreen` dependency.
 
 ## Geometry
@@ -211,7 +211,7 @@ also removes a whole failure class and any run-time dependency on `QuicklinkStor
 
 ## Testing
 
-`Tests/window-layout-test.swift` covers the record and its entry id, the anchor grid and the
+`Tests/WindowLayoutTests.swift` covers the record and its entry id, the anchor grid and the
 AX-orientation lock, exact resolver frames, off-origin and negative-coordinate displays, offsets and
 their clamping, degenerate fractions, gap arithmetic, `describe` at every anchor, the round-trip
 identity, per-axis anchor independence, absent-display skipping, window binding and its determinism,

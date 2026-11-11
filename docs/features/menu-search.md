@@ -73,7 +73,7 @@ is checked before the menu-bar test, because Tinycast runs as an accessory and w
 as menu-less; `excluded` is checked next, for the same reason.
 
 `MenuSearchSession` takes its walk as an injected `WalkOperation` — `(pid, showsAppleMenu)` — which
-is what lets `Tests/menu-search-test.swift` drive publication, supersession and cancellation without
+is what lets `Tests/MenuSearchTests.swift` drive publication, supersession and cancellation without
 an AX server.
 
 Ranking scores the title and the `File > Export As` display path together, but the path rides as a

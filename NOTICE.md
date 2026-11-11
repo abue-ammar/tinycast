@@ -320,7 +320,7 @@ follow that project. Every adapted file says so on its first line, with a link t
   the window-number lookup in `AXWindowAccess.swift`
 - `Tinycast/Features/WindowManagement/UI/`: `RoomCoordinator.swift`, `RoomsScreen.swift`,
   `RoomPickerScreen.swift`, `RoomPreviewController.swift` and `RoomPreviewView.swift`
-- `Tests/window-room-test.swift`, whose cases follow Rooms' own tests
+- `Tests/WindowRoomTests.swift`, whose cases follow Rooms' own tests
 
 Its licence requires this notice to travel with the work:
 

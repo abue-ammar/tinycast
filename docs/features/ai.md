@@ -216,7 +216,7 @@ bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
   treated the same way: the decoder is handed the key and header values, an Anthropic `error` event shows its message
   under its line, and an OpenAI-compatible one reads through `metadata.raw` too, or says the provider
   stopped the response when there is no sentence to show.
-- **`Model/` stays Foundation-only.** `ai-provider-test` compiles the shipped provider models and pins
+- **`Model/` stays Foundation-only.** `AIProviderTests` compiles the shipped provider models and pins
   endpoints, request bodies, stream parsing, persistence repair, Codex protocol framing and both
   CLI routes' MCP launch encodings. Request
   bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
@@ -521,7 +521,7 @@ and the Actions menu's own chords, and dies with the window.
   `ChatMarkdownText` draws each text segment into one read-only `NSTextView`, and
   `ChatMarkdownRenderer` builds its single attributed string: lists with hanging indents, quotes,
   code as `NSTextBlock`s, tables as an `NSTextTable`, with find's marks and the citation numbers
-  in it. Its leaf paths are `ChatFindIndex.leaves`'s, which `chat-markdown-test` pins. A code
+  in it. Its leaf paths are `ChatFindIndex.leaves`'s, which `ChatMarkdownTests` pins. A code
   block's `NSTextBlock` only lays it out: `ChatSelectableTextView.drawBackground(in:)` draws its box,
   a continuous rounded rectangle (`Theme.Radius.codeBlock`) over the block's bounds less its margin
   (the list or quote indent), because a text block paints only around the glyphs being redrawn and
@@ -772,21 +772,21 @@ window, and every chat action either surface sends — is the nineteenth feature
   to the defaults. After the first message the menu is a label and cannot be changed.
 - Delete a preset: the dialog asks first, the row leaves Settings and the composer menu, and chats it
   started keep their instructions.
-- Harnesses: `ai-provider-test` (instruction composition and its enable/disable setting, a preset's
+- Harnesses: `AIProviderTests` (instruction composition and its enable/disable setting, a preset's
   instructions, `ChatPresetStore`'s validation and unreadable-file refusal, endpoints,
   request bodies, stream decoding including leading
   think tags across content and SSE splits, persistence repair,
   Codex framing, on-device routing, the two MCP launch encodings and the two consent channels, the
   shown-model and switched-off-route rules, and a tool's override from settings to launch),
-  `opencode-mcp-test` (bridge authentication, scoped catalog, exact permissions, calls and limits),
-  `syntax-highlight-test` (every grammar's tokens, language aliases, the size limit, and that every
+  `OpenCodeMCPTests` (bridge authentication, scoped catalog, exact permissions, calls and limits),
+  `SyntaxHighlightTests` (every grammar's tokens, language aliases, the size limit, and that every
   prefix of a streaming block scans in order and inside its own bounds),
-  `ai-chat-test` (`ChatSession`, `MarkdownBlock` with its math delimiters, LaTeX subset and
+  `AIChatTests` (`ChatSession`, `MarkdownBlock` with its math delimiters, LaTeX subset and
   mid-stream hold-back, `ChatHistoryStore` with renames, pins and preset stamps, an empty chat
   following its preset,
   `AIToolLoopProvider`, regenerate, `ChatReasoning`'s display text, the window's open policy and
   `AIChatSurfacesState`'s one-live-place rule),
-  and `apple-intelligence-test` (status copy, snapshot deltas,
+  and `AppleIntelligenceTests` (status copy, snapshot deltas,
   transcript assembly and error mapping, plus an optional real generation enabled with
   `TINYCAST_TEST_APPLE_INTELLIGENCE=1` when this Mac can run one), all in
   `run-tests.sh`.
@@ -968,7 +968,7 @@ guessed at, and a file past `AIAttachmentBudget.maxInlinedTextBytes` is refused 
 truncated — a silently truncated CSV is a lie the model then answers confidently.
 
 `AIAttachmentPolicy` is the one place deciding what may be attached and as what. It is pure and
-Foundation-only, so `ai-chat-test` pins it. It uses **extension allowlists rather than
+Foundation-only, so `AIChatTests` pins it. It uses **extension allowlists rather than
 `UTType.conforms(to:)`**: a machine's installed apps declare types, so a conformance answer differs
 between two Macs and would make a harness machine-dependent — the exact environment coupling
 `Model/` exists to keep out. Adding a type is a one-line change; a type answer that differs per Mac

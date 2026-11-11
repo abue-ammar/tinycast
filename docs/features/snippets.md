@@ -13,7 +13,7 @@ another app.
   `snippetsEnabled` is excluded from settings backups, and Accessibility — the only permission it needs,
   since the listen-only tap needs nothing more — may be requested **only** from that explicit Settings
   gesture, never from startup, callbacks, watchers or health checks.
-- **All of `Model/` and `Service/` compiles into `snippets-test`** (it globs both), so the model, Markdown
+- **All of `Model/` and `Service/` compiles into `SnippetsTests`** (it globs both), so the model, Markdown
   serializer, template engine, repository and keyword policies stay Foundation-only, and the AppKit files
   there keep their dependencies to what the harness can stub.
 - **Expansion goes where the caret is, which is not the frontmost application.** Our panels are
@@ -439,7 +439,7 @@ Run the real model, codec, template engine, repository, keyword listener with a 
 main-actor watcher against temporary roots:
 
 ```sh
-./Scripts/run-tests.sh snippets-test
+./Scripts/run-tests.sh SnippetsTests
 ```
 
 The delivery contract's two judgements — `keywordState` and `confirmsReplacement` — are pure, so the

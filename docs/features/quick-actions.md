@@ -39,7 +39,7 @@ selectable Markdown renderer with AI Chat.
   replace text the first had already changed. `QuickActionCoordinator` holds a single task and
   refuses a second while it lives; a generation token stops a task that finishes after being
   replaced — by a retranslate, say — from clearing the newer handle.
-- **`Model/` stays Foundation-only.** `quick-action-test` compiles that folder standalone, which is
+- **`Model/` stays Foundation-only.** `QuickActionTests` compiles that folder standalone, which is
   what keeps `FoundationModels`, `Translation` and `NaturalLanguage` in `Service/` and `UI/`.
 - **Quick Actions route themselves.** `quickActionModel` is a second routing decision, defaulting to
   Apple Intelligence and falling back to chat's model. A shortcut pressed all day should not bill an
@@ -309,6 +309,6 @@ failure handler, so automatic expansion stays silent as before.
 - Translate Korean text with Korean not downloaded and the target language installed: the panel names
   Korean, the language that is actually missing.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.
-- Harnesses: `quick-action-test` (action metadata, prompt boundaries, preview choices, routes and
+- Harnesses: `QuickActionTests` (action metadata, prompt boundaries, preview choices, routes and
   their repair) and
-  `text-diff-test` (exact chunks, coalescing, Unicode, ties, token boundaries and fast paths).
+  `TextDiffTests` (exact chunks, coalescing, Unicode, ties, token boundaries and fast paths).

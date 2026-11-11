@@ -109,7 +109,7 @@ also mixes Release entries in with Debug and lets them win. `Scripts/sync-lsp.sh
 
 `xcodebuild` never compiles the harnesses — they are not in the Xcode project — so nothing emits a
 compile command for them, and without one an open harness reports every shipped type it uses as *cannot
-find in scope*. Measured on `fuzz-test.swift`: 60 errors with no entry, 0 with one.
+find in scope*. Measured on `FuzzTests.swift`: 60 errors with no entry, 0 with one.
 
 ```sh
 ./Scripts/run-tests.sh --index    # merge the harness compile commands into .compile

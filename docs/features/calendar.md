@@ -51,7 +51,7 @@ camera preview, and individual events as searchable launcher entries.
 - **`MeetingEvent` carries only what a row needs.** Location, notes and attendees are read for one
   occurrence when its details page opens, never for the whole span, so a busy calendar's invites
   never sit in the snapshot every surface diffs.
-- **`Model/` stays Foundation-only**; `calendar-test` compiles the shipped sources. EventKit lives in
+- **`Model/` stays Foundation-only**; `CalendarTests` compiles the shipped sources. EventKit lives in
   `Service/CalendarStore.swift` and nothing EventKit-shaped leaves it.
 
 ## The pure layer

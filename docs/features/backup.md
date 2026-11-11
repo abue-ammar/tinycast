@@ -11,7 +11,7 @@ A backup carries five independently selectable categories, ticked on export and 
 - **`SettingsBackup`'s mirror is hand-written, and reflection is never the fix.** `AppSettingsKey` owns
   every key `AppSettings` persists; `SettingsBackupCoverage` says which of them `SettingsData` carries,
   which are sourced from somewhere other than `UserDefaults`, and which are excluded **with a reason**.
-  `settings-backup-test` fails when a key is none of those. Adding a setting means editing
+  `SettingsBackupTests` fails when a key is none of those. Adding a setting means editing
   `SettingsBackupCoverage` in the same commit.
 - **`snippetsEnabled` is excluded, and that is a security control.** It doubles as consent to keystroke
   listening, so an imported file must not be able to grant it. A `Mirror` or a macro is the wrong
@@ -22,9 +22,9 @@ A backup carries five independently selectable categories, ticked on export and 
   case: its order and checkboxes live on their own `UserDefaults` keys precisely so an import cannot
   arm **Run Shell Command** in someone's launcher. This change adds *content*, never a capability.
 - **No absolute path may enter a `.tinycast`.** A clip's `imagePath` names a file on the Mac that wrote
-  it, so `BackupClipboardItem` carries a bundle-relative `imageName` instead. `backup-archive-test`
+  it, so `BackupClipboardItem` carries a bundle-relative `imageName` instead. `BackupArchiveTests`
   asserts the produced file contains neither `/Users` nor `/Library` — the analogue of
-  `settings-backup-test`'s `snippetsEnabled` check, and for the same reason: this file gets sent to
+  `SettingsBackupTests`'s `snippetsEnabled` check, and for the same reason: this file gets sent to
   people.
 - **The file carries a format version and a reader accepts only its own.** That is a guard, not a
   migration: the comparison is `==`, so an older and a newer file fail identically and by the same
@@ -78,7 +78,7 @@ import picker greys a row out instead of importing nothing and saying nothing.
 built in memory to encode and again to decode; a line per clip is one small encode through an open
 `FileHandle` on the way out and one mapped read on the way back. Splitting on `\n` is legal precisely
 because a newline inside a clip is escaped as `\n` by the encoder and can never appear raw —
-`backup-archive-test` asserts the line count equals the clip count for exactly that reason.
+`BackupArchiveTests` asserts the line count equals the clip count for exactly that reason.
 
 **AppleArchive, LZFSE, and a deliberately narrow keyset.** `"TYP,PAT,DAT,MOD,MTM"` rather than
 `.defaultForArchive`: no `UID`/`GID`, which would restore another Mac's numeric owner, and no `IDX`,
@@ -90,7 +90,7 @@ payload and are already compressed.
 that returns `.skip` for any entry whose path is absolute or contains `..`, and then refuses an extract
 holding a symbolic link — a link entry names no `..` at all, so the path filter passes it, and reading
 through one would leave the tree the caller chose. Composing resolves a link for the same reason, so a
-symlinked note travels as a file. `backup-archive-test` builds both hostile archives header-by-header
+symlinked note travels as a file. `BackupArchiveTests` builds both hostile archives header-by-header
 and asserts nothing escapes.
 
 **Staging lives in `Caches`, not `temporaryDirectory`.** It has to sit on the same volume as
@@ -107,7 +107,7 @@ anything a day old on the next run, since a run killed mid-flight leaves its tre
   `launchAtLogin` comes from `LaunchAtLogin`, which owns the login item.
 - `deliberatelyExcluded` — keys kept out on purpose, each with its reason as a string.
 
-`settings-backup-test` asserts that every `AppSettingsKey` appears in exactly one table, that no field
+`SettingsBackupTests` asserts that every `AppSettingsKey` appears in exactly one table, that no field
 claims a key twice, that every exclusion names a real key and carries a non-empty reason, and that each
 capability-granting key — `snippetsEnabled`, `extensionsEnabled`, `calendarEnabled`,
 `autoJoinMeetings`, `cameraPreview`, `quickActionsEnabled` — is named individually as excluded. The

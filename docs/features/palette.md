@@ -13,7 +13,7 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
 - **The flat `selection` index must match the visible row order exactly**, including the inline
   calculator card at index 0 when present. Selection is the single source of truth for highlight and
   activation. `Features/PaletteRowIndex.swift` is that mapping and stays **Foundation-only and pure** —
-  no SwiftUI, no AppKit — so `palette-selection-test` compiles the shipped type rather than a copy.
+  no SwiftUI, no AppKit — so `PaletteSelectionTests` compiles the shipped type rather than a copy.
   Section headers are not selectable and never consume an index.
 - **A menu owns native text input while it is open.** Its panel becomes key so the menu field gets an
   AppKit field editor; the palette field stays mounted and inert beneath it.
@@ -298,7 +298,7 @@ The compact window adds a four-point transparent drawing margin for the native g
 Its content remains at the same anchor; dragging and snapping convert back to that visible anchor.
 
 All of the arithmetic lives in `PalettePlacement`, which is CoreGraphics-only and takes every screen
-fact as a parameter, so `palette-placement-test` drives the shipped rules rather than a copy of them.
+fact as a parameter, so `PalettePlacementTests` drives the shipped rules rather than a copy of them.
 
 The panel's width and height are not constants: they come from `InterfaceMetrics`, so Interface Size
 changes them. A change re-enters through `AppCore.track` → `applyInterfaceSize()`, which **drops the

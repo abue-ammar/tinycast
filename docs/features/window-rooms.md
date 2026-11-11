@@ -40,7 +40,7 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
   every restore: two passes at once would each hide what the other just showed.
 - **The runner never touches `WindowActionMemory`**, exactly as layouts do not.
 - **`Model/` stays Foundation + CoreGraphics.** Screens arrive as `WindowLayoutScreen`, windows as
-  handle-based `RoomLiveWindow`s, minimum sizes as a dictionary; `window-room-test` compiles the
+  handle-based `RoomLiveWindow`s, minimum sizes as a dictionary; `WindowRoomTests` compiles the
   shipped files.
 
 ## Layout
@@ -165,7 +165,7 @@ to come back before returning parked windows.
 
 ## Testing
 
-`Tests/window-room-test.swift` covers the engine (every layout on laptop and monitor fixtures,
+`Tests/WindowRoomTests.swift` covers the engine (every layout on laptop and monitor fixtures,
 minimum sizes, Auto's choice, Stack's peeks, a sampled sweep that a fitting layout never overlaps
 or leaves the canvas), gap 0 and gapped tiling, absurd and non-finite gaps, the grid and its hole
 filling, arrangement reading and learning, window matching, parking corners and ways back, the

@@ -20,7 +20,7 @@ registered, so re-enabling restores every global shortcut.
 - **Only a successful read frees anything.** A shortcut missing from one loses its binding, alias,
   visibility, favorite slot and ranking; a failed read changes nothing, since it can't tell deleted
   from unreadable. An empty read and turning the feature off free nothing either.
-- **`Model/` stays Foundation-only and pure** for `apple-shortcut-test`.
+- **`Model/` stays Foundation-only and pure** for `AppleShortcutTests`.
 
 ## Discovery
 
@@ -80,5 +80,5 @@ flags, since running a shortcut the user built grants no permission class. Bindi
 ## Standalone harness
 
 ```sh
-./Scripts/run-tests.sh apple-shortcut-test
+./Scripts/run-tests.sh AppleShortcutTests
 ```
