@@ -6,6 +6,7 @@ export function Keyboard() {
   return (
     <Section
       id="keyboard"
+      index={4}
       label="Keyboard"
       title="Built for the keyboard."
       intro="Choose one shortcut to open the palette. Everything else has a key, and shortcuts follow key position, so they work with any keyboard layout."

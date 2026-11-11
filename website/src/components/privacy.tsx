@@ -61,6 +61,7 @@ export function Privacy() {
   return (
     <Section
       id="privacy"
+      index={3}
       label="Privacy"
       title="Off until you turn it on."
       intro="A new install has the launcher, the calculator and clipboard history. Everything else stays off until you enable it, and nothing needs an account."

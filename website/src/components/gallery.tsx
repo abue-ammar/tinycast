@@ -65,6 +65,7 @@ export function Gallery() {
   return (
     <Section
       id="gallery"
+      index={2}
       label="In action"
       title="Straight from the app."
       intro="The palette at the top of this page is a recreation. These screenshots and videos come from Tinycast itself. Click to enlarge an image or play a video."

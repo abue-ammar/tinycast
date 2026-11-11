@@ -8,6 +8,7 @@ export function Switch() {
   return (
     <Section
       id="switch"
+      index={5}
       label="Moving over"
       title={migration.title}
       intro={migration.intro}

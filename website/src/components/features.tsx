@@ -42,6 +42,7 @@ export function Features() {
   return (
     <Section
       id="features"
+      index={1}
       label="Features"
       title="One palette for the things you do all day."
       intro="Most features are off until you turn them on, so Tinycast only runs what you use."
