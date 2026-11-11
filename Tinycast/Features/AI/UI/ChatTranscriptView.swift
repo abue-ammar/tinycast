@@ -506,6 +506,7 @@ private struct ChatDocumentChip: View {
         .padding(.horizontal, metrics.spacing.sm)
         .padding(.vertical, metrics.spacing.xxs)
         .background(Capsule().fill(Theme.Colors.controlSurface))
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Attached file \(document.name)")
     }
 }

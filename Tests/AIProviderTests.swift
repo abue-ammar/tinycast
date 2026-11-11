@@ -211,6 +211,8 @@ struct AIProviderTests {
         toolArgumentsSurviveArrivingInFragments()
         geminiThoughtSignaturesRoundTrip()
         toolCapabilitiesFollowTheRoute()
+        webSearchStaysOnTheVendorsOwnEndpoint()
+        anthropicSearchesAndCitationsDecode()
         codexLaunchNamesServersAndKeepsSecretsOffArgv()
         codexLaunchHandsAServerItsOwnVariableNames()
         codexVariablesNeverCollide()
@@ -330,6 +332,76 @@ struct AIProviderTests {
     }
 
     /// Only a route that can actually run one is ever offered a tool.
+    static func webSearchStaysOnTheVendorsOwnEndpoint() {
+        let routes: [(AIProviderKind, String?, Bool)] = [
+            (.openAI, nil, true),
+            (.anthropic, nil, true),
+            (.openRouter, nil, true),
+            (.openAI, "https://gateway.example/v1", false),
+            (.anthropic, "https://gateway.example/anthropic", false),
+            (.gemini, nil, false),
+            (.openAICompatible, nil, false)
+        ]
+        for (provider, baseURL, searches) in routes {
+            let connection = AIConnection(provider: provider, baseURL: baseURL, models: ["m"])
+            expect(
+                connection.capabilities(for: "m").webSearch == searches,
+                "\(provider) at \(connection.baseURL) offers web search: \(searches)")
+        }
+
+        let anthropic = AIHTTPConfiguration(
+            provider: .anthropic, baseURL: URL(string: AIProviderKind.anthropic.defaultBaseURL)!,
+            model: "claude")
+        let tool = AITool(name: "files__read", description: "Read", parameters: .object([:]), origin: "Files")
+        let body = AIRequestBody.make(
+            AIRequest(messages: [AIMessage(role: .user, text: "news")], webSearch: true, tools: [tool]),
+            configuration: anthropic)
+        let tools = body["tools"] as? [[String: Any]] ?? []
+        expect(
+            tools.map { $0["name"] as? String } == [tool.name, "web_search"]
+                && tools.last?["type"] as? String == "web_search_20250305",
+            "Anthropic's search rides beside the client tools as its server tool")
+        let quiet = AIRequestBody.make(
+            AIRequest(messages: [AIMessage(role: .user, text: "news")]), configuration: anthropic)
+        expect(quiet["tools"] == nil, "search off adds no tool")
+    }
+
+    static func anthropicSearchesAndCitationsDecode() {
+        let cite = #"{"type":"citations_delta","citation":{"url":"https://swift.org/a_(b)"}}"#
+        let payloads = [
+            #"{"type":"content_block_start","index":0,"content_block":{"type":"server_tool_use","name":"web_search"}}"#,
+            #"{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"{\"query\":\"swift "}}"#,
+            #"{"type":"content_block_delta","index":0,"delta":{"type":"input_json_delta","partial_json":"6\"}"}}"#,
+            #"{"type":"content_block_stop","index":0}"#,
+            #"{"type":"content_block_start","index":1,"content_block":{"type":"web_search_tool_result","content":[]}}"#,
+            #"{"type":"content_block_start","index":2,"content_block":{"type":"text","text":""}}"#,
+            #"{"type":"content_block_delta","index":2,"delta":"# + cite + "}",
+            #"{"type":"content_block_delta","index":2,"delta":"# + cite + "}",
+            #"{"type":"content_block_delta","index":2,"delta":{"type":"text_delta","text":"Swift 6 shipped."}}"#,
+            #"{"type":"content_block_stop","index":2}"#,
+            #"{"type":"message_stop"}"#
+        ]
+        var decoder = AIStreamDecoder(shape: .anthropic)
+        let stream = Data(payloads.map { "data: \($0)\n\n" }.joined().utf8)
+        let events = (try? decoder.feed(stream)) ?? []
+        let link = " ([swift.org](https://swift.org/a_%28b%29))"
+        expect(
+            events == [
+                .searching(nil), .searched("swift 6"), .text("Swift 6 shipped."), .text(link),
+                .finished
+            ],
+            "a server search reports its query, and a block's sources follow it once")
+        expect(
+            ChatReferences.extract(from: "Swift 6 shipped." + link).map(\.url.absoluteString)
+                == ["https://swift.org/a_%28b%29"],
+            "the inlined citation is a source the transcript reads")
+        expect(
+            !events.contains {
+                if case .toolCallRequested = $0 { return true }; return false
+            },
+            "a server tool never reaches Tinycast's own tool loop")
+    }
+
     static func toolCapabilitiesFollowTheRoute() {
         let connection = AIConnection(provider: .anthropic, models: ["claude"])
         expect(
@@ -827,7 +899,7 @@ struct AIProviderTests {
                 && router.capabilities(for: "model-b").images
                 && router.capabilities(for: "model-a").webSearch,
             "OpenRouter gates images by the catalog and searches for every model")
-        let direct = AIConnection(provider: .openAI, models: ["model-a"])
+        let direct = AIConnection(provider: .gemini, models: ["model-a"])
         expect(
             direct.capabilities(for: "model-a").images
                 && !direct.capabilities(for: "model-a").webSearch,

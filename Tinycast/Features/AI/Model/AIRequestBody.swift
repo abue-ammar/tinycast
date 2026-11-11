@@ -23,14 +23,14 @@ enum AIRequestBody {
         ]
         if let instructions = input.instructions?.nonEmpty { body["instructions"] = instructions }
         if let effort = configuration.requestedEffort { body["reasoning"] = ["effort": effort] }
-        if !input.tools.isEmpty {
-            body["tools"] = input.tools.map {
-                [
-                    "type": "function", "name": $0.name, "description": $0.description,
-                    "parameters": $0.parameters.jsonObject, "strict": false
-                ]
-            }
+        var tools: [[String: Any]] = input.tools.map {
+            [
+                "type": "function", "name": $0.name, "description": $0.description,
+                "parameters": $0.parameters.jsonObject, "strict": false
+            ]
         }
+        if input.webSearch { tools.append(["type": "web_search"]) }
+        if !tools.isEmpty { body["tools"] = tools }
         return body
     }
 
@@ -99,6 +99,11 @@ enum AIRequestBody {
         return body
     }
 
+    /// The basic version: later ones filter through code execution, which not every model runs.
+    private static var anthropicWebSearch: [String: Any] {
+        ["type": "web_search_20250305", "name": "web_search", "max_uses": 5]
+    }
+
     private static func anthropic(
         _ input: AIRequest, configuration: AIHTTPConfiguration
     ) -> [String: Any] {
@@ -114,14 +119,14 @@ enum AIRequestBody {
         ]
         if !systemParts.isEmpty { body["system"] = systemParts.joined(separator: "\n\n") }
         if let effort = configuration.requestedEffort { body["output_config"] = ["effort": effort] }
-        if !input.tools.isEmpty {
-            body["tools"] = input.tools.map {
-                [
-                    "name": $0.name, "description": $0.description,
-                    "input_schema": $0.parameters.jsonObject
-                ]
-            }
+        var tools: [[String: Any]] = input.tools.map {
+            [
+                "name": $0.name, "description": $0.description,
+                "input_schema": $0.parameters.jsonObject
+            ]
         }
+        if input.webSearch { tools.append(anthropicWebSearch) }
+        if !tools.isEmpty { body["tools"] = tools }
         return body
     }
 

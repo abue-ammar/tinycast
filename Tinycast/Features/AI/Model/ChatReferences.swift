@@ -4,7 +4,9 @@ struct ChatReference: Equatable, Hashable, Sendable {
     let title: String
     let url: URL
 
-    var host: String {
+    var host: String { Self.host(of: url) }
+
+    static func host(of url: URL) -> String {
         let host = url.host() ?? url.absoluteString
         return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
     }

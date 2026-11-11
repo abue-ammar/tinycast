@@ -916,9 +916,9 @@ transport code at all.
 | OpenCode command | never | a private file per picture, through `--file`, only for models whose catalog lists `image` input | never | selected Tinycast tools through a per-turn authenticated loopback bridge; all other tools denied |
 | Cursor command | never | never | never | the global config still loads — ask mode and withheld approval refuse the call |
 | OpenRouter | `plugins: [{id: "web"}]` — OpenRouter's own layer, any model | `image_url` part, only for models whose catalog lists the `image` modality | never yet — its catalog publishes a `file` modality Tinycast does not read | `tools` + `role: "tool"` turns |
-| OpenAI | not offered | `image_url` part, assumed supported | `file` part with `filename` and a `file_data` data URL | `tools` + `role: "tool"` turns |
+| OpenAI | the hosted `web_search` tool on the Responses route — never on a gateway | `image_url` part, assumed supported | `file` part with `filename` and a `file_data` data URL | `tools` + `role: "tool"` turns |
 | Gemini / compatible | not offered | `image_url` part, assumed supported | never — a gateway that has not implemented the part bills the upload before rejecting it | `tools` + `role: "tool"` turns; a call's `extra_content.google.thought_signature` goes back unchanged, or Gemini 3 rejects the next turn |
-| Anthropic | not offered | base64 `image` block | base64 `document` block, ahead of the text block | `tools` + `tool_use` / `tool_result` blocks |
+| Anthropic | the `web_search_20250305` server tool, five searches a turn, at `api.anthropic.com` only | base64 `image` block | base64 `document` block, ahead of the text block | `tools` + `tool_use` / `tool_result` blocks |
 
 A search is part of the reply, not a status: `item/started` for a `webSearch` item appends a
 `ChatSearch` to the streaming message pinned at the text length so far, `item/completed` (or the
@@ -926,8 +926,14 @@ next text delta, or the turn ending) marks it finished and fills in the query if
 carry it. `ChatMessage.segments` splits the text around its searches so the transcript renders
 text, a search row (spinner → globe, "Searching web" → "Searched web · query"), then the rest, in
 the order it happened. Searches persist in `message_searches`. OpenRouter's web plugin is invisible
-to the stream, so it shows none. The web-search instructions ask for citations linked by the
-publication's name — the model otherwise labels them "Read more".
+to the stream, so it shows none. OpenAI's `web_search_call` items and Anthropic's `server_tool_use`
+/ `web_search_tool_result` blocks map to the same start and finish. Both APIs report citations
+beside the text — `url_citation` annotations and `citations_delta` — so `AICitationLinker` inlines
+each as a host-labelled Markdown link after the span it cites, unless the reply already links that
+page, which is what `ChatReferences` reads as a source. Gemini's OpenAI-compatible endpoint has no
+search parameter, so it offers none. An Anthropic `pause_turn` ends the reply where it paused.
+The web-search instructions ask for citations linked by the publication's name — the model
+otherwise labels them "Read more".
 
 `AIModelCapabilities` says what the footer may offer for the selected model. OpenRouter is the only
 catalog that reports `architecture.input_modalities`, so it is the only provider gated on it:

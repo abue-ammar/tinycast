@@ -30,6 +30,7 @@ struct AIResponsesTests {
         endpointsStayWithinTheirProvider()
         requestBodiesKeepInstructionsAttachmentsAndSchemas()
         try streamsCarryOnlyCompletedCalls()
+        try searchesAndCitationsStream()
         try failuresNeverReleaseTools()
         try await toolRoundsReplayTheCompleteOutput()
         try await reasoningCountsAgainstTheTurnBudget()
@@ -101,6 +102,41 @@ struct AIResponsesTests {
         expect(function["parameters"].map(JSONValue.init) == tool.parameters, "MCP schemas stay intact")
         let plain = AIRequestBody.make(AIRequest(messages: []), configuration: configuration)
         expect(plain["instructions"] == nil && plain["tools"] == nil, "disabled capabilities add no fields")
+        let searching = AIRequestBody.make(
+            AIRequest(messages: [], webSearch: true, tools: [tool]), configuration: configuration)
+        expect(
+            (searching["tools"] as? [[String: Any]])?.compactMap { $0["type"] as? String }
+                == ["function", "web_search"],
+            "web search is a hosted tool beside the functions")
+    }
+
+    static func searchesAndCitationsStream() throws {
+        let cited = "https://example.com/report"
+        let linked = "https://news.example/story"
+        let frames =
+            try frame(["type": "response.output_item.added", "item": ["type": "web_search_call"]])
+            + frame([
+                "type": "response.output_item.done",
+                "item": ["type": "web_search_call", "action": ["type": "search", "queries": ["rates"]]]
+            ])
+            + frame(["type": "response.output_text.delta", "delta": "Rates rose ([news](\(linked)))."])
+            + frame([
+                "type": "response.output_text.annotation.added",
+                "annotation": ["type": "url_citation", "url": linked, "title": "News"]
+            ])
+            + frame([
+                "type": "response.output_text.annotation.added",
+                "annotation": ["type": "url_citation", "url": cited, "title": "Report"]
+            ])
+            + completed([])
+        var decoder = AIStreamDecoder(shape: .openAIResponses)
+        let events = try feed(frames, slice: 9, decoder: &decoder)
+        expect(
+            events == [
+                .searching(nil), .searched("rates"), .text("Rates rose ([news](\(linked)))."),
+                .text(" ([example.com](\(cited)))"), .usage(AIUsage()), .finished
+            ],
+            "a search reports its query and only a source the text lacks is linked")
     }
 
     static func streamsCarryOnlyCompletedCalls() throws {
