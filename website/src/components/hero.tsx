@@ -110,7 +110,11 @@ export async function Hero() {
             ))}
           </ul>
 
-          <div className="blur-in mt-8" style={{ animationDelay: "360ms" }}>
+          {/* Kept in the markup but hidden so the hero stays uncluttered. */}
+          <div
+            className="blur-in mt-8 hidden"
+            style={{ animationDelay: "360ms" }}
+          >
             <Badges />
           </div>
         </div>

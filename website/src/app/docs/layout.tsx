@@ -2,11 +2,16 @@ import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import type { ReactNode } from "react";
 import { DocsProvider } from "../../components/docs-provider";
 import {
-  DiscordLogo,
-  GitHubLogo,
-  Logo,
-  SupportIcon,
-} from "../../components/ui/icon";
+  DocsSearchButton,
+  DocsSidebarButton,
+} from "../../components/docs-nav-buttons";
+import {
+  DiscordLink,
+  GitHubLink,
+  NavFrame,
+  SupportLink,
+} from "../../components/nav";
+import { DiscordLogo, Logo } from "../../components/ui/icon";
 import { site } from "../../data/site";
 import { source } from "../../lib/source";
 
@@ -19,29 +24,8 @@ export default function Layout({ children }: { children: ReactNode }) {
         // screen leaves a dead margin to the left of the sidebar. Full width
         // collapses that margin so the sidebar sits against the edge.
         containerProps={{ style: { "--fd-layout-width": "100%" } as never }}
-        // `type: "icon"` is what places these in the sidebar's bottom bar
-        // beside the theme switch. Passing `githubUrl` instead would put
-        // GitHub there but leave Discord with nowhere to go.
+        // `type: "icon"` places Discord in the sidebar's bottom bar, beside the theme switch.
         links={[
-          // A button, not an icon: a 16pt glyph would hide it beside GitHub and Discord.
-          {
-            type: "button",
-            text: (
-              <span className="flex items-center gap-1.5">
-                <SupportIcon size={15} />
-                Support
-              </span>
-            ),
-            url: site.support,
-          },
-          {
-            type: "icon",
-            text: "GitHub",
-            label: "GitHub repository",
-            url: site.repo,
-            icon: <GitHubLogo size={16} />,
-            external: true,
-          },
           {
             type: "icon",
             text: "Discord",
@@ -52,6 +36,19 @@ export default function Layout({ children }: { children: ReactNode }) {
           },
         ]}
         nav={{
+          // Our own bar on phones, laid out like the site nav so nothing moves
+          // between pages. z-30 keeps it under the search dialog and the menu drawer.
+          component: (
+            <NavFrame className="z-30 [grid-area:header] md:hidden">
+              <SupportLink />
+              <GitHubLink />
+              <DiscordLink />
+              <DocsSearchButton />
+              <DocsSidebarButton />
+            </NavFrame>
+          ),
+          // Desktop only: the sidebar header shows this beside the title.
+          children: <GitHubLink />,
           title: (
             <span className="flex items-center gap-1.5 font-semibold text-fg">
               <Logo size={22} />

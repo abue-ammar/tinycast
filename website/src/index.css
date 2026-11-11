@@ -595,6 +595,14 @@
   --color-fd-ring: var(--color-violet-bright);
 }
 
+/* The docs grid offsets its sticky rows by this; our phone header is the site
+   nav's 48px. */
+@media (width < 48rem) {
+  #nd-docs-layout {
+    --fd-header-height: --spacing(12);
+  }
+}
+
 /* Load-in and ambient motion — all gated on prefers-reduced-motion below. */
 @keyframes rise {
   from {
