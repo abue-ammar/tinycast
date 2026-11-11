@@ -24,7 +24,7 @@ function FeatureCard({ title, body, href, preview, isWide }: Feature) {
         <FeaturePreviewArt preview={preview} />
       </div>
       <div className="px-3 pb-3 pt-4">
-        <h3 className="flex items-center gap-1 text-body font-medium text-fg">
+        <h3 className="flex items-center gap-1 text-title font-semibold text-fg">
           {title}
           <ArrowUpRight
             size={15}
@@ -42,7 +42,6 @@ export function Features() {
   return (
     <Section
       id="features"
-      index={1}
       label="Features"
       title="One palette for the things you do all day."
       intro="Most features are off until you turn them on, so Tinycast only runs what you use."
@@ -55,7 +54,7 @@ export function Features() {
 
       <div className="mt-4 rounded-2xl bg-tint/4 p-5 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <h3 className="text-body font-medium text-fg">Also included</h3>
+          <h3 className="text-title font-semibold text-fg">Also included</h3>
           <Button href="/docs" variant="outline">
             Browse the docs
           </Button>

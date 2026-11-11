@@ -34,7 +34,10 @@ export function Ethos() {
               />
             </em>
           </p>
-          <footer className="mt-4 text-small text-fg-subtle" {...reveal("text", 4)}>
+          <footer
+            className="mt-4 text-small text-fg-subtle"
+            {...reveal("text", 4)}
+          >
             {ethos.attribution}
           </footer>
         </blockquote>
@@ -45,7 +48,7 @@ export function Ethos() {
             return (
               <div key={pillar.title} {...reveal("text", index)}>
                 <Icon size={18} className="text-fg-subtle" />
-                <h3 className="mt-3 text-body font-semibold text-fg">
+                <h3 className="mt-3 text-title font-semibold text-fg">
                   {pillar.title}
                 </h3>
                 <p className="mt-1.5 text-small text-fg-muted">{pillar.body}</p>

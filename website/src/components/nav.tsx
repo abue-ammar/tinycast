@@ -41,7 +41,8 @@ export function Nav() {
       >
         <BookOpen size={16} />
       </Link>
-      <ThemeSwitch />
+      {/* Hidden while the site is dark only. */}
+      <ThemeSwitch className="hidden" />
     </NavFrame>
   );
 }
@@ -66,7 +67,7 @@ export function NavFrame({
       <div className="mx-auto flex h-12 max-w-7xl items-center gap-6 px-4 sm:px-10">
         <Link href="/" className="flex items-center gap-2">
           <Logo size={24} />
-          <span className="text-body font-semibold tracking-[-0.02em] text-fg">
+          <span className="font-rounded text-title font-semibold text-fg">
             {site.name}
           </span>
         </Link>

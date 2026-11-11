@@ -11,6 +11,8 @@ export function Providers({ children }: { children: ReactNode }) {
     <ThemeProvider
       attribute="class"
       defaultTheme="dark"
+      // Dark only for now; drop this to bring back Light and the toggles.
+      forcedTheme="dark"
       enableSystem
       disableTransitionOnChange
     >

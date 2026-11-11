@@ -8,7 +8,6 @@ export function Switch() {
   return (
     <Section
       id="switch"
-      index={5}
       label="Moving over"
       title={migration.title}
       intro={migration.intro}
@@ -25,7 +24,9 @@ export function Switch() {
                 {i + 1}
               </span>
               <span className="min-w-0">
-                <h3 className="text-body font-medium text-fg">{step.title}</h3>
+                <h3 className="text-subheading font-semibold text-fg">
+                  {step.title}
+                </h3>
                 <p className="mt-1 text-small text-fg-muted">{step.body}</p>
               </span>
             </li>

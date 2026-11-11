@@ -2,6 +2,7 @@ import "../index.css";
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import localFont from "next/font/local";
 import { Providers } from "../components/providers";
 import { pageTitle, site, summary } from "../data/site";
 
@@ -11,6 +12,16 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist" });
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+});
+// The heading face. Apple's licence does not cover serving it; the owner chose to anyway.
+const sfRounded = localFont({
+  src: [
+    { path: "../fonts/sf-pro-rounded-regular.woff2", weight: "400" },
+    { path: "../fonts/sf-pro-rounded-medium.woff2", weight: "500" },
+    { path: "../fonts/sf-pro-rounded-bold.woff2", weight: "700" },
+  ],
+  variable: "--font-sf-rounded",
+  display: "swap",
 });
 // One display face, for the ethos pull quote and nothing else. Both styles are
 // loaded because the quote sets its last sentence in italic.
@@ -82,12 +93,12 @@ export default function RootLayout({
     // against the incoming page and you land part-way down the new one.
     <html
       lang="en"
-      className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}
+      className={`dark ${geist.variable} ${geistMono.variable} ${sfRounded.variable} ${instrumentSerif.variable}`}
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
       <head>
-        <meta name="color-scheme" content="light dark" />
+        <meta name="color-scheme" content="dark" />
         <script
           type="application/ld+json"
           // eslint-disable-next-line react/no-danger

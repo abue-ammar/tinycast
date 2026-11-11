@@ -1,6 +1,7 @@
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import type { ReactNode } from "react";
 import { DocsProvider } from "../../components/docs-provider";
+import { DocsSidebarLinks } from "../../components/docs-sidebar-links";
 import {
   DocsSearchButton,
   DocsSidebarButton,
@@ -35,6 +36,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             external: true,
           },
         ]}
+        sidebar={{ banner: <DocsSidebarLinks /> }}
+        themeSwitch={{ enabled: false }}
         nav={{
           // Our own bar on phones, laid out like the site nav so nothing moves
           // between pages. z-30 keeps it under the search dialog and the menu drawer.
@@ -47,10 +50,8 @@ export default function Layout({ children }: { children: ReactNode }) {
               <DocsSidebarButton />
             </NavFrame>
           ),
-          // Desktop only: the sidebar header shows this beside the title.
-          children: <GitHubLink />,
           title: (
-            <span className="flex items-center gap-1.5 font-semibold text-fg">
+            <span className="flex items-center gap-1.5 font-rounded text-title font-semibold text-fg">
               <Logo size={22} />
               {site.name}
             </span>

@@ -44,7 +44,7 @@ export function Button({
     <Link
       href={href}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-colors active:translate-y-px",
+        "inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-[color,background-color,border-color,opacity,scale] duration-200 ease-(--ease-quart) active:scale-97",
         variants[variant],
         sizes[size],
         className,

@@ -47,7 +47,9 @@ function SwitchCard({ icon, name, note, isOn }: DefaultSwitch) {
         <span className="sr-only">{isOn ? "On" : "Off"} by default</span>
         <SwitchGlyph isOn={isOn} />
       </span>
-      <span className="mt-4 text-body font-medium text-fg">{name}</span>
+      <span className="mt-4 font-rounded text-subheading font-semibold text-fg">
+        {name}
+      </span>
       <span className="mt-1 text-small text-fg-muted">{note}</span>
     </li>
   );
@@ -59,7 +61,6 @@ export function Privacy() {
   return (
     <Section
       id="privacy"
-      index={3}
       label="Privacy"
       title="Off until you turn it on."
       intro="A new install has the launcher, the calculator and clipboard history. Everything else stays off until you enable it, and nothing needs an account."
@@ -71,14 +72,14 @@ export function Privacy() {
             className="flex flex-col-reverse rounded-xl bg-tint/4 px-5 py-4"
           >
             <dt className="text-small text-fg-muted">{stat.label}</dt>
-            <dd className="text-heading text-fg">{stat.value}</dd>
+            <dd className="font-rounded text-heading text-fg">{stat.value}</dd>
           </div>
         ))}
       </dl>
 
       <figure className="mt-4 rounded-2xl bg-tint/4 p-2">
         <figcaption className="flex items-center justify-between gap-3 px-3 pb-3 pt-2.5">
-          <span className="text-small font-medium text-fg">
+          <span className="font-rounded text-title font-semibold text-fg">
             Default settings
           </span>
           <span className="rounded-full bg-kbd-bg px-2.5 py-0.5 text-caption font-medium text-kbd">

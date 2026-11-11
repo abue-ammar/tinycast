@@ -10,9 +10,8 @@
  * default text scale is disabled below so an off-scale size can't slip in.
  *
  * Token names are semantic, not literal: `canvas` is near-black in Dark and
- * near-white in Light. The app holds the same rule — Dark is the frozen
- * baseline and Light restates it with the ink inverted, so a dark value here
- * is the literal the dark-only build shipped.
+ * white in Light. Dark is the baseline and Light restates it with the ink
+ * inverted.
  */
 
 /* ── Theme ramps ───────────────────────────────────────────────────────────
@@ -56,20 +55,19 @@
 }
 
 .dark {
-  --tc-canvas: #040506;
-  --tc-surface: #07080a;
-  --tc-well: #111214;
-  --tc-badge: #1b1c1e;
-  --tc-fg: #ffffff;
-  --tc-fg-muted: #9c9c9d;
-  --tc-fg-subtle: #6a6b6c;
-  --tc-action: #e6e6e6;
-  --tc-action-fg: #454647;
-  --tc-border: #1b1c1e;
-  --tc-border-strong: #34353a;
+  --tc-canvas: #000000;
+  --tc-surface: #0a0a0b;
+  --tc-well: #161618;
+  --tc-badge: #242426;
+  --tc-fg: #ededed;
+  --tc-fg-muted: #8f8f8f;
+  --tc-fg-subtle: #5c5c60;
+  --tc-action: #ededed;
+  --tc-action-fg: #000000;
+  --tc-border: rgb(255 255 255 / 0.07);
+  --tc-border-strong: rgb(255 255 255 / 0.11);
   --tc-tint: 255 255 255;
 
-  /* Frozen: these are the literals the dark-only build shipped. */
   --tc-key:
     rgb(255 255 255 / 0.05) 0px 1px 0px 0px inset,
     rgb(255 255 255 / 0.14) 0px 0px 0px 1px,
@@ -119,9 +117,14 @@
   /* ── Typography ──────────────────────────────────────────────────────── */
   /* Supplied by next/font in app/layout.tsx, which self-hosts each face and
      generates its own metric-matched fallback — so no @font-face here. */
+  /* Apple devices get SF Pro; everyone else gets Geist rather than their OS face. */
   --font-sans:
-    var(--font-geist), ui-sans-serif, system-ui, -apple-system,
-    BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -apple-system, BlinkMacSystemFont, var(--font-geist), "Segoe UI", Roboto,
+    sans-serif;
+  /* Self-hosted first so every platform renders the same rounded headings. */
+  --font-rounded:
+    var(--font-sf-rounded), ui-rounded, "SF Pro Rounded", var(--font-geist),
+    sans-serif;
   --font-mono:
     var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco,
     Consolas, monospace;
@@ -143,6 +146,9 @@
   --text-eyebrow--line-height: 1.5;
   --text-eyebrow--letter-spacing: 0.18em;
 
+  --text-label: 0.8125rem; /* 13px — section labels */
+  --text-label--line-height: 1.5;
+
   --text-caption: 0.75rem; /* 12px — keycaps, badges */
   --text-caption--line-height: 1.5;
 
@@ -157,21 +163,25 @@
   --text-body: 1rem; /* 16px — item titles, the wordmark */
   --text-body--line-height: 1.6;
 
-  --text-body-lg: 1.0625rem; /* 17px — section intros */
-  --text-body-lg--line-height: 1.6;
+  --text-body-lg: 1rem; /* 16px — section intros */
+  --text-body-lg--line-height: 1.65;
 
-  --text-subheading: 1.125rem; /* 18px — hero intro */
-  --text-subheading--line-height: 1.6;
+  --text-subheading: 1.0625rem; /* 17px — hero intro */
+  --text-subheading--line-height: 1.55;
+
+  --text-title: 1.1875rem; /* 19px — card titles */
+  --text-title--line-height: 1.3;
+  --text-title--letter-spacing: -0.01em;
 
   /* The privacy zeros, set in mono. */
   --text-stat: clamp(2.25rem, 1.5rem + 3.2vw, 3.75rem); /* 36→60px */
   --text-stat--line-height: 1;
   --text-stat--font-weight: 500;
 
-  --text-heading: clamp(1.875rem, 1.45rem + 1.8vw, 2.6rem); /* 30→42px — h2 */
-  --text-heading--line-height: 1.08;
-  --text-heading--letter-spacing: -0.03em;
-  --text-heading--font-weight: 600;
+  --text-heading: clamp(1.75rem, 1.2rem + 1.9vw, 2.375rem); /* 28→38px — h2 */
+  --text-heading--line-height: 1.12;
+  --text-heading--letter-spacing: -0.02em;
+  --text-heading--font-weight: 700;
 
   /* The hero palette at the app's own text styles, one point to one pixel. */
   --text-demo-query: 1.25rem; /* 20px — the search field */
@@ -191,17 +201,17 @@
   --text-quote--letter-spacing: -0.02em;
   --text-quote--font-weight: 400;
 
-  --text-closing: clamp(2.25rem, 1.5rem + 3.2vw, 3.75rem); /* 36→60px */
-  --text-closing--line-height: 1.04;
-  --text-closing--letter-spacing: -0.04em;
-  --text-closing--font-weight: 600;
+  --text-closing: clamp(1.875rem, 1.1rem + 3vw, 3.125rem); /* 30→50px */
+  --text-closing--line-height: 1.08;
+  --text-closing--letter-spacing: -0.022em;
+  --text-closing--font-weight: 700;
 
   /* Hero h1. Sized for the hero's left column, not the full page width, so
      each headline line stays on one line beside the palette. */
-  --text-display: clamp(2.4rem, 1.4rem + 3.1vw, 3.6rem); /* 38→58px */
-  --text-display--line-height: 1.04;
-  --text-display--letter-spacing: -0.045em;
-  --text-display--font-weight: 600;
+  --text-display: clamp(2.25rem, 1.3rem + 3.2vw, 3.625rem); /* 36→58px */
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.022em;
+  --text-display--font-weight: 700;
 
   /* Spacing & radius use Tailwind's built-in scales — the 8px grid maps
      cleanly onto them (p-4 = 16px, p-6 = 24px, rounded-2xl = 16px, …). */
@@ -245,7 +255,9 @@
     background-color: var(--color-canvas);
     color: var(--color-fg-muted);
     font-family: var(--font-sans);
-    font-feature-settings: "calt", "kern", "liga", "ss03";
+    line-height: 1.6;
+    /* No stylistic sets: SF Pro and Geist number them differently. */
+    font-feature-settings: "calt", "kern", "liga";
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     overflow-x: hidden;
@@ -281,6 +293,13 @@
     margin-right: 0 !important;
     padding-right: 0 !important;
     --removed-body-scroll-bar-size: 0px !important;
+  }
+
+  /* The docs prose and every page share one heading voice. */
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-rounded);
   }
 
   ::selection {
@@ -648,6 +667,8 @@
    motion gets the finished page with nothing hidden. */
 :root {
   --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-quart: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-glide: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-swap: cubic-bezier(0.65, 0, 0.35, 1);
   --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -655,8 +676,8 @@
 @keyframes blur-rise {
   from {
     opacity: 0;
-    filter: blur(8px);
-    translate: 0 var(--rise, 12px);
+    filter: blur(6px);
+    translate: 0 var(--rise, 4px);
   }
 }
 
@@ -698,7 +719,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .blur-in {
-    animation: blur-rise 0.8s var(--ease-settle) both;
+    animation: blur-rise 0.7s var(--ease-settle) both;
   }
 
   .swap-words {
@@ -723,19 +744,19 @@
   }
 
   [data-reveal="text"][data-revealed] {
-    animation: blur-rise 0.8s var(--ease-settle) both;
-    animation-delay: calc(var(--i) * 90ms);
+    animation: blur-rise 0.7s var(--ease-settle) both;
+    animation-delay: calc(var(--i) * 80ms);
   }
 
   [data-reveal="content"][data-revealed] {
-    animation: rise 0.8s var(--ease-settle) both;
-    animation-delay: calc(var(--i) * 90ms);
+    animation: rise 0.7s var(--ease-settle) both;
+    animation-delay: calc(var(--i) * 80ms);
   }
 
   [data-reveal="words"][data-revealed] .reveal-word {
     --rise: 0.35em;
     animation: blur-rise 0.7s var(--ease-settle) both;
-    animation-delay: calc(var(--i) * 90ms + var(--w) * 45ms);
+    animation-delay: calc(var(--i) * 80ms + var(--w) * 40ms);
   }
 }
 
