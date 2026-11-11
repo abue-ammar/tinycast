@@ -71,6 +71,12 @@ struct CalendarTests {
         expect(provider("https://bluejeans.com/123456") == .blueJeans, "bluejeans.com is BlueJeans")
         expect(provider("https://join.skype.com/abcdef") == .skype, "join.skype.com is Skype")
         expect(
+            provider("https://telemost.yandex.ru/j/12345678901234") == .telemost,
+            "telemost.yandex.ru is Telemost")
+        expect(
+            provider("https://telemost.360.yandex.ru/j/12345678901234") == .telemost,
+            "a Yandex 360 Telemost link is Telemost")
+        expect(
             provider("https://example.com/rooms/standup") == .generic,
             "an unknown host is still a joinable link")
         expect(MeetingLink.detect(in: "no links here at all") == nil, "plain prose has no link")
@@ -90,6 +96,9 @@ struct CalendarTests {
             MeetingLink.detect(in: "https://teams.microsoft.com/downloads") == nil,
             "a Teams download page is not a meeting")
         expect(
+            MeetingLink.detect(in: "https://telemost.yandex.com/support") == nil,
+            "a Telemost page without a /j/ code is not a meeting")
+        expect(
             MeetingLink.detect(in: "Join: https://zoom.us/download or https://zoom.us/j/42")?.provider
                 == .zoom,
             "a rejected page does not stop the real link being found")
@@ -107,6 +116,12 @@ struct CalendarTests {
             bare?.url.absoluteString == "https://example.com/room",
             "with no named provider the earliest bare link wins")
         expect(MeetingLink.detect(fields: [nil, nil]) == nil, "empty fields yield no link")
+        expect(
+            MeetingLink.detect(fields: [
+                "https://calendar.yandex.ru/event?event_id=1", nil,
+                "Join https://telemost.yandex.ru/j/12345678901234"
+            ])?.provider == .telemost,
+            "a Telemost link in the notes beats the calendar's own event page")
     }
 
     static func linkScanning() {
