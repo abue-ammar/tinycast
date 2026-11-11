@@ -48,6 +48,25 @@ struct SSEParser: Sendable {
     }
 }
 
+/// Sources an API cites beside its text, inlined as the Markdown links `ChatReferences` reads.
+struct AICitationLinker: Sendable {
+    private var text = ""
+    private var linked: Set<String> = []
+
+    mutating func record(_ delta: String) {
+        text += delta
+    }
+
+    /// Nil for a page the reply already links, so a source the model wrote itself is not repeated.
+    mutating func link(to string: String) -> String? {
+        guard let url = URL(string: string), url.scheme == "https" || url.scheme == "http",
+            !text.contains(string), linked.insert(string).inserted
+        else { return nil }
+        let target = string.replacing("(", with: "%28").replacing(")", with: "%29")
+        return " ([\(ChatReference.host(of: url))](\(target)))"
+    }
+}
+
 struct AIStreamDecoder: Sendable {
     /// A call arrives in fragments keyed by index, with its id and name only on the first one.
     private struct PartialToolCall {
@@ -65,6 +84,10 @@ struct AIStreamDecoder: Sendable {
     private var responses: AIResponsesDecoder
     private var usage = AIUsage()
     private var partialToolCalls: [Int: PartialToolCall] = [:]
+    private var citations = AICitationLinker()
+    private var citedURLs: [Int: [String]] = [:]
+    private var searchIndex: Int?
+    private var searchInput = ""
     private(set) var isTerminal = false
 
     init(shape: AIHTTPConfiguration.APIShape, secrets: [String] = []) {
@@ -181,24 +204,51 @@ struct AIStreamDecoder: Sendable {
             throw AIProviderError.malformedResponse
         }
 
+        let index = event.index ?? 0
         switch event.type {
         case "content_block_start":
-            guard event.contentBlock?.type == "tool_use" else { return [] }
-            partialToolCalls[event.index ?? 0] = PartialToolCall(
-                id: event.contentBlock?.id ?? "", name: event.contentBlock?.name ?? "",
-                arguments: "")
-            return []
+            switch event.contentBlock?.type {
+            case "tool_use":
+                partialToolCalls[index] = PartialToolCall(
+                    id: event.contentBlock?.id ?? "", name: event.contentBlock?.name ?? "",
+                    arguments: "")
+                return []
+            case "server_tool_use" where event.contentBlock?.name == "web_search":
+                searchIndex = index
+                searchInput = ""
+                return [.searching(nil)]
+            case "web_search_tool_result":
+                searchIndex = nil
+                return [.searched(searchQuery)]
+            default:
+                return []
+            }
         case "content_block_delta":
             if event.delta?.type == "text_delta", let text = event.delta?.text, !text.isEmpty {
+                citations.record(text)
                 return [.text(text)]
             }
             if event.delta?.type == "input_json_delta" {
-                partialToolCalls[event.index ?? 0]?.arguments += event.delta?.partialJSON ?? ""
+                let fragment = event.delta?.partialJSON ?? ""
+                if index == searchIndex {
+                    searchInput += fragment
+                } else {
+                    partialToolCalls[index]?.arguments += fragment
+                }
+                return []
+            }
+            if event.delta?.type == "citations_delta", let url = event.delta?.citation?.url {
+                citedURLs[index, default: []].append(url)
                 return []
             }
             guard event.delta?.type == "thinking_delta" else { return [] }
             guard let thinking = event.delta?.thinking, !thinking.isEmpty else { return [.thinking] }
             return [.thinking, .reasoning(thinking)]
+        case "content_block_stop":
+            let links = (citedURLs.removeValue(forKey: index) ?? []).compactMap {
+                citations.link(to: $0)
+            }
+            return links.isEmpty ? [] : [.text(links.joined())]
         case "message_start":
             let reported = event.message?.usage
             usage.inputTokens = reported?.inputTokens ?? usage.inputTokens
@@ -223,6 +273,11 @@ struct AIStreamDecoder: Sendable {
         default:
             return []
         }
+    }
+
+    private var searchQuery: String? {
+        let input = try? JSONSerialization.jsonObject(with: Data(searchInput.utf8))
+        return (input as? [String: Any])?["query"] as? String
     }
 
     private static func anthropicErrorMessage(_ type: String?) -> String {
@@ -331,14 +386,17 @@ private struct OpenAIChunk: Decodable {
 
 private struct AnthropicEvent: Decodable {
     struct Delta: Decodable {
+        struct Citation: Decodable { let url: String? }
+
         let type: String?
         let text: String?
         let thinking: String?
         let partialJSON: String?
         let stopReason: String?
+        let citation: Citation?
 
         enum CodingKeys: String, CodingKey {
-            case type, text, thinking
+            case type, text, thinking, citation
             case partialJSON = "partial_json"
             case stopReason = "stop_reason"
         }
