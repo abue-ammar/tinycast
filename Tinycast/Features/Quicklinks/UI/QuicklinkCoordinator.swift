@@ -82,6 +82,7 @@ final class QuicklinkCoordinator {
     /// The only entry that seeds an argument from the selection.
     func openQuicklinkFromHotKey(id: UUID) {
         guard let quicklink = openableQuicklink(id: id) else { return }
+        guard !isPrompting(for: quicklink) else { return paletteCoordinator.hidePalette() }
         let attempt = makeAttempt(quicklink, values: [:], forcingDefaultApp: false)
         guard let argument = selectedTextArgument(for: quicklink) else { return open(attempt) }
         guard attempt.context.selection.isEmpty, let app = attempt.copySource else {
@@ -101,6 +102,13 @@ final class QuicklinkCoordinator {
             return openQuicklink(id: id)
         }
         openQuicklink(id: id, values: [target.name: seed])
+    }
+
+    private func isPrompting(for quicklink: Quicklink) -> Bool {
+        guard paletteCoordinator.isShowing(.quicklinks) else { return false }
+        let rows = store.enabled(matching: core.palette.query)
+        let selection = core.palette.selection
+        return rows.indices.contains(selection) && rows[selection].id == quicklink.id
     }
 
     private func openableQuicklink(id: UUID) -> Quicklink? {
