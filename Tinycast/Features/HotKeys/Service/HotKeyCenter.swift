@@ -27,7 +27,6 @@ private func hotKeyCarbonEventHandler(
 final class HotKeyCenter {
     private struct Entry {
         let shortcut: KeyShortcut
-        let exclusive: Bool
         let onKeyDown: (UInt64) -> Void
         let onKeyUp: (() -> Void)?
         let carbonID: UInt32
@@ -39,11 +38,14 @@ final class HotKeyCenter {
     private var nextCarbonID: UInt32 = 0
     private var eventHandler: EventHandlerRef?
     private let signature: OSType = 0x5459_4354  // FourCC "TYCT"
+    /// Each read costs milliseconds, so it is taken once and refreshed when a recording ends.
+    private var systemShortcutsCache: Set<KeyShortcut>?
 
     /// While true every hotkey is soft-unregistered, so a recorder can capture combos.
     var isPaused = false {
         didSet {
             guard isPaused != oldValue else { return }
+            if !isPaused { systemShortcutsCache = nil }
             for key in entries.keys {
                 if isPaused { deactivate(key) } else { activate(key) }
             }
@@ -52,14 +54,13 @@ final class HotKeyCenter {
 
     /// Registers `shortcut` under `id`, dropping any previous one so no combo leaks.
     func register(
-        id: String, shortcut: KeyShortcut, exclusive: Bool = false,
-        onKeyDown: @escaping (UInt64) -> Void,
+        id: String, shortcut: KeyShortcut, onKeyDown: @escaping (UInt64) -> Void,
         onKeyUp: (() -> Void)? = nil
     ) {
         unregister(id: id)
         nextCarbonID += 1
         entries[id] = Entry(
-            shortcut: shortcut, exclusive: exclusive, onKeyDown: onKeyDown, onKeyUp: onKeyUp,
+            shortcut: shortcut, onKeyDown: onKeyDown, onKeyUp: onKeyUp,
             carbonID: nextCarbonID, ref: nil)
         idToKey[nextCarbonID] = id
         if !isPaused { activate(id) }
@@ -75,14 +76,13 @@ final class HotKeyCenter {
         guard var entry = entries[id], entry.ref == nil else { return }
         installEventHandlerIfNeeded()
         var ref: EventHotKeyRef?
-        let error = RegisterEventHotKey(
-            UInt32(entry.shortcut.carbonKeyCode),
-            UInt32(entry.shortcut.carbonModifiers),
-            EventHotKeyID(signature: signature, id: entry.carbonID),
-            GetEventDispatcherTarget(),
-            UInt32(entry.exclusive ? kEventHotKeyExclusive : kEventHotKeyNoOptions),
-            &ref
-        )
+        // Claiming a chord macOS answers keeps its own action from running beside ours.
+        let claims = systemShortcuts.contains(entry.shortcut)
+        var error = registerWithCarbon(
+            entry, options: claims ? kEventHotKeyExclusive : kEventHotKeyNoOptions, ref: &ref)
+        if claims, error != noErr {
+            error = registerWithCarbon(entry, options: kEventHotKeyNoOptions, ref: &ref)
+        }
         // Another app may own the combo; the binding stays visible but doesn't fire.
         guard error == noErr, let ref else {
             NSLog("Tinycast: could not register hotkey for %@ (OSStatus %d)", id, error)
@@ -90,6 +90,24 @@ final class HotKeyCenter {
         }
         entry.ref = ref
         entries[id] = entry
+    }
+
+    private func registerWithCarbon(_ entry: Entry, options: Int, ref: inout EventHotKeyRef?) -> OSStatus {
+        RegisterEventHotKey(
+            UInt32(entry.shortcut.carbonKeyCode),
+            UInt32(entry.shortcut.carbonModifiers),
+            EventHotKeyID(signature: signature, id: entry.carbonID),
+            GetEventDispatcherTarget(),
+            UInt32(options),
+            &ref
+        )
+    }
+
+    private var systemShortcuts: Set<KeyShortcut> {
+        if let systemShortcutsCache { return systemShortcutsCache }
+        let shortcuts = KeyShortcut.systemShortcuts()
+        systemShortcutsCache = shortcuts
+        return shortcuts
     }
 
     private func deactivate(_ id: String) {

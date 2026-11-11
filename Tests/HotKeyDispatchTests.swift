@@ -14,31 +14,8 @@ struct HotKeyDispatchTests {
 
     static func main() {
         for includesShift in [false, true] { dispatch(includesShift: includesShift) }
-        emojiRegistration()
         print("\(checks) dispatch checks; \(failures) failures")
         if failures > 0 { exit(1) }
-    }
-
-    static func emojiRegistration() {
-        let domain = "tinycast.hotkey-dispatch-test.\(UUID())"
-        let defaults = UserDefaults(suiteName: domain)!
-        defer { defaults.removePersistentDomain(forName: domain) }
-        let manager = HotKeyManager(defaults: defaults)
-        let center = HotKeyCenter.current!
-        let emoji = HotKeyAction.command(.searchEmoji)
-        let systemChord = KeyShortcut(carbonKeyCode: kVK_Space, carbonModifiers: controlKey | cmdKey)
-        let alternate = KeyShortcut(carbonKeyCode: kVK_Space, carbonModifiers: controlKey | shiftKey)
-
-        manager.setBinding(.combo(systemChord), for: emoji)
-        check(
-            "emoji on the Character Viewer shortcut registers exclusively",
-            center.entries[emoji.defaultsKey]?.exclusive == true)
-        manager.setBinding(.combo(alternate), for: emoji)
-        check("rebinding emoji releases exclusive registration", center.entries[emoji.defaultsKey]?.exclusive == false)
-        manager.setBinding(.combo(systemChord), for: .togglePalette)
-        check(
-            "other commands retain ordinary registration",
-            center.entries[HotKeyAction.togglePalette.defaultsKey]?.exclusive == false)
     }
 
     static func dispatch(includesShift: Bool) {
