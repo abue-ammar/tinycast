@@ -79,7 +79,7 @@ struct SnippetsTests {
             "/tmp/editor.md",
             Snippet(
                 name: "Original", text: "Hello", keyword: "!hello", isEnabled: false,
-                showsConfirmation: true))
+                showsConfirmation: true, isPinned: true))
         let editing = SnippetEditorSession(record: original)
         check("editing keeps the loaded record and source revision", editing.record == original)
         check("editing starts with every original option", editing.snippet == original.snippet)
@@ -192,6 +192,20 @@ struct SnippetsTests {
             content: "---\nname: \"No HUD\"\n---\nBody",
             fileURL: fileURL)
         check("missing show_confirmation defaults false", !missingHUD.showsConfirmation)
+        check("missing pinned defaults false", !missingHUD.isPinned)
+        check(
+            "serializer omits pinned while unset",
+            !SnippetMarkdownSerializer.serialize(missingHUD).contains("pinned"))
+        let pinned = Snippet(name: "Pinned", text: "Body", isPinned: true)
+        let pinnedSource = SnippetMarkdownSerializer.serialize(pinned)
+        check(
+            "serializer writes pinned last",
+            pinnedSource.hasPrefix(
+                "---\nname: \"Pinned\"\nenabled: true\nshow_confirmation: false\npinned: true\n---\n"))
+        let parsedPinned = try SnippetMarkdownSerializer.parse(content: pinnedSource, fileURL: fileURL)
+        check("pinned round-trips", parsedPinned == pinned)
+        expectParseError(
+            "pinned uses strict booleans", content: "---\npinned: yes\n---\n", fileURL: fileURL)
         expectParseError(
             "show_confirmation uses strict booleans", content: "---\nshow_confirmation: TRUE\n---\n",
             fileURL: fileURL)
@@ -1116,6 +1130,18 @@ struct SnippetsTests {
             "watcher debounces a burst into one published reload",
             snapshotCount == beforeBurst + 1
                 && store.snippets.filter { $0.snippet.name.hasPrefix("Burst ") }.count == 3)
+
+        if var pinned = store.snippets.first(where: { $0.snippet.name == "Burst 2" }) {
+            pinned.snippet.isPinned = true
+            try await store.save(pinned)
+        }
+        check(
+            "browser rows lead with pins and keep name order within each block",
+            store.browserRows(matching: "").map(\.snippet.name)
+                == ["Burst 2", "After Delete", "Burst 0", "Burst 1"])
+        check(
+            "browser rows filter before ordering pins first",
+            store.browserRows(matching: " burst ").map(\.snippet.name) == ["Burst 2", "Burst 0", "Burst 1"])
 
         let corruptURL = repository.snippetsDirectory.appendingPathComponent("corrupt.md")
         try "---\nname: invalid\n---\n".write(

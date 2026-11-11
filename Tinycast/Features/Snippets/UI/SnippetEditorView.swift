@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SnippetEditorView: View {
     @Bindable var editor: SnippetEditorSession
+    let openMenuCorner: MenuPanelCorner?
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
     @Environment(SnippetCoordinator.self) private var coordinator
@@ -78,20 +79,14 @@ struct SnippetEditorView: View {
         .frame(maxWidth: .infinity)
     }
 
+    private var placeholderMenuCorner: MenuPanelCorner {
+        .belowControl(placeholderMenuFrame, trailing: false)
+    }
+
     private var placeholderMenu: some View {
-        Button("Insert…", action: showPlaceholderMenu)
-            .buttonStyle(.plain)
-            .fixedSize()
-            .onGeometryChange(for: CGRect.self) {
-                $0.frame(in: .global)
-            } action: {
-                placeholderMenuFrame = $0
-            }
-            .tooltip(
-                String(localized: "Insert a dynamic placeholder"), alignment: .leading,
-                dismissOnPress: true
-            )
-            .accessibilityLabel("Insert a placeholder")
+        PlaceholderMenuButton(
+            isOpen: openMenuCorner == placeholderMenuCorner, frame: $placeholderMenuFrame,
+            action: showPlaceholderMenu)
     }
 
     private func showPlaceholderMenu() {
@@ -114,8 +109,7 @@ struct SnippetEditorView: View {
                 }
             }
         }
-        openInputMenu(
-            PopoverMenuContent(items: items), .belowControl(placeholderMenuFrame, trailing: false), 0)
+        openInputMenu(PopoverMenuContent(items: items), placeholderMenuCorner, 0)
     }
 
     private var properties: some View {

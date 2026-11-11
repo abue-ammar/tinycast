@@ -10,26 +10,58 @@ struct SnippetsList: View {
     let onActivate: () -> Void
     let onActions: (StoredSnippet) -> Void
 
+    private enum Row: Identifiable {
+        case header(String)
+        case item(StoredSnippet)
+        var id: String {
+            switch self {
+            case .header(let title): return "header-" + title
+            case .item(let record): return record.id
+            }
+        }
+    }
+
     private var firstRowSelected: Bool {
         selectedID != nil && selectedID == results.first?.id
     }
 
+    /// The store lists pinned first, so this emits a header on the one boundary.
+    private var rows: [Row] {
+        var rows: [Row] = []
+        var currentTitle: String?
+        for record in results {
+            let title = record.snippet.isPinned ? String(localized: "Pinned") : String(localized: "Snippets")
+            if title != currentTitle {
+                rows.append(.header(title))
+                currentTitle = title
+            }
+            rows.append(.item(record))
+        }
+        return rows
+    }
+
     var body: some View {
-        ScrollViewReader { proxy in
+        let rows = rows
+        return ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(results) { record in
-                        SnippetRow(record: record, selected: record.id == selectedID)
-                            .selectionFrame(record.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onSelect(record) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    onSelect(record)
-                                    onActivate()
-                                }
-                            )
-                            .onRightClick { onActions(record) }
+                    ForEach(rows) { row in
+                        switch row {
+                        case .header(let title):
+                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                        case .item(let record):
+                            SnippetRow(record: record, selected: record.id == selectedID)
+                                .selectionFrame(record.id == selectedID)
+                                .contentShape(Rectangle())
+                                .onTapGesture { onSelect(record) }
+                                .simultaneousGesture(
+                                    TapGesture(count: 2).onEnded {
+                                        onSelect(record)
+                                        onActivate()
+                                    }
+                                )
+                                .onRightClick { onActions(record) }
+                        }
                     }
                 }
                 .padding(.horizontal, metrics.spacing.md)

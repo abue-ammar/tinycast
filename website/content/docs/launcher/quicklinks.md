@@ -32,7 +32,7 @@ Click **Add Quicklink** in Settings, or run the **Create Quicklink** command, to
 | Pin to top          | Keeps it above your other quicklinks                    |
 | Show in root search | Lists it in the main search with your apps and commands |
 
-The **Insert…** menu adds placeholders for you.
+The **Insert Placeholder** menu adds placeholders for you.
 
 ## Destinations
 

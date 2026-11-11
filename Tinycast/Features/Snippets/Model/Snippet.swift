@@ -6,20 +6,39 @@ struct Snippet: Sendable, Hashable {
     var keyword: String?
     var isEnabled: Bool
     var showsConfirmation: Bool
+    var isPinned: Bool
 
     init(
         name: String,
         text: String,
         keyword: String? = nil,
         isEnabled: Bool = true,
-        showsConfirmation: Bool = false
+        showsConfirmation: Bool = false,
+        isPinned: Bool = false
     ) {
         self.name = name
         self.text = text
         self.keyword = keyword
         self.isEnabled = isEnabled
         self.showsConfirmation = showsConfirmation
+        self.isPinned = isPinned
     }
+}
+
+enum SnippetDefaultAction: String, CaseIterable, Identifiable, Sendable {
+    case paste
+    case copy
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .paste: String(localized: "Paste")
+        case .copy: String(localized: "Copy to Clipboard")
+        }
+    }
+
+    var alternate: Self { self == .paste ? .copy : .paste }
 }
 
 /// Fingerprint of a snippet file's bytes, detecting an external edit before a save or delete.

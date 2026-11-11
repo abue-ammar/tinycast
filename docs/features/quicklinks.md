@@ -92,7 +92,7 @@ normally prevents that, which is why `| raw` is a deliberate authoring choice an
 
 `{selectedText}` is accepted as an alias for `{selection}`, so a link pasted from Raycast's docs
 works unchanged. `{selection}` stays the canonical spelling and is the only one the editor's
-**Insert…** menu writes. `{query}` is accepted as an alias for `{argument}` for the same reason;
+**Insert Placeholder** menu writes. `{query}` is accepted as an alias for `{argument}` for the same reason;
 a Raycast import rewrites it to `{argument}` before the row is stored.
 
 ## Arguments
