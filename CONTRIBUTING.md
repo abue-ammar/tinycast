@@ -30,7 +30,7 @@ start a discussion, and a maintainer turns it into an issue once it is clear and
 ## Before submitting
 
 - **Ask before you start.** Open a
-  [Contribution Request](https://github.com/abue-ammar/tinycast/discussions/new?category=contribution-request)
+  [Vouch Request](https://github.com/abue-ammar/tinycast/discussions/new?category=vouch-request)
   discussion and wait for a maintainer to say yes.
 - **A linked issue marked `approved`.** Put `Closes #<number>` in the PR description. Anyone may
   open the PR, not only the issue's author. Docs-only changes (`*.md`, `docs/`, `website/`) need no
