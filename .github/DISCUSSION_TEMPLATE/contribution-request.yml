@@ -1,0 +1,32 @@
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > Ask here **before you start work** on a pull request. Read [CONTRIBUTING.md](https://github.com/abue-ammar/tinycast/blob/main/CONTRIBUTING.md) first.
+        >
+        > Keep it **short** and write it **in your own words**. A maintainer replies when you can start.
+  - type: textarea
+    id: what
+    attributes:
+      label: What do you want to work on?
+      description: Link the issue or discussion if there is one.
+      placeholder: I'd like to fix the bug in #1234 where...
+    validations:
+      required: true
+  - type: textarea
+    id: how
+    attributes:
+      label: How do you plan to do it?
+      placeholder: I'd change...
+    validations:
+      required: true
+  - type: checkboxes
+    id: acknowledge
+    attributes:
+      label: "I confirm that:"
+      options:
+        - label: I have read [CONTRIBUTING.md](https://github.com/abue-ammar/tinycast/blob/main/CONTRIBUTING.md).
+          required: true
+        - label: I wrote this request myself, in my own words, without AI writing it.
+          required: true
