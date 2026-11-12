@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Report a bug
+    url: https://github.com/abue-ammar/tinycast/discussions/new?category=issue-triage
+    about: Something in Tinycast doesn't work as expected. Start a discussion first.
+  - name: Suggest a feature
+    url: https://github.com/abue-ammar/tinycast/discussions/new?category=feature-requests-ideas
+    about: Share an idea for Tinycast. Start a discussion first.
+  - name: Ask a question
+    url: https://github.com/abue-ammar/tinycast/discussions/new?category=q-a
+    about: Ask the community for help.
   - name: Discord
     url: https://discord.gg/v2Eeb4QQy3
-    about: Questions, ideas, and general chat.
+    about: General chat.

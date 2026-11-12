@@ -2,40 +2,17 @@ name: Triage
 
 # pull_request_target so forked PRs get the comment too; safe, as it is API calls only.
 on:
-  issues:
-    types: [opened]
   pull_request_target:
     types: [opened]
 
 permissions:
-  issues: write
   pull-requests: write
 
 jobs:
   triage:
     runs-on: ubuntu-latest
     steps:
-      - name: Comment on issue
-        if: github.event_name == 'issues'
-        uses: actions/github-script@v8
-        with:
-          script: |
-            const body = [
-              "Thanks for opening this! Tinycast stays small and focused, so new features are chosen",
-              "carefully and smaller conveniences are usually closed.",
-              "",
-              "> [!TIP]",
-              "> **Planning to build this?** Discussing the approach here first is highly preferred.",
-            ].join("\n");
-            await github.rest.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body
-            });
-
       - name: Comment on pull request
-        if: github.event_name == 'pull_request_target'
         uses: actions/github-script@v8
         with:
           script: |

@@ -1,0 +1,21 @@
+name: Issue
+description: For maintainers. Turn a confirmed discussion into a task.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Only maintainers open issues.** Please start a [Discussion](https://github.com/abue-ammar/tinycast/discussions) instead.
+  - type: input
+    id: discussion
+    attributes:
+      label: Discussion
+      description: The discussion this issue comes from.
+      placeholder: https://github.com/abue-ammar/tinycast/discussions/123
+    validations:
+      required: false
+  - type: textarea
+    id: task
+    attributes:
+      label: What needs to be done?
+    validations:
+      required: true

@@ -1,0 +1,25 @@
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > Many ideas have already been declined on purpose. Read [What Tinycast Won't Do](https://github.com/abue-ammar/tinycast/blob/main/docs/not-planned.md) first.
+        >
+        > **Like an idea that's already here? Upvote it instead of opening a new one.**
+  - type: textarea
+    id: what
+    attributes:
+      label: What should it do?
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why does it belong in Tinycast?
+      description: >
+        Tinycast stays small on purpose — quality over quantity. It has already borrowed what it
+        wanted from Raycast, so "Raycast has it" is not a reason. Tell us why this is worth its
+        weight.
+    validations:
+      required: true

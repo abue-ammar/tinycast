@@ -1,19 +1,19 @@
-name: Bug Report
-description: Report a bug running Tinycast
-title: "[Bug]: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
       value: |
-        **Check this first.** Some behaviour is a choice, not a bug, and those reports are closed as not planned. Read [What Tinycast Won't Do](https://github.com/abue-ammar/tinycast/blob/main/docs/not-planned.md) before you open this.
+        > [!IMPORTANT]
+        > Read the pinned **[READ ME FIRST]: Discussion Rules** and [What Tinycast Won't Do](https://github.com/abue-ammar/tinycast/blob/main/docs/not-planned.md) first. Some behaviour is a choice, not a bug.
+        >
+        > **Hotkey or Hyper key not working?** Check that no other app grabs the same key before you post.
   - type: checkboxes
     id: existing-search
     attributes:
-      label: Existing issues
+      label: Existing discussions
       options:
-        - label: I searched open and closed issues and didn't find this already reported
-          required: false
+        - label: I searched discussions and issues and didn't find this already reported
+          required: true
   - type: textarea
     id: what-happened
     attributes:
@@ -54,15 +54,3 @@ body:
       placeholder: "26.0"
     validations:
       required: true
-  - type: checkboxes
-    id: willing
-    attributes:
-      label: Contribution
-      description: >
-        **Ticking this is not permission to start.** Wait until a maintainer labels this issue
-        `approved` — that label is the only green light. Docs-only changes are the exception. Read
-        [CONTRIBUTING.md](https://github.com/abue-ammar/tinycast/blob/main/CONTRIBUTING.md)
-        first — it is required reading, and it is what your PR is held to.
-      options:
-        - label: I'm willing to implement this myself **once this issue is labelled `approved`**
-          required: false

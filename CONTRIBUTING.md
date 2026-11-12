@@ -1,7 +1,9 @@
 # Contributing to Tinycast
 
-Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
-[pull requests](https://github.com/abue-ammar/tinycast/pulls) first.
+Check existing [discussions](https://github.com/abue-ammar/tinycast/discussions),
+[issues](https://github.com/abue-ammar/tinycast/issues) and
+[pull requests](https://github.com/abue-ammar/tinycast/pulls) first. Only maintainers open issues:
+start a discussion, and a maintainer turns it into an issue once it is clear and confirmed.
 
 > **Don't hurry your code. Make sure it works well and is well designed. Don't worry about timing.**
 
@@ -13,7 +15,7 @@ Check existing [issues](https://github.com/abue-ammar/tinycast/issues) and
 - **Design.** New UI must look like it shipped with the app — spacing, type, radii and motion from the
   existing tokens ([`docs/ui.md`](docs/ui.md)). If you genuinely need a new one, justify it in the PR.
 - **No bloat.** Tinycast stays small on purpose — quality over quantity. A clean patch still gets
-  declined if the feature isn't worth its weight, so open an issue and settle that before you build.
+  declined if the feature isn't worth its weight, so start a discussion and settle that before you build.
 - **Never break the Non-negotiables** in [`AGENTS.md`](AGENTS.md).
 
 ## Setup
