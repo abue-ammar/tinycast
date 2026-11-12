@@ -88,7 +88,6 @@ enum CalcEngine {
         guard let query = format.canonical(trimmed) else { return nil }
         if query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) {
             return CalcDateTime.namedMoment(query, now: now, calendar: calendar).map(unchained)
-                ?? (query.utf8.count <= 3 ? constant(.ident(query.lowercased()), query: query) : nil)
         }
         // The remainder is already canonical, so it must not be re-read in the localized format.
         if let asked = CalcQuestion.asked(query),
@@ -145,7 +144,7 @@ enum CalcEngine {
                     sourceBadge: String(localized: "Expression"), targetBadge: String(localized: "Result"),
                     payload: .number(value))
             }
-            return constant(tokens[0], query: query)
+            return nil
         }
 
         if let base = baseConversion(tokens, query: query) { return base }
@@ -225,15 +224,6 @@ enum CalcEngine {
             ?? CalcStatistics.evaluate(tokens, query: query) ?? CalcRatePhrases.evaluate(tokens, query: query)
             ?? CalcSubstance.evaluate(tokens, query: query) ?? CalcPixelDensity.evaluate(tokens, query: query)
             ?? CalcPitch.evaluate(tokens, query: query)
-    }
-
-    private static func constant(_ token: CalcToken, query: String) -> CalcResult? {
-        guard case .ident(let name) = token, name != "half", let value = CalcMath.constants[name] else {
-            return nil
-        }
-        return CalcResult(
-            expression: query, sourceBadge: String(localized: "Expression"),
-            targetBadge: String(localized: "Result"), payload: .number(value))
     }
 
     private static func paceInMinutes(_ query: String) -> String {

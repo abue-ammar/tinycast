@@ -57,9 +57,9 @@ in (see Currency below).
 
 `CalcEngine.evaluate` runs:
 
-Single ASCII words return immediately: a bare app name or date keyword never earns a card.
-The exceptions are the five words that name the current moment (see grammar G) and `e`, `pi`, `tau`
-and `phi`. Quoted text goes first to `CalcText`: `first 10 characters of "hello"`, `length of "…"`,
+Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
+The one exception is the five words that name the current moment or its neighbours — see grammar G.
+Quoted text goes first to `CalcText`: `first 10 characters of "hello"`, `length of "…"`,
 `"abc" in uppercase`.
 A trailing `?` is dropped, and a leading `what is`, `what's`, `how much is`, `calculate`, `compute` or
 `evaluate` is tried first on what follows it (`CalcQuestion.asked`), falling back to the whole query —

@@ -245,9 +245,8 @@ struct CalcTests {
         expectNil("1password")
         expectNil("45")
         expectNil("3.14")
-        expectDisplay("pi", "3.141592654")
-        expectDisplay("e", "2.718281828")
-        expectNil("half")
+        expectNil("pi")
+        expectNil("e")
         expectNil("10km to")  // half-typed conversion
         expectNil("10 to mi")
         expectDisplay("45+", "45")  // safe trailing operators keep the last complete result
