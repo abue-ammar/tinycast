@@ -191,7 +191,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `LauncherSettingsFileTests` | Launcher settings application — invalid records, partial edits, deferred bundles, shortcut moves and records outside search scopes; isolated preferences and in-memory scan/Carbon effects |
 | `BackupArchiveTests` | all of `Backup/Model/`, plus `Backup/Service/BackupStaging.swift` |
 | `UpdatesTests` | `Updates/Model/` — version precedence, channel filtering, install route, readiness |
-| `BundleIdentifierMigrationTests` | `Migrations/BundleIdentifierMigration.swift` — the id mapping, moving without overwriting, clipboard and snippet paths, preferences, the login-item flag, the backup and its expiry |
+| `BundleIdentifierMigrationTests` | `Migrations/BundleIdentifierMigration.swift` — the id mapping, moving without overwriting, every spelling of a saved path into the old folders, preferences, the login-item flag, the backup and its expiry, the repair of an earlier move |
 | `UpdateCheckTests` | `UpdateCheckStore` — stopping, in-flight cancellation, cached offer suppression, restart and independent manual checking |
 | `SupportTests` | `Support/Model/` — when the support reminder comes due, and a clock moved backwards |
 | `AIProviderTests` | `AI/Model/` and `AISettingsStore` — instruction composition, provider requests and streams, route settings, protocol framing, CLI launch encodings and queued Codex writes across cancellation, timeout and Stop |

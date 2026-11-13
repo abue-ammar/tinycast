@@ -137,8 +137,8 @@ whose bundle id differs from its own, and that check is in code already shipped.
   it can run; `ReleaseFeed` skips both for a copy that has moved.
 - **On launch it hands over and gets out of the way:** it records whether the old id was a login
   item, unregisters it, swaps the app it carries into its own place, opens it and exits.
-  `BundleIdentifierMigration` then moves the preferences, folders, clipboard paths, snippet paths and
-  login item to the new id. The user clicks Update and Relaunch once, then grants the macOS permissions again and
+  `BundleIdentifierMigration` then moves the preferences, folders and login item to the new id, and
+  repoints every saved path into the old folders. The user clicks Update and Relaunch once, then grants the macOS permissions again and
   re-enters any AI API key or MCP secret: the Keychain asks before another id reads an item, and the
   move must never ask.
 

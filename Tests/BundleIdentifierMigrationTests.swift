@@ -23,6 +23,9 @@ struct BundleIdentifierMigrationTests {
         try expiresTheBackup()
         try handsOnTheLoginItemOnlyWhenItWasOn()
         try followsSnippetsToTheirNewPath()
+        try repointsEverySpellingOfTheOldFolders()
+        try repairsAnEarlierMove()
+        leavesAFreshInstallAlone()
 
         print("\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -202,6 +205,168 @@ extension BundleIdentifierMigrationTests {
     }
 }
 
+extension BundleIdentifierMigrationTests {
+    struct Command: Codable, Equatable {
+        let command: String
+        let workingDirectory: String?
+    }
+
+    /// A path a user typed or picked can be absolute, `~/`, a `file://` URL, or JSON inside a setting.
+    static func repointsEverySpellingOfTheOldFolders() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let tilde = (
+            old: "~/Library/Application Support/\(fixture.legacy)/tinycastscripts",
+            new: "~/Library/Application Support/\(fixture.current)/tinycastscripts"
+        )
+        let script = (
+            old: fixture.legacyHome.appending(path: "tinycastscripts/run.sh").path,
+            new: fixture.home.appending(path: "tinycastscripts/run.sh").path
+        )
+        let link = (
+            old: "file://" + fixture.encoded(fixture.legacyHome) + "/Read%20Me.pdf",
+            new: "file://" + fixture.encoded(fixture.home) + "/Read%20Me.pdf"
+        )
+        try fixture.write("#!/bin/sh", to: URL(filePath: script.old))
+        let shell = (
+            old:
+                #"cd ~/Library/Application\ Support/\#(fixture.legacy) && "$HOME/Library/Caches/\#(fixture.legacy)/x""#,
+            new:
+                #"cd ~/Library/Application\ Support/\#(fixture.current) && "$HOME/Library/Caches/\#(fixture.current)/x""#
+        )
+        let commands = try JSONEncoder().encode([
+            Command(command: "sh '\(script.old)'", workingDirectory: tilde.old),
+            Command(command: shell.old, workingDirectory: nil)
+        ])
+        let archived = try PropertyListSerialization.data(
+            fromPropertyList: ["path": script.old], format: .binary, options: 0)
+        let lookalike = "~/Library/Application Support/\(fixture.legacy)x/keep"
+        fixture.domains.values[fixture.legacy] = [
+            "customCommands": commands,
+            "fileSearchScopes": [tilde.old, "~/Documents"],
+            "archived": archived,
+            "lookalike": lookalike,
+            "plist": "~/Library/Preferences/\(fixture.legacy).plist",
+            "models": "~/Library/Caches/\(fixture.legacy).dictation/models"
+        ]
+        let escaped = tilde.old.replacingOccurrences(of: "/", with: "\\/")
+        try fixture.write(
+            #"{"preferences":{"folder":"\#(escaped)"}}"#,
+            to: fixture.legacyHome.appending(path: "extension-data/files.json"))
+        let support = "extensions/files/support/cache.json"
+        try fixture.write(#"{"root":"\#(script.old)"}"#, to: fixture.legacyHome.appending(path: support))
+        try fixture.sqlite(
+            fixture.legacyHome.appending(path: "quicklinks.sqlite3"),
+            """
+            CREATE TABLE quicklinks(id TEXT, link TEXT, open_with TEXT, icon TEXT);
+            INSERT INTO quicklinks VALUES('a', '\(link.old)', NULL, NULL);
+            """)
+        try fixture.sqlite(
+            fixture.legacyHome.appending(path: "clipboard.sqlite3"),
+            """
+            CREATE TABLE items(id TEXT, kind TEXT, text TEXT, image_path TEXT);
+            INSERT INTO items VALUES('f', 'file', '\(script.old)', NULL);
+            INSERT INTO items VALUES('t', 'text', '\(script.old)', NULL);
+            """)
+        try fixture.write(#"{"snippets":{"folder":"\#(tilde.old)"}}"#, to: fixture.settingsFile)
+
+        fixture.migrate()
+
+        let preferences = fixture.domains.values[fixture.current] ?? [:]
+        let moved = (preferences["customCommands"] as? Data).flatMap {
+            try? JSONDecoder().decode([Command].self, from: $0)
+        }
+        check(
+            "a custom command's folder and command follow, though stored as JSON data",
+            moved?.first == Command(command: "sh '\(script.new)'", workingDirectory: tilde.new))
+        check("a shell-escaped or $HOME path in a command follows", moved?.last?.command == shell.new)
+        check(
+            "a ~/ path in a setting follows",
+            preferences["fileSearchScopes"] as? [String] == [tilde.new, "~/Documents"])
+        check("a binary property list is left alone", preferences["archived"] as? Data == archived)
+        check(
+            "a longer id that only starts like the old one is left alone",
+            preferences["lookalike"] as? String == lookalike)
+        check(
+            "the old preferences file is a different file, and is left alone",
+            preferences["plist"] as? String == "~/Library/Preferences/\(fixture.legacy).plist")
+        check(
+            "a path into the Dictation helper's caches follows",
+            preferences["models"] as? String == "~/Library/Caches/\(fixture.current).dictation/models")
+
+        let storage = try Data(contentsOf: fixture.home.appending(path: "extension-data/files.json"))
+        let folder = (try JSONSerialization.jsonObject(with: storage) as? [String: [String: String]])?[
+            "preferences"]?["folder"]
+        check("an extension's stored preference follows", folder == tilde.new)
+        let cache = try String(contentsOf: fixture.home.appending(path: support), encoding: .utf8)
+        check("a JSON file an extension wrote in its own folder follows", cache.contains(script.new))
+        check(
+            "the extension's file is backed up",
+            FileManager.default.fileExists(
+                atPath: fixture.backup.appending(path: "extension-data/files.json").path))
+        let quicklinks = fixture.home.appending(path: "quicklinks.sqlite3")
+        check(
+            "a quicklink's file:// link follows",
+            fixture.column(in: quicklinks, "SELECT link FROM quicklinks") == [link.new])
+        check(
+            "a quicklink's empty columns stay empty",
+            fixture.column(in: quicklinks, "SELECT open_with FROM quicklinks") == [nil])
+        let clipboard = fixture.home.appending(path: "clipboard.sqlite3")
+        check(
+            "a copied file in the old folder follows",
+            fixture.column(in: clipboard, "SELECT text FROM items WHERE kind = 'file'") == [script.new])
+        check(
+            "copied text that mentions the path is content, and stays",
+            fixture.column(in: clipboard, "SELECT text FROM items WHERE kind = 'text'") == [script.old])
+        let settings = try String(contentsOf: fixture.settingsFile, encoding: .utf8)
+        check("settings.json follows, or it would undo the move at launch", settings.contains(tilde.new))
+        check(
+            "settings.json is backed up",
+            (try? String(contentsOf: fixture.backup.appending(path: "settings.json"), encoding: .utf8))?
+                .contains(tilde.old) == true)
+    }
+
+    /// What 0.12.14-beta.141 left: everything moved, the backup made, and a `~/` folder still old.
+    static func repairsAnEarlierMove() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        try FileManager.default.createDirectory(at: fixture.backup, withIntermediateDirectories: true)
+        let old = "~/Library/Application Support/\(fixture.legacy)/tinycastscripts"
+        let new = "~/Library/Application Support/\(fixture.current)/tinycastscripts"
+        let commands = try JSONEncoder().encode([Command(command: "ls", workingDirectory: old)])
+        fixture.domains.values[fixture.current] = ["customCommands": commands, "kept": "yes"]
+
+        check("a repair never registers a login item", !fixture.migrate())
+
+        let preferences = fixture.domains.values[fixture.current] ?? [:]
+        let repaired = (preferences["customCommands"] as? Data).flatMap {
+            try? JSONDecoder().decode([Command].self, from: $0)
+        }
+        check(
+            "the earlier move's custom command folder is repaired", repaired?.first?.workingDirectory == new)
+        check("the rest of the preferences stay", preferences["kept"] as? String == "yes")
+        check(
+            "the preferences are backed up before the repair",
+            FileManager.default.fileExists(
+                atPath: fixture.backup.appending(path: fixture.current + ".plist").path))
+
+        fixture.domains.values[fixture.current]?["late"] = old
+        fixture.migrate()
+        check("the repair runs once", fixture.domains.values[fixture.current]?["late"] as? String == old)
+    }
+
+    static func leavesAFreshInstallAlone() {
+        guard let fixture = try? Fixture() else { return check("a fixture opens", false) }
+        defer { fixture.remove() }
+        let path = "~/Library/Application Support/\(fixture.legacy)/x"
+        fixture.domains.values[fixture.current] = ["path": path]
+        check("a copy that never had the old id has nothing to do", !fixture.migrate())
+        check("nothing is created for it", !FileManager.default.fileExists(atPath: fixture.home.path))
+        check(
+            "nothing in it is rewritten", fixture.domains.values[fixture.current]?["path"] as? String == path)
+    }
+}
+
 /// The preference domains, in memory.
 final class Domains {
     var values: [String: [String: Any]] = [:]
@@ -224,6 +389,7 @@ struct Fixture {
     var home: URL { support.appending(path: current, directoryHint: .isDirectory) }
     var legacyHome: URL { support.appending(path: legacy, directoryHint: .isDirectory) }
     var backup: URL { home.appending(path: "Migration Backup", directoryHint: .isDirectory) }
+    var settingsFile: URL { root.appending(path: "config/settings.json") }
 
     init() throws {
         root = FileManager.default.temporaryDirectory.appending(
@@ -237,7 +403,8 @@ struct Fixture {
     @discardableResult
     func migrate(now: Date = Date()) -> Bool {
         BundleIdentifierMigration.migrate(
-            from: legacy, to: current, library: root, preferences: domains.preferences, now: now)
+            from: legacy, to: current, library: root, settingsFile: settingsFile,
+            preferences: domains.preferences, now: now)
     }
 
     func write(_ text: String, to url: URL) throws {
@@ -247,19 +414,29 @@ struct Fixture {
     }
 
     func makeClipboard(imagePaths: [String?]) throws {
-        try FileManager.default.createDirectory(at: legacyHome, withIntermediateDirectories: true)
+        let rows = imagePaths.map { path in
+            "INSERT INTO items VALUES('\(UUID())', 'image', NULL, \(path.map { "'\($0)'" } ?? "NULL"));"
+        }
+        try sqlite(
+            legacyHome.appending(path: "clipboard.sqlite3"),
+            "PRAGMA journal_mode=WAL; CREATE TABLE items(id TEXT, kind TEXT, text TEXT, image_path TEXT);"
+                + rows.joined())
+    }
+
+    func sqlite(_ database: URL, _ sql: String) throws {
+        try FileManager.default.createDirectory(
+            at: database.deletingLastPathComponent(), withIntermediateDirectories: true)
         var db: OpaquePointer?
         defer { sqlite3_close(db) }
-        sqlite3_open(legacyHome.appending(path: "clipboard.sqlite3").path, &db)
-        sqlite3_exec(
-            db, "PRAGMA journal_mode=WAL; CREATE TABLE items(id TEXT, image_path TEXT)", nil, nil, nil)
-        for path in imagePaths {
-            let value = path.map { "'\($0)'" } ?? "NULL"
-            sqlite3_exec(db, "INSERT INTO items VALUES('\(UUID())', \(value))", nil, nil, nil)
-        }
+        sqlite3_open(database.path, &db)
+        sqlite3_exec(db, sql, nil, nil, nil)
     }
 
     func imagePaths(in database: URL) -> [String?] {
+        column(in: database, "SELECT image_path FROM items")
+    }
+
+    func column(in database: URL, _ select: String) -> [String?] {
         var db: OpaquePointer?
         var statement: OpaquePointer?
         defer {
@@ -267,13 +444,17 @@ struct Fixture {
             sqlite3_close(db)
         }
         guard sqlite3_open_v2(database.path, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK,
-            sqlite3_prepare_v2(db, "SELECT image_path FROM items", -1, &statement, nil) == SQLITE_OK
+            sqlite3_prepare_v2(db, select, -1, &statement, nil) == SQLITE_OK
         else { return [] }
-        var paths: [String?] = []
+        var values: [String?] = []
         while sqlite3_step(statement) == SQLITE_ROW {
-            paths.append(sqlite3_column_text(statement, 0).map { String(cString: $0) })
+            values.append(sqlite3_column_text(statement, 0).map { String(cString: $0) })
         }
-        return paths
+        return values
+    }
+
+    func encoded(_ folder: URL) -> String {
+        folder.path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? folder.path
     }
 
     func remove() {
