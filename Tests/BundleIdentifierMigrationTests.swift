@@ -22,6 +22,7 @@ struct BundleIdentifierMigrationTests {
         try keepsWhatTheNewHomeAlreadyHas()
         try expiresTheBackup()
         try handsOnTheLoginItemOnlyWhenItWasOn()
+        try followsSnippetsToTheirNewPath()
 
         print("\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
@@ -102,7 +103,8 @@ struct BundleIdentifierMigrationTests {
         check(
             "a second run changes nothing",
             !registersAgain
-                && fixture.imagePaths(in: fixture.home.appending(path: "clipboard.sqlite3")).contains(newImage)
+                && fixture.imagePaths(in: fixture.home.appending(path: "clipboard.sqlite3")).contains(
+                    newImage)
                 && after == before
                 && (fixture.domains.values[fixture.current]?["shared"] as? String) == "new")
     }
@@ -127,7 +129,8 @@ struct BundleIdentifierMigrationTests {
                 && FileManager.default.fileExists(atPath: fixture.home.appending(path: "onboarded").path))
         check(
             "the old copy of a conflicting file stays where it was",
-            FileManager.default.fileExists(atPath: fixture.legacyHome.appending(path: "Notes/Groceries.md").path))
+            FileManager.default.fileExists(
+                atPath: fixture.legacyHome.appending(path: "Notes/Groceries.md").path))
     }
 
     static func expiresTheBackup() throws {
@@ -140,7 +143,8 @@ struct BundleIdentifierMigrationTests {
         fixture.migrate(now: Date().addingTimeInterval(29 * 24 * 60 * 60))
         check("a backup within a month is kept", FileManager.default.fileExists(atPath: fixture.backup.path))
         fixture.migrate(now: Date().addingTimeInterval(31 * 24 * 60 * 60))
-        check("a backup past a month is removed", !FileManager.default.fileExists(atPath: fixture.backup.path))
+        check(
+            "a backup past a month is removed", !FileManager.default.fileExists(atPath: fixture.backup.path))
     }
 
     static func handsOnTheLoginItemOnlyWhenItWasOn() throws {
@@ -153,6 +157,48 @@ struct BundleIdentifierMigrationTests {
         defer { unknown.remove() }
         unknown.domains.values[unknown.legacy] = ["shared": "old"]
         check("preferences without the handoff's flag register nothing", !unknown.migrate())
+    }
+}
+
+extension BundleIdentifierMigrationTests {
+    /// A snippet's launcher id is its path, so every record keyed by it must follow the move.
+    static func followsSnippetsToTheirNewPath() throws {
+        let fixture = try Fixture()
+        defer { fixture.remove() }
+        let oldSnippet = fixture.legacyHome.appending(path: "Snippets/Sign-off.md").path
+        let newSnippet = fixture.home.appending(path: "Snippets/Sign-off.md").path
+        try fixture.write("Thanks", to: URL(filePath: oldSnippet))
+        fixture.domains.values[fixture.legacy] = [
+            "hotkey.snippet." + oldSnippet: "{\"keyCode\":1}",
+            "boundSnippetIDs": [oldSnippet],
+            "aliases": ["snippet:" + oldSnippet: "so"],
+            "favorites": ["snippet:" + oldSnippet, "app:com.apple.Safari"]
+        ]
+        struct Visit: Codable { let count: Int }
+        let ranking = try JSONEncoder().encode(["snippet:" + oldSnippet: Visit(count: 3)])
+        try ranking.write(to: fixture.legacyHome.appending(path: "launcher-ranking.json"))
+
+        fixture.migrate()
+
+        let preferences = fixture.domains.values[fixture.current] ?? [:]
+        check(
+            "a snippet's hotkey keeps its binding",
+            preferences["hotkey.snippet." + newSnippet] as? String == "{\"keyCode\":1}")
+        check("no preference names the old folder", !"\(preferences)".contains(fixture.legacyHome.path))
+        check("the bound snippet list follows", preferences["boundSnippetIDs"] as? [String] == [newSnippet])
+        check(
+            "a snippet's alias follows",
+            (preferences["aliases"] as? [String: String])?["snippet:" + newSnippet] == "so")
+        check(
+            "a favorite follows and the others stay",
+            preferences["favorites"] as? [String] == ["snippet:" + newSnippet, "app:com.apple.Safari"])
+
+        let moved = try Data(contentsOf: fixture.home.appending(path: "launcher-ranking.json"))
+        let visits = try JSONDecoder().decode([String: Visit].self, from: moved)
+        check("the launch ranking follows", visits["snippet:" + newSnippet]?.count == 3 && visits.count == 1)
+        check(
+            "the backup keeps the ranking as it was",
+            (try? Data(contentsOf: fixture.backup.appending(path: "launcher-ranking.json"))) == ranking)
     }
 }
 
@@ -205,7 +251,8 @@ struct Fixture {
         var db: OpaquePointer?
         defer { sqlite3_close(db) }
         sqlite3_open(legacyHome.appending(path: "clipboard.sqlite3").path, &db)
-        sqlite3_exec(db, "PRAGMA journal_mode=WAL; CREATE TABLE items(id TEXT, image_path TEXT)", nil, nil, nil)
+        sqlite3_exec(
+            db, "PRAGMA journal_mode=WAL; CREATE TABLE items(id TEXT, image_path TEXT)", nil, nil, nil)
         for path in imagePaths {
             let value = path.map { "'\($0)'" } ?? "NULL"
             sqlite3_exec(db, "INSERT INTO items VALUES('\(UUID())', \(value))", nil, nil, nil)

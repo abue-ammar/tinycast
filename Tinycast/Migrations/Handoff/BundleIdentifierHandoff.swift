@@ -10,10 +10,11 @@ enum BundleIdentifierHandoff {
     static func main() async {
         let handoff = Bundle.main.bundleURL
         let helpers = handoff.appending(components: "Contents", "Helpers")
-        guard
-            let successor = (try? FileManager.default.contentsOfDirectory(
-                at: helpers, includingPropertiesForKeys: nil))?.first(where: { $0.pathExtension == "app" })
-        else { exit(EXIT_FAILURE) }
+        let contents = try? FileManager.default.contentsOfDirectory(
+            at: helpers, includingPropertiesForKeys: nil)
+        guard let successor = contents?.first(where: { $0.pathExtension == "app" }) else {
+            exit(EXIT_FAILURE)
+        }
 
         UserDefaults.standard.set(SMAppService.mainApp.status == .enabled, forKey: launchAtLoginKey)
         try? await SMAppService.mainApp.unregister()

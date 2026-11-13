@@ -50,17 +50,25 @@ enum BundleIdentifierMigration {
         let legacyHome = support.appending(path: legacy, directoryHint: .isDirectory)
         let home = support.appending(path: current, directoryHint: .isDirectory)
         let backup = home.appending(path: "Migration Backup", directoryHint: .isDirectory)
+        let legacyCaches = caches.appending(path: legacy, directoryHint: .isDirectory)
+        let legacyHelperCaches = caches.appending(path: legacy + ".dictation", directoryHint: .isDirectory)
+
+        expireBackup(backup, now: now)
+        // Preferences move last, so a run cut short leaves them behind and the next launch resumes.
+        guard
+            [legacyHome, legacyCaches, legacyHelperCaches].contains(where: {
+                FileManager.default.fileExists(atPath: $0.path)
+            }) || preferences.read(legacy)?.isEmpty == false
+        else { return false }
 
         merge(legacyHome, into: home)
-        merge(caches.appending(path: legacy), into: caches.appending(path: current))
-        merge(
-            caches.appending(path: legacy + ".dictation"),
-            into: caches.appending(path: current + ".dictation"))
-        repointClipboardImages(in: home, from: legacyHome, backup: backup)
-        let launchesAtLogin = movePreferences(
-            from: legacy, to: current, preferences: preferences, backup: backup)
-        expireBackup(backup, now: now)
-        return launchesAtLogin
+        merge(legacyCaches, into: caches.appending(path: current))
+        merge(legacyHelperCaches, into: caches.appending(path: current + ".dictation"))
+        let paths = (old: legacyHome.path + "/", new: home.path + "/")
+        repointClipboardImages(in: home, from: paths.old, to: paths.new, backup: backup)
+        repointJSONFiles(in: home, from: paths.old, to: paths.new, backup: backup)
+        return movePreferences(
+            from: legacy, to: current, repointing: paths, preferences: preferences, backup: backup)
     }
 
     // MARK: - Files
@@ -72,8 +80,8 @@ enum BundleIdentifierMigration {
             do {
                 try files.moveItem(at: source, to: destination)
             } catch {
-                logger.error(
-                    "Moving \(source.path, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                let reason = error.localizedDescription
+                logger.error("Moving \(source.path, privacy: .public) failed: \(reason, privacy: .public)")
             }
             return
         }
@@ -98,17 +106,70 @@ enum BundleIdentifierMigration {
         try? FileManager.default.removeItem(at: backup)
     }
 
+    /// A snippet's launcher id is its file's path, so its ranking names the old folder too.
+    private static func repointJSONFiles(in home: URL, from old: String, to new: String, backup: URL) {
+        let escaped = old.replacingOccurrences(of: "/", with: "\\/")
+        let files =
+            (try? FileManager.default.contentsOfDirectory(at: home, includingPropertiesForKeys: nil)) ?? []
+        for file in files where file.pathExtension == "json" {
+            guard let data = try? Data(contentsOf: file),
+                let text = String(data: data, encoding: .utf8),
+                text.contains(old) || text.contains(escaped),
+                let json = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
+                let repointed = try? JSONSerialization.data(
+                    withJSONObject: repointing(json, from: old, to: new), options: .fragmentsAllowed)
+            else { continue }
+            let copy = backup.appending(path: file.lastPathComponent)
+            do {
+                if !FileManager.default.fileExists(atPath: copy.path) {
+                    try FileManager.default.createDirectory(at: backup, withIntermediateDirectories: true)
+                    try data.write(to: copy)
+                }
+                try repointed.write(to: file, options: .atomic)
+            } catch {
+                let reason = error.localizedDescription
+                let name = file.lastPathComponent
+                logger.error("Repointing \(name, privacy: .public) failed: \(reason, privacy: .public)")
+            }
+        }
+    }
+
+    /// Every string, and every dictionary key, with the old folder's path swapped for the new one.
+    private static func repointing(_ value: Any, from old: String, to new: String) -> Any {
+        switch value {
+        case let text as String:
+            text.replacingOccurrences(of: old, with: new)
+        case let list as [Any]:
+            list.map { repointing($0, from: old, to: new) }
+        case let table as [String: Any]:
+            Dictionary(
+                table.map {
+                    (
+                        $0.key.replacingOccurrences(of: old, with: new),
+                        repointing($0.value, from: old, to: new)
+                    )
+                },
+                uniquingKeysWith: { _, last in last })
+        default:
+            value
+        }
+    }
+
     // MARK: - Preferences
 
+    /// A snippet's hotkey, alias, favorite and visibility are keyed by its file's path.
     private static func movePreferences(
-        from legacy: String, to current: String, preferences: Preferences, backup: URL
+        from legacy: String, to current: String, repointing paths: (old: String, new: String),
+        preferences: Preferences, backup: URL
     ) -> Bool {
-        guard var old = preferences.read(legacy), !old.isEmpty else { return false }
+        guard let stored = preferences.read(legacy), !stored.isEmpty,
+            var old = repointing(stored, from: paths.old, to: paths.new) as? [String: Any]
+        else { return false }
         let copy = backup.appending(path: legacy + ".plist")
         if !FileManager.default.fileExists(atPath: copy.path) {
             do {
                 try FileManager.default.createDirectory(at: backup, withIntermediateDirectories: true)
-                try PropertyListSerialization.data(fromPropertyList: old, format: .binary, options: 0)
+                try PropertyListSerialization.data(fromPropertyList: stored, format: .binary, options: 0)
                     .write(to: copy)
             } catch {
                 logger.error(
@@ -126,14 +187,12 @@ enum BundleIdentifierMigration {
     // MARK: - Clipboard
 
     /// Each image row holds an absolute path, and that path still names the old folder.
-    private static func repointClipboardImages(in home: URL, from legacyHome: URL, backup: URL) {
+    private static func repointClipboardImages(in home: URL, from old: String, to new: String, backup: URL) {
         let database = home.appending(path: "clipboard.sqlite3")
         guard FileManager.default.fileExists(atPath: database.path) else { return }
         var db: OpaquePointer?
         defer { sqlite3_close(db) }
         guard sqlite3_open_v2(database.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else { return }
-        let old = legacyHome.path + "/"
-        let new = home.path + "/"
         let matching = "FROM items WHERE substr(image_path, 1, length(?1)) = ?1"
         guard (integer(db, "SELECT COUNT(*) \(matching)", old) ?? 0) > 0 else { return }
 
