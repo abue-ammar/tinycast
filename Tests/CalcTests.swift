@@ -2326,6 +2326,8 @@ struct CalcTests {
     static let french = CalcNumberFormat(decimalSeparator: ",", groupingSeparator: "\u{202F}")!
     static let swiss = CalcNumberFormat(decimalSeparator: ".", groupingSeparator: "\u{2019}")!
     static let ungrouped = CalcNumberFormat(decimalSeparator: ",", groupingSeparator: nil)!
+    static let indian = CalcNumberFormat(
+        decimalSeparator: ".", groupingSeparator: ",", primaryGrouping: 3, secondaryGrouping: 2)!
 
     static func localeTests() {
         check(
@@ -2346,6 +2348,12 @@ struct CalcTests {
         )
         check("format [it argument separator]", expected: ";", got: String(italian.argumentSeparator))
         check("format [ch argument separator]", expected: ",", got: String(swiss.argumentSeparator))
+        check("format [secondary equal to primary]", expected: "nil", got: secondary(".", ",", 3, 3))
+        check("format [grouping without a separator]", expected: "nil", got: secondary(",", nil, 3, 2))
+        check("format [widths with a decimal comma]", expected: "nil", got: secondary(",", ".", 3, 2))
+        check("format [widths with a grouping quote]", expected: "nil", got: secondary(".", "'", 3, 2))
+        check("format [en primary width]", expected: "2", got: primary(".", ",", 2))
+        check("format [nbsp primary width]", expected: "3", got: primary(",", "\u{00A0}", 2))
 
         expectLocalized("2,3 + 1,5", "3,8", italian)
         expectLocalized("1.234,56 + 0,44", "1.235", italian)
@@ -2437,6 +2445,26 @@ struct CalcTests {
         expectSameAsEnglish("19.2.27", swiss)
         expectSameAsEnglish("1.2.3 + 1", swiss)
 
+        // India groups the last three digits and then every two: 20,00,000
+        expectLocalized("2000000 + 0", "20,00,000", indian)
+        expectLocalized("100000 + 0", "1,00,000", indian)
+        expectLocalized("12345678 + 0", "1,23,45,678", indian)
+        expectLocalized("123456789 + 0", "12,34,56,789", indian)
+        expectLocalized("123456.78 * 1", "1,23,456.78", indian)
+        expectLocalized("20,00,000 + 1", "20,00,001", indian)
+        expectLocalized("1,23,45,678 / 2", "61,72,839", indian)
+        expectLocalized("1/3", "0.3333333333", indian)
+        // The English habit reads too, and the pasteboard keeps its ungrouped text
+        expectLocalized("2,000,000 + 1", "20,00,001", indian)
+        expectLocalizedCopy("2000000 + 0", "2000000", indian)
+        // Reading input is untouched, so a comma is still the English grouping it always was
+        expectLocalized("2,3 + 1,5", "38", indian)
+        // Any other separators keep threes, so the answer still types back in
+        let indianComma = CalcNumberFormat(
+            decimalSeparator: ",", groupingSeparator: ".", primaryGrouping: 3, secondaryGrouping: 2)!
+        expectLocalized("2000000 + 0", "2.000.000", indianComma)
+        expectLocalized("2.000.000 + 1", "2.000.001", indianComma)
+
         // A format without grouping neither reads nor writes one
         expectLocalized("1234,5 * 2", "2469", ungrouped)
         expectLocalized("2^20", "1048576", ungrouped)
@@ -2512,6 +2540,19 @@ struct CalcTests {
 
     static func formatLabel(_ query: String, _ format: CalcNumberFormat) -> String {
         "\(query) [decimal \(format.decimalSeparator)]"
+    }
+
+    static func secondary(_ decimal: String, _ grouping: String?, _ primary: Int, _ secondary: Int) -> String {
+        let format = CalcNumberFormat(
+            decimalSeparator: decimal, groupingSeparator: grouping, primaryGrouping: primary,
+            secondaryGrouping: secondary)
+        return "\(format?.secondaryGrouping as Any)"
+    }
+
+    static func primary(_ decimal: String, _ grouping: String?, _ primary: Int) -> String {
+        let format = CalcNumberFormat(
+            decimalSeparator: decimal, groupingSeparator: grouping, primaryGrouping: primary)
+        return "\(format.map { String($0.primaryGrouping) } ?? "nil")"
     }
 
     static func expectLocalized(_ query: String, _ expected: String, _ format: CalcNumberFormat) {

@@ -20,28 +20,42 @@ struct CalcNumberFormat: Equatable, Sendable {
     let decimalSeparator: Unicode.Scalar
     /// nil when numbers are written without grouping.
     let groupingSeparator: Unicode.Scalar?
+    /// Digits in the rightmost group, then in each group left of it: 3 + 2 writes `1,00,000`.
+    let primaryGrouping: Int
+    let secondaryGrouping: Int?
 
-    static let english = CalcNumberFormat(decimal: ".", grouping: ",")
+    static let english = CalcNumberFormat(decimal: ".", grouping: ",", primary: 3, secondary: nil)
 
     /// Separators macOS offers that can never be mistaken for calculator syntax.
     private static let groupingScalars: Set<Unicode.Scalar> = [
         ".", ",", "'", "\u{2019}", "\u{00A0}", "\u{202F}", "\u{2009}"
     ]
 
-    private init(decimal: Unicode.Scalar, grouping: Unicode.Scalar?) {
+    private init(decimal: Unicode.Scalar, grouping: Unicode.Scalar?, primary: Int, secondary: Int?) {
         decimalSeparator = decimal
         groupingSeparator = grouping
+        primaryGrouping = primary
+        secondaryGrouping = secondary
     }
 
     /// nil for a decimal separator canonical syntax can't express, such as the Arabic `٫`.
-    init?(decimalSeparator: String, groupingSeparator: String?) {
+    init?(
+        decimalSeparator: String, groupingSeparator: String?, primaryGrouping: Int = 3,
+        secondaryGrouping: Int? = nil
+    ) {
         guard let decimal = Self.single(decimalSeparator), decimal == "." || decimal == "," else {
             return nil
         }
         let grouping = groupingSeparator.flatMap(Self.single).flatMap {
             $0 != decimal && Self.groupingScalars.contains($0) ? $0 : nil
         }
-        self.init(decimal: decimal, grouping: grouping)
+        // Only English separators read any grouping back, so other formats keep retypable threes.
+        let regroups = decimal == "." && grouping == "," && (1...3).contains(primaryGrouping)
+        let primary = regroups ? primaryGrouping : 3
+        let secondary = secondaryGrouping.flatMap {
+            regroups && (1...3).contains($0) && $0 != primary ? $0 : nil
+        }
+        self.init(decimal: decimal, grouping: grouping, primary: primary, secondary: secondary)
     }
 
     private static func single(_ text: String) -> Unicode.Scalar? {
@@ -54,11 +68,16 @@ struct CalcNumberFormat: Equatable, Sendable {
 
     private var usesDecimalComma: Bool { decimalSeparator == "," }
 
+    /// `.` and `,` read every query as English does, so only the answer is re-grouped.
+    private var readsCanonicalSeparators: Bool {
+        decimalSeparator == "." && groupingSeparator == ","
+    }
+
     // MARK: - Input
 
     /// The query in canonical syntax, or nil when a number in it has no single reading.
     func canonical(_ query: String) -> String? {
-        guard self != .english else { return query }
+        guard !readsCanonicalSeparators else { return query }
         let scalars = Array(query.unicodeScalars)
         var output = String.UnicodeScalarView()
         var index = 0
@@ -209,16 +228,39 @@ struct CalcNumberFormat: Equatable, Sendable {
         guard parts.count <= 2, parts.count == 1 || !parts[1].contains(",") else { return nil }
         let groups = parts[0].split(separator: ",", omittingEmptySubsequences: false)
         guard groups.count == 1 || Self.isValidGrouping(groups) else { return nil }
-        var number: [Unicode.Scalar] = []
-        for (index, group) in groups.enumerated() {
-            if index > 0, let groupingSeparator { number.append(groupingSeparator) }
-            number.append(contentsOf: group)
-        }
+        var number = regroup(groups.flatMap { $0 }, grouped: groups.count > 1)
         if parts.count == 2 {
             number.append(decimalSeparator)
             number.append(contentsOf: parts[1])
         }
         return number
+    }
+
+    /// Canonical digits in this format's own widths, so a lakh-and-crore region reads `20,00,000`.
+    private func regroup(_ digits: [Unicode.Scalar], grouped: Bool) -> [Unicode.Scalar] {
+        guard grouped, let groupingSeparator else { return digits }
+        var number: [Unicode.Scalar] = []
+        var index = 0
+        for (position, size) in groupSizes(digits.count).reversed().enumerated() {
+            if position > 0 { number.append(groupingSeparator) }
+            number.append(contentsOf: digits[index..<(index + size)])
+            index += size
+        }
+        return number
+    }
+
+    /// Group widths from the right: an eight-digit Indian number is 3 + 2 + 2 + 1.
+    private func groupSizes(_ count: Int) -> [Int] {
+        var sizes: [Int] = []
+        var remaining = count
+        var size = primaryGrouping
+        while remaining > size {
+            sizes.append(size)
+            remaining -= size
+            size = secondaryGrouping ?? primaryGrouping
+        }
+        sizes.append(remaining)
+        return sizes
     }
 
     // MARK: - Scanning

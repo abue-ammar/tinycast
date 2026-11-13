@@ -899,14 +899,19 @@ typed back reads as local time, and `CalcQuantity` clears it on a boolean.
 ## Number format
 
 General ▸ Calculator ▸ Number format is `System` by default, reading the decimal and grouping
-separators from Language & Region, or `English`, which is the canonical syntax itself. A decimal
-separator other than `.` or `,` (the Arabic `٫`) falls back to English, and so does any grouping
-separator outside `. , ' ’` and the no-break spaces — an ordinary space is never grouping, so
-`1hr 30` and `5 feet 3 inches` keep their meaning. `RegionNumberFormatMonitor` re-reads on
+separators, and the grouping widths, from Language & Region, or `English`, which is the canonical
+syntax itself. A decimal separator other than `.` or `,` (the Arabic `٫`) falls back to English, and
+so does any grouping separator outside `. , ' ’` and the no-break spaces — an ordinary space is
+never grouping, so `1hr 30` and `5 feet 3 inches` keep their meaning. India's widths come with them,
+so a lakh renders `1,00,000` rather than `100,000` — but only with `.` and `,`, the one pair whose
+input reads any grouping back. Any other pair keeps threes, so `2.000.000` still types back in.
+`RegionNumberFormatMonitor` re-reads on
 `NSLocale.currentLocaleDidChangeNotification`, so a change in System Settings applies without a relaunch.
 
 `CalcNumberFormat.canonical` scans each run of digits and the separators between them, and rewrites
-it to canonical spelling or rejects the whole query. Rejection means **no card**, never a guess:
+it to canonical spelling or rejects the whole query. Rejection means **no card**, never a guess. A
+region that writes `.` and `,` — India included — reads input exactly as `English` does, and only
+its answers are re-grouped, so nothing it already answers stops answering:
 
 - **A decimal comma owns every comma between two digits.** `2,3 + 1,5` is `3,8` and `max(2,3)` is
   `max(2.3)`. Function arguments and list items are separated by `;` instead — `max(2,5; 3)`,
@@ -931,8 +936,9 @@ it to canonical spelling or rejects the whole query. Rejection means **no card**
   space) is the canonical decimal, so `1.5 + 1` answers `2,5`.
 
 `CalcNumberFormat.localized` is the reverse, applied to canonical text: a run that is one valid
-canonical number takes the format's separators, and anything else — a dotted date, a version, a
-clock, a date formatter's `Friday, 24 July` — is left as written. Inside a function call every comma
+canonical number is re-grouped in the format's own widths and takes its separators — India reads the
+canonical `2,000,000` back as `20,00,000` — and anything else — a dotted date, a version, a clock, a
+date formatter's `Friday, 24 July` — is left as written. Inside a function call every comma
 is an argument, as `CalcTokenizer` reads it, so a stored `max(1,234)` shows `max(1;234)`, never
 `max(1.234)`. The echoed expression additionally turns its canonical argument commas into `;`. `English` makes both directions the identity, so the
 English path is byte-for-byte what it was.
