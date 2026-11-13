@@ -274,13 +274,13 @@ struct SnippetsTests {
 
         let channelRoot = root.appendingPathComponent("channels", isDirectory: true)
         let stable = SnippetRepository(
-            bundleIdentifier: "com.tinycast.app",
+            bundleIdentifier: "com.abueammar.tinycast",
             applicationSupportRoot: channelRoot)
         let beta = SnippetRepository(
-            bundleIdentifier: "com.tinycast.app.beta",
+            bundleIdentifier: "com.abueammar.tinycast.beta",
             applicationSupportRoot: channelRoot)
         let dev = SnippetRepository(
-            bundleIdentifier: "com.tinycast.app.dev",
+            bundleIdentifier: "com.abueammar.tinycast.dev",
             applicationSupportRoot: channelRoot)
 
         check(
@@ -301,7 +301,7 @@ struct SnippetsTests {
 
         let chosenFolder = root.appendingPathComponent("dotfiles/snippets", isDirectory: true)
         let chosen = SnippetRepository(
-            bundleIdentifier: "com.tinycast.app", applicationSupportRoot: channelRoot,
+            bundleIdentifier: "com.abueammar.tinycast", applicationSupportRoot: channelRoot,
             snippetsDirectory: chosenFolder)
         let signOff = try chosen.create(Snippet(name: "Sign-off", text: "Thanks"))
         let stableAfter = try stable.load()

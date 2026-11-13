@@ -16,6 +16,9 @@ enum ReleaseFeed {
     /// The only artifact with an x86_64 slice, so the only one an Intel Mac can install.
     private static let universalMarker = "-Universal-"
 
+    /// Carries the old bundle id for copies from before the move, which this copy would refuse.
+    private static let handoffMarker = "-Handoff"
+
     /// The newest release this channel accepts, ignoring drafts and anything without a usable zip.
     static func newest(
         from data: Data, channel: ReleaseChannel, architecture: ReleaseArchitecture
@@ -55,7 +58,7 @@ enum ReleaseFeed {
     private static func asset(
         from assets: [Entry.Asset], for architecture: ReleaseArchitecture
     ) -> Entry.Asset? {
-        let zips = assets.filter { $0.name.hasSuffix(".zip") }
+        let zips = assets.filter { $0.name.hasSuffix(".zip") && !$0.name.contains(handoffMarker) }
         let universal = zips.first { $0.name.contains(universalMarker) }
         switch architecture {
         case .intel: return universal

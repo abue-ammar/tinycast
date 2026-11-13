@@ -7,7 +7,7 @@ struct UninstallTests {
     static var passes = 0
 
     static let home = "/Users/tester"
-    static let ownBundleID = "com.tinycast.app"
+    static let ownBundleID = "com.abueammar.tinycast"
     static let ownBundleURL = URL(fileURLWithPath: "/Applications/Tinycast.app")
     static let recentDocuments =
         "Application Support/com.apple.sharedfilelist/"
@@ -305,7 +305,7 @@ struct UninstallTests {
     static func testIdentityRefusal() {
         let byID = UninstallTarget(
             bundleURL: URL(fileURLWithPath: "/Applications/Somewhere Else.app"),
-            bundleID: "com.tinycast.app", displayName: "Tinycast", bundleName: nil)
+            bundleID: "com.abueammar.tinycast", displayName: "Tinycast", bundleName: nil)
         expect(
             UninstallIdentity.make(
                 target: byID, otherAppNames: [], ownBundleID: ownBundleID,
@@ -314,10 +314,10 @@ struct UninstallTests {
 
         let dev = UninstallTarget(
             bundleURL: URL(fileURLWithPath: "/Applications/Tinycast Dev.app"),
-            bundleID: "com.tinycast.app.dev", displayName: "Tinycast Dev", bundleName: nil)
+            bundleID: "com.abueammar.tinycast.dev", displayName: "Tinycast Dev", bundleName: nil)
         expect(
             UninstallIdentity.make(
-                target: dev, otherAppNames: [], ownBundleID: "com.tinycast.app.dev",
+                target: dev, otherAppNames: [], ownBundleID: "com.abueammar.tinycast.dev",
                 ownBundleURL: URL(fileURLWithPath: "/Applications/Tinycast Dev.app")) == nil,
             "the Dev channel refuses itself too — the check is against the running identity")
         expect(

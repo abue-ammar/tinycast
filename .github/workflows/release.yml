@@ -33,6 +33,7 @@ jobs:
       full_version: ${{ steps.meta.outputs.full_version }}
       display_name: ${{ steps.meta.outputs.display_name }}
       bundle_id: ${{ steps.meta.outputs.bundle_id }}
+      legacy_bundle_id: ${{ steps.meta.outputs.legacy_bundle_id }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -62,17 +63,21 @@ jobs:
           BASE_VERSION="${{ github.event.inputs.version }}"
           # Each channel is a distinct side-by-side app with its own name, bundle id and cask.
           case "$CHANNEL" in
-            beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.tinycast.app.beta";  CASK="tinycast@beta";  PRERELEASE=true ;;
-            stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.tinycast.app";       CASK="tinycast";       PRERELEASE=false ;;
+            beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.abueammar.tinycast.beta";  CASK="tinycast@beta";  PRERELEASE=true ;;
+            stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.abueammar.tinycast";       CASK="tinycast";       PRERELEASE=false ;;
           esac
+          # Copies from before the bundle id move install only this id; see docs/migrations.md.
+          LEGACY="com.tinycast.app${BUNDLE#com.abueammar.tinycast}"
           FULL="${BASE_VERSION}${SUFFIX}"
           {
             echo "full_version=${FULL}"
             echo "display_name=${DISPLAY}"
             echo "bundle_id=${BUNDLE}"
+            echo "legacy_bundle_id=${LEGACY}"
             echo "cask_name=${CASK}"
             echo "dmg_file=Tinycast-${FULL}.dmg"
             echo "zip_file=Tinycast-${FULL}.zip"
+            echo "handoff_file=Tinycast-${FULL}-Handoff.zip"
             echo "prerelease=${PRERELEASE}"
           } >> "$GITHUB_OUTPUT"
 
@@ -141,6 +146,30 @@ jobs:
           ./Scripts/package-release.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
             "dist/${DMG_FILE}" "dist/${ZIP_FILE}"
 
+      # A copy from before the bundle id move installs only its own id, so it gets this wrapper.
+      - name: Build and notarize the handoff
+        env:
+          VERSION: ${{ steps.meta.outputs.full_version }}
+          DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
+          LEGACY_BUNDLE_ID: ${{ steps.meta.outputs.legacy_bundle_id }}
+          BUILD_NUMBER: ${{ github.run_number }}
+          HANDOFF_FILE: ${{ steps.meta.outputs.handoff_file }}
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          xcodebuild -project Tinycast.xcodeproj -target TinycastHandoff -configuration Release \
+            SYMROOT="$RUNNER_TEMP/Handoff" \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" DEVELOPMENT_TEAM=J656U8XZ93 \
+            OTHER_CODE_SIGN_FLAGS="--timestamp" \
+            PRODUCT_NAME="$DISPLAY_NAME" TINYCAST_LEGACY_BUNDLE_IDENTIFIER="$LEGACY_BUNDLE_ID" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            build
+          ./Scripts/package-handoff.sh "$RUNNER_TEMP/Handoff/Release/${DISPLAY_NAME}.app" \
+            "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" "dist/${HANDOFF_FILE}"
+
       - uses: actions/upload-artifact@v7
         with:
           name: Tinycast-${{ steps.meta.outputs.full_version }}
@@ -170,12 +199,16 @@ jobs:
           fi
           # --notes-file, never --generate-notes: gh would put the install text above the changelog.
           gh release create "$TAG" \
-            "dist/${{ steps.meta.outputs.dmg_file }}" \
-            "dist/${{ steps.meta.outputs.zip_file }}" \
-            "dist/${{ steps.meta.outputs.zip_file }}.sig" \
+            "dist/${{ steps.meta.outputs.handoff_file }}" \
+            "dist/${{ steps.meta.outputs.handoff_file }}.sig" \
             --title "${{ steps.meta.outputs.display_name }} ${{ steps.meta.outputs.full_version }}" \
             --notes-file "$RUNNER_TEMP/notes.md" \
             $PRERELEASE_FLAG
+          # After the handoff, in its own call: copies from before the move take the first zip listed.
+          gh release upload "$TAG" \
+            "dist/${{ steps.meta.outputs.dmg_file }}" \
+            "dist/${{ steps.meta.outputs.zip_file }}" \
+            "dist/${{ steps.meta.outputs.zip_file }}.sig"
 
       # A dispatch is the one event GITHUB_TOKEN may start another workflow with.
       - name: Rebuild the website
@@ -239,6 +272,7 @@ jobs:
       VERSION: ${{ needs.build.outputs.full_version }}
       DISPLAY_NAME: ${{ needs.build.outputs.display_name }}
       BUNDLE_ID: ${{ needs.build.outputs.bundle_id }}
+      LEGACY_BUNDLE_ID: ${{ needs.build.outputs.legacy_bundle_id }}
       CASK: tinycast-universal
     steps:
       - uses: actions/checkout@v7
@@ -313,6 +347,26 @@ jobs:
           ./Scripts/package-release.sh "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
             "dist/Tinycast-Universal-${VERSION}.dmg" "dist/Tinycast-Universal-${VERSION}.zip"
 
+      - name: Build and notarize the handoff
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+          NOTARY_KEY_P8_BASE64: ${{ secrets.NOTARY_KEY_P8_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+          UPDATE_SIGNING_KEY: ${{ secrets.UPDATE_SIGNING_KEY }}
+        run: |
+          xcodebuild -project Tinycast.xcodeproj -target TinycastHandoff -configuration Release \
+            SYMROOT="$RUNNER_TEMP/Handoff" \
+            ARCHS="arm64 x86_64" ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" DEVELOPMENT_TEAM=J656U8XZ93 \
+            OTHER_CODE_SIGN_FLAGS="--timestamp" \
+            PRODUCT_NAME="$DISPLAY_NAME" TINYCAST_LEGACY_BUNDLE_IDENTIFIER="$LEGACY_BUNDLE_ID" \
+            MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+            build
+          ./Scripts/package-handoff.sh "$RUNNER_TEMP/Handoff/Release/${DISPLAY_NAME}.app" \
+            "$RUNNER_TEMP/DerivedData/Build/Products/Release/${DISPLAY_NAME}.app" \
+            "dist/Tinycast-Universal-${VERSION}-Handoff.zip"
+
       - uses: actions/upload-artifact@v7
         with:
           name: Tinycast-Universal-${{ needs.build.outputs.full_version }}
@@ -323,6 +377,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          gh release upload "v${VERSION}" \
+            "dist/Tinycast-Universal-${VERSION}-Handoff.zip" \
+            "dist/Tinycast-Universal-${VERSION}-Handoff.zip.sig"
+          # After the handoff, in its own call: an old Intel copy takes the first universal zip.
           gh release upload "v${VERSION}" \
             "dist/Tinycast-Universal-${VERSION}.dmg" \
             "dist/Tinycast-Universal-${VERSION}.zip" \

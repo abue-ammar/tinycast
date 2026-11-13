@@ -110,7 +110,7 @@ Preview, Quick Actions, MCP servers, Dictation or text recognition.
 ## Where your data is stored
 
 Everything a backup includes is also a regular file. By default, it's in
-`~/Library/Application Support/com.tinycast.app/`:
+`~/Library/Application Support/com.abueammar.tinycast/`:
 
 | What                                          | Where                                             |
 | --------------------------------------------- | ------------------------------------------------- |

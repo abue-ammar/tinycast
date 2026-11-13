@@ -1,6 +1,6 @@
 name: Tinycast
 options:
-  bundleIdPrefix: com.tinycast
+  bundleIdPrefix: com.abueammar.tinycast
   deploymentTarget:
     macOS: "26.0"
   createIntermediateGroups: true
@@ -17,11 +17,13 @@ settings:
     # A stable self-signed identity keeps the Accessibility grant across rebuilds. docs/signing.md
     CODE_SIGN_IDENTITY: "Tinycast Self-Signed"
     SWIFT_STRICT_CONCURRENCY: complete
-    TINYCAST_BUNDLE_IDENTIFIER: com.tinycast.app
+    TINYCAST_BUNDLE_IDENTIFIER: com.abueammar.tinycast
+    TINYCAST_LEGACY_BUNDLE_IDENTIFIER: com.tinycast.app
     TINYCAST_URL_SCHEME: tinycast
   configs:
     Debug:
-      TINYCAST_BUNDLE_IDENTIFIER: com.tinycast.app.dev
+      TINYCAST_BUNDLE_IDENTIFIER: com.abueammar.tinycast.dev
+      TINYCAST_LEGACY_BUNDLE_IDENTIFIER: com.tinycast.app.dev
       # Its own scheme too, so a link never lands in whichever channel macOS happens to pick.
       TINYCAST_URL_SCHEME: tinycast-dev
       DICTATION_EXECUTABLE_NAME: Tinycast Dev Dictation
@@ -47,6 +49,7 @@ targets:
           - Features/Clipboard/Service/ClipboardTextHelper.swift
           - Features/Dictation/Helper
           - Features/FileSearch/Helper
+          - Migrations/Handoff
           - Resources/EmojiKeywords
       # A folder reference keeps the packs in their own directory, which `EmojiIndex` lists.
       - path: Tinycast/Resources/EmojiKeywords
@@ -155,3 +158,25 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: "$(TINYCAST_BUNDLE_IDENTIFIER).dictation"
         SKIP_INSTALL: YES
         SWIFT_OPTIMIZATION_LEVEL: -O
+
+  # Built only by the release workflow, which embeds the shipped app under Contents/Helpers.
+  TinycastHandoff:
+    type: application
+    platform: macOS
+    info:
+      path: Tinycast/Migrations/Handoff/Info.plist
+      properties:
+        CFBundleName: "$(PRODUCT_NAME)"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSMinimumSystemVersion: "$(MACOSX_DEPLOYMENT_TARGET)"
+        LSUIElement: true
+    sources:
+      - Tinycast/Migrations/Handoff
+      - Tinycast/tinycast.icon
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(TINYCAST_LEGACY_BUNDLE_IDENTIFIER)"
+        PRODUCT_MODULE_NAME: TinycastHandoff
+        ASSETCATALOG_COMPILER_APPICON_NAME: tinycast
+        SKIP_INSTALL: YES
