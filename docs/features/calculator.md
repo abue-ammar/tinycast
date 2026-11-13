@@ -135,7 +135,8 @@ parser, while the separator still chooses ISO, month-first or day-first interpre
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
 - **C** — a moment ± durations: `today + 3 weeks`, `now + 90 min`,
   `17.2.26 + 100 weekdays - 4 + 2`
-- **D** — difference between two moments: `jul 4 - today`; `today - 1.1.2026 + 3` adds 3 days
+- **D** — difference between two moments: `jul 4 - today`; `today - 1.1.2026 + 3` adds 3 days;
+  in brackets it becomes a span for the arithmetic around it: `(today - 1.1.2026) / 2`
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
 - **G** — a named moment: `today`, `now`, `time`, `tomorrow at 9am`, `next monday`, `last friday`

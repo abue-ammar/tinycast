@@ -103,6 +103,13 @@ enum CalcEngine {
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) {
             return unchained(sightingNoted(dateTime, query: query))
         }
+        if query.utf8.contains(0x28), let spans = datesInBrackets(query, now: now, calendar: calendar),
+            let answer = evaluate(spans, now: now, calendar: calendar, rates: rates, region: region)
+        {
+            return CalcResult(
+                expression: CalcFormatter.expression(query), sourceBadge: answer.sourceBadge,
+                targetBadge: answer.targetBadge, payload: answer.payload, canChain: answer.canChain)
+        }
 
         // Before tokenizing: `5pm ldn in sf` is words, which the tokenizer would reject.
         let mayNameZone = query.utf8.contains { (97...122).contains($0 | 0x20) || $0 >= 128 || $0 == 58 }
@@ -234,6 +241,31 @@ enum CalcEngine {
         let parts = query[range].split(separator: ":")
         guard let minutes = Double(parts[0]), let seconds = Double(parts[1]) else { return query }
         return query.replacingCharacters(in: range, with: CalcFormatter.copyText(minutes + seconds / 60))
+    }
+
+    private static func datesInBrackets(_ query: String, now: Date, calendar: Calendar) -> String? {
+        var text = query
+        var from = text.startIndex
+        var changed = false
+        while let close = text[from...].firstIndex(of: ")") {
+            guard let open = text[..<close].lastIndex(of: "("),
+                let result = CalcDateTime.evaluate(
+                    String(text[text.index(after: open)..<close]), now: now, calendar: calendar),
+                case .value(_, let copy) = result.payload,
+                let unit = copy.split(separator: " ").last,
+                ["day", "days", "wk", "hr", "min", "s"].contains(unit)
+            else {
+                from = text.index(after: close)
+                continue
+            }
+            var span = copy.replacingOccurrences(of: ",", with: "")
+            if span.hasPrefix("-") { span = "-(\(span.dropFirst()))" }
+            let offset = text.distance(from: text.startIndex, to: open) + span.count + 2
+            text.replaceSubrange(open...close, with: "(\(span))")
+            from = text.index(text.startIndex, offsetBy: offset)
+            changed = true
+        }
+        return changed ? text : nil
     }
 
     private static func withoutQuestionMark(_ text: String) -> String {

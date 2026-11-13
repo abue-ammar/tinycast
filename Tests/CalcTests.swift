@@ -782,6 +782,8 @@ struct CalcTests {
         expectDisplayAt("today - 9/4", "-42 days")
         expectDisplayAt("today - 1.1.2026 + 3", "207 days")
         expectDisplayAt("today - 1.1.2026 + 1 week - 1", "210 days")
+        expectDisplayAt("(today - 1.1.2026 + 3) / 2", "103.5 day")
+        expectDisplayAt("(15:00 - 9:30) / 2", "2.75 hr")
         expectDisplayAt("week 44 2026", "Sun, 25 Oct – Sat, 31 Oct, 2026")
         expectDisplayAt("week 1", "Sun, 28 Dec – Sat, 3 Jan, 2026")
         expectNilAt("week 54 2026")
