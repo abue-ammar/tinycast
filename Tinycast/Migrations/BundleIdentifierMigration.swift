@@ -21,6 +21,54 @@ enum BundleIdentifierMigration {
         }
     }
 
+    /// A path through an old folder however it is spelled: absolute, `~/`, `$HOME`, escaped or a URL.
+    struct PathRewrite {
+        let legacy: String
+        private let expression: NSRegularExpression?
+        private let template: String
+
+        init(legacy: String, current: String) {
+            self.legacy = legacy
+            // A whole path component, since `com.tinycast.app` also starts `com.tinycast.app.beta`.
+            expression = try? NSRegularExpression(
+                pattern: "(?<=/|%2[Ff])" + NSRegularExpression.escapedPattern(for: legacy)
+                    + #"(\.dictation)?(?![A-Za-z0-9._-])"#)
+            template = NSRegularExpression.escapedTemplate(for: current) + "$1"
+        }
+
+        func rewriting(_ text: String) -> String {
+            guard let expression, text.contains(legacy) else { return text }
+            return expression.stringByReplacingMatches(
+                in: text, range: NSRange(text.startIndex..., in: text), withTemplate: template)
+        }
+
+        /// Strings, dictionary keys, and JSON-encoded data such as a custom command's settings.
+        func rewriting(value: Any) -> Any {
+            switch value {
+            case let text as String:
+                rewriting(text)
+            case let data as Data:
+                rewriting(json: data)
+            case let list as [Any]:
+                list.map { rewriting(value: $0) }
+            case let table as [String: Any]:
+                Dictionary(
+                    table.map { (rewriting($0.key), rewriting(value: $0.value)) },
+                    uniquingKeysWith: { _, last in last })
+            default:
+                value
+            }
+        }
+
+        /// JSON only: a binary property list would break when a path inside it changes length.
+        private func rewriting(json data: Data) -> Data {
+            guard let text = String(bytes: data, encoding: .utf8), text.contains(legacy),
+                (try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed)) != nil
+            else { return data }
+            return Data(rewriting(text).utf8)
+        }
+    }
+
     private static let currentPrefix = "com.abueammar.tinycast"
     private static let legacyPrefix = "com.tinycast.app"
     private static let backupLifetime: TimeInterval = 30 * 24 * 60 * 60
@@ -30,9 +78,10 @@ enum BundleIdentifierMigration {
         guard let bundleID = Bundle.main.bundleIdentifier, let legacy = legacyIdentifier(of: bundleID)
         else { return }
         let library = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
-        if migrate(from: legacy, to: bundleID, library: library, preferences: .standard, now: Date()) {
-            LaunchAtLogin.set(true)
-        }
+        let launchesAtLogin = migrate(
+            from: legacy, to: bundleID, library: library,
+            settingsFile: AppPaths.settingsFile(bundleID: bundleID), preferences: .standard, now: Date())
+        if launchesAtLogin { LaunchAtLogin.set(true) }
     }
 
     static func legacyIdentifier(of bundleID: String) -> String? {
@@ -43,32 +92,60 @@ enum BundleIdentifierMigration {
     /// Moves, never overwrites, backs up what it edits; answers whether the old id opened at login.
     @discardableResult
     static func migrate(
-        from legacy: String, to current: String, library: URL, preferences: Preferences, now: Date
+        from legacy: String, to current: String, library: URL, settingsFile: URL?,
+        preferences: Preferences, now: Date
     ) -> Bool {
+        let files = FileManager.default
         let support = library.appending(path: "Application Support", directoryHint: .isDirectory)
         let caches = library.appending(path: "Caches", directoryHint: .isDirectory)
         let legacyHome = support.appending(path: legacy, directoryHint: .isDirectory)
         let home = support.appending(path: current, directoryHint: .isDirectory)
         let backup = home.appending(path: "Migration Backup", directoryHint: .isDirectory)
+        let repointed = backup.appending(path: "paths-repointed")
         let legacyCaches = caches.appending(path: legacy, directoryHint: .isDirectory)
         let legacyHelperCaches = caches.appending(path: legacy + ".dictation", directoryHint: .isDirectory)
 
         expireBackup(backup, now: now)
         // Preferences move last, so a run cut short leaves them behind and the next launch resumes.
-        guard
-            [legacyHome, legacyCaches, legacyHelperCaches].contains(where: {
-                FileManager.default.fileExists(atPath: $0.path)
-            }) || preferences.read(legacy)?.isEmpty == false
-        else { return false }
+        let pending =
+            [legacyHome, legacyCaches, legacyHelperCaches].contains { files.fileExists(atPath: $0.path) }
+            || preferences.read(legacy)?.isEmpty == false
+        // 0.12.14-beta.141 moved everything but repointed only absolute paths outside data blobs.
+        let movedWithoutRepointing =
+            files.fileExists(atPath: backup.path) && !files.fileExists(atPath: repointed.path)
+        guard pending || movedWithoutRepointing else { return false }
 
         merge(legacyHome, into: home)
         merge(legacyCaches, into: caches.appending(path: current))
         merge(legacyHelperCaches, into: caches.appending(path: current + ".dictation"))
-        let paths = (old: legacyHome.path + "/", new: home.path + "/")
-        repointClipboardImages(in: home, from: paths.old, to: paths.new, backup: backup)
-        repointJSONFiles(in: home, from: paths.old, to: paths.new, backup: backup)
-        return movePreferences(
-            from: legacy, to: current, repointing: paths, preferences: preferences, backup: backup)
+
+        let rewrite = PathRewrite(legacy: legacy, current: current)
+        let clipboard = home.appending(path: "clipboard.sqlite3")
+        repointRows(in: clipboard, table: "items", columns: ["image_path"], rewrite: rewrite, backup: backup)
+        repointRows(
+            in: clipboard, table: "items", columns: ["text"], where: "kind = 'file'", rewrite: rewrite,
+            backup: backup)
+        repointRows(
+            in: home.appending(path: "quicklinks.sqlite3"), table: "quicklinks",
+            columns: ["link", "open_with", "icon"], rewrite: rewrite, backup: backup)
+        let contents = files.enumerator(atPath: home.path)
+        while let name = contents?.nextObject() as? String {
+            if name == backup.lastPathComponent { contents?.skipDescendants() }
+            guard name.hasSuffix(".json") else { continue }
+            repoint(home.appending(path: name), keptAs: name, rewrite: rewrite, backup: backup)
+        }
+        if let settingsFile {
+            repoint(
+                settingsFile.resolvingSymlinksInPath(), keptAs: "settings.json", rewrite: rewrite,
+                backup: backup)
+        }
+
+        let launchesAtLogin = movePreferences(
+            from: legacy, to: current, preferences: preferences, backup: backup)
+        repointPreferences(of: current, rewrite: rewrite, preferences: preferences, backup: backup)
+        try? files.createDirectory(at: backup, withIntermediateDirectories: true)
+        _ = files.createFile(atPath: repointed.path, contents: nil)
+        return launchesAtLogin
     }
 
     // MARK: - Files
@@ -106,76 +183,47 @@ enum BundleIdentifierMigration {
         try? FileManager.default.removeItem(at: backup)
     }
 
-    /// A snippet's launcher id is its file's path, so its ranking names the old folder too.
-    private static func repointJSONFiles(in home: URL, from old: String, to new: String, backup: URL) {
-        let escaped = old.replacingOccurrences(of: "/", with: "\\/")
-        let files =
-            (try? FileManager.default.contentsOfDirectory(at: home, includingPropertiesForKeys: nil)) ?? []
-        for file in files where file.pathExtension == "json" {
-            guard let data = try? Data(contentsOf: file),
-                let text = String(data: data, encoding: .utf8),
-                text.contains(old) || text.contains(escaped),
-                let json = try? JSONSerialization.jsonObject(with: data, options: .fragmentsAllowed),
-                let repointed = try? JSONSerialization.data(
-                    withJSONObject: repointing(json, from: old, to: new), options: .fragmentsAllowed)
-            else { continue }
-            let copy = backup.appending(path: file.lastPathComponent)
-            do {
-                if !FileManager.default.fileExists(atPath: copy.path) {
-                    try FileManager.default.createDirectory(at: backup, withIntermediateDirectories: true)
-                    try data.write(to: copy)
-                }
-                try repointed.write(to: file, options: .atomic)
-            } catch {
-                let reason = error.localizedDescription
-                let name = file.lastPathComponent
-                logger.error("Repointing \(name, privacy: .public) failed: \(reason, privacy: .public)")
-            }
-        }
+    /// The first copy only: a later run must never replace what the file held before the move.
+    private static func keep(_ data: Data, as name: String, in backup: URL) throws {
+        let copy = backup.appending(path: name)
+        guard !FileManager.default.fileExists(atPath: copy.path) else { return }
+        try FileManager.default.createDirectory(
+            at: copy.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: copy)
     }
 
-    /// Every string, and every dictionary key, with the old folder's path swapped for the new one.
-    private static func repointing(_ value: Any, from old: String, to new: String) -> Any {
-        switch value {
-        case let text as String:
-            text.replacingOccurrences(of: old, with: new)
-        case let list as [Any]:
-            list.map { repointing($0, from: old, to: new) }
-        case let table as [String: Any]:
-            Dictionary(
-                table.map {
-                    (
-                        $0.key.replacingOccurrences(of: old, with: new),
-                        repointing($0.value, from: old, to: new)
-                    )
-                },
-                uniquingKeysWith: { _, last in last })
-        default:
-            value
+    /// Text replaced as text, so a JSON file keeps its formatting and a symlinked one its link.
+    private static func repoint(_ file: URL, keptAs name: String, rewrite: PathRewrite, backup: URL) {
+        guard let data = try? Data(contentsOf: file), let text = String(bytes: data, encoding: .utf8) else {
+            return
+        }
+        let repointed = rewrite.rewriting(text)
+        guard repointed != text else { return }
+        let attributes = try? FileManager.default.attributesOfItem(atPath: file.path)
+        do {
+            try keep(data, as: name, in: backup)
+            try Data(repointed.utf8).write(to: file, options: .atomic)
+            if let permissions = attributes?[.posixPermissions] {
+                try FileManager.default.setAttributes(
+                    [.posixPermissions: permissions], ofItemAtPath: file.path)
+            }
+        } catch {
+            let reason = error.localizedDescription
+            logger.error("Repointing \(name, privacy: .public) failed: \(reason, privacy: .public)")
         }
     }
 
     // MARK: - Preferences
 
-    /// A snippet's hotkey, alias, favorite and visibility are keyed by its file's path.
     private static func movePreferences(
-        from legacy: String, to current: String, repointing paths: (old: String, new: String),
-        preferences: Preferences, backup: URL
+        from legacy: String, to current: String, preferences: Preferences, backup: URL
     ) -> Bool {
-        guard let stored = preferences.read(legacy), !stored.isEmpty,
-            var old = repointing(stored, from: paths.old, to: paths.new) as? [String: Any]
-        else { return false }
-        let copy = backup.appending(path: legacy + ".plist")
-        if !FileManager.default.fileExists(atPath: copy.path) {
-            do {
-                try FileManager.default.createDirectory(at: backup, withIntermediateDirectories: true)
-                try PropertyListSerialization.data(fromPropertyList: stored, format: .binary, options: 0)
-                    .write(to: copy)
-            } catch {
-                logger.error(
-                    "Backing up the preferences failed: \(error.localizedDescription, privacy: .public)")
-                return false
-            }
+        guard var old = preferences.read(legacy), !old.isEmpty else { return false }
+        do {
+            try keep(plist(old), as: legacy + ".plist", in: backup)
+        } catch {
+            logger.error("Backing up the preferences failed: \(error.localizedDescription, privacy: .public)")
+            return false
         }
         let launchesAtLogin = old.removeValue(forKey: launchAtLoginKey) as? Bool ?? false
         let kept = preferences.read(current) ?? [:]
@@ -184,40 +232,89 @@ enum BundleIdentifierMigration {
         return launchesAtLogin
     }
 
-    // MARK: - Clipboard
+    /// A snippet's hotkey, alias and favorite are keyed by its path; a custom command stores its folder.
+    private static func repointPreferences(
+        of current: String, rewrite: PathRewrite, preferences: Preferences, backup: URL
+    ) {
+        guard let stored = preferences.read(current),
+            let repointed = rewrite.rewriting(value: stored) as? [String: Any],
+            !NSDictionary(dictionary: stored).isEqual(to: repointed)
+        else { return }
+        do {
+            try keep(plist(stored), as: current + ".plist", in: backup)
+        } catch {
+            logger.error("Backing up the preferences failed: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+        preferences.write(repointed, current)
+    }
 
-    /// Each image row holds an absolute path, and that path still names the old folder.
-    private static func repointClipboardImages(in home: URL, from old: String, to new: String, backup: URL) {
-        let database = home.appending(path: "clipboard.sqlite3")
+    private static func plist(_ domain: [String: Any]) throws -> Data {
+        try PropertyListSerialization.data(fromPropertyList: domain, format: .binary, options: 0)
+    }
+
+    // MARK: - Databases
+
+    /// Rows naming the old id get `columns` rewritten, after one copy of the whole database.
+    private static func repointRows(
+        in database: URL, table: String, columns: [String], where condition: String = "1",
+        rewrite: PathRewrite, backup: URL
+    ) {
         guard FileManager.default.fileExists(atPath: database.path) else { return }
         var db: OpaquePointer?
         defer { sqlite3_close(db) }
         guard sqlite3_open_v2(database.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else { return }
-        let matching = "FROM items WHERE substr(image_path, 1, length(?1)) = ?1"
-        guard (integer(db, "SELECT COUNT(*) \(matching)", old) ?? 0) > 0 else { return }
 
-        let copy = backup.appending(path: "clipboard.sqlite3")
-        if !FileManager.default.fileExists(atPath: copy.path) {
-            try? FileManager.default.createDirectory(at: backup, withIntermediateDirectories: true)
-            guard execute(db, "VACUUM INTO ?1", copy.path) else {
-                logger.error("Backing up the clipboard history failed; its image paths are left as they are")
-                return
+        let naming = columns.map { "\($0) LIKE ?1" }.joined(separator: " OR ")
+        let select =
+            "SELECT rowid, \(columns.joined(separator: ", ")) FROM \(table) WHERE (\(condition)) AND (\(naming))"
+        guard let query = prepare(db, select, ["%\(rewrite.legacy)%"]) else { return }
+        var changes: [(row: Int64, values: [String?])] = []
+        while sqlite3_step(query) == SQLITE_ROW {
+            let values = columns.indices.map { index in
+                sqlite3_column_text(query, Int32(index + 1)).map { String(cString: $0) }
             }
+            let repointed = values.map { $0.map(rewrite.rewriting) }
+            if repointed != values { changes.append((sqlite3_column_int64(query, 0), repointed)) }
         }
-        let update = """
-            UPDATE items SET image_path = ?2 || substr(image_path, length(?1) + 1) \
-            WHERE substr(image_path, 1, length(?1)) = ?1
-            """
-        if !execute(db, update, old, new) {
-            logger.error("Repointing the clipboard images failed")
+        sqlite3_finalize(query)
+        guard !changes.isEmpty, keepDatabase(db, as: database.lastPathComponent, in: backup) else { return }
+
+        let assignments = columns.enumerated().map { "\($1) = ?\($0 + 1)" }.joined(separator: ", ")
+        guard execute(db, "BEGIN IMMEDIATE"),
+            let update = prepare(
+                db, "UPDATE \(table) SET \(assignments) WHERE rowid = ?\(columns.count + 1)", [])
+        else { return }
+        let transient = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+        var succeeded = true
+        for change in changes where succeeded {
+            sqlite3_reset(update)
+            for (index, value) in change.values.enumerated() {
+                if let value {
+                    sqlite3_bind_text(update, Int32(index + 1), value, -1, transient)
+                } else {
+                    sqlite3_bind_null(update, Int32(index + 1))
+                }
+            }
+            sqlite3_bind_int64(update, Int32(columns.count + 1), change.row)
+            succeeded = sqlite3_step(update) == SQLITE_DONE
+        }
+        sqlite3_finalize(update)
+        guard execute(db, succeeded ? "COMMIT" : "ROLLBACK"), succeeded else {
+            logger.error("Repointing \(table, privacy: .public) failed")
+            return
         }
     }
 
-    private static func integer(_ db: OpaquePointer?, _ sql: String, _ values: String...) -> Int? {
-        guard let statement = prepare(db, sql, values) else { return nil }
-        defer { sqlite3_finalize(statement) }
-        guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
-        return Int(sqlite3_column_int64(statement, 0))
+    private static func keepDatabase(_ db: OpaquePointer?, as name: String, in backup: URL) -> Bool {
+        let copy = backup.appending(path: name)
+        if FileManager.default.fileExists(atPath: copy.path) { return true }
+        try? FileManager.default.createDirectory(at: backup, withIntermediateDirectories: true)
+        guard execute(db, "VACUUM INTO ?1", copy.path) else {
+            logger.error("Backing up \(name, privacy: .public) failed; its rows are left as they are")
+            return false
+        }
+        return true
     }
 
     private static func execute(_ db: OpaquePointer?, _ sql: String, _ values: String...) -> Bool {

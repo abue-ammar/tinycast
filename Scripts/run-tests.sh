@@ -788,6 +788,7 @@ run UpdatesTests           Tinycast/Features/Updates/Model/*.swift \
                            Tinycast/Features/Updates/Service/BundleSignature.swift \
                            Tinycast/Features/Updates/Service/UpdateSignature.swift
 run BundleIdentifierMigrationTests Tinycast/Migrations/BundleIdentifierMigration.swift \
+                           Tinycast/Platform/AppPaths.swift \
                            Tinycast/Platform/LaunchAtLogin.swift
 run UpdateCheckTests       Tinycast/Features/Updates/Model/*.swift \
                            Tinycast/Features/Updates/Service/UpdateCheckStore.swift \

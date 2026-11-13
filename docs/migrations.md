@@ -36,7 +36,7 @@ When the check fails, delete everything the row lists, then the row. Then run `x
 
 | Migration | Repairs | Delete with it |
 | --- | --- | --- |
-| `BundleIdentifierMigration` | Moves `com.tinycast.app[.beta\|.dev]`'s preferences, Application Support and Caches folders, clipboard image paths, the snippet paths its preferences and JSON files key records by, and login item to `com.abueammar.tinycast[.beta\|.dev]`. Keychain secrets stay behind: moving them asks once per item, so users enter them again. Kept until **2027-05-13** | Everything in [Removing the bundle id move](#removing-the-bundle-id-move) |
+| `BundleIdentifierMigration` | Moves `com.tinycast.app[.beta\|.dev]`'s preferences, Application Support and Caches folders and login item to `com.abueammar.tinycast[.beta\|.dev]`, and repoints every saved path into the old folders: in preferences (JSON-encoded ones too), JSON files, clipboard and quicklink rows, and `settings.json`. A `paths-repointed` marker in its backup makes it repair, once, a copy 0.12.14-beta.141 moved without repointing. Keychain secrets stay behind: moving them asks once per item, so users enter them again. Kept until **2027-05-13** | Everything in [Removing the bundle id move](#removing-the-bundle-id-move) |
 
 ### Removing the bundle id move
 
