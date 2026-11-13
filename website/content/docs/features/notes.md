@@ -46,7 +46,7 @@ writing.
 By default, notes are stored in Tinycast's Application Support folder:
 
 ```
-~/Library/Application Support/com.tinycast.app/Notes/
+~/Library/Application Support/com.abueammar.tinycast/Notes/
 ```
 
 To keep notes in another folder, click **Choose…** next to **Notes Folder** in **Settings → Notes**.

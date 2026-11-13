@@ -874,7 +874,7 @@ node test.mjs ~/.config/raycast/extensions/<uuid> [command]
 
 # 3. the real Swift engine, against JavaScriptCore
 Scripts/run-tests.sh ExtensionTests
-"${TMPDIR:-/tmp}"/tinycast-harness/ExtensionTests ~/Library/Application\ Support/com.tinycast.app.dev/extensions/<name> [command]
+"${TMPDIR:-/tmp}"/tinycast-harness/ExtensionTests ~/Library/Application\ Support/com.abueammar.tinycast.dev/extensions/<name> [command]
 ```
 
 `ExtensionTests` compiles the real engine sources — there is no copy to keep in sync. `EXT_TEST_VERBOSE=1`
@@ -889,7 +889,7 @@ status items stay hidden so a test run cannot interfere with the running app's m
 
 ```sh
 EXT_TEST_MENU_BAR=1 "${TMPDIR:-/tmp}/tinycast-harness/ExtensionTests" \
-  "$HOME/Library/Application Support/com.tinycast.app.dev/extensions/opencodex-usage" usage-menu-bar
+  "$HOME/Library/Application Support/com.abueammar.tinycast.dev/extensions/opencodex-usage" usage-menu-bar
 ```
 
 ### Debugging a failing extension

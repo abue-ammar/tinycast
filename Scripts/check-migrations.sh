@@ -20,6 +20,15 @@ for file in "${files[@]}"; do
         echo "✗ $name has no row in docs/migrations.md" >&2
         status=1
     fi
+    # A dated row is one a later release still depends on: it lives until that day instead.
+    until=$(grep "\`$name\`" docs/migrations.md | grep -Eo '[0-9]{4}-[0-9]{2}-[0-9]{2}' | head -n1)
+    if [ -n "$until" ]; then
+        if [[ "$(date +%F)" > "$until" ]]; then
+            echo "✗ $name was kept until $until: delete what its row in docs/migrations.md lists" >&2
+            status=1
+        fi
+        continue
+    fi
     added=$(git log --no-renames --diff-filter=A --format=%H -1 -- "$file")
     [ -n "$added" ] || continue
     shipped=$(git tag --contains "$added" --sort=v:refname | grep -Em1 '^v[0-9]+\.[0-9]+\.[0-9]+$')

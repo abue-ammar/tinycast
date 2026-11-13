@@ -30,7 +30,7 @@ uninstall` and `brew list` keep working unchanged.
   checked — it resolves the ticket through `syspolicyd` or the network, so an offline Mac would
   refuse a bundle the signature already proves is ours.
 - **A build only ever updates within its own channel.** The channels are separate bundle ids installed
-  side by side; crossing would mean installing a different app. `com.tinycast.app.dev` never updates
+  side by side; crossing would mean installing a different app. `com.abueammar.tinycast.dev` never updates
   at all, and does not advertise the command.
 - **Nothing is installed unless every check passes.** Bundle id, version and signature are all checked
   on the expanded copy, and the running app survives any failure untouched.
@@ -80,11 +80,17 @@ the header row. It cannot reuse `ExtensionToastPill`, because extension views st
 
 `ReleaseChannel` is derived from the bundle id, and nothing else:
 
-| Bundle id               | Channel        | Takes       |
-| ----------------------- | -------------- | ----------- |
-| `com.tinycast.app`      | `.stable`      | releases    |
-| `com.tinycast.app.beta` | `.beta`        | prereleases |
-| anything else           | `.development` | nothing     |
+| Bundle id                     | Channel        | Takes       |
+| ----------------------------- | -------------- | ----------- |
+| `com.abueammar.tinycast`      | `.stable`      | releases    |
+| `com.abueammar.tinycast.beta` | `.beta`        | prereleases |
+| anything else                 | `.development` | nothing     |
+
+Until 2027-05-13 each release also carries a `-Handoff` zip, listed before its own, for copies from
+before the bundle id moved from `com.tinycast.app`. Those copies refuse any other bundle id and take
+the first zip, so the handoff wears their id and carries this app inside; `ReleaseFeed` never offers it
+to a copy that has moved. See [migrations.md](../migrations.md) and
+[release.md](../release.md#the-bundle-id-handoff).
 
 `AppVersion` parses `MAJOR.MINOR.PATCH` and `MAJOR.MINOR.PATCH-beta.N` with semver precedence: a
 prerelease sorts below the release it leads to, and `beta.10` above `beta.9`. Everything else parses

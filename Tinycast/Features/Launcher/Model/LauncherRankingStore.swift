@@ -156,7 +156,7 @@ final class LauncherRankingStore {
 
     /// Application Support, not Caches: relearning a ranking takes the user weeks of use.
     private static func defaultFileURL() -> URL {
-        let bundleID = Bundle.main.bundleIdentifier ?? "com.tinycast.app"
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.abueammar.tinycast"
         let base = FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(bundleID, isDirectory: true)

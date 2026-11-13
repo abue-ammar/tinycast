@@ -11,7 +11,7 @@ TAG="${TAG:?TAG is required, e.g. v0.9.13-beta.61}"
 SHA="${SHA:-$(git rev-parse HEAD)}"
 VERSION="${VERSION:-${TAG#v}}"
 DISPLAY_NAME="${DISPLAY_NAME:-Tinycast}"
-BUNDLE_ID="${BUNDLE_ID:-com.tinycast.app}"
+BUNDLE_ID="${BUNDLE_ID:-com.abueammar.tinycast}"
 CASK="${CASK:-tinycast}"
 
 # Everything below this line is for the download page; the update window cuts here.

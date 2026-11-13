@@ -7,7 +7,7 @@ if (( $# < 1 || $# > 4 )); then
     exit 2
 fi
 helper=${2:-"$repo/build/DerivedData/Build/Products/Debug/Tinycast Dev.app/Contents/Helpers/Tinycast Dev Dictation.app"}
-models=${3:-"$HOME/Library/Caches/com.tinycast.app.dev/Dictation"}
+models=${3:-"$HOME/Library/Caches/com.abueammar.tinycast.dev/Dictation"}
 binary=$(mktemp /tmp/tinycast-dictation-benchmark.XXXXXX)
 trap 'rm -f "$binary"' EXIT
 swiftc -O -swift-version 6 -target "$(uname -m)-apple-macos26.0" \
