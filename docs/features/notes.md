@@ -259,7 +259,7 @@ AppKit still owns typing, selection, Cut, Copy, Paste, Select All, Find, marked 
 characters and undo grouping. The editor handles ⌘Z and ⇧⌘Z while focused, including in the
 non-activating panel and with rendering off. Its native undo manager holds one linear history in
 memory; editing after undo discards redo. The coordinator observes undo and redo completion with
-main-actor notifications, so both reach autosave, rendering, formatting and the character count.
+main-actor notifications, so both reach autosave, rendering, formatting and the counts.
 Copy yields raw Markdown and VoiceOver reads the source. Changing the note
 identity or editor epoch reinstalls and restyles the string and clears the previous document's undo
 history. Snippets expand through `insertText` and are styled like typed text. The empty-note placeholder
@@ -268,19 +268,19 @@ is drawn in the text view, so opening the find bar moves it with the editor cont
 ### The formatting bar
 
 While Render Markdown and Show Formatting Bar are both on, the band under the editor holds the
-character count at its leading edge and the formatting bar at its trailing edge. The bar is
+word and character counts at its leading edge and the formatting bar at its trailing edge. The bar is
 `NoteFormattingBar`, a frosted capsule in the title bar's recipe. It starts collapsed to one round
 `paintbrush` button; ⌥⌘T or a click expands it, and the buttons slide out from behind that button:
 a heading menu, Bold, Italic, Strikethrough, Inline Code and Link, then Code Block and Quote, then
 Numbered, Bullet and Task List. Hovering a button shows its name and shortcut. Each button is a
-28-point square, so the whole row fits the smallest window. The count hides when the row leaves it no
+28-point square, so the whole row fits the smallest window. The counts hide when the row leaves them no
 lane, and the band never widens the note.
 
 Expanded or collapsed is window state, not a preference: `AppCore` reads and writes it under
 `notesFormattingBarExpanded` in `UserDefaults` and hands it to `NotesCoordinator`, the way it hands
 the store the active note's filename. It is deliberately not an `AppSettings` key, so no settings
-backup carries it. With Show Formatting Bar off there is no round button at all and the count returns
-to its own footer.
+backup carries it. With Show Formatting Bar off there is no round button at all and the counts return
+to their own footer.
 
 `NoteEditorView` reports `NoteMarkdownEditing.formatting(source:selection:markdown:)` on every
 install, edit and selection change, and `NotesCoordinator` publishes it only when it changed. That
@@ -306,9 +306,12 @@ carried by settings backups. It only takes effect while Render Markdown is on, a
 otherwise.
 
 An empty note shows a `Start writing…` placeholder aligned to the 16-point text container inset. The
-character count comes straight off `NSTextStorage.length` and sits in a footer under the editor, or at
-the leading end of the formatting bar's band while the bar shows. Both belong to the editor surface,
-so neither appears when no note is active.
+character count comes straight off `NSTextStorage.length`. The word count is `NoteWordCount`: ICU word
+boundaries over the source, so Markdown markers and punctuation are not words and text without spaces
+still splits into words. It costs a pass over the whole note, so `NotesCoordinator` runs it off-main
+after every report and applies only the result for the current editor input. Both counts sit in a
+footer under the editor, or at the leading end of the formatting bar's band while the bar shows. Both
+belong to the editor surface, so neither appears when no note is active.
 
 ## Autosave
 
@@ -331,8 +334,8 @@ file was removed, loading chooses a remaining note, or the empty state when none
 `Tests/NotesTests.swift` compiles the shipped Notes model and service sources with the real fuzzy
 matcher. It covers repository safety, unique-name claiming, derived titles, search, selection,
 autosave, external reloads, draft preservation, empty collections, switcher interaction, and
-cancellation, plus the Markdown parser, every edit plan, the formatting each selection reports and the
-reveal policy.
+cancellation, plus the Markdown parser, every edit plan, the formatting each selection reports, the
+reveal policy and the word count.
 
 `Tests/NotesEditorTests.swift` uses real TextKit 2 and AppKit undo objects. It runs the native
 Cut/Copy/Paste, the native find bar, Unicode and marked-text cases with rendering off and on, and covers
