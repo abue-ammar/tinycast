@@ -16,6 +16,7 @@ struct PasteboardTests {
         multipleFilesReadNewestLast()
         linksAndTextAreNotFiles()
         volatileAndMissingFilesFallThrough()
+        aContainerCopyBesidePixelsFallsThrough()
         theBatchIsCapped()
         rejectedFilesDoNotCountTowardTheCap()
         theBoundedReaderStopsAtItsLimit()
@@ -133,6 +134,67 @@ struct PasteboardTests {
         let gone = board()
         gone.writeObjects([URL(fileURLWithPath: "/nowhere/\(UUID().uuidString).txt") as NSURL])
         expect(ClipboardManager.fileURLs(on: gone) == nil, "and neither is one that is not there")
+    }
+
+    static func aContainerCopyBesidePixelsFallsThrough() {
+        withScratch { dir in
+            let containers = dir.appendingPathComponent("Containers", isDirectory: true)
+            let staged = containers.appendingPathComponent("com.example.chat/temp/photo.jpg")
+            let elsewhere = dir.appendingPathComponent("photo.jpg")
+            do {
+                try FileManager.default.createDirectory(
+                    at: staged.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try Data("jpg".utf8).write(to: staged)
+                try Data("jpg".utf8).write(to: elsewhere)
+            } catch {
+                fail("cannot create container fixtures: \(error)")
+                return
+            }
+            var root = containers.resolvingSymlinksInPath().path
+            if root.hasPrefix("/private/") { root.removeFirst("/private".count) }
+
+            @MainActor func capture(_ file: URL, pixels: Bool, from bundleID: String?) -> [String]? {
+                let item = NSPasteboardItem()
+                item.setData(file.dataRepresentation, forType: .fileURL)
+                if pixels { item.setData(Data("tiff".utf8), forType: .tiff) }
+                let pb = board()
+                defer { pb.releaseGlobally() }
+                pb.writeObjects([item])
+                let roots = ClipboardManager.volatileRoots(
+                    on: pb, copiedFrom: bundleID, containers: root + "/", roots: [])
+                return ClipboardManager.fileURLs(on: pb, volatileRoots: roots)
+            }
+
+            expect(
+                capture(staged, pixels: true, from: "com.example.chat") == nil,
+                "a file staged in the copying app's container falls through to its pixels")
+            expect(
+                capture(staged, pixels: false, from: "com.example.chat") == [staged.path],
+                "without pixels beside it, the container file stays a file")
+            expect(
+                capture(staged, pixels: true, from: "com.apple.finder") == [staged.path],
+                "copied by another app, the container file stays a file")
+            expect(
+                capture(staged, pixels: true, from: nil) == [staged.path],
+                "and so does one with no known source")
+            expect(
+                capture(elsewhere, pixels: true, from: "com.example.chat") == [elsewhere.path],
+                "a file outside the copying app's container stays a file beside pixels")
+        }
+
+        let pixels = board()
+        defer { pixels.releaseGlobally() }
+        pixels.declareTypes([.png], owner: nil)
+        pixels.setData(Data("png".utf8), forType: .png)
+        expect(
+            ClipboardManager.volatileRoots(on: pixels, copiedFrom: "com.example.chat")
+                == ClipboardManager.volatileRoots
+                + [NSHomeDirectory() + "/Library/Containers/com.example.chat/"],
+            "the shipped roots gain only the copying app's own container")
+        expect(
+            ClipboardManager.volatileRoots(on: board(), copiedFrom: "com.example.chat")
+                == ClipboardManager.volatileRoots,
+            "and nothing without pixels")
     }
 
     static func theBatchIsCapped() {
