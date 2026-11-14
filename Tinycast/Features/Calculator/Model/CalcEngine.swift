@@ -90,21 +90,28 @@ enum CalcEngine {
             return answer
         }
         guard query.utf8.contains(0x28) else { return nil }
-        if query.hasPrefix("("), query.hasSuffix(")"), query.utf8.contains(where: { (48...57).contains($0) }),
-            let tokens = CalcTokenizer.tokenize(query),
-            let quantity = CalcQuantity.evaluate(
-                tokens, query: query, rates: rates, region: region, preserveStandaloneUnit: true)
-        {
-            return quantity
-        }
+        let inlined = phrasesInBrackets(query, now: now, calendar: calendar, rates: rates, region: region)
         guard
-            let inlined = phrasesInBrackets(
-                query, now: now, calendar: calendar, rates: rates, region: region),
-            let answer = solve(inlined, now: now, calendar: calendar, rates: rates, region: region)
+            let answer = wrappedQuantity(inlined ?? query, rates: rates, region: region)
+                ?? inlined.flatMap({ solve($0, now: now, calendar: calendar, rates: rates, region: region) })
         else { return nil }
         return CalcResult(
             expression: CalcFormatter.expression(query), sourceBadge: answer.sourceBadge,
-            targetBadge: answer.targetBadge, payload: answer.payload, canChain: answer.canChain)
+            targetBadge: answer.targetBadge, payload: answer.payload, canChain: answer.canChain,
+            isCurrency: answer.isCurrency)
+    }
+
+    /// `(2m)` is `2 m`, where a bare `2m` converts.
+    private static func wrappedQuantity(
+        _ text: String, rates: CurrencyRates?, region: String?
+    ) -> CalcResult? {
+        guard text.hasPrefix("("), text.hasSuffix(")"), text.utf8.contains(where: { (48...57).contains($0) }),
+            let tokens = CalcTokenizer.tokenize(text),
+            let quantity = CalcQuantity.evaluate(
+                tokens, query: text, rates: rates, region: region, preserveStandaloneUnit: true),
+            quantity.isActionable
+        else { return nil }
+        return quantity
     }
 
     private static func solve(

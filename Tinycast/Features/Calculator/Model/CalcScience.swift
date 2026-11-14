@@ -108,7 +108,10 @@ enum CalcScience {
             return nil
         }
         let trimmed = formula.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty, trimmed.count <= 64, let grams = mass(of: trimmed) else { return .some(nil) }
+        guard !trimmed.isEmpty, trimmed.count <= 64, !trimmed.hasPrefix("of"), let grams = mass(of: trimmed)
+        else {
+            return .some(nil)
+        }
         return CalcResult(
             expression: query, sourceBadge: trimmed, targetBadge: String(localized: "Molar Mass"),
             payload: .number((grams * 1000).rounded() / 1000, suffix: " g/mol"), canChain: false)
