@@ -12,6 +12,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     private var fitTask: Task<Void, Never>?
     private var previousApp: NSRunningApplication?
     private weak var previousOwnWindow: NSWindow?
+    private var parkedSelection: ParkedSelection?
 
     init(coordinator: NotesCoordinator) {
         self.coordinator = coordinator
@@ -25,6 +26,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         panel.contentView?.layoutSubtreeIfNeeded()
         panel.makeKeyAndOrderFront(nil)
         panel.orderFrontRegardless()
+        restoreParkedSelection()
         scheduleFit()
         seatTrafficLights(in: panel)
         // The corner is clipped in SwiftUI, so the shadow has to be recut from what was drawn.
@@ -34,6 +36,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
 
     func hide(restoreFocus: Bool) {
         let restore = restoreFocus && !userMovedOn
+        parkSelection()
         panel?.orderOut(nil)
         guard restore else { return }
         if let previousOwnWindow, previousOwnWindow.isVisible {
@@ -268,6 +271,21 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
             && frontmost != previousApp?.processIdentifier
     }
 
+    /// Writing Tools orders its affordance as a child of the panel, which drags a hidden panel back.
+    private func parkSelection() {
+        guard let editor, editor.selectedRange().length > 0 else { return }
+        parkedSelection = ParkedSelection(source: editor.string, ranges: editor.selectedRanges)
+        editor.setSelectedRange(NSRange(location: editor.selectedRange().upperBound, length: 0))
+    }
+
+    /// Only onto the text it was taken from: a reload or note switch has already placed the caret.
+    private func restoreParkedSelection() {
+        guard let parked = parkedSelection.take(), let editor, editor.string == parked.source else {
+            return
+        }
+        editor.selectedRanges = parked.ranges
+    }
+
     private func captureFocusTarget() {
         let frontmost = NSWorkspace.shared.frontmostApplication
         if frontmost?.processIdentifier == NSRunningApplication.current.processIdentifier {
@@ -291,4 +309,9 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
             panel.makeFirstResponder(editor)
         }
     }
+}
+
+private struct ParkedSelection {
+    let source: String
+    let ranges: [NSValue]
 }
