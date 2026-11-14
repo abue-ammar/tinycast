@@ -86,6 +86,30 @@ enum CalcEngine {
             return text
         }
         guard let query = format.canonical(trimmed) else { return nil }
+        if let answer = solve(query, now: now, calendar: calendar, rates: rates, region: region) {
+            return answer
+        }
+        guard query.utf8.contains(0x28) else { return nil }
+        if query.hasPrefix("("), query.hasSuffix(")"), query.utf8.contains(where: { (48...57).contains($0) }),
+            let tokens = CalcTokenizer.tokenize(query),
+            let quantity = CalcQuantity.evaluate(
+                tokens, query: query, rates: rates, region: region, preserveStandaloneUnit: true)
+        {
+            return quantity
+        }
+        guard
+            let inlined = phrasesInBrackets(
+                query, now: now, calendar: calendar, rates: rates, region: region),
+            let answer = solve(inlined, now: now, calendar: calendar, rates: rates, region: region)
+        else { return nil }
+        return CalcResult(
+            expression: CalcFormatter.expression(query), sourceBadge: answer.sourceBadge,
+            targetBadge: answer.targetBadge, payload: answer.payload, canChain: answer.canChain)
+    }
+
+    private static func solve(
+        _ query: String, now: Date, calendar: Calendar, rates: CurrencyRates?, region: String?
+    ) -> CalcResult? {
         if query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) {
             return CalcDateTime.namedMoment(query, now: now, calendar: calendar).map(unchained)
         }
@@ -102,13 +126,6 @@ enum CalcEngine {
 
         if let dateTime = CalcDateTime.evaluate(query, now: now, calendar: calendar) {
             return unchained(sightingNoted(dateTime, query: query))
-        }
-        if query.utf8.contains(0x28), let spans = datesInBrackets(query, now: now, calendar: calendar),
-            let answer = evaluate(spans, now: now, calendar: calendar, rates: rates, region: region)
-        {
-            return CalcResult(
-                expression: CalcFormatter.expression(query), sourceBadge: answer.sourceBadge,
-                targetBadge: answer.targetBadge, payload: answer.payload, canChain: answer.canChain)
         }
 
         // Before tokenizing: `5pm ldn in sf` is words, which the tokenizer would reject.
@@ -243,29 +260,42 @@ enum CalcEngine {
         return query.replacingCharacters(in: range, with: CalcFormatter.copyText(minutes + seconds / 60))
     }
 
-    private static func datesInBrackets(_ query: String, now: Date, calendar: Calendar) -> String? {
+    private static func phrasesInBrackets(
+        _ query: String, now: Date, calendar: Calendar, rates: CurrencyRates?, region: String?
+    ) -> String? {
         var text = query
         var from = text.startIndex
         var changed = false
         while let close = text[from...].firstIndex(of: ")") {
             guard let open = text[..<close].lastIndex(of: "("),
-                let result = CalcDateTime.evaluate(
-                    String(text[text.index(after: open)..<close]), now: now, calendar: calendar),
+                case let inner = String(text[text.index(after: open)..<close]), isPhrase(inner),
+                let result = evaluate(inner, now: now, calendar: calendar, rates: rates, region: region),
                 case .value(_, let copy) = result.payload,
-                let unit = copy.split(separator: " ").last,
-                ["day", "days", "wk", "hr", "min", "s"].contains(unit)
+                result.canChain || isSpan(copy)
             else {
                 from = text.index(after: close)
                 continue
             }
-            var span = copy.replacingOccurrences(of: ",", with: "")
-            if span.hasPrefix("-") { span = "-(\(span.dropFirst()))" }
-            let offset = text.distance(from: text.startIndex, to: open) + span.count + 2
-            text.replaceSubrange(open...close, with: "(\(span))")
+            var answer = copy.replacingOccurrences(of: ",", with: "")
+            if answer.hasPrefix("-") { answer = "-(\(answer.dropFirst()))" }
+            let offset = text.distance(from: text.startIndex, to: open) + answer.count + 2
+            text.replaceSubrange(open...close, with: "(\(answer))")
             from = text.index(text.startIndex, offsetBy: offset)
             changed = true
         }
         return changed ? text : nil
+    }
+
+    /// Not a lone quantity (`2m`) nor a half-typed `2 +`.
+    private static func isPhrase(_ inner: String) -> Bool {
+        guard let tokens = CalcTokenizer.tokenize(inner) else { return true }
+        if case .op = tokens.last { return false }
+        return tokens.count > 2
+    }
+
+    private static func isSpan(_ copy: String) -> Bool {
+        guard let unit = copy.split(separator: " ").last else { return false }
+        return ["day", "days", "wk", "hr", "min", "s"].contains(unit)
     }
 
     private static func withoutQuestionMark(_ text: String) -> String {

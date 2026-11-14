@@ -92,6 +92,11 @@ so `what is the time in tokyo` still reaches the zone grammar.
 18. Pixels against physical size (`CalcPixelDensity`: `3000 px to inches at 300 ppi`)
 19. Musical pitch (`CalcPitch`: `440 hz to pitch`, `c4 to hz`)
 
+When nothing answers, each bracketed phrase whose answer can be typed back, or that names a date span, is
+replaced by that answer and the query solved again: `(15% tip on $80) / 2`, `(c4 to hz) * 2`,
+`(today - 1.1.2026) / 2`. A half-typed `(2 +)` is left alone, and `(2m)` is `2 m` where a bare `2m`
+converts.
+
 `CalcExpressionParser` is the sole precedence-climbing evaluator, returning `CalcValue` for numbers,
 measurements, currencies and booleans. `CalcQuantity` turns those values into cards and applies display
 policy. Scalar operands in conversions and percent phrases use the same parser's `scalar` projection;
@@ -135,8 +140,7 @@ parser, while the separator still chooses ISO, month-first or day-first interpre
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
 - **C** — a moment ± durations: `today + 3 weeks`, `now + 90 min`,
   `17.2.26 + 100 weekdays - 4 + 2`
-- **D** — difference between two moments: `jul 4 - today`; `today - 1.1.2026 + 3` adds 3 days;
-  in brackets it becomes a span for the arithmetic around it: `(today - 1.1.2026) / 2`
+- **D** — difference between two moments: `jul 4 - today`; `today - 1.1.2026 + 3` adds 3 days
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
 - **G** — a named moment: `today`, `now`, `time`, `tomorrow at 9am`, `next monday`, `last friday`
