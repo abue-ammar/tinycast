@@ -67,7 +67,7 @@ height and the `sheen` gradient.
 
 ## Where it is reachable from
 
-The palette's bottom-left menu circle (between About and Settings), Settings → About, the menu bar
+The palette's bottom-left menu circle (beside About), Settings → About, the menu bar
 menu, and the launcher as `CommandID.support`. All four land on `showSupport()`. The launcher arm
 hides the palette first, the way `.about` does; the menu-circle row does not, because the panel
 dismisses itself on `windowDidResignKey`.
