@@ -64,7 +64,7 @@ export const cryptoSupport = {
     `Send only on the ${network} network. Funds sent on another network may be lost.`,
   unlisted: {
     lead: "Network not listed? Email",
-    email: "iabueammar@gmail.com",
+    email: "hello@tinycast.dev",
     subject: "Supporting Tinycast",
   },
 } as const;

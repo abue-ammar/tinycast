@@ -58515,54 +58515,54 @@
         }
       }
     },
-    "Free and open source, funded out of pocket." : {
+    "Free and open source. Your support sustains its development." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Kostenlos und Open Source, aus eigener Tasche finanziert."
+            "value" : "Kostenlos und Open Source. Deine Unterstützung sichert die Weiterentwicklung."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gratis y de código abierto, financiado de nuestro bolsillo."
+            "value" : "Gratis y de código abierto. Tu apoyo hace posible su desarrollo."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gratuit et open source, financé par son développeur."
+            "value" : "Gratuit et open source. Votre soutien assure son développement."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "無料のオープンソースで、自費で運営しています。"
+            "value" : "無料のオープンソースです。皆さまのご支援が開発を支えています。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "무료 오픈 소스이며, 개인 비용으로 운영됩니다."
+            "value" : "무료 오픈 소스입니다. 여러분의 후원으로 개발이 이어집니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Gratuito e de código aberto, financiado do próprio bolso."
+            "value" : "Gratuito e de código aberto. Seu apoio sustenta o desenvolvimento."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Бесплатно, с открытым исходным кодом, разработка ведётся за личный счёт."
+            "value" : "Бесплатно, с открытым исходным кодом. Ваша поддержка обеспечивает развитие проекта."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "免费且开源，由个人出资维持。"
+            "value" : "免费且开源。您的支持让开发得以持续。"
           }
         }
       }
