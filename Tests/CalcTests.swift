@@ -2542,7 +2542,8 @@ struct CalcTests {
         "\(query) [decimal \(format.decimalSeparator)]"
     }
 
-    static func secondary(_ decimal: String, _ grouping: String?, _ primary: Int, _ secondary: Int) -> String {
+    static func secondary(_ decimal: String, _ grouping: String?, _ primary: Int, _ secondary: Int) -> String
+    {
         let format = CalcNumberFormat(
             decimalSeparator: decimal, groupingSeparator: grouping, primaryGrouping: primary,
             secondaryGrouping: secondary)

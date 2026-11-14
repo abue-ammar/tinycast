@@ -40,6 +40,13 @@ final class UpdateCoordinator {
         }
     }
 
+    // MARK: - Status
+
+    var updatesItself: Bool { store.channel.updatesItself }
+    var isChecking: Bool { store.isChecking }
+    var lastCheckedAt: Date? { store.lastCheckedAt }
+    var availableVersion: AppVersion? { store.update?.version }
+
     // MARK: - Entry points
 
     /// Never re-offers an update under way: that would discard it.
