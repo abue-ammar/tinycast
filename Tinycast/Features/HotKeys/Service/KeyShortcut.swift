@@ -102,6 +102,36 @@ struct KeyShortcut: Hashable, Sendable {
     /// 🎤, as remapped by `DictationKeyManager`.
     var isDictationKey: Bool { carbonKeyCode == kVK_F20 }
 
+    // MARK: - System shortcuts
+
+    /// The enabled chords in Keyboard Shortcuts settings, which macOS answers beside any registrant.
+    static func systemShortcuts() -> Set<KeyShortcut> {
+        var hotKeys: Unmanaged<CFArray>?
+        guard CopySymbolicHotKeys(&hotKeys) == noErr, let hotKeys else { return [] }
+        return systemShortcuts(in: hotKeys.takeRetainedValue() as? [[String: Any]] ?? [])
+    }
+
+    static func systemShortcuts(in hotKeys: [[String: Any]]) -> Set<KeyShortcut> {
+        var shortcuts: Set<KeyShortcut> = []
+        for hotKey in hotKeys {
+            guard hotKey[kHISymbolicHotKeyEnabled as String] as? Bool == true,
+                let keyCode = hotKey[kHISymbolicHotKeyCode as String] as? Int,
+                let modifiers = hotKey[kHISymbolicHotKeyModifiers as String] as? Int
+            else { continue }
+            shortcuts.insert(KeyShortcut(carbonKeyCode: keyCode, carbonModifiers: modifiers))
+            // These keys always report fn, which a recording keeps only while Globe is held.
+            guard implicitFunctionKeys.contains(keyCode) else { continue }
+            shortcuts.insert(
+                KeyShortcut(carbonKeyCode: keyCode, carbonModifiers: modifiers & ~kEventKeyModifierFnMask))
+        }
+        return shortcuts
+    }
+
+    private static let implicitFunctionKeys = Set(functionKeyNames.keys).union([
+        kVK_LeftArrow, kVK_RightArrow, kVK_UpArrow, kVK_DownArrow,
+        kVK_Home, kVK_End, kVK_PageUp, kVK_PageDown, kVK_ForwardDelete, kVK_Help
+    ])
+
     private static let allModifiers = cmdKey | optionKey | controlKey | shiftKey | kEventKeyModifierFnMask
 
     // MARK: - Key glyph

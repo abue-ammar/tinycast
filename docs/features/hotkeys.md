@@ -18,6 +18,15 @@ the keycap rendering — only the _engine_ differs.
 Carbon's dispatcher enters through an explicit `@MainActor` callback. Press and release handlers
 return `OSStatus` synchronously, preserving event order and hold-to-talk release handling.
 
+Carbon hotkeys are shared: every registrant of a chord hears it, macOS included. A chord macOS answers
+itself — any enabled entry in Keyboard ▸ Keyboard Shortcuts, read with `CopySymbolicHotKeys` — is
+therefore registered exclusively, so its system action does not run beside Tinycast's. Bound to
+⌃⌘Space, Search Emoji & Symbols otherwise opened Character Viewer too, which took focus from the paste.
+Arrows and F-keys carry fn in that list but not in a recording made without Globe, so both spellings
+are claimed. An exclusive registration fails while another app holds the chord, and falls back to a
+shared one. Each read costs milliseconds, so `HotKeyCenter` takes it once and refreshes it when a
+recording ends. Conflict detection still covers only Tinycast's own bindings.
+
 ## Invariants
 
 - **Hotkeys persist as JSON strings under `hotkey.<action>` UserDefaults keys**, and

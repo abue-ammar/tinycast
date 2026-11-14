@@ -66,6 +66,7 @@ struct HotKeyTests {
         globeTap()
         sidedModifiers()
         globeChord()
+        systemShortcutClaims()
         firing()
         timing()
         chords()
@@ -206,6 +207,32 @@ struct HotKeyTests {
             KeyShortcut(carbonKeyCode: kVK_ANSI_J, carbonModifiers: Int.max).carbonModifiers
                 == KeyShortcut.carbonModifiers(from: [.function, .control, .option, .shift, .command]),
             "decoding keeps fn but still discards unrelated modifier bits")
+    }
+
+    static func systemShortcutClaims() {
+        func hotKey(_ keyCode: Int, _ modifiers: Int, enabled: Bool = true) -> [String: Any] {
+            [
+                kHISymbolicHotKeyCode as String: keyCode,
+                kHISymbolicHotKeyModifiers as String: modifiers,
+                kHISymbolicHotKeyEnabled as String: enabled
+            ]
+        }
+        func contains(_ keyCode: Int, _ modifiers: Int) -> Bool {
+            claimed.contains(KeyShortcut(carbonKeyCode: keyCode, carbonModifiers: modifiers))
+        }
+        let claimed = KeyShortcut.systemShortcuts(in: [
+            hotKey(kVK_Space, controlKey | cmdKey),
+            hotKey(kVK_ANSI_3, shiftKey | cmdKey, enabled: false),
+            hotKey(kVK_UpArrow, controlKey | kEventKeyModifierFnMask),
+            hotKey(kVK_ANSI_E, kEventKeyModifierFnMask)
+        ])
+        expect(contains(kVK_Space, controlKey | cmdKey), "an enabled system chord is claimed")
+        expect(!contains(kVK_ANSI_3, shiftKey | cmdKey), "a disabled system chord stays shared")
+        expect(contains(kVK_UpArrow, controlKey), "an arrow's implicit fn still matches a recorded ⌃↑")
+        expect(
+            contains(kVK_UpArrow, controlKey | kEventKeyModifierFnMask),
+            "an arrow recorded with Globe held still matches")
+        expect(!contains(kVK_ANSI_E, 0), "Globe on a letter stays part of the chord")
     }
 
     static func sidedModifiers() {
