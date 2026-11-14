@@ -960,6 +960,7 @@ The uppercase `B` distinguishes byte rates (`Bps`, `kBps` / `KBps`, `MBps`, `GBp
 `500 Mbps in MBps` gives `62.5 MBps`; bare byte rates auto-convert to the matching bit rate.
 `100Mbps to MB/s` gives `12.5 MB/s`, and `1GB / 10MB/s to s` gives `100 s`.
 Binary rates such as `MiB/s` and bit amounts such as `kbit` also work.
+An angle converts to nautical miles and back, one arcminute each: `4° in nmi` gives `240 nmi`.
 SI prefixes expand for meters, grams, seconds, hertz, newtons, joules, watts and pascals,
 including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings.
 

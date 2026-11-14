@@ -78,6 +78,9 @@ enum CalcUnits {
             guard let output = reciprocalValue(input, from: from, to: to) else { return nil }
             return .value(input: input, from: from, to: to, output: output)
         }
+        if let output = arcValue(input, from: from, to: to) {
+            return .value(input: input, from: from, to: to, output: output)
+        }
         guard from.category == to.category else { return .mismatch(from: from, to: to) }
         let output = (input * from.factor + from.offset - to.offset) / to.factor
         guard output.isFinite else { return nil }
@@ -96,6 +99,18 @@ enum CalcUnits {
 
     private static func isFuel(_ unit: UnitDef) -> Bool {
         unit.category == .fuelEconomy || unit.category == .fuelConsumption
+    }
+
+    /// A nautical mile is an arcminute of latitude: `4° in nmi`.
+    static func arcValue(_ amount: Double, from: UnitDef, to: UnitDef) -> Double? {
+        let metersPerRadian = 1852 * 10800 / Double.pi
+        if from.category == .angle, to.symbol == "nmi" {
+            return amount * from.factor * metersPerRadian / to.factor
+        }
+        if from.symbol == "nmi", to.category == .angle {
+            return amount * from.factor / metersPerRadian / to.factor
+        }
+        return nil
     }
 
     static func reciprocalValue(_ amount: Double, from: UnitDef, to: UnitDef) -> Double? {
