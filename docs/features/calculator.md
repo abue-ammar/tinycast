@@ -128,6 +128,9 @@ parser, while the separator still chooses ISO, month-first or day-first interpre
 
 `CalcDateTime` recognizes these grammars:
 
+- **Clock format** — a time on its own converts between 12-hour and 24-hour notation. `12 PM` is
+  `12:00`, `18:30` and `18h30` are `6:30 PM`, and `24:00` is midnight at the end of the day.
+  French `12 heures` means noon. `12h` and `12 h` remain duration queries.
 - **A** — duration until a moment: `hrs till 9am`, `days till 9april`
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
 - **C** — a moment ± durations: `today + 3 weeks`, `now + 90 min`,

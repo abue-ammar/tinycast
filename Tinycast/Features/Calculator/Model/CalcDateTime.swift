@@ -9,7 +9,9 @@ enum CalcDateTime {
         -> CalcResult?
     {
         let echo = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        var lowered = fromNow(withoutApostrophes(echo.lowercased()))
+        let lowercase = echo.lowercased()
+        if let clock = clockConversion(lowercase, echo: echo) { return clock }
+        var lowered = fromNow(withoutApostrophes(lowercase))
         guard !lowered.isEmpty else { return nil }
 
         // One pass over the words, since an app search pays this on every keystroke.
@@ -63,6 +65,36 @@ enum CalcDateTime {
             return result
         }
         return nil
+    }
+
+    private static func clockConversion(_ query: String, echo: String) -> CalcResult? {
+        guard let first = query.utf8.first, (48...57).contains(first) else { return nil }
+
+        let clock24 =
+            #/
+            (?<hour>[0-9]{1,2})
+            (?:(?::|\h*h\h*)(?<minute>[0-9]{2})|\h+heures?)
+            /#
+        let answer: String
+        if let match = query.wholeMatch(of: /(?<time>[0-9]{1,2}(?::[0-9]{2})?)\h*(?<period>[ap])\.?m\.?/),
+            let clock = parseMeridiemClock("\(match.time)\(match.period)m")
+        {
+            answer = String(format: "%02d:%02d", clock.hour, clock.minute)
+        } else if let match = query.wholeMatch(of: clock24),
+            let hour = Int(match.hour),
+            let minute = Int(match.minute ?? "0"),
+            minute < 60, hour < 24 || (hour == 24 && minute == 0)
+        {
+            let hourOfDay = hour % 24
+            let hourInPeriod = hourOfDay % 12
+            let period = hourOfDay < 12 ? "AM" : "PM"
+            answer = "\(hourInPeriod == 0 ? 12 : hourInPeriod):\(String(format: "%02d", minute)) \(period)"
+        } else {
+            return nil
+        }
+
+        return CalcResult(
+            expression: echo, payload: .value(display: answer, copyText: answer), canChain: false)
     }
 
     /// The only lone words that answer: each names one moment, where `monday` or `july` recurs.
