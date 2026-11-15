@@ -1,6 +1,6 @@
 import "../index.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import localFont from "next/font/local";
 import { Providers } from "../components/providers";
@@ -66,6 +66,9 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
   icons: { icon: "/favicon.svg" },
 };
+
+// Mobile browsers tint their status bar from this; it must match the dark --tc-canvas.
+export const viewport: Viewport = { themeColor: "#000000" };
 
 const structuredData = {
   "@context": "https://schema.org",

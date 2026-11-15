@@ -72,7 +72,7 @@ export function NavFrame({
           </span>
         </Link>
         {sections}
-        <div className="ml-auto flex items-center gap-1">{children}</div>
+        <div className="ml-auto flex items-center sm:gap-1">{children}</div>
       </div>
     </header>
   );
