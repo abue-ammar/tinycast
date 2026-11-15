@@ -1334,6 +1334,23 @@ struct CalcTests {
         expectBadgesAt("hrs till 9am", source: "00:18", target: "09:00", calendar: britain)
         expectDisplayAt("time in sf", "5:18 pm (yesterday)", calendar: britain12)
 
+        expectDisplayAt("10 AM", "10:00")
+        expectDisplayAt("12PM", "12:00")
+        expectCopyAt("12PM", "12:00")
+        expectCopyAt("12 PM", "12:00")
+        expectCopyAt("12 AM", "00:00")
+        expectDisplayAt("5:30\u{a0}p.m.", "17:30", calendar: britain12)
+        expectDisplayAt("17:30", "5:30 PM", calendar: hour24)
+        expectDisplayAt("12:00", "12:00 PM")
+        expectDisplayAt("18h30", "6:30 PM")
+        expectDisplayAt("18 h 30", "6:30 PM")
+        expectDisplayAt("00:01", "12:01 AM")
+        expectDisplayAt("24:00", "12:00 AM")
+        expectDisplay("12h", "720 min")
+        expectDisplay("12 h", "720 min")
+        expectDisplay("12 hours", "720 min")
+        for query in ["0 AM", "13 PM", "10:60 AM", "24:01", "25:00"] { expectNilAt(query) }
+
         let zoneNow = clock.calendar.date(
             from: DateComponents(year: 2026, month: 9, day: 15, hour: 12))!
         for home in ["UTC", "Asia/Shanghai", "America/Los_Angeles"] {
@@ -1429,7 +1446,7 @@ struct CalcTests {
             now: clock.calendar.date(from: DateComponents(year: 2026, month: 3, day: 8, hour: 12))!)
         for query in [
             "5:30 pm PSTT", "5:30pm PSTT", "5:30pm SF junk", "5:30 pm SF London",
-            "5pm", "5 pm", "17:30", "17:30 pm", "5 SF", "pm SF", "now SF",
+            "17:30 pm", "5 SF", "pm SF", "now SF",
             "13pm SF", "5:60pm SF", "5pm pm SF", "5:30 am pm SF", "25:30 SF",
             "5:30pm SF to", "5:30pm SF to PSTT", "5:30pm SF + 2 kg",
             "time in sf in 4 hours", "now in tokyo in 2h", "Screen Time", "Safari SF"
