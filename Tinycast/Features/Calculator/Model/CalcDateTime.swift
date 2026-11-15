@@ -70,11 +70,7 @@ enum CalcDateTime {
     private static func clockConversion(_ query: String, echo: String) -> CalcResult? {
         guard let first = query.utf8.first, (48...57).contains(first) else { return nil }
 
-        let clock24 =
-            #/
-            (?<hour>[0-9]{1,2})
-            (?:(?::|\h*h\h*)(?<minute>[0-9]{2})|\h+heures?)
-            /#
+        let clock24 = /(?<hour>[0-9]{1,2})(?::|\h*h\h*)(?<minute>[0-9]{2})/
         let answer: String
         if let match = query.wholeMatch(of: /(?<time>[0-9]{1,2}(?::[0-9]{2})?)\h*(?<period>[ap])\.?m\.?/),
             let clock = parseMeridiemClock("\(match.time)\(match.period)m")
@@ -82,7 +78,7 @@ enum CalcDateTime {
             answer = String(format: "%02d:%02d", clock.hour, clock.minute)
         } else if let match = query.wholeMatch(of: clock24),
             let hour = Int(match.hour),
-            let minute = Int(match.minute ?? "0"),
+            let minute = Int(match.minute),
             minute < 60, hour < 24 || (hour == 24 && minute == 0)
         {
             let hourOfDay = hour % 24

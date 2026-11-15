@@ -296,8 +296,8 @@ is always written out in full: `1 IDR to USD` is `0.00005539 USD`, never `5.539e
 
 ## Dates and times
 
-An hour on its own converts between clock formats. `12 PM` is `12:00` and `12 AM` is `00:00`.
-`18:30` or `18h30` gives `6:30 PM`. `12 heures` means noon. Use `12h` or `12 h` for a duration.
+A time on its own converts between clock formats. `12 PM` gives `12:00`, `12 AM` gives `00:00`,
+and `18:30` gives `6:30 PM`. Use `12h` or `12 hours` for a duration.
 
 | What you want                | Example                                              |
 | ---------------------------- | ---------------------------------------------------- |

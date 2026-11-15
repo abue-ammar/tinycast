@@ -1341,14 +1341,14 @@ struct CalcTests {
         expectCopyAt("12 AM", "00:00")
         expectDisplayAt("5:30\u{a0}p.m.", "17:30", calendar: britain12)
         expectDisplayAt("17:30", "5:30 PM", calendar: hour24)
-        expectDisplayAt("12 heures", "12:00 PM")
+        expectDisplayAt("12:00", "12:00 PM")
         expectDisplayAt("18h30", "6:30 PM")
         expectDisplayAt("18 h 30", "6:30 PM")
         expectDisplayAt("00:01", "12:01 AM")
         expectDisplayAt("24:00", "12:00 AM")
-        expectDisplayAt("24 heures", "12:00 AM")
         expectDisplay("12h", "720 min")
         expectDisplay("12 h", "720 min")
+        expectDisplay("12 hours", "720 min")
         for query in ["0 AM", "13 PM", "10:60 AM", "24:01", "25:00"] { expectNilAt(query) }
 
         let zoneNow = clock.calendar.date(
