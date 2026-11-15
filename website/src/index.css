@@ -798,16 +798,12 @@
 }
 
 .scene-clip-select {
-  transform: translateY(50px);
+  transform: translateY(38px);
 }
 
 .scene-window {
   left: 51%;
   width: 47%;
-}
-
-.scene-layout-label:not(:last-child) {
-  opacity: 0;
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -864,22 +860,6 @@
 
   .scene-window {
     animation: scene-window 5.6s var(--ease-glide) 300ms both;
-  }
-
-  .scene-layout-label {
-    animation: 5.6s linear 300ms both;
-  }
-  .scene-layout-label:nth-child(1) {
-    animation-name: scene-label-1;
-  }
-  .scene-layout-label:nth-child(2) {
-    animation-name: scene-label-2;
-  }
-  .scene-layout-label:nth-child(3) {
-    animation-name: scene-label-3;
-  }
-  .scene-layout-label:nth-child(4) {
-    animation-name: scene-label-4;
   }
 
   .feature-progress {
@@ -979,7 +959,7 @@
   }
   65%,
   78% {
-    transform: translateY(102px);
+    transform: translateY(106px);
   }
   90%,
   100% {
@@ -1008,58 +988,6 @@
   70% {
     left: 2%;
     width: 63%;
-  }
-}
-
-@keyframes scene-label-1 {
-  0%,
-  20% {
-    opacity: 1;
-  }
-  24%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes scene-label-2 {
-  0%,
-  20% {
-    opacity: 0;
-  }
-  24%,
-  46% {
-    opacity: 1;
-  }
-  50%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes scene-label-3 {
-  0%,
-  46% {
-    opacity: 0;
-  }
-  50%,
-  72% {
-    opacity: 1;
-  }
-  76%,
-  100% {
-    opacity: 0;
-  }
-}
-
-@keyframes scene-label-4 {
-  0%,
-  72% {
-    opacity: 0;
-  }
-  76%,
-  100% {
-    opacity: 1;
   }
 }
 

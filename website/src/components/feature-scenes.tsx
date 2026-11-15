@@ -1,5 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
+import { Search } from "lucide-react";
+import { useId, type CSSProperties, type ReactNode } from "react";
 import type { FeaturePreview } from "../data/features";
+import { cn } from "../lib/cn";
 
 // Each scene's resting state is its last frame; the `scene-*` animations in
 // index.css only replay the steps that lead there, so reduced motion still
@@ -48,25 +50,6 @@ function Caret({ start }: { start: number }) {
   );
 }
 
-function Query({ children }: { children: ReactNode }) {
-  return (
-    <>
-      <g
-        className="fill-none stroke-fg-subtle"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      >
-        <circle cx="38" cy="37" r="6.5" />
-        <path d="m42.8 41.8 4.4 4.4" />
-      </g>
-      <text x="58" y="44" fontSize="18" className="fill-fg font-rounded">
-        {children}
-      </text>
-      <line x1="12" x2="628" y1="62" y2="62" className="stroke-border" />
-    </>
-  );
-}
-
 function Keycap({ x, y, label }: { x: number; y: number; label: string }) {
   return (
     <g>
@@ -84,34 +67,162 @@ function Keycap({ x, y, label }: { x: number; y: number; label: string }) {
   );
 }
 
-// The palette's bottom bar: the mark on the left, the default action on the right.
-function ActionBar({ action, start }: { action: string; start: number }) {
+// The palette scenes copy HeroPalette's measurements one unit per point, in the
+// same 640×360 space as Stage, so the shell's corner sits at (12, 12).
+const shell = { left: 12, top: 12, right: 628, bottom: 348 };
+const listTop = shell.top + 46;
+const rowHeight = 38;
+const footerCenter = shell.bottom - 26;
+
+// The real window draws no outline and no rule; spacing alone separates its parts.
+function PaletteStage({
+  query,
+  footer,
+  children,
+}: {
+  query: ReactNode;
+  footer: ReactNode;
+  children: ReactNode;
+}) {
+  const dissolve = useId();
   return (
-    <g className="scene-in" style={at(start)}>
-      <line x1="12" x2="628" y1="312" y2="312" className="stroke-border" />
+    <div aria-hidden="true" className="@container size-full p-[1.875%]">
+      <div className="glass-palette size-full rounded-[4.22cqw]">
+        <span aria-hidden="true" className="glass-grain" />
+        <svg viewBox="12 12 616 336" className="scene relative size-full">
+          <defs>
+            <linearGradient
+              id={`${dissolve}-fade`}
+              gradientUnits="userSpaceOnUse"
+              x1="0"
+              x2="0"
+              y1={shell.bottom - 80}
+              y2={shell.bottom}
+            >
+              <stop offset="0" stopColor="white" />
+              <stop offset="0.5" stopColor="white" stopOpacity="0.25" />
+              <stop offset="1" stopColor="white" stopOpacity="0" />
+            </linearGradient>
+            <mask id={dissolve} maskUnits="userSpaceOnUse">
+              <rect
+                x={shell.left}
+                y={shell.top}
+                width={shell.right - shell.left}
+                height={shell.bottom - shell.top}
+                fill={`url(#${dissolve}-fade)`}
+              />
+            </mask>
+          </defs>
+          {query}
+          <g mask={`url(#${dissolve})`}>{children}</g>
+          {footer}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+function PaletteQuery({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <Search
+        x={28}
+        y={27}
+        size={22}
+        strokeWidth={1.75}
+        className="text-(--glass-fg-muted)"
+      />
+      <text x="58" y="45" fontSize="20" className="fill-(--glass-fg)">
+        {children}
+      </text>
+    </>
+  );
+}
+
+function PaletteKeycap({ x, label }: { x: number; label: string }) {
+  return (
+    <g>
       <rect
-        x="26"
-        y="323"
-        width="14"
-        height="14"
-        rx="4"
-        className="fill-violet"
+        x={x + 0.5}
+        y={footerCenter - 8.5}
+        width="17"
+        height="17"
+        rx="5.5"
+        className="fill-none stroke-(--glass-border)"
       />
       <text
-        x="582"
-        y="334"
-        fontSize="12"
-        textAnchor="end"
-        className="fill-fg-muted"
+        x={x + 9}
+        y={footerCenter + 3.5}
+        fontSize="10"
+        textAnchor="middle"
+        className="fill-(--glass-fg-muted)"
       >
-        {action}
+        {label}
       </text>
-      <Keycap x={592} y={321} label="↩" />
     </g>
   );
 }
 
-function SectionLabel({
+// SVG text cannot be measured before layout, so the capsule sizes each label from
+// an average glyph width and pins it there with textLength.
+const footerTextWidth = (label: string) => Math.round(label.length * 6.1);
+
+function PaletteFooter({ action, start }: { action: string; start: number }) {
+  const actionWidth = footerTextWidth(action);
+  const actionsWidth = footerTextWidth("Actions");
+  const width = actionWidth + actionsWidth + 110;
+  const left = shell.right - 8 - width;
+  const actionsLeft = left + actionWidth + 54;
+  return (
+    <g className="scene-in" style={at(start)}>
+      <circle
+        cx={shell.left + 26}
+        cy={footerCenter}
+        r="17.5"
+        className="fill-(--glass-control) stroke-(--glass-control-rim)"
+      />
+      <path
+        d={`M${shell.left + 19} ${footerCenter - 2.25}h14M${shell.left + 19} ${footerCenter + 2.25}h8`}
+        className="fill-none stroke-(--glass-fg-muted)"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      <rect
+        x={left + 0.5}
+        y={footerCenter - 17.5}
+        width={width - 1}
+        height="35"
+        rx="17.5"
+        className="fill-(--glass-control) stroke-(--glass-control-rim)"
+      />
+      <g fontSize="12" fontWeight="500">
+        <text
+          x={left + 12}
+          y={footerCenter + 4}
+          textLength={actionWidth}
+          lengthAdjust="spacing"
+          className="fill-(--glass-fg)"
+        >
+          {action}
+        </text>
+        <text
+          x={actionsLeft}
+          y={footerCenter + 4}
+          textLength={actionsWidth}
+          lengthAdjust="spacing"
+          className="fill-(--glass-fg-muted)"
+        >
+          Actions
+        </text>
+      </g>
+      <PaletteKeycap x={left + actionWidth + 18} label="↵" />
+      <PaletteKeycap x={actionsLeft + actionsWidth + 6} label="⌘" />
+      <PaletteKeycap x={actionsLeft + actionsWidth + 26} label="K" />
+    </g>
+  );
+}
+
+function PaletteSectionLabel({
   y,
   start,
   children,
@@ -125,7 +236,8 @@ function SectionLabel({
       x="28"
       y={y}
       fontSize="11"
-      className="scene-in fill-fg-subtle"
+      fontWeight="500"
+      className="scene-in fill-(--glass-fg-muted)"
       style={at(start)}
     >
       {children}
@@ -133,14 +245,14 @@ function SectionLabel({
   );
 }
 
-function ResultRow({
-  y,
+function PaletteRow({
+  top,
   name,
   kind,
   tint,
   start,
 }: {
-  y: number;
+  top: number;
   name: string;
   kind: string;
   tint: string;
@@ -148,16 +260,16 @@ function ResultRow({
 }) {
   return (
     <g className="scene-in" style={at(start)}>
-      <rect x="30" y={y + 7} width="22" height="22" rx="6" className={tint} />
-      <text x="64" y={y + 23} fontSize="14" className="fill-fg font-rounded">
+      <rect x="30" y={top + 8} width="22" height="22" rx="5" className={tint} />
+      <text x="64" y={top + 23.5} fontSize="13" className="fill-(--glass-fg)">
         {name}
       </text>
       <text
-        x="610"
-        y={y + 23}
+        x="612"
+        y={top + 23}
         fontSize="12"
         textAnchor="end"
-        className="fill-fg-subtle"
+        className="fill-(--glass-fg-muted)"
       >
         {kind}
       </text>
@@ -165,11 +277,17 @@ function ResultRow({
   );
 }
 
+// A section header is 4pt above its 11pt line and 4pt below; every later one adds 12pt.
+const firstRowTop = listTop + 22;
+const laterSectionHeader = 30;
+
 function LauncherScene() {
+  const secondHeader = firstRowTop + rowHeight * 2;
   const groups = [
     {
       label: "Favorites",
-      y: 82,
+      labelY: listTop + 15,
+      firstTop: firstRowTop,
       first: 0,
       rows: [
         { name: "Safari", tint: "fill-cyan" },
@@ -178,7 +296,8 @@ function LauncherScene() {
     },
     {
       label: "Applications",
-      y: 182,
+      labelY: secondHeader + 23,
+      firstTop: secondHeader + laterSectionHeader,
       first: 2,
       rows: [
         { name: "Spotify", tint: "fill-violet" },
@@ -188,38 +307,42 @@ function LauncherScene() {
     },
   ];
   return (
-    <Stage>
-      <Query>
-        <Typed text="s" start={300} step={0} />
-        <Caret start={300} />
-      </Query>
+    <PaletteStage
+      query={
+        <PaletteQuery>
+          <Typed text="s" start={300} step={0} />
+          <Caret start={300} />
+        </PaletteQuery>
+      }
+      footer={<PaletteFooter action="Open Application" start={1000} />}
+    >
       <rect
         x="20"
-        y="88"
+        y={firstRowTop}
         width="600"
-        height="36"
-        rx="9"
-        className="scene-launcher-select fill-tint/8"
+        height={rowHeight}
+        rx="10"
+        className="scene-launcher-select fill-(--glass-selection)"
         style={at(900)}
       />
       <rect
         x="20"
-        y="88"
+        y={firstRowTop}
         width="600"
-        height="36"
-        rx="9"
+        height={rowHeight}
+        rx="10"
         className="scene-flash fill-violet/30"
         style={at(4600)}
       />
       {groups.map((group) => (
         <g key={group.label}>
-          <SectionLabel y={group.y} start={500 + group.first * 70}>
+          <PaletteSectionLabel y={group.labelY} start={500 + group.first * 70}>
             {group.label}
-          </SectionLabel>
+          </PaletteSectionLabel>
           {group.rows.map((row, i) => (
-            <ResultRow
+            <PaletteRow
               key={row.name}
-              y={group.y + 6 + i * 38}
+              top={group.firstTop + i * rowHeight}
               name={row.name}
               kind="Application"
               tint={row.tint}
@@ -228,152 +351,190 @@ function LauncherScene() {
           ))}
         </g>
       ))}
-      <ActionBar action="Open Application" start={1000} />
-    </Stage>
+    </PaletteStage>
   );
 }
 
+// One lead card, as the app draws an answer: both sides in it, a bare arrow between.
 function CalculatorScene() {
-  const cards = [
-    { x: 28, value: "560 km", unit: "Kilometers", start: 1150 },
-    { x: 340, value: "347.97 mi", unit: "Miles", start: 1500 },
+  const cardTop = listTop + 4;
+  const columns = [
+    {
+      x: 176,
+      value: "560 km",
+      unit: "Kilometers",
+      weight: "500",
+      start: 1150,
+    },
+    {
+      x: 464,
+      value: "347.97 mi",
+      unit: "Miles",
+      weight: "600",
+      start: 1500,
+    },
   ];
   return (
-    <Stage>
-      <Query>
-        <Typed text="560 km to mi" start={250} step={70} />
-        <Caret start={1020} />
-      </Query>
-      {cards.map((card) => (
-        <g key={card.unit} className="scene-in" style={at(card.start)}>
+    <PaletteStage
+      query={
+        <PaletteQuery>
+          <Typed text="560 km to mi" start={250} step={70} />
+          <Caret start={1020} />
+        </PaletteQuery>
+      }
+      footer={<PaletteFooter action="Copy Answer" start={2300} />}
+    >
+      <rect
+        x="20"
+        y={cardTop}
+        width="600"
+        height="116"
+        rx="10"
+        className="scene-in fill-(--glass-selection)"
+        style={at(1100)}
+      />
+      {columns.map((column) => (
+        <g key={column.unit} className="scene-in" style={at(column.start)}>
+          <text
+            x={column.x}
+            y={cardTop + 56}
+            fontSize="28"
+            fontWeight={column.weight}
+            textAnchor="middle"
+            className="fill-(--glass-fg)"
+          >
+            {column.value}
+          </text>
           <rect
-            x={card.x}
-            y="84"
-            width="272"
-            height="170"
-            rx="12"
-            className="fill-well"
+            x={column.x - column.unit.length * 3.2 - 6}
+            y={cardTop + 70}
+            width={column.unit.length * 6.4 + 12}
+            height="17"
+            rx="6"
+            className="fill-tint/10"
           />
           <text
-            x={card.x + 136}
-            y="196"
-            fontSize="32"
+            x={column.x}
+            y={cardTop + 82}
+            fontSize="10.5"
             textAnchor="middle"
-            className="fill-fg font-rounded font-bold"
+            className="fill-(--glass-fg-muted)"
           >
-            {card.value}
-          </text>
-          <text
-            x={card.x + 136}
-            y="222"
-            fontSize="12"
-            textAnchor="middle"
-            className="fill-fg-subtle"
-          >
-            {card.unit}
+            {column.unit}
           </text>
         </g>
       ))}
-      <g className="scene-pop" style={at(1350)}>
-        <circle
-          cx="320"
-          cy="190"
-          r="15"
-          className="fill-surface stroke-border-strong"
-        />
-        <path
-          d="M313 190h14m-5-5 5 5-5 5"
-          className="fill-none stroke-fg-muted"
-          strokeWidth="1.6"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </g>
-      <ActionBar action="Copy Answer" start={2300} />
-    </Stage>
+      <path
+        d={`M311 ${cardTop + 47}h18m-6.5-6.5 6.5 6.5-6.5 6.5`}
+        className="scene-pop fill-none stroke-(--glass-fg-muted) opacity-60"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={at(1350)}
+      />
+    </PaletteStage>
   );
 }
 
 function ClipboardScene() {
+  const listRight = shell.left + 290;
   const rows = [
     { label: "brew install --cask…", tint: "fill-tint/10", isMono: true },
     { label: "#863BFF", tint: "fill-violet", isMono: true },
     { label: "Screenshot.png", tint: "fill-cyan/70", isMono: false },
     { label: "tinycast.app", tint: "fill-tint/10", isMono: false },
   ];
+  const previewLeft = listRight + 25;
   return (
-    <Stage>
-      <Query>
-        <tspan className="fill-fg-subtle">Search clipboard history</tspan>
-      </Query>
-      <line x1="262" x2="262" y1="62" y2="312" className="stroke-border" />
-      <SectionLabel y={81} start={150}>
+    <PaletteStage
+      query={
+        <PaletteQuery>
+          <tspan className="fill-(--glass-fg-muted)">
+            Search clipboard history
+          </tspan>
+        </PaletteQuery>
+      }
+      footer={<PaletteFooter action="Paste" start={2500} />}
+    >
+      <rect
+        x={listRight}
+        y={listTop}
+        width="1"
+        height={shell.bottom - listTop}
+        className="fill-tint/10"
+      />
+      <PaletteSectionLabel y={listTop + 15} start={150}>
         Today
-      </SectionLabel>
+      </PaletteSectionLabel>
       <rect
         x="20"
-        y="88"
-        width="234"
-        height="36"
-        rx="9"
-        className="scene-clip-select fill-tint/8"
+        y={firstRowTop}
+        width={listRight - 28}
+        height={rowHeight}
+        rx="10"
+        className="scene-clip-select fill-(--glass-selection)"
         style={at(1500)}
       />
       {rows.map((row, i) => (
         <g key={row.label} className="scene-in" style={at(200 + i * 80)}>
           <rect
             x="30"
-            y={99 + i * 50}
-            width="18"
-            height="18"
+            y={firstRowTop + i * rowHeight + 8}
+            width="22"
+            height="22"
             rx="5"
             className={row.tint}
           />
           <text
-            x="60"
-            y={113 + i * 50}
-            fontSize="12.5"
-            className={
-              row.isMono ? "fill-fg font-mono" : "fill-fg font-rounded"
-            }
+            x="64"
+            y={firstRowTop + i * rowHeight + 23.5}
+            fontSize="13"
+            className={cn(
+              "fill-(--glass-fg)",
+              row.isMono && "font-mono text-[12px]",
+            )}
           >
             {row.label}
           </text>
         </g>
       ))}
       <text
-        x="286"
-        y="100"
+        x={previewLeft}
+        y={listTop + 30}
         fontSize="13"
-        className="scene-out fill-fg-muted font-mono"
+        className="scene-out fill-(--glass-fg-muted) font-mono"
         style={at(1500)}
       >
         brew install --cask tinycast
       </text>
       <rect
-        x="286"
-        y="86"
-        width="156"
-        height="156"
-        rx="24"
+        x={previewLeft}
+        y={listTop + 16}
+        width="140"
+        height="140"
+        rx="22"
         className="scene-pop fill-violet"
         style={at(1650)}
       />
       <g className="scene-in" style={at(1850)}>
-        <text x="466" y="150" fontSize="22" className="fill-fg font-mono">
+        <text
+          x={previewLeft + 160}
+          y={listTop + 80}
+          fontSize="22"
+          className="fill-(--glass-fg) font-mono"
+        >
           #863BFF
         </text>
         <text
-          x="466"
-          y="176"
+          x={previewLeft + 160}
+          y={listTop + 104}
           fontSize="12"
-          className="fill-fg-subtle font-mono"
+          className="fill-(--glass-fg-muted) font-mono"
         >
           rgb(134, 59, 255)
         </text>
       </g>
-      <ActionBar action="Paste" start={2500} />
-    </Stage>
+    </PaletteStage>
   );
 }
 
@@ -774,15 +935,9 @@ function SnippetsScene() {
 // HTML rather than SVG: the window animates its left edge and width in
 // percent, which SVG geometry cannot do across every browser.
 function WindowsScene() {
-  const layouts = [
-    "Left Half",
-    "Center Third",
-    "First Two Thirds",
-    "Right Half",
-  ];
   return (
     <div aria-hidden="true" className="size-full p-[1.9%]">
-      <div className="flex size-full flex-col gap-2 rounded-[14px] border border-border-strong bg-surface p-2.5">
+      <div className="flex size-full flex-col rounded-[14px] border border-border-strong bg-surface p-2.5">
         <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-canvas">
           <div className="h-3 border-b border-border bg-tint/4" />
           <div className="scene-window absolute top-[14%] bottom-[5%] rounded-md border border-violet-bright/70 bg-violet/15">
@@ -792,16 +947,6 @@ function WindowsScene() {
               ))}
             </div>
           </div>
-        </div>
-        <div className="grid font-rounded text-small font-medium text-fg">
-          {layouts.map((layout) => (
-            <span
-              key={layout}
-              className="scene-layout-label col-start-1 row-start-1 text-center"
-            >
-              {layout}
-            </span>
-          ))}
         </div>
       </div>
     </div>

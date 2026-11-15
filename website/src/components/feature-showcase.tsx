@@ -76,12 +76,12 @@ function wrapToMiddleCopy(list: HTMLElement) {
   }
 }
 
-// A tab list styled as the palette's own result rows. It advances on its own
-// until someone picks a row; from then on the reader is in charge.
+// A tab list styled as the palette's own result rows. It always advances on its
+// own: a pick restarts the timer there, and only reading the preview holds it.
 export function FeatureShowcase({ features }: { features: Feature[] }) {
   const [active, setActive] = useState(0);
-  const [isAutoplay, setIsAutoplay] = useState(true);
-  const [isPaused, setIsPaused] = useState(false);
+  const [isHoveringPreview, setIsHoveringPreview] = useState(false);
+  const [isKeyboardFocused, setIsKeyboardFocused] = useState(false);
   const [isOffscreen, setIsOffscreen] = useState(true);
   const root = useRef<HTMLDivElement>(null);
   const tablist = useRef<HTMLDivElement>(null);
@@ -129,21 +129,17 @@ export function FeatureShowcase({ features }: { features: Feature[] }) {
     };
   }, []);
 
-  function choose(index: number) {
-    setIsAutoplay(false);
-    setActive(index);
-  }
-
   function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
     const move = keyMoves[event.key];
     if (!move) return;
     event.preventDefault();
     const next = move(active, features.length);
-    choose(next);
+    setActive(next);
     tabs.current[next]?.focus({ preventScroll: true });
   }
 
   const feature = features[active];
+  const isPaused = isHoveringPreview || isKeyboardFocused;
 
   return (
     <div
@@ -151,10 +147,10 @@ export function FeatureShowcase({ features }: { features: Feature[] }) {
       className="feature-showcase grid items-start gap-2 rounded-2xl bg-tint/4 p-2 lg:grid-cols-[18rem_minmax(0,1fr)]"
       data-paused={isPaused || undefined}
       data-offscreen={isOffscreen || undefined}
-      onPointerEnter={() => setIsPaused(true)}
-      onPointerLeave={() => setIsPaused(false)}
-      onFocus={() => setIsPaused(true)}
-      onBlur={() => setIsPaused(false)}
+      onFocus={(event) =>
+        setIsKeyboardFocused(event.target.matches(":focus-visible"))
+      }
+      onBlur={() => setIsKeyboardFocused(false)}
     >
       <div
         ref={tablist}
@@ -167,7 +163,6 @@ export function FeatureShowcase({ features }: { features: Feature[] }) {
         {copies.map((copy) =>
           features.map((item, index) => {
             const isActive = index === active;
-            const showsProgress = isActive && isAutoplay;
             if (copy !== 0) {
               return (
                 <FeatureTab
@@ -175,11 +170,10 @@ export function FeatureShowcase({ features }: { features: Feature[] }) {
                   feature={item}
                   index={index}
                   isActive={isActive}
-                  showsProgress={showsProgress}
                   progressKey={active}
                   aria-hidden="true"
                   tabIndex={-1}
-                  onClick={() => choose(index)}
+                  onClick={() => setActive(index)}
                   className="lg:hidden"
                 />
               );
@@ -193,7 +187,6 @@ export function FeatureShowcase({ features }: { features: Feature[] }) {
                 feature={item}
                 index={index}
                 isActive={isActive}
-                showsProgress={showsProgress}
                 progressKey={active}
                 onProgressEnd={() =>
                   setActive((current) => (current + 1) % features.length)
@@ -203,7 +196,7 @@ export function FeatureShowcase({ features }: { features: Feature[] }) {
                 aria-selected={isActive}
                 aria-controls={`${id}-panel`}
                 tabIndex={isActive ? 0 : -1}
-                onClick={() => choose(index)}
+                onClick={() => setActive(index)}
               />
             );
           }),
@@ -214,6 +207,8 @@ export function FeatureShowcase({ features }: { features: Feature[] }) {
         role="tabpanel"
         id={`${id}-panel`}
         aria-labelledby={`${id}-tab-${active}`}
+        onPointerEnter={() => setIsHoveringPreview(true)}
+        onPointerLeave={() => setIsHoveringPreview(false)}
         className="flex min-w-0 flex-col overflow-hidden rounded-xl bg-canvas"
       >
         <div aria-hidden="true" className="feature-stage aspect-[16/9] w-full">
@@ -241,7 +236,6 @@ type FeatureTabProps = Omit<ComponentProps<"button">, "children"> & {
   feature: Feature;
   index: number;
   isActive: boolean;
-  showsProgress: boolean;
   progressKey: number;
   onProgressEnd?: () => void;
 };
@@ -250,7 +244,6 @@ function FeatureTab({
   feature,
   index,
   isActive,
-  showsProgress,
   progressKey,
   onProgressEnd,
   className,
@@ -281,7 +274,7 @@ function FeatureTab({
       <span className="whitespace-nowrap font-rounded text-body font-semibold">
         {feature.title}
       </span>
-      {showsProgress && (
+      {isActive && (
         <span
           key={progressKey}
           aria-hidden="true"
