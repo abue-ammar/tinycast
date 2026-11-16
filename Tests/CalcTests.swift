@@ -1153,6 +1153,16 @@ struct CalcTests {
         // A ticker outranks a generated noun, and only that noun: `soles` still reaches PEN
         expectBadges("1 sol to usd", source: "Solana", target: "US Dollar")
         expectError("1 soles to usd", "No exchange rate for PEN.")
+        // Sats need no quote of their own: BTC's rate prices them at 100,000,000 to the coin
+        expectDisplay("1 btc to sats", "100,000,000.00 SATS")
+        expectDisplay("1 usd to sats", "1,666.67 SATS")
+        expectDisplay("1 eth to sats", "3,333,333.33 SATS")
+        expectDisplay("10000 sats to usd", "6.00 USD")
+        expectDisplay("10000 sats", "501.00 INR", region: "INR")
+        expectBadges("1 eth to sats", source: "Ethereum", target: "Satoshi")
+        check(
+            "sats are absent from the fetched coins", expected: "false",
+            got: "\(CalcCurrency.cryptoCodes.contains(CalcCurrency.satoshi.code))")
         check(
             "crypto is absent from the generated fiat table", expected: "true",
             got: "\(CurrencyData.all.allSatisfy { !CalcCurrency.cryptoCodes.contains($0.code) })")
@@ -1199,6 +1209,7 @@ struct CalcTests {
         check(
             "a coin-less snapshot is rejected on load", expected: "false",
             got: "\(CurrencyFeed.pricesCoins(coinless))")
+        check("sats need BTC's rate", expected: "true", got: "\(coinless.rate(for: "SATS") == nil)")
         check("the fixture prices coins", expected: "true", got: "\(CurrencyFeed.pricesCoins(fx))")
         expectSnapshotThrows(
             "feed reported failure",
