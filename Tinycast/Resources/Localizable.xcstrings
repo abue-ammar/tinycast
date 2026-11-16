@@ -141762,58 +141762,6 @@
         }
       }
     },
-    "macOS reported an unexpected value for this setting." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS hat einen unerwarteten Wert für diese Einstellung gemeldet."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS devolvió un valor inesperado para este ajuste."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS a signalé une valeur inattendue pour ce réglage."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOSがこの設定について予期しない値を返しました。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS가 이 설정에 대해 예기치 않은 값을 보고했습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O macOS informou um valor inesperado para este ajuste."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS сообщила неожиданное значение этой настройки."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS 为此设置返回了意外的值。"
-          }
-        }
-      }
-    },
     "matched by name" : {
       "comment" : "Lowercase tag: why an uninstall candidate was found",
       "localizations" : {

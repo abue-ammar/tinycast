@@ -436,41 +436,16 @@ enum SystemActionRunner {
     }
 
     /// Returns the state it landed in, so the caller needn't re-read the preference.
-    @discardableResult
     private static func toggleDefault(domain: String, key: String) async throws -> Bool {
-        let read = try await process("/usr/bin/defaults", arguments: ["read", domain, key])
-        let normalized = read.stdout.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        let current: Bool
-        if read.status == 0 {
-            guard let parsed = booleanDefault(normalized) else {
-                throw SystemActionFailure(
-                    String(localized: "macOS reported an unexpected value for this setting."))
-            }
-            current = parsed
-        } else if read.stderr.contains("does not exist") {
-            // Unset is genuinely off; any other failure is unknown and stays untouched.
-            current = false
-        } else {
-            throw processFailure(read, executable: "defaults")
-        }
-        let requested = !current
+        func isOn() -> Bool { CFPreferencesGetAppBooleanValue(key as CFString, domain as CFString, nil) }
+        let requested = !isOn()
         try await runProcess(
             "/usr/bin/defaults",
             arguments: ["write", domain, key, "-bool", requested ? "true" : "false"])
-        let verify = try await process("/usr/bin/defaults", arguments: ["read", domain, key])
-        let verified = verify.stdout.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard verify.status == 0, booleanDefault(verified) == requested else {
+        guard isOn() == requested else {
             throw SystemActionFailure(String(localized: "macOS did not save the requested setting."))
         }
         return requested
-    }
-
-    private static func booleanDefault(_ value: String) -> Bool? {
-        switch value {
-        case "1", "true", "yes": return true
-        case "0", "false", "no": return false
-        default: return nil
-        }
     }
 
     /// Returns how many were dismissed, so an empty screen reads as information.
