@@ -222,6 +222,11 @@ struct RootPaletteView: View {
             header: title,
             items: [
                 PopoverMenuItem(
+                    title: String(localized: "Check for Updates"), systemImage: "arrow.down.circle"
+                ) {
+                    core.updateCoordinator.checkForUpdates()
+                },
+                PopoverMenuItem(
                     title: String(localized: "Changelog"),
                     systemImage: "clock.arrow.trianglehead.2.counterclockwise.rotate.90"
                 ) {
@@ -229,14 +234,18 @@ struct RootPaletteView: View {
                         openURL(url)
                     }
                 },
-                PopoverMenuItem(title: String(localized: "About Tinycast"), systemImage: "info.circle") {
+                PopoverMenuItem(
+                    title: String(localized: "About Tinycast"), systemImage: "info.circle",
+                    startsSection: true
+                ) {
                     core.settingsCoordinator.showAbout()
                 },
                 PopoverMenuItem(title: String(localized: "Support Tinycast"), systemImage: "heart") {
                     core.supportCoordinator.showSupport()
                 },
                 PopoverMenuItem(
-                    title: String(localized: "Settings"), systemImage: "gearshape", shortcut: "⌘,"
+                    title: String(localized: "Settings"), systemImage: "gearshape",
+                    startsSection: true, shortcut: "⌘,"
                 ) {
                     core.settingsCoordinator.showSettings()
                 },
@@ -263,7 +272,6 @@ struct RootPaletteView: View {
             let filtered = appMenuContent.matching(ActionMenuSearchQuery(vm.menuQuery))
             return PaletteMenuContent(
                 popover: filtered.content, selection: $menuSelection,
-                visibleRows: Theme.Size.appMenuVisibleRows,
                 search: PopoverMenu.Search(
                     placeholder: String(localized: "Search for actions…"), placement: .bottom),
                 onActivate: activateMenuItem, preferredSelection: filtered.bestMatch)

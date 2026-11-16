@@ -1,17 +1,19 @@
 import Foundation
 
-/// The daily release check. See docs/features/updates.md.
+/// The twice-daily release check. See docs/features/updates.md.
 @MainActor
 @Observable
 final class UpdateCheckStore {
     private nonisolated static let endpoint = URL(
         string: "https://api.github.com/repos/\(ReleaseFeed.repository)/releases?per_page=20")!
-    /// Daily, measured from `lastCheckedAt`, so relaunching never re-asks GitHub.
-    private static let refreshInterval: TimeInterval = 24 * 3600
+    /// Measured from `lastCheckedAt`, so relaunching never re-asks GitHub.
+    private static let refreshInterval: TimeInterval = 12 * 3600
     /// Shorter retry, so a machine offline at launch sees a release soon after it reconnects.
     private static let retryInterval: TimeInterval = 2 * 3600
     /// Keeps the first check clear of the login rush.
     private static let startupDelay = Duration.seconds(30)
+    /// Lets macOS coalesce the wake with other timers.
+    private static let wakeTolerance = Duration.seconds(15)
 
     let channel: ReleaseChannel
     let runningVersion: AppVersion?
@@ -67,7 +69,7 @@ final class UpdateCheckStore {
             while !Task.isCancelled {
                 // Optional-chained: the sleep must not retain the store, or nothing can release it.
                 guard let wait = await self?.advance() else { return }
-                try? await Task.sleep(for: .seconds(wait))
+                try? await Task.sleep(for: .seconds(wait), tolerance: Self.wakeTolerance)
             }
         }
     }
