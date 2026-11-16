@@ -2,9 +2,6 @@ import AppKit
 
 /// The files a pasteboard names; `NSURL` reading picks a representation of its own choosing.
 enum PasteboardFiles {
-    /// Written by anything that still speaks the pre-UTI pasteboard.
-    private static let legacyFilenames = NSPasteboard.PasteboardType("NSFilenamesPboardType")
-
     /// The file itself on the board, so a paste in Finder copies it rather than its path.
     static func write(_ url: URL, to pasteboard: NSPasteboard) {
         pasteboard.clearContents()
@@ -25,21 +22,8 @@ enum PasteboardFiles {
     ) -> [URL] {
         guard limit > 0 else { return [] }
         var matches: [URL] = []
-        var hasFileURL = false
         for item in pasteboard.pasteboardItems ?? [] {
-            guard let url = url(from: item) else { continue }
-            hasFileURL = true
-            guard predicate(url) else { continue }
-            matches.append(url)
-            if matches.count == limit { return matches }
-        }
-        // A modern flavour suppresses the fallback even when every URL was rejected.
-        guard !hasFileURL,
-            let paths = pasteboard.propertyList(forType: legacyFilenames) as? [String]
-        else { return matches }
-        for path in paths {
-            let url = URL(fileURLWithPath: path)
-            guard predicate(url) else { continue }
+            guard let url = url(from: item), predicate(url) else { continue }
             matches.append(url)
             if matches.count == limit { return matches }
         }

@@ -5,16 +5,10 @@ import AppKit
 enum ClipboardFilePerformanceTests {
     static let cap = ClipboardManager.maxCapturedFiles
 
-    static func board(_ urls: [URL], legacy: Bool) -> NSPasteboard {
+    static func board(_ urls: [URL]) -> NSPasteboard {
         let board = NSPasteboard.withUniqueName()
         if urls.isEmpty { return board }
-        if legacy {
-            let type = NSPasteboard.PasteboardType("NSFilenamesPboardType")
-            board.declareTypes([type], owner: nil)
-            precondition(board.setPropertyList(urls.map(\.path), forType: type))
-        } else {
-            precondition(board.writeObjects(urls as [NSURL]))
-        }
+        precondition(board.writeObjects(urls as [NSURL]))
         return board
     }
 
@@ -30,8 +24,8 @@ enum ClipboardFilePerformanceTests {
             + Double(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1_000
     }
 
-    static func verify(_ urls: [URL], expected: [String]?, roots: [String], legacy: Bool) {
-        let pasteboard = board(urls, legacy: legacy)
+    static func verify(_ urls: [URL], expected: [String]?, roots: [String]) {
+        let pasteboard = board(urls)
         defer { pasteboard.releaseGlobally() }
         precondition(ClipboardManager.fileURLs(on: pasteboard, volatileRoots: roots) == expected)
     }
@@ -71,20 +65,16 @@ enum ClipboardFilePerformanceTests {
         let durableLink = directory.appendingPathComponent("durable-link")
         let volatileLink = directory.appendingPathComponent("volatile-link")
         let brokenLink = directory.appendingPathComponent("broken-link")
-        for legacy in [false, true] {
-            verify([], expected: nil, roots: roots, legacy: legacy)
-            verify([missing, volatile, volatileLink, brokenLink], expected: nil, roots: roots, legacy: legacy)
-            let valid = [durableLink] + Array(durable.prefix(40))
-            let mixed = Array(repeating: missing, count: 40) + [volatile, volatileLink, brokenLink] + valid
-            verify(
-                mixed, expected: Array(valid.prefix(cap).map(\.standardizedFileURL.path).reversed()),
-                roots: roots, legacy: legacy)
-            for count in [1, cap - 1, cap, cap + 1] {
-                let urls = Array(durable.prefix(count))
-                verify(
-                    urls, expected: Array(urls.prefix(cap).map(\.path).reversed()), roots: roots,
-                    legacy: legacy)
-            }
+        verify([], expected: nil, roots: roots)
+        verify([missing, volatile, volatileLink, brokenLink], expected: nil, roots: roots)
+        let valid = [durableLink] + Array(durable.prefix(40))
+        let mixed = Array(repeating: missing, count: 40) + [volatile, volatileLink, brokenLink] + valid
+        verify(
+            mixed, expected: Array(valid.prefix(cap).map(\.standardizedFileURL.path).reversed()),
+            roots: roots)
+        for count in [1, cap - 1, cap, cap + 1] {
+            let urls = Array(durable.prefix(count))
+            verify(urls, expected: Array(urls.prefix(cap).map(\.path).reversed()), roots: roots)
         }
         let text = NSPasteboard.withUniqueName()
         text.declareTypes([.string], owner: nil)
@@ -93,62 +83,57 @@ enum ClipboardFilePerformanceTests {
         text.releaseGlobally()
 
         var results: [[String: Any]] = []
-        for legacy in [false, true] {
-            for (workload, count) in [
-                ("durable", cap), ("durable", 1_000), ("durable", 10_000),
-                ("missing", 10_000), ("rejected-prefix", 1_000)
-            ] {
-                let urls =
-                    workload == "missing"
-                    ? Array(repeating: missing, count: count)
-                    : (workload == "rejected-prefix" ? Array(repeating: missing, count: 40) : [])
-                        + Array(durable.prefix(count))
-                let pasteboard = board(urls, legacy: legacy)
-                let expected: [String]? =
-                    workload == "missing"
-                    ? nil
-                    : Array(durable.prefix(min(count, cap)).map(\.path).reversed())
-                precondition(ClipboardManager.fileURLs(on: pasteboard, volatileRoots: roots) == expected)
-                let iterations = 5
-                let startCPU = cpu()
-                let start = ContinuousClock.now
-                for _ in 0..<iterations {
-                    autoreleasepool {
-                        precondition(
-                            ClipboardManager.fileURLs(on: pasteboard, volatileRoots: roots) == expected)
-                    }
+        for (workload, count) in [
+            ("durable", cap), ("durable", 1_000), ("durable", 10_000),
+            ("missing", 10_000), ("rejected-prefix", 1_000)
+        ] {
+            let urls =
+                workload == "missing"
+                ? Array(repeating: missing, count: count)
+                : (workload == "rejected-prefix" ? Array(repeating: missing, count: 40) : [])
+                    + Array(durable.prefix(count))
+            let pasteboard = board(urls)
+            let expected: [String]? =
+                workload == "missing"
+                ? nil
+                : Array(durable.prefix(min(count, cap)).map(\.path).reversed())
+            precondition(ClipboardManager.fileURLs(on: pasteboard, volatileRoots: roots) == expected)
+            let iterations = 5
+            let startCPU = cpu()
+            let start = ContinuousClock.now
+            for _ in 0..<iterations {
+                autoreleasepool {
+                    precondition(
+                        ClipboardManager.fileURLs(on: pasteboard, volatileRoots: roots) == expected)
                 }
-                let wall = milliseconds(start) / Double(iterations)
-                let cpuTime = (cpu() - startCPU) / Double(iterations)
-                pasteboard.releaseGlobally()
-                results.append([
-                    "workload": workload, "files": count, "format": legacy ? "legacy" : "file-url",
-                    "iterations": iterations, "wall_ms_per_call": wall,
-                    "cpu_ms_per_call": cpuTime, "exact_output_passed": true
-                ])
             }
+            let wall = milliseconds(start) / Double(iterations)
+            let cpuTime = (cpu() - startCPU) / Double(iterations)
+            pasteboard.releaseGlobally()
+            results.append([
+                "workload": workload, "files": count, "iterations": iterations,
+                "wall_ms_per_call": wall, "cpu_ms_per_call": cpuTime,
+                "exact_output_passed": true
+            ])
         }
-        for legacy in [false, true] {
-            for count in [cap, 10_000] {
-                let urls = Array(durable.prefix(count))
-                let pasteboard = board(urls, legacy: legacy)
-                precondition(PasteboardFiles.urls(on: pasteboard) == urls)
-                let iterations = 5
-                let startCPU = cpu()
-                let start = ContinuousClock.now
-                for _ in 0..<iterations {
-                    autoreleasepool { precondition(PasteboardFiles.urls(on: pasteboard) == urls) }
-                }
-                let wall = milliseconds(start) / Double(iterations)
-                let cpuTime = (cpu() - startCPU) / Double(iterations)
-                pasteboard.releaseGlobally()
-                results.append([
-                    "workload": "uncapped-reader", "files": count,
-                    "format": legacy ? "legacy" : "file-url", "iterations": iterations,
-                    "wall_ms_per_call": wall, "cpu_ms_per_call": cpuTime,
-                    "exact_output_passed": true
-                ])
+        for count in [cap, 10_000] {
+            let urls = Array(durable.prefix(count))
+            let pasteboard = board(urls)
+            precondition(PasteboardFiles.urls(on: pasteboard) == urls)
+            let iterations = 5
+            let startCPU = cpu()
+            let start = ContinuousClock.now
+            for _ in 0..<iterations {
+                autoreleasepool { precondition(PasteboardFiles.urls(on: pasteboard) == urls) }
             }
+            let wall = milliseconds(start) / Double(iterations)
+            let cpuTime = (cpu() - startCPU) / Double(iterations)
+            pasteboard.releaseGlobally()
+            results.append([
+                "workload": "uncapped-reader", "files": count, "iterations": iterations,
+                "wall_ms_per_call": wall, "cpu_ms_per_call": cpuTime,
+                "exact_output_passed": true
+            ])
         }
         let data = try JSONSerialization.data(withJSONObject: results, options: [.sortedKeys])
         FileHandle.standardOutput.write(data + Data([10]))
