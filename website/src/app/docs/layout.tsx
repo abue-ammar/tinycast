@@ -7,12 +7,13 @@ import {
   DocsSidebarButton,
 } from "../../components/docs-nav-buttons";
 import {
-  DiscordLink,
+  ChangelogLink,
+  DocsLink,
   GitHubLink,
   NavFrame,
   SupportLink,
 } from "../../components/nav";
-import { DiscordLogo, Logo } from "../../components/ui/icon";
+import { Logo } from "../../components/ui/icon";
 import { site } from "../../data/site";
 import { source } from "../../lib/source";
 
@@ -25,27 +26,17 @@ export default function Layout({ children }: { children: ReactNode }) {
         // screen leaves a dead margin to the left of the sidebar. Full width
         // collapses that margin so the sidebar sits against the edge.
         containerProps={{ style: { "--fd-layout-width": "100%" } as never }}
-        // `type: "icon"` places Discord in the sidebar's bottom bar, beside the theme switch.
-        links={[
-          {
-            type: "icon",
-            text: "Discord",
-            label: "Join the Discord",
-            url: site.community.discord,
-            icon: <DiscordLogo size={16} />,
-            external: true,
-          },
-        ]}
         sidebar={{ banner: <DocsSidebarLinks /> }}
         themeSwitch={{ enabled: false }}
         nav={{
           // Our own bar on phones, laid out like the site nav so nothing moves
-          // between pages. z-30 keeps it under the search dialog and the menu drawer.
+          // between pages.
           component: (
-            <NavFrame className="z-30 [grid-area:header] md:hidden">
+            <NavFrame className="[grid-area:header] md:hidden">
               <SupportLink />
               <GitHubLink />
-              <DiscordLink />
+              <DocsLink />
+              <ChangelogLink />
               <DocsSearchButton />
               <DocsSidebarButton />
             </NavFrame>

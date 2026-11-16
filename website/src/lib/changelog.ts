@@ -34,7 +34,7 @@ export type StableRelease = {
   compareUrl: string | null;
   /** False for releases published before notes were generated from merged PRs. */
   hasNotes: boolean;
-  /** The notes' prose, such as the line a release with no merged PRs carries instead. */
+  /** The notes' prose as markdown, such as the line a release with no merged PRs carries. */
   summary: string | null;
   changes: Change[];
   contributors: Contributor[];
@@ -65,6 +65,17 @@ function cleanTitle(title: string): string {
   return bare.charAt(0).toUpperCase() + bare.slice(1);
 }
 
+function toChange(line: string): Change {
+  const match = line.match(CHANGE_LINE);
+  if (!match)
+    return { title: cleanTitle(line.slice(2)), author: null, pr: null };
+  return {
+    title: cleanTitle(match[1]),
+    author: match[2],
+    pr: Number(match[3]),
+  };
+}
+
 function parseNotes(notes: string) {
   const changes: Change[] = [];
   const prose: string[] = [];
@@ -72,30 +83,28 @@ function parseNotes(notes: string) {
 
   for (const raw of notes.split(/\r?\n/)) {
     const line = raw.trim();
+    // Only GitHub's level-2 headings start a generated list; a deeper one opens hand-written prose.
     if (line.startsWith("## ")) {
       section = line.slice(3).toLowerCase();
       continue;
     }
-    if (!line.startsWith("* ")) {
-      if (line) prose.push(line);
+    if (/^#{3,6} /.test(line)) section = "notes";
+
+    const isGenerated = section !== "notes";
+    if (isGenerated && line.startsWith("* ")) {
+      // Everyone listed there is already credited on the changes they made.
+      if (!section.startsWith("new contributors")) changes.push(toChange(line));
       continue;
     }
-
-    // Everyone listed there is already credited on the changes they made.
-    if (section.startsWith("new contributors")) continue;
-    const match = line.match(CHANGE_LINE);
-    changes.push(
-      match
-        ? {
-            title: cleanTitle(match[1]),
-            author: match[2],
-            pr: Number(match[3]),
-          }
-        : { title: cleanTitle(line.slice(2)), author: null, pr: null },
-    );
+    // The raw line keeps its indentation and blank lines, which the markdown needs.
+    prose.push(raw.trimEnd());
   }
 
-  return { changes, summary: prose.join(" ") || null };
+  const summary = prose
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return { changes, summary: summary || null };
 }
 
 // Most changes first, ties in the order they first appear in the notes.

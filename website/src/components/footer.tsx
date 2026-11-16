@@ -6,7 +6,6 @@ import { Link } from "./ui/link";
 const links = [
   { label: "Docs", href: "/docs" },
   { label: "Privacy", href: "/#privacy" },
-  { label: "Install", href: "/docs/install" },
   { label: "Changelog", href: "/changelog" },
   { label: "GitHub", href: site.repo },
   { label: "Discord", href: site.community.discord },
@@ -38,7 +37,7 @@ export async function Footer() {
 
         <nav
           aria-label="Footer"
-          className="flex flex-wrap items-center gap-x-5 gap-y-2"
+          className="flex flex-wrap items-center justify-between gap-x-1.5 gap-y-2 md:justify-start md:gap-x-5"
         >
           {links.map((link) => (
             <Link

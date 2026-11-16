@@ -105,7 +105,7 @@ export function CheckoutPanel() {
                 "h-11 rounded-lg font-mono text-body transition-[box-shadow,color,background-color]",
                 preset === value
                   ? "bg-violet/12 text-fg shadow-[inset_0_0_0_1.5px_var(--color-violet)]"
-                  : "text-fg-muted shadow-key hover:text-fg hover:shadow-key-hover",
+                  : "text-fg-muted shadow-line hover:text-fg hover:shadow-line-hover",
               )}
             >
               ${value}

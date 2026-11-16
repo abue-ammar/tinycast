@@ -17,7 +17,7 @@ export function ThankYou({ plan }: { plan: Plan }) {
     <div
       ref={ref}
       role="status"
-      className="rise relative overflow-hidden rounded-2xl bg-surface px-6 pb-8 pt-10 text-center shadow-key sm:px-8"
+      className="rise relative overflow-hidden rounded-2xl bg-surface px-6 pb-8 pt-10 text-center shadow-line sm:px-8"
     >
       <span
         aria-hidden="true"

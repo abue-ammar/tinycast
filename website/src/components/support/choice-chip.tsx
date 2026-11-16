@@ -24,7 +24,7 @@ export function ChoiceChip({
         "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-violet-bright",
         checked
           ? "bg-violet/12 text-fg shadow-[inset_0_0_0_1.5px_var(--color-violet)]"
-          : "text-fg-muted shadow-key hover:text-fg hover:shadow-key-hover",
+          : "text-fg-muted shadow-line hover:text-fg hover:shadow-line-hover",
       )}
     >
       <input

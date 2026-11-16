@@ -55,7 +55,7 @@ export function CryptoPanel() {
               width={164}
               height={164}
               hidden={option !== wallet}
-              className="aspect-square w-full rounded-lg shadow-key"
+              className="aspect-square w-full rounded-lg shadow-line"
             />
           ))}
         </div>

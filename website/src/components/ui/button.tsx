@@ -21,7 +21,7 @@ const variants: Record<Variant, string> = {
   action: "rounded-md bg-action text-action-fg hover:opacity-90",
   ghost: "rounded-full text-fg-muted hover:bg-tint/5 hover:text-fg",
   outline:
-    "rounded-full border border-border text-fg-muted hover:border-border-strong hover:text-fg",
+    "rounded-full bg-tint/6 text-fg shadow-line hover:bg-tint/10 hover:shadow-line-hover",
 };
 
 const sizes: Record<Size, string> = {
@@ -44,7 +44,7 @@ export function Button({
     <Link
       href={href}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-[color,background-color,border-color,opacity,scale] duration-200 ease-(--ease-quart) active:scale-97",
+        "inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-[color,background-color,box-shadow,opacity,scale] duration-200 ease-(--ease-quart) active:scale-97",
         variants[variant],
         sizes[size],
         className,

@@ -125,7 +125,7 @@ export function SupportFlow({ intro }: Props) {
           {returned ? (
             <ThankYou plan={returned} />
           ) : (
-            <div className="rounded-2xl bg-surface shadow-key">
+            <div className="rounded-2xl bg-surface shadow-line">
               <MethodTabs value={method} onChange={setMethod} />
               <div className="grid p-5 sm:p-6">
                 <MethodPanel isActive={method === "card"}>

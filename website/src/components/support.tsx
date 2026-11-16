@@ -3,49 +3,28 @@ import { supportHero } from "../data/support";
 import { reveal } from "../lib/reveal";
 import { Button } from "./ui/button";
 import { GitHubLogo, Logo, SupportIcon } from "./ui/icon";
-import { RevealWords } from "./ui/reveal-words";
-
-// The mark alone on a violet glow, so the page ends on the brand.
-function GlowingMark() {
-  return (
-    <span className="relative mx-auto flex size-28 items-center justify-center sm:size-32">
-      <span
-        aria-hidden="true"
-        className="mark-bloom pointer-events-none absolute -inset-32"
-      />
-      <Logo size={72} className="relative" />
-    </span>
-  );
-}
 
 export function Support() {
   return (
-    <section id="support" className="px-4 pb-24 pt-24 text-center sm:px-10 ">
-      <div aria-hidden="true" {...reveal("content")}>
-        <GlowingMark />
-      </div>
-      <h2
-        className="mx-auto mt-14 max-w-2xl text-closing"
-        {...reveal("words", 1)}
-      >
-        <RevealWords text={supportHero.title} />
+    <section
+      id="support"
+      className="flex flex-col items-center px-4 py-16 text-center sm:px-10 sm:py-20"
+      {...reveal("content")}
+    >
+      <Logo size={40} />
+      <h2 className="mt-5 font-rounded text-heading text-fg">
+        {supportHero.title}
       </h2>
-      <p
-        className="mx-auto mt-4 max-w-lg text-pretty text-body-lg text-fg-muted"
-        {...reveal("text", 2)}
-      >
+      <p className="mt-3 max-w-xl text-pretty text-small text-fg-muted">
         {supportHero.intro}
       </p>
-      <div
-        className="mt-8 flex flex-wrap justify-center gap-3"
-        {...reveal("content", 3)}
-      >
-        <Button href={site.support} size="lg">
-          <SupportIcon size={18} />
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <Button href={site.support} size="md">
+          <SupportIcon size={16} />
           Support Tinycast
         </Button>
-        <Button href={site.repo} variant="ghost" size="lg">
-          <GitHubLogo size={16} />
+        <Button href={site.repo} variant="outline" size="md">
+          <GitHubLogo size={15} />
           Star on GitHub
         </Button>
       </div>

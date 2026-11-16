@@ -1,3 +1,5 @@
+import { createMarkdownRenderer } from "fumadocs-core/content/md";
+import type { ComponentProps } from "react";
 import { ArrowUpRight, ChevronDown } from "lucide-react";
 import { changelogCopy, changelogHero } from "../data/changelog";
 import { site } from "../data/site";
@@ -68,6 +70,70 @@ function ChangeTitle({ title }: { title: string }) {
     ) : (
       part
     ),
+  );
+}
+
+// Raw HTML in a release body is dropped by the renderer, so notes cannot inject markup.
+const { MarkdownServer } = createMarkdownRenderer();
+
+function NotesHeading(props: ComponentProps<"h3">) {
+  return (
+    <h3
+      {...props}
+      className="mb-3 mt-6 text-body font-semibold text-fg first:mt-0"
+    />
+  );
+}
+
+const notesComponents = {
+  h1: NotesHeading,
+  h2: NotesHeading,
+  h3: NotesHeading,
+  h4: NotesHeading,
+  p: (props: ComponentProps<"p">) => (
+    <p {...props} className="mt-3 text-pretty first:mt-0" />
+  ),
+  ul: (props: ComponentProps<"ul">) => (
+    <ul {...props} className="mt-3 list-disc space-y-2 pl-5" />
+  ),
+  ol: (props: ComponentProps<"ol">) => (
+    <ol
+      {...props}
+      className="mt-3 list-decimal space-y-2 pl-5 marker:text-fg-subtle"
+    />
+  ),
+  li: (props: ComponentProps<"li">) => (
+    <li {...props} className="pl-1 text-pretty" />
+  ),
+  strong: (props: ComponentProps<"strong">) => (
+    <strong {...props} className="font-semibold text-fg" />
+  ),
+  code: (props: ComponentProps<"code">) => (
+    <code
+      {...props}
+      className="rounded-sm bg-well px-1 py-0.5 font-mono text-key text-fg"
+    />
+  ),
+  a: (props: ComponentProps<"a">) => (
+    <a
+      {...props}
+      target="_blank"
+      rel="noreferrer"
+      className="text-fg underline decoration-border-strong underline-offset-2 transition-colors hover:decoration-fg"
+    />
+  ),
+};
+
+function ReleaseNotes({ notes, isCard }: { notes: string; isCard: boolean }) {
+  return (
+    <div
+      className={cn(
+        "text-small text-fg-muted",
+        isCard ? "rounded-xl px-5 py-4 shadow-key" : "mb-5",
+      )}
+    >
+      <MarkdownServer components={notesComponents}>{notes}</MarkdownServer>
+    </div>
   );
 }
 
@@ -229,16 +295,10 @@ function ReleaseEntry({
       <div className={cn(railBody, "mt-6 md:mt-0 md:pb-16")}>
         <RailDot highlighted={latest} />
         {release.summary && (
-          <p
-            className={cn(
-              "text-pretty text-small text-fg-muted",
-              release.changes.length > 0
-                ? "mb-5"
-                : "rounded-xl px-5 py-4 shadow-key",
-            )}
-          >
-            {release.summary}
-          </p>
+          <ReleaseNotes
+            notes={release.summary}
+            isCard={release.changes.length === 0}
+          />
         )}
         {release.changes.length > 0 && <ChangeList changes={release.changes} />}
         <Contributors contributors={release.contributors} />

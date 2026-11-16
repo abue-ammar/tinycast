@@ -3,9 +3,8 @@
 import { ThemeProvider } from "next-themes";
 import type { ReactNode } from "react";
 
-// Only the theme is global. Fumadocs' own RootProvider — which pulls in the
-// search context and its dialog — is mounted in the docs layout instead, so
-// the marketing page never pays for machinery it has no use for.
+// Only the theme is global. Fumadocs' RootProvider is mounted by the docs layout
+// and the site nav, the two places that use its search and drawer.
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider

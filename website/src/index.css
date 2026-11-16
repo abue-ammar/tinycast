@@ -4,6 +4,11 @@
 
 @source "../node_modules/fumadocs-ui/dist/**/*.js";
 
+/* The docs drawer's own top row holds only a close button; DocsSidebarLinks draws the header. */
+#nd-docs-layout #nd-sidebar-mobile > div:first-child > div:first-child {
+  display: none;
+}
+
 /*
  * Tinycast design tokens — the single source of truth for the site.
  * Components must only use sizes, colors, and shadows defined here; Tailwind's
@@ -201,11 +206,6 @@
   --text-quote--letter-spacing: -0.02em;
   --text-quote--font-weight: 400;
 
-  --text-closing: clamp(1.875rem, 1.1rem + 3vw, 3.125rem); /* 30→50px */
-  --text-closing--line-height: 1.08;
-  --text-closing--letter-spacing: -0.022em;
-  --text-closing--font-weight: 700;
-
   /* Hero h1. Sized for the hero's left column, not the full page width, so
      each headline line stays on one line beside the palette. */
   --text-display: clamp(2.25rem, 1.3rem + 3.2vw, 3.625rem); /* 36→58px */
@@ -223,6 +223,9 @@
   /* Signature: the 'keyboard key' surface — pressed, tactile, no drop shadow. */
   --shadow-key: var(--tc-key);
   --shadow-key-hover: var(--tc-key-hover);
+  /* One flat 1px ring at the key's strength, for outlines that must not read doubled. */
+  --shadow-line: inset 0 0 0 1px rgb(var(--tc-tint) / 0.14);
+  --shadow-line-hover: inset 0 0 0 1px rgb(var(--tc-tint) / 0.22);
   /* A single inset top highlight — icon chips and other small raised surfaces. */
   --shadow-highlight: var(--tc-highlight);
   /* A pressed chip — the "comes across" and ethos value pills. */

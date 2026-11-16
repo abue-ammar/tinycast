@@ -1,53 +1,60 @@
-import { BookOpen, Star } from "lucide-react";
+import { BookOpen, History, Star } from "lucide-react";
 import type { ReactNode } from "react";
 import { nav, site } from "../data/site";
 import { cn } from "../lib/cn";
 import { starCount } from "../lib/version";
-import { DiscordLogo, GitHubLogo, Logo, SupportIcon } from "./ui/icon";
+import { DocsSearchButton, DocsSidebarButton } from "./docs-nav-buttons";
+import { DocsSidebarLinks } from "./docs-sidebar-links";
+import { SiteMenuDrawer, SiteMenuProvider } from "./site-menu";
+import { DiscordLogo, GitHubLogo, SupportIcon } from "./ui/icon";
 import { iconButtonClass } from "./ui/icon-button";
 import { Link } from "./ui/link";
+import { SiteBrand } from "./ui/site-brand";
 import { ThemeSwitch } from "./ui/theme-toggle";
 
 // One thin bar on a hairline, see-through over the hero and glass once the page
-// scrolls. Phones get icons instead of a menu: the section links are a scroll
-// away, and a drawer is one more thing to open.
+// scrolls. Phones get the docs bar's search and drawer, so both bars match.
 export function Nav() {
   return (
-    <NavFrame
-      sections={
-        <nav
-          aria-label="Sections"
-          className="hidden items-center gap-5 md:flex"
-        >
-          {nav.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="text-small text-fg-muted transition-colors hover:text-fg"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-      }
-    >
-      <SupportLink />
-      <GitHubLink />
-      <DiscordLink />
-      <Link
-        href="/docs"
-        aria-label="Documentation"
-        className={`${iconButtonClass} md:hidden`}
+    <SiteMenuProvider>
+      <NavFrame
+        sections={
+          <nav
+            aria-label="Sections"
+            className="hidden items-center gap-5 md:flex"
+          >
+            {nav.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="text-small text-fg-muted transition-colors hover:text-fg"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        }
       >
-        <BookOpen size={16} />
-      </Link>
-      {/* Hidden while the site is dark only. */}
-      <ThemeSwitch className="hidden" />
-    </NavFrame>
+        <SupportLink />
+        <GitHubLink />
+        <DiscordLink className="max-md:hidden" />
+        <div className="flex items-center sm:gap-1 md:hidden">
+          <DocsLink />
+          <ChangelogLink />
+          <DocsSearchButton />
+          <DocsSidebarButton />
+        </div>
+        {/* Hidden while the site is dark only. */}
+        <ThemeSwitch className="hidden" />
+      </NavFrame>
+      {/* Outside the header: its backdrop filter would pin a fixed drawer to the bar. */}
+      <SiteMenuDrawer banner={<DocsSidebarLinks />} />
+    </SiteMenuProvider>
   );
 }
 
 // The docs header renders this same frame, so the bar holds still between pages.
+// z-30 keeps it under the search dialog and the menu drawer.
 export function NavFrame({
   className,
   sections,
@@ -60,19 +67,17 @@ export function NavFrame({
   return (
     <header
       className={cn(
-        "header-veil sticky top-0 z-50 border-b border-border",
+        "header-veil sticky top-0 z-30 border-b border-border",
         className,
       )}
     >
       <div className="mx-auto flex h-12 max-w-7xl items-center gap-6 px-4 sm:px-10">
-        <Link href="/" className="flex items-center gap-2">
-          <Logo size={24} />
-          <span className="font-rounded text-title font-semibold text-fg">
-            {site.name}
-          </span>
-        </Link>
+        <SiteBrand />
         {sections}
-        <div className="ml-auto flex items-center sm:gap-1">{children}</div>
+        {/* Pulls the last icon's inner padding out, so the edges match the logo's. */}
+        <div className="-mr-2 ml-auto flex items-center sm:gap-1">
+          {children}
+        </div>
       </div>
     </header>
   );
@@ -86,7 +91,7 @@ export function SupportLink() {
       title="Support Tinycast"
       className="flex h-8 items-center gap-1.5 rounded-full px-2 text-small text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg sm:px-2.5"
     >
-      <SupportIcon size={17} className="text-violet-bright" />
+      <SupportIcon size={16} className="text-violet-bright" />
       <span className="hidden sm:inline">Support</span>
     </Link>
   );
@@ -104,13 +109,14 @@ export async function GitHubLink() {
       title="View source on GitHub"
       className={
         stars
-          ? "flex h-8 items-center gap-1.5 rounded-full px-2.5 text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg"
+          ? "flex h-8 items-center justify-center gap-1.5 rounded-full text-fg-muted transition-colors hover:bg-tint/5 hover:text-fg max-sm:w-8 sm:px-2.5"
           : iconButtonClass
       }
     >
       <GitHubLogo size={16} />
       {stars && (
-        <span className="inline-flex items-center gap-1 font-mono text-caption">
+        // Too wide for a phone bar with six icons; the drawer's tile still shows it.
+        <span className="inline-flex items-center gap-1 font-mono text-caption max-sm:hidden">
           <Star size={12} aria-hidden="true" />
           {stars}
         </span>
@@ -119,7 +125,7 @@ export async function GitHubLink() {
   );
 }
 
-export function DiscordLink() {
+export function DiscordLink({ className }: { className?: string }) {
   return (
     <a
       href={site.community.discord}
@@ -127,9 +133,35 @@ export function DiscordLink() {
       rel="noreferrer"
       aria-label="Join the Discord"
       title="Join the Discord"
-      className={iconButtonClass}
+      className={cn(iconButtonClass, className)}
     >
       <DiscordLogo size={16} />
     </a>
+  );
+}
+
+export function ChangelogLink() {
+  return (
+    <Link
+      href="/changelog"
+      aria-label="Changelog"
+      title="Changelog"
+      className={iconButtonClass}
+    >
+      <History size={16} />
+    </Link>
+  );
+}
+
+export function DocsLink() {
+  return (
+    <Link
+      href="/docs"
+      aria-label="Documentation"
+      title="Documentation"
+      className={iconButtonClass}
+    >
+      <BookOpen size={16} />
+    </Link>
   );
 }
