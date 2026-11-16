@@ -62,7 +62,7 @@ struct CalcResult: Equatable, Sendable {
         _ query: String, _ payload: Payload, target: String, canChain: Bool = true, isCurrency: Bool = false
     ) -> CalcResult {
         CalcResult(
-            expression: query.split(whereSeparator: \.isWhitespace).joined(separator: " "),
+            expression: query.split(whereSeparator: \.isBlank).joined(separator: " "),
             sourceBadge: String(localized: "Expression"), targetBadge: target, payload: payload,
             canChain: canChain, isCurrency: isCurrency)
     }
@@ -81,9 +81,42 @@ enum CalcEngine {
         region: String? = nil, format: CalcNumberFormat = .english
     ) -> CalcResult? {
         let trimmed = withoutQuestionMark(raw.trimmingCharacters(in: .whitespacesAndNewlines))
-        guard !trimmed.isEmpty, trimmed.count <= 256, let query = format.canonical(trimmed) else {
-            return nil
+        guard !trimmed.isEmpty, trimmed.count <= 256 else { return nil }
+        if trimmed.utf8.contains(where: { $0 == 0x22 || $0 == 0xE2 }), let text = CalcText.evaluate(trimmed) {
+            return text
         }
+        guard let query = format.canonical(trimmed) else { return nil }
+        if let answer = solve(query, now: now, calendar: calendar, rates: rates, region: region) {
+            return answer
+        }
+        guard query.utf8.contains(0x28) else { return nil }
+        let inlined = phrasesInBrackets(query, now: now, calendar: calendar, rates: rates, region: region)
+        guard
+            let answer = wrappedQuantity(inlined ?? query, rates: rates, region: region)
+                ?? inlined.flatMap({ solve($0, now: now, calendar: calendar, rates: rates, region: region) })
+        else { return nil }
+        return CalcResult(
+            expression: CalcFormatter.expression(query), sourceBadge: answer.sourceBadge,
+            targetBadge: answer.targetBadge, payload: answer.payload, canChain: answer.canChain,
+            isCurrency: answer.isCurrency)
+    }
+
+    /// `(2m)` is `2 m`, where a bare `2m` converts.
+    private static func wrappedQuantity(
+        _ text: String, rates: CurrencyRates?, region: String?
+    ) -> CalcResult? {
+        guard text.hasPrefix("("), text.hasSuffix(")"), text.utf8.contains(where: { (48...57).contains($0) }),
+            let tokens = CalcTokenizer.tokenize(text),
+            let quantity = CalcQuantity.evaluate(
+                tokens, query: text, rates: rates, region: region, preserveStandaloneUnit: true),
+            quantity.isActionable
+        else { return nil }
+        return quantity
+    }
+
+    private static func solve(
+        _ query: String, now: Date, calendar: Calendar, rates: CurrencyRates?, region: String?
+    ) -> CalcResult? {
         if query.utf8.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) }) {
             return CalcDateTime.namedMoment(query, now: now, calendar: calendar).map(unchained)
         }
@@ -103,11 +136,18 @@ enum CalcEngine {
         }
 
         // Before tokenizing: `5pm ldn in sf` is words, which the tokenizer would reject.
-        if let zone = CalcTimeZone.evaluate(query, now: now, calendar: calendar) {
+        let mayNameZone = query.utf8.contains { (97...122).contains($0 | 0x20) || $0 >= 128 || $0 == 58 }
+        if mayNameZone, let zone = CalcTimeZone.evaluate(query, now: now, calendar: calendar) {
             return unchained(zone)
         }
 
-        guard let typed = CalcTokenizer.tokenize(query), !typed.isEmpty else { return nil }
+        if let science = CalcScience.evaluate(
+            query, solve: { evaluate($0, now: now, calendar: calendar, rates: rates, region: region) })
+        {
+            return science
+        }
+
+        guard let typed = CalcTokenizer.tokenize(paceInMinutes(query)), !typed.isEmpty else { return nil }
         let tokens = CalcQuestion.conversion(typed) ?? typed
 
         if CalcSplit.mentions(tokens), let share = CalcSplit.evaluate(query, rates: rates, region: region) {
@@ -215,6 +255,54 @@ enum CalcEngine {
             ?? CalcStatistics.evaluate(tokens, query: query) ?? CalcRatePhrases.evaluate(tokens, query: query)
             ?? CalcSubstance.evaluate(tokens, query: query) ?? CalcPixelDensity.evaluate(tokens, query: query)
             ?? CalcPitch.evaluate(tokens, query: query)
+    }
+
+    private static func paceInMinutes(_ query: String) -> String {
+        guard query.utf8.contains(0x3A), query.utf8.contains(0x2F),
+            let range = query.range(
+                of: #"(?<![\d:])\d{1,2}:[0-5]\d(?=\s*min\s*/)"#, options: .regularExpression)
+        else { return query }
+        let parts = query[range].split(separator: ":")
+        guard let minutes = Double(parts[0]), let seconds = Double(parts[1]) else { return query }
+        return query.replacingCharacters(in: range, with: CalcFormatter.copyText(minutes + seconds / 60))
+    }
+
+    private static func phrasesInBrackets(
+        _ query: String, now: Date, calendar: Calendar, rates: CurrencyRates?, region: String?
+    ) -> String? {
+        var text = query
+        var from = text.startIndex
+        var changed = false
+        while let close = text[from...].firstIndex(of: ")") {
+            guard let open = text[..<close].lastIndex(of: "("),
+                case let inner = String(text[text.index(after: open)..<close]), isPhrase(inner),
+                let result = evaluate(inner, now: now, calendar: calendar, rates: rates, region: region),
+                case .value(_, let copy) = result.payload,
+                result.canChain || isSpan(copy)
+            else {
+                from = text.index(after: close)
+                continue
+            }
+            var answer = copy.replacingOccurrences(of: ",", with: "")
+            if answer.hasPrefix("-") { answer = "-(\(answer.dropFirst()))" }
+            let offset = text.distance(from: text.startIndex, to: open) + answer.count + 2
+            text.replaceSubrange(open...close, with: "(\(answer))")
+            from = text.index(text.startIndex, offsetBy: offset)
+            changed = true
+        }
+        return changed ? text : nil
+    }
+
+    /// Not a lone quantity (`2m`) nor a half-typed `2 +`.
+    private static func isPhrase(_ inner: String) -> Bool {
+        guard let tokens = CalcTokenizer.tokenize(inner) else { return true }
+        if case .op = tokens.last { return false }
+        return tokens.count > 2
+    }
+
+    private static func isSpan(_ copy: String) -> Bool {
+        guard let unit = copy.split(separator: " ").last else { return false }
+        return ["day", "days", "wk", "hr", "min", "s"].contains(unit)
     }
 
     private static func withoutQuestionMark(_ text: String) -> String {
@@ -333,7 +421,7 @@ enum CalcEngine {
         guard let target = radixTarget(tokens) else { return nil }
 
         let valueTokens = Array(tokens[..<target.start])
-        let literalText = query.split(whereSeparator: \.isWhitespace).first.map(String.init) ?? query
+        let literalText = query.split(whereSeparator: \.isBlank).first.map(String.init) ?? query
         let source: UInt64
         let sourceBadge: String
         let sourceText: String

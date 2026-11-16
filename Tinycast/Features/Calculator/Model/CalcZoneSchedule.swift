@@ -5,7 +5,7 @@ extension CalcTimeZone {
     /// `oct 28 at 1pm et`, `tomorrow 3pm pst in tokyo`, `1pm et tomorrow`: a day and a clock in one zone.
     static func datedMoment(_ query: String, now: Date, calendar: Calendar) -> CalcResult? {
         let (zoneQuery, offset) = splitOffset(query)
-        let words = zoneQuery.split(whereSeparator: \.isWhitespace).map(String.init)
+        let words = zoneQuery.split(whereSeparator: \.isBlank).map(String.init)
         guard words.count >= 3 else { return nil }
         let (head, target) = splitTarget(words, home: calendar.timeZone)
         let tokens = clockTokens(head)
@@ -31,7 +31,7 @@ extension CalcTimeZone {
 
     /// `9am-5pm et in cet`, `9am to 5pm london in tokyo`: a span, with the day as spoken or today.
     static func clockRange(_ query: String, now: Date, calendar: Calendar) -> CalcResult? {
-        let words = query.split(whereSeparator: \.isWhitespace).flatMap(splitHyphen)
+        let words = query.split(whereSeparator: \.isBlank).flatMap(splitHyphen)
         guard words.count >= 3 else { return nil }
         let (head, target) = splitTarget(words, home: calendar.timeZone)
         var tokens = clockTokens(head)

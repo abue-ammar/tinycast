@@ -29,8 +29,9 @@ enum CalcDateFacts {
         guard raw.utf8.count <= 64, let first = raw.utf8.first, "wdabchmsWDABCHMS".utf8.contains(first),
             raw.utf8.contains(32)
         else { return nil }
-        let query = raw.lowercased().split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let query = raw.lowercased().split(whereSeparator: \.isBlank).joined(separator: " ")
         if let count = periodCount(query, now: now, calendar: calendar) { return count }
+        if query.hasPrefix("week "), let week = weekSpan(query, now: now, calendar: calendar) { return week }
         guard let (phrase, fact) = Fact.phrases.first(where: { matches(query, $0.0) }) else { return nil }
         var rest = String(query.dropFirst(phrase.count)).trimmingCharacters(in: .whitespaces)
         if fact != .age {
@@ -87,6 +88,25 @@ enum CalcDateFacts {
         CalcResult(
             expression: query, sourceBadge: day, targetBadge: badge, payload: .number(Double(value)),
             canChain: false)
+    }
+
+    private static func weekSpan(_ query: String, now: Date, calendar: Calendar) -> CalcResult? {
+        let words = query.split(separator: " ")
+        guard words.count <= 3, let week = Int(words[1]), (1...53).contains(week),
+            let year = words.count == 3 ? Int(words[2]) : calendar.component(.yearForWeekOfYear, from: now),
+            (1...9999).contains(year),
+            let start = calendar.date(
+                from: DateComponents(
+                    weekday: calendar.firstWeekday, weekOfYear: week, yearForWeekOfYear: year)),
+            calendar.component(.weekOfYear, from: start) == week,
+            let end = calendar.date(byAdding: .day, value: 6, to: start)
+        else { return nil }
+        let text =
+            format(start, "EEE, d MMM", calendar: calendar) + " – "
+            + format(end, "EEE, d MMM, yyyy", calendar: calendar)
+        return CalcResult(
+            expression: query, sourceBadge: String(year), targetBadge: String(localized: "Week of the Year"),
+            payload: .value(display: text, copyText: text), canChain: false)
     }
 
     /// A year has to be written, because a bare `3 may` could be any birth year.

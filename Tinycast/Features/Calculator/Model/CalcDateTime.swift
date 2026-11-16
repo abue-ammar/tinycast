@@ -35,7 +35,7 @@ enum CalcDateTime {
             return nil
         }
 
-        let query = lowered.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let query = lowered.split(whereSeparator: \.isBlank).joined(separator: " ")
         if hasTimestamp || query.hasSuffix(" to date") && CalcTimestamp.looksLikeISO(query),
             let result = parseTimestamp(query, echo: echo, now: now, calendar: calendar)
         {
@@ -153,7 +153,7 @@ enum CalcDateTime {
 
     private static func keywordSignals(_ query: String) -> Signals {
         var signals: Signals = []
-        let words = query.split(whereSeparator: \.isWhitespace)
+        let words = query.split(whereSeparator: \.isBlank)
         for (index, word) in words.enumerated() {
             let isFirst = index == 0
             let isLast = index == words.count - 1
@@ -394,7 +394,7 @@ enum CalcDateTime {
         let (left, operation, tail) = splitTerm(expression[...])
         guard let op = operation else { return nil }
         let right = String(tail)
-        let firstTerm = splitTerm(tail).term
+        let (firstTerm, trailingOperator, trailing) = splitTerm(tail)
         let shifts = parseDurations(firstTerm) != nil || Double(firstTerm) != nil
         guard var base = parseMoment(left, now: now, calendar: calendar, bias: shifts ? .nearest : .future)
         else { return nil }
@@ -422,15 +422,23 @@ enum CalcDateTime {
             targetUnit != nil || base.hasTime || left.contains(where: \.isLetter)
                 || right.contains(where: \.isLetter) || left.contains("-") || isDottedDate(atomize(left)),
             let other = parseMoment(
-                right, now: now, calendar: calendar, bias: base.hasTime ? .nearest : .future)
+                firstTerm, now: now, calendar: calendar, bias: base.hasTime ? .nearest : .future)
         else {
             return nil
         }
+        let end: Moment
+        if let trailingOperator {
+            guard let shifted = applyShifts(trailingOperator, String(trailing), to: base, calendar: calendar)
+            else { return nil }
+            end = shifted
+        } else {
+            end = base
+        }
         let payload: CalcResult.Payload =
             if let unit = targetUnit {
-                .measurement(base.date.timeIntervalSince(other.date) / unit.factor, unit: unit)
+                .measurement(end.date.timeIntervalSince(other.date) / unit.factor, unit: unit)
             } else {
-                difference(from: other, to: base, calendar: calendar)
+                difference(from: other, to: end, calendar: calendar)
             }
         return CalcResult(
             expression: echo,

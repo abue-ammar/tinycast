@@ -3,7 +3,7 @@ import Foundation
 enum CalcTimeZone {
     static func evaluate(_ raw: String, now: Date, calendar: Calendar) -> CalcResult? {
         guard raw.count <= 128, raw.contains(where: \.isWhitespace) else { return nil }
-        let inputWords = raw.split(whereSeparator: \.isWhitespace)
+        let inputWords = raw.split(whereSeparator: \.isBlank)
         let typedWords = inputWords.map { $0.lowercased() }
         let lowerWords = withoutFillers(typedWords)
         if lowerWords != typedWords {
@@ -38,7 +38,7 @@ enum CalcTimeZone {
 
         // A trailing `± <n> <unit>` shifts the answer, so `5pm ldn in sf + 2h` is still one query.
         let (zoneQuery, offset) = splitOffset(query)
-        let words = zoneQuery.split(whereSeparator: \.isWhitespace).map(String.init)
+        let words = zoneQuery.split(whereSeparator: \.isBlank).map(String.init)
         guard words.count >= 2 else { return nil }
 
         let target: TimeZone
@@ -205,7 +205,7 @@ enum CalcTimeZone {
     private static func offsetBetween(
         _ query: String, now: Date, calendar: Calendar
     ) -> CalcResult? {
-        var words = query.split(whereSeparator: \.isWhitespace).map(String.init)
+        var words = query.split(whereSeparator: \.isBlank).map(String.init)
         if words.first == "time" { words.removeFirst() }
         guard words.count >= 2, words[0] == "diff" || words[0] == "difference" else { return nil }
         words.removeFirst()

@@ -82,6 +82,12 @@ enum CalcUnitCatalog {
         au|Astronomical Units|149597870700.0|au,astronomical unit,astronomical units
         fathom|Fathoms|1.8288|fathom,fathoms
         furlong|Furlongs|201.168|furlong,furlongs
+        Å|Ångströms|1e-10|å,angstrom,angstroms,ångström,ångströms
+        µm|Micrometers|1e-06|µm,μm,um,micron,microns,micrometer,micrometers,micrometre,micrometres
+        ch|Chains|20.1168|ch,chain,chains
+        rod|Rods|5.0292|rod,rods
+        league|Leagues|4828.032|league,leagues
+        ls|Light Seconds|299792458.0|ls,light second,light seconds,lightsecond,lightseconds
         pixels
         px|Pixels|1.0|px,pixel,pixels
         rem|REM|16.0|rem,rems
@@ -105,6 +111,11 @@ enum CalcUnitCatalog {
         st|Stone|6.35029318|st,stone
         short ton|US Tons|907.18474|shortton,uston
         long ton|UK Tons|1016.0469088|longton,ukton
+        gr|Grains|6.479891e-05|grain,grains
+        dwt|Pennyweights|0.00155517384|dwt,pennyweight,pennyweights
+        slug|Slugs|14.593902937206364|slug,slugs
+        Da|Daltons|1.6605390666e-27|Da,dalton,daltons,amu
+        cwt|Hundredweight|45.359237|cwt,hundredweight
         temperature
         °C|Celsius|1.0|c,°c,celsius,centigrade|273.15
         °F|Fahrenheit|0.5555555555555556|f,°f,fahrenheit|255.3722222222222
@@ -118,6 +129,10 @@ enum CalcUnitCatalog {
         week|Weeks|604800.0|wk,week,weeks
         mo|Months|2629746.0|mo,month,months
         yr|Years|31556952.0|yr,year,years
+        fortnight|Fortnights|1209600.0|fortnight,fortnights
+        decade|Decades|315569520.0|decade,decades
+        century|Centuries|3155695200.0|century,centuries
+        millennium|Millennia|31556952000.0|millennium,millennia,millenniums
         workdays|Workdays|28800.0|workday,workdays,businessday,businessdays
         area
         mm²|Square Millimeters|1e-06|mm2,sqmm,sq mm,square millimeter,square millimeters,square millimetre,square millimetres
@@ -159,6 +174,9 @@ enum CalcUnitCatalog {
         yd³|Cubic Yards|0.764554857984|yd3,cu yd,cubic yard,cubic yards
         km³|Cubic Kilometers|1000000000.0|km3,cubic km,cubic kilometer,cubic kilometers,cubic kilometre,cubic kilometres
         mi³|Cubic Miles|4168181825.440579584|mi3,cubic mi,cubic mile,cubic miles
+        gill|Gills|0.00011829411825|gill,gills
+        cord|Cords|3.624556363776|cord,cords
+        shot|Shots|4.436029434375e-05|shot,shots,jigger,jiggers
         volumeFlow
         L/s|Liters per Second|0.001|l/s,l/sec
         L/min|Liters per Minute|1.6666666666666667e-05|l/min,lpm
@@ -173,6 +191,7 @@ enum CalcUnitCatalog {
         L/100km|Liters per 100 Kilometers|1e-08|l/100km
         digitalStorage
         bit|Bits|0.125|bit,bits
+        nibble|Nibbles|0.5|nibble,nibbles
         B|Bytes|1.0|b,byte,bytes
         kB|Kilobytes|1000.0|kb,kilobyte,kilobytes
         MB|Megabytes|1000000.0|mb,megabyte,megabytes
@@ -202,6 +221,9 @@ enum CalcUnitCatalog {
         ft/s|Feet per Second|0.3048|fps,ft/s,ft/sec
         kn|Knots|0.5144444444444445|kn,knot,knots
         km/s|Kilometers per Second|1000.0|km/s,km/sec
+        mach|Mach|340.29|mach
+        in/s|Inches per Second|0.0254|ips,in/s
+        ft/min|Feet per Minute|0.00508|fpm,ft/min
         pressure
         Pa|Pascals|1.0|pa,pascal,pascals
         hPa|Hectopascals|100.0|hpa
@@ -212,6 +234,7 @@ enum CalcUnitCatalog {
         atm|Atmospheres|101325.0|atm,atmosphere,atmospheres
         mmHg|Millimeters of Mercury|133.322387415|mmhg
         Torr|Torr|133.32236842105263|torr
+        inHg|Inches of Mercury|3386.389|inhg
         dataRate
         bps|Bits per Second|0.125|bps
         Kbps|Kilobits per Second|125.0|kbps,kbit/s,kb/s
@@ -226,8 +249,11 @@ enum CalcUnitCatalog {
         acceleration
         m/s²|Meters per Second Squared|1.0|m/s2,mps2
         ft/s²|Feet per Second Squared|0.3048|ft/s2,fps2
+        gee|Standard Gravity|9.80665|gee,gforce,g-force
         force
         N|Newtons|1.0|n,newton,newtons
+        dyn|Dynes|1e-05|dyn,dyne,dynes
+        kgf|Kilograms Force|9.80665|kgf,kp,kilogramforce
         energy
         J|Joules|1.0|j,joule,joules
         kJ|Kilojoules|1000.0|kj,kilojoule,kilojoules
@@ -239,11 +265,22 @@ enum CalcUnitCatalog {
         TWh|Terawatt Hours|3600000000000000.0|TWh,twh,terawatthour,terawatthours
         cal|Calories|4.184|cal,calorie,calories
         kcal|Kilocalories|4184.0|kcal,kilocalorie,kilocalories
+        eV|Electronvolts|1.602176634e-19|ev,electronvolt,electronvolts
+        keV|Kiloelectronvolts|1.602176634e-16|kev
+        MeV|Megaelectronvolts|1.602176634e-13|mev
+        GeV|Gigaelectronvolts|1.602176634e-10|gev
+        erg|Ergs|1e-07|erg,ergs
+        thm|Therms|105480400.0|thm,therm,therms
+        ft·lbf|Foot-Pounds|1.3558179483314004|ftlb,ftlbf,foot pound,foot pounds
+        TNT|Tons of TNT|4184000000.0|tnt
         power
         W|Watts|1.0|w,watt,watts
         mW|Milliwatts|0.001|mw,milliwatt,milliwatts
         kW|Kilowatts|1000.0|kw,kilowatt,kilowatts
         MW|Megawatts|1000000.0|MW,megawatt,megawatts
+        GW|Gigawatts|1000000000.0|GW,gigawatt,gigawatts
+        PS|Metric Horsepower|735.49875|PS,metric horsepower
+        BTU/h|BTU per Hour|0.29307107017222|btu/h,btu/hr,btuh
         electricCurrent
         A|Amperes|1.0|a,amp,amps,ampere,amperes
         mA|Milliamperes|0.001|ma,milliamp,milliamps,milliampere,milliamperes
@@ -271,6 +308,8 @@ enum CalcUnitCatalog {
         Hz|Hertz|1.0|hz,hertz
         kHz|Kilohertz|1000.0|khz,kilohertz
         MHz|Megahertz|1000000.0|mhz,megahertz
+        GHz|Gigahertz|1000000000.0|ghz,gigahertz
+        bpm|Beats per Minute|0.016666666666666666|bpm
         volume
         UK gal|UK Gallons|0.00454609|ukgal,ukgallon,ukgallons,imperial gallon,imperial gallons
         UK qt|UK Quarts|0.0011365225|ukqt,ukquart,ukquarts,imperial quart,imperial quarts

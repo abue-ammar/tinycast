@@ -13,7 +13,7 @@ enum CalcRounding {
 
     private static let keywords: Set<String> = [
         "round", "rounded", "nearest", "dp", "decimal", "decimals", "digit", "digits", "places", "fraction",
-        "frac"
+        "frac", "improper", "mixed"
     ]
 
     // MARK: - Rounding
@@ -131,20 +131,36 @@ enum CalcRounding {
     // MARK: - Fractions
 
     private static func fraction(_ tokens: [CalcToken], query: String) -> CalcResult? {
+        let mixed = tokens.contains(.ident("mixed"))
         guard
-            let parts = fractionTargets.lazy.compactMap({ tokens.operands(of: $0) }).first,
+            let parts = (mixed ? mixedTargets : fractionTargets).lazy.compactMap({ tokens.operands(of: $0) })
+                .first,
             let value = CalcExpressionParser.value(parts[0]), case .scalar = value.kind,
             let (numerator, denominator) = simplestFraction(value.effective)
         else { return nil }
-        let text = denominator == 1 ? "\(numerator)" : "\(numerator)/\(denominator)"
+        var text = denominator == 1 ? "\(numerator)" : "\(numerator)/\(denominator)"
+        if mixed, denominator > 1, abs(numerator) > denominator {
+            let sign = numerator < 0 ? "-" : ""
+            text = "\(sign)\(abs(numerator) / denominator) \(abs(numerator) % denominator)/\(denominator)"
+        }
         return .phrase(query, .value(display: text, copyText: text), target: String(localized: "Fraction"))
     }
 
-    private static let fractionTargets: [[CalcToken?]] = ["as", "to", "in"].flatMap { connector in
-        [["fraction"], ["a", "fraction"], ["frac"]].map { words in
-            [nil, .ident(connector)] + words.map { .ident($0) }
+    private static func targets(_ phrases: [[String]]) -> [[CalcToken?]] {
+        ["as", "to", "in"].flatMap { connector in
+            phrases.map { words in [nil, .ident(connector)] + words.map { .ident($0) } }
         }
     }
+
+    private static let fractionTargets = targets([
+        ["fraction"], ["a", "fraction"], ["frac"], ["improper"], ["improper", "fraction"],
+        ["an", "improper", "fraction"]
+    ])
+
+    private static let mixedTargets = targets([
+        ["mixed"], ["mixed", "number"], ["a", "mixed", "number"], ["mixed", "fraction"],
+        ["a", "mixed", "fraction"]
+    ])
 
     /// The continued-fraction convergent within a billionth of `value`, kept to readable denominators.
     private static func simplestFraction(_ value: Double) -> (numerator: Int, denominator: Int)? {

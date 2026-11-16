@@ -3,9 +3,19 @@ import Foundation
 /// Hand-rolled, locale-independent number formatting, so every locale renders identically.
 enum CalcFormatter {
     static func expression(_ query: String) -> String {
-        query.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-            .replacingOccurrences(of: "*", with: "×")
-            .replacingOccurrences(of: "/", with: "÷")
+        var output = ""
+        output.reserveCapacity(query.utf8.count)
+        var pendingSpace = false
+        for character in query {
+            if character.isBlank {
+                pendingSpace = !output.isEmpty
+                continue
+            }
+            if pendingSpace { output.append(" ") }
+            pendingSpace = false
+            output.append(character == "*" ? "×" : character == "/" ? "÷" : character)
+        }
+        return output
     }
 
     /// Human-facing: ≤10 significant digits, trailing zeros trimmed, thousands separators.
@@ -88,5 +98,12 @@ enum CalcFormatter {
             output.append(byte)
         }
         return String(bytes: output, encoding: .utf8)!
+    }
+}
+
+extension Character {
+    var isBlank: Bool {
+        if let ascii = asciiValue { return ascii == 32 || (9...13).contains(ascii) }
+        return isWhitespace
     }
 }

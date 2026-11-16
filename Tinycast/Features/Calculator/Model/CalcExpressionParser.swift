@@ -651,6 +651,11 @@ struct CalcExpressionParser {
                     else { return nil }
                     return CalcValue(amount: output, kind: .unit(to))
                 }
+                if !from.isCompatible(with: to),
+                    let output = CalcUnits.arcValue(value.effective, from: from, to: to)
+                {
+                    return CalcValue(amount: output, kind: .unit(to))
+                }
                 guard from.isCompatible(with: to) else {
                     return fail(
                         String(

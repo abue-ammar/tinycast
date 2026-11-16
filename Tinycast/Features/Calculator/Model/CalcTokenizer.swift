@@ -193,6 +193,8 @@ enum CalcTokenizer {
                 if functionDepth == depth { functionDepth = nil }
             }
             switch ch {
+            case "%" where isSpacedRemainder(chars, at: i, after: tokens.last):
+                tokens.append(.ident("mod"))
             case "+", "(", ")", "!", "%", "^", "&", "|", "~", "<", ">", "≤", "≥", "≠", "⊻":
                 guard let op = CalcOperator(rawValue: Character(ch)) else { return nil }
                 tokens.append(.op(op))
@@ -346,7 +348,24 @@ enum CalcTokenizer {
         var end = start
         while end < chars.count, (48...57).contains(chars[end].value) { end += 1 }
         guard end > start, end - start <= 15, end == chars.count || chars[end] != "." else { return nil }
-        return Double(String(String.UnicodeScalarView(chars[start..<end]))).map { ($0, end) }
+        return (chars[start..<end].reduce(0) { $0 * 10 + Double($1.value - 48) }, end)
+    }
+
+    /// A percent hugs its number, so only `12 % 5` is a remainder; `12% 5` and `12 % 5%` stay percents.
+    private static func isSpacedRemainder(
+        _ chars: [Unicode.Scalar], at index: Int, after previous: CalcToken?
+    ) -> Bool {
+        guard index > 0, chars[index - 1].isWhitespace else { return false }
+        switch previous {
+        case .number?, .compactNumber?, .intLiteral?, .op(.close)?: break
+        default: return false
+        }
+        var next = index + 1
+        while next < chars.count, chars[next].isWhitespace { next += 1 }
+        guard next < chars.count, (48...57).contains(chars[next].value) else { return false }
+        while next < chars.count, (48...57).contains(chars[next].value) || chars[next] == "." { next += 1 }
+        while next < chars.count, chars[next].isWhitespace { next += 1 }
+        return next == chars.count || chars[next] != "%"
     }
 
     private static func namesUnit(_ chars: [Unicode.Scalar], from index: Int) -> Bool {
@@ -409,9 +428,11 @@ enum CalcTokenizer {
         var end = rightStart
         while end < chars.count, chars[end].isLetter || chars[end].isNumber { end += 1 }
         guard end > rightStart else { return nil }
-        let spelling = (prefix + separator + String(String.UnicodeScalarView(chars[rightStart..<end])))
-            .replacingOccurrences(of: "²", with: "2")
-            .replacingOccurrences(of: "³", with: "3")
+        var spelling = prefix + separator + String(String.UnicodeScalarView(chars[rightStart..<end]))
+        if !spelling.utf8.allSatisfy({ $0 < 128 }) {
+            spelling = spelling.replacingOccurrences(of: "²", with: "2").replacingOccurrences(
+                of: "³", with: "3")
+        }
         let name = CalcUnits.byName[spelling] != nil ? spelling : spelling.lowercased()
         guard CalcUnits.byName[name] != nil else { return nil }
         return (name, end)
@@ -469,8 +490,8 @@ private extension Unicode.Scalar {
         return CharacterSet.letters.contains(self)
     }
 
-    var isWhitespace: Bool { properties.isWhitespace }
-    var isNumber: Bool { properties.numericType != nil }
+    var isWhitespace: Bool { isASCII ? value == 32 || (9...13).contains(value) : properties.isWhitespace }
+    var isNumber: Bool { isASCII ? (48...57).contains(value) : properties.numericType != nil }
     var isCombiningMark: Bool {
         properties.generalCategory == .nonspacingMark || properties.generalCategory == .spacingMark
     }

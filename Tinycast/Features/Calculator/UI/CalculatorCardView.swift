@@ -124,6 +124,11 @@ private enum CalcSyntax {
             var piece = AttributedString(String(word))
             if isConnector(word, at: index, of: words) {
                 piece.foregroundColor = Theme.Colors.textTertiary
+            } else {
+                for bracket in piece.characters.indices where "()".contains(piece.characters[bracket]) {
+                    piece[bracket..<piece.characters.index(after: bracket)].foregroundColor =
+                        Theme.Colors.textTertiary
+                }
             }
             attributed.append(piece)
         }

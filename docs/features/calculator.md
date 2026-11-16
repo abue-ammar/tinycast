@@ -59,6 +59,8 @@ in (see Currency below).
 
 Single ASCII words return immediately: a bare app name, constant or date keyword never earns a card.
 The one exception is the five words that name the current moment or its neighbours — see grammar G.
+Quoted text goes first to `CalcText`: `first 10 characters of "hello"`, `length of "…"`,
+`"abc" in uppercase`.
 A trailing `?` is dropped, and a leading `what is`, `what's`, `how much is`, `calculate`, `compute` or
 `evaluate` is tried first on what follows it (`CalcQuestion.asked`), falling back to the whole query —
 so `what is the time in tokyo` still reaches the zone grammar.
@@ -67,7 +69,10 @@ so `what is the time in tokyo` still reaches the zone grammar.
 2. Natural-language date/time (`CalcDateTime`, e.g. `hrs till 9am`, `days till 9april`,
    `today + 3 weeks`)
 3. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
-   because a zone phrase is words rather than calculator input
+   because a zone phrase is words rather than calculator input — then `CalcScience`
+   (`speed of light in km/s`, `molar mass of C6H12O6`), gated by an anchor word. A lowercase
+   formula answers only with a digit and one reading: `h2so4` does, while `water` (W·At·Er) and
+   `co2` (CO₂ or Co₂) stay silent
 4. Tokenize, rewrite a **worded conversion** (`CalcQuestion.conversion`: `convert 5 km into miles`,
    `how many feet in a mile`), then a **shared amount** (`CalcSplit`: `$120 split 4`), which divides the
    amount before step 6 formats it, then preserve the complete prefix of a trailing binary operator
@@ -88,6 +93,11 @@ so `what is the time in tokyo` still reaches the zone grammar.
 17. Ingredients between weight and volume (`CalcSubstance`: `1 cup of flour in grams`)
 18. Pixels against physical size (`CalcPixelDensity`: `3000 px to inches at 300 ppi`)
 19. Musical pitch (`CalcPitch`: `440 hz to pitch`, `c4 to hz`)
+
+When nothing answers, each bracketed phrase whose answer can be typed back, or that names a date span, is
+replaced by that answer and the query solved again: `(15% tip on $80) / 2`, `(c4 to hz) * 2`,
+`(today - 1.1.2026) / 2`. A half-typed `(2 +)` is left alone, and `(2m)` is `2 m` where a bare `2m`
+converts.
 
 `CalcExpressionParser` is the sole precedence-climbing evaluator, returning `CalcValue` for numbers,
 measurements, currencies and booleans. `CalcQuantity` turns those values into cards and applies display
@@ -132,7 +142,7 @@ parser, while the separator still chooses ISO, month-first or day-first interpre
 - **B** — duration since a past moment: `days since 9jul`, `hrs since noon`
 - **C** — a moment ± durations: `today + 3 weeks`, `now + 90 min`,
   `17.2.26 + 100 weekdays - 4 + 2`
-- **D** — difference between two moments: `jul 4 - today`
+- **D** — difference between two moments: `jul 4 - today`; `today - 1.1.2026 + 3` adds 3 days
 - **E** — a leading duration: `5 weekdays from now`, `3 days from today`, `2 weeks ago`
 - **F** — a weekday inside a future week: `monday in 3 weeks`, `friday in 2 weeks`
 - **G** — a named moment: `today`, `now`, `time`, `tomorrow at 9am`, `next monday`, `last friday`
@@ -435,6 +445,7 @@ the **injected calendar's own** — its first weekday and minimal days, so a US 
 can differ by one — never a hard-coded ISO week. An age needs the year written, since `3 may` could
 be any birth year, and a birth date in the future is silent. `week of month` and `day of month` read
 the injected calendar's own components the same way, and `week of year` is `week number`.
+`week 44 2026` (or `week 44`) answers the days that week runs.
 
 **Counts over a period** — `days left in 2026`, `days remaining in this month`, `hours left in today`,
 `workdays left in the month`, `days in 2028`, `weeks in 2026`, `workdays in march` — take a unit
@@ -629,7 +640,8 @@ A phrase is a token pattern (`[CalcToken].operands(of:)`) whose open slots are e
 parser, so an amount keeps its money or unit: `25% off $60` is `45.00 USD`.
 
 - `20% off 500` → 400, `15% on 80` → 92, and `50 as % of 200` / `30 as a % of 120` → 25%; also
-  `take 20% off 100`, `20% off of 100` and `20% from 100`. A single word between the percentage and
+  `take 20% off 100`, `20% off of 100`, `20% from 100` and `15% decrease from 813` (or `increase`).
+  A single word between the percentage and
   `of` / `on` / `off` only names it (`20% discount off $100`, `20% markup on 50`), except `tip`
 - `10% tax on 100` → 110, `10% tax of 110` → 11, `20% vat in 120` → 20 (the tax inside a price) and
   `$100 + 10% tax` → `110.00 USD`; `tax`, `sales tax`, `vat` and `gst` all read so
@@ -662,8 +674,9 @@ parser, so an amount keeps its money or unit: `25% off $60` is `45.00 USD`.
   `round 56.2 up`, `round 51 to next 10`, `round 59 down to last 10`, `round 56 up to 10` and
   `3.3 to nearest quarter` (or `half`, `third`, `tenth`, `8th`). A bare `to 10` is a step only after
   `up` or `down`, so `round 56 to 10` stays silent rather than guessing places
-- `0.625 as fraction` (or `to|in fraction`, `as frac`) → `5/8`, the continued-fraction convergent within a billionth with a
-  denominator up to 10,000; `pi as fraction` has none and stays silent
+- `0.625 as fraction` (or `to|in fraction`, `as frac`, `as improper`) → `5/8`, the continued-fraction
+  convergent within a billionth with a denominator up to 10,000; `pi as fraction` has none and stays
+  silent. `1.75 as mixed` → `1 3/4`
 - `$2,000 after 5 years at 4%` compounds yearly, or `compounding monthly|quarterly|daily`;
   `interest on …` answers the growth alone, and the term and rate may come in either order
 - `monthly|annual|total payment on $20,000 over 5 years at 6%` amortises monthly; `repayment`
@@ -721,9 +734,9 @@ already produced, so a query without one of its words pays nothing.
 ## Modulo
 
 `mod` is a binary operator at `*` / `/` precedence, computed with `truncatingRemainder` so the sign
-follows the dividend (`-10 mod 3` → -1). It is spelled out on purpose: `%` already means percent, and
-`20% - 5` offers no local signal to tell a percent from a remainder, so overloading the symbol would
-silently rewrite expressions like `450 + 20% - 5`.
+follows the dividend (`-10 mod 3` → -1). A percent hugs its number, so `%` is a remainder only when
+a space sets it apart from the number or bracket before it and a plain number follows it (`12 % 5` → 2).
+Otherwise it is a percent: `450 + 20% - 5` stays 535, `12%(5)` stays 0.6 and `15% 80` stays silent.
 
 A query ending in a binary operator keeps the last complete prefix visible while the next operand is
 being typed: `10 +` shows `10`, `10kg + 500g +` shows `10,500 g`, and `$10 +` shows `10.00 USD`
@@ -950,6 +963,7 @@ The uppercase `B` distinguishes byte rates (`Bps`, `kBps` / `KBps`, `MBps`, `GBp
 `500 Mbps in MBps` gives `62.5 MBps`; bare byte rates auto-convert to the matching bit rate.
 `100Mbps to MB/s` gives `12.5 MB/s`, and `1GB / 10MB/s to s` gives `100 s`.
 Binary rates such as `MiB/s` and bit amounts such as `kbit` also work.
+An angle converts to nautical miles and back, one arcminute each: `4° in nmi` gives `240 nmi`.
 SI prefixes expand for meters, grams, seconds, hertz, newtons, joules, watts and pascals,
 including `um`, `nm`, `us`, `ns` and `GHz`. Existing aliases keep their meanings.
 
@@ -960,7 +974,8 @@ cups, UK tablespoons and teaspoons, GWh/TWh, poundals (`pdl`), `ksi`, `rps` and 
 `ft/s²`, the exa-, zetta- and yottabytes, mechanical horsepower (`hp`),
 BTU (international table), `rpm`, pound-force (`lbf`), US/UK tons and UK liquid measures
 (`ukgal`, `ukqt`, `ukpint`, `ukfloz`, or `imperial gallons` and the like). Plain gallons and pints
-remain US measures.
+remain US measures. Also ångströms, microns, electronvolts, therms, mach, decades, grains, dynes,
+`kgf`, `gee`, `inHg` and a few dozen more (see `CalcUnitCatalog`).
 
 Capacitance (farads), inductance (henries), conductance (siemens), magnetic flux (webers), flux density
 (teslas, gauss), torque (`Nm`, `lb ft`, `lbin`, `ozin`) and amount of substance (moles, with its own
