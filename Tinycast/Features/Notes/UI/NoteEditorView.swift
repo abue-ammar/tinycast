@@ -228,6 +228,8 @@ struct NoteEditorView: NSViewRepresentable {
         textView.isContinuousSpellCheckingEnabled = false
         textView.smartInsertDeleteEnabled = false
         textView.usesFindBar = true
+        // Its affordance is a child window that drags a closed note back on screen.
+        textView.writingToolsBehavior = .none
         textView.allowsUndo = true
         textView.linkTextAttributes = [.foregroundColor: NSColor.linkColor, .cursor: NSCursor.pointingHand]
         textView.typingAttributes = NoteMarkdownStyler.literal
