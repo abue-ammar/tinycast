@@ -811,6 +811,11 @@ the `BTC1K` prefix split, `parseConversion`, typed arithmetic — works on them 
 inserted **after** the generated nouns, so a ticker outranks one: `1 sol` is Solana while `soles` and
 `pen` still reach the Peruvian sol. That is the only word the two tables both claim.
 
+`CalcCurrency.satoshi` is the one denomination. `SATS` is a fixed split of BTC, 100,000,000 to the
+coin, so `CurrencyRates.rate(for:)` prices it off BTC's rate instead of reading the table. It stays out
+of `crypto`, so the fetch never asks for it, and any snapshot that prices BTC prices sats too: `1 eth
+to sats`, `10000 sats to usd`. Only `sats` names it, since `sat` is already Saturday.
+
 Order is the whole disambiguation story. Currency runs **after** the unit path, so a query both sides
 of which are compatible units stays a measurement: `10 pounds to kg` is weight, `10 pounds to euros`
 is money, and `1 cup to ml` stays volume even though `CUP` is the Cuban peso. A currency on one side
