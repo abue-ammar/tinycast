@@ -122,31 +122,6 @@ Two details the script exists for:
 The Discord announcement carries the same changelog, truncated to fit Discord's component limit, and
 pings `@everyone`.
 
-### The bundle id handoff
-
-Tinycast moved from `com.tinycast.app` (and `.beta`, `.dev`) to `com.abueammar.tinycast`, because
-another team holds the old App ID and iCloud needs one. A copy from before the move refuses any update
-whose bundle id differs from its own, and that check is in code already shipped. So until
-**2027-05-13** every release also publishes a handoff, built from the `TinycastHandoff` target:
-
-- **It wears the old id and the release's version**, so the old copy's checks pass, and it carries the
-  real app under `Contents/Helpers/`. `wrap-handoff.sh` embeds the stapled app, re-seals the handoff
-  and asserts its id and version; `package-handoff.sh` then notarizes, staples, zips and signs it.
-- **It is uploaded first, in its own call:** `Tinycast-<version>-Handoff.zip` in the build job,
-  `Tinycast-Universal-<version>-Handoff.zip` before the universal zip. An old copy takes the first zip
-  it can run; `ReleaseFeed` skips both for a copy that has moved.
-- **On launch it hands over and gets out of the way:** it records whether the old id was a login
-  item, unregisters it, swaps the app it carries into its own place, opens it and exits.
-  `BundleIdentifierMigration` then moves the preferences, folders and login item to the new id, and
-  repoints every saved path into the old folders. The user clicks Update and Relaunch once, then grants the macOS permissions again and
-  re-enters any AI API key or MCP secret: the Keychain asks before another id reads an item, and the
-  move must never ask.
-
-The casks in homebrew/cask still name the old id in `uninstall quit:` and `zap`, and need the new one
-after the first stable handoff release; the universal cask in the tap needs the same. On 2027-05-13
-the migration check fails, and the handoff goes with everything its row in
-[migrations.md](migrations.md) lists.
-
 ### Homebrew casks
 
 `tinycast` and `tinycast@beta` are in [homebrew/cask](https://github.com/Homebrew/homebrew-cask),

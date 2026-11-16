@@ -86,12 +86,6 @@ the header row. It cannot reuse `ExtensionToastPill`, because extension views st
 | `com.abueammar.tinycast.beta` | `.beta`        | prereleases |
 | anything else                 | `.development` | nothing     |
 
-Until 2027-05-13 each release also carries a `-Handoff` zip, listed before its own, for copies from
-before the bundle id moved from `com.tinycast.app`. Those copies refuse any other bundle id and take
-the first zip, so the handoff wears their id and carries this app inside; `ReleaseFeed` never offers it
-to a copy that has moved. See [migrations.md](../migrations.md) and
-[release.md](../release.md#the-bundle-id-handoff).
-
 `AppVersion` parses `MAJOR.MINOR.PATCH` and `MAJOR.MINOR.PATCH-beta.N` with semver precedence: a
 prerelease sorts below the release it leads to, and `beta.10` above `beta.9`. Everything else parses
 to nil, so an off-shape tag can never be offered as an update. A release whose tag disagrees with

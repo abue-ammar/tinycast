@@ -17,7 +17,7 @@ export function DocsSearchButton() {
       title="Search the docs"
       className={iconButtonClass}
     >
-      <Search size={16} />
+      <Search size={18} />
     </button>
   );
 }
@@ -34,7 +34,7 @@ export function DocsSidebarButton() {
       aria-controls="nd-sidebar-mobile"
       className={iconButtonClass}
     >
-      <PanelLeft size={16} />
+      <PanelLeft size={18} />
     </button>
   );
 }
