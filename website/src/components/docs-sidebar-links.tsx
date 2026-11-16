@@ -65,7 +65,7 @@ function DrawerHeader() {
         aria-label="Close the menu"
         className={cn(iconButtonClass, "-mr-2")}
       >
-        <PanelLeft size={16} />
+        <PanelLeft size={18} />
       </SidebarTrigger>
     </div>
   );

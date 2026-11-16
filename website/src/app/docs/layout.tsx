@@ -35,8 +35,8 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavFrame className="[grid-area:header] md:hidden">
               <SupportLink />
               <GitHubLink />
-              <DocsLink />
               <ChangelogLink />
+              <DocsLink />
               <DocsSearchButton />
               <DocsSidebarButton />
             </NavFrame>
