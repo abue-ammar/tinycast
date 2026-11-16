@@ -139,8 +139,11 @@ enum CalcScience {
     }()
 
     private static func mass(of formula: String) -> Double? {
-        let written = formula.contains(where: \.isUppercase) ? formula : capitalized(formula)
-        guard let written else { return nil }
+        let isCased = formula.contains(where: \.isUppercase)
+        // Lowercase needs a digit, or a word such as `water` would read as W·At·Er.
+        guard isCased || formula.contains(where: \.isNumber),
+            let written = isCased ? formula : capitalized(formula)
+        else { return nil }
         var total = 0.0
         for part in written.split(whereSeparator: { "·*•.".contains($0) }) {
             let digits = part.prefix(while: \.isNumber)
@@ -188,7 +191,7 @@ enum CalcScience {
         }
     }
 
-    /// One-letter symbols first, so `co2` is CO₂ rather than Co.
+    /// Lowercase has no case to split on, so `co2` (CO₂ or Co₂) stays silent rather than guessing.
     private static func capitalized(_ formula: String) -> String? {
         var output = ""
         var run = ""
@@ -210,16 +213,17 @@ enum CalcScience {
     private static func symbols(_ run: Substring) -> String? {
         let letters = Array(run)
         var tails: [String?] = Array(repeating: nil, count: letters.count + 1)
+        var readings = Array(repeating: 0, count: letters.count + 1)
         tails[letters.count] = ""
+        readings[letters.count] = 1
         for start in stride(from: letters.count - 1, through: 0, by: -1) {
             for length in 1...min(2, letters.count - start) {
                 let symbol = String(letters[start..<start + length]).capitalized
-                if weights[symbol] != nil, let rest = tails[start + length] {
-                    tails[start] = symbol + rest
-                    break
-                }
+                guard weights[symbol] != nil, let rest = tails[start + length] else { continue }
+                tails[start] = symbol + rest
+                readings[start] = min(readings[start] + readings[start + length], 2)
             }
         }
-        return tails[0]
+        return readings[0] == 1 ? tails[0] : nil
     }
 }

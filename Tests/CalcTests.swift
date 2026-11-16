@@ -168,9 +168,14 @@ struct CalcTests {
         expectDisplay("-10 mod 3", "-1")  // fmod semantics: the sign follows the dividend
         expectDisplay("2 + 10 mod 3", "3")  // same precedence as * and /, binds tighter than +
         expectNil("10 mod 0")
-        expectDisplay("10 % 3", "1")  // a number right after "%" makes it a remainder
+        expectDisplay("10 % 3", "1")  // spaced off its number, "%" is a remainder
         expectDisplay("12 % 5", "2")
+        expectDisplay("2 + 10 % 3", "3")
+        expectDisplay("(2 + 3) % 2", "1")
         expectDisplay("12%(2+3)", "0.6")
+        expectNil("15% 80")
+        expectNil("10%3")
+        expectNil("10 % 3%")
         expectNil("10% 20%")
         expectNil("molar mass of cococococococococococococococococococococococococococococococox")
         expectNil("molar mass of H99999999999999999999")
@@ -2192,9 +2197,18 @@ struct CalcTests {
         expectNil("molar mass of")
         expectDisplay("molar mass of CuSO4·5H2O", "249.677 g/mol")
         expectDisplay("Ca(OH)2 molar mass", "74.092 g/mol")
-        expectDisplay("molar mass of co2", "44.009 g/mol")
-        expectDisplay("molar mass of nacl", "58.44 g/mol")
+        expectDisplay("molar mass of CO2", "44.009 g/mol")
+        expectDisplay("molar mass of h2so4", "98.072 g/mol")
+        expectNil("molar mass of co2")  // CO₂ or Co₂
+        expectNil("molar mass of caco3")
+        expectNil("molar mass of sio2")
+        expectDisplay("molar mass of NaCl", "58.44 g/mol")
         expectNil("molar mass of Xx2")
+        expectNil("molar mass of water")
+        expectNil("iron molar mass")
+        expectNil("molar mass of Carbon")
+        expectNil("100 gr to g")
+        expectDisplay("100 grains to g", "6.479891 g")
         expectDisplay("5:00 min/km in km/h", "12 km/h")
         expectDisplay("4:30 min/mi to km/h", "21.45792 km/h")
         expectDisplay("first 10 characters of \"hello\"", "hello")

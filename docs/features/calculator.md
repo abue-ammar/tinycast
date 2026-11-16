@@ -70,7 +70,9 @@ so `what is the time in tokyo` still reaches the zone grammar.
    `today + 3 weeks`)
 3. **Time zones** (`CalcTimeZone`, e.g. `time in Tokyo`, `5pm ldn in sf`) — before tokenizing,
    because a zone phrase is words rather than calculator input — then `CalcScience`
-   (`speed of light in km/s`, `molar mass of C6H12O6`), gated by an anchor word
+   (`speed of light in km/s`, `molar mass of C6H12O6`), gated by an anchor word. A lowercase
+   formula answers only with a digit and one reading: `h2so4` does, while `water` (W·At·Er) and
+   `co2` (CO₂ or Co₂) stay silent
 4. Tokenize, rewrite a **worded conversion** (`CalcQuestion.conversion`: `convert 5 km into miles`,
    `how many feet in a mile`), then a **shared amount** (`CalcSplit`: `$120 split 4`), which divides the
    amount before step 6 formats it, then preserve the complete prefix of a trailing binary operator
@@ -732,8 +734,9 @@ already produced, so a query without one of its words pays nothing.
 ## Modulo
 
 `mod` is a binary operator at `*` / `/` precedence, computed with `truncatingRemainder` so the sign
-follows the dividend (`-10 mod 3` → -1). `%` is a remainder only when a plain number follows it
-(`12 % 5` → 2); otherwise it is a percent, so `450 + 20% - 5` stays 535 and `12%(5)` stays 0.6.
+follows the dividend (`-10 mod 3` → -1). A percent hugs its number, so `%` is a remainder only when
+a space sets it apart from the number or bracket before it and a plain number follows it (`12 % 5` → 2).
+Otherwise it is a percent: `450 + 20% - 5` stays 535, `12%(5)` stays 0.6 and `15% 80` stays silent.
 
 A query ending in a binary operator keeps the last complete prefix visible while the next operand is
 being typed: `10 +` shows `10`, `10kg + 500g +` shows `10,500 g`, and `$10 +` shows `10.00 USD`

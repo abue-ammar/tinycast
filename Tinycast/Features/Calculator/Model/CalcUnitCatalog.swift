@@ -111,7 +111,7 @@ enum CalcUnitCatalog {
         st|Stone|6.35029318|st,stone
         short ton|US Tons|907.18474|shortton,uston
         long ton|UK Tons|1016.0469088|longton,ukton
-        gr|Grains|6.479891e-05|gr,grain,grains
+        gr|Grains|6.479891e-05|grain,grains
         dwt|Pennyweights|0.00155517384|dwt,pennyweight,pennyweights
         slug|Slugs|14.593902937206364|slug,slugs
         Da|Daltons|1.6605390666e-27|Da,dalton,daltons,amu

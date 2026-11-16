@@ -97,7 +97,7 @@ enum CalcFormatter {
             }
             output.append(byte)
         }
-        return String(decoding: output, as: UTF8.self)
+        return String(bytes: output, encoding: .utf8)!
     }
 }
 

@@ -192,7 +192,7 @@ enum CalcDateTime {
             }
             if dashes >= 2 { signals.insert(.moment) }
             for letters in word.utf8.split(whereSeparator: { !(97...122).contains($0) }) {
-                let name = String(decoding: letters, as: UTF8.self)
+                let name = String(bytes: letters, encoding: .utf8)!
                 if monthByName[name] != nil { signals.formUnion([.dayName, .moment]) }
                 if weekdayByName[name] != nil { signals.insert(.moment) }
                 switch name {

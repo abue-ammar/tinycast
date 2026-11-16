@@ -193,6 +193,8 @@ enum CalcTokenizer {
                 if functionDepth == depth { functionDepth = nil }
             }
             switch ch {
+            case "%" where isSpacedRemainder(chars, at: i, after: tokens.last):
+                tokens.append(.ident("mod"))
             case "+", "(", ")", "!", "%", "^", "&", "|", "~", "<", ">", "≤", "≥", "≠", "⊻":
                 guard let op = CalcOperator(rawValue: Character(ch)) else { return nil }
                 tokens.append(.op(op))
@@ -347,6 +349,23 @@ enum CalcTokenizer {
         while end < chars.count, (48...57).contains(chars[end].value) { end += 1 }
         guard end > start, end - start <= 15, end == chars.count || chars[end] != "." else { return nil }
         return (chars[start..<end].reduce(0) { $0 * 10 + Double($1.value - 48) }, end)
+    }
+
+    /// A percent hugs its number, so only `12 % 5` is a remainder; `12% 5` and `12 % 5%` stay percents.
+    private static func isSpacedRemainder(
+        _ chars: [Unicode.Scalar], at index: Int, after previous: CalcToken?
+    ) -> Bool {
+        guard index > 0, chars[index - 1].isWhitespace else { return false }
+        switch previous {
+        case .number?, .compactNumber?, .intLiteral?, .op(.close)?: break
+        default: return false
+        }
+        var next = index + 1
+        while next < chars.count, chars[next].isWhitespace { next += 1 }
+        guard next < chars.count, (48...57).contains(chars[next].value) else { return false }
+        while next < chars.count, (48...57).contains(chars[next].value) || chars[next] == "." { next += 1 }
+        while next < chars.count, chars[next].isWhitespace { next += 1 }
+        return next == chars.count || chars[next] != "%"
     }
 
     private static func namesUnit(_ chars: [Unicode.Scalar], from index: Int) -> Bool {
