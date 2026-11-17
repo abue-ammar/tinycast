@@ -543,7 +543,7 @@ struct RootPaletteView: View {
                 if let reorder = movePinnedOrFavorite(1, modifiers: press.modifiers) { return reorder }
                 if vm.isControlListOpen { return .ignored }
                 if menuOpen {
-                    moveMenu(1)
+                    moveMenu(1, toEdge: Self.isCommandOnly(press.modifiers))
                     return .handled
                 }
                 // Marked text owns these keys: an IME drives its candidate window with them.
@@ -565,7 +565,7 @@ struct RootPaletteView: View {
                 if vm.isControlListOpen { return .ignored }
                 if isCollapsed { return .ignored }
                 if menuOpen {
-                    moveMenu(-1)
+                    moveMenu(-1, toEdge: Self.isCommandOnly(press.modifiers))
                     return .handled
                 }
                 if vm.isComposing { return .ignored }
@@ -1279,11 +1279,11 @@ struct RootPaletteView: View {
             return true
         }
         switch event.specialKey {
-        case .some(.downArrow) where navigationModifiers.isEmpty:
-            moveMenu(1)
+        case .some(.downArrow) where navigationModifiers.isEmpty || navigationModifiers == .command:
+            moveMenu(1, toEdge: navigationModifiers == .command)
             return true
-        case .some(.upArrow) where navigationModifiers.isEmpty:
-            moveMenu(-1)
+        case .some(.upArrow) where navigationModifiers.isEmpty || navigationModifiers == .command:
+            moveMenu(-1, toEdge: navigationModifiers == .command)
             return true
         case .some(.carriageReturn), .some(.enter):
             let screen = screen
@@ -1445,16 +1445,29 @@ struct RootPaletteView: View {
         return .handled
     }
 
-    private func moveMenu(_ delta: Int) {
+    private func moveMenu(_ delta: Int, toEdge: Bool = false) {
         guard let content = menuContent else { return }
+        let rows = 0..<content.rowCount
+        if toEdge {
+            let edge =
+                delta > 0
+                ? rows.last(where: content.isSelectable) : rows.first(where: content.isSelectable)
+            if let edge { menuSelection = edge }
+            return
+        }
         var row = menuSelection + delta
-        while (0..<content.rowCount).contains(row) {
+        while rows.contains(row) {
             if content.isSelectable(row) {
                 menuSelection = row
                 return
             }
             row += delta
         }
+    }
+
+    /// Arrow presses also carry `.numericPad`, so compare only the chord keys.
+    private static func isCommandOnly(_ modifiers: SwiftUI.EventModifiers) -> Bool {
+        modifiers.intersection([.command, .control, .option, .shift]) == .command
     }
 
     private func activateMenuItem(_ index: Int) {

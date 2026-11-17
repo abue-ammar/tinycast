@@ -572,8 +572,8 @@ caret, mouse selection and standard editing commands.
   `onMenuOpenChanged`.
 - The searchable field binds directly to `PaletteState.menuQuery`; Escape clears a non-empty query,
   then closes the menu on the next press. A click outside still closes it immediately. `MenuPanel`
-  keeps ↑/↓, ↵, Tab and action chords on the menu while leaving text editing, selection and
-  clipboard commands to AppKit.
+  keeps ↑/↓, ⌘↑/⌘↓, ↵, Tab and action chords on the menu while leaving text editing, selection
+  and clipboard commands to AppKit.
 - The palette window delegate ignores this intentional key transfer. Losing key status to anything
   else still dismisses the palette, and closing the child restores key status before it orders out.
 - The caret is hidden by clearing SwiftUI's **own** live field editor's `insertionPointColor`. SwiftUI
