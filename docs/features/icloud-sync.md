@@ -95,5 +95,6 @@ stable, beta and Dev never share data.
 Pushes deliver changes within seconds. A 15-minute poll, waking from sleep and opening the pane
 fetch as well, because pushes on macOS can be late.
 
-The release workflow deploys the schema to Production before it builds; a field the schema lacks
-fails every save there. See [release.md](../release.md) and [signing.md](../signing.md).
+Production takes a schema only through the CloudKit Console's **Deploy Schema Changes**, and a field
+it lacks fails every save there, so the release workflow checks it before it builds. See
+[release.md](../release.md) and [signing.md](../signing.md).

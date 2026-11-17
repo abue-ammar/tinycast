@@ -91,11 +91,11 @@ jobs:
         run: ./Scripts/install-provisioning-profile.sh "Config/Profiles/${PROFILE// /_}.provisionprofile"
 
       # Developer ID builds reach only Production, where an undeployed field fails every save.
-      - name: Deploy the CloudKit schema
+      - name: Check the CloudKit schema
         env:
           CLOUDKIT_MANAGEMENT_TOKEN: ${{ secrets.CLOUDKIT_MANAGEMENT_TOKEN }}
           BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
-        run: ./Scripts/deploy-cloudkit-schema.sh production "iCloud.$BUNDLE_ID"
+        run: ./Scripts/check-cloudkit-schema.sh "iCloud.$BUNDLE_ID"
 
       - name: Build app
         env:

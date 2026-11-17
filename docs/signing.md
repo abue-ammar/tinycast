@@ -54,7 +54,7 @@ environment deploys from `main` only, so a workflow pushed to any other branch c
 | `NOTARY_KEY_P8_BASE64`              | an App Store Connect API team key (`.p8`) with Developer access, base64                         |
 | `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | that key's ID and its issuer ID                                                                 |
 | `UPDATE_SIGNING_KEY`                | the release key: an Ed25519 private key, base64, whose public half is `TinycastUpdatePublicKey` |
-| `CLOUDKIT_MANAGEMENT_TOKEN`         | a CloudKit Console management token, which deploys the iCloud Sync schema                       |
+| `CLOUDKIT_MANAGEMENT_TOKEN`         | a CloudKit Console management token, which checks the iCloud Sync schema                        |
 
 Export the Developer ID identity alone — `security export -t identities` bundles every identity in
 the keychain. In Keychain Access, open **My Certificates**, select
