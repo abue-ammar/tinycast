@@ -96,9 +96,8 @@ private struct ChatHistoryRow: View {
     }
 
     var body: some View {
-        IconCache.observeStyle()
-        return HStack(spacing: metrics.spacing.lg) {
-            Image(nsImage: IconCache.symbolIcon(named: "bubble.left")).resizable()
+        HStack(spacing: metrics.spacing.lg) {
+            IconTile(symbol: "bubble.left.fill", tint: SettingsTab.ai.tint, extent: IconCache.appIconBody)
                 .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
             VStack(alignment: .leading, spacing: metrics.spacing.xxs) {
                 Text(conversation.displayTitle)

@@ -70,28 +70,46 @@ enum SettingsTab: CaseIterable, Identifiable {
     var systemImage: String {
         switch self {
         case .general: return "switch.2"
-        case .applications: return "square.grid.2x2"
-        case .systemSettings: return "gearshape"
-        case .systemActions: return "bolt"
-        case .commands: return "terminal"
+        case .applications: return "square.grid.2x2.fill"
+        case .systemSettings: return "gearshape.fill"
+        case .systemActions: return "bolt.fill"
+        case .commands: return "terminal.fill"
         case .quicklinks: return "link"
-        case .appleShortcuts: return "square.2.layers.3d"
+        case .appleShortcuts: return "square.2.layers.3d.fill"
         case .fallbacks: return "arrow.turn.down.right"
         case .ai: return "sparkles"
         case .quickActions: return "wand.and.sparkles"
         case .dictation: return "waveform"
         case .fileSearch: return "doc.text.magnifyingglass"
-        case .notes: return "text.page"
+        case .notes: return "text.page.fill"
         case .snippets: return "curlybraces"
         case .navigation: return "arrow.left.arrow.right"
         case .windowManagement: return "macwindow"
-        case .clipboard: return "doc.on.clipboard"
-        case .emoji: return "face.smiling"
+        case .clipboard: return "list.clipboard.fill"
+        case .emoji: return "face.smiling.inverse"
         case .calendar: return "calendar"
-        case .extensions: return "puzzlepiece.extension"
-        case .permissions: return "lock.shield"
-        case .backup: return "arrow.up.arrow.down.circle"
-        case .about: return "info.circle"
+        case .extensions: return "puzzlepiece.extension.fill"
+        case .permissions: return "lock.shield.fill"
+        case .backup: return "arrow.up.arrow.down.circle.fill"
+        case .about: return "info.circle.fill"
+        }
+    }
+
+    var tint: IconTint {
+        switch self {
+        case .general, .systemSettings, .fallbacks, .about: return .gray
+        case .commands, .navigation: return .graphite
+        case .permissions, .quicklinks, .fileSearch: return .blue
+        case .applications, .backup: return .cyan
+        case .windowManagement: return .mint
+        case .extensions: return .green
+        case .notes: return .yellow
+        case .systemActions, .emoji: return .orange
+        case .calendar: return .red
+        case .appleShortcuts, .dictation: return .pink
+        case .ai: return .purple
+        case .clipboard, .quickActions: return .indigo
+        case .snippets: return .brown
         }
     }
 }

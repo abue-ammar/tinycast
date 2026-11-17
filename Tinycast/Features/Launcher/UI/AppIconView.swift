@@ -20,24 +20,28 @@ struct AppIconView: View {
     }
 
     var body: some View {
-        let size = pointSize.map { IconSize(points: $0, scale: displayScale) }
-        // Keyed on the icon, not the entry: re-skinning an extension leaves `id` untouched.
-        let request = IconRequest(Key(icon: app.iconKey, size: size))
-        let warm = IconCache.cached(app.iconSource, fileURL: app.url, size: size)
-        let image = warm ?? (loaded?.request == request ? loaded?.image : nil)
-        Group {
-            if let image {
-                Image(nsImage: image).resizable()
-            } else {
-                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                    .fill(Theme.Colors.iconPlaceholder)
+        if case .tile(let symbol, let tint) = app.iconSource {
+            IconTile(symbol: symbol, tint: tint, extent: IconCache.appIconBody)
+        } else {
+            let size = pointSize.map { IconSize(points: $0, scale: displayScale) }
+            // Keyed on the icon, not the entry: re-skinning an extension leaves `id` untouched.
+            let request = IconRequest(Key(icon: app.iconKey, size: size))
+            let warm = IconCache.cached(app.iconSource, fileURL: app.url, size: size)
+            let image = warm ?? (loaded?.request == request ? loaded?.image : nil)
+            Group {
+                if let image {
+                    Image(nsImage: image).resizable()
+                } else {
+                    RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                        .fill(Theme.Colors.iconPlaceholder)
+                }
             }
-        }
-        .task(id: request) {
-            guard warm == nil else { return }
-            let image = await IconCache.loadAsync(app.iconSource, fileURL: app.url, size: size)
-            guard !Task.isCancelled else { return }
-            loaded = Loaded(request: request, image: image)
+            .task(id: request) {
+                guard warm == nil else { return }
+                let image = await IconCache.loadAsync(app.iconSource, fileURL: app.url, size: size)
+                guard !Task.isCancelled else { return }
+                loaded = Loaded(request: request, image: image)
+            }
         }
     }
 }

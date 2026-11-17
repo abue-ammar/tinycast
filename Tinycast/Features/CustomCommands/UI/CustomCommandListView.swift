@@ -54,11 +54,11 @@ struct CustomCommandList: View {
         }
 
         var body: some View {
-            IconCache.observeStyle()
-            return HStack(spacing: metrics.spacing.lg) {
-                Image(nsImage: IconCache.symbolIcon(named: command.symbol))
-                    .resizable()
-                    .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+            HStack(spacing: metrics.spacing.lg) {
+                IconTile(
+                    symbol: command.symbol, tint: SettingsTab.commands.tint, extent: IconCache.appIconBody
+                )
+                .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
                 Text(command.name).font(metrics.typography.rowTitle).lineLimit(1)
                 Spacer(minLength: metrics.spacing.sm)
                 if !command.showsInRootSearch {

@@ -205,6 +205,7 @@ enum Theme {
         static let settingsRowButton: CGFloat = 24
         /// Inside its tinted tile, whose inset brings it to the row icon's size.
         static let settingsSidebarGlyph: CGFloat = 14
+        static let settingsSidebarIcon: CGFloat = 22
         /// AI Chat's opening size; the user owns it from there, autosaved.
         static let aiChatWindow = CGSize(width: 960, height: 660)
         static let aiChatWindowMinimum = CGSize(width: 680, height: 440)
@@ -528,13 +529,46 @@ enum Theme {
             private static func pair(dark: UInt32, light: UInt32) -> Color {
                 adaptive(dark: rgb(dark), light: rgb(light))
             }
-
-            private static func rgb(_ hex: UInt32) -> NSColor {
-                NSColor(
-                    srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
-                    blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
-            }
         }
+    }
+
+    enum IconTile {
+        static let glyphRatio: CGFloat = 0.6
+        static let edgeLightRatio: CGFloat = 0.02
+        static let edgeLight = LinearGradient(
+            stops: [
+                .init(color: .white.opacity(0.26), location: 0),
+                .init(color: .white.opacity(0.03), location: 0.6)
+            ], startPoint: .top, endPoint: .bottom)
+
+        /// Fixed in both appearances: a saturated tile carries its own contrast against white ink.
+        static func fill(_ tint: IconTint) -> LinearGradient {
+            let (top, bottom): (UInt32, UInt32) =
+                switch tint {
+                case .gray: (0xA9A9AF, 0x77777D)
+                case .graphite: (0x55555B, 0x1F1F22)
+                case .blue: (0x4AA3FF, 0x0B6BF5)
+                case .cyan: (0x5CC8F7, 0x1B9BE0)
+                case .mint: (0x56D6C4, 0x12B2A0)
+                case .green: (0x5FDD70, 0x2DBB49)
+                case .yellow: (0xFFD43B, 0xF5AB00)
+                case .orange: (0xFFAD42, 0xFF8600)
+                case .red: (0xFF6A60, 0xEE3B31)
+                case .pink: (0xFF6B87, 0xF52E57)
+                case .purple: (0xC57BF0, 0x9B45D6)
+                case .indigo: (0x8583FF, 0x5451E0)
+                case .brown: (0xC2A07A, 0x96744F)
+                }
+            return LinearGradient(
+                colors: [Color(nsColor: rgb(top)), Color(nsColor: rgb(bottom))],
+                startPoint: .top, endPoint: .bottom)
+        }
+    }
+
+    private static func rgb(_ hex: UInt32) -> NSColor {
+        NSColor(
+            srgbRed: CGFloat((hex >> 16) & 0xFF) / 255, green: CGFloat((hex >> 8) & 0xFF) / 255,
+            blue: CGFloat(hex & 0xFF) / 255, alpha: 1)
     }
 }
 

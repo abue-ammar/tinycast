@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Swatches and a searchable symbol grid. Changes apply at once: the launcher is the real preview.
+/// A searchable symbol grid. Changes apply at once: the launcher is the real preview.
 struct ExtensionAppearancePicker: View {
     let current: ExtensionAppearance
     /// Whether it is re-skinned, the only time resetting means anything.
@@ -16,11 +16,10 @@ struct ExtensionAppearancePicker: View {
     /// One column system from the grid, so every row shares its edges rather than finding its own.
     private enum Metrics {
         static let tile: CGFloat = 30
+        static let glyph: CGFloat = 15
         static let columns = 10
         static let gap: CGFloat = 8
         static let inset: CGFloat = Theme.Spacing.xl
-        static let swatchesPerRow = 9
-        static let swatch: CGFloat = 20
         /// Whole rows on show, plus half a tile of the next as a deliberate scroll hint.
         static let visibleRows = 6
 
@@ -31,38 +30,13 @@ struct ExtensionAppearancePicker: View {
         static var gridHeight: CGFloat {
             CGFloat(visibleRows) * (tile + gap) - gap + tile / 2
         }
-        /// Spread across the same width, so the first and last swatch sit on the grid's edges.
-        static var swatchGap: CGFloat {
-            (contentWidth - CGFloat(swatchesPerRow) * swatch) / CGFloat(swatchesPerRow - 1)
-        }
     }
 
-    private let swatches = Array(
-        repeating: GridItem(.fixed(Metrics.swatch), spacing: Metrics.swatchGap),
-        count: Metrics.swatchesPerRow)
     private let icons = Array(
         repeating: GridItem(.fixed(Metrics.tile), spacing: Metrics.gap), count: Metrics.columns)
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            LazyVGrid(columns: swatches, alignment: .leading, spacing: Metrics.gap) {
-                ForEach(ExtensionTint.allCases) { tint in
-                    Button {
-                        onPick(ExtensionAppearance(symbol: current.symbol, tint: tint))
-                    } label: {
-                        Circle()
-                            .fill(tint.color.gradient)
-                            .frame(width: Metrics.swatch, height: Metrics.swatch)
-                            .overlay(
-                                Circle().strokeBorder(
-                                    .white.opacity(tint == current.tint ? 0.9 : 0), lineWidth: 2)
-                            )
-                    }
-                    .buttonStyle(.plain)
-                    .help(tint.title)
-                }
-            }
-
             HStack(spacing: Theme.Spacing.sm) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("", text: $query, prompt: Text("Search symbols…"))
@@ -91,16 +65,15 @@ struct ExtensionAppearancePicker: View {
                     LazyVGrid(columns: icons, alignment: .leading, spacing: Metrics.gap) {
                         ForEach(results, id: \.self) { symbol in
                             Button {
-                                onPick(ExtensionAppearance(symbol: symbol, tint: current.tint))
+                                onPick(ExtensionAppearance(symbol: symbol))
                             } label: {
-                                SymbolTile(symbol: symbol, tint: current.tint, side: Metrics.tile)
-                                    .opacity(symbol == current.symbol ? 1 : 0.55)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 7, style: .continuous)
-                                            .strokeBorder(
-                                                .white.opacity(symbol == current.symbol ? 0.9 : 0),
-                                                lineWidth: 2)
+                                SymbolImage(name: symbol, size: Metrics.glyph, monochrome: true)
+                                    .frame(width: Metrics.tile, height: Metrics.tile)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                                            .fill(symbol == current.symbol ? Theme.Colors.selection : .clear)
                                     )
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                             .help(symbol)
@@ -141,33 +114,32 @@ struct ExtensionAppearancePicker: View {
     }
 }
 
-/// Drawn in SwiftUI so the picker previews exactly what `IconCache` renders.
+/// The launcher's tile for an override, restated here because an extension's views stay its own.
 struct SymbolTile: View {
     let symbol: String
-    let tint: ExtensionTint
     let side: CGFloat
 
-    /// Marks the system has no symbol for; they draw as templates, so they tint like a symbol.
-    @ViewBuilder
-    private var glyph: some View {
-        if SymbolCatalog.isBundled(symbol) {
-            Image(symbol)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: side * 0.5, height: side * 0.5)
-                .foregroundStyle(.white)
-        } else {
-            Image(systemName: symbol)
-                .font(.system(size: side * 0.46, weight: .medium))
-                .foregroundStyle(.white)
-        }
+    /// Marks the system has no symbol for draw as templates, so they take the ink like a symbol.
+    private var glyph: Image {
+        SymbolCatalog.isBundled(symbol)
+            ? Image(symbol).renderingMode(.template)
+            : Image(systemName: symbol)
     }
 
     var body: some View {
-        RoundedRectangle(cornerRadius: side * 0.23, style: .continuous)
-            .fill(tint.color)
+        let shape = RoundedRectangle(cornerRadius: side * IconCache.appIconCornerRatio, style: .continuous)
+        glyph
+            .resizable()
+            .scaledToFit()
+            .fontWeight(.semibold)
+            .fontDesign(.rounded)
+            .foregroundStyle(.white)
+            .frame(width: side * Theme.IconTile.glyphRatio, height: side * Theme.IconTile.glyphRatio)
             .frame(width: side, height: side)
-            .overlay(glyph)
+            .background(Theme.IconTile.fill(SettingsTab.extensions.tint), in: shape)
+            .overlay {
+                shape.strokeBorder(Theme.IconTile.edgeLight, lineWidth: side * Theme.IconTile.edgeLightRatio)
+            }
+            .environment(\.colorScheme, .light)
     }
 }

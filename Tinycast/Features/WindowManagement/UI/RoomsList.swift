@@ -85,7 +85,7 @@ private struct RoomRowView: View {
 
     var body: some View {
         HStack(spacing: metrics.spacing.lg) {
-            EntryIconView(source: .symbol(symbol))
+            IconTile(symbol: symbol, tint: SettingsTab.windowManagement.tint, extent: IconCache.appIconBody)
                 .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
             VStack(alignment: .leading, spacing: 0) {
                 Text(title)

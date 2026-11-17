@@ -13,34 +13,14 @@ struct IconCacheTests {
         }
     }
 
-    /// The cache key carries the colour, or a re-skin serves whatever was drawn first.
-    static func tintedTiles() {
-        let plain = bitmap(IconCache.symbolIcon(named: "star"))
-        let red = bitmap(
-            IconCache.symbolIcon(named: "star", tint: SymbolTint(key: "red", color: .systemRed)))
-        let blue = bitmap(
-            IconCache.symbolIcon(named: "star", tint: SymbolTint(key: "blue", color: .systemBlue)))
-
-        expect(plain != nil && red != nil && blue != nil, "every tile rasterizes")
-        expect(plain != red, "a tinted tile differs from the plain one")
-        expect(red != blue, "two tints do not share a cache entry")
-        // Same key twice must hit the cache and give back the identical bitmap.
-        expect(
-            red
-                == bitmap(
-                    IconCache.symbolIcon(
-                        named: "star", tint: SymbolTint(key: "red", color: .systemRed))),
-            "the same tint is stable")
-    }
-
-    static func bitmap(_ image: NSImage) -> Data? { image.tiffRepresentation }
-
     static func semanticSymbolNames() {
         for (isDark, appearance) in [(false, NSAppearance.Name.aqua), (true, .darkAqua)] {
             let smile = SystemSymbolName.resolve("face.smiling", isDark: isDark)
             let other = smile == "face.smiling" ? "face.smiling.inverse" : "face.smiling"
             NSAppearance(named: appearance)?.performAsCurrentDrawingAppearance {
                 expect(ink(smile) < ink(other), "the smiley resolves to its outline, dark: \(isDark)")
+                let filled = SystemSymbolName.resolve("face.smiling.inverse", isDark: isDark)
+                expect(ink(filled) > ink(smile), "the inverse smiley stays filled, dark: \(isDark)")
             }
         }
         expect(SystemSymbolName.resolve("star", isDark: true) == "star", "other symbols stay unchanged")
@@ -243,7 +223,6 @@ struct IconCacheTests {
         fittedAlphaThreshold()
         await asynchronousRows()
         semanticSymbolNames()
-        tintedTiles()
         restyling()
         styleFingerprint()
 

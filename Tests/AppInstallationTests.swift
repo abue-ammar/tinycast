@@ -529,9 +529,14 @@ struct AppInstallationTests {
 }
 
 // Empty feature catalogs keep this harness focused on the shipped launcher.
-enum SettingsTab: Sendable { case ai }
+enum SettingsTab: Sendable {
+    case ai, quickActions, windowManagement, quicklinks, snippets, commands, calendar
+    var tint: IconTint { .gray }
+}
 enum ExtensionRefreshState: Hashable, Sendable { case idle }
-enum EntryIcon: Hashable, Sendable { case file(stamp: Int), symbol(String) }
+enum EntryIcon: Hashable, Sendable {
+    case file(stamp: Int), symbol(String), tile(symbol: String, tint: IconTint)
+}
 enum IconCache {
     static func observeStyle() {}
     static func icon(for source: EntryIcon, fileURL: URL) -> NSImage { NSImage() }
@@ -539,6 +544,7 @@ enum IconCache {
 enum CommandID: String, Sendable {
     case fixture
     var sfSymbol: String { "" }
+    var tint: IconTint { .gray }
     var hotKeyAction: HotKeyAction? { nil }
     var isQueryDriven: Bool { false }
     var suggestionPriority: Int? { nil }
@@ -590,6 +596,7 @@ struct SystemAction: Sendable {
     var name = ""
     var englishName = ""
     var sfSymbol = ""
+    var tint = IconTint.gray
 }
 enum SystemActionCatalog {
     static let all: [SystemAction] = []
