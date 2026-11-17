@@ -176,7 +176,7 @@ enum CommandID: String, CaseIterable, Sendable {
 
     var tint: IconTint {
         switch self {
-        case .quickAI, .aiChat: return .teal
+        case .quickAI, .aiChat: return .purple
         case .fixGrammar, .rewrite, .translate, .summarize, .clipboardHistory, .pasteSequentially:
             return .indigo
         case .calculatorHistory, .checkForUpdates: return .green
