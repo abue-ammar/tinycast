@@ -91,6 +91,11 @@ Any status but `Accepted` prints Apple's log and stops the run before anything i
 update key. `Scripts/check-update-path.sh` runs just before notarizing, and fails the run unless the
 last release on the channel would install this build ([signing.md](signing.md#update-trust)).
 
+Before building, the job installs the channel's profile from `Config/Profiles/` and deploys
+`Config/CloudKit/schema.ckdb` to the channel's container in Production with
+`Scripts/deploy-cloudkit-schema.sh`; a Developer ID build reaches only Production, where a field the
+schema lacks fails every save ([icloud-sync.md](features/icloud-sync.md#cloudkit)).
+
 Channel builds override `TINYCAST_BUNDLE_IDENTIFIER`, not the target-wide `PRODUCT_BUNDLE_IDENTIFIER`.
 The Dictation helper derives its own identifier with a `.dictation` suffix; signature verification
 checks that its bundle and signing identifiers agree and remain distinct from the main app.

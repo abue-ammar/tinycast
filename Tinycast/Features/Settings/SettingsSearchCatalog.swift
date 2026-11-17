@@ -106,7 +106,7 @@ enum SettingsSearchCatalog {
     // Pane order, then section order within a pane, so this reads as a table of contents.
 
     static let entries: [SettingsSearchEntry] =
-        general + applications + systemSettings + systemActions + commands + quicklinks
+        general + iCloudSync + applications + systemSettings + systemActions + commands + quicklinks
         + appleShortcuts + fallbacks + clipboard + snippets + fileSearch + windowManagement
         + navigation + notes + calendar + emoji + ai + quickActions + dictation + extensions + permissions
         + backup + about
@@ -660,6 +660,18 @@ enum SettingsSearchCatalog {
         .init(
             .permissionsMicrophone, "Microphone",
             keywords: ["dictation", "recording", "privacy", "grant"])
+    ]
+
+    private static let iCloudSync: [SettingsSearchEntry] = [
+        .init(pane: .iCloudSync, keywords: ["icloud", "sync", "cloud", "cloudkit", "other macs"]),
+        .init(.iCloudSyncSwitch, "Sync with iCloud", keywords: ["turn on", "enable", "sync"]),
+        .init(
+            group: .iCloudSyncContent, "Synced Content",
+            keywords: ["notes", "snippets", "quicklinks", "chats", "extensions", "presets"]),
+        .init(group: .iCloudSyncGeneral, "Synced Settings", keywords: ["appearance", "login", "menu bar"]),
+        .init(group: .iCloudSyncNotSynced, "Not Synced", keywords: ["clipboard", "passwords", "excluded"]),
+        .init(group: .iCloudSyncMacs, "Synced Macs", keywords: ["devices", "remove", "rename", "computers"]),
+        .init(.iCloudSyncData, "Delete iCloud Data", keywords: ["reset", "erase", "remove", "cloud data"])
     ]
 
     private static let backup: [SettingsSearchEntry] = [

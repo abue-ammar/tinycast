@@ -318,6 +318,20 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         return failed
     }
 
+    /// Store installs: the ones another Mac can fetch again by handle and name.
+    var storeInstalled: [InstalledExtension] {
+        let tracked = storeVersions.tracked
+        return installed.filter { tracked.contains($0.manifest.name) }
+    }
+
+    /// Installs what another Mac has, found again in the store under the same handle and name.
+    func installFromStore(handle: String, name: String) async throws {
+        guard let listing = try await ExtensionStoreClient().lookup(handle: handle, name: name) else {
+            throw ExtensionStoreError.notAnExtension
+        }
+        try await install(listing, onProgress: { _ in })
+    }
+
     /// Replaces only the extension's directory, so its preferences and storage carry over.
     private func installFromStore(
         _ listing: ExtensionListing,

@@ -196,6 +196,10 @@ enum SettingsBackupCoverage {
         AppSettingsKey.notesFolder.rawValue:
             "Names a folder on this Mac; the one a backup lands on may not have it.",
         AppSettingsKey.settingsFileEnabled.rawValue:
-            "Lets a file on this Mac change its settings; an import must not hand that to another."
+            "Lets a file on this Mac change its settings; an import must not hand that to another.",
+        AppSettingsKey.iCloudSyncEnabled.rawValue:
+            "Sends this Mac's data to iCloud; only the iCloud Sync pane may turn that on.",
+        AppSettingsKey.iCloudSyncDisabledCategories.rawValue:
+            "Which categories sync is each Mac's own choice, made in its iCloud Sync pane."
     ]
 }

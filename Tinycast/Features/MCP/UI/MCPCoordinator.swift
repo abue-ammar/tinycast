@@ -151,6 +151,15 @@ final class MCPCoordinator {
         applyEnabled()
     }
 
+    /// Keeps this Mac's credentials and trust: a synced server brings neither, and a new one asks.
+    func applySynced(_ synced: MCPServer) {
+        var server = synced
+        server.trust = store.server(id: server.id)?.trust ?? .ask
+        manager.disconnect(server.id)
+        store.save(server)
+        applyEnabled()
+    }
+
     func remove(_ id: UUID) throws {
         core.mcpOAuth.cancelSignIn(id)
         try MCPSecretStore().remove(for: id)

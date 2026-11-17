@@ -1045,7 +1045,9 @@ A plain chat started after a preset chat, in the same state, goes back to every 
 ⌘N in an empty chat drops the preset picked in it, and the window's open policy never replaces an
 empty chat that has one. Presets live outside `UserDefaults` and so never travel in a settings backup
 or `settings.json`, for the reason the system prompt stays out of backups: standing instructions must
-not arrive on another Mac unread.
+not arrive on another Mac unread. [iCloud Sync](icloud-sync.md) is the exception the user turns on:
+presets, the system prompt, chats and their retention reach only that user's own Macs, and a chat's
+attachments stay on the Mac they were added on.
 
 ## Settings and backup boundary
 

@@ -25,7 +25,10 @@ commands and global shortcuts can show, search, or extend the collection.
   collection navigation cannot abandon an in-memory draft.
 - **Tinycast is the only writer while editing.** There is no watcher or disk revision check: a save
   replaces the file with what is in the editor. Every show re-lists the folder and reloads the clean
-  active note; an unsaved draft is retained, including after a failed save.
+  active note; an unsaved draft is retained, including after a failed save. [iCloud
+  Sync](icloud-sync.md) writes a note another Mac changed only while the editor holds no unsaved
+  edit to it; one that does keeps its edit, which then uploads as the newer copy. A note deleted on
+  another Mac goes to the Trash.
 - **Search is on demand and unindexed.** An empty switcher query reads metadata plus the head of every
   unnamed note; a nonempty query reads bodies sequentially off-main and retains no collection-sized
   source cache.

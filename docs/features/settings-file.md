@@ -83,6 +83,11 @@ target, so a file linked from a dotfiles repository stays linked.
   `settings.json: unknown setting “clipboard.enabeld” (+1 more)`.
 - **Turning it off** stops both directions and leaves the file on disk.
 
+The bindings are built once, as `AppCore.settingsBindings`, and shared with [iCloud
+Sync](icloud-sync.md), which syncs one key at a time through the same `read` and `write`. An app or
+pane record waiting for its app to be installed is kept in `launcherWaitingRecords`, so a relaunch
+never drops another Mac's apps from the next render.
+
 A side effect of a setting runs from an `AppCore` `track` sink, never from a pane's `.onChange`: the file
 can change a setting while no pane is open. Clipboard retention, AI retention and the extensions'
 launcher presence are the three that moved for this.

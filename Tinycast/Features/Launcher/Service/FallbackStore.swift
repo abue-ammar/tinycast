@@ -30,6 +30,13 @@ final class FallbackStore {
         defaults.set(Array(disabledIDs), forKey: disabledKey)
     }
 
+    func replace(order: [String], disabled: Set<String>) {
+        orderedIDs = order
+        disabledIDs = disabled
+        defaults.set(orderedIDs, forKey: orderKey)
+        defaults.set(Array(disabledIDs), forKey: disabledKey)
+    }
+
     /// Swaps two neighbours and stores the whole visible order, so no later row can drift.
     func exchange(_ fallback: Fallback, with other: Fallback, in order: [Fallback]) {
         guard let from = order.firstIndex(of: fallback), let to = order.firstIndex(of: other) else {

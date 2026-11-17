@@ -51,20 +51,25 @@ final class LauncherSettingsFile {
         var waiting: [String: Record] = [:]
     }
 
+    /// Waiting records outlive a relaunch, so a re-render never drops another Mac's apps.
+    private static let waitingKey = "launcherWaitingRecords"
+
     private let appIndex: AppIndex
     private let aliases: AliasStore
     private let visibility: VisibilityStore
     private let shortcuts: HotKeySettingsFile
+    private let defaults: UserDefaults
     private var bundleRecords: [SettingsFileKey: BundleRecords] = [:]
 
     init(
         appIndex: AppIndex, aliases: AliasStore, visibility: VisibilityStore,
-        shortcuts: HotKeySettingsFile
+        shortcuts: HotKeySettingsFile, defaults: UserDefaults = .standard
     ) {
         self.appIndex = appIndex
         self.aliases = aliases
         self.visibility = visibility
         self.shortcuts = shortcuts
+        self.defaults = defaults
     }
 
     func appsBinding(for key: SettingsFileKey) -> SettingsFileBinding {
@@ -118,6 +123,7 @@ final class LauncherSettingsFile {
             let items = ready.keys.sorted().map { item($0, held.bundle) }
             issues += apply(ready, to: items, noun: held.bundle.noun, key: key)
         }
+        saveWaiting()
         return issues + shortcuts.commit()
     }
 
@@ -145,7 +151,10 @@ final class LauncherSettingsFile {
     }
 
     private func bundlesBinding(for key: SettingsFileKey, _ bundle: Bundle) -> SettingsFileBinding {
-        SettingsFileBinding(
+        if let waiting = storedWaiting()[key.rawValue] {
+            bundleRecords[key] = BundleRecords(bundle: bundle, waiting: waiting)
+        }
+        return SettingsFileBinding(
             key,
             read: { [self] in
                 let state = bundleRecords[key]
@@ -168,11 +177,29 @@ final class LauncherSettingsFile {
                 bundleRecords[key] = BundleRecords(
                     bundle: bundle, applied: Set(present.keys),
                     waiting: decoded.records.filter { !known.contains($0.key) })
+                saveWaiting()
                 let live = customized(known.map { item($0, bundle) }).map(\.name)
                 let items = Set(live).union(present.keys).sorted().map { item($0, bundle) }
                 return decoded.problems.map { .invalidEntry(key, $0) }
                     + apply(present, to: items, noun: bundle.noun, key: key)
             })
+    }
+
+    private func storedWaiting() -> [String: [String: Record]] {
+        guard let data = defaults.data(forKey: Self.waitingKey) else { return [:] }
+        return (try? JSONDecoder().decode([String: [String: Record]].self, from: data)) ?? [:]
+    }
+
+    private func saveWaiting() {
+        let waiting = Dictionary(
+            uniqueKeysWithValues: bundleRecords.compactMap { key, held in
+                held.waiting.isEmpty ? nil : (key.rawValue, held.waiting)
+            })
+        if waiting.isEmpty {
+            defaults.removeObject(forKey: Self.waitingKey)
+        } else if let data = try? JSONEncoder().encode(waiting) {
+            defaults.set(data, forKey: Self.waitingKey)
+        }
     }
 
     // MARK: - Items

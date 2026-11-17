@@ -125,6 +125,13 @@ extension SettingsAnchor {
     static let permissionsCalendars = Self(tab: .permissions, title: "Calendars")
     static let permissionsMicrophone = Self(tab: .permissions, title: "Microphone")
 
+    static let iCloudSyncSwitch = Self(tab: .iCloudSync, title: "iCloud Sync")
+    static let iCloudSyncContent = Self(tab: .iCloudSync, title: "Content")
+    static let iCloudSyncGeneral = Self(tab: .iCloudSync, title: "General Settings")
+    static let iCloudSyncAlways = Self(tab: .iCloudSync, title: "Always Synced")
+    static let iCloudSyncNotSynced = Self(tab: .iCloudSync, title: "Not Synced")
+    static let iCloudSyncMacs = Self(tab: .iCloudSync, title: "Macs")
+    static let iCloudSyncData = Self(tab: .iCloudSync, title: "iCloud Data")
     static let backupExport = Self(tab: .backup, title: "Export")
     static let backupImport = Self(tab: .backup, title: "Import")
     static let backupImportFromRaycast = Self(tab: .backup, title: "Import from Raycast")

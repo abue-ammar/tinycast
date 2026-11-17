@@ -1,12 +1,12 @@
 import Foundation
 
 struct ChatMessage: Identifiable, Equatable, Sendable {
-    enum Role: String, Equatable, Sendable {
+    enum Role: String, Codable, Equatable, Sendable {
         case user
         case assistant
     }
 
-    enum State: String, Equatable, Sendable {
+    enum State: String, Codable, Equatable, Sendable {
         case streaming
         case complete
         case failed
@@ -99,7 +99,7 @@ struct ChatMessage: Identifiable, Equatable, Sendable {
     }
 }
 
-struct ChatSearch: Equatable, Hashable, Sendable {
+struct ChatSearch: Codable, Equatable, Hashable, Sendable {
     var query: String?
     var isComplete: Bool
     /// Characters of reply text that had arrived when the search began.
@@ -108,8 +108,8 @@ struct ChatSearch: Equatable, Hashable, Sendable {
 }
 
 /// One tool call inside a reply: live while it runs, a record of what ran once it is done.
-struct ChatToolUse: Equatable, Hashable, Sendable {
-    enum State: String, Equatable, Hashable, Sendable {
+struct ChatToolUse: Codable, Equatable, Hashable, Sendable {
+    enum State: String, Codable, Equatable, Hashable, Sendable {
         case running
         case completed
         case failed
@@ -143,7 +143,7 @@ extension Array where Element == ChatToolUse {
 }
 
 /// One stretch of thinking: a reply may think, answer, then think again before going on.
-struct ChatReasoning: Equatable, Hashable, Sendable {
+struct ChatReasoning: Codable, Equatable, Hashable, Sendable {
     var text: String
     /// Characters of reply text that had arrived when this stretch began.
     let textOffset: Int

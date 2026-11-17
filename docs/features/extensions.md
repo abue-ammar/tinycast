@@ -587,6 +587,14 @@ A lookup that fails is skipped rather than reported, so a flaky network never in
 Updating is a store install of that listing, which replaces only the extension's directory — its
 preferences, storage and icon carry over.
 
+## iCloud Sync
+
+[iCloud Sync](icloud-sync.md) carries the same tracked set — store installs only — to the user's
+other Macs, found again by handle and name, and installs one only where Extensions is on. An
+uninstall reaches every Mac syncing extensions, and its confirmation says so. Text, checkbox and
+dropdown preferences travel; passwords, file and folder paths, local storage and OAuth tokens stay.
+Which commands show in the launcher stays per Mac, as in Raycast.
+
 ## Shortcuts
 
 A global shortcut binds to a **command**, not to an extension — a shortcut has to land on one thing to

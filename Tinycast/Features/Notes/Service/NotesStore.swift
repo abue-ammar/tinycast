@@ -244,6 +244,65 @@ final class NotesStore {
         }
     }
 
+    // MARK: - Sync
+
+    /// Every note's source by file name, as saved on disk; nil while the folder is missing.
+    func syncedSources() async -> [NoteID: String]? {
+        let repository = repository
+        guard FileManager.default.fileExists(atPath: repository.notesDirectory.path) else { return nil }
+        let result = await detached {
+            try repository.list().reduce(into: [NoteID: String]()) { sources, summary in
+                sources[summary.id] = try repository.load(summary.id).source
+            }
+        } recover: {
+            repository.notesDirectory
+        }
+        return try? result.get()
+    }
+
+    func syncedSource(of id: NoteID) async -> String? {
+        let repository = repository
+        return try? await detached {
+            try repository.load(id).source
+        } recover: {
+            repository.fileURL(for: id)
+        }.get()
+    }
+
+    /// Writes what another Mac changed; the open note with unsaved edits keeps them, and wins.
+    func applySynced(_ sources: [NoteID: String], trashing trashed: Set<NoteID>) async -> Bool {
+        let held = isDirty || saveTask != nil ? activeID : nil
+        let writes = sources.filter { $0.key != held }
+        let trashing = trashed.filter { $0 != held }
+        let repository = repository
+        let preferredID = activeID
+        let result = await detached {
+            for (id, source) in writes { try repository.save(id: id, source: source) }
+            for id in trashing where FileManager.default.fileExists(atPath: repository.fileURL(for: id).path)
+            {
+                try repository.trash(id: id)
+            }
+            return try repository.load(preferredID: preferredID)
+        } recover: {
+            repository.notesDirectory
+        }
+        guard case .success(let (summaries, document)) = result else { return false }
+        guard isLoaded, repository.notesDirectory == notesDirectory else { return true }
+        let touchesActive = preferredID.map { writes[$0] != nil || trashing.contains($0) } ?? false
+        if touchesActive, !isDirty, saveTask == nil, preferredID == activeID {
+            apply(document, summaries: summaries)
+        } else {
+            self.summaries = summaries
+        }
+        return true
+    }
+
+    /// Renames a note out of the way, so one from another Mac can take its file name.
+    func setAside(_ id: NoteID) async -> Bool {
+        let title = URL(fileURLWithPath: id.rawValue).deletingPathExtension().lastPathComponent
+        return await rename(id, to: String(localized: "\(title) (This Mac)")) != nil
+    }
+
     func updateSearchQuery(_ updated: String) {
         searchQuery = updated
         searchTask?.cancel()

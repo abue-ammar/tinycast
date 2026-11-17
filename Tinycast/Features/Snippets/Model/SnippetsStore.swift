@@ -129,6 +129,37 @@ final class SnippetsStore {
         scheduleReload(after: .zero)
     }
 
+    // MARK: - Sync
+
+    /// Each file's bytes by name; nil unless the store is running and its folder has listed.
+    func syncedFiles() async -> [String: Data]? {
+        guard isStarted, state == .ready else { return nil }
+        let repository = repository
+        return await Task.detached(priority: .utility) { try? repository.files() }.value
+    }
+
+    func syncedFile(named name: String) async -> Data? {
+        guard isStarted else { return nil }
+        let url = snippetsDirectory.appendingPathComponent(name)
+        return await Task.detached(priority: .utility) { try? Data(contentsOf: url) }.value
+    }
+
+    /// Writes and trashes what another Mac changed; false when the folder refused.
+    func applySynced(_ files: [String: Data], trashing names: Set<String>) async -> Bool {
+        guard isStarted else { return false }
+        let succeeded =
+            (try? await performMutation { try $0.apply(writing: files, trashing: names) }) != nil
+        scheduleReload(after: .zero)
+        return succeeded
+    }
+
+    func setAside(_ name: String) async -> Bool {
+        guard isStarted else { return false }
+        let succeeded = (try? await performMutation { try $0.setAside(fileName: name) }) != nil
+        scheduleReload(after: .zero)
+        return succeeded
+    }
+
     func record(id: StoredSnippet.ID) -> StoredSnippet? {
         snippets.first(where: { $0.id == id })
     }
