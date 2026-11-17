@@ -193,25 +193,37 @@ struct AppEntry: Identifiable, Hashable, Sendable {
 
     private var defaultIcon: EntryIcon {
         guard kind.descriptor.isSymbolIcon else { return .file(stamp: iconStamp) }
-        return .symbol(symbolName ?? kindSymbol)
-    }
-
-    private var kindSymbol: String {
         switch kind {
-        case .quicklink: return Quicklink.sfSymbol
-        case .snippet: return "text.quote"
-        case .customCommand: return CustomCommand.sfSymbol
-        case .command: return CommandCatalog.command(for: self)?.sfSymbol ?? "questionmark"
+        case .command:
+            guard let command = CommandCatalog.command(for: self) else { return .symbol("questionmark") }
+            return .tile(symbol: command.sfSymbol, tint: command.tint)
         case .quickAction:
-            return CommandCatalog.command(for: self)?.sfSymbol ?? CustomQuickAction.sfSymbol
-        case .systemAction: return SystemActionCatalog.action(forEntryID: id)?.sfSymbol ?? "questionmark"
+            guard let command = CommandCatalog.command(for: self) else {
+                return .tile(
+                    symbol: symbolName ?? CustomQuickAction.sfSymbol, tint: SettingsTab.quickActions.tint)
+            }
+            return .tile(symbol: command.sfSymbol, tint: command.tint)
+        case .systemAction:
+            guard let action = SystemActionCatalog.action(forEntryID: id) else {
+                return .symbol("questionmark")
+            }
+            return .tile(symbol: action.sfSymbol, tint: action.tint)
         case .windowCommand:
-            return WindowCommandCatalog.command(forEntryID: id)?.sfSymbol
-                ?? CustomWindowSize.sfSymbol
-        case .windowLayout: return WindowLayout.sfSymbol
-        case .windowRoom: return Room.sfSymbol
-        case .meeting: return "video.fill"
-        case .application, .systemSettings, .appleShortcut, .extensionCommand: return "questionmark"
+            let symbol =
+                WindowCommandCatalog.command(forEntryID: id)?.sfSymbol ?? CustomWindowSize.sfSymbol
+            return .tile(symbol: symbol, tint: SettingsTab.windowManagement.tint)
+        case .windowLayout:
+            return .tile(
+                symbol: symbolName ?? WindowLayout.sfSymbol, tint: SettingsTab.windowManagement.tint)
+        case .windowRoom: return .tile(symbol: Room.sfSymbol, tint: SettingsTab.windowManagement.tint)
+        case .quicklink:
+            return .tile(symbol: symbolName ?? Quicklink.sfSymbol, tint: SettingsTab.quicklinks.tint)
+        case .snippet: return .tile(symbol: "text.quote", tint: SettingsTab.snippets.tint)
+        case .customCommand:
+            return .tile(symbol: symbolName ?? CustomCommand.sfSymbol, tint: SettingsTab.commands.tint)
+        case .meeting: return .tile(symbol: symbolName ?? "video.fill", tint: SettingsTab.calendar.tint)
+        case .application, .systemSettings, .appleShortcut, .extensionCommand:
+            return .symbol(symbolName ?? "questionmark")
         }
     }
 

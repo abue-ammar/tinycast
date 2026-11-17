@@ -593,9 +593,11 @@ enum QuicklinkLauncher {
 }
 
 struct InlineArgument { let id: String; let title: String; let options: [String]; let isOptional: Bool }
+enum SettingsTab { case quicklinks; var tint: IconTint { .blue } }
 struct InlineArgumentFields: View {
     let arguments: [InlineArgument]
     let symbol: String?
+    let tint: IconTint
     let value: (String) -> Binding<String>
     let focused: FocusState<String?>.Binding
     let openOptions: (String) -> Void

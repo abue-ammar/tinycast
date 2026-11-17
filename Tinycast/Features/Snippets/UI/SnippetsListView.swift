@@ -93,9 +93,8 @@ private struct SnippetRow: View {
     }
 
     var body: some View {
-        IconCache.observeStyle()
-        return HStack(spacing: metrics.spacing.lg) {
-            Image(nsImage: IconCache.symbolIcon(named: "curlybraces")).resizable()
+        HStack(spacing: metrics.spacing.lg) {
+            IconTile(symbol: "curlybraces", tint: SettingsTab.snippets.tint, extent: IconCache.appIconBody)
                 .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
             Text(record.snippet.name)
                 .font(metrics.typography.rowTitle)

@@ -1,4 +1,4 @@
-import { BookOpen, History, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import type { ReactNode } from "react";
 import { nav, site } from "../data/site";
 import { cn } from "../lib/cn";
@@ -38,9 +38,7 @@ export function Nav() {
         <SupportLink />
         <GitHubLink />
         <DiscordLink className="max-md:hidden" />
-        <div className="flex items-center gap-0.5 md:hidden">
-          <ChangelogLink />
-          <DocsLink />
+        <div className="flex items-center md:hidden">
           <DocsSearchButton />
           <DocsSidebarButton />
         </div>
@@ -75,7 +73,7 @@ export function NavFrame({
         <SiteBrand />
         {sections}
         {/* Pulls the last icon's inner padding out, so the edges match the logo's. */}
-        <div className="-mr-2 ml-auto flex items-center gap-0.5">
+        <div className="-mr-2 ml-auto flex items-center md:gap-0.5">
           {children}
         </div>
       </div>
@@ -136,31 +134,5 @@ export function DiscordLink({ className }: { className?: string }) {
     >
       <DiscordLogo size={18} />
     </a>
-  );
-}
-
-export function ChangelogLink() {
-  return (
-    <Link
-      href="/changelog"
-      aria-label="Changelog"
-      title="Changelog"
-      className={iconButtonClass}
-    >
-      <History size={18} />
-    </Link>
-  );
-}
-
-export function DocsLink() {
-  return (
-    <Link
-      href="/docs"
-      aria-label="Documentation"
-      title="Documentation"
-      className={iconButtonClass}
-    >
-      <BookOpen size={18} />
-    </Link>
   );
 }

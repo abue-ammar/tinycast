@@ -202,7 +202,7 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         appearance: ExtensionAppearance?
     ) -> EntryIcon {
         if let appearance {
-            return .tintedSymbol(name: appearance.symbol, tint: appearance.tint.symbolTint)
+            return .tile(symbol: appearance.symbol, tint: SettingsTab.extensions.tint)
         }
         guard let path = commandIconPath(command, in: owner) ?? owner.iconPath else {
             return .symbol("puzzlepiece.extension")

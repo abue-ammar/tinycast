@@ -6,13 +6,7 @@ import {
   DocsSearchButton,
   DocsSidebarButton,
 } from "../../components/docs-nav-buttons";
-import {
-  ChangelogLink,
-  DocsLink,
-  GitHubLink,
-  NavFrame,
-  SupportLink,
-} from "../../components/nav";
+import { GitHubLink, NavFrame, SupportLink } from "../../components/nav";
 import { Logo } from "../../components/ui/icon";
 import { site } from "../../data/site";
 import { source } from "../../lib/source";
@@ -35,8 +29,6 @@ export default function Layout({ children }: { children: ReactNode }) {
             <NavFrame className="[grid-area:header] md:hidden">
               <SupportLink />
               <GitHubLink />
-              <ChangelogLink />
-              <DocsLink />
               <DocsSearchButton />
               <DocsSidebarButton />
             </NavFrame>

@@ -730,7 +730,7 @@ private struct ExtensionIconRow: View {
     @ViewBuilder
     private var preview: some View {
         if let appearance {
-            SymbolTile(symbol: appearance.symbol, tint: appearance.tint, side: Theme.Size.rowIcon)
+            SymbolTile(symbol: appearance.symbol, side: Theme.Size.rowIcon)
         } else {
             ExtensionIconView(
                 resolved: installed.iconPath.map { ExtensionImage.Resolved(source: .file($0)) },

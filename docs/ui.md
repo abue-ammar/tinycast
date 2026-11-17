@@ -38,7 +38,7 @@ These are the things that quietly break the look if changed. Preserve them unles
 - **Dark is the baseline and its values are frozen.** Every `Theme.Colors` token resolves per appearance, and its **dark branch is the literal the forced-dark build shipped** — restated, never recomputed. Retune a light branch freely; touch a dark one only when the task is to change Dark. `AppCore.applyAppearance()` is the only place an appearance is assigned, from `AppSettings.appearance`; `.system` assigns `nil` so AppKit follows macOS.
 - **New colors go through `Theme.Colors.ramp(dark:light:)`** (an alpha that inverts) or `adaptive(dark:light:)` (two explicit `NSColor`s, for anything that isn't a plain inversion — `panelScrim`, `layoutPreviewGround`). Never a bare `Color.white.opacity(…)` in a view: it disappears in Light.
 - **No grays, no opaque fills on the surface.** Reach for `Theme.Colors.*` instead of `.gray`, `NSColor.windowBackground`, etc.
-- **Some colors stay fixed in both appearances, on purpose.** The `EdgeDissolve`/`OverflowFade` gradients are **mask luminance, not color** — inverting them breaks the dissolve everywhere. `ExtensionTintColors` and a tinted `IconCache` tile keep white ink, because a saturated tile carries its own contrast. The selected compact shortcut glyph also stays white over its contrasting fill. And `IconCache` cannot use a dynamic `NSColor` at all: it rasterizes off-main, so the surface is carried explicitly and is part of the cache key.
+- **Some colors stay fixed in both appearances, on purpose.** The `EdgeDissolve`/`OverflowFade` gradients are **mask luminance, not color** — inverting them breaks the dissolve everywhere. `IconTile` and the extension `SymbolTile` keep white ink, because a saturated tile carries its own contrast. The selected compact shortcut glyph also stays white over its contrasting fill. And `IconCache` cannot use a dynamic `NSColor` at all: it rasterizes off-main, so the surface is carried explicitly and is part of the cache key.
 - **An icon is drawn for a surface _and_ a system icon style, and both move under you.** macOS restyles the icons `NSWorkspace` hands out when System Settings → Appearance → **Icon & widget style** changes, so `IconStyleMonitor` and Tinycast's own appearance both call `IconCache.invalidateStyled()`. **The monitor may not invalidate on the notification itself.** AppKit posts `NSWorkspaceIconAppearanceConfigurationDidChange` before IconServices has swapped what `NSWorkspace` vends — measured at 25–120ms behind, jittering run to run — and the images it hands back are live objects macOS restyles in place, so flattening one on the signal freezes the _outgoing_ style into a bitmap nothing ever invalidates again. `IconStyleMonitor` therefore polls `IconCache.styleFingerprint()` until the pixels actually move, and only then invalidates. Waiting also sidesteps the cost: re-flattening every icon the instant a restyle begins forces a cold IconServices regeneration, measured at 160× the settled draw cost. That drops the cached bitmaps, bumps every cache key so an in-flight decode cannot repopulate a stale one, and moves `IconCache.style.generation`. **Any view that draws an icon must key its fetch on that generation** — wrap the view's own key in `IconRequest`, or call `IconCache.observeStyle()` where the icon is resolved synchronously in a `body`. It is reached through `IconCache` rather than injected precisely because icons are drawn in menus, popovers and every list, where a missed injection would be a silent staleness bug.
 - **No hard dividers between the list and the bars.** The header and bottom bar are `safeAreaInset` overlays with no background; separation comes from `edgeDissolve()`, nothing else. (One deliberate exception: the vertical hairline between a list and its preview pane, as the clipboard and file search screens draw.)
 - **The root clip owns the expanded panel's corner and the window's shape.** `RootPaletteView.body` applies `.background(panelScrim)`, then a `.background` of `Color.clear.glassEffect(.regular, in: Rectangle())` — `.identity` while compact, so the tree never changes — then ends with `.clipShape(RoundedRectangle(26, .continuous))`. Keep the glass square: glass in a rounded shape feathers its own edge, and under a clip of the same curve the corner anti-aliases twice and reads soft (an alpha ramp of 3–8 px at the curve against 2–4 px). Keep the glass _behind_ the scrim rather than wrapping it: given the scrim as its content, the glass keeps its rim brighter above it (107 against 84 on a dark desktop), while a scrim over the glass dims the rim with everything else. The clip is last. AppKit owns only the window; the glass and everything in it are SwiftUI. The clip is what lets macOS read the panel's outline for the system shadow. **Never remove that clip, and never make bare glass the window's content:** with only glass in a borderless window, macOS cannot read a shape and shadows the default window outline instead (rounded top, square bottom), which shows as a pale rectangle and a broken hairline over a light desktop. The shadow and its hairline are the system's, and so is the glass rim, which Liquid Glass lights on the top and bottom edges and fades around the corners; Tinycast draws none of them. Compact uses zero root corner radius and a four-point drawing outset so its native glass shapes own their contours without touching the window boundary.
@@ -134,7 +134,7 @@ Notes has no corner of its own: it clips to `panel`, so the two floating surface
 
 `dialog` sits between `menuPanel` and `panel` so a dialog reads as a smaller sibling of the palette, not a second palette.
 
-`menu` is the shared small-control corner (sidebar tiles, About link pills); `menuRow` is the slightly rounder hover highlight behind popover-menu rows.
+`menu` is the shared small-control corner (About link pills); `menuRow` is the slightly rounder hover highlight behind popover-menu rows.
 
 Always `RoundedRectangle(cornerRadius:, style: .continuous)` — continuous corners everywhere, never `.circular`.
 
@@ -176,7 +176,7 @@ panel, the shortcut-recorder callout and the Notes switcher, and `menuRow` is de
 `menuWidth 276` · `clipboardFilterMenuWidth 200` · `fileSearchFilterMenuWidth 200` ·
 `emojiCategoryMenuWidth 220` · `menuIcon 20` ·
 `emojiGridInset 16` ·
-`settingsSidebar 215` · `settingsRowIcon 20` · `settingsRowButton 24` ·
+`settingsSidebar 232` · `settingsRowIcon 20` · `settingsRowButton 24` ·
 `dialogCompactWidth 290` ·
 `dialogWidth 420` · `dialogButtonHeight 34` · `dialogSymbol 28` · `dialogSymbolContainer 52` ·
 `dialogIcon 32` · `hudWidth 200` ·
@@ -424,6 +424,50 @@ or pass `includingTop: true` for a bounded popup whose title and rows scroll tog
 
 ---
 
+## Icon pack
+
+Source: `DesignSystem/IconTile.swift`, `DesignSystem/IconTint.swift`, `Theme.IconTile`. Every icon,
+previewed, with this guide: the **Tinycast Icon Pack** artifact
+(https://claude.ai/artifact/9jWyGYLNGDFPQHiNb3s3KB, files `icons.js` and `glyphs/`).
+
+Every launcher entry drawn from a symbol is an `IconTile`: a white SF Symbol on its tint's gradient,
+the way System Settings draws its sidebar. The Settings sidebar uses the same tile.
+
+- **Tile.** The app icon's own outline — `IconCache.appIconCornerRatio`, a continuous corner at 26% of
+  the side, measured off the system's icons — with a top-to-bottom gradient and a faint white edge
+  light along the top. No shadow, border or glass. It fills its frame; in a row of apps it takes
+  `extent: IconCache.appIconBody`, an app icon's 824-of-1024 body, so the two are the same size. The
+  plain symbol tile `IconCache` still draws (clipboard content, fallbacks) uses the same outline and body.
+- **Glyph.** Semibold, `.rounded` design, white, one tone. The `.fill` variant whenever one exists,
+  scaled so its longer side is 60% of the tile. The tile pins `.light`, so a glyph that swaps in Dark
+  (`face.smiling.inverse`) keeps one look.
+- **Tint.** One of the 13 `IconTint`s, chosen by feature: every Notes icon is yellow, every Calendar
+  icon red. Red also marks an action that ends or deletes something. Two sidebar neighbours never share
+  one. The values live only in `Theme.IconTile.fill(_:)`, fixed in both appearances.
+- **Built-in entries** declare the tint beside the symbol: `SettingsTab.systemImage` and `.tint`,
+  `CommandID.sfSymbol` and `.tint`, `SystemActionCatalog.symbol(for:)` and `tint(for:)`. The switches
+  are exhaustive, so a new case fails the build until it has both.
+- **User-made entries** keep the symbol the user picked and take their feature tab's tint —
+  `SettingsTab.quicklinks.tint` for a quicklink, `.windowManagement` for window commands, layouts and
+  rooms, `.extensions` for an extension's icon override. There is no colour to choose. Each feature's
+  own list (Quicklinks, Custom Commands, Snippets, Rooms, Calculator History, chat history) draws the
+  same tile. `AppEntry.iconSource` turns either kind into `EntryIcon.tile`.
+- **Not in the pack.** Clipboard rows keep the plain tile, since their glyph names the content's type.
+  Menus, icon pickers, dialogs, HUDs, the compact bar and menu-bar items draw the symbol with no tile.
+- **Vector only.** `IconCache` cannot draw the rounded design off-main, so `AppIconView` draws
+  `EntryIcon.tile` itself; a bitmap consumer of one gets the plain symbol tile.
+
+### Adding an icon
+
+1. Pick the symbol in the SF Symbols app: its `.fill` variant if it has one, and never a symbol that
+   already means something else in the same group. A trademark SF Symbols lacks is a template asset in
+   `Assets.xcassets`, as `bluetooth` is.
+2. Pick the tint of the feature it belongs to. Add a new `IconTint` (and its pair in
+   `Theme.IconTile.fill(_:)`) only for a new feature whose sidebar neighbours use every fitting one.
+3. Add both to the catalog's switches, next to the case.
+4. Add the row to the artifact's `icons.js`, render its preview with `tools/render-symbols.swift.txt`,
+   and republish, so the reference stays complete.
+
 ## Rows, selection, hover
 
 Source: `Launcher/UI/LauncherList.swift`, `Clipboard/UI/ClipboardView.swift`,
@@ -433,7 +477,7 @@ All lists share one row grammar so launcher and clipboard look identical:
 
 - `HStack(spacing: lg)`: leading 26pt icon/thumbnail, title (`.body`, `lineLimit(1)`), optional trailing keycaps/kind label, `Spacer`. Insets: `.horizontal md`, `.vertical sm`.
 - **The palette result slot is always `Theme.Size.resultRowIcon`, whatever fills it.** A glyph smaller than an app icon — the uninstall list's 16pt checkbox — is centred _inside_ that 26pt slot rather than sizing the slot to itself. Every list then starts its title at the same x, so switching palette modes doesn't jog the column sideways. The slot doubles as the hit target. Settings keeps the existing 24pt `rowIcon`.
-- Clipboard thumbnails use `IconCache.appIconExtent` within that slot; synthetic row symbols use the same app-icon-shaped tile as the launcher.
+- Clipboard thumbnails use `IconCache.appIconExtent` within that slot. A symbol entry draws its [icon pack](#icon-pack) tile at an app icon's body size.
 - Background is a `RoundedRectangle(row, .continuous)` filled by `fill`: **selection → hover → clear**, in that precedence. This `fill` computed property is copy-identical across `AppRow`, `ClipboardRow` and `UninstallRow` — keep them in sync. The launcher's lead cards don't restate it: `.leadCard(selected:)` (`Features/Launcher/UI/LeadCard.swift`) owns their fill and hover, so a card can't answer a selection differently from its siblings.
 - **Hover state lives on the row**, not the list, so a mouse sweep repaints only the rows entering/leaving (a list-level hover rebuilds every row per move — don't do that).
 - **Hover is armed by pointer movement, not by the pointer's position** (`armedHover`, `Palette/HoverArming.swift`). A palette shown under a resting pointer lights nothing, and keys or a scroll drop the highlight until the pointer moves clear of the slop radius around where it stood — a row must never light up because it _slid under_ a still pointer. Two measured facts the rule rests on: SwiftUI fires hover phases for rows arriving under a stationary pointer, but **not** for a lit row that merely shifts, so `PaletteState.hoverDisarmToken` clears what is already lit; and a wheel gesture ends with a mouse-moved event carrying no displacement, so _event type is not evidence the pointer moved_. `Tests/PaletteNavigationTests.swift` pins both halves.

@@ -41,7 +41,8 @@ enum QuicklinkArgumentsAccessory {
             // Identity per row, so which fields were left unanswered resets on the next one.
             view: AnyView(
                 InlineArgumentFields(
-                    arguments: arguments, symbol: symbol, value: value, focused: focus,
+                    arguments: arguments, symbol: symbol, tint: SettingsTab.quicklinks.tint,
+                    value: value, focused: focus,
                     openOptions: onOpenOptions, onSubmit: onSubmit
                 )
                 .id(quicklink.entryID))

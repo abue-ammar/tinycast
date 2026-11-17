@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import Synchronization
 import UniformTypeIdentifiers
 
@@ -36,16 +37,15 @@ struct IconRequest<Key: Hashable>: Hashable {
     }
 }
 
-/// A tile's fill and the key naming it, so `IconCache` needn't know who chose the colour.
-struct SymbolTint: Hashable, Sendable {
-    let key: String
-    let color: NSColor
-}
-
 enum SystemSymbolName {
-    // This pair swaps glyphs in Dark, so there the outline is the inverse.
+    // This pair swaps glyphs in Dark, so there each name draws as the other.
     static func resolve(_ name: String, isDark: Bool) -> String {
-        name == "face.smiling" && isDark ? "face.smiling.inverse" : name
+        guard isDark else { return name }
+        switch name {
+        case "face.smiling": return "face.smiling.inverse"
+        case "face.smiling.inverse": return "face.smiling"
+        default: return name
+        }
     }
 }
 
@@ -54,7 +54,8 @@ enum EntryIcon: Hashable, Sendable {
     /// The stamp is `FileIconStamp`'s: it moves when the file's icon does, retiring the old bitmap.
     case file(stamp: Int)
     case symbol(String)
-    case tintedSymbol(name: String, tint: SymbolTint)
+    /// Drawn as a vector `IconTile`; the bitmap paths below fall back to the plain symbol tile.
+    case tile(symbol: String, tint: IconTint)
     case artwork(path: String, extent: CGFloat)
     /// A declared type's icon, for a bundle whose own file icon is a placeholder.
     case contentType(String)
@@ -115,8 +116,8 @@ enum IconCache {
         guard let entry = rowCache.object(forKey: key), entry.size == size else { return nil }
         return entry.image
     }
-    static func cachedSymbol(named name: String, tint: SymbolTint? = nil) -> NSImage? {
-        cache.object(forKey: symbolKey(name, tint))
+    static func cachedSymbol(named name: String) -> NSImage? {
+        cache.object(forKey: symbolKey(name))
     }
 
     /// Tiles rasterize off-main, where a dynamic `NSColor` resolves wrong, so carry the surface.
@@ -175,9 +176,9 @@ enum IconCache {
         "\(styleGeneration.withLock { $0 }):\(body)" as NSString
     }
 
-    private static func symbolKey(_ name: String, _ tint: SymbolTint?) -> NSString {
+    private static func symbolKey(_ name: String) -> NSString {
         let surface = darkSurface.withLock { $0 } ? "dark" : "light"
-        return key("symbol:\(surface):\(tint?.key ?? "plain"):\(name)")
+        return key("symbol:\(surface):\(name)")
     }
 
     /// A freshly-decoded, thereafter-immutable `NSImage` is safe to move across the actor boundary.
@@ -199,10 +200,10 @@ enum IconCache {
             return Decoded(image: icon(forFile: path, stamp: stamp, size: size))
         }.value.image
     }
-    static func loadSymbolAsync(named name: String, tint: SymbolTint? = nil) async -> NSImage? {
-        if let cached = cachedSymbol(named: name, tint: tint) { return cached }
+    static func loadSymbolAsync(named name: String) async -> NSImage? {
+        if let cached = cachedSymbol(named: name) { return cached }
         return await Task.detached(priority: .userInitiated) {
-            Decoded(image: symbolIcon(named: name, tint: tint))
+            Decoded(image: symbolIcon(named: name))
         }.value.image
     }
 
@@ -246,24 +247,23 @@ enum IconCache {
         return (image, rep.bytesPerRow * rep.pixelsHigh)
     }
 
-    static func symbolIcon(named name: String, tint: SymbolTint? = nil) -> NSImage {
-        let key = symbolKey(name, tint)
+    static func symbolIcon(named name: String) -> NSImage {
+        let key = symbolKey(name)
         if let cached = cache.object(forKey: key) { return cached }
 
         let side = displayPixel
         let isDark = darkSurface.withLock { $0 }
         let plainInk: CGFloat = isDark ? 1 : 0
         let image = NSImage(size: NSSize(width: side, height: side), flipped: false) { _ in
-            // Tile inset mirrors the margin macOS app icons carry inside their canvas.
-            let tile = NSRect(x: 0, y: 0, width: side, height: side).insetBy(dx: 4, dy: 4)
-            (tint?.color ?? .srgbInk(plainInk, alpha: 0.09)).setFill()
-            NSBezierPath(roundedRect: tile, xRadius: 9, yRadius: 9).fill()
+            let inset = side * (1 - appIconBody) / 2
+            let tile = NSRect(x: 0, y: 0, width: side, height: side).insetBy(dx: inset, dy: inset)
+            NSColor.srgbInk(plainInk, alpha: 0.09).setFill()
+            appIconShape(in: tile).fill()
 
-            // A tinted tile keeps white ink in both appearances; the tint carries the contrast.
-            let ink = tint == nil ? NSColor.srgbInk(plainInk, alpha: 0.85) : .white
+            let ink = NSColor.srgbInk(plainInk, alpha: 0.85)
             // A symbol picks its glyph by the drawing appearance, which off-main isn't the surface's.
             NSAppearance(named: isDark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
-                guard let symbol = glyph(named: name, tint: ink, isDark: isDark) else { return }
+                guard let symbol = glyph(named: name, ink: ink, isDark: isDark) else { return }
                 let size = symbol.size
                 symbol.draw(
                     in: NSRect(
@@ -277,9 +277,9 @@ enum IconCache {
         return icon
     }
 
-    private static func glyph(named name: String, tint: NSColor, isDark: Bool) -> NSImage? {
+    private static func glyph(named name: String, ink: NSColor, isDark: Bool) -> NSImage? {
         let config = NSImage.SymbolConfiguration(pointSize: 21, weight: .medium)
-            .applying(.init(paletteColors: [tint]))
+            .applying(.init(paletteColors: [ink]))
         if let symbol = NSImage(
             systemSymbolName: SystemSymbolName.resolve(name, isDark: isDark),
             accessibilityDescription: nil
@@ -292,7 +292,7 @@ enum IconCache {
         let assetSize = NSSize(width: 24, height: 24)
         return NSImage(size: assetSize, flipped: false) { rect in
             asset.draw(in: rect)
-            tint.set()
+            ink.set()
             rect.fill(using: .sourceAtop)
             return true
         }
@@ -300,6 +300,15 @@ enum IconCache {
 
     /// What an app icon paints: the reference for every other artwork.
     static let appIconExtent: CGFloat = 0.83
+    /// An app icon's body on its canvas, 824 of 1024, so a tile in a row of apps is their size.
+    static let appIconBody: CGFloat = 824.0 / 1024
+    /// Measured off the system's app icons, whose continuous corner this matches to the pixel.
+    static let appIconCornerRatio: CGFloat = 0.26
+
+    private static func appIconShape(in rect: NSRect) -> NSBezierPath {
+        let shape = RoundedRectangle(cornerRadius: rect.width * appIconCornerRatio, style: .continuous)
+        return NSBezierPath(cgPath: shape.path(in: rect).cgPath)
+    }
 
     /// The caller chooses the extent; this only measures and rasterizes.
     static func fitted(_ source: NSImage, to extent: CGFloat) -> (NSImage, Int) {
@@ -365,8 +374,7 @@ enum IconCache {
     static func icon(for source: EntryIcon, fileURL: URL) -> NSImage {
         switch source {
         case .file(let stamp): return icon(forFile: fileURL.path, stamp: stamp)
-        case .symbol(let name): return symbolIcon(named: name)
-        case .tintedSymbol(let name, let tint): return symbolIcon(named: name, tint: tint)
+        case .symbol(let name), .tile(let name, _): return symbolIcon(named: name)
         case .artwork(let path, let extent): return artwork(atPath: path, extent: extent)
         case .contentType(let identifier): return contentTypeIcon(identifier)
         }
@@ -375,8 +383,7 @@ enum IconCache {
     static func cached(_ source: EntryIcon, fileURL: URL, size: IconSize? = nil) -> NSImage? {
         switch source {
         case .file(let stamp): return cached(forFile: fileURL.path, stamp: stamp, size: size)
-        case .symbol(let name): return cachedSymbol(named: name)
-        case .tintedSymbol(let name, let tint): return cachedSymbol(named: name, tint: tint)
+        case .symbol(let name), .tile(let name, _): return cachedSymbol(named: name)
         case .artwork(let path, let extent): return cachedArtwork(atPath: path, extent: extent)
         case .contentType(let identifier): return cachedContentTypeIcon(identifier)
         }
@@ -385,8 +392,7 @@ enum IconCache {
     static func loadAsync(_ source: EntryIcon, fileURL: URL, size: IconSize? = nil) async -> NSImage? {
         switch source {
         case .file(let stamp): return await loadAsync(forFile: fileURL.path, stamp: stamp, size: size)
-        case .symbol(let name): return await loadSymbolAsync(named: name)
-        case .tintedSymbol(let name, let tint): return await loadSymbolAsync(named: name, tint: tint)
+        case .symbol(let name), .tile(let name, _): return await loadSymbolAsync(named: name)
         case .artwork(let path, let extent):
             return await loadArtworkAsync(atPath: path, extent: extent)
         case .contentType(let identifier): return await loadContentTypeIconAsync(identifier)

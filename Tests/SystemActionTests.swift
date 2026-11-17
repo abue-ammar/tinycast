@@ -67,7 +67,7 @@ struct SystemActionTests {
 
         let microphone = SystemActionCatalog.action(id: .toggleMicrophoneMute)
         expect(microphone.name == "Toggle Microphone Mute", "microphone mute has its own launcher row")
-        expect(microphone.sfSymbol == "mic.slash", "microphone mute uses a microphone glyph")
+        expect(microphone.sfSymbol == "mic.slash.fill", "microphone mute uses a microphone glyph")
         expect(
             microphone.entryID == "system-action:toggle-microphone-mute",
             "microphone mute has a stable identity separate from output mute")
