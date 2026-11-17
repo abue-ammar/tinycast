@@ -18,6 +18,7 @@ struct CloudSyncTests {
         let t1 = t0.addingTimeInterval(60)
         let t2 = t0.addingTimeInterval(120)
         let fields = Data([1])
+        let tag = "tag"
         let all: (String) -> Bool = { _ in true }
         func name(for key: String) -> String { SyncSourceID.notes.recordName(for: key) }
 
@@ -48,7 +49,7 @@ struct CloudSyncTests {
         _ = ledger.record(["b.md": "v1"], of: .notes, now: t0, includes: all)
         let b = name(for: "b.md")
         _ = ledger.willSend(b)
-        ledger.didSave(b, systemFields: fields)
+        ledger.didSave(b, systemFields: fields, changeTag: tag)
         check("a confirmed save clears the pending upload", ledger.entry(named: b)?.pending == nil)
 
         changes = ledger.record([:], of: .notes, now: t1, includes: all)
@@ -62,7 +63,7 @@ struct CloudSyncTests {
         let c = name(for: "c.md")
         _ = ledger.willSend(c)
         _ = ledger.record(["c.md": "v2"], of: .notes, now: t1, includes: all)
-        ledger.didSave(c, systemFields: fields)
+        ledger.didSave(c, systemFields: fields, changeTag: tag)
         check(
             "a save confirmed after a newer edit keeps that edit pending",
             ledger.entry(named: c)?.pending == .save)
@@ -73,7 +74,8 @@ struct CloudSyncTests {
         paused.join([.otherSettings])
         let setting = SyncSourceID.settings.recordName(for: "emoji.gridColumns")
         _ = paused.receive(
-            setting, source: .settings, key: "emoji.gridColumns", modifiedAt: t0, systemFields: fields)
+            setting, source: .settings, key: "emoji.gridColumns", modifiedAt: t0, changeTag: tag,
+            systemFields: fields)
         paused.didApply(setting, localVersion: nil)
         changes = paused.record([:], of: .settings, now: t1, includes: all)
         check("an item this Mac never held is never deleted by a snapshot", changes.isEmpty)
@@ -90,12 +92,14 @@ struct CloudSyncTests {
         _ = lww.record(["d.md": "local"], of: .notes, now: t2, includes: all)
         check(
             "a newer local edit beats an older server copy",
-            lww.receive(d, source: .notes, key: "d.md", modifiedAt: t1, systemFields: fields) == .keepLocal)
+            lww.receive(d, source: .notes, key: "d.md", modifiedAt: t1, changeTag: tag, systemFields: fields)
+                == .keepLocal)
         check("and stays pending", lww.entry(named: d)?.pending == .save)
         check(
             "a newer server copy beats an older local edit",
             lww.receive(
-                d, source: .notes, key: "d.md", modifiedAt: t2.addingTimeInterval(1), systemFields: fields)
+                d, source: .notes, key: "d.md", modifiedAt: t2.addingTimeInterval(1), changeTag: tag,
+                systemFields: fields)
                 == .apply)
         check("and drops the local upload", lww.entry(named: d)?.pending == nil)
 
@@ -103,13 +107,39 @@ struct CloudSyncTests {
         _ = lww.record(["e.md": "local"], of: .notes, now: t1, includes: all)
         check(
             "a tie goes to the server",
-            lww.receive(e, source: .notes, key: "e.md", modifiedAt: t1, systemFields: fields) == .apply)
+            lww.receive(e, source: .notes, key: "e.md", modifiedAt: t1, changeTag: tag, systemFields: fields)
+                == .apply)
 
         // MARK: Echo-free apply
 
         lww.didApply(e, localVersion: "reread")
         changes = lww.record(["e.md": "reread"], of: .notes, now: t2, includes: all)
         check("an applied change never uploads again", changes.isEmpty)
+
+        // MARK: Re-fetch
+
+        var refetch = SyncLedger()
+        refetch.join([.notes])
+        let r = name(for: "r.md")
+        _ = refetch.record(["r.md": "v1"], of: .notes, now: t0, includes: all)
+        _ = refetch.willSend(r)
+        refetch.didSave(r, systemFields: fields, changeTag: "saved")
+        check(
+            "a re-fetch of the version this Mac saved is skipped",
+            refetch.receive(
+                r, source: .notes, key: "r.md", modifiedAt: t0, changeTag: "saved", systemFields: fields)
+                == .unchanged)
+        check(
+            "a newer server version applies",
+            refetch.receive(
+                r, source: .notes, key: "r.md", modifiedAt: t1, changeTag: "newer", systemFields: fields)
+                == .apply)
+        _ = refetch.record(["r.md": "v2"], of: .notes, now: t2, includes: all)
+        check(
+            "an edit not yet uploaded is never skipped",
+            refetch.receive(
+                r, source: .notes, key: "r.md", modifiedAt: t1, changeTag: "newer", systemFields: fields)
+                == .keepLocal)
 
         // MARK: Deletions
 
@@ -119,7 +149,7 @@ struct CloudSyncTests {
         check("and saves as a new record", lww.entry(named: f)?.systemFields == nil)
 
         _ = lww.willSend(f)
-        lww.didSave(f, systemFields: fields)
+        lww.didSave(f, systemFields: fields, changeTag: tag)
         if case .apply(let entry) = lww.receiveDeletion(f) {
             check("a remote delete of a settled item applies", entry.key == "f.md")
         } else {
@@ -131,7 +161,8 @@ struct CloudSyncTests {
 
         var categories = SyncLedger()
         _ = categories.receive(
-            groceries, source: .notes, key: "Groceries.md", modifiedAt: t0, systemFields: fields)
+            groceries, source: .notes, key: "Groceries.md", modifiedAt: t0, changeTag: tag,
+            systemFields: fields)
         categories.join([.notes])
         categories.forget(.notes)
         check("forgetting a category drops its items", categories.entry(named: groceries) == nil)
@@ -139,7 +170,8 @@ struct CloudSyncTests {
 
         var counted = SyncLedger()
         let g = name(for: "g.md")
-        _ = counted.receive(g, source: .notes, key: "g.md", modifiedAt: t0, systemFields: fields)
+        _ = counted.receive(
+            g, source: .notes, key: "g.md", modifiedAt: t0, changeTag: tag, systemFields: fields)
         counted.didApply(g, localVersion: "v1")
         _ = counted.record(["g.md": "v1", "h.md": "v1"], of: .notes, now: t0, includes: all)
         check("counts tell this Mac from iCloud", counted.counts(of: .notes) == (2, 1) as (Int, Int))

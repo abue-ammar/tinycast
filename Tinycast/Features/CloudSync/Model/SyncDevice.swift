@@ -1,6 +1,5 @@
 import Foundation
 
-/// One Mac taking part in sync, as the others see it.
 struct SyncDevice: Codable, Equatable, Identifiable, Sendable {
     let id: String
     var name: String

@@ -47,10 +47,7 @@ final class CloudSyncSession: CKSyncEngineDelegate {
     // MARK: Lifecycle
 
     func start() async {
-        let needsJoin =
-            store.state.engine == nil || store.state.catalog != Self.catalog
-            || SyncCategory.allCases.contains { isEnabled($0) && !store.state.ledger.joined.contains($0) }
-        if needsJoin {
+        if store.state.engine == nil || needsJoin {
             await join()
         } else {
             makeEngine()
@@ -75,6 +72,7 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         do {
             try await fresh.fetchChanges()
         } catch {
+            guard fresh === self.engine else { return }
             isJoining = false
             fail(error)
             return
@@ -90,8 +88,10 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         settle()
     }
 
+    /// Also finishes a join whose fetch failed, so this Mac's own items still get to upload.
     func fetch() async {
-        guard let engine else { return }
+        guard let engine, !isJoining else { return }
+        if needsJoin { return await join() }
         requeuePending()
         do {
             try await engine.fetchChanges()
@@ -107,7 +107,6 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         for id in SyncSourceID.allCases { await sync(id) }
     }
 
-    /// Reads one source and queues whatever changed since the ledger last saw it.
     func sync(_ id: SyncSourceID) async {
         guard let engine, let source = sources[id] else { return }
         await applyDeferred(of: source)
@@ -123,7 +122,6 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         if !changes.isEmpty { onEvent(.ledgerChanged) }
     }
 
-    /// Deletes a record this Mac never held, such as another Mac's device entry.
     func delete(_ id: SyncSourceID, key: String) {
         let name = id.recordName(for: key)
         var queued = false
@@ -200,11 +198,13 @@ final class CloudSyncSession: CKSyncEngineDelegate {
             store.update { state in
                 outcome = state.ledger.receive(
                     name, source: item.source, key: item.key, modifiedAt: item.modifiedAt,
+                    changeTag: record.recordChangeTag,
                     systemFields: CloudSyncRecordCodec.systemFields(of: record))
             }
             switch outcome {
             case .apply: arrivals[item.source, default: SyncChanges()].upserts[item.key] = item.payload
             case .keepLocal: requeue(name)
+            case .unchanged: break
             }
         }
         for name in deletions {
@@ -224,10 +224,17 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         for (id, changes) in arrivals { await apply(changes, to: id) }
     }
 
-    /// Meeting an item it already holds, a Mac sets a differing copy aside and drops a duplicate.
     private func apply(_ arrivals: SyncChanges, to id: SyncSourceID) async {
         guard let source = sources[id] else { return }
         guard let local = await source.snapshot() else { return deferArrivals(arrivals, of: id) }
+        await merge(arrivals, into: source, over: local)
+    }
+
+    /// Meeting an item it already holds, a Mac sets a differing copy aside and drops a duplicate.
+    private func merge(
+        _ arrivals: SyncChanges, into source: any SyncSource, over local: [String: String]
+    ) async {
+        let id = source.id
         var changes = arrivals
         let identical = Set(changes.upserts.filter { local[$0.key] == SyncVersion.of($0.value) }.keys)
         changes.upserts = changes.upserts.filter { !identical.contains($0.key) }
@@ -256,7 +263,9 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         onEvent(.ledgerChanged)
     }
 
+    /// Leaves the arrivals on disk untouched while the source still can't take them.
     private func applyDeferred(of source: any SyncSource) async {
+        guard store.hasDeferred(of: source.id), let local = await source.snapshot() else { return }
         let arrivals = store.deferredArrivals(of: source.id)
         guard !arrivals.isEmpty else { return }
         store.clearDeferred(arrivals.keys)
@@ -268,7 +277,7 @@ final class CloudSyncSession: CKSyncEngineDelegate {
                 changes.deletions.insert(arrival.key)
             }
         }
-        await apply(changes, to: source.id)
+        await merge(changes, into: source, over: local)
     }
 
     private func deferArrivals(_ changes: SyncChanges, of id: SyncSourceID) {
@@ -307,7 +316,8 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         store.update { state in
             for record in sent.savedRecords {
                 state.ledger.didSave(
-                    record.recordID.recordName, systemFields: CloudSyncRecordCodec.systemFields(of: record))
+                    record.recordID.recordName, systemFields: CloudSyncRecordCodec.systemFields(of: record),
+                    changeTag: record.recordChangeTag)
             }
             for id in sent.deletedRecordIDs { state.ledger.didDelete(id.recordName) }
             for (id, error) in sent.failedRecordDeletes where error.code == .unknownItem {
@@ -345,6 +355,11 @@ final class CloudSyncSession: CKSyncEngineDelegate {
     }
 
     // MARK: Helpers
+
+    private var needsJoin: Bool {
+        store.state.catalog != Self.catalog
+            || SyncCategory.allCases.contains { isEnabled($0) && !store.state.ledger.joined.contains($0) }
+    }
 
     private func makeEngine() {
         var configuration = CKSyncEngine.Configuration(

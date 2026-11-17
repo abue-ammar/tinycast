@@ -61,6 +61,11 @@ struct MCPServer: Codable, Equatable, Identifiable, Sendable {
         return trimmed.isEmpty ? slug : trimmed
     }
 
+    /// The same server set up separately, as on two Macs before they sync.
+    func isTwin(of other: MCPServer) -> Bool {
+        name == other.name && transport == other.transport
+    }
+
     /// The shape a CLI runs itself; `bearerToken` is the OAuth session's, lent for the turn.
     func toolServer(
         headerValue: String, environment: [String: String], bearerToken: String?

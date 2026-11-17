@@ -1,6 +1,6 @@
 import Foundation
 
-/// A chat as it travels to another Mac: everything but attachments, which stay where they were added.
+/// A chat as it travels to another Mac: everything but attachments, which stay where added.
 struct ChatSyncPayload: Codable, Sendable {
     struct Message: Codable, Sendable {
         let id: UUID

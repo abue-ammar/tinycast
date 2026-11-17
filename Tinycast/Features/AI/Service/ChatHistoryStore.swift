@@ -315,7 +315,6 @@ final class ChatHistoryStore {
 
     // MARK: - Sync
 
-    /// Replaces this Mac's copy of a chat with another Mac's, titles and pin included.
     @discardableResult
     func applySynced(_ payload: ChatSyncPayload) -> Bool {
         let session = payload.session(keepingAttachmentsOf: self.session(id: payload.id))

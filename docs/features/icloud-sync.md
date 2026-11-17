@@ -12,17 +12,20 @@ What syncs, and how the pane presents it, follows Raycast's Cloud Sync. The feat
   - the server wins for settings, so a new Mac adopts the others' setup;
   - a note or snippet with the same file name but different content is renamed aside, so both
     survive;
-  - a duplicate of an arriving item is removed ("Removing duplicates").
+  - a duplicate of an arriving item is removed ("Removing duplicates"); a duplicate MCP server
+    first hands its credentials and trust to the arriving one.
 
   The same merge runs when sync or a category is turned back on, a notes or snippets folder
   moves, the account switches, or iCloud resets its encrypted data. Turning sync off forgets the
-  ledger and keeps every Mac's data and the copy in iCloud.
+  ledger and keeps every Mac's data and the copy in iCloud. A join whose fetch fails runs again at
+  the next fetch, so this Mac's own items still upload.
 - **An unavailable source is paused, never empty.** A source answers `nil` while it can't speak
   for its data — AI off, Snippets off, a folder missing, a store unreadable — and `nil` never
   produces a deletion. What arrives meanwhile is deferred to disk and applied once it can be.
 - **Applying never echoes.** After an apply, the ledger records the source's own re-read, not the
   incoming payload, so what a Mac couldn't take — a clashing chord, a missing app — stays local and
-  isn't sent back. Identical content is never rewritten, so a note's date doesn't move.
+  isn't sent back. Identical content is never rewritten, so a note's date doesn't move, and a
+  re-fetch skips every version this Mac already holds by its change tag.
 - **Last write wins per item.** `modifiedAt` is stamped when a change is detected, and ties go to
   the server. An edit beats a remote delete and is uploaded again. The open note with unsaved
   edits keeps them.

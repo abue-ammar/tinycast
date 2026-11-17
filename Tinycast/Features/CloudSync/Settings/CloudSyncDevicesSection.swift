@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Every Mac taking part: this one first and renamable, the others removable.
 struct CloudSyncDevicesSection: View {
     @Environment(AppCore.self) private var core
     @State private var name = ""

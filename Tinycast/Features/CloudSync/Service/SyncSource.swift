@@ -1,6 +1,5 @@
 import Foundation
 
-/// What arrived from iCloud for one source: payloads by key, and keys deleted elsewhere.
 struct SyncChanges: Sendable {
     var upserts: [String: Data] = [:]
     var deletions: Set<String> = []
@@ -8,7 +7,6 @@ struct SyncChanges: Sendable {
     var isEmpty: Bool { upserts.isEmpty && deletions.isEmpty }
 }
 
-/// One kind of data sync can read and write; each feature owns its own.
 @MainActor
 protocol SyncSource: AnyObject, Sendable {
     var id: SyncSourceID { get }
@@ -48,7 +46,6 @@ enum SyncPayload {
         return try? decoder.decode(type, from: data)
     }
 
-    /// Versions every encodable item by its own bytes.
     static func snapshot<Item: Encodable>(_ items: [String: Item]) -> [String: String] {
         items.compactMapValues { encode($0).map(SyncVersion.of) }
     }

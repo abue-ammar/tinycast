@@ -1,6 +1,5 @@
 import Foundation
 
-/// What never leaves a Mac, listed in the pane so nobody has to guess.
 enum SyncExclusion: CaseIterable, Sendable {
     case clipboardHistory, customCommands, searchRanking, credentials, macSpecific
 

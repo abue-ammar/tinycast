@@ -324,7 +324,6 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         return installed.filter { tracked.contains($0.manifest.name) }
     }
 
-    /// Installs what another Mac has, found again in the store under the same handle and name.
     func installFromStore(handle: String, name: String) async throws {
         guard let listing = try await ExtensionStoreClient().lookup(handle: handle, name: name) else {
             throw ExtensionStoreError.notAnExtension
@@ -355,17 +354,12 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         if backgroundRef?.extensionName == installedExtension.manifest.name {
             await abortBackgroundRun()
         }
-        let entryIDs = installedExtension.manifest.commands.map {
-            ExtensionCommandRef(
-                extensionName: installedExtension.manifest.name, commandName: $0.name
-            ).entryID
-        }
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
         commandMetadata.removeAll(extension: installedExtension.manifest.name)
         untrack(installedExtension.manifest.name)
         appearances.set(nil, for: installedExtension.manifest.name)
-        onDidUninstall?(entryIDs)
+        onDidUninstall?(installedExtension.commandEntryIDs)
         await refresh()
     }
 

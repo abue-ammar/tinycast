@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install a profile where Xcode's manual signing finds it by name. Usage: install-provisioning-profile.sh <file>
+# Usage: install-provisioning-profile.sh <file>, so Xcode's manual signing finds it by name.
 set -euo pipefail
 
 PROFILE="${1:?usage: install-provisioning-profile.sh <file>}"

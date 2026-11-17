@@ -40,7 +40,6 @@ final class CloudSyncCoordinator {
 
     var isEnabled: Bool { core.settings.iCloudSyncEnabled }
 
-    /// Whether a category reaches iCloud from this Mac right now.
     func syncs(_ category: SyncCategory) -> Bool {
         isEnabled && includes(category)
     }
@@ -295,13 +294,19 @@ final class CloudSyncCoordinator {
                 homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
         }
         let aiIsOn = { core.settings.aiEnabled }
+        let rows = {
+            Set(core.appIndex.apps.map(\.id))
+                .union(core.quicklinks.quicklinks.map(\.entryID))
+                .union(core.snippetsStore.snippets.map(\.entryID))
+                .union(core.extensions.installed.flatMap(\.commandEntryIDs))
+        }
         return [
             devices,
             SettingsSyncSource(
                 bindings: core.settingsBindings.bindings, commit: core.settingsBindings.commit,
                 settings: core.settings),
             EntryShortcutSyncSource(
-                aliases: core.aliases, hotKeys: core.hotKeys, appIndex: core.appIndex, entryKeys: entryKeys),
+                aliases: core.aliases, hotKeys: core.hotKeys, rows: rows, entryKeys: entryKeys),
             LauncherListSyncSource(
                 favorites: core.favorites, fallbacks: core.fallbacks, entryKeys: entryKeys),
             SnippetSyncSource(store: core.snippetsStore),

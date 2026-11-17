@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One category's checkbox, with how many of its items this Mac and iCloud each hold.
 struct CloudSyncCategoryRow: View {
     let category: SyncCategory
     @Binding var isIncluded: Bool

@@ -1,6 +1,5 @@
 import Foundation
 
-/// A list of UUID-identified records, each synced whole; the feature supplies how to read and write.
 @MainActor
 final class RecordSyncSource<Record: Codable & Identifiable & Sendable>: SyncSource where Record.ID == UUID {
     let id: SyncSourceID
@@ -35,17 +34,18 @@ final class RecordSyncSource<Record: Codable & Identifiable & Sendable>: SyncSou
         records()?.first { Self.key($0.id) == key }.flatMap(SyncPayload.encode)
     }
 
+    /// Saves first, so an arriving twin can take over what a duplicate held before that goes.
     func apply(_ changes: SyncChanges) async -> Set<String> {
         var deferred: Set<String> = []
+        for (key, payload) in changes.upserts {
+            guard let record = SyncPayload.decode(Record.self, from: payload) else { continue }
+            if !save(record) { deferred.insert(key) }
+        }
         for key in changes.deletions {
             guard let id = UUID(uuidString: key), records()?.contains(where: { $0.id == id }) == true else {
                 continue
             }
             if !remove(id) { deferred.insert(key) }
-        }
-        for (key, payload) in changes.upserts {
-            guard let record = SyncPayload.decode(Record.self, from: payload) else { continue }
-            if !save(record) { deferred.insert(key) }
         }
         return deferred
     }

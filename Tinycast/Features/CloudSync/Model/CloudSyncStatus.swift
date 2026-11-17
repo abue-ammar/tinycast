@@ -1,6 +1,5 @@
 import Foundation
 
-/// What the pane's status line says.
 enum CloudSyncStatus: Equatable, Sendable {
     case off
     case unavailable(CloudSyncUnavailability)
@@ -54,7 +53,6 @@ enum CloudSyncProblem: Equatable, Sendable {
     }
 }
 
-/// Why sync turned itself off, so the next look at the pane can say so.
 enum CloudSyncStopReason: String, Codable, Sendable {
     case removedElsewhere, dataDeleted, accountChanged
 

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// One group's categories: a checkbox each where it's optional, a plain row where it isn't.
 struct CloudSyncCategoryList: View {
     @Environment(AppCore.self) private var core
     let group: SyncCategory.Group

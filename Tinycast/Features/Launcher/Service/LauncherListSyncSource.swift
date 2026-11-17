@@ -1,6 +1,5 @@
 import Foundation
 
-/// Favorites and fallback order, each one list synced whole.
 @MainActor
 final class LauncherListSyncSource: SyncSource {
     private struct Fallbacks: Codable {

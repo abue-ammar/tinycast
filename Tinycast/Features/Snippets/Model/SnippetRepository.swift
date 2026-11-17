@@ -259,7 +259,6 @@ struct SnippetRepository: Sendable {
         }
     }
 
-    /// Writes a file another Mac sent under its own name, replacing whatever is there.
     func write(fileName: String, contents: Data) throws(RepositoryError) {
         try directoryLock.withLock { () throws(RepositoryError) in
             let fileURL = snippetsDirectory.appendingPathComponent(fileName)

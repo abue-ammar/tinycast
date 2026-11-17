@@ -1,5 +1,4 @@
 #!/bin/bash
-# Validate and import Config/CloudKit/schema.ckdb into one container's environment.
 # Usage: deploy-cloudkit-schema.sh <development|production> <container-id>
 # The token comes from CLOUDKIT_MANAGEMENT_TOKEN, else from `xcrun cktool save-token`.
 set -euo pipefail

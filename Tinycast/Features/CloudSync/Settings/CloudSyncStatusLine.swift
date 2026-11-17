@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The switch's companion line: what sync is doing, or why it isn't.
 struct CloudSyncStatusLine: View {
     let status: CloudSyncStatus
     let stopReason: CloudSyncStopReason?

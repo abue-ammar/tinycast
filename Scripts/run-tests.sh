@@ -113,7 +113,7 @@ run() {
 }
 
 L=Tinycast/Features/Launcher/Model
-# What a feature's sync source needs from iCloud Sync, for harnesses compiling a whole Service folder.
+# What a sync source needs from iCloud Sync, for harnesses compiling a whole Service folder.
 SYNC="Tinycast/Features/CloudSync/Model/*.swift Tinycast/Features/CloudSync/Service/SyncSource.swift Tinycast/Features/CloudSync/Service/RecordSyncSource.swift Tinycast/Features/Settings/Model/SettingsFileKey.swift"
 run slow -O FuzzTests      $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/EntryNaming.swift $L/LauncherOrder.swift \

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A row that only informs: always synced, or never.
 struct CloudSyncInfoRow: View {
     let title: String
     let symbol: String

@@ -2,7 +2,6 @@ import Foundation
 import Observation
 import SystemConfiguration
 
-/// This Mac's own device record out, every other Mac's in, for the pane's list of Macs.
 @MainActor
 @Observable
 final class DeviceSyncSource: SyncSource {

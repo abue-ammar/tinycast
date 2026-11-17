@@ -66,7 +66,6 @@ jobs:
             beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.abueammar.tinycast.beta";  CASK="tinycast@beta";  PRERELEASE=true ;;
             stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.abueammar.tinycast";       CASK="tinycast";       PRERELEASE=false ;;
           esac
-          # iCloud Sync's entitlements are authorized by the channel's own Developer ID profile.
           PROFILE="$( [ "$CHANNEL" = beta ] && echo "Tinycast Beta Developer ID" || echo "Tinycast Developer ID")"
           FULL="${BASE_VERSION}${SUFFIX}"
           {

@@ -14,7 +14,7 @@ extension RecordSyncSource where Record == MCPServer {
                 return true
             },
             remove: remove,
-            isDuplicate: { $0.name == $1.name && $0.transport == $1.transport })
+            isDuplicate: { $0.isTwin(of: $1) })
     }
 
     private static func withoutTrust(_ server: MCPServer) -> MCPServer {

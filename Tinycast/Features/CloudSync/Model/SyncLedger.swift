@@ -15,6 +15,8 @@ struct SyncLedger: Codable, Equatable, Sendable {
         var modifiedAt: Date
         /// The server record's archived system fields; nil until the server has the item.
         var systemFields: Data?
+        /// The change tag those fields carry, so a re-fetch of a version held here is skipped.
+        var changeTag: String?
         var pending: Pending?
         /// The version in flight, so a save confirmed after a newer edit can't clear that edit.
         var sentVersion: String?
@@ -27,6 +29,8 @@ struct SyncLedger: Codable, Equatable, Sendable {
         case apply
         /// This Mac's newer edit wins: upload it again over the server's copy.
         case keepLocal
+        /// This Mac already holds that very version, as a full re-fetch brings back.
+        case unchanged
     }
 
     enum Deletion: Equatable, Sendable {
@@ -58,7 +62,6 @@ struct SyncLedger: Codable, Equatable, Sendable {
         entries = entries.filter { $0.value.category != category }
     }
 
-    /// Compares a source's items with what was last seen and returns the uploads that follow.
     mutating func record(
         _ snapshot: [String: String], of source: SyncSourceID, now: Date,
         includes: (String) -> Bool
@@ -94,10 +97,15 @@ struct SyncLedger: Codable, Equatable, Sendable {
 
     /// A server record arrived, fetched or returned by a failed save; ties go to the server.
     mutating func receive(
-        _ name: String, source: SyncSourceID, key: String, modifiedAt: Date, systemFields: Data
+        _ name: String, source: SyncSourceID, key: String, modifiedAt: Date, changeTag: String?,
+        systemFields: Data
     ) -> Incoming {
         var entry = entries[name] ?? Entry(source: source, key: key, modifiedAt: modifiedAt)
+        if let changeTag, changeTag == entry.changeTag, entry.pending == nil, entry.version != nil {
+            return .unchanged
+        }
         entry.systemFields = systemFields
+        entry.changeTag = changeTag
         if entry.pending != nil, entry.modifiedAt > modifiedAt {
             entries[name] = entry
             return .keepLocal
@@ -119,6 +127,7 @@ struct SyncLedger: Codable, Equatable, Sendable {
         guard var entry = entries[name] else { return .ignore }
         if entry.pending == .save {
             entry.systemFields = nil
+            entry.changeTag = nil
             entries[name] = entry
             return .keepLocal
         }
@@ -126,7 +135,6 @@ struct SyncLedger: Codable, Equatable, Sendable {
         return .apply(entry)
     }
 
-    /// Marks the version about to upload and returns the entry, or nil when nothing should.
     mutating func willSend(_ name: String) -> Entry? {
         guard var entry = entries[name], entry.pending != nil else { return nil }
         entry.sentVersion = entry.version
@@ -134,9 +142,10 @@ struct SyncLedger: Codable, Equatable, Sendable {
         return entry
     }
 
-    mutating func didSave(_ name: String, systemFields: Data) {
+    mutating func didSave(_ name: String, systemFields: Data, changeTag: String?) {
         guard var entry = entries[name] else { return }
         entry.systemFields = systemFields
+        entry.changeTag = changeTag
         if entry.pending == .save, entry.sentVersion == entry.version { entry.pending = nil }
         entry.sentVersion = nil
         entries[name] = entry
@@ -150,6 +159,7 @@ struct SyncLedger: Codable, Equatable, Sendable {
     /// The server no longer has the record a save expected, so the next save creates it anew.
     mutating func didLoseRecord(_ name: String) {
         entries[name]?.systemFields = nil
+        entries[name]?.changeTag = nil
         entries[name]?.sentVersion = nil
     }
 
@@ -167,7 +177,6 @@ struct SyncLedger: Codable, Equatable, Sendable {
         entries.compactMapValues(\.pending)
     }
 
-    /// Items held here and on the server, per counted category.
     func counts(of category: SyncCategory) -> (local: Int, cloud: Int) {
         entries.values.reduce(into: (local: 0, cloud: 0)) { counts, entry in
             guard entry.category == category else { return }

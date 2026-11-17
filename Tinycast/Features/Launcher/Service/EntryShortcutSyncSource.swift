@@ -19,23 +19,24 @@ final class EntryShortcutSyncSource: SyncSource {
     let id = SyncSourceID.launcherShortcuts
     private let aliases: AliasStore
     private let hotKeys: HotKeyManager
-    private let appIndex: AppIndex
+    /// Every row this Mac holds, listed in the launcher or not.
+    private let rows: () -> Set<String>
     private let entryKeys: () -> SyncEntryKey
 
     init(
-        aliases: AliasStore, hotKeys: HotKeyManager, appIndex: AppIndex,
+        aliases: AliasStore, hotKeys: HotKeyManager, rows: @escaping () -> Set<String>,
         entryKeys: @escaping () -> SyncEntryKey
     ) {
         self.aliases = aliases
         self.hotKeys = hotKeys
-        self.appIndex = appIndex
+        self.rows = rows
         self.entryKeys = entryKeys
     }
 
     func observe() {
         _ = aliases.revision
         _ = hotKeys.revision
-        _ = appIndex.apps
+        _ = rows()
     }
 
     func snapshot() async -> [String: String]? {
@@ -55,7 +56,7 @@ final class EntryShortcutSyncSource: SyncSource {
     /// A shortcut whose row isn't on this Mac yet waits for it, and a clashing chord stays local.
     func apply(_ changes: SyncChanges) async -> Set<String> {
         let entryKeys = entryKeys()
-        let present = Set(appIndex.apps.map(\.id))
+        let present = rows()
         var deferred: Set<String> = []
         for (key, payload) in changes.upserts {
             let entryID = entryKeys.local(key)

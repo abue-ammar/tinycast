@@ -2,7 +2,6 @@ import AppKit
 import CloudKit
 import Security
 
-/// Whether this copy of Tinycast may reach iCloud at all, before anything touches CloudKit.
 enum CloudSyncAvailability {
     /// A build without the entitlement crashes on its first `CKContainer`, so this asks first.
     static var isEntitled: Bool {
@@ -27,7 +26,7 @@ enum CloudSyncAvailability {
         }
     }
 
-    /// Pushes are what make another Mac's change arrive within seconds rather than at the next poll.
+    /// Pushes make another Mac's change arrive within seconds rather than at the next poll.
     @MainActor
     static func registerForPushes() {
         guard entitlement("com.apple.developer.aps-environment") is String else { return }

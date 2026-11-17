@@ -2,7 +2,6 @@ import CloudKit
 import Foundation
 import OSLog
 
-/// Sync's own bookkeeping on this Mac: the engine checkpoint, the ledger and deferred arrivals.
 @MainActor
 final class CloudSyncStateStore {
     struct State: Codable, Sendable {
@@ -14,7 +13,6 @@ final class CloudSyncStateStore {
         var devices: [String: SyncDevice] = [:]
         /// What this build syncs; a change re-fetches everything older builds skipped.
         var catalog: String?
-        /// Arrivals a source couldn't take yet, by record name.
         var deferred: [String: Deferred] = [:]
     }
 
@@ -74,6 +72,10 @@ final class CloudSyncStateStore {
             try? payload.write(to: deferredDirectory.appending(path: name), options: [.atomic])
         }
         update { $0.deferred[name] = Deferred(key: key, isDeletion: payload == nil) }
+    }
+
+    func hasDeferred(of source: SyncSourceID) -> Bool {
+        state.deferred.keys.contains { SyncSourceID(recordName: $0) == source }
     }
 
     func deferredArrivals(of source: SyncSourceID) -> [String: Arrival] {

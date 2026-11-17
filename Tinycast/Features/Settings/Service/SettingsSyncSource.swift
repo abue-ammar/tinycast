@@ -1,7 +1,6 @@
 import Foundation
 import OSLog
 
-/// Settings sync one value per settings.json key, read and written through the file's bindings.
 @MainActor
 final class SettingsSyncSource: SyncSource {
     private static let logger = Logger(subsystem: "com.tinycast", category: "CloudSync")
