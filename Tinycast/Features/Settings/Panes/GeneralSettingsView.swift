@@ -33,6 +33,10 @@ struct GeneralSettingsView: View {
                     SettingsRowTitle(.generalGeneral, "Show in menu bar")
                     Text("Shortcuts still work when the menu bar icon is hidden.")
                 }
+                Toggle(isOn: $settings.showInDock) {
+                    SettingsRowTitle(.generalGeneral, "Show in Dock")
+                    Text("While a window like Settings is open.")
+                }
                 Toggle(isOn: $settings.automaticallyCheckForUpdates) {
                     SettingsRowTitle(.generalGeneral, "Automatically check for updates")
                     Text("You can still check for updates manually.")

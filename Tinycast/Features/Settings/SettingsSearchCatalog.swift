@@ -126,6 +126,9 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Show in menu bar",
             keywords: ["menubar", "status item", "icon", "hide"]),
         .init(
+            .generalGeneral, "Show in Dock",
+            keywords: ["dock icon", "icon", "hide", "app switcher"]),
+        .init(
             .generalGeneral, "Automatically check for updates",
             keywords: ["software", "update", "automatic", "disable", "popup"]),
         .init(

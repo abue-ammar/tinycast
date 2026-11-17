@@ -166,6 +166,11 @@ final class AppSettings {
         didSet { defaults.set(showInMenuBar, forKey: Key.showInMenuBar.rawValue) }
     }
 
+    /// Whether an open window such as Settings puts Tinycast in the Dock.
+    var showInDock: Bool {
+        didSet { defaults.set(showInDock, forKey: Key.showInDock.rawValue) }
+    }
+
     var automaticallyCheckForUpdates: Bool {
         didSet {
             defaults.set(
@@ -737,6 +742,9 @@ final class AppSettings {
         showInMenuBar =
             defaults.object(forKey: Key.showInMenuBar.rawValue) == nil
             || defaults.bool(forKey: Key.showInMenuBar.rawValue)
+        showInDock =
+            defaults.object(forKey: Key.showInDock.rawValue) == nil
+            || defaults.bool(forKey: Key.showInDock.rawValue)
         automaticallyCheckForUpdates =
             defaults.object(forKey: Key.automaticallyCheckForUpdates.rawValue) == nil
             || defaults.bool(forKey: Key.automaticallyCheckForUpdates.rawValue)

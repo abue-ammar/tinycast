@@ -103,6 +103,7 @@ because the app rewrites the file.
   "general": {
     "language": "en",
     "showInMenuBar": true,
+    "showInDock": true,
     "automaticallyCheckForUpdates": true,
     "popToRootSeconds": 0,
     "escapeKeyBehavior": "navigateBackOrClose",

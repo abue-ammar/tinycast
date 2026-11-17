@@ -1032,7 +1032,9 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
 - With no saved app language, onboarding uses the primary system language if supported, otherwise
   English; a saved language stays unchanged on relaunch
 - Onboarding has no Dock entry; completing it leaves the palette open and ready for typing.
-  Settings still adds a Dock entry while open and removes it when the last ordinary window closes
+  Settings still adds a Dock entry while open and removes it when the last ordinary window closes;
+  with **Show in Dock** off it adds none, and turning it off with Settings open drops the entry
+  while Settings stays frontmost
 - Palette opens and lists apps; clipboard, quicklinks, snippets and calculator history are all empty
   and all accept a first entry
 - Notes creates no directory until Show, Create, or Search is first used, then accepts its first edit
