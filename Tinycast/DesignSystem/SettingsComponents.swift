@@ -5,7 +5,7 @@ import SwiftUI
 
 struct SettingsTabIcon: View {
     let tab: SettingsTab
-    var size = Theme.Size.settingsSidebarIcon
+    var size = Theme.Size.settingsRowIcon
 
     var body: some View {
         IconTile(symbol: tab.systemImage, tint: tab.tint)

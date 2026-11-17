@@ -107,7 +107,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .systemActions, .emoji: return .orange
         case .calendar: return .red
         case .appleShortcuts, .dictation: return .pink
-        case .ai: return .purple
+        case .ai: return .teal
         case .clipboard, .quickActions: return .indigo
         case .snippets: return .brown
         }

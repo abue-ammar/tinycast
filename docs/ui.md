@@ -176,7 +176,7 @@ panel, the shortcut-recorder callout and the Notes switcher, and `menuRow` is de
 `menuWidth 276` · `clipboardFilterMenuWidth 200` · `fileSearchFilterMenuWidth 200` ·
 `emojiCategoryMenuWidth 220` · `menuIcon 20` ·
 `emojiGridInset 16` ·
-`settingsSidebar 215` · `settingsSidebarIcon 22` · `settingsRowIcon 20` · `settingsRowButton 24` ·
+`settingsSidebar 232` · `settingsRowIcon 20` · `settingsRowButton 24` ·
 `dialogCompactWidth 290` ·
 `dialogWidth 420` · `dialogButtonHeight 34` · `dialogSymbol 28` · `dialogSymbolContainer 52` ·
 `dialogIcon 32` · `hudWidth 200` ·
