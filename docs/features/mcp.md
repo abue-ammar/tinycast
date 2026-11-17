@@ -21,7 +21,10 @@ not read MCP settings. `AIChatCoordinator.send` is the one place the two meet.
   to the next turn's relaunch or that idle stop. Both flags and `mcpServers`
   are excluded from settings backups — a server list is a source of executable code and a
   destination for chat context, and the flag doubles as consent to run it, so an import can never
-  arrive having connected one.
+  arrive having connected one. [iCloud Sync](icloud-sync.md) carries the list to the user's own
+  Macs, never a credential or a trust grant: an arriving server asks before it runs, unless it
+  replaces the same server set up on this Mac, whose credentials and trust it takes over. The switch
+  stays per Mac.
 - **Credentials live only in the login Keychain.** `MCPServer` persists the endpoint, authentication
   mode, the header *name*, the command, its arguments and its environment variable *names* in
   `UserDefaults`; it never contains a secret. The HTTP header value, environment values, OAuth client

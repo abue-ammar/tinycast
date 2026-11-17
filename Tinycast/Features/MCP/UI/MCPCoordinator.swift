@@ -151,6 +151,23 @@ final class MCPCoordinator {
         applyEnabled()
     }
 
+    /// A synced server brings no credentials or trust: it keeps this Mac's, a twin's, or asks.
+    func applySynced(_ synced: MCPServer) {
+        var server = synced
+        if let local = store.server(id: server.id) {
+            server.trust = local.trust
+        } else if let twin = store.servers.first(where: { $0.isTwin(of: synced) }) {
+            server.trust = twin.trust
+            let secrets = MCPSecretStore()
+            try? secrets.save(secrets.secrets(for: twin.id), for: server.id)
+        } else {
+            server.trust = .ask
+        }
+        manager.disconnect(server.id)
+        store.save(server)
+        applyEnabled()
+    }
+
     func remove(_ id: UUID) throws {
         core.mcpOAuth.cancelSignIn(id)
         try MCPSecretStore().remove(for: id)

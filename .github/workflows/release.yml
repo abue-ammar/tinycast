@@ -33,6 +33,7 @@ jobs:
       full_version: ${{ steps.meta.outputs.full_version }}
       display_name: ${{ steps.meta.outputs.display_name }}
       bundle_id: ${{ steps.meta.outputs.bundle_id }}
+      profile: ${{ steps.meta.outputs.profile }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -65,6 +66,7 @@ jobs:
             beta)   SUFFIX="-beta.${GITHUB_RUN_NUMBER}";  DISPLAY="Tinycast Beta";  BUNDLE="com.abueammar.tinycast.beta";  CASK="tinycast@beta";  PRERELEASE=true ;;
             stable) SUFFIX="";                            DISPLAY="Tinycast";       BUNDLE="com.abueammar.tinycast";       CASK="tinycast";       PRERELEASE=false ;;
           esac
+          PROFILE="$( [ "$CHANNEL" = beta ] && echo "Tinycast Beta Developer ID" || echo "Tinycast Developer ID")"
           FULL="${BASE_VERSION}${SUFFIX}"
           {
             echo "full_version=${FULL}"
@@ -74,6 +76,7 @@ jobs:
             echo "dmg_file=Tinycast-${FULL}.dmg"
             echo "zip_file=Tinycast-${FULL}.zip"
             echo "prerelease=${PRERELEASE}"
+            echo "profile=${PROFILE}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Import signing certificate
@@ -82,12 +85,25 @@ jobs:
           P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
         run: ./Scripts/import-signing-identity.sh
 
+      - name: Install the provisioning profile
+        env:
+          PROFILE: ${{ steps.meta.outputs.profile }}
+        run: ./Scripts/install-provisioning-profile.sh "Config/Profiles/${PROFILE// /_}.provisionprofile"
+
+      # Developer ID builds reach only Production, where an undeployed field fails every save.
+      - name: Check the CloudKit schema
+        env:
+          CLOUDKIT_MANAGEMENT_TOKEN: ${{ secrets.CLOUDKIT_MANAGEMENT_TOKEN }}
+          BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
+        run: ./Scripts/check-cloudkit-schema.sh "iCloud.$BUNDLE_ID"
+
       - name: Build app
         env:
           VERSION: ${{ steps.meta.outputs.full_version }}
           DISPLAY_NAME: ${{ steps.meta.outputs.display_name }}
           BUNDLE_ID: ${{ steps.meta.outputs.bundle_id }}
           BUILD_NUMBER: ${{ github.run_number }}
+          PROFILE: ${{ steps.meta.outputs.profile }}
         run: |
           # ARCHS pinned: trusting ARCHS_STANDARD once let a thin arm64 build reach Intel users.
           xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Release \
@@ -96,6 +112,7 @@ jobs:
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" DEVELOPMENT_TEAM=J656U8XZ93 \
             OTHER_CODE_SIGN_FLAGS="--timestamp" \
             PRODUCT_NAME="$DISPLAY_NAME" TINYCAST_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            TINYCAST_ENTITLEMENTS=Tinycast/TinycastCloud.entitlements TINYCAST_PROVISIONING_PROFILE="$PROFILE" \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
 
@@ -239,6 +256,7 @@ jobs:
       VERSION: ${{ needs.build.outputs.full_version }}
       DISPLAY_NAME: ${{ needs.build.outputs.display_name }}
       BUNDLE_ID: ${{ needs.build.outputs.bundle_id }}
+      PROFILE: ${{ needs.build.outputs.profile }}
       CASK: tinycast-universal
     steps:
       - uses: actions/checkout@v7
@@ -261,6 +279,9 @@ jobs:
           P12_PASSWORD: ${{ secrets.DEVELOPER_ID_P12_PASSWORD }}
         run: ./Scripts/import-signing-identity.sh
 
+      - name: Install the provisioning profile
+        run: ./Scripts/install-provisioning-profile.sh "Config/Profiles/${PROFILE// /_}.provisionprofile"
+
       - name: Build app
         env:
           BUILD_NUMBER: ${{ github.run_number }}
@@ -271,6 +292,7 @@ jobs:
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="$SIGNING_IDENTITY" DEVELOPMENT_TEAM=J656U8XZ93 \
             OTHER_CODE_SIGN_FLAGS="--timestamp" \
             PRODUCT_NAME="$DISPLAY_NAME" TINYCAST_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+            TINYCAST_ENTITLEMENTS=Tinycast/TinycastCloud.entitlements TINYCAST_PROVISIONING_PROFILE="$PROFILE" \
             MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
             build
 

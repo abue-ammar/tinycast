@@ -1,0 +1,2 @@
+// Contributors build self-signed with no iCloud; a signer's own gitignored Local.xcconfig adds it.
+#include? "Local.xcconfig"

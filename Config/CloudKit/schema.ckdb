@@ -1,0 +1,12 @@
+DEFINE SCHEMA
+
+    RECORD TYPE SyncItem (
+        modifiedAt       TIMESTAMP,
+        schemaVersion    INT64,
+        payloadAsset     ASSET,
+        key              ENCRYPTED STRING,
+        payload          ENCRYPTED BYTES,
+        GRANT WRITE TO "_creator",
+        GRANT CREATE TO "_icloud",
+        GRANT READ TO "_creator"
+    );

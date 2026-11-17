@@ -122,5 +122,7 @@ enum AppSettingsKey: String, CaseIterable {
     case dictationLanguage = "dictationLanguage"
     case supportReminders = "supportReminders"
     case settingsFileEnabled = "settingsFileEnabled"
+    case iCloudSyncEnabled = "iCloudSyncEnabled"
+    case iCloudSyncDisabledCategories = "iCloudSyncDisabledCategories"
     case allowedDeepLinks = "allowedDeepLinks"
 }

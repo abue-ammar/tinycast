@@ -77,7 +77,8 @@ selectable Markdown renderer with AI Chat.
 - **A custom action never travels in a backup.** Neither the record, its shortcut nor its route, for
   the reason `quickActionInstructions` already doesn't: an import must never change what a shortcut
   does to somebody's documents. Its JSON sits outside `UserDefaults`, so no settings key can sweep it
-  up, and `quickActionModelOverrides` is excluded like `quickActionModel`.
+  up, and `quickActionModelOverrides` is excluded like `quickActionModel`. Only the user's own
+  [iCloud Sync](icloud-sync.md) carries the record to their other Macs; its route stays behind.
 
 ## The actions
 

@@ -59,7 +59,17 @@ for PAIR in "${RESOURCE_ENTITLEMENTS[@]}"; do
         fail "$NAME.app: $USAGE is declared but $ENTITLEMENT is not"
 done
 
+# iCloud Sync: AMFI refuses these entitlements without the profile, and a wrong one syncs nowhere.
+[ -f "$APP/Contents/embedded.provisionprofile" ] || fail "$NAME.app: no embedded provisioning profile"
+entitlement() { /usr/libexec/PlistBuddy -c "Print :$1" "$ENTITLEMENTS" 2>/dev/null; }
+[ "$(entitlement com.apple.developer.icloud-container-identifiers:0)" = "iCloud.$APP_ID" ] ||
+    fail "$NAME.app: its iCloud container is not iCloud.$APP_ID"
+[ "$(entitlement com.apple.developer.icloud-container-environment)" = Production ] ||
+    fail "$NAME.app: iCloud is not set to Production"
+[ "$(entitlement com.apple.developer.aps-environment)" = production ] ||
+    fail "$NAME.app: push is not set to production"
+
 if [ "$STATUS" -eq 0 ]; then
-    echo "✓ $NAME.app is notarizable and its prompts are entitled"
+    echo "✓ $NAME.app is notarizable, its prompts are entitled and it can reach iCloud"
 fi
 exit "$STATUS"

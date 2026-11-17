@@ -9,6 +9,8 @@ another app.
 - **Snippets are channel-isolated and path-identified.** They persist under
   `~/Library/Application Support/<bundle-id>/Snippets/` unless the user chooses a folder;
   `StoredSnippet.ID` is the standardized source path, and an external rename is a delete plus a create.
+  Across Macs, [iCloud Sync](icloud-sync.md) knows a snippet by its file name alone, since each Mac's
+  folder differs; one deleted on another Mac goes to the Trash.
 - **The feature ships off, and its enable switch doubles as keyword-expansion consent.**
   `snippetsEnabled` is excluded from settings backups, and Accessibility — the only permission it needs,
   since the listen-only tap needs nothing more — may be requested **only** from that explicit Settings

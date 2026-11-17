@@ -8,6 +8,7 @@ struct SettingsDetailView: View {
         Group {
             switch navigation.tab {
             case .general: GeneralSettingsView()
+            case .iCloudSync: CloudSyncSettingsView()
             case .applications: ApplicationsSettingsView()
             case .systemSettings: SystemSettingsSettingsView()
             case .systemActions: SystemActionsSettingsView()

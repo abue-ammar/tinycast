@@ -183,6 +183,7 @@ If a change touches anything in the right column, the harness on the left is man
 | `IconCacheTests` | `Platform/Images/IconCache.swift` — row sizing at 1×/2×, warm reuse, stamp and style invalidation, bitmap release, fitted geometry across all 256 alpha values, and that a row icon draws identically to the 96px one |
 | `EntryIconTests` | `EntryIcon` — that each case draws, caches and prints apart from the others, and that a moved `FileIconStamp` retires the bitmap decoded before it |
 | `TextDiffTests` | `QuickActions/Model/TextDiffEngine.swift` — exact chunks, coalescing, Unicode, ties, token-cap boundaries and fast paths |
+| `CloudSyncTests` | `CloudSync/Model/` and `Settings/Model/SettingsFileKey.swift` — record names, the ledger's diff, last-write-wins, edit-beats-delete, echo-free apply and re-fetch skip, category merge, setting scope (every feature switch, folder and device stays local) and entry-key spelling |
 | `SettingsBackupTests` | `Settings/AppSettingsKey.swift`, `Backup/Model/SettingsBackupCoverage.swift` |
 | `SettingsFileTests` | `Settings/Model/` and `Settings/Service/` — key paths, value tokens, the printer and parser, and the repository's import, replace, save, reload and symlink handling on a scratch folder |
 | `WindowFileTests` | `WindowManagement/Model/WindowManagementFileFormat.swift` — command shortcuts, custom sizes, layouts and rooms as settings.json spells them, hand edits and bad records |
@@ -993,6 +994,26 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
 - Cancelling the save panel leaves nothing in `~/Library/Caches/com.abueammar.tinycast.dev/backup-staging/`
 - **`snippetsEnabled` is not in the exported file**, and importing does not enable snippets
 - Nothing in the extracted tree names a Keychain item, an extension, or an AI conversation
+
+### iCloud Sync
+
+Needs a Dev build signed with `Config/Local.xcconfig` ([signing.md](signing.md)). A second macOS user
+signed in to the same Apple ID is a second Mac on one machine.
+
+- A self-signed contributor build shows "iCloud Sync needs a signed release build" and nothing crashes
+- Turning sync on asks first, then shows "Setting up…" and settles on "Up to date"; the counts match
+- On the second Mac: notes, snippets, quicklinks, a hotkey, an alias, a favorite and an appearance
+  change arrive; no note is rewritten or renamed when both Macs already held it
+- Edit the same note on both while offline: the later edit wins; an open note with unsaved typing
+  keeps it and uploads it
+- Delete a note on one Mac: it moves to the Trash on the other
+- Install a store extension on one Mac: it installs on the other only once Extensions is on there;
+  uninstalling removes it from both
+- A clashing hotkey keeps each Mac's own choice and is not bounced back
+- Unchecking a category stops it in both directions; checking it again merges rather than deletes
+- Remove the other Mac: it turns sync off there and says why
+- Delete iCloud Data turns sync off on every Mac and leaves their data
+- Signing out of iCloud shows the reason; signing back in resumes on its own
 
 ### Clean install
 

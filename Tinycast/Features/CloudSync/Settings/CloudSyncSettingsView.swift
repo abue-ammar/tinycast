@@ -1,0 +1,112 @@
+import SwiftUI
+
+struct CloudSyncSettingsView: View {
+    @Environment(AppCore.self) private var core
+    /// The switch's requested position while its confirmation is up.
+    @State private var requestedEnabled: Bool?
+    @State private var confirmingDelete = false
+
+    private var sync: CloudSyncCoordinator { core.cloudSyncCoordinator }
+
+    private var switchBinding: Binding<Bool> {
+        Binding(get: { sync.isEnabled }, set: { requestedEnabled = $0 })
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle(isOn: switchBinding) {
+                    SettingsRowTitle(.iCloudSyncSwitch, "Sync with iCloud")
+                    Text("Keep settings and content the same on every Mac signed in to your iCloud account.")
+                }
+                .disabled(sync.status == .unavailable(.unsignedBuild))
+                CloudSyncStatusLine(status: sync.status, stopReason: sync.stopReason, retry: sync.refresh)
+            }
+            .settingsAnchor(.iCloudSyncSwitch)
+
+            Section {
+                CloudSyncCategoryList(group: .content)
+            } header: {
+                SettingsSectionHeader(.iCloudSyncContent)
+            } footer: {
+                if !sync.isEnabled {
+                    Text("Choose what syncs before you turn iCloud Sync on.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Section {
+                CloudSyncCategoryList(group: .general)
+            } header: {
+                SettingsSectionHeader(.iCloudSyncGeneral)
+            }
+            Section {
+                CloudSyncCategoryList(group: .always)
+            } header: {
+                SettingsSectionHeader(.iCloudSyncAlways)
+            }
+
+            Section {
+                ForEach(SyncExclusion.allCases, id: \.self) { exclusion in
+                    CloudSyncInfoRow(
+                        title: exclusion.title, symbol: exclusion.symbol, detail: exclusion.detail)
+                }
+            } header: {
+                SettingsSectionHeader(.iCloudSyncNotSynced)
+            }
+
+            if sync.isEnabled {
+                CloudSyncDevicesSection()
+                Section {
+                    LabeledContent {
+                        Button("Delete…", role: .destructive) { confirmingDelete = true }
+                    } label: {
+                        SettingsRowTitle(.iCloudSyncData, "Delete iCloud Data")
+                        Text("Removes everything Tinycast stored in iCloud. Each Mac keeps its own data.")
+                    }
+                } header: {
+                    SettingsSectionHeader(.iCloudSyncData)
+                } footer: {
+                    Text(
+                        """
+                        Synced content is end-to-end encrypted with iCloud. Clipboard history, \
+                        passwords and API keys never leave this Mac.
+                        """
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .settingsScrollTarget(.iCloudSync)
+        .onAppear { sync.refresh() }
+        .confirmationDialog(
+            requestedEnabled == true ? "Turn on iCloud Sync?" : "Turn off iCloud Sync?",
+            isPresented: Binding(
+                get: { requestedEnabled != nil }, set: { if !$0 { requestedEnabled = nil } }),
+            titleVisibility: .visible
+        ) {
+            if requestedEnabled == true {
+                Button("Turn On") { sync.setEnabled(true) }
+            } else {
+                Button("Turn Off", role: .destructive) { sync.setEnabled(false) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                requestedEnabled == true
+                    ? "The checked items sync with every Mac signed in to this iCloud account."
+                    : "This Mac stops syncing. Its data, and the copy in iCloud, stay as they are.")
+        }
+        .confirmationDialog("Delete iCloud data?", isPresented: $confirmingDelete, titleVisibility: .visible)
+        {
+            Button("Delete", role: .destructive) { Task { await sync.deleteCloudData() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(
+                "This deletes Tinycast's data and Macs from iCloud and turns off sync. Data on each Mac stays."
+            )
+        }
+    }
+}

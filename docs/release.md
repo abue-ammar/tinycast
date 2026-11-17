@@ -91,6 +91,14 @@ Any status but `Accepted` prints Apple's log and stops the run before anything i
 update key. `Scripts/check-update-path.sh` runs just before notarizing, and fails the run unless the
 last release on the channel would install this build ([signing.md](signing.md#update-trust)).
 
+Before building, the job installs the channel's profile from `Config/Profiles/` and runs
+`Scripts/check-cloudkit-schema.sh`, which stops the run unless the channel's container has every
+field of `Config/CloudKit/schema.ckdb` in Production. A Developer ID build reaches only Production,
+where a missing field fails every save. `cktool` can't write Production, so a schema change ships in
+two steps before the release: `./Scripts/deploy-cloudkit-schema.sh iCloud.<bundle id>` imports it
+into Development, then **Deploy Schema Changes** in the CloudKit Console takes it to Production
+([icloud-sync.md](features/icloud-sync.md#cloudkit)).
+
 Channel builds override `TINYCAST_BUNDLE_IDENTIFIER`, not the target-wide `PRODUCT_BUNDLE_IDENTIFIER`.
 The Dictation helper derives its own identifier with a `.dictation` suffix; signature verification
 checks that its bundle and signing identifiers agree and remain distinct from the main app.

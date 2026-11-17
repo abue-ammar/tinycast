@@ -127,7 +127,7 @@ struct AIRequest: Equatable, Sendable {
     }
 }
 
-struct AIUsage: Equatable, Sendable {
+struct AIUsage: Codable, Equatable, Sendable {
     var inputTokens: Int?
     var outputTokens: Int?
     /// Prompt tokens served from or written to a cache; Anthropic counts them outside `inputTokens`.

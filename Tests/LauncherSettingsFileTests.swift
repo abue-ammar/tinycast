@@ -130,6 +130,12 @@ struct LauncherSettingsFileTests {
         check("the waiting visibility changes", saved?["showInLauncher"] == false)
         check("a malformed waiting record is reported", binding.write(.object([bundleID: false])).count == 1)
         check("a malformed waiting record keeps its values", binding.read()[bundleID] == saved)
+        let relaunched = LauncherSettingsFile(
+            appIndex: fixture.index, aliases: fixture.aliases, visibility: fixture.visibility,
+            shortcuts: fixture.shortcuts, defaults: fixture.defaults)
+        check(
+            "a waiting record survives a relaunch",
+            relaunched.appsBinding(for: .applications).read()[bundleID] == saved)
 
         fixture.index.apps = [entry(bundleID, kind: .application)]
         check("the first scan applies the waiting record", fixture.file.applyInstalled().isEmpty)
@@ -204,7 +210,7 @@ struct LauncherSettingsFileTests {
         let shortcuts: HotKeySettingsFile
         let file: LauncherSettingsFile
         private let suite = "launcher-settings-file-test-\(UUID().uuidString)"
-        private let defaults: UserDefaults
+        let defaults: UserDefaults
 
         init() {
             defaults = UserDefaults(suiteName: suite)!
@@ -212,7 +218,8 @@ struct LauncherSettingsFileTests {
             visibility = VisibilityStore(defaults: defaults)
             shortcuts = HotKeySettingsFile(hotKeys: hotKeys)
             file = LauncherSettingsFile(
-                appIndex: index, aliases: aliases, visibility: visibility, shortcuts: shortcuts)
+                appIndex: index, aliases: aliases, visibility: visibility, shortcuts: shortcuts,
+                defaults: defaults)
         }
 
         isolated deinit { defaults.removePersistentDomain(forName: suite) }

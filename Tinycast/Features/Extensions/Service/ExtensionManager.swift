@@ -318,6 +318,19 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         return failed
     }
 
+    /// Store installs: the ones another Mac can fetch again by handle and name.
+    var storeInstalled: [InstalledExtension] {
+        let tracked = storeVersions.tracked
+        return installed.filter { tracked.contains($0.manifest.name) }
+    }
+
+    func installFromStore(handle: String, name: String) async throws {
+        guard let listing = try await ExtensionStoreClient().lookup(handle: handle, name: name) else {
+            throw ExtensionStoreError.notAnExtension
+        }
+        try await install(listing, onProgress: { _ in })
+    }
+
     /// Replaces only the extension's directory, so its preferences and storage carry over.
     private func installFromStore(
         _ listing: ExtensionListing,
@@ -341,17 +354,12 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
         if backgroundRef?.extensionName == installedExtension.manifest.name {
             await abortBackgroundRun()
         }
-        let entryIDs = installedExtension.manifest.commands.map {
-            ExtensionCommandRef(
-                extensionName: installedExtension.manifest.name, commandName: $0.name
-            ).entryID
-        }
         try? ExtensionCatalog.uninstall(installedExtension)
         storage.removeAll(extension: installedExtension.manifest.name)
         commandMetadata.removeAll(extension: installedExtension.manifest.name)
         untrack(installedExtension.manifest.name)
         appearances.set(nil, for: installedExtension.manifest.name)
-        onDidUninstall?(entryIDs)
+        onDidUninstall?(installedExtension.commandEntryIDs)
         await refresh()
     }
 

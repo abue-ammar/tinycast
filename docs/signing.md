@@ -44,7 +44,7 @@ Now local builds (Xcode, VS Code F5, `xcodebuild`) sign with it, and you grant A
 
 ## 2. The release secrets
 
-Releases read six secrets from the repo's `release` environment (**Settings → Environments**). The
+Releases read seven secrets from the repo's `release` environment (**Settings → Environments**). The
 environment deploys from `main` only, so a workflow pushed to any other branch can never read them.
 
 | Secret                              | Holds                                                                                           |
@@ -54,6 +54,7 @@ environment deploys from `main` only, so a workflow pushed to any other branch c
 | `NOTARY_KEY_P8_BASE64`              | an App Store Connect API team key (`.p8`) with Developer access, base64                         |
 | `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID` | that key's ID and its issuer ID                                                                 |
 | `UPDATE_SIGNING_KEY`                | the release key: an Ed25519 private key, base64, whose public half is `TinycastUpdatePublicKey` |
+| `CLOUDKIT_MANAGEMENT_TOKEN`         | a CloudKit Console management token, which checks the iCloud Sync schema                        |
 
 Export the Developer ID identity alone — `security export -t identities` bundles every identity in
 the keychain. In Keychain Access, open **My Certificates**, select
@@ -86,6 +87,34 @@ Before it expires, the account holder creates a new one on developer.apple.com (
 Application**, **G2 Sub-CA**) and replaces the two `DEVELOPER_ID_P12_*` secrets. Nothing else
 changes: a shipped build stays valid because its signature carries Apple's timestamp, and macOS and
 the updater both match the team rather than the certificate. The API key does not expire.
+
+## iCloud Sync
+
+CloudKit and push are restricted entitlements: macOS refuses to launch a build claiming them unless an
+embedded provisioning profile authorizes them. So a build claims them only when it names a profile:
+
+- **By default**, `TINYCAST_ENTITLEMENTS` is `Tinycast/Tinycast.entitlements` and no profile is named.
+  A contributor's self-signed build is unchanged, and its iCloud Sync pane says it needs a signed
+  build.
+- **Releases** pass `Tinycast/TinycastCloud.entitlements` and the channel's Developer ID profile,
+  committed in `Config/Profiles/` (a profile holds no secret). `verify-signature.sh` asserts the
+  profile, the `iCloud.<bundle id>` container, Production and production push.
+- **The Dev build** signs with Apple Development and the Dev profile through a gitignored
+  `Config/Local.xcconfig`, which every target's Debug configuration includes:
+
+  ```
+  CODE_SIGN_IDENTITY = Apple Development
+  DEVELOPMENT_TEAM = J656U8XZ93
+  TINYCAST_ENTITLEMENTS = Tinycast/TinycastCloud.entitlements
+  TINYCAST_PROVISIONING_PROFILE = Tinycast Dev Development
+  ```
+
+  Install the profile once with `./Scripts/install-provisioning-profile.sh <file>`. It names this
+  Mac's UDID, so another Mac needs registering and the profile remaking. The new identity asks for
+  Accessibility again once.
+
+`TinycastCloud.entitlements` repeats the base keys: keep the two files in step. A capability change on
+an App ID invalidates its profiles; remake them and replace the files.
 
 ## Hardened runtime
 

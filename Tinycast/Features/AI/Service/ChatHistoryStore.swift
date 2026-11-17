@@ -313,6 +313,40 @@ final class ChatHistoryStore {
         return sqlite3_step(statement) == SQLITE_DONE
     }
 
+    // MARK: - Sync
+
+    @discardableResult
+    func applySynced(_ payload: ChatSyncPayload) -> Bool {
+        let session = payload.session(keepingAttachmentsOf: self.session(id: payload.id))
+        guard !session.messages.isEmpty, ensureDatabase(), let database,
+            sqlite3_exec(database, "BEGIN IMMEDIATE", nil, nil, nil) == SQLITE_OK
+        else { return false }
+        guard clearMessages(of: session.id, in: database), saveConversation(session, in: database),
+            rewriteTail(of: session, database: database), saveModel(of: session),
+            savePreset(of: session, in: database), write(.customTitle(payload.customTitle), of: session.id),
+            write(.pinned(payload.isPinned), of: session.id),
+            payload.generatedTitle.map({ write(.generatedTitle($0), of: session.id) }) ?? true,
+            sqlite3_exec(database, "COMMIT", nil, nil, nil) == SQLITE_OK
+        else {
+            sqlite3_exec(database, "ROLLBACK", nil, nil, nil)
+            return false
+        }
+        var summary = session.summary
+        summary.customTitle = payload.customTitle
+        summary.isPinned = payload.isPinned
+        summary.generatedTitle = payload.generatedTitle
+        replace(summary)
+        return true
+    }
+
+    private func clearMessages(of id: UUID, in database: OpaquePointer) -> Bool {
+        guard let statement = prepare("DELETE FROM messages WHERE conversation_id = ?;", in: database)
+        else { return false }
+        defer { sqlite3_finalize(statement) }
+        bind(id.uuidString, to: statement, at: 1)
+        return sqlite3_step(statement) == SQLITE_DONE
+    }
+
     func remove(id: UUID) {
         guard ensureDatabase(), let database,
             let statement = prepare("DELETE FROM conversations WHERE id = ?;", in: database)

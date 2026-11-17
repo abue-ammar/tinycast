@@ -684,6 +684,20 @@ final class AppSettings {
         didSet { defaults.set(settingsFileEnabled, forKey: Key.settingsFileEnabled.rawValue) }
     }
 
+    /// Sends this Mac's data to iCloud, so only the iCloud Sync pane may turn it on.
+    var iCloudSyncEnabled: Bool {
+        didSet { defaults.set(iCloudSyncEnabled, forKey: Key.iCloudSyncEnabled.rawValue) }
+    }
+
+    /// The categories this Mac leaves out; stored as exclusions, so a new category starts synced.
+    var iCloudSyncDisabledCategories: Set<SyncCategory> {
+        didSet {
+            defaults.set(
+                iCloudSyncDisabledCategories.map(\.rawValue).sorted(),
+                forKey: Key.iCloudSyncDisabledCategories.rawValue)
+        }
+    }
+
     /// Rows a link from outside may run without asking; only `DeepLinkCoordinator` adds to it.
     var allowedDeepLinks: [String] {
         didSet { defaults.set(allowedDeepLinks, forKey: Key.allowedDeepLinks.rawValue) }
@@ -936,6 +950,10 @@ final class AppSettings {
             defaults.object(forKey: Key.supportReminders.rawValue) == nil
             || defaults.bool(forKey: Key.supportReminders.rawValue)
         settingsFileEnabled = defaults.bool(forKey: Key.settingsFileEnabled.rawValue)
+        iCloudSyncEnabled = defaults.bool(forKey: Key.iCloudSyncEnabled.rawValue)
+        iCloudSyncDisabledCategories = Set(
+            (defaults.stringArray(forKey: Key.iCloudSyncDisabledCategories.rawValue) ?? [])
+                .compactMap(SyncCategory.init(rawValue:)))
         allowedDeepLinks = defaults.stringArray(forKey: Key.allowedDeepLinks.rawValue) ?? []
     }
 }

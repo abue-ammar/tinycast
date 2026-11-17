@@ -244,6 +244,75 @@ struct SnippetRepository: Sendable {
         }
     }
 
+    // MARK: - Sync
+
+    /// Each snippet file's bytes by file name, which is a snippet's identity across Macs.
+    func files() throws(RepositoryError) -> [String: Data] {
+        try directoryLock.withLock { () throws(RepositoryError) -> [String: Data] in
+            try mappedError(at: snippetsDirectory) {
+                var files: [String: Data] = [:]
+                for fileURL in try markdownFiles(in: snippetsDirectory) {
+                    files[fileURL.lastPathComponent] = try Data(contentsOf: fileURL)
+                }
+                return files
+            }
+        }
+    }
+
+    func write(fileName: String, contents: Data) throws(RepositoryError) {
+        try directoryLock.withLock { () throws(RepositoryError) in
+            let fileURL = snippetsDirectory.appendingPathComponent(fileName)
+            try mappedError(at: fileURL) {
+                try ensureSnippetsDirectory()
+                let fileURL = try validatedFileURL(fileURL)
+                try coordinatedMutation(at: fileURL, options: .forReplacing) { coordinatedURL in
+                    try contents.write(to: try validatedFileURL(coordinatedURL), options: .atomic)
+                }
+            }
+        }
+    }
+
+    func apply(writing files: [String: Data], trashing names: Set<String>) throws(RepositoryError) {
+        for (name, contents) in files { try write(fileName: name, contents: contents) }
+        for name in names { try trash(fileName: name) }
+    }
+
+    /// Deleted on another Mac, so it goes to the Trash here rather than vanishing.
+    func trash(fileName: String) throws(RepositoryError) {
+        try directoryLock.withLock { () throws(RepositoryError) in
+            let fileURL = snippetsDirectory.appendingPathComponent(fileName)
+            try mappedError(at: fileURL) {
+                let fileURL = try validatedFileURL(fileURL)
+                guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+                try coordinatedMutation(at: fileURL, options: .forDeleting) { coordinatedURL in
+                    try FileManager.default.trashItem(
+                        at: try validatedFileURL(coordinatedURL), resultingItemURL: nil)
+                }
+            }
+        }
+    }
+
+    /// Moves a file to the next free name beside it, so a different one can take its name.
+    func setAside(fileName: String) throws(RepositoryError) {
+        try directoryLock.withLock { () throws(RepositoryError) in
+            let fileURL = snippetsDirectory.appendingPathComponent(fileName)
+            try mappedError(at: fileURL) {
+                let fileURL = try validatedFileURL(fileURL)
+                let base = fileURL.deletingPathExtension().lastPathComponent
+                var suffix = 2
+                var destination = snippetsDirectory.appendingPathComponent("\(base)-\(suffix).md")
+                while FileManager.default.fileExists(atPath: destination.path) {
+                    suffix += 1
+                    destination = snippetsDirectory.appendingPathComponent("\(base)-\(suffix).md")
+                }
+                try coordinatedMutation(at: fileURL, options: .forMoving) { coordinatedURL in
+                    try FileManager.default.moveItem(
+                        at: try validatedFileURL(coordinatedURL), to: destination)
+                }
+            }
+        }
+    }
+
     /// Only has to guarantee the folder exists; intermediates cover the channel directory too.
     private func ensureSnippetsDirectory() throws {
         try FileManager.default.createDirectory(

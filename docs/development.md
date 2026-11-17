@@ -18,6 +18,9 @@ Create the `Tinycast Self-Signed` code-signing identity once — builds sign wit
 macOS from forgetting the Accessibility grant on every rebuild. Follow **[signing.md](signing.md) §1**,
 a few `openssl`/`security` commands.
 
+Working on iCloud Sync needs the team's Apple Development signing instead; see
+[signing.md](signing.md#icloud-sync). Without it everything else builds and runs as before.
+
 That is the whole required setup. Editor configuration is personal and the repo does not prescribe it;
 the section below is a note for anyone who wants it, not a step.
 
