@@ -28,6 +28,7 @@ struct FileSearchTests {
 
     static func main() {
         queryMatching()
+        termHits()
         launcherQuery()
         ranking()
         typeFilter()
@@ -99,6 +100,51 @@ struct FileSearchTests {
         expect(
             haystack.withUTF8 { FileSearchQuery.find(Array("abc".utf8), in: $0) } == 2,
             "find returns the first case-insensitive occurrence")
+    }
+
+    static func hits(_ query: String, _ name: String) -> FileSearchQuery.TermHits {
+        let prepared = FileSearchQuery.prepare(query)!
+        var name = name
+        return name.withUTF8 { FileSearchQuery.hits(prepared, name: $0, mask: FileSearchQuery.nameMask($0)) }
+    }
+
+    static func termHits() {
+        let prepared = FileSearchQuery.prepare("claude surge skill")!
+        expect(prepared.reachesFolders && prepared.everyTerm == 0b111, "each term owns one bit")
+        expect(!FileSearchQuery.prepare("skill")!.reachesFolders, "one term never reaches folders")
+        expect(
+            !FileSearchQuery.prepare("a b c d e f g h i")!.reachesFolders,
+            "more terms than bits stay with names")
+
+        let claude = hits("claude surge skill", ".claude")
+        expect(claude.held == 0b001 && claude.startingWords == 0b001, "a dot starts a word")
+        let skills = hits("claude surge skill", "skills")
+        expect(skills.held == 0b100 && skills.startingWords == 0b100, "a word may run on")
+        let inner = hits("laude skill", ".claude")
+        expect(inner.held == 0b01 && inner.startingWords == 0, "a term inside a word starts none")
+        let later = hits("map", "bitmap-map")
+        expect(later.startingWords == 0b1, "a later occurrence can start a word")
+        expect(hits("projects resume", "Résumé").held == 0b10, "a folded name holds its plain term")
+
+        func score(_ query: String, _ name: String, holding held: UInt8) -> Int? {
+            let prepared = FileSearchQuery.prepare(query)!
+            var name = name
+            return name.withUTF8 { bytes in
+                FileSearchQuery.score(
+                    prepared, name: bytes, mask: FileSearchQuery.nameMask(bytes), holding: held,
+                    prior: 2)
+            }
+        }
+        expect(
+            score("claude skills", "skills", holding: 0b10)!
+                > score("claude skill", "SKILL.md", holding: 0b10)!,
+            "a name equal to its held term ranks first")
+        expect(
+            score("claude skill", "SKILL.md", holding: 0b10)!
+                > score("claude skill", "skillful.md", holding: 0b10)!,
+            "a held term that ends a word beats one that runs on")
+        expect(
+            score("claude skill", "notes.md", holding: 0b10) == nil, "a term the name lacks scores nothing")
     }
 
     static func ranking() {
@@ -200,6 +246,10 @@ struct FileSearchTests {
         expect(
             !shipped.excludes(name: "Preferences", path: "/Users/test/Library/Preferences"),
             "only the noisy parts of the user's Library are skipped")
+        expect(
+            shipped.excludes(name: "worktrees", path: "/Users/test/Developer/app/.claude/worktrees")
+                && shipped.excludes(name: "workspaces", path: "/Users/test/conductor/workspaces"),
+            "agent worktrees are skipped wherever they live")
 
         let edited = FileSearchIgnoreList.patterns(
             added: ["*.log", "node_modules", "*.log"], removedDefaults: [".git", "*.log"])
@@ -249,6 +299,15 @@ struct FileSearchTests {
         check(
             ["**/Cache/*.bin"], name: "blob.bin", path: "/x/Cache/nested/blob.bin",
             excluded: true, builds: 1)
+        check(
+            ["**/.claude/worktrees"], name: "WorkTrees", path: "/x/repo/.claude/WorkTrees",
+            excluded: true, builds: 1)
+        check(
+            ["**/.claude/worktrees"], name: "worktrees", path: "/x/repo/worktrees",
+            excluded: false, builds: 1)
+        check(
+            ["**/.claude/worktrees"], name: "notes.txt", path: "/x/repo/notes.txt",
+            excluded: false, builds: 0)
         check(["/x/[a/b]"], name: "a", path: "/x/a", excluded: true, builds: 1)
         check(["/x/cache\\?"], name: "cache?", path: "/x/cache?", excluded: true, builds: 1)
         check(["/x/\\*/cache"], name: "cache", path: "/x/*/cache", excluded: true, builds: 1)
@@ -258,16 +317,20 @@ struct FileSearchTests {
     static func policy() {
         let policy = FileSearchPolicy(
             scopes: ["~/Developer", "~", "/Volumes/Work", "~/Developer"],
-            ignorePatterns: ["*.log"], homeDirectory: home)
+            ignorePatterns: ["*.log"], includesHiddenFiles: false, homeDirectory: home)
         expect(
             policy.roots == ["/Users/test", "/Volumes/Work"],
             "roots are deduplicated, and a scope inside another folds into it")
         expect(
-            FileSearchPolicy(scopes: ["/", "~"], ignorePatterns: [], homeDirectory: home).roots
+            FileSearchPolicy(
+                scopes: ["/", "~"], ignorePatterns: [], includesHiddenFiles: false, homeDirectory: home
+            ).roots
                 == ["/"],
             "the whole disk covers home")
         expect(
-            FileSearchPolicy(scopes: [], ignorePatterns: [], homeDirectory: home).roots.isEmpty,
+            FileSearchPolicy(
+                scopes: [], ignorePatterns: [], includesHiddenFiles: false, homeDirectory: home
+            ).roots.isEmpty,
             "a cleared list resolves to no roots at all")
         expect(
             policy.ignore.excludes(name: "run.log", path: "/Volumes/Work/run.log")
@@ -276,16 +339,24 @@ struct FileSearchTests {
 
         let same = FileSearchPolicy(
             scopes: ["~/Developer", "~", "/Volumes/Work", "~/Developer"],
-            ignorePatterns: ["*.log"], homeDirectory: home)
+            ignorePatterns: ["*.log"], includesHiddenFiles: false, homeDirectory: home)
         expect(policy == same && policy.fingerprint == same.fingerprint, "the fingerprint is stable")
         let other = FileSearchPolicy(
-            scopes: ["~"], ignorePatterns: ["*.txt"], homeDirectory: home)
+            scopes: ["~"], ignorePatterns: ["*.txt"], includesHiddenFiles: false, homeDirectory: home)
         expect(policy.fingerprint != other.fingerprint, "changing the settings changes the fingerprint")
+        let hidden = FileSearchPolicy(
+            scopes: ["~/Developer", "~", "/Volumes/Work", "~/Developer"],
+            ignorePatterns: ["*.log"], includesHiddenFiles: true, homeDirectory: home)
+        expect(
+            policy != hidden && policy.fingerprint != hidden.fingerprint,
+            "including hidden files rebuilds the index")
 
         let priors: [(String, Int8)] = [
             ("/Users/test", 2),
             ("/Users/test/Documents/Work", 2),
-            ("/Users/test/.config", 0),
+            ("/Users/test/.config", 1),
+            ("/Users/test/.config/Tool.app/Contents", 0),
+            ("/Users/test/Library/CloudStorage/Dropbox/.cache", 1),
             ("/Users/test/Library/Caches", 0),
             ("/Users/test/Library/CloudStorage/Dropbox/Team", 2),
             ("/Users/test/Library/Mobile Documents/com~apple~CloudDocs/Notes", 2),

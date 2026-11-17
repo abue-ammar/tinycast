@@ -4,6 +4,7 @@ struct FileSearchPolicy: Sendable, Equatable {
     struct Request: Codable, Sendable, Equatable {
         let scopes: [String]
         let ignorePatterns: [String]
+        let includesHiddenFiles: Bool
         let homeDirectory: String
     }
 
@@ -26,11 +27,13 @@ struct FileSearchPolicy: Sendable, Equatable {
         "/Library/CloudStorage", "/Library/Mobile Documents/com~apple~CloudDocs"
     ]
 
-    init(scopes: [String], ignorePatterns: [String], homeDirectory: URL) {
+    var includesHiddenFiles: Bool { request.includesHiddenFiles }
+
+    init(scopes: [String], ignorePatterns: [String], includesHiddenFiles: Bool, homeDirectory: URL) {
         self.init(
             Request(
                 scopes: scopes, ignorePatterns: ignorePatterns,
-                homeDirectory: homeDirectory.path))
+                includesHiddenFiles: includesHiddenFiles, homeDirectory: homeDirectory.path))
     }
 
     init(_ request: Request) {
@@ -40,7 +43,9 @@ struct FileSearchPolicy: Sendable, Equatable {
         homePath = homeDirectory.path
         roots = FileSearchScope.roots(for: request.scopes, homeDirectory: homeDirectory)
         ignore = FileSearchIgnoreList(patterns: request.ignorePatterns, homeDirectory: homeDirectory)
-        fingerprint = Self.fnv1a((roots + ["\0"] + request.ignorePatterns).joined(separator: "\n"))
+        let visibility = request.includesHiddenFiles ? "hidden" : "visible"
+        fingerprint = Self.fnv1a(
+            ([visibility] + roots + ["\0"] + request.ignorePatterns).joined(separator: "\n"))
     }
 
     static func == (lhs: Self, rhs: Self) -> Bool { lhs.request == rhs.request }
@@ -50,21 +55,27 @@ struct FileSearchPolicy: Sendable, Equatable {
         if FileSearchScope.contains(homePath, path) {
             let rest = path.dropFirst(homePath.count)
             for cloud in Self.cloudDrives where rest == cloud || rest.hasPrefix(cloud + "/") {
-                return Self.isPlain(rest.dropFirst(cloud.count)) ? 2 : 0
+                return Self.prior(of: rest.dropFirst(cloud.count), plain: 2)
             }
             if rest == "/Library" || rest.hasPrefix("/Library/") { return 0 }
-            return Self.isPlain(rest) ? 2 : 0
+            return Self.prior(of: rest, plain: 2)
         }
         if let top = path.split(separator: "/").first, Self.systemFolders.contains(top) { return 0 }
-        return Self.isPlain(path[...]) ? 1 : 0
+        return Self.prior(of: path[...], plain: 1)
     }
 
-    private static func isPlain(_ path: Substring) -> Bool {
-        path.split(separator: "/").allSatisfy { component in
-            guard !component.hasPrefix(".") else { return false }
-            guard let dot = component.lastIndex(of: ".") else { return true }
-            return !bundleExtensions.contains(component[component.index(after: dot)...].lowercased())
+    /// A bundle's insides are never the user's own files; a hidden folder's are, just less often.
+    private static func prior(of path: Substring, plain: Int8) -> Int8 {
+        var prior = plain
+        for component in path.split(separator: "/") {
+            if let dot = component.lastIndex(of: "."),
+                bundleExtensions.contains(component[component.index(after: dot)...].lowercased())
+            {
+                return 0
+            }
+            if component.hasPrefix(".") { prior = min(prior, 1) }
         }
+        return prior
     }
 
     private static func fnv1a(_ text: String) -> UInt64 {

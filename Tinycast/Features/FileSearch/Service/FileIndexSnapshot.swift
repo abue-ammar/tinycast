@@ -128,10 +128,39 @@ final class FileIndexSnapshot: @unchecked Sendable {
         directoryBits[index >> 6] & (1 << UInt64(index & 63)) != 0
     }
 
+    var folderCount: Int { childStart.count }
+
     func children(of index: Int) -> Range<Int> {
         guard let folder = folder(of: index) else { return 0..<0 }
+        return children(ofFolder: folder)
+    }
+
+    func children(ofFolder folder: Int) -> Range<Int> {
         let start = Int(childStart[folder])
         return start..<start + Int(childCount[folder])
+    }
+
+    func folders(in range: Range<Int>) -> Range<Int> {
+        rank(range.lowerBound)..<rank(range.upperBound)
+    }
+
+    func forEachFolder(in range: Range<Int>, _ body: (_ index: Int, _ folder: Int) -> Void) {
+        guard !range.isEmpty else { return }
+        var word = range.lowerBound >> 6
+        var folder = rank(range.lowerBound)
+        var bits = directoryBits[word] & ~((1 << UInt64(range.lowerBound & 63)) - 1)
+        while true {
+            while bits != 0 {
+                let index = word << 6 | bits.trailingZeroBitCount
+                guard index < range.upperBound else { return }
+                body(index, folder)
+                folder += 1
+                bits &= bits - 1
+            }
+            word += 1
+            guard word << 6 < range.upperBound else { return }
+            bits = directoryBits[word]
+        }
     }
 
     func subtree(of index: Int) -> Range<Int> {
@@ -170,12 +199,16 @@ final class FileIndexSnapshot: @unchecked Sendable {
         return nil
     }
 
-    /// Folders are numbered in entry order, so a folder's number is the directories before it.
     private func folder(of index: Int) -> Int? {
+        isDirectory(index) ? rank(index) : nil
+    }
+
+    /// Folders are numbered in entry order, so a folder's number is the directories before it.
+    private func rank(_ index: Int) -> Int {
+        guard index < entryCount else { return folderCount }
         let word = index >> 6
-        let bit: UInt64 = 1 << UInt64(index & 63)
-        guard directoryBits[word] & bit != 0 else { return nil }
-        return Int(directoryRank[word]) + (directoryBits[word] & (bit - 1)).nonzeroBitCount
+        return Int(directoryRank[word])
+            + (directoryBits[word] & ((1 << UInt64(index & 63)) - 1)).nonzeroBitCount
     }
 
     /// Only block starts are stored, not a parent per entry.

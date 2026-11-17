@@ -383,6 +383,9 @@ enum SettingsSearchCatalog {
             group: .fileSearchSearchScopes, "Search Scopes",
             keywords: ["folders", "locations", "home", "whole disk", "add folder"]),
         .init(
+            .fileSearchSearchScopes, "Include hidden files",
+            keywords: ["dotfiles", "dot folders", "invisible"]),
+        .init(
             group: .fileSearchIgnorePatterns, "Ignore Patterns",
             keywords: ["exclude", "glob", "node_modules", "skip", "ignore folder"])
     ]

@@ -8,7 +8,9 @@ struct FileSearchIgnoreList: Sendable, Equatable {
         "node_modules", ".git", ".build", "build", "dist", "target", "DerivedData", "Pods", ".next",
         ".venv", "*.photoslibrary", "~/.Trash", "~/.cache", "~/.npm", "~/Library/Application Support",
         "~/Library/Caches", "~/Library/Containers", "~/Library/Developer", "~/Library/Group Containers",
-        "~/Library/Mail", "/Library/Caches", "/private/var/folders"
+        "~/Library/Mail", "/Library/Caches", "/private/var/folders", "**/.claude/worktrees",
+        "**/.codex/worktrees", "**/.cursor/worktrees", "**/.gemini/worktrees", "**/.windsurf/worktrees",
+        "**/.local/share/opencode/worktree", "**/conductor/workspaces"
     ]
 
     /// A shipped rule is governed by `removedDefaults` alone, even when `added` repeats it.
@@ -50,7 +52,7 @@ struct FileSearchIgnoreList: Sendable, Equatable {
             if literal.equals(name) { return true }
         }
         for glob in nameGlobs where glob.matches(name) { return true }
-        guard pathGlobs.contains(where: { $0.couldMatchName(name) }) else { return false }
+        guard pathGlobs.contains(where: { $0.couldMatchName(name, length: length) }) else { return false }
         let path = path()
         return path.withCString { path in pathGlobs.contains { $0.matches(path) } }
     }
@@ -69,10 +71,11 @@ private struct Glob: Sendable, Equatable {
     init(_ pattern: String) {
         terminated = pattern.utf8CString
         length = terminated.count - 1
-        if let slash = pattern.lastIndex(of: "/"), !pattern.hasSuffix("/"),
-            !pattern.contains(where: { Self.isMetacharacter($0) || $0 == "\\" })
+        let tail = pattern.lastIndex(of: "/").map { pattern[pattern.index(after: $0)...] }
+        if let tail, !tail.isEmpty, !tail.contains(where: Self.isMetacharacter),
+            !pattern.contains(where: { $0 == "[" || $0 == "\\" })
         {
-            literalPathName = String(pattern[pattern.index(after: slash)...]).utf8CString
+            literalPathName = String(tail).utf8CString
         } else {
             literalPathName = nil
         }
@@ -86,9 +89,11 @@ private struct Glob: Sendable, Equatable {
         terminated.withUnsafeBufferPointer { strcasecmp($0.baseAddress!, name) == 0 }
     }
 
-    func couldMatchName(_ name: UnsafePointer<CChar>) -> Bool {
+    /// Without `[` or `\` every `/` is literal, so a literal last component must be the name.
+    func couldMatchName(_ name: UnsafePointer<CChar>, length: Int) -> Bool {
         guard let literalPathName else { return true }
-        return literalPathName.withUnsafeBufferPointer { fnmatch($0.baseAddress!, name, FNM_CASEFOLD) == 0 }
+        return literalPathName.count - 1 == length
+            && literalPathName.withUnsafeBufferPointer { strcasecmp($0.baseAddress!, name) == 0 }
     }
 
     func matches(_ candidate: UnsafePointer<CChar>) -> Bool {

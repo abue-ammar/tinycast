@@ -344,6 +344,13 @@ final class AppSettings {
         }
     }
 
+    var fileSearchIncludesHiddenFiles: Bool {
+        didSet {
+            defaults.set(
+                fileSearchIncludesHiddenFiles, forKey: Key.fileSearchIncludesHiddenFiles.rawValue)
+        }
+    }
+
     var notesEnabled: Bool {
         didSet { defaults.set(notesEnabled, forKey: Key.notesEnabled.rawValue) }
     }
@@ -790,6 +797,8 @@ final class AppSettings {
         fileSearchRemovedDefaultPatterns =
             defaults.stringArray(forKey: Key.fileSearchRemovedDefaultPatterns.rawValue) ?? []
         fileSearchShowInLauncher = defaults.bool(forKey: Key.fileSearchShowInLauncher.rawValue)
+        fileSearchIncludesHiddenFiles = defaults.bool(
+            forKey: Key.fileSearchIncludesHiddenFiles.rawValue)
         notesEnabled = defaults.bool(forKey: Key.notesEnabled.rawValue)
         dictationEnabled = defaults.bool(forKey: Key.dictationEnabled.rawValue)
         dictationMode =
