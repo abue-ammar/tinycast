@@ -7,7 +7,7 @@ struct FileSearchPerformanceTests {
         let arguments = Array(CommandLine.arguments.dropFirst())
         let scopes = arguments.isEmpty ? ["/System", "/Applications", "/Library", "/usr"] : arguments
         let policy = FileSearchPolicy(
-            scopes: scopes, ignorePatterns: [],
+            scopes: scopes, ignorePatterns: [], includesHiddenFiles: true,
             homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
         let url = FileManager.default.temporaryDirectory.appending(path: "FileSearchPerformanceTests.bin")
         defer { try? FileManager.default.removeItem(at: url) }
@@ -32,7 +32,10 @@ struct FileSearchPerformanceTests {
                 format: "%d entries  crawl %.0f ms  write %.0f ms  index %.1f MB",
                 index.itemCount, crawled, written, Double(size) / 1_048_576))
         measure("(recent)") { index.recent(filter: .all).count }
-        for query in ["a", "e", "swift", "pdf", "project", "main.rs", "info plist", "résumé"] {
+        for query in [
+            "a", "e", "swift", "pdf", "project", "main.rs", "info plist", "résumé", "xcode plist",
+            "lproj localizable", "appkit resources"
+        ] {
             let prepared = FileSearchQuery.prepare(query)!
             measure(query) { index.search(prepared, filter: .all).count }
         }

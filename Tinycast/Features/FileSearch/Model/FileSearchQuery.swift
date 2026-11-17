@@ -14,6 +14,17 @@ enum FileSearchQuery {
         let terms: [[UInt8]]
         let whole: [UInt8]
         let mask: UInt64
+        let termMasks: [UInt64]
+
+        /// Each term owns one bit of a `UInt8`, so folders can stand in for at most eight.
+        var reachesFolders: Bool { (2...8).contains(terms.count) }
+
+        var everyTerm: UInt8 { UInt8(truncatingIfNeeded: (1 << terms.count) - 1) }
+    }
+
+    struct TermHits: Sendable {
+        var held: UInt8 = 0
+        var startingWords: UInt8 = 0
     }
 
     static func answersLauncher(_ query: String) -> Bool {
@@ -44,7 +55,8 @@ enum FileSearchQuery {
         guard !terms.isEmpty else { return nil }
         let whole = Array(terms.joined(separator: [0x20]))
         // From the terms, not `whole`: its spaces are no letter a name has to contain.
-        return Prepared(terms: terms, whole: whole, mask: mask(of: terms.joined()))
+        return Prepared(
+            terms: terms, whole: whole, mask: mask(of: terms.joined()), termMasks: terms.map { mask(of: $0) })
     }
 
     static func fold(_ text: String) -> String {
@@ -96,23 +108,80 @@ enum FileSearchQuery {
             guard let at = find(term, in: name) else { return nil }
             if index == 0 { first = at }
         }
-        let lead = query.terms[0]
         let wholeAt = query.terms.count == 1 ? first : find(query.whole, in: name)
-        var score = Int(prior) * priorWeight - 4 * name.count
+        var score =
+            Int(prior) * priorWeight - 4 * name.count + leadScore(query.terms[0], at: first, in: name)
         if wholeAt == 0, name.count == query.whole.count {
             score += 4_000
         } else if query.terms.count > 1, wholeAt != nil {
             score += 1_500
         }
-        if first == 0 {
-            score += 2_000
-        } else if isBoundary(name, at: first) {
-            score += 1_000
+        return score
+    }
+
+    static func score(
+        _ query: Prepared, name: UnsafeBufferPointer<UInt8>, mask: UInt64, holding held: UInt8,
+        prior: Int8
+    ) -> Int? {
+        withFolded(name, mask: mask) { name in
+            let lead = query.terms[held.trailingZeroBitCount]
+            guard let first = find(lead, in: name) else { return nil }
+            var score = Int(prior) * priorWeight - 4 * name.count + leadScore(lead, at: first, in: name)
+            if first == 0, name.count == lead.count { score += 4_000 }
+            return score
         }
+    }
+
+    static func hits(_ query: Prepared, name: UnsafeBufferPointer<UInt8>, mask: UInt64) -> TermHits {
+        var candidates: UInt8 = 0
+        for index in query.termMasks.indices where mask & query.termMasks[index] == query.termMasks[index] {
+            candidates |= 1 << index
+        }
+        guard candidates != 0 else { return TermHits() }
+        return withFolded(name, mask: mask) { name in
+            var hits = TermHits()
+            var remaining = candidates
+            while remaining != 0 {
+                let index = remaining.trailingZeroBitCount
+                remaining &= remaining - 1
+                let term = query.terms[index]
+                guard let first = find(term, in: name) else { continue }
+                hits.held |= 1 << index
+                if startsWord(term, in: name, from: first) { hits.startingWords |= 1 << index }
+            }
+            return hits
+        }
+    }
+
+    private static func withFolded<T>(
+        _ name: UnsafeBufferPointer<UInt8>, mask: UInt64, _ body: (UnsafeBufferPointer<UInt8>) -> T
+    ) -> T {
+        guard mask & nonASCIIBit != 0 else { return body(name) }
+        let folded = Array(fold(String(decoding: name, as: UTF8.self)).utf8)
+        return folded.withUnsafeBufferPointer(body)
+    }
+
+    private static func leadScore(
+        _ lead: [UInt8], at first: Int, in name: UnsafeBufferPointer<UInt8>
+    ) -> Int {
+        var score = first == 0 ? 2_000 : isBoundary(name, at: first) ? 1_000 : 0
         // `report` should find `report.pdf` ahead of `reporting.pdf`.
         let end = first + lead.count
         if end == name.count || !isAlphanumeric(name[end]) { score += 500 }
         return score
+    }
+
+    private static func startsWord(
+        _ term: [UInt8], in name: UnsafeBufferPointer<UInt8>, from first: Int
+    ) -> Bool {
+        var at = first
+        while at > 0, !isBoundary(name, at: at) {
+            guard let next = find(term, in: UnsafeBufferPointer(rebasing: name[(at + 1)...])) else {
+                return false
+            }
+            at += 1 + next
+        }
+        return true
     }
 
     static func find(_ needle: [UInt8], in haystack: UnsafeBufferPointer<UInt8>) -> Int? {

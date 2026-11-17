@@ -204,7 +204,8 @@ nonisolated enum FileIndexCrawler {
             let status = field.loadUnaligned(as: UInt32.self)
             if status & UInt32(DIR_MNTSTATUS_MNTPOINT | DIR_MNTSTATUS_TRIGGER) != 0 { return }
         }
-        guard length > 0, length <= Int(UInt16.max),
+        let isHidden = name.pointee == 0x2E
+        guard length > 0, length <= Int(UInt16.max), !isHidden || policy.includesHiddenFiles,
             !policy.ignore.excludes(
                 name: name, length: length,
                 path: {
@@ -212,12 +213,10 @@ nonisolated enum FileIndexCrawler {
                 })
         else { return }
 
-        let isDirectory = type == VDIR.rawValue
-        let isHidden = name.pointee == 0x2E
         listing.entries.append(
             Entry(
                 nameStart: UInt32(listing.names.count), nameLength: UInt16(length),
-                isDirectory: isDirectory, prior: isHidden ? 0 : prior,
+                isDirectory: type == VDIR.rawValue, prior: isHidden ? min(prior, 1) : prior,
                 mtime: UInt32(clamping: mtime), child: none))
         listing.names.append(contentsOf: UnsafeRawBufferPointer(start: name, count: length))
     }

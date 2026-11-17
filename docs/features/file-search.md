@@ -15,13 +15,14 @@ design follows [fsearch](https://github.com/noahdunnagan/fsearch).
   probes a TCC-guarded file, which never prompts. The pane and the palette both say how to grant it.
 - **Scopes are the crawl roots.** Only what lies under a scope is indexed or searched; a scope inside
   another stays listed but folds into it at crawl time, and a cleared list indexes nothing. The default
-  is home (`~`): dotfiles are user files, the rest of the disk is the system's, and apps are the
-  launcher's.
+  is home (`~`): the rest of the disk is the system's, and apps are the launcher's.
 - **A matching ignore pattern skips a folder and everything in it at crawl time.** Changing either list
   rebuilds the index, debounced by a second; the old index serves until the new one maps.
-- **Hidden files and bundle contents are indexed.** They rank last instead (see Ranking), and the ignore
-  list is how a user narrows further. Mount points are never entered, which keeps firmlinked files from
-  appearing twice through `/System/Volumes/Data` and keeps other volumes out.
+- **Hidden files are indexed only with Include hidden files on, and it is off by default.** The crawl
+  skips a name that starts with a dot in `FileIndexCrawler.append`, the one place a listing is made, so a
+  rebuild, a live diff and the walk of a new folder always agree. Bundle contents are always indexed and
+  rank last (see Searching). Mount points are never entered, which keeps firmlinked files from appearing
+  twice through `/System/Volumes/Data` and keeps other volumes out.
 - **A crawl never downloads.** Every listing runs with `IOPOL_MATERIALIZE_DATALESS_FILES_OFF` on its own
   thread, so dataless iCloud and File Provider items are listed as they are.
 - **A live update is idempotent.** Every FSEvents event relists one folder and diffs it, so a replay, a
@@ -91,9 +92,21 @@ One score orders the results: exact name +4000, name starts with the first term 
 word or camel-case boundary +1000, terms typed in order +1500, first term ending a word +500, the prior
 × 1500, minus 4 per name byte. Ties go to the shorter path.
 
+A query of two to eight terms that leaves room under 200 also matches **through folders**, so
+`claude surge skill` finds `~/.claude/skills/surge/SKILL.md`. An entry qualifies when its name holds at
+least one term and the folders between its scope root and itself start a word with every other term.
+These hits list after every name hit, so they never reorder one, and a single term or a list the name
+pass already filled does no extra work. Each term is one bit of a `UInt8`: the pass works out every
+distinct name's held and word-starting terms across the cores, gives each folder its own set in
+parallel, ORs each parent's set into its children in one forward pass (folders are numbered in entry
+order, so a parent always comes first), and then walks only the children of folders whose set is not
+empty. A hit is scored on the first term its name holds, with the bonuses above; the overlay of live
+additions takes its folders from its path.
+
 `prior` is set per folder at crawl time and inherited by its files: 2 under home and the cloud drives,
-1 elsewhere in plain sight (`/Applications`, `/Users/Shared`), 0 for hidden paths, system folders,
-`~/Library` and anything inside a bundle.
+1 elsewhere in plain sight (`/Applications`, `/Users/Shared`) and for hidden paths, 0 for system
+folders, `~/Library` and anything inside a bundle. A hidden path at 1 stays out of Recent and out of
+the live diff's date comparison, so a tool that writes under `~/.claude` all day costs nothing.
 
 An empty query lists **Recent**: the 20 newest files with prior 2, by modification date. The session
 keeps those rows across closes and recomputes them in the background whenever the index is swapped in
@@ -109,7 +122,10 @@ reports the failure when opened. Icons and previews are still purged on close.
 The 2026-10-13 benchmark (`Tests/FileSearchPerformanceTests.swift`, `/System /Applications /Library /usr`,
 844,911 entries) crawled in 5.2 s with a 103 MB helper peak and wrote a 16.6 MB index, down from 40 MB
 before names were interned and the per-entry folder and parent columns dropped. With whole-module
-optimization, queries took 0.3–2.7 ms and single letters 3.4 ms.
+optimization, queries took 0.3–2.7 ms and single letters 3.4 ms. On 2026-11-18 (857,059 entries)
+single-term and name-filled queries were unchanged by folder matching, and queries completed through
+folders (`lproj localizable`, `appkit resources`, `xcode plist`) took 2.2–3.5 ms: about 1–1.5 ms for
+the folder pass, the rest for building the rows it adds.
 
 ## Live updates
 
@@ -161,7 +177,9 @@ somewhere on another; `/` is shown as the startup volume's name. The helper reso
 | contains `/`, or starts with `~/` | the whole absolute path, via `fnmatch` | `~/Movies`, `**/[Cc]ache/**` |
 
 The defaults skip what a search for one's own files never wants: build output and dependency
-folders (`node_modules`, `.git`, `build`, `DerivedData`, `.venv`, …), the Photos library, the Trash,
+folders (`node_modules`, `.git`, `build`, `DerivedData`, `.venv`, …), the worktrees AI coding agents
+keep (`**/.claude/worktrees`, `**/.codex/worktrees`, `**/conductor/workspaces`, …), each a full copy of
+a repository, the Photos library, the Trash,
 the `~/.cache` and `~/.npm` caches, and the noisy parts of `~/Library` — `Application Support`,
 `Caches`, `Containers`, `Developer`, `Group Containers` and `Mail`. Together they hold most of a home
 folder's entries and most of its churn: one browser's cache alone rewrites tens of thousands of files
@@ -174,8 +192,11 @@ twice, and a default repeated in `fileSearchIgnorePatterns` is ignored, so a shi
 switch.
 
 `fnmatch` runs with `FNM_CASEFOLD` and without `FNM_PATHNAME`, so `*` spans `/`. Name patterns read the
-NUL-terminated name straight out of the `getattrlistbulk` buffer. Literal path patterns first check the
-entry name, so an unrelated entry builds no path; wildcard and escaped paths keep the full-path match.
+NUL-terminated name straight out of the `getattrlistbulk` buffer. A path pattern whose last component
+is literal (no `*` or `?` there, and no `[` or `\` anywhere, so every `/` is a real slash) first
+compares that component with the entry name by length and `strcasecmp`, so an unrelated entry builds no
+path and `**/.claude/worktrees` costs a crawl no more than `~/Movies`. Other wildcard and escaped paths
+keep the full-path match.
 **Add Folder…** stores the chosen folder as a `~`-relative path pattern.
 
 ## Palette and actions
@@ -296,8 +317,9 @@ fitted cache, purged when the palette hides.
 ## Invocation
 
 Settings ▸ File Search owns the `fileSearchEnabled` switch, which is off when its preference is absent,
-the **Show in launcher** switch beneath it, along with the Full Disk Access status, the index status and **Rebuild Index**, the scope list, the
-ignore patterns and the Search Files command row. The lists are ordinary settings carried by Tinycast
+the **Show in launcher** switch beneath it, along with the Full Disk Access status, the index status and **Rebuild Index**, the scope list
+with **Include hidden files** (`fileSearchIncludesHiddenFiles`), the ignore patterns and the Search Files
+command row. The lists are ordinary settings carried by Tinycast
 settings backups; importing them grants no permission.
 
 `AppCore` observes the switch and asks `FileSearchCoordinator` to project `CommandID.searchFiles` into

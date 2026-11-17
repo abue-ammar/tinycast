@@ -89,6 +89,7 @@ enum SettingsFileSchema {
         case .quickActionCommands: return launcher.commandsBinding(for: key, owner: .quickActions)
         case .fileSearchEnabled: return bind(settings, \.fileSearchEnabled)
         case .fileSearchScopes: return bind(settings, \.fileSearchScopes)
+        case .fileSearchIncludesHiddenFiles: return bind(settings, \.fileSearchIncludesHiddenFiles)
         case .fileSearchIgnorePatterns: return bind(settings, \.fileSearchIgnorePatterns)
         case .fileSearchRemovedDefaultPatterns:
             return bind(settings, \.fileSearchRemovedDefaultPatterns)

@@ -27,7 +27,8 @@ struct FileIndexTests {
         }
 
         let policy = FileSearchPolicy(
-            scopes: [root.path], ignorePatterns: ["node_modules", "~/Movies"], homeDirectory: root)
+            scopes: [root.path], ignorePatterns: ["node_modules", "~/Movies"], includesHiddenFiles: true,
+            homeDirectory: root)
         let index = FileIndex()
         let snapshot = try build(policy, at: scratch.appending(path: "index.bin"))
         index.replace(with: snapshot, policy: policy)
@@ -35,6 +36,7 @@ struct FileIndexTests {
         layout(snapshot, root: root.path)
         search(index, root: root.path)
         try live(index, root: root, policy: policy)
+        try folders(in: scratch)
 
         print(failures == 0 ? "File index tests passed" : "\(failures) file index tests failed")
         exit(failures == 0 ? 0 : 1)
@@ -149,6 +151,65 @@ struct FileIndexTests {
         expect(
             !index.apply(folder: developer.path + "/application/node_modules"),
             "an event in a skipped folder is ignored")
+    }
+
+    static func folders(in scratch: URL) throws {
+        let root = URL(fileURLWithPath: realPath(scratch.path)).appending(path: "agents")
+        for file in [
+            ".claude/skills/surge/SKILL.md", ".claude/skills/review/SKILL.md",
+            ".codex/skills/surge/SKILL.md", "Projects/surge-skill.md",
+            "Projects/app/.claude/worktrees/copy/skills/surge/SKILL.md", ".zshrc"
+        ] {
+            try write(root.appending(path: file))
+        }
+        func policy(includesHiddenFiles: Bool) -> FileSearchPolicy {
+            FileSearchPolicy(
+                scopes: [root.path], ignorePatterns: FileSearchIgnoreList.defaults,
+                includesHiddenFiles: includesHiddenFiles, homeDirectory: root)
+        }
+        let index = FileIndex()
+
+        let visible = policy(includesHiddenFiles: false)
+        index.replace(with: try build(visible, at: scratch.appending(path: "visible.bin")), policy: visible)
+        expect(index.itemCount == 3, "hidden files stay out by default")
+        expect(paths(index, "claude surge skill").isEmpty, "and so do the folders that hold them")
+        try write(root.appending(path: ".bashrc"))
+        index.apply(folder: root.path)
+        try write(root.appending(path: ".claude/skills/surge/notes.md"))
+        expect(
+            !index.apply(folder: root.appending(path: ".claude/skills/surge").path) && index.itemCount == 3,
+            "neither a new dotfile nor an event inside a hidden folder adds anything")
+
+        let hidden = policy(includesHiddenFiles: true)
+        index.replace(with: try build(hidden, at: scratch.appending(path: "hidden.bin")), policy: hidden)
+        expect(
+            paths(index, "claude surge skill")
+                == ["~/.claude/skills/surge", "~/.claude/skills/surge/SKILL.md"],
+            "folders above an entry stand in for the terms its name lacks")
+        expect(paths(index, "laude surge skill").isEmpty, "a folder term must start a word")
+        expect(paths(index, "worktrees skill").isEmpty, "agent worktrees are skipped")
+        let surge = paths(index, "surge skill")
+        expect(surge.first == "~/Projects/surge-skill.md", "a name holding every term comes first")
+        expect(
+            Set(surge.dropFirst()) == [
+                "~/.claude/skills/surge", "~/.codex/skills/surge", "~/.claude/skills/surge/SKILL.md",
+                "~/.codex/skills/surge/SKILL.md"
+            ],
+            "then every entry its folders complete")
+        expect(
+            !paths(index, "skill").contains { !$0.lowercased().contains("skill") },
+            "a single term still matches names only")
+
+        try write(root.appending(path: ".claude/skills/forge/SKILL.md"))
+        index.apply(folder: root.appending(path: ".claude/skills").path)
+        expect(
+            paths(index, "claude forge skill")
+                == ["~/.claude/skills/forge", "~/.claude/skills/forge/SKILL.md"],
+            "an entry added since the snapshot is matched through its folders too")
+    }
+
+    static func paths(_ index: FileIndex, _ query: String) -> [String] {
+        index.search(FileSearchQuery.prepare(query)!, filter: .all).map { "\($0.parentPath)/\($0.name)" }
     }
 
     static func names(
