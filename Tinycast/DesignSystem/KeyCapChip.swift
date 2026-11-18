@@ -11,25 +11,13 @@ struct KeyCapChip: View {
             if let prefix {
                 HStack(spacing: spacing) {
                     Text(prefix).textScale(.secondary)
-                    KeyCapChip.legend(text)
+                    Text(text)
                 }
             } else {
-                KeyCapChip.legend(text)
+                Text(text)
             }
         }
     }
-
-    nonisolated static func inlineText(_ caps: [String], separator: String = "") -> Text {
-        caps.dropFirst().reduce(legend(caps.first ?? "")) { line, cap in
-            Text("\(line)\(separator)\(legend(cap))")
-        }
-    }
-
-    private nonisolated static func legend(_ text: String) -> Text {
-        symbolLegends[text].map { Text(Image(systemName: $0)) } ?? Text(text)
-    }
-
-    private nonisolated static let symbolLegends = ["🎤": "mic"]
 
     enum Style {
         case outline

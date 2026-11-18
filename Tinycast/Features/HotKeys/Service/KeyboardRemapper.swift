@@ -28,25 +28,22 @@ final class KeyboardRemapper {
     private(set) var sawKarabinerConflict = false
 
     private let defaults: UserDefaults
-    private let recoveryKey: String
     private let instanceLock: RemapInstanceLock?
     private let bootSessionID: String?
     private var savedMappings: [String: SavedMapping] = [:]
     private lazy var system: HIDEventSystem? = makeSystem()
 
-    init(
-        defaults: UserDefaults = .standard, recoveryKey: String = "hyperKeyKeyboardMappings",
-        instanceLock: RemapInstanceLock? = nil
-    ) {
+    private static let recoveryKey = "hyperKeyKeyboardMappings"
+
+    init(defaults: UserDefaults = .standard, instanceLock: RemapInstanceLock? = nil) {
         self.defaults = defaults
-        self.recoveryKey = recoveryKey
         self.instanceLock = instanceLock
         bootSessionID = Self.currentBootSessionID()
         reloadRecovery()
     }
 
     private func reloadRecovery() {
-        let recovery = defaults.data(forKey: recoveryKey).flatMap {
+        let recovery = defaults.data(forKey: Self.recoveryKey).flatMap {
             try? JSONDecoder().decode(Recovery.self, from: $0)
         }
         savedMappings = recovery?.bootSessionID == bootSessionID ? recovery?.keyboards ?? [:] : [:]
@@ -99,7 +96,7 @@ final class KeyboardRemapper {
 
     @discardableResult
     private func reconcileAll() -> (succeeded: Bool, changed: Bool) {
-        guard mapping != nil || defaults.object(forKey: recoveryKey) != nil else { return (true, false) }
+        guard mapping != nil || defaults.object(forKey: Self.recoveryKey) != nil else { return (true, false) }
         return withOwnership(unavailable: (false, false)) {
             guard mapping != nil || !savedMappings.isEmpty else { return (true, false) }
             guard bootSessionID != nil, let system else { return (false, false) }
@@ -182,12 +179,12 @@ final class KeyboardRemapper {
     private func save(_ mapping: SavedMapping?, for id: String) {
         savedMappings[id] = mapping
         if savedMappings.isEmpty {
-            defaults.removeObject(forKey: recoveryKey)
+            defaults.removeObject(forKey: Self.recoveryKey)
         } else if let bootSessionID,
             let data = try? JSONEncoder().encode(
                 Recovery(bootSessionID: bootSessionID, keyboards: savedMappings))
         {
-            defaults.set(data, forKey: recoveryKey)
+            defaults.set(data, forKey: Self.recoveryKey)
         }
     }
 

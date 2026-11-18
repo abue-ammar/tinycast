@@ -121,7 +121,7 @@ struct OnboardingView: View {
 
     private var readyMessage: Text {
         if let caps = hotKeys.binding(for: .togglePalette)?.keycaps {
-            return Text("Press \(KeyCapChip.inlineText(caps)) anytime to start using Tinycast.")
+            return Text("Press \(caps.joined()) anytime to start using Tinycast.")
         }
         return Text("Tinycast is ready. Set a shortcut in Settings to summon it.")
     }

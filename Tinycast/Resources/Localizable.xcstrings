@@ -3649,16 +3649,6 @@
         }
       }
     },
-    "%@%@%@" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%1$@%2$@%3$@"
-          }
-        }
-      }
-    },
     "%@, %@ layout" : {
       "localizations" : {
         "de" : {
@@ -144684,58 +144674,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "macOS 隔离了下载的 App，Tinycast 无法清除此标记。"
-          }
-        }
-      }
-    },
-    "macOS refused to remap the Dictation key" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS hat die Neubelegung der Diktattaste abgelehnt"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS rechazó la reasignación de la tecla de dictado"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS a refusé de réaffecter la touche de dictée"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOSが音声入力キーの再割り当てを拒否しました"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS가 받아쓰기 키 재매핑을 거부함"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O macOS recusou o remapeamento da tecla de Ditado"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS отказалась переназначить клавишу Диктовки"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "macOS 拒绝重新映射听写键"
           }
         }
       }

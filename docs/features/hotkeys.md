@@ -405,20 +405,6 @@ The one-second watchdog runs only while waiting (for a grant, a refused remap or
 retries `apply()`. The HID remap outlives the process, so `applicationWillTerminate` takes it off every
 keyboard before exiting.
 
-## The Dictation key
-
-Apple's 🎤 key (Consumer `0xC000000CF`) can't be recorded. While a recorder is open or a binding uses
-F20, `DictationKeyManager` remaps it to **F20**, a bare F-key Carbon fires on press and release, even
-in Secure Input, with no tap or permission. Otherwise, and in other users' sessions, macOS Dictation
-keeps it. F20 keycaps draw as `mic`.
-
-Like Hyper's, its remap and recovery journal are guarded by a `RemapInstanceLock`, on
-`com.tinycast.dictation-key.lock`, held while the remap is wanted. A second copy that finds the lock
-held leaves both alone: the remap is system-wide, so its F20 already arrives.
-It subscribes to the shared one-second watchdog while waiting for ownership, then takes over when
-the owner quits or stops using the key. Taking ownership, removing the binding, leaving the session
-or terminating stops the retry.
-
 ## Recorder
 
 The settings recorder (`Features/HotKeys/UI/ShortcutRecorder.swift`) is deliberately **not** a focusable
