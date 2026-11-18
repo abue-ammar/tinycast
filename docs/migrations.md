@@ -30,4 +30,4 @@ When the check fails, delete everything the row lists, then the row.
 ## Live migrations
 
 | Migration | Repairs | Delete with it |
-| --- | --- | --- |
+| --------- | ------- | -------------- |

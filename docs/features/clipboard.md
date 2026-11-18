@@ -2,7 +2,7 @@
 
 ## Invariants
 
-- **`clipboardEnabled` ships on — the only feature switch that does.** Absence of the key therefore
+- **`clipboardEnabled` ships on, the only feature switch that does.** Absence of the key therefore
   has to outrank a stored `false` in `AppSettings.init`, and off means fully off: the poller stops,
   the SQLite file closes, the launcher commands and their shortcuts go, and Tab skips the screen.
   `ClipboardCoordinator.applyEnabled()` is the single place that applies it.
@@ -30,17 +30,17 @@
 - **An image capture keeps the generation from its pasteboard poll.** Clear History and store close
   retire it across conversion and file writing; a stale capture inserts nothing and leaves no blob.
 - A database that cannot be opened is deleted and recreated. That is sound because a history is
-  captured rather than authored, and there is no UI for an unavailable clipboard — `QuicklinkStore`
+  captured rather than authored, and there is no UI for an unavailable clipboard; `QuicklinkStore`
   deliberately does the opposite. It is **not** a licence to treat the file as disposable: it lives in
   Application Support precisely because nothing else can put it back.
 - **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` holds
-  only what capture can tell apart on the pasteboard — `text`, `image`, `file` — so improving the
-  *classifier* stays a code change rather than a database migration plus a backfill, while a new
+  only what capture can tell apart on the pasteboard (`text`, `image`, `file`), so improving the
+  _classifier_ stays a code change rather than a database migration plus a backfill, while a new
   kind needs a new pasteboard type to justify it. `textForm` is nil for anything but `.text`, which
   is what keeps a path shaped like `apple.com/report.pdf` out of the links.
 - **A `.file` entry references the file where it lies and never copies it.** Its absolute path is
   the `text` column, so the trigram index finds it by name or by folder for free, and `imagePath`
-  stays nil — which is what keeps `prune`, `deleteBlob` and `owns` from ever reaching a file
+  stays nil, which is what keeps `prune`, `deleteBlob` and `owns` from ever reaching a file
   Tinycast did not write. `kind` is a plain `TEXT` column, so the case cost no migration; an older
   build simply fails to decode the row.
 - **A colour is parsed from the text on demand, never stored.** `ColorValue` is the single parser
@@ -49,8 +49,8 @@
 - **Recognized text is search metadata and nothing else.** It lives in its own `item_text` table,
   never on `ClipboardItem` and never in the resident window, so no surface can paste it, copy it,
   or classify an entry by it. The one exception is Copy Text, which the reader invokes explicitly:
-  it extracts fresh in the helper and puts the text on the pasteboard — the `item_text` table
-  itself is still never copied from. What an entry *is* still comes from the content that was
+  it extracts fresh in the helper and puts the text on the pasteboard; the `item_text` table
+  itself is still never copied from. What an entry _is_ still comes from the content that was
   captured.
 - **No recognition ever runs in the app process.** `ClipboardTextWorker` spawns one bundled
   `ClipboardTextHelper` per item and reaps it, which is the whole reason Vision's and PDFKit's
@@ -59,9 +59,9 @@
 ## Poll-based capture
 
 **A file URL is read before the text**, because that is the whole of the bug this ordering fixes:
-Finder puts the file's *display name* on `public.utf8-plain-string` beside `public.file-url`, so a
+Finder puts the file's _display name_ on `public.utf8-plain-string` beside `public.file-url`, so a
 text-first poller records `IMG_1234.png` as prose. The read sits after the `internalType` and
-sensitive-type guards, which stay unconditional — a secret must never be recorded whatever shape it
+sensitive-type guards, which stay unconditional: a secret must never be recorded whatever shape it
 arrives in. A bare screenshot carries no file URL and still falls through to the `.png`/`.tiff`
 branch untouched.
 
@@ -83,7 +83,7 @@ pasteboard also carries `.png` or `.tiff`, `volatileRoots(on:copiedFrom:)` adds 
 `~/Library/Containers/<bundle ID>/`: macOS keeps another app's container closed to Tinycast, so a
 file staged there previews as an icon and goes stale, while its pixels record as an image. A
 container file without pixels, or one copied by another app such as Finder, stays a file. Paths come
-back reversed so the *first* file copied ends up leading the history. Durability checks stop after
+back reversed so the _first_ file copied ends up leading the history. Durability checks stop after
 32 accepted files, and decoding stops with them: the reader takes the cap and the durability test
 together rather than filtering a list it has already decoded whole. Rejected paths do not consume
 the cap. The uncapped `PasteboardFiles.urls(on:)` that attachments use is the same reader with no
@@ -99,13 +99,13 @@ between, and the restore's baseline keeps the copy from being recorded once it r
 `TextInjector` refuses a second borrow while one is in flight, so the pause is never nested.
 
 `stop()` is the off switch: it drops the timer and the fast-user-switching observers, and clears the
-`isCapturing` flag that `prepareForTinycastPasteboardMutation` reads — so a paste Tinycast performs
+`isCapturing` flag that `prepareForTinycastPasteboardMutation` reads, so a paste Tinycast performs
 itself no longer drains the pasteboard into history either.
 
 Existing clips survive being switched off, since a history is captured rather than authored and
-nothing else can put it back. **Clear history stays live with the feature off** —
-`ClipboardCoordinator.clearHistory()` reopens the file, clears the unpinned rows and closes it again — so a reader
-who turns the feature off can still erase what it kept.
+nothing else can put it back. **Clear history stays live with the feature off**
+(`ClipboardCoordinator.clearHistory()` reopens the file, clears the unpinned rows and closes it
+again), so a reader who turns the feature off can still erase what it kept.
 
 ## Store
 
@@ -115,7 +115,7 @@ are mirrored in the observable `items` window; FTS search reaches older rows.
 
 **Application Support, not Caches.** `~/Library/Caches` is excluded from Time Machine and the system
 may reclaim it at any time without telling the app, so a history kept there survives neither a restore
-nor a full disk — while the retention setting offers **Forever** and a pin is an explicit act.
+nor a full disk, while the retention setting offers **Forever** and a pin is an explicit act.
 
 A database that won't open is deleted and recreated (worst case the store degrades to session-only
 in-memory history).
@@ -139,7 +139,7 @@ name. An image outside `images/`, such as a Raycast import, never gets copies.
 
 **A backup reads the whole table, not `items`.** `forEachStoredItem(inDatabaseAt:)` is `nonisolated`
 and opens a second connection, because the resident window stops at 1000 rows while the table is
-capped only by age — an export that read `items` would silently drop the rest of someone's history,
+capped only by age: an export that read `items` would silently drop the rest of someone's history,
 and walking an uncapped table is not main-actor work. That connection is `SQLITE_OPEN_READWRITE`,
 not read-only: a read-only connection to a WAL database still has to create its `-shm` file, and
 fails confusingly when it cannot. It reads in `rowid` order, oldest first, so a streaming
@@ -154,8 +154,8 @@ handed in are already the ones to keep, as the Raycast import's are.
 **The load query is deliberately two indexed branches**, not one `pinned_at IS NOT NULL OR rowid >= ?`.
 It fetches every pinned row plus the newest `memoryWindow` unpinned ones, keyed off the floor rowid
 that `windowFloor` looks up. The planner cannot drive an `OR` from an index while preserving row
-order, so the single-predicate form reads the whole table instead. The floor is 0 — meaning no floor,
-load everything — while the history is shorter than the window.
+order, so the single-predicate form reads the whole table instead. The floor is 0 (meaning no floor,
+load everything) while the history is shorter than the window.
 
 Searching is trigram FTS, which needs **at least three characters**; shorter queries, and the
 no-database fallback path, filter the in-memory window instead. Results are memoized one query deep,
@@ -168,7 +168,7 @@ it; an update trigger moves the original-text FTS entry to the new rowid. The UU
 are untouched.
 
 Files under the store's own `imagesDir` are **owned**: pruned and deleted with their row. External
-references — an image imported from another app's cache — are left on disk when the row goes. A
+references (an image imported from another app's cache) are left on disk when the row goes. A
 retention cut can strand hundreds of files, so those deletions run off the main actor to keep
 capture-time pruning from hitching.
 
@@ -184,8 +184,8 @@ When both clipboard history and text search are enabled, `AppCore` creates its
 background-priority job after two seconds without input, even while the palette is open. A 250 ms
 pause separates items; continued typing or mouse movement defers the next job. Existing and imported
 history is backfilled, including rows beyond the resident window. Nothing recognizes on the capture
-or search path. When only failed work is left the indexer sleeps until a retry is due — a new capture
-wakes that wait — and an empty queue exits rather than polling.
+or search path. When only failed work is left the indexer sleeps until a retry is due (a new capture
+wakes that wait), and an empty queue exits rather than polling.
 
 Turning either switch off cancels the run in flight; the indexer is kept and reschedules itself once
 that run winds down, which is why `applyClipboardTextSearch` can be called again at any time.
@@ -194,14 +194,14 @@ Recognition runs in a bundled `ClipboardTextHelper`, one item at a time, and Vis
 state leaves with it. The parent accepts at most 32 KB from the helper's output pipe, propagates
 cancellation, and terminates and reaps a helper that runs past 60 seconds. `ClipboardTextWorker`
 does its blocking read and wait on its own `DispatchQueue`, never the cooperative pool. No helper
-exists while text search is off or the queue is empty — a Copy Text trigger is the exception: the
+exists while text search is off or the queue is empty; a Copy Text trigger is the exception: the
 helper is bundled either way, so an explicit extraction spawns one with the search switch off.
 
 Images include owned clipboard PNGs and referenced image files. Referenced PDFs use PDFKit's embedded
 text page by page, with Vision OCR for pages without text. Mixed text-and-scan documents therefore
 remain searchable; images embedded on a page that already has text are not separately OCR'd. All
 processing stays on this Mac. Extracted text is search metadata, never the value pasted or
-copied — Copy Text below is the deliberate exception, a copy the reader asks for.
+copied; Copy Text below is the deliberate exception, a copy the reader asks for.
 
 The derived `item_text` table and its trigram FTS index persist metadata without adding extracted
 strings to `ClipboardItem` or loading them into the resident history. Original text/path search returns
@@ -209,7 +209,7 @@ immediately. A cancellable off-main SQLite query adds OCR-only matches for All, 
 Text, Links, Emails and Colors never consult OCR. Type classification always uses original content.
 There is no spinner or skeleton. Pins lead in pin order, ordinary unpinned matches keep theirs, and
 OCR-only unpinned matches of the active type fill what is left of the same `searchLimit` budget, in
-history recency rather than extraction order — a deliberate choice to let an ordinary match answer
+history recency rather than extraction order, a deliberate choice to let an ordinary match answer
 first. Queries under three characters consult only the resident window and pins.
 
 Each reader takes a 2 MiB SQLite cache budget and closes its connection when it finishes. A new
@@ -225,7 +225,7 @@ Work is bounded: files up to 32 MB, the first 64 PDF pages, a 4,194,304-pixel bi
 is a completed attempt. Failed recognition, a locked or unreadable input and a helper failure go to
 `item_text_failures` instead: up to three attempts 30 seconds apart, which never block another item.
 Success and deletion clear that state. Enabling text search resets failures and earlier empty
-attempts so they can be tried again, keeping recognized text that is not empty — so an empty input
+attempts so they can be tried again, keeping recognized text that is not empty, so an empty input
 may be reprocessed on a later launch, but nothing retries forever inside one session. Tall bitmaps
 are recognized in full-width 2048-pixel strips overlapping by 256 pixels, with Vision's relative
 minimum text-height cutoff disabled so it cannot discard small text on a tall screenshot or page.
@@ -240,27 +240,27 @@ original content and references, and a restored entry is recognized again.
 coordinator entry point, `ClipboardCoordinator.copyImageText(_:)`, sits behind both surfaces: the
 ⌘K Actions-menu row and the **⇧⌘T** chord (which requires the expanded list, like the other row
 chords, and closes an open menu). `ClipboardItem.offersTextExtraction` is the one eligibility
-answer — a captured `.image` entry, or a `.file` entry whose kind is an image (a screenshot copied
-in Finder) — and it is never a PDF, which stays a background-indexing capability.
+answer: a captured `.image` entry, or a `.file` entry whose kind is an image (a screenshot copied
+in Finder); and it is never a PDF, which stays a background-indexing capability.
 
 The action closes the palette and shows a "Reading text…" progress pill, then stats the file off
 the main actor, since a stat on an unmounted volume can stall: a vanished referenced file raises the
-HUD every action on that row uses, and a pruned blob says "That image is no longer available." —
-the palette is already down, so a HUD is the only thing that can speak. `ClipboardTextWorker` then
+HUD every action on that row uses, and a pruned blob says "That image is no longer available."
+The palette is already down, so a HUD is the only thing that can speak. `ClipboardTextWorker` then
 spawns the bundled helper: no Vision runs in the app process, nothing reads the `item_text` table,
 and nothing depends on the text-search switch, whose helper is bundled either way. The extracted
 text is written with `Paster.copyPlainText`, **unmarked**, so the copy enters history like Copy
-Path does, and the pill is replaced by the outcome — **Copied text**, **No text found** when the
+Path does, and the pill is replaced by the outcome: **Copied text**, **No text found** when the
 helper succeeded but recognized nothing, or **Couldn’t read the text** when it failed.
 
 Only one extraction is in flight: a second trigger cancels the first, whose helper is terminated
-and which reports nothing. A result never overwrites a newer copy — when the pasteboard's
+and which reports nothing. A result never overwrites a newer copy: when the pasteboard's
 `changeCount` moved while the helper ran, the text is dropped and the pill says **Clipboard
 changed, text not copied**.
 
 The bounds are the indexer's, stated precisely: the helper truncates its output at 32,000 UTF-8
-bytes, so a text-dense scan can copy *partial* text under a success HUD, and an input over 32 MB
-extracts as empty and lands in **No text found**. The source row is not promoted — a copy is not a
+bytes, so a text-dense scan can copy _partial_ text under a success HUD, and an input over 32 MB
+extracts as empty and lands in **No text found**. The source row is not promoted: a copy is not a
 paste.
 
 ## Edit an entry
@@ -269,7 +269,7 @@ paste.
 palette. A file entry never offers it, because its text is a path and rewriting it would repoint
 the row. `ClipboardEditField` is the dialog's accessory: a code-mode `FormTextArea`, since smart
 quotes or autocorrect would corrupt a token, at a fixed height that scrolls rather than grows the
-panel. ↵ starts a new line as in any editor, so ⌘↵ saves and Esc cancels —
+panel. ↵ starts a new line as in any editor, so ⌘↵ saves and Esc cancels;
 `DialogAccessory.acceptsLineBreaks` is what hands ↵ to the field. An input method's ↵ always commits
 its marked text, in every dialog.
 
@@ -278,8 +278,8 @@ trigger reindexes FTS and nothing else changes. `Paster.copy` then writes it mar
 unless pinned, and the palette stays up with the row selected and scrolled into view, so ⌘V pastes
 the edit and so does ↵ on the row. A query or type filter that hides the edit is cleared; matching
 ones stay. The palette preserves the row through its query and filter observers, including a pin
-past the first row. An empty edit changes nothing. An entry deleted while open — by
-retention, say — is not brought back: `updateText` answers nil and the text goes on the pasteboard
+past the first row. An empty edit changes nothing. An entry deleted while open (by
+retention, say) is not brought back: `updateText` answers nil and the text goes on the pasteboard
 **unmarked**, entering history as a new copy rather than being lost. A row found by FTS past the
 resident window has no in-memory copy to replace, so the store drops its search memo instead.
 Database write failures throw instead of taking the deleted-entry path: the HUD reports the failure,
@@ -290,38 +290,38 @@ would reindex it on the main actor.
 
 ## Type filter
 
-The clipboard header carries a `ClipboardFilterButton` at the trailing edge of the search field —
+The clipboard header carries a `ClipboardFilterButton` at the trailing edge of the search field,
 the only palette screen with a control up there. It toggles a `PopoverMenu` anchored `.topTrailing`
 under the button, so the ⌘K Actions menu, the app menu and this one are the same view on the same
 glass. **⌘P** toggles it; ↑/↓, ↵ and Esc come free from `RootPaletteView`'s one menu path, and the
-menu opens highlighting the *active* filter rather than the first row, the way a pop-up button does.
+menu opens highlighting the _active_ filter rather than the first row, the way a pop-up button does.
 A native, row-height search field above the rows filters their titles with the shared fuzzy matcher;
 an empty result centres **No Results** in one row. Escape clears a non-empty query before closing.
 The filter is not gated on the list having rows: an over-narrow filter empties it, and the button is
 the way back out.
 
-`ClipboardFilter` owns the seven cases and everything the UI needs from them — title, glyph, and the
+`ClipboardFilter` owns the seven cases and everything the UI needs from them: title, glyph, and the
 `emptyMessage` that stops "Clipboard history is empty" from appearing over a history that only looks
-empty. The cases are **exclusive**: a copied URL is a link, not a narrower kind of text, so *Text
-Only* means prose, and *Colors Only* takes `#FF5733` out of it.
+empty. The cases are **exclusive**: a copied URL is a link, not a narrower kind of text, so _Text
+Only_ means prose, and _Colors Only_ takes `#FF5733` out of it.
 
-`ClipboardItem.textForm` derives `plain`/`color`/`link`/`email` from the text on demand — nil for an
-image.
+`ClipboardItem.textForm` derives `plain`/`color`/`link`/`email` from the text on demand (nil for an
+image).
 The classifier is guarded cheapest-first, because `rows` is rebuilt every render: anything over
 2048 UTF-8 bytes is plain by definition (`utf8.count` is O(1), `count` walks graphemes), then
 a colour, then anything holding whitespace, then a `scheme://` or `mailto:` prefix, an address
 shape, and finally a bare domain. Colour runs **before** the whitespace reject, because
-`rgb(255, 87, 51)` is one value that happens to be written with spaces in it — every later branch
-is a single token by definition. That last step is the only one needing judgement — `report.pdf`
+`rgb(255, 87, 51)` is one value that happens to be written with spaces in it; every later branch
+is a single token by definition. That last step is the only one needing judgement: `report.pdf`
 and `index.html` are
-domain-shaped — so a bare domain must be lower case (which is what keeps `Safari.app` out) and end
+domain-shaped, so a bare domain must be lower case (which is what keeps `Safari.app` out) and end
 in one of a compact set of TLDs people actually copy. It is a heuristic whose worst case files a row
 under the wrong type, and `ClipboardTests` pins the cases that matter.
 
 `search(_:filter:)` filters **after** the pinned/rest split, so a matching pin still leads its block
-in pin order, and the filter joins the search memo's key — keying on the query alone would serve
+in pin order, and the filter joins the search memo's key: keying on the query alone would serve
 stale rows for a render or more, since the filter changes without the query moving. One consequence
-of filtering after the fact: the FTS statement's `LIMIT 200` applies to the *unfiltered* matches, so
+of filtering after the fact: the FTS statement's `LIMIT 200` applies to the _unfiltered_ matches, so
 a narrow filter over a broad query can show fewer rows than the history holds.
 
 ## Colours
@@ -330,24 +330,24 @@ A copied colour is drawn as the colour and can be copied back out in another not
 surfaces read one parser: the clipboard history, and the launcher, where pasting a colour answers
 with a card the way the calculator does.
 
-`ColorValue` (`Model/`, Foundation-only) is that parser. It takes the CSS spellings people copy —
-the four hex lengths, plus `rgb()`/`hsl()`/`oklch()` and their alpha forms in both the comma and
-CSS4 space-and-slash syntax — and stores **sRGB components**, so every notation derives from one
-source rather than a second parser that can drift from it. An extension's tints and grid swatches
-read the same parser, which is how a colour picker's `oklch()` swatch draws as its colour.
+`ColorValue` (`Model/`, Foundation-only) is that parser. It takes the CSS spellings people copy
+(the four hex lengths, plus `rgb()`/`hsl()`/`oklch()` and their alpha forms in both the comma
+and CSS4 space-and-slash syntax) and stores **sRGB components**, so every notation derives from
+one source rather than a second parser that can drift from it. An extension's tints and grid
+swatches read the same parser, which is how a colour picker's `oklch()` swatch draws as its colour.
 
 **A colour is rejected rather than approximated**, because a wrong swatch filed under Colors Only
 is worse than none. An HSL channel must carry its `%`, or `hsl(120, 100, 50)` clamps to white.
 Arguments are counted, so `rgb(255,,87,51)` is malformed rather than three good ones with a hole;
 each side of a `/` is counted separately, or `rgb(0 255 / 0.5)` reads an alpha as its blue channel.
 `Double` also parses `nan`, `inf` and Swift literals CSS never writes, and every notation ends in
-an `Int(_:)` that traps on a non-finite value — so the reject sits at the parse boundary.
+an `Int(_:)` that traps on a non-finite value, so the reject sits at the parse boundary.
 
 `ColorFormat` offers four notations: hex, `rgba()`, `hsl()` and `oklch()`, plus the two spellings
-named for their alpha, which `offered(for:)` drops from an opaque colour — six rows at most, four
+named for their alpha, which `offered(for:)` drops from an opaque colour: six rows at most, four
 for an opaque one. The digits themselves are `ColorDigits`, private to that file: writing a colour
-is the format's business, not the value's. The rest of CSS Color 4 — the space-separated forms,
-`hwb()`, `lab()`, `lch()`, `oklab()` — and the `NSColor`/`UIColor`/SwiftUI spellings were all built
+is the format's business, not the value's. The rest of CSS Color 4 (the space-separated forms,
+`hwb()`, `lab()`, `lch()`, `oklab()`) and the `NSColor`/`UIColor`/SwiftUI spellings were all built
 and then removed: they
 restate the same four answers, and a row you scroll past to reach the one you wanted costs more
 than it gives. `oklch()` stays as the one perceptual space people write, and `hsl()` keeps one
@@ -355,11 +355,11 @@ decimal because whole degrees cost up to 5/255 on the way back. `ClipboardTests`
 offered notation and re-parses it, bar `oklch()`: it states fewer digits than the channel the
 sweep compares to.
 
-`ColorSpaces.swift` holds Oklab and its polar form, both ways — matrices and cube roots, no tables.
+`ColorSpaces.swift` holds Oklab and its polar form, both ways: matrices and cube roots, no tables.
 Oklab is private to it: `oklch()` is the one thing it exists for. A neutral is stated with no hue at
 all, since `atan2` over two rounding errors still names a direction.
 
-The notations are a menu of their own under the launcher card, and **nowhere else** — a history
+The notations are a menu of their own under the launcher card, and **nowhere else**: a history
 entry's ⌘K stays the actions it always was, since converting a colour is not something you reach
 for while browsing what you copied. **There is no submenu** either, the palette's menu being one
 level deep, so each row states its value through `PopoverMenuItem.detail`, never `shortcut`, which
@@ -367,48 +367,48 @@ renders one keycap per character. The rows carry `PopoverMenuIcon.blank`, a run 
 repeated eyedropper saying nothing, and the menu keeps the standard `menuWidth`: every notation
 fits it, and a menu that widened for its content would jump as rows changed.
 
-`ColorSwatch` is the one place a colour is drawn — row thumbnail, preview and card alike — over a
+`ColorSwatch` is the one place a colour is drawn (row thumbnail, preview and card alike) over a
 checkerboard built only when there is alpha to show, so an opaque colour never pays for a `Canvas`
 nothing can see. The preview shows the colour and the copied text and nothing else. Detection is
 narrow by design: anything past 64 UTF-8 bytes is not a colour, and no named colour (`red`) is
-recognised, since a bare English word is prose far more often than CSS — and **a colour is never
-named**: `#D6D6D6` is a swatch and its digits, never *Silver*. `NSColorList` naming was built,
+recognised, since a bare English word is prose far more often than CSS; and **a colour is never
+named**: `#D6D6D6` is a swatch and its digits, never _Silver_. `NSColorList` naming was built,
 measured and removed; it knew only the 59 names macOS ships, so most colours read as nothing, and
 CSS's own (`gainsboro`) are in no catalog at all. The card runs **after** the calculator, which
-costs nothing — no colour notation is also an expression.
+costs nothing: no colour notation is also an expression.
 
-`ColorCard` is built from the calculator card's own parts — `LeadCardColumn` and
-`.leadCard(selected:)` — so a lead card can't change height or hover with its kind. Its swatch is
+`ColorCard` is built from the calculator card's own parts (`LeadCardColumn` and
+`.leadCard(selected:)`), so a lead card can't change height or hover with its kind. Its swatch is
 **stretched to the value column rather than sized**, since no notation has a fixed height.
 
 ## Pinned entries
 
 A row's ⌘K Actions menu carries **Pin Entry / Unpin Entry** (⌘., since ⌘P opens the type filter),
-persisted as a `pinned_at` column on `items` —
+persisted as a `pinned_at` column on `items`,
 a stamp rather than a flag, because the Pinned section is ordered by _when you pinned_, not by
 recency.
 
 Pins change five things:
 
-- **Order.** `search` returns pinned rows first — for the empty query and for FTS hits alike — under
+- **Order.** `search` returns pinned rows first, for the empty query and for FTS hits alike, under
   one "Pinned" section above the date buckets, in pin order with the oldest pin at the top, so a new
   pin joins the end of the section instead of displacing the ones already there. `items` itself stays
   in pure recency order; the display split is memoized next to the search memo and invalidated with
   it. Original text on pinned rows is matched **in memory**
   rather than taken from the FTS result, since the statement's `LIMIT` could otherwise drop one out
-  of a busy query's matches — which holds because every pinned row is resident in `items`, however
+  of a busy query's matches, which holds because every pinned row is resident in `items`, however
   old (`load` fetches them all, and neither the window trim nor pruning drops one). OCR metadata
   for matching pins is queried separately off-main without the unpinned result limit.
 - **Unpinning re-recencies.** An unpinned row rejoins the history as its _newest_ entry (Raycast does
   the same) rather than dropping back into the date bucket it came from, which would scroll the list
   out from under the selection. It uses the same atomic timestamp and rowid update as `promote`.
 - **Retention.** Pruning skips pinned rows (`AND pinned_at IS NULL`), so a pin outlives the retention
-  window — and "Clear History" skips them on the same condition, so only `remove` drops a pin.
+  window, and "Clear History" skips them on the same condition, so only `remove` drops a pin.
 - **Selection.** Pinning lifts a row out of its date bucket, so `ClipboardCoordinator.togglePinnedClip` moves the
   palette selection to the row's new index in the _current_ results and bumps `palette.followToken`,
   which is what makes the list scroll the highlight back into view.
-- **Landing.** A pin shapes the order, never the default selection. Every reset — opening the screen,
-  clearing the query, changing the type filter — lands on the newest clip below the Pinned section
+- **Landing.** A pin shapes the order, never the default selection. Every reset (opening the screen,
+  clearing the query, changing the type filter) lands on the newest clip below the Pinned section
   (`ClipboardStore.landingIndex`), and the palette centres it so the pins stay in view above. A typed
   query lands on its first match instead, pinned or not: the pins are results then, not a shelf.
 
@@ -427,55 +427,55 @@ a no-op. They are fixed to the physical number row, with ⌘1…⌘9 then ⌘0 a
 `load` reads every pinned row plus the newest 1000 unpinned ones as two indexed branches over a
 partial index on `pinned_at` (`Tests/ClipboardTests.swift` covers the shape). The single
 `pinned_at IS NOT NULL OR rowid >= ?` form reads better but cannot be driven from an index while
-holding row order, so it scans the whole table — ~12ms against ~1ms at 200k rows, on the main actor
+holding row order, so it scans the whole table: ~12ms against ~1ms at 200k rows, on the main actor
 at launch.
 
 ## Referenced files
 
 A file copied in Finder is recorded as a reference, never as a copy: Tinycast writes nothing to
 disk for it, and the row's path points at the original wherever it lies. That is the whole reason
-`imagePath` stays nil for a `.file` row — `owns()` is the one ownership rule, and a path it never
+`imagePath` stays nil for a `.file` row: `owns()` is the one ownership rule, and a path it never
 sees can never be deleted by `deleteBlob` or a retention cut. `ClipboardTests`'s
 `referencedFilesOutliveTheirRows` is the case that pins it, across `remove`, a retention cut and
 Clear History alike.
 
 **Pasting writes two flavours.** `public.file-url` so Finder, Mail and anything file-taking receive
-the *file*, and `.string` carrying the **path** — deliberately not Finder's own choice of the name,
+the _file_, and `.string` carrying the **path**, deliberately not Finder's own choice of the name,
 because a text field or Terminal almost always wants a path, a name is recoverable from a path and
 a path is not recoverable from a name. "A name arrived where a file was meant" is the bug being
 fixed, so it must not be reintroduced on the way out.
 
 **A vanished file is reported, never silently swallowed and never auto-deleted.** `Paster.write`
-returns false, the coordinator raises a HUD, and the row survives — history is a record of what
+returns false, the coordinator raises a HUD, and the row survives: history is a record of what
 happened, and the recorded path is still the answer to "where was it?". The preview says so in
 place, and the Path row keeps showing where the file used to be.
 
 `FilePreviewThumbnail` is the row tile and the preview still. `QLThumbnailGenerator` is the only
-thing that renders a *content* thumbnail for any type — a video's poster frame, a PDF's first page
-— and with `representationTypes: .all` it falls back to the type icon itself, so every file paints
+thing that renders a _content_ thumbnail for any type (a video's poster frame, a PDF's first page),
+and with `representationTypes: .all` it falls back to the type icon itself, so every file paints
 something through one path. It copies `ImageThumbnail`'s shape exactly: two byte-bounded caches
 split at 128px, cost measured as the real bitmap footprint, and `purgePreviews()` called from
 `PaletteWindowController.hide()` beside the other two.
 
 **The player's teardown is the part with a lifetime to get wrong.** `orderOut` leaves the SwiftUI
-tree mounted, so `onDisappear` never fires on hide — which is exactly why `hide()` already has to
+tree mounted, so `onDisappear` never fires on hide, which is exactly why `hide()` already has to
 purge caches by hand. `PaletteState.isVisible` is therefore the second half of the player's
 `.task(id:)` key, alongside the URL, so one mechanism covers both teardown triggers with no
 `onChange` racing it. Teardown calls `replaceCurrentItem(with: nil)` and not merely `pause()`: a
 paused `AVPlayer` still holds its asset reader and decoder open, which is how a 100 MB budget goes.
-Nothing ever autoplays — arrow-keying a list of twenty videos must not start twenty decodes. The
+Nothing ever autoplays: arrow-keying a list of twenty videos must not start twenty decodes. The
 player view is `KeyboardFocusRefusing`, so clicking its transport leaves the caret in the search
 field; see [palette.md](palette.md#the-keyboard-belongs-to-the-search-field).
 
 **`clipboardMediaHeight` is a cap, not a height.** As a fixed `frame(height:)` the player asked for
 260 pt whatever the pane had: with the Information block's 175 pt beneath it the column wanted 435 pt
 of a 359 pt content area, and the overflow pushed the bottom bar out and the panel taller. Every other
-preview kind already shrinks — an image scales to fit, text scrolls — so the player does too, and only
+preview kind already shrinks (an image scales to fit, text scrolls), so the player does too, and only
 its maximum is a token.
 
 **A backup carries the path, never the bytes.** `BackupClipboardItem.file` exports `text` and no
 blob, a file already gone at export time is counted missing, and a restore drops a row whose path
-does not exist on this Mac — the same thing the Raycast import already does for an image path.
+does not exist on this Mac, the same thing the Raycast import already does for an image path.
 Carrying file bytes would make a backup unbounded and defeat the point of referencing in place.
 
 ## Dragging out
@@ -502,7 +502,7 @@ first.** The overlay owns the whole press: select on the way down, activate on a
 start the session once the pointer passes 4pt of slop. A press that stays inside the slop was a
 click, which is why the press takes `select` and `activate` instead of sitting beside a tap gesture
 that would never fire. It declines the right button in `hitTest`, the mirror of what
-`RightClickCatcher` does with the left one — an overlay that answers every event would sit on top of
+`RightClickCatcher` does with the left one: an overlay that answers every event would sit on top of
 the actions catcher and silently swallow the menu.
 
 **The payload resolves on mouse-down, not on every row render.**
@@ -516,8 +516,8 @@ tile, `cached` only and never `load`, because a decode on mouse-down stalls the 
 begins on. A link or a copy gets a drawn text tile. The dragging frame is sized to that image and
 centred on the cursor, since the row's own shape would stretch a thumbnail.
 
-**A landed drop hides the palette**, the ending a paste has, through `PaletteCoordinator.dragLanded()`
-— the one ending every draggable row shares. A cancelled
+**A landed drop hides the palette**, the ending a paste has, through
+`PaletteCoordinator.dragLanded()`, the one ending every draggable row shares. A cancelled
 drag leaves it up and animates back to the row it came from, so a drag that achieved nothing says
 so. The session outliving the panel is safe for the reason the player teardown above is delicate:
 `orderOut` leaves the SwiftUI tree mounted, and the pasteboard holds the payload from the moment the
@@ -526,7 +526,7 @@ session begins.
 ## Paste Sequentially
 
 A command, so it is bound in Settings ▸ Clipboard like any other. Each press pastes the next older
-entry — text, image or file — into `PaletteCoordinator.targetApp` through `Paster.pasteInPlace`:
+entry (text, image or file) into `PaletteCoordinator.targetApp` through `Paster.pasteInPlace`:
 ⌘V goes to that app's pid, and nothing is activated or promoted. An image or file gone from disk
 writes nothing, so the same press moves on to the next entry.
 

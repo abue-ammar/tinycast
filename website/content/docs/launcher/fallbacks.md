@@ -13,7 +13,7 @@ somewhere else. They always appear at the bottom, below the real results.
 | Quick AI          | Sent as a question in the palette                             | [AI](/docs/ai) is on                               |
 | Search Files      | Opens [file search](/docs/features/file-search) with it typed | File Search is on                                  |
 | Run Shell Command | Runs in `zsh`, with its output in a window                    | Always, unless you turn it off                     |
-| Define Word       | Looks it up in the [dictionary](/docs/features/dictionary)   | Define Word is visible in Settings → Commands     |
+| Define Word       | Looks it up in the [dictionary](/docs/features/dictionary)    | Define Word is visible in Settings → Commands      |
 | A quicklink       | Fills in the quicklink's first `{argument}`                   | Quicklinks is on, and the link has an `{argument}` |
 
 ### Run Shell Command

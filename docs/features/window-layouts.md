@@ -15,15 +15,15 @@ resolution-independent by construction.
   `resolve` the runner does; a view that derived a rect itself would draw a lie.
 - **`resolve(describe(frame)) == frame` for any whole-point frame inside the box.** That identity is
   what makes Capture trustworthy, and `WindowLayoutTests` sweeps it over four displays and three
-  gaps. The converse does **not** hold — `resolve` clamps and floors — so only idempotence
+  gaps. The converse does **not** hold (`resolve` clamps and floors), so only idempotence
   (`resolve(describe(resolve(e))) == resolve(e)`) is asserted for degenerate entries.
 - **A display is matched by `CGDisplayCreateUUIDFromDisplayID` and nothing else.** No name fallback,
-  no ordinal guess, no fall-back-to-primary: an entry whose display is absent is *skipped*. Guessing
+  no ordinal guess, no fall-back-to-primary: an entry whose display is absent is _skipped_. Guessing
   would pile a three-monitor layout onto the laptop, which is worse than doing nothing.
 - **The runner never touches `WindowActionMemory`.** Recording a layout's writes would make the next
   Left Half press read as "the user moved it", and would overwrite the single-level restore point.
-  The visible consequence: Restore after a layout run returns the frame from before the last *window
-  command*, not from before the layout.
+  The visible consequence: Restore after a layout run returns the frame from before the last _window
+  command_, not from before the layout.
 - **At most one entry ends a run frontmost, by construction.** The mark is
   `WindowLayout.frontmostEntryID`, never a per-entry flag, so no sanitising can find two. A mark
   whose entry is gone is cleared, and a duplicate carries it to the copy's entry by position.
@@ -37,21 +37,21 @@ resolution-independent by construction.
 
 ## Layout
 
-| File | Imports | Role |
-| --- | --- | --- |
-| `Model/WindowLayout.swift` | Foundation + CoreGraphics | **Pure.** The record, its entry, and their sanitising |
-| `Model/WindowLayoutAnchor.swift` | CoreGraphics | **Pure.** The 3×3 grid's persisted spelling |
-| `Model/WindowLayoutDisplay.swift` | Foundation | **Pure.** The stored display identity |
-| `Model/WindowLayoutGeometry.swift` | Foundation + CoreGraphics | **Pure.** `resolve` and its inverse |
-| `Model/WindowLayoutPlan.swift` | Foundation + CoreGraphics | **Pure.** What a run will do, decided before any write |
-| `Model/WindowLayoutStore.swift` | Foundation | The library, as JSON in `UserDefaults` |
-| `Model/WindowLayoutDraft.swift` | Foundation + CoreGraphics | One in-flight edit, owned by the panel |
-| `Service/AXWindowAccess.swift` | AppKit + ApplicationServices | Every `AXUIElement` call, shared with the mover |
-| `Service/AXScreens.swift` | AppKit + ColorSync | `AXGeometry`, and displays with their UUIDs |
-| `Service/WindowInventory.swift` | AppKit + ApplicationServices | What is on screen, read once per gesture |
-| `Service/WindowLayoutRunner.swift` | AppKit | Applies a plan; opens what isn't running |
-| `UI/WindowLayoutCoordinator.swift` | AppKit | The one run funnel, the library, the editor handoff |
-| `Settings/WindowLayout*.swift` | SwiftUI | The pane's section and the editor panel |
+| File                               | Imports                      | Role                                                   |
+| ---------------------------------- | ---------------------------- | ------------------------------------------------------ |
+| `Model/WindowLayout.swift`         | Foundation + CoreGraphics    | **Pure.** The record, its entry, and their sanitising  |
+| `Model/WindowLayoutAnchor.swift`   | CoreGraphics                 | **Pure.** The 3×3 grid's persisted spelling            |
+| `Model/WindowLayoutDisplay.swift`  | Foundation                   | **Pure.** The stored display identity                  |
+| `Model/WindowLayoutGeometry.swift` | Foundation + CoreGraphics    | **Pure.** `resolve` and its inverse                    |
+| `Model/WindowLayoutPlan.swift`     | Foundation + CoreGraphics    | **Pure.** What a run will do, decided before any write |
+| `Model/WindowLayoutStore.swift`    | Foundation                   | The library, as JSON in `UserDefaults`                 |
+| `Model/WindowLayoutDraft.swift`    | Foundation + CoreGraphics    | One in-flight edit, owned by the panel                 |
+| `Service/AXWindowAccess.swift`     | AppKit + ApplicationServices | Every `AXUIElement` call, shared with the mover        |
+| `Service/AXScreens.swift`          | AppKit + ColorSync           | `AXGeometry`, and displays with their UUIDs            |
+| `Service/WindowInventory.swift`    | AppKit + ApplicationServices | What is on screen, read once per gesture               |
+| `Service/WindowLayoutRunner.swift` | AppKit                       | Applies a plan; opens what isn't running               |
+| `UI/WindowLayoutCoordinator.swift` | AppKit                       | The one run funnel, the library, the editor handoff    |
+| `Settings/WindowLayout*.swift`     | SwiftUI                      | The pane's section and the editor panel                |
 
 The first seven compile into `Tests/WindowLayoutTests.swift`, so none of them may gain an AppKit,
 SwiftUI or `NSScreen` dependency.
@@ -60,15 +60,15 @@ SwiftUI or `NSScreen` dependency.
 
 An entry is a fraction of a **box**, then a 3×3 anchor, then a point offset. The box is the display's
 `visibleFrame`, or `WindowPlacementEngine.canvas(visibleFrame, gap:)` when the layout opts into the
-global gap — one expression covers both, since `sanitizedGap` returns 0 for a zero gap.
+global gap; one expression covers both, since `sanitizedGap` returns 0 for a zero gap.
 
 `resolve` composes, in this order and for these reasons:
 
 1. Fractions clamp into 0…1; a non-finite one reads as full.
 2. The size floors at **1 pt**, not at `WindowPlacementEngine`'s `max(200×150, 15%)`. That floor is
-   tuned for *repeated* shrinking; a one-shot authored fraction is a different job, and a 120 pt floor
+   tuned for _repeated_ shrinking; a one-shot authored fraction is a different job, and a 120 pt floor
    would break the round trip for any genuinely small window.
-3. `anchor.place(size, in: box)` — the size has to exist before it can be anchored.
+3. `anchor.place(size, in: box)`. The size has to exist before it can be anchored.
 4. The offset is added **before** the clamp: the nudge is intent, the clamp only a safety net.
    Clamping first would let the offset push the window back off the display.
 5. `clamped` pins the leading edge without resizing, then `rounded` snaps the four edges.
@@ -86,7 +86,7 @@ the one bug the round-trip sweep caught.
 
 `WindowLayoutCoordinator.runWindowLayout(id:)` is the one funnel for a palette row, a global shortcut
 and the pane's Run button alike, so the feature switch cannot be bypassed. It hides the palette with
-`restoreFocus: false` — an app the layout opens activates itself, and handing focus back first
+`restoreFocus: false`: an app the layout opens activates itself, and handing focus back first
 pulls a different app forward mid-pass.
 
 `WindowLayoutRunner.run` then:
@@ -103,19 +103,19 @@ pulls a different app forward mid-pass.
 **Binding windows to entries** is greedy nearest-centre: among the app's unclaimed windows, the one
 whose centre is closest to the entry's target wins. An already-correct desktop is then a no-op and
 nothing swaps displays, which reading order alone would not give. An entry carrying an **argument**
-always opens rather than claiming an existing window — that is the only reliable way to get another
-window out of most apps, and it is what the user asked for. Two entries naming the same app *and*
+always opens rather than claiming an existing window; that is the only reliable way to get another
+window out of most apps, and it is what the user asked for. Two entries naming the same app _and_
 argument describe one window, so the second is reported as `duplicateTarget`.
 
 `AXEnhancedUserInterface` is suppressed **per application**, not per window, and restored in a
-`defer` — the flag is application-scoped, and restoring per group means a long launch wait never
+`defer`: the flag is application-scoped, and restoring per group means a long launch wait never
 leaves it off.
 
 **Focus comes last, once.** Every opened app activates itself on launch, so focusing any earlier
 lets a later launch take the front back; focusing each app in turn would flicker across displays
 and Spaces. The cost is that a layout waiting on a slow launch focuses only when that wait ends,
 up to the deadline below. A cancelled run focuses nothing, and neither does a run whose frontmost
-app, when the wait ends, is neither the one it started with nor one it opened — the user has moved
+app, when the wait ends, is neither the one it started with nor one it opened; the user has moved
 on. `AXWindowAccess.focus` is the same raise-and-activate sequence Switch Windows uses.
 
 ### The launch wait
@@ -126,48 +126,48 @@ gesture's own `Task`, honouring cancellation and storing nothing.
 
 This is not the polling the feature rules out; that constraint is about **steady state**. Between
 runs the feature holds no timer, no observer, no registration on any foreign process. Both
-alternatives are worse: an `AXObserver` needs a registration per app *including apps not yet
-running*, a run-loop source and teardown; and `didLaunchApplication` fires before any window exists,
+alternatives are worse: an `AXObserver` needs a registration per app _including apps not yet
+running_, a run-loop source and teardown; and `didLaunchApplication` fires before any window exists,
 so it would still need this same wait after it. The deadline is a `ContinuousClock` instant, so a
 clock step or a sleep cannot shorten it.
 
 **The plan is never recomputed mid-run.** A display appearing during the wait is ignored until the
-next run — the honest reading of "no auto-apply on display change", and what keeps the single-snapshot
+next run: the honest reading of "no auto-apply on display change", and what keeps the single-snapshot
 invariant true for every frame in the pass.
 
 ## Capture
 
 **Create Layout from Current Windows** is `describe` applied to the desktop. It reads every window
 that is `AXStandardWindow`, not minimized, not natively fullscreen, reports geometry, and is
-positionable — a stricter filter than the mover's, because a Save panel must never become an entry.
+positionable, a stricter filter than the mover's, because a Save panel must never become an entry.
 Candidates come from `AppLauncher.quitAllTargets()`'s rule, excluded **by pid** rather than by
 activation policy, since opening About flips Tinycast itself to `.regular`.
 
 Only Accessibility is needed: `AXPosition` and `AXSize` are AX attributes. Screen Recording gates
-window *titles*, which nothing here reads.
+window _titles_, which nothing here reads.
 
 The frontmost app's focused window, when it is one of the captured windows, is marked **Bring to
 front**. Capturing from Settings marks nothing, because Tinycast itself is frontmost then.
 
-Capture never saves silently — the draft opens in the editor so it can be seen, trimmed and named.
+Capture never saves silently; the draft opens in the editor so it can be seen, trimmed and named.
 
 ## The editor
 
 A Settings editor panel at `Theme.Size.layoutEditorSheet`, presented from Window Management so the
 two launcher commands can open it too. Two columns split two to one: a read-only preview, and the
-inspector. Both the width and the height are stated — the inspector reveals four field groups the
+inspector. Both the width and the height are stated: the inspector reveals four field groups the
 moment an app is picked, and a panel sized to its content would resize under the pointer.
 
 - **The preview is handed its screens once** by the panel and re-reads them only on
   `didChangeScreenParameters`. Resolving displays inside `body` would cost an AX round trip per
   keystroke.
-- **The plate is the display**, drawn at its own aspect ratio and letterboxed inside the box — fit,
+- **The plate is the display**, drawn at its own aspect ratio and letterboxed inside the box: fit,
   never fill, or every rect inside it is misdrawn. It stays dark in both appearances, so its token is
   `adaptive`, never `ramp`.
 - **No coordinate flip in the view.** `resolve` works in AX space (top-left origin, +Y down) and
   SwiftUI's y also points down. This is the one place the two conventions agree.
 - **The tabs sit on the caption row, not over the canvas**, so a tab can never cover a window rect.
-  The row shows a tab for every connected display *plus* any display an entry names, so a layout
+  The row shows a tab for every connected display _plus_ any display an entry names, so a layout
   authored at a desk is still editable on the laptop. The entry picker is deliberately **not** scoped
   by the tab, for the same reason.
 - **The entry dropdown is a button and a popover, not a `Menu`.** A menu label stretches an
@@ -177,9 +177,9 @@ moment an app is picked, and a panel sized to its content would resize under the
   and a stroke is hittable only on the line. Each anchor's block spans half a pinned axis and all of
   a spanned one, so the nine cells read as nine distinct silhouettes.
 - **Every field commits as it is typed**, so the preview moves with the keystroke and Save can
-  never write behind a value the field still holds — `⌘↵` blurs nothing. A number field still
+  never write behind a value the field still holds; `⌘↵` blurs nothing. A number field still
   never holds a bad value: out of range clamps and shows the clamped number on ↵ or focus loss,
-  nonsense reverts. The inline error slot is therefore only for what a field cannot prevent — an
+  nonsense reverts. The inline error slot is therefore only for what a field cannot prevent: an
   empty or duplicate name, or a refused write.
 - **Save is `⌘↵`, not `.defaultAction`.** Plain ↵ belongs to whichever field has focus. The footer
   draws the cap because here the cap and the behaviour come from one `.keyboardShortcut`, so the
@@ -194,19 +194,19 @@ also removes a whole failure class and any run-time dependency on `QuicklinkStor
 
 ## Wiring
 
-- **`AppEntry.Kind.windowLayout`** — entries are `window-layout:<uuid>`, published by
+- **`AppEntry.Kind.windowLayout`**: entries are `window-layout:<uuid>`, published by
   `AppIndex.setWindowLayouts(_:)` immediately **before** the window-command slice.
   `LauncherList.rows` mirrors that position; the slice order is the flat-selection invariant, and its
   `assert` proves membership but **not** order, so the two arrays must move together.
-- **`HotKeyAction.windowLayout(id:)`** — persisted under `hotkey.windowLayout.<uuid>` with a
+- **`HotKeyAction.windowLayout(id:)`**: persisted under `hotkey.windowLayout.<uuid>` with a
   `boundWindowLayoutIDs` index, the shape quicklinks and custom commands use. `WindowLayoutStore`
   decodes in `init`, so its live IDs are known by the time `hotKeys.start` prunes.
-- **Settings** — one new key, `windowLayoutsShowInLauncher` (on). Its own flag rather than sharing
+- **Settings**: one new key, `windowLayoutsShowInLauncher` (on). Its own flag rather than sharing
   `windowManagementShowInLauncher`: 34 command rows and three named layouts are different amounts of
   launcher noise, and wanting the layouts without the commands is the likelier preference. Layouts
   and their bindings ride in settings backups. A layout's row carries an alias field, dimmed with
   this switch or the row's own launcher checkbox.
-- **Two commands** — `Create Window Layout` and `Create Layout from Current Windows`, both dropped
+- **Two commands**: `Create Window Layout` and `Create Layout from Current Windows`, both dropped
   from the launcher with the feature.
 
 ## Testing

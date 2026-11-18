@@ -1,7 +1,7 @@
 # Window Management
 
-Rectangle-style window actions — halves, quarters, fourths, thirds, sizing, nudging, edge moves,
-display moves, native fullscreen and Space switching — searchable in the palette and bindable to
+Rectangle-style window actions (halves, quarters, fourths, thirds, sizing, nudging, edge moves,
+display moves, native fullscreen and Space switching), searchable in the palette and bindable to
 global shortcuts. 39 commands, plus any number of user-defined [custom sizes](#custom-sizes), no new
 dependencies and no new permission: they reuse the Accessibility grant clipboard paste already needs.
 
@@ -11,13 +11,13 @@ entries and a still-registered shortcut moves nothing.
 ## Invariants
 
 - **`WindowPlacementEngine` works exclusively in AX space**, and `AXScreens.AXGeometry` is the only place that
-  converts — anchored on the **primary** display, never the window's own screen. See
+  converts, anchored on the **primary** display, never the window's own screen. See
   [Coordinate space](#coordinate-space); getting this wrong is invisible on one monitor and wrong on
   every mixed-size setup.
 - **Nothing in this feature touches `backingScaleFactor`.** All three of `NSScreen.frame`, `visibleFrame`
   and AX coordinates are in points, so mixed-DPI correctness is automatic.
 - **`WindowCommand.swift`, `WindowPlacementEngine.swift`, `WindowActionMemory.swift` and `SpaceGesture.swift`
-  stay Foundation + CoreGraphics and pure** — no AX, no `NSScreen`, no clock (`WindowActionMemory`
+  stay Foundation + CoreGraphics and pure**: no AX, no `NSScreen`, no clock (`WindowActionMemory`
   takes `now` as a parameter, `SpaceGesture` takes `timestamp`). Every `AXUIElement` call and the
   Cocoa↔AX flip live in `Service/`; every `CGEvent` call lives in `SpaceSwitcher.swift`.
 - **`AXWindowAccess` is the one AX layer**, shared by the mover, the layout runner and
@@ -27,39 +27,39 @@ entries and a still-registered shortcut moves nothing.
   an `AXUIElement` write into our own process would stall the main thread that services it.
   `WindowInventory` still excludes us entirely, so layouts never name one of our windows.
 - **A Space command never reaches `WindowMover`.** `WindowPlacementEngine.placement` answers only for
-  `.geometry` and `.restore`, and `WindowCommandCoordinator` branches on `SpaceDirection` first — the
+  `.geometry` and `.restore`, and `WindowCommandCoordinator` branches on `SpaceDirection` first: the
   mover needs a `WindowTarget` naming a window to place, and a Space switch names none. An external
   target additionally needs a resolvable AX window; `.own` needs neither an app nor AX.
 
 ## Layout
 
-| File                                             | Imports                      | Role                                                                |
-| ------------------------------------------------ | ---------------------------- | ------------------------------------------------------------------- |
-| `Model/WindowCommand.swift`          | Foundation                   | Catalog: id, name, symbol, kind, group, `cyclesOnRepeat`, `resizes` |
-| `Model/WindowCycle.swift`            | Foundation                   | The three cycling modes a repeat press can run                      |
-| `Model/WindowPlacementEngine.swift`  | Foundation + CoreGraphics    | **Pure.** Every frame the commands produce                          |
-| `Model/WindowActionMemory.swift`     | Foundation + CoreGraphics    | **Pure.** Per-window cycle position and restore point               |
-| `Model/SpaceGesture.swift`           | Foundation                   | **Pure.** The Dock-swipe field tables and the IOHID payload bytes   |
-| `Service/AXWindowAccess.swift`       | AppKit + ApplicationServices | `@MainActor`. Every `AXUIElement` call, and the one write sequence  |
-| `Service/AXScreens.swift`            | AppKit + ColorSync           | `@MainActor`. `AXGeometry`, the one coordinate flip                 |
-| `Service/WindowMover.swift`          | AppKit + ApplicationServices | `@MainActor`. Command policy: cycle, restore, fullscreen            |
-| `Service/SpaceSwitcher.swift`        | CoreGraphics                 | `@MainActor`. Every `CGEvent` call and the payload splice           |
-| `Service/WindowTarget.swift`         | AppKit                       | `@MainActor`. Which window a command acts on                        |
-| `Model/CustomWindowSize.swift`       | Foundation + CoreGraphics    | **Pure.** A custom size, its units and the frame it resolves to     |
-| `Model/CustomWindowSizeStore.swift`  | Foundation                   | The custom-size library, as JSON in `UserDefaults`                  |
-| `UI/WindowCommandCoordinator.swift`  | AppKit                       | The one funnel from a palette row or a global hotkey                |
-| `UI/CustomWindowSizeCoordinator.swift` | Foundation                 | Custom sizes' launcher presence, edits and a deletion's cleanup     |
-| `Model/WindowShortcutPreset.swift`   | Foundation + Carbon          | **Pure.** Rectangle / Magnet and Spectacle tables, and the apply plan |
-| `UI/WindowShortcutPresetCoordinator.swift` | Foundation             | Applies a preset, confirming first when it replaces a user's key   |
+| File                                       | Imports                      | Role                                                                  |
+| ------------------------------------------ | ---------------------------- | --------------------------------------------------------------------- |
+| `Model/WindowCommand.swift`                | Foundation                   | Catalog: id, name, symbol, kind, group, `cyclesOnRepeat`, `resizes`   |
+| `Model/WindowCycle.swift`                  | Foundation                   | The three cycling modes a repeat press can run                        |
+| `Model/WindowPlacementEngine.swift`        | Foundation + CoreGraphics    | **Pure.** Every frame the commands produce                            |
+| `Model/WindowActionMemory.swift`           | Foundation + CoreGraphics    | **Pure.** Per-window cycle position and restore point                 |
+| `Model/SpaceGesture.swift`                 | Foundation                   | **Pure.** The Dock-swipe field tables and the IOHID payload bytes     |
+| `Service/AXWindowAccess.swift`             | AppKit + ApplicationServices | `@MainActor`. Every `AXUIElement` call, and the one write sequence    |
+| `Service/AXScreens.swift`                  | AppKit + ColorSync           | `@MainActor`. `AXGeometry`, the one coordinate flip                   |
+| `Service/WindowMover.swift`                | AppKit + ApplicationServices | `@MainActor`. Command policy: cycle, restore, fullscreen              |
+| `Service/SpaceSwitcher.swift`              | CoreGraphics                 | `@MainActor`. Every `CGEvent` call and the payload splice             |
+| `Service/WindowTarget.swift`               | AppKit                       | `@MainActor`. Which window a command acts on                          |
+| `Model/CustomWindowSize.swift`             | Foundation + CoreGraphics    | **Pure.** A custom size, its units and the frame it resolves to       |
+| `Model/CustomWindowSizeStore.swift`        | Foundation                   | The custom-size library, as JSON in `UserDefaults`                    |
+| `UI/WindowCommandCoordinator.swift`        | AppKit                       | The one funnel from a palette row or a global hotkey                  |
+| `UI/CustomWindowSizeCoordinator.swift`     | Foundation                   | Custom sizes' launcher presence, edits and a deletion's cleanup       |
+| `Model/WindowShortcutPreset.swift`         | Foundation + Carbon          | **Pure.** Rectangle / Magnet and Spectacle tables, and the apply plan |
+| `UI/WindowShortcutPresetCoordinator.swift` | Foundation                   | Applies a preset, confirming first when it replaces a user's key      |
 
-The feature also owns **[Window Layouts](window-layouts.md)** — saved multi-display arrangements
-applied in one pass — and **[Rooms](window-rooms.md)**, named sets of windows that tile on the
+The feature also owns **[Window Layouts](window-layouts.md)** (saved multi-display arrangements
+applied in one pass) and **[Rooms](window-rooms.md)**, named sets of windows that tile on the
 display you are on while everything else steps back. Both share this feature's switch, its
 Accessibility grant and its gap setting.
 
 The first four compile into `Tests/WindowCommandTests.swift` and `SpaceGesture.swift` compiles into
 `Tests/SpaceGestureTests.swift`, so none of them may gain an AppKit, SwiftUI or `NSScreen`
-dependency, and all must stay pure — `WindowActionMemory` takes `now` as a parameter rather than
+dependency, and all must stay pure: `WindowActionMemory` takes `now` as a parameter rather than
 reading a clock. CoreGraphics is needed only because `CGRect`'s `Equatable` conformance lives in that
 overlay rather than in Foundation.
 
@@ -75,8 +75,8 @@ _down_. `WindowMover.AXGeometry` is the only place that converts to and from Coc
 The visible consequence is that Top Half has `minY == visibleFrame.minY`, which the harness asserts
 specifically to stop a bottom-left convention creeping back in.
 
-The flip is anchored on the **primary** display's height — the display whose Cocoa frame origin is
-`(0, 0)` — never on the window's own screen. Both global spaces are anchored on the primary; flipping
+The flip is anchored on the **primary** display's height (the display whose Cocoa frame origin is
+`(0, 0)`), never on the window's own screen. Both global spaces are anchored on the primary; flipping
 through the window's own screen height shears every rect on a differently-sized display by the height
 difference. That bug is invisible on a single monitor and wrong on every mixed-size multi-monitor
 setup, so it is worth stating twice.
@@ -94,7 +94,7 @@ in this feature is a bug. `visibleFrame` already excludes the menu bar, the Dock
 family: an edge sitting on the screen boundary takes the full gap, an interior edge takes half. Two
 adjacent tiles therefore leave exactly `gap` between them and every screen edge is inset by `gap`, with
 no per-family special cases. Rects are rounded on their four **edges**, not origin + size, so two tiles
-sharing a fractional boundary (480.333 for thirds of 1441) round it identically — no overlaps, no
+sharing a fractional boundary (480.333 for thirds of 1441) round it identically: no overlaps, no
 one-point seams.
 
 **Free-floating commands** (Maximize, Almost Maximize, Reasonable Size, Center, Make Larger/Smaller,
@@ -104,13 +104,13 @@ the nudges and edge moves) work in
 **Next / Previous Display** re-derive a window a tile placed, so it lands as the same tile. Any other
 window keeps its position and size as fractions of the canvas, each display applying its own gap: the
 gap stays the same in points, and a window that filled one canvas fills the other. With **Keep aspect
-ratio** off, the window — tile or not — keeps its size and its offset from the canvas instead, capped
+ratio** off, the window, tile or not, keeps its size and its offset from the canvas instead, capped
 to the destination. With **Wrap around displays** off, moving past the first or last display is a
 no-op.
 
 **Make Larger / Make Smaller** step by 5% of the _screen_, not of the window, and the step is forced
-even so each edge moves a whole point. That makes the two commands exactly invertible — `size × 0.95 ×
-1.05 ≠ size`, so a size-relative step would shrink a little on every round trip — and it feels the same
+even so each edge moves a whole point. That makes the two commands exactly invertible (`size × 0.95 ×
+1.05 ≠ size`, so a size-relative step would shrink a little on every round trip), and it feels the same
 at any window size. Both directions saturate into exact no-ops: the ceiling is the canvas, the floor is
 `max(200×150, 15% of canvas)`.
 
@@ -119,11 +119,11 @@ without resizing it, keeping its position on the other axis. They are idempotent
 no area is left alone: pushed to an edge it would sit on the display boundary and change host.
 
 **Reasonable Size** is 60% of the canvas, centred, capped at 1025×900 points. The cap is what makes it
-display-independent — a laptop gets the fraction, a 4K or 5K display gets a moderate window instead of
+display-independent: a laptop gets the fraction, a 4K or 5K display gets a moderate window instead of
 a 2304×1296 one. It ignores the window's current size entirely, so it is idempotent.
 
-**Center Half** is half the screen's _area_: half width, full height, horizontally centred — the family
-sibling of Center Third. **Center Two Thirds** is the same shape at two thirds of the width.
+**Center Half** is half the screen's _area_: half width, full height, horizontally centred (the family
+sibling of Center Third). **Center Two Thirds** is the same shape at two thirds of the width.
 
 An oversized or off-screen window is always clamped back onto the display; `clamped` pins the leading
 edge rather than shoving the window off the far side. Maximize Height and Maximize Width keep the
@@ -132,8 +132,8 @@ full-height and still off-screen.
 
 ## Custom sizes
 
-A **custom size** is a user-defined command: a name, a width and a height — each in points or as a
-percentage — a position on the 3×3 grid [Window Layouts](window-layouts.md) uses, and an optional
+A **custom size** is a user-defined command: a name, a width and a height (each in points or as a
+percentage), a position on the 3×3 grid [Window Layouts](window-layouts.md) uses, and an optional
 offset in points on top of that position. It acts on the focused window exactly as a built-in
 command does, and is the answer for a display where Reasonable Size is wrong: no single built-in
 size suits every screen, so the size is the user's.
@@ -152,7 +152,7 @@ size suits every screen, so the size is the user's.
   `WindowActionMemory` records it with a `nil` command: it never cycles and is never a tile, so a
   following Next Display scales the window rather than re-deriving a tile.
 - **A unit switch in the editor converts** the number against the main display, so 50% becomes the
-  points it was on that screen. Stored values are whole numbers, clamped rather than rejected — a
+  points it was on that screen. Stored values are whole numbers, clamped rather than rejected: a
   bad import keeps the record.
 
 A custom size shares the window commands' `AppEntry.Kind`, their launcher section and their
@@ -161,22 +161,22 @@ A custom size shares the window commands' `AppEntry.Kind`, their launcher sectio
 
 ## Cycling and Restore
 
-Both reduce to one question — _has the user moved this window themselves since our last action?_ — so
+Both reduce to one question (_has the user moved this window themselves since our last action?_), so
 `WindowActionMemory` answers it once. It is generic over the key so it stays Foundation-only: the app
 keys by `AXUIElement` (via `CFEqual`/`CFHash` plus the pid), the harness keys by `Int`.
 
-`decide` is a pure query returning the cycle step, which is then fed into `WindowPlacementEngine.Input.step` —
+`decide` is a pure query returning the cycle step, which is then fed into `WindowPlacementEngine.Input.step`;
 cycle state is never hidden inside the geometry. Its rules, in order:
 
 1. No record → step 0, capture the current frame as the restore point, `canRestore: false`.
-2. The window left the state we put it in — its frame drifted from `appliedFrame` by more than
+2. The window left the state we put it in: its frame drifted from `appliedFrame` by more than
    2 pt, or it is natively fullscreen when we did not leave it so → step 0, **and refresh** the
    restore point.
 3. A different command, a different display, a `cycleLength` of 1, or a lapsed `cycleTimeout` → step 0.
 4. Otherwise → `(step + 1) % cycleLength`.
 
 `cycleLength` comes from `WindowPlacementEngine.cycleLength(for:screens:cycle:)`, so the memory holds
-no opinion about what a step means: 1 covers cycling switched off *and* a command that never cycles,
+no opinion about what a step means: 1 covers cycling switched off _and_ a command that never cycles,
 which is why `WindowActionMemory` no longer reads the catalog at all.
 
 Two details carry their weight:
@@ -196,23 +196,23 @@ the window is still in it. `WindowMover` leaves `cycleTimeout` unset, so waiting
 **Cycling covers the four halves and Center Half only**, and `WindowCycle` picks one of three modes,
 `.off` by default so a repeat press stays idempotent unless asked otherwise:
 
-- **`.sizes`** — ½ → ⅓ → ⅔ in place. Top and Bottom Half cycle through _vertical_ thirds, which have no
+- **`.sizes`**: ½ → ⅓ → ⅔ in place. Top and Bottom Half cycle through _vertical_ thirds, which have no
   commands of their own (the Thirds group is horizontal), so they are expressed as fractions rather
   than as other command IDs. Center Half keeps its width centred, so its steps land on Center Third
   and Center Two Thirds.
-- **`.displays`** — every display contributes two half-slots to one strip, ordered left-to-right by
+- **`.displays`**: every display contributes two half-slots to one strip, ordered left-to-right by
   `ordered(_:)`. Left and Top walk it backwards, Right and Bottom forwards, both wrapping, so one
   shortcut sweeps the whole desktop in one direction: on two displays, Left Half gives
   D1-left → D2-right → D2-left → D1-right. The walk counts from the display the chain started on,
   which `decide` carries as `originScreenID`: from the second press the window already sits on the
   display it was moved to, and counting from there would overshoot a slot. One display makes the
-  mode a quiet no-op — a length of 1 — rather than a left/right flip in place, matching Next
+  mode a quiet no-op (a length of 1) rather than a left/right flip in place, matching Next
   Display's own single-display behaviour. Center Half hugs no edge, so it has no slot on the strip
   and stays put; Next Display already moves it.
 
 The two are deliberately exclusive rather than composable: a 12-press chain over two displays is not a
 shortcut any more, and Raycast's own setting is the same single choice. `Half` carries the (axis, edge)
-pair that makes both modes one expression — a slot's edge decides which side a ⅓ hugs, so the four
+pair that makes both modes one expression: a slot's edge decides which side a ⅓ hugs, so the four
 halves are no longer four hand-written fraction cases.
 
 Growth is bounded three ways: an LRU cap of 64, an `NSWorkspace.didTerminateApplicationNotification`
@@ -222,11 +222,11 @@ when a read fails. Nothing is persisted.
 ## Choosing a target
 
 Our panels are `.nonactivatingPanel`, so opening one never makes Tinycast frontmost and
-`NSWorkspace.frontmostApplication` keeps naming the app *behind* it rather than the window the user
+`NSWorkspace.frontmostApplication` keeps naming the app _behind_ it rather than the window the user
 is looking at. `WindowTarget` is the answer to "what does this command act on": it prefers a key
 window of ours, falling back to the frontmost app only when there is none.
 
-`canBecomeMain` is the filter, and it needed no new flag — every transient panel in the app already
+`canBecomeMain` is the filter, and it needed no new flag: every transient panel in the app already
 declines it, which leaves exactly the Notes editor and the `AppWindowController` windows. When a key
 child is in front, such as the note switcher that `addChildWindow`s itself onto the editor,
 `WindowTarget` looks one level up through `parent` so the command still places the editor.
@@ -235,7 +235,7 @@ child is in front, such as the note switcher that `addChildWindow`s itself onto 
 here, because `WindowCommandCoordinator.handOffTarget()` branches on `paletteCoordinator.isVisible`
 first and a hidden palette cannot be key. **That ordering is the invariant; do not reorder those two
 branches.** The palette branch reads `previousOwnWindow`, which `PaletteWindowController` records
-from whatever held key at summon time regardless of which app was frontmost — for the same reason
+from whatever held key at summon time regardless of which app was frontmost, for the same reason
 this section exists.
 
 Fullscreen on a window of ours fires when it is `.resizable` and its `collectionBehavior` opts out of
@@ -250,13 +250,13 @@ for keystrokes: same shape, same `Service/` position, one idea applied twice.
 ## Applying a placement
 
 `WindowMover.perform(_:target:gap:cycle:wrapsDisplays:keepsProportions:)` is the only entry point.
-`target` is **explicit** because the palette is frontmost when a command dispatches from it —
+`target` is **explicit** because the palette is frontmost when a command dispatches from it;
 `WindowCommandCoordinator` passes a `WindowTarget`, which is either an external app or one of our
 own windows (see [Choosing a target](#choosing-a-target)), and restores focus to it rather than
 dropping it. The own case skips AX and the Accessibility prompt entirely: placing our own window
 needs no grant. It is synchronous: every AX call is a bounded mach round trip capped by a 1s
 messaging timeout, and `await` would only add reentrancy between a held hotkey's repeats. The
-timeout is set on the application element _and again_ on the window element — it is per-element and
+timeout is set on the application element _and again_ on the window element: it is per-element and
 never inherited. The one exception is [leaving fullscreen](#leaving-fullscreen), which has to wait
 out an animation.
 
@@ -277,15 +277,15 @@ The frame is read back **once** afterwards, for three reasons: to detect an app-
 (AX exposes no attribute for it, so the read-back is the only way to learn it), to record a truthful
 `appliedFrame`, and to report whether anything actually changed. When the app refused to shrink, the
 window is re-placed per the placement's `anchor` so a left half stays left-aligned instead of drifting
-centre. **One correction, no loop** — iterating against an app that fights back just makes the window
+centre. **One correction, no loop**: iterating against an app that fights back just makes the window
 visibly jitter.
 
 **Toggle Fullscreen** uses the undocumented `AXFullScreen` attribute, falling back to pressing
 `AXFullScreenButton` when the attribute is not settable, then a quiet no-op. A write that fails
 counts as sent and never falls through to the button: the app may still flip, and the press would
 flip it back. There is deliberately no synthetic ⌃⌘F third attempt: it is app-rebindable and could
-fire an unrelated menu command. It does not read geometry back — the transition is animated and
-asynchronous, so any frame read there is a mid-animation value — and it clears the cycle chain while
+fire an unrelated menu command. It does not read geometry back (the transition is animated and
+asynchronous, so any frame read there is a mid-animation value), and it clears the cycle chain while
 keeping the restore point, since macOS restores the pre-fullscreen frame itself but the user's
 original frame is still the right Restore target. It records the state it asked for, so the window
 going fullscreen through us does not break the chain.
@@ -296,7 +296,7 @@ size are rejected before any work happens.
 ### Leaving fullscreen
 
 A geometry command on a natively fullscreen window resolves its placement first, so a command with
-nowhere to go — Next Display on one display, or past the last with wrapping off — leaves the window
+nowhere to go (Next Display on one display, or past the last with wrapping off) leaves the window
 alone. Otherwise it exits fullscreen, waits **a fixed 750 ms**, and applies the same decision to a
 fresh frame and fresh screens, so an unplugged display is handled like any other move. Next and
 Previous Display then re-enter fullscreen, which macOS does on the display now holding the window;
@@ -314,7 +314,7 @@ window as it finds it, so the latest press wins. Commands on other windows are u
 macOS transitions stay visible.
 
 `AXEnhancedUserInterface` is cleared for the duration of the writes and restored immediately, because
-some apps reinterpret frame writes while it is on — but never while VoiceOver is running, which would
+some apps reinterpret frame writes while it is on, but never while VoiceOver is running, which would
 break the screen reader. **This mitigation is inherited convention and unverified on macOS 26**; if a
 stock Electron app tiles correctly without it, delete the helper rather than keep it.
 
@@ -322,26 +322,25 @@ stock Electron app tiles correctly without it, delete the helper rather than kee
 
 Switch to Next/Previous Space does not move a window at all. It synthesises the **trackpad Dock swipe**
 macOS switches Spaces with, at a velocity high enough that the WindowServer completes the transition
-instead of animating it — about 56 ms against roughly 1100 ms for the system's own ⌃← / ⌃→.
+instead of animating it: about 56 ms against roughly 1100 ms for the system's own ⌃← / ⌃→.
 
 Everything else was measured and rejected: `CGSManagedDisplaySetCurrentSpace` updates the bookkeeping
 but never performs the transition, so you keep looking at the same windows; a synthetic ⌃← is ignored
 because the Space hotkey only accepts real HID events; and driving System Events costs the full
 animation. The gesture is the only path that both works and skips the slide, and it needs no private
-framework linkage and no SIP change — only public `CGEvent` calls carrying undocumented field numbers.
+framework linkage and no SIP change: only public `CGEvent` calls carrying undocumented field numbers.
 
-`SpaceSwitcher` posts three phases — began, changed, ended — to `.cgSessionEventTap`. A two-phase
+`SpaceSwitcher` posts three phases (began, changed, ended) to `.cgSessionEventTap`. A two-phase
 gesture is ignored. Fields 55 (`DockControl`), 110 (dock-swipe HID type), 132 (phase), 123 (horizontal
 motion) and 124 (progress) are common to both encodings; **positive is "next"**, except that macOS 27
 applies Natural Scrolling to the synthetic swipe, so `SpaceSwitcher` reverses the direction while
 `com.apple.swipescrolldirection` is on (its default when the key is absent). Progress is
 deliberately the smallest representable nudge: a real distance makes the WindowServer draw the slide.
 
-**macOS 27 changed the contract.** Through macOS 26 the public fields are enough, and velocity (129 and
-130) rides on every phase. From macOS 27 the Dock validates the gesture against a raw IOHID queue
+**macOS 27 changed the contract.** Through macOS 26 the public fields are enough, and velocity (129 and 130) rides on every phase. From macOS 27 the Dock validates the gesture against a raw IOHID queue
 payload that no setter can reach, so `SpaceSwitcher` serialises the event with `CGEventCreateData`,
 appends the payload as a field-4205 record, and reparses it with `CGEventCreateFromData`. That path
-also adds fields 134, 138, 169 and 125, and carries velocity **only** on the ended phase — velocity
+also adds fields 134, 138, 169 and 125, and carries velocity **only** on the ended phase; velocity
 earlier makes the Space slide back before it settles. `SpaceGesture` owns both tables so the two
 encodings can never drift apart, and the runtime OS selects between them: the SDK cannot, because a
 build made on 26 still has to work on 27.
@@ -353,7 +352,7 @@ Three details are load-bearing and each was expensive to learn:
 - **Velocity is momentum, not latency.** 2000 overshoots by two Spaces; 1000 lands exactly one, and
   lowering it does not make the switch slower.
 - **The Dock ignores a gesture from a short-lived process.** The calls all report success and nothing
-  happens. Tinycast is a resident menu-bar app, so this is free — but it is why a one-shot CLI cannot
+  happens. Tinycast is a resident menu-bar app, so this is free, but it is why a one-shot CLI cannot
   be used to reproduce a bug here.
 
 Boundaries are left to macOS. The private `CGSGetActiveSpace` lags behind the Dock after a synthetic
@@ -364,7 +363,7 @@ while one is in flight is dropped rather than queued, for the same reason the ph
 The serialized `CGEvent` format is a big-endian tagged record list behind a version word, which
 `SpaceSwitcher` checks is `2` before splicing; a bumped version makes the command a quiet no-op rather
 than posting a corrupt event. The payload itself is packed little-endian with 16.16 fixed-point
-scalars, which is why `SpaceGesture.fixed1616` floors to ±1 — the tiny progress value would otherwise
+scalars, which is why `SpaceGesture.fixed1616` floors to ±1: the tiny progress value would otherwise
 quantize to zero and the gesture would do nothing.
 
 ## Shortcut presets
@@ -376,7 +375,7 @@ It is a one-shot action rather than a mode, so nothing is persisted, there is no
 and every shortcut stays editable afterwards.
 
 - **Fill in, never replace wholesale.** A command the preset doesn't name keeps its binding, unless it
-  holds a key the preset gives to another command — then it is *displaced* and cleared.
+  holds a key the preset gives to another command; then it is _displaced_ and cleared.
 - **Confirm only over the user's own keys.** `WindowShortcutPresetPlan` lists every command whose
   existing binding would change or be displaced; when that list is empty the preset applies at once,
   otherwise `WindowShortcutPresetCoordinator` asks through `AppCore.confirm` first.
@@ -387,37 +386,37 @@ and every shortcut stays editable afterwards.
   so ⌃⌥U lands on the same physical key under Dvorak or AZERTY. Actions with no Tinycast equivalent
   (Spectacle's next/previous third and redo) are left out.
 - **Choose, then Apply.** The pop-up holds a choice that is never stored, and Apply stays disabled
-  until one is made — and while `WindowShortcutPreset.matching` reports the chosen preset as fully
+  until one is made, and while `WindowShortcutPreset.matching` reports the chosen preset as fully
   set (other commands don't count), so one edited or cleared key re-enables it.
 - **No Raycast preset.** Raycast ships its window commands unbound, so there is nothing to fill in.
 
 ## Wiring
 
-- **`AppEntry.Kind.windowCommand`** — entries are `window-command:<id>`, published by
+- **`AppEntry.Kind.windowCommand`**: entries are `window-command:<id>`, published by
   `AppIndex.setWindowCommandsVisible(_:)` between the system-action and custom-command slices.
   `LauncherList.rows` mirrors that position with a "Window Management" section; the slice order is the
   flat-selection invariant, so the two must move together.
-- **`HotKeyAction.windowCommand(id:)`** — persisted under
+- **`HotKeyAction.windowCommand(id:)`**: persisted under
   `hotkey.windowCommand.<raw-id>`, matching the shared `HotKeyAction.defaultsKey` convention. Unlike
   custom commands there is no bound-ID index to maintain: the catalog is fixed, so `HotKeyManager.start`
   and `conflictOwner` iterate `WindowCommand.ID.allCases` and `register` no-ops on an unbound command.
 - **`WindowCommandCoordinator.runWindowCommand(id:)`** is the one funnel for both palette activation and the global
   hotkey, so the feature switch cannot be bypassed by either. A Space command branches out of it first
   and hides the palette with `restoreFocus: false`: restoring focus reactivates the recorded previous
-  app, and activating an app that lives on another Space pulls that Space forward — a race against the
+  app, and activating an app that lives on another Space pulls that Space forward, a race against the
   gesture that can land on the opposite Space from the one asked for.
-- **`HotKeyAction.customWindowSize(id:)`** — persisted under `hotkey.customWindowSize.<uuid>` with a
+- **`HotKeyAction.customWindowSize(id:)`**: persisted under `hotkey.customWindowSize.<uuid>` with a
   `boundCustomWindowSizeIDs` index, the shape window layouts use. It dispatches through
   `WindowCommandCoordinator.runCustomWindowSize(id:)`, the same funnel and the same feature gate.
 - **`AppIndex.setCustomWindowSizes(_:)`** publishes the custom-size slice immediately after the
   window commands, inside the same section. Custom sizes and their bindings ride in settings backups.
-- **Settings** — `windowManagementEnabled` (off), `windowManagementShowInLauncher` (on), `windowGap`
+- **Settings**: `windowManagementEnabled` (off), `windowManagementShowInLauncher` (on), `windowGap`
   (0), `windowCycle` (`.off`), `windowWrapsDisplays` (on) and `windowKeepsProportions` (on). All six
   ride in settings backups: unlike `snippetsEnabled` they grant no permission class of their own.
 - **Per-command visibility** reuses `VisibilityStore` as-is; clearing a recorded shortcut is how a
   hotkey is disabled, so there is no separate per-command enabled flag. Each command and custom-size
   row carries an alias field, dimmed while its entry is hidden from the launcher. Window commands
-  deliberately get **no** launcher-category pane of their own — they are managed inside Settings ›
+  deliberately get **no** launcher-category pane of their own; they are managed inside Settings ›
   Window Management, the same call already made for snippets.
 
 ## Testing
@@ -445,12 +444,12 @@ arithmetic, the host-display placement, and store CRUD, validation, import sanit
 persistence.
 
 Everything runs headless because the layer is pure. `WindowMover` and `SpaceSwitcher` are not compiled
-into either harness and have no automated coverage — the AX and `CGEvent` paths need manual
+into either harness and have no automated coverage; the AX and `CGEvent` paths need manual
 verification, particularly:
 
 1. A non-resizable window (System Information) must fail silently, left untouched rather than
    half-moved.
-2. **A mixed-resolution multi-monitor setup** — the coordinate-flip bug appears nowhere else. Tile on
+2. **A mixed-resolution multi-monitor setup**: the coordinate-flip bug appears nowhere else. Tile on
    the secondary display, then round-trip Next/Previous Display.
 3. Toggle Fullscreen on a window that accepts it and one that refuses it. Then, on two unequal
    displays, Next and Previous Display on the fullscreen window land it fullscreen on the other
@@ -462,6 +461,6 @@ verification, particularly:
 5. Restore on a window Tinycast has never moved, and after a custom size.
 6. **Space switching, on the real desktop with three or more Spaces.** Next and Previous each move
    exactly one Space with no visible slide, in and out of a fullscreen Space, and a held shortcut does
-   not wedge the Dock or land two Spaces at once. A Space switch is not observable until it settles —
+   not wedge the Dock or land two Spaces at once. A Space switch is not observable until it settles;
    sampling sooner than about three seconds returns mid-transition state that reads as a dropped or
    doubled move, which will make a working build look broken.

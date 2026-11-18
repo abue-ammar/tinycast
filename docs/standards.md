@@ -1,6 +1,6 @@
 # Engineering standards
 
-How code in Tinycast is written. This is **guidance** — it describes what the codebase already looks
+How code in Tinycast is written. This is **guidance**: it describes what the codebase already looks
 like so that new code reads like it was there all along, and a good reason to depart from it is a good
 reason. What is actually checked is the bar in
 [testing.md](testing.md#definition-of-done); the rules that may not be broken at all are the
@@ -41,12 +41,12 @@ cross an asynchronous actor boundary.
 
 Full detail in [architecture.md](architecture.md); the rules a new feature has to satisfy:
 
-- **One folder per feature** under `Tinycast/Features/<Name>/`, holding everything that feature owns —
+- **One folder per feature** under `Tinycast/Features/<Name>/`, holding everything that feature owns:
   its model, its services, its views and its own Settings panes.
 - A larger feature splits into `Model/` (pure), `Service/` (effects), `UI/` (views and the feature's
   coordinator) and `Settings/` (its panes). A small one stays flat. Split when the flat folder stops being
   scannable, not on principle.
-- **`Model/` may not import AppKit or SwiftUI.** Everything from the environment is injected — the clock,
+- **`Model/` may not import AppKit or SwiftUI.** Everything from the environment is injected: the clock,
   the filesystem, the home directory, the rates table. This is the enforced rule below.
 - New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a second singleton.
 - A Settings pane lives with its feature. Only a pane no feature owns lives in `Settings/Panes/`.
@@ -54,7 +54,7 @@ Full detail in [architecture.md](architecture.md); the rules a new feature has t
   feature.
 
 Feature work reaches the app through a **coordinator**, called by `AppCore` and by views via
-`@Environment`. Confirmation gates live in the coordinator, never in the runner — which is what lets
+`@Environment`. Confirmation gates live in the coordinator, never in the runner, which is what lets
 `ShellCommandRunner` and `SystemActionRunner` stay harness-compilable while the "are you sure?" step
 remains unbypassable.
 
@@ -67,10 +67,10 @@ fit the table.
 | Suffix        | Means                                                                         |
 | ------------- | ----------------------------------------------------------------------------- |
 | `Store`       | Owns persisted state and publishes it                                         |
-| `Repository`  | File semantics a `Store` does not imply — conflict detection, revision checks |
+| `Repository`  | File semantics a `Store` does not imply: conflict detection, revision checks  |
 | `Coordinator` | A feature's action surface, called by `AppCore` and the palette               |
 | `Controller`  | Owns one AppKit window or surface                                             |
-| `Presenter`   | Owns presentation policy across surfaces — one-at-a-time, auto-dismiss, fade  |
+| `Presenter`   | Owns presentation policy across surfaces: one-at-a-time, auto-dismiss, fade   |
 | `Manager`     | Owns a subsystem's lifecycle _and_ its policy; started from `AppCore.start()` |
 | `Service`     | A stateless capability other types call                                       |
 | `Provider`    | Supplies values on demand, owning no policy about their use                   |
@@ -86,7 +86,7 @@ fit the table.
 | `Index`       | A searchable collection, rebuilt as its inputs change                         |
 | `Engine`      | A pure evaluator: input → output                                              |
 | `Lexer`       | Splits text into classified token ranges in one pass; never rejects input     |
-| `Policy`      | A pure decision — no state, no effects                                        |
+| `Policy`      | A pure decision: no state, no effects                                         |
 | `Remapper`    | Keeps one HID key mapping on every matching device, including later arrivals  |
 | `Migration`   | Repairs state an older release left behind; deleted after one stable release  |
 | `Lock`        | Holds a cross-process exclusive claim that the kernel frees on exit           |
@@ -96,7 +96,7 @@ type, so there are only four: `ClipboardManager` (polls, and owns the capture po
 paste-side handshake), `HotKeyManager` (persists bindings, and drives Carbon registration and
 double-tap dispatch), `HyperKeyManager` (drives the tap, the remap and their pauses, and owns the
 conflict and Secure Input policy) and `DictationKeyManager` (the 🎤 remap). Another is fine if it
-genuinely owns both halves — but check first whether `Store`, `Monitor` or `Coordinator` describes it
+genuinely owns both halves, but check first whether `Store`, `Monitor` or `Coordinator` describes it
 better, because usually one of them does.
 
 `Registry` and `ViewModel` are retired: a static table is a `Catalog`, shared app state is a `State`.
@@ -107,7 +107,7 @@ governed by this table.
 
 - One top-level type per file, named for it. A `View` file is named for its view; a namespace `enum` for
   the namespace.
-- Private nested helpers are free to be named for their job — the table governs top-level types only.
+- Private nested helpers are free to be named for their job; the table governs top-level types only.
 - `*.generated.swift` is emitted by a script in `Scripts/` and never hand-edited.
 
 ## Swift style
@@ -115,11 +115,11 @@ governed by this table.
 Match the surrounding code. Beyond that:
 
 - **Early returns over nesting.** A `guard` at the top beats an `if` wrapping the body.
-- `let` unless mutation is needed. No abbreviations in names — `index`, not `idx`.
+- `let` unless mutation is needed. No abbreviations in names: `index`, not `idx`.
 - Prefer a named constant or a small type to a comment explaining a literal.
 - Keep types and functions to a single responsibility. If a function needs a section comment, it wants to
   be two functions.
-- Views stay declarative and thin. Business logic lives in a model, a store or a coordinator — a `body`
+- Views stay declarative and thin. Business logic lives in a model, a store or a coordinator; a `body`
   that decides things is the most common way this codebase gets worse.
 - Prefer composition over a long `body`. Extract a subview before extracting a `@ViewBuilder` helper.
 - Errors surface through `DialogController` (something the user must acknowledge) or
@@ -160,13 +160,13 @@ Swift 6 language mode: data-race violations are hard errors, and that is the des
   lifetime. Strong capture is valid for intentional bounded work; `[unowned self]` needs a guaranteed
   lifetime. Unwrapping weak `self` before a long suspension still retains it until the work finishes.
 - `DispatchQueue.main.async` is not a fix for an ordering problem. If order matters, make it explicit.
-- `ClipboardStore` uses `isolated deinit` for its SQLite teardown — the idiom to copy for a resource that
+- `ClipboardStore` uses `isolated deinit` for its SQLite teardown: the idiom to copy for a resource that
   must be torn down on its actor.
 
 Two gotchas worth knowing before they cost an afternoon:
 
 - **`withObservationTracking`'s `onChange` is a willSet hook.** It fires _before_ the write lands, so a
-  re-read must be deferred into a `Task` — which is also where the tracking is re-armed, since the
+  re-read must be deferred into a `Task`, which is also where the tracking is re-armed, since the
   closure is one-shot. `AppCore.track` is the shape to copy.
 - **A signpost interval leaks if the wrapped work throws.** The `.end` emit is skipped on the throw path
   unless it is in a `defer`. `Signposts.interval` already does this.
@@ -177,7 +177,7 @@ Use `@Observable` for UI state rather than `ObservableObject` or `@Published`:
 
 - `@ObservationIgnored` on memo caches and lazily-built collaborators. Without it, reading a memo
   registers a dependency and the view re-renders on its own cache fill.
-- Never write a type annotation on `@Environment` for an `@Observable` type — the macro resolves the
+- Never write a type annotation on `@Environment` for an `@Observable` type; the macro resolves the
   keyless overload by type, and an annotation changes which overload is chosen.
 - **The compiler is blind to a missed injection site.** A view reading `@Environment(AppSettings.self)`
   from a hierarchy nobody injected into compiles and traps at runtime, so check the injection when adding
@@ -214,7 +214,7 @@ The bar the whole codebase is held to, and the reason it stays legible:
 - Preserve existing behaviour unless the task is to change it. Behaviour changes are decisions, and
   decisions get discussed.
 - Delete rather than deprecate. There is no audience for a compatibility layer in an app with no API.
-- Leave the codebase cleaner than you found it — but in a separate commit from the change that noticed.
+- Leave the codebase cleaner than you found it, but in a separate commit from the change that noticed.
 
 ## Comments
 
@@ -236,12 +236,12 @@ comment is written buys a second edit; these are cheap to get right on the first
 ## Accessibility
 
 Every custom control carries a label and the traits that describe it. The palette is an entirely custom
-control surface, so nothing comes for free — a row, a keycap chip, a footer pill and a dialog button all
+control surface, so nothing comes for free: a row, a keycap chip, a footer pill and a dialog button all
 need saying explicitly. Adding it as the view is written costs a line; retrofitting it costs a rewrite.
 
 A label on a stack lands on each child, so a labelled stack is made one element first with
 `.accessibilityElement(children:)`. Inside `.textSelection(.enabled)` a `Text` given a label is an
-AppKit element whose label lookup calls itself until the stack overflows — the crash in #1860.
+AppKit element whose label lookup calls itself until the stack overflows (the crash in #1860).
 
 ## Localization
 
@@ -251,8 +251,8 @@ English source text; the compiler extracts the keys, and `./Scripts/sync-strings
 the catalog (Xcode's own build does the same in the IDE). The six privacy prompts live in
 `InfoPlist.xcstrings`, keyed by their `Info.plist` key.
 
-- **SwiftUI's own initializers localize literals already** — `Text("…")`, `Button("…")`, `.help("…")`
-  and the rest take a `LocalizedStringKey`. A `String` *variable* passed to them is shown verbatim, so
+- **SwiftUI's own initializers localize literals already**: `Text("…")`, `Button("…")`, `.help("…")`
+  and the rest take a `LocalizedStringKey`. A `String` _variable_ passed to them is shown verbatim, so
   the place that wrote the English is the place that localizes it.
 - **A view that only ever labels takes `LocalizedStringResource`**, so its callers pass plain literals
   and the compiler still extracts them: `SettingsRowTitle`, `SettingsAnchor`, `SettingsSearchEntry`,
@@ -260,16 +260,16 @@ the catalog (Xcode's own build does the same in the IDE). The six privacy prompt
 - **A `LocalizedStringResource` becomes a `String` through `resolved()`**, never `String(localized:)`:
   that overload can skip the bundle's string-table cache and reparse the whole table on every call.
 - **Everything that also carries runtime text keeps `String`**, and its literal callers write
-  `String(localized: "…")` — dialogs, HUD messages, `PopoverMenuItem`, AppKit menus and windows,
+  `String(localized: "…")`: dialogs, HUD messages, `PopoverMenuItem`, AppKit menus and windows,
   `LocalizedError`, and every model `title`. `Model/` files use it too; it is Foundation.
 - **One sentence is one literal.** Never assemble one with `+` or from localized fragments: the
   translation has to be free to reorder it. A long one is a `"""` literal with `\` continuations.
-  Interpolate data — a name, a count — never a phrase.
+  Interpolate data (a name, a count), never a phrase.
 - **A count is one interpolated string** (`"\(count) items"`) with plural variations in the catalog, never
   a `== 1 ?` branch.
 - **Not language, not in the catalog**: glyphs, separators and samples are `Text(verbatim:)`.
-- **Never localized**: anything from macOS, the user or an extension — app and pane names, user
-  content, everything a Raycast extension supplies or receives — and persisted formats, identifiers,
+- **Never localized**: anything from macOS, the user or an extension (app and pane names, user
+  content, everything a Raycast extension supplies or receives) and persisted formats, identifiers,
   log text, prompts sent to a model, and what the calculator parses.
 - **Tinycast's own command names are translated and stay findable in English**: `CommandID`,
   `SystemAction` and `WindowCommand` keep their English source as `englishName`, which the launcher
@@ -280,12 +280,12 @@ and saves that choice before any localization lookup. It does not keep following
 Settings › General › Language writes the same per-app `AppleLanguages` key as System Settings ›
 Language & Region › Applications, and it applies on relaunch. An empty or unshipped stored list still
 launches in English. Because that key also changes
-`Locale.preferredLanguages` for this process, anything that indexes what the user *types* — app
-names, emoji keywords — reads macOS's own list through `SystemLanguages.preferred` instead.
+`Locale.preferredLanguages` for this process, anything that indexes what the user _types_ (app
+names, emoji keywords) reads macOS's own list through `SystemLanguages.preferred` instead.
 
 ## What is actually checked
 
-Everything above is guidance. The mechanical bar — the harnesses, the purity grep, lint and a
-clean build — is one list, in [testing.md](testing.md#definition-of-done), so that it cannot drift by
+Everything above is guidance. The mechanical bar (the harnesses, the purity grep, lint and a
+clean build) is one list, in [testing.md](testing.md#definition-of-done), so that it cannot drift by
 being written down twice. Anything not on it is a judgement call: make it, and say why in the PR if it
 is not obvious.

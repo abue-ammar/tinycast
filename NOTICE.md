@@ -1,6 +1,6 @@
 # Third-party notices
 
-Tinycast is licensed under the GNU Affero General Public License v3 — see [LICENSE](LICENSE). It
+Tinycast is licensed under the GNU Affero General Public License v3 (see [LICENSE](LICENSE)). It
 also redistributes the third-party material recorded below, under the terms stated for each.
 
 ## Dictation model resources
@@ -223,7 +223,7 @@ Qwen's tokenizer resources come from Qwen/Qwen3-ASR-0.6B. The Apache 2.0 licence
    limitations under the License.
 ```
 
-## Brand marks — `Tinycast/Assets.xcassets/AIBrand*.imageset`
+## Brand marks: `Tinycast/Assets.xcassets/AIBrand*.imageset`
 
 Sixteen monochrome template SVGs, ~300 B–2 KB each, drawn beside a model's name in the model
 picker and the chat header, and beside a provider in Settings, so a route is recognisable at a
@@ -233,7 +233,7 @@ Every mark is the trademark of the company it identifies. Tinycast uses them onl
 company's own models inside its own UI. No affiliation, sponsorship or endorsement is implied, and
 none of these companies has reviewed or approved Tinycast.
 
-### Simple Icons — thirteen marks
+### Simple Icons: thirteen marks
 
 `claude`, `cursor`, `deepseek`, `googlegemini`, `kimi`, `meta`, `minimax`, `mistralai`, `openai`,
 `openrouter`, `perplexity`, `qwen` and `x`, from <https://github.com/simple-icons/simple-icons>.
@@ -245,7 +245,7 @@ imply the icon is unlicensed. Anyone redistributing Tinycast, or reusing these f
 should read the disclaimer and satisfy themselves about the brands involved:
 <https://github.com/simple-icons/simple-icons/blob/develop/DISCLAIMER.md>.
 
-### Lobe Icons — two marks
+### Lobe Icons: two marks
 
 `grok` and `zai`, from <https://github.com/lobehub/lobe-icons>, which is MIT licensed. Its licence requires
 this notice to travel with the work:
@@ -274,7 +274,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-### OpenCode — one mark
+### OpenCode: one mark
 
 `opencode`, drawn after the mark in <https://github.com/sst/opencode>, which is MIT licensed: the
 frame and the dimmer block inside it, as its own favicon has them. Its licence requires this notice
@@ -304,7 +304,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Rooms — window rooms, their layouts and the gliding layout preview
+## Rooms: window rooms, their layouts and the gliding layout preview
 
 Window Management's rooms adapt code from **Rooms** by Sara Gordić,
 <https://github.com/saragordic/rooms>, used with the author's permission and under its MIT
@@ -348,7 +348,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## File Search — the disk index
+## File Search: the disk index
 
 Search Files' index follows the design of **fsearch** by Noah Dunnagan,
 <https://github.com/noahdunnagan/fsearch>, which is MIT licensed. Tinycast's implementation is its

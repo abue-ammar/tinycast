@@ -28,6 +28,11 @@ Leak-tested:
 
 <!-- Tradeoffs made on purpose, and anything you're unsure about. "None" is a valid answer. -->
 
+## AI usage
+
+<!-- Required. Which tool, and what it did: wrote the code, wrote the tests, helped debug, or only
+     autocomplete. "None" is a valid answer. See CODE_OF_CONDUCT.md § AI usage. -->
+
 ## Tests & validation
 
 <!-- Which Tests/ harnesses you ran and any cases you added, plus what you exercised by hand.

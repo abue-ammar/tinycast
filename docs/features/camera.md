@@ -2,52 +2,52 @@
 
 One camera, two surfaces. `Open Camera` is a launcher command that puts a live preview on screen,
 mirrors it, switches between the Mac's cameras and copies a photo to the clipboard. Calendar's
-pre-meeting preview is the other, and it rides the same session, panel and stage — the join-specific
+pre-meeting preview is the other, and it rides the same session, panel and stage; the join-specific
 controller and footer are all that stay in [calendar.md](calendar.md).
 
 ## Invariants
 
 - **Nothing runs until the command is run.** `CameraCoordinator` is `lazy` on `AppCore`, and
-  `CameraSession.init` stores a `Purpose` and touches nothing else — no device, no discovery session,
+  `CameraSession.init` stores a `Purpose` and touches nothing else: no device, no discovery session,
   no TCC read. The camera permission prompt is raised by `start()`, from the gesture that asked for
   it, and never on launch.
 - **The camera settles before the panel opens, and stops after it closes.** `start()` resolves access
-  and blocks on `startRunning` first, then hands a settled `Feed` up — so the first frame is live
+  and blocks on `startRunning` first, then hands a settled `Feed` up, so the first frame is live
   video rather than a stage swapped out from under the user, and the TCC prompt never takes key from
   a panel already up. `stop()` runs once AppKit's close animation has left the screen, so the camera
   light never outlives the panel but is never torn down under a visible one either. It also drops the
-  `AVCaptureSession`, so every open builds its own: a reused session with no output of its own — the
-  preview's — restarts to a black stage.
+  `AVCaptureSession`, so every open builds its own: a reused session with no output of its own (the
+  preview's) restarts to a black stage.
 - **Escape, click-away and the shot all end the same way.** Every route goes through
   `CameraCoordinator.close()`, which drops the panel and stops the session. Taking a photo closes
-  too — the command is done, so the camera goes out with it rather than idling for a second shot.
+  too; the command is done, so the camera goes out with it rather than idling for a second shot.
 - **System UI is not a click away.** `CameraPanel` owns click-away for both surfaces and reports it
   as the same `.cancel` as Esc. Losing key counts, unless the window under the pointer sits at the
-  Dock's level or above — the menu bar, what it drops down, the Dock — so reframing from Control
+  Dock's level or above (the menu bar, what it drops down, the Dock), so reframing from Control
   Center keeps the feed live. No further `resignKey` follows that, so a mouse-down monitor waits for
   the next click outside the panel and system UI, and stops once the panel is key again.
 - **The preview and the photo are mirrored together.** Mirroring is `isVideoMirrored` on a connection
-  — the preview layer's, and the photo output's at capture time — never a `scaleEffect` on the view,
+  (the preview layer's, and the photo output's at capture time), never a `scaleEffect` on the view,
   which would hand back a photo that is not what the user framed.
 - **A photo reaches the clipboard as PNG.** The camera's own encoding is decoded and re-encoded off
   main, because `ClipboardManager` records `.png` and `.tiff` and nothing else.
 - **`AVCaptureSession` is not `Sendable`, and only `CaptureBox` crosses that line.** The blocking
-  calls — `startRunning`, `stopRunning`, and the begin/commit around a device swap — run in
+  calls (`startRunning`, `stopRunning`, and the begin/commit around a device swap) run in
   `Task.detached` behind that one `@unchecked Sendable` box, which is private to `CameraSession.swift`.
   There is no second actor.
 
 ## How it is put together
 
-| Piece | Holds |
-| --- | --- |
-| `Service/CameraSession.swift` | access, start/stop, device cycling, the photo, and the box |
-| `UI/CameraCoordinator.swift` | the standalone panel's lifecycle, mirror state, the clipboard write |
-| `UI/CameraView.swift` | the standalone surface: stage over a footer of controls |
-| `UI/CameraStage.swift` | the shared stage — the hosted preview layer, or why there is no video |
-| `UI/CameraPanel.swift` | the shared borderless panel: ↵, Esc, click-away, cursor-screen centring |
-| `UI/CameraButton.swift` | both footers' button: `ModalActionButtonStyle` plus a key-cap tooltip |
+| Piece                         | Holds                                                                   |
+| ----------------------------- | ----------------------------------------------------------------------- |
+| `Service/CameraSession.swift` | access, start/stop, device cycling, the photo, and the box              |
+| `UI/CameraCoordinator.swift`  | the standalone panel's lifecycle, mirror state, the clipboard write     |
+| `UI/CameraView.swift`         | the standalone surface: stage over a footer of controls                 |
+| `UI/CameraStage.swift`        | the shared stage: the hosted preview layer, or why there is no video    |
+| `UI/CameraPanel.swift`        | the shared borderless panel: ↵, Esc, click-away, cursor-screen centring |
+| `UI/CameraButton.swift`       | both footers' button: `ModalActionButtonStyle` plus a key-cap tooltip   |
 
-`Purpose` is the session's one knob. `.preview` is the cheap one Calendar takes — a `.medium` preset
+`Purpose` is the session's one knob. `.preview` is the cheap one Calendar takes: a `.medium` preset
 and no output. `.capture` raises the preset to `.photo` and adds an `AVCapturePhotoOutput`, which is
 the whole cost of being able to take a photo, and it is paid only by the command that does.
 
@@ -63,6 +63,6 @@ unless it has been unplugged since. `Switch Camera` only appears when
 
 ## Where it is reachable from
 
-The launcher, as `CommandID.openCamera` — so it takes aliases and a global shortcut like any other
+The launcher, as `CommandID.openCamera`, so it takes aliases and a global shortcut like any other
 command, and hides with the `Command` category. It has no Settings pane and no enable switch: there
 is nothing to configure and nothing to leave running.

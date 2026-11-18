@@ -18,8 +18,14 @@ body:
     attributes:
       label: Why does it belong in Tinycast?
       description: >
-        Tinycast stays small on purpose — quality over quantity. It has already borrowed what it
-        wanted from Raycast, so "Raycast has it" is not a reason. Tell us why this is worth its
-        weight.
+        Tinycast stays minimal on purpose — quality over quantity. "Another app has it" is not a
+        reason on its own. Tell us why this is worth its weight.
     validations:
       required: true
+  - type: checkboxes
+    id: acknowledge
+    attributes:
+      label: "I confirm that:"
+      options:
+        - label: I wrote this in my own words. If I used AI, I checked and edited the text myself ([AI usage](https://github.com/abue-ammar/tinycast/blob/main/CODE_OF_CONDUCT.md#ai-usage)).
+          required: true

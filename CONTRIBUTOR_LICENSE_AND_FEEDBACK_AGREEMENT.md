@@ -54,7 +54,7 @@ restriction and without compensation to you.
 
 Project maintainers are not required to accept, use, or maintain any Contribution or Feedback. In
 particular, a Contribution may be declined because the feature does not fit the Project's scope, or
-because it conflicts with the Project's size, memory, or design constraints — independent of the
+because it conflicts with the Project's size, memory, or design constraints, independent of the
 quality of the work.
 
 ## 7. Disclaimer

@@ -8,7 +8,7 @@ and no appcast: the release feed the website already reads is the feed the app r
 
 - **Tinycast installs its own updates, and Homebrew stays out of the way.** Every cask declares
   `auto_updates true`, which is Homebrew's own flag for an app that manages its own version. `brew
-update && brew upgrade` therefore skips Tinycast entirely — it is never reported outdated, never
+update && brew upgrade` therefore skips Tinycast entirely: it is never reported outdated, never
   re-downloaded, and a self-updated copy is never trashed or rolled back. `brew install`, `brew
 uninstall` and `brew list` keep working unchanged.
 - **The archive is a zip, never the DMG.** A zip expands with `ditto`; a DMG would have to be mounted,
@@ -27,7 +27,7 @@ uninstall` and `brew list` keep working unchanged.
   Developer ID signed by any team, or it satisfies the running copy's own designated requirement.
   Nothing is pinned: a new Apple team still updates through the key, and a new key through an
   unchanged identity. Changing both in one release strands everyone. `notarized` is deliberately not
-  checked — it resolves the ticket through `syspolicyd` or the network, so an offline Mac would
+  checked: it resolves the ticket through `syspolicyd` or the network, so an offline Mac would
   refuse a bundle the signature already proves is ours.
 - **A build only ever updates within its own channel.** The channels are separate bundle ids installed
   side by side; crossing would mean installing a different app. `com.abueammar.tinycast.dev` never updates
@@ -135,18 +135,18 @@ One route, whatever the install came from:
 
 1. Stream the zip into `~/Library/Caches/<bundle-id>/Updates/`, with real byte progress and a Cancel
    that actually aborts the transfer, then fetch its `.sig` and check it against the release key.
-2. `ditto -x -k` it into a staging folder, and take whatever `.app` lands there — the bundle is named
+2. `ditto -x -k` it into a staging folder, and take whatever `.app` lands there; the bundle is named
    for its channel, so it is `Tinycast Beta.app` on beta.
 3. Check quarantine natively; clear it if somehow present, and refuse the update if it survives.
 4. Verify the bundle id, the version, and that the code signature is valid and proves the bundle is
-   ours — through the release key, or through the running copy's own designated requirement — and
+   ours (through the release key, or through the running copy's own designated requirement), and
    record its code-directory hash. A `.sig` that fails to download is logged and treated as absent.
 5. Offer Relaunch. At quit, by Relaunch or otherwise, the staged bundle is checked again against
    that hash, so a copy changed since staging is discarded, and `FileManager.replaceItemAt` swaps
    it in. The staging folder is on the same volume as `/Applications`, which is what lets this be
    atomic. A copy Tinycast cannot write is reported before the download starts, not worked around;
    there is no privileged helper.
-6. Relaunch spawns a detached waiter that reopens the app once this process exits — `open` on a
+6. Relaunch spawns a detached waiter that reopens the app once this process exits; `open` on a
    bundle id that is still running would only re-activate the instance on its way out.
 
 A successful install records its version as `installedVersion`. The first launch running that
@@ -163,19 +163,19 @@ setting, clipboard entry, note or snippet is affected by an update, by `brew upg
 `.github/workflows/release.yml` publishes two assets from one build: the DMG people download by hand
 and the cask installs, and `Tinycast-<version>.zip` for the updater. A stable run adds a
 `Tinycast-Universal-<version>` pair from its `universal` job, uploaded second so the thin zip stays
-first in the asset list — builds predating architecture-aware selection take whichever comes first.
+first in the asset list: builds predating architecture-aware selection take whichever comes first.
 The zip is made with
 
 ```sh
 ditto -c -k --keepParent --sequesterRsrc "$APP" "dist/$ZIP_FILE"
 ```
 
-which is the only zip that leaves the code signature verifiable — plain `zip` drops symlinks and
+which is the only zip that leaves the code signature verifiable: plain `zip` drops symlinks and
 breaks the seal, and the signature check above would then reject every update.
 
 The body it publishes is composed by `Scripts/release-notes.sh`: GitHub's generated changelog first,
 then `<!-- tinycast:install -->`, then the install text. The app does not read the body. Anything a
-release wants the website's changelog to show has to go above that marker — see
+release wants the website's changelog to show has to go above that marker; see
 [release.md](../release.md#release-notes).
 
 **Every cask must declare `auto_updates true`**, in homebrew/cask and in the tap. Without it Homebrew

@@ -104,9 +104,18 @@ Use `open -g`, so the link runs without bringing Tinycast forward:
       "type": "basic",
       "from": {
         "key_code": "v",
-        "modifiers": { "mandatory": ["left_command", "left_control", "left_option", "left_shift"] }
+        "modifiers": {
+          "mandatory": [
+            "left_command",
+            "left_control",
+            "left_option",
+            "left_shift"
+          ]
+        }
       },
-      "to": [{ "shell_command": "open -g 'tinycast://command/clipboard-history'" }]
+      "to": [
+        { "shell_command": "open -g 'tinycast://command/clipboard-history'" }
+      ]
     }
   ]
 }

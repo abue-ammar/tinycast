@@ -12,36 +12,36 @@ number row. See [the palette](/docs/palette#emacs-chords) for input-method behav
 
 ## Everywhere in the palette
 
-| Key                                                 | Does                                                   |
-| --------------------------------------------------- | ------------------------------------------------------ |
-| <kbd>return</kbd>                                   | Main action                                            |
-| <kbd>⌘</kbd><kbd>return</kbd>                       | Second action                                          |
-| <kbd>⌘</kbd><kbd>K</kbd>                            | Actions menu                                           |
-| <kbd>↑</kbd> <kbd>↓</kbd>                           | Move the selection                                     |
-| <kbd>⌃</kbd><kbd>N</kbd> / <kbd>⌃</kbd><kbd>P</kbd> | Same as <kbd>↓</kbd> / <kbd>↑</kbd>                    |
-| <kbd>⌃</kbd><kbd>F</kbd> / <kbd>⌃</kbd><kbd>B</kbd> | Same as <kbd>→</kbd> / <kbd>←</kbd>                    |
+| Key                                                 | Does                                                    |
+| --------------------------------------------------- | ------------------------------------------------------- |
+| <kbd>return</kbd>                                   | Main action                                             |
+| <kbd>⌘</kbd><kbd>return</kbd>                       | Second action                                           |
+| <kbd>⌘</kbd><kbd>K</kbd>                            | Actions menu                                            |
+| <kbd>↑</kbd> <kbd>↓</kbd>                           | Move the selection                                      |
+| <kbd>⌃</kbd><kbd>N</kbd> / <kbd>⌃</kbd><kbd>P</kbd> | Same as <kbd>↓</kbd> / <kbd>↑</kbd>                     |
+| <kbd>⌃</kbd><kbd>F</kbd> / <kbd>⌃</kbd><kbd>B</kbd> | Same as <kbd>→</kbd> / <kbd>←</kbd>                     |
 | <kbd>tab</kbd>                                      | Launcher → Quick AI → clipboard, or move through fields |
-| <kbd>esc</kbd>                                      | Clear the search, go back a screen, then close         |
-| <kbd>⌘</kbd><kbd>esc</kbd>                          | Back to the root search from any screen                |
-| <kbd>delete</kbd>                                   | In an empty search, go back a screen                   |
-| <kbd>⌘</kbd><kbd>,</kbd>                            | Settings                                               |
-| <kbd>⌘</kbd><kbd>W</kbd>                            | Close the window                                       |
+| <kbd>esc</kbd>                                      | Clear the search, go back a screen, then close          |
+| <kbd>⌘</kbd><kbd>esc</kbd>                          | Back to the root search from any screen                 |
+| <kbd>delete</kbd>                                   | In an empty search, go back a screen                    |
+| <kbd>⌘</kbd><kbd>,</kbd>                            | Settings                                                |
+| <kbd>⌘</kbd><kbd>W</kbd>                            | Close the window                                        |
 
 ## Launcher
 
-| Key                                                 | Does                                    |
-| --------------------------------------------------- | --------------------------------------- |
-| <kbd>return</kbd>                                   | Open                                    |
-| <kbd>⌘</kbd><kbd>return</kbd>                       | Show in Finder (app, setting, snippet)  |
-| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd>                | Add to / Remove from Favorites          |
-| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>↑</kbd> / <kbd>↓</kbd> | Move a favorite up or down              |
-| <kbd>⌘</kbd><kbd>1</kbd> … <kbd>⌘</kbd><kbd>0</kbd> | Open favorite 1 to 10                   |
-| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>H</kbd>                | Hide from Search                        |
-| <kbd>⌘</kbd><kbd>R</kbd>                            | Restart Application (running apps only) |
-| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd>                | Quit Application (running apps only)    |
-| <kbd>⌘</kbd><kbd>E</kbd>                            | Edit Quicklink, Snippet or Custom Command                          |
-| <kbd>⌘</kbd><kbd>return</kbd>                       | Put Answer in Search Bar (calculator)   |
-| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd>           | Copy Calculation, on a calculator card  |
+| Key                                                 | Does                                      |
+| --------------------------------------------------- | ----------------------------------------- |
+| <kbd>return</kbd>                                   | Open                                      |
+| <kbd>⌘</kbd><kbd>return</kbd>                       | Show in Finder (app, setting, snippet)    |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>F</kbd>                | Add to / Remove from Favorites            |
+| <kbd>⌥</kbd><kbd>⌘</kbd><kbd>↑</kbd> / <kbd>↓</kbd> | Move a favorite up or down                |
+| <kbd>⌘</kbd><kbd>1</kbd> … <kbd>⌘</kbd><kbd>0</kbd> | Open favorite 1 to 10                     |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>H</kbd>                | Hide from Search                          |
+| <kbd>⌘</kbd><kbd>R</kbd>                            | Restart Application (running apps only)   |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd>                | Quit Application (running apps only)      |
+| <kbd>⌘</kbd><kbd>E</kbd>                            | Edit Quicklink, Snippet or Custom Command |
+| <kbd>⌘</kbd><kbd>return</kbd>                       | Put Answer in Search Bar (calculator)     |
+| <kbd>⇧</kbd><kbd>⌘</kbd><kbd>return</kbd>           | Copy Calculation, on a calculator card    |
 
 ## Quick AI
 
@@ -120,12 +120,12 @@ When **Default action** is set to Copy to Clipboard, <kbd>return</kbd> and
 
 ## Switch Windows
 
-| Key                                  | Does              |
-| ------------------------------------ | ----------------- |
-| <kbd>return</kbd>                    | Switch to Window  |
-| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>M</kbd> | Minimize Window   |
-| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>H</kbd> | Hide Application  |
-| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd> | Quit Application  |
+| Key                                  | Does             |
+| ------------------------------------ | ---------------- |
+| <kbd>return</kbd>                    | Switch to Window |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>M</kbd> | Minimize Window  |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>H</kbd> | Hide Application |
+| <kbd>⌃</kbd><kbd>⇧</kbd><kbd>Q</kbd> | Quit Application |
 
 Repeated presses of your recorded Switch Windows shortcut move through the list; Switch Windows
 Backwards moves in reverse. After repeating with the modifiers held, release them to switch.
@@ -196,12 +196,12 @@ saves the room.
 
 ## Custom commands
 
-| Key                           | Does                       |
-| ----------------------------- | -------------------------- |
-| <kbd>return</kbd>             | Run Command                |
-| <kbd>⌘</kbd><kbd>N</kbd>      | Create Custom Command      |
-| <kbd>⌘</kbd><kbd>E</kbd>      | Edit Custom Command        |
-| <kbd>⌃</kbd><kbd>X</kbd>      | Delete Custom Command      |
+| Key                      | Does                  |
+| ------------------------ | --------------------- |
+| <kbd>return</kbd>        | Run Command           |
+| <kbd>⌘</kbd><kbd>N</kbd> | Create Custom Command |
+| <kbd>⌘</kbd><kbd>E</kbd> | Edit Custom Command   |
+| <kbd>⌃</kbd><kbd>X</kbd> | Delete Custom Command |
 
 For a command with arguments, <kbd>tab</kbd> moves through its inline fields and <kbd>return</kbd>
 focuses the first missing required value before running. See [Commands](/docs/launcher/commands#arguments).

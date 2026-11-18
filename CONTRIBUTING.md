@@ -5,6 +5,8 @@ Check existing [discussions](https://github.com/abue-ammar/tinycast/discussions)
 [pull requests](https://github.com/abue-ammar/tinycast/pulls) first. Only maintainers open issues:
 start a discussion, and a maintainer turns it into an issue once it is clear and confirmed.
 
+Read the [Code of Conduct](CODE_OF_CONDUCT.md) too. It covers notifications, spam and AI usage.
+
 > **Don't hurry your code. Make sure it works well and is well designed. Don't worry about timing.**
 
 ## Non-negotiables
@@ -12,9 +14,9 @@ start a discussion, and a maintainer turns it into an issue once it is clear and
 - **RAM.** Under 100 MB, always. No feature is worth going over.
 - **No leaks.** Leak-test before you submit. Zero leaks, no retain cycles, memory back to baseline
   after the palette closes.
-- **Design.** New UI must look like it shipped with the app — spacing, type, radii and motion from the
+- **Design.** New UI must look like it shipped with the app: spacing, type, radii and motion from the
   existing tokens ([`docs/ui.md`](docs/ui.md)). If you genuinely need a new one, justify it in the PR.
-- **No bloat.** Tinycast stays small on purpose — quality over quantity. A clean patch still gets
+- **No bloat.** Tinycast stays minimal on purpose: quality over quantity. A clean patch still gets
   declined if the feature isn't worth its weight, so start a discussion and settle that before you build.
 - **Never break the Non-negotiables** in [`AGENTS.md`](AGENTS.md).
 
@@ -34,9 +36,8 @@ start a discussion, and a maintainer turns it into an issue once it is clear and
   discussion and wait for a maintainer to say yes.
 - **A linked issue marked `approved`.** Put `Closes #<number>` in the PR description. Anyone may
   open the PR, not only the issue's author. Docs-only changes (`*.md`, `docs/`, `website/`) need no
-  approved issue. A PR with no linked issue gets a reminder and is closed automatically 24 hours
-  later.
-- The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes — harnesses, lint,
+  approved issue.
+- The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes: harnesses, lint,
   purity, a clean build. Engine changes come with new cases. There is no CI, so **run
   `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally**.
 - Leak-tested and memory-measured. Numbers in the PR.
@@ -45,13 +46,15 @@ start a discussion, and a maintainer turns it into an issue once it is clear and
 - Anything in [`docs/`](docs/) your change makes wrong is fixed.
 - **Read your own diff top to bottom before you open the PR.** Most review comments are things the
   author would have caught on a second pass.
+- **AI usage is disclosed in the PR, and you understand every line.** See
+  [AI usage](CODE_OF_CONDUCT.md#ai-usage).
 - You agree to the
   [Contributor License and Feedback Agreement](CONTRIBUTOR_LICENSE_AND_FEEDBACK_AGREEMENT.md).
   Opening a PR is your acceptance.
 
 ## Pull requests
 
-- Fill in the [PR template](.github/PULL_REQUEST_TEMPLATE.md) — every section, or say why it doesn't
+- Fill in the [PR template](.github/PULL_REQUEST_TEMPLATE.md): every section, or say why it doesn't
   apply.
 - **Visual change → side-by-side before/after video. Mandatory.** Same window size, same actions.
   An "after"-only clip doesn't count; stills don't substitute.
@@ -61,11 +64,11 @@ start a discussion, and a maintainer turns it into an issue once it is clear and
 
 ## Code style
 
-Read [`AGENTS.md`](AGENTS.md) first — the posture, the Non-negotiables and the naming and comment rules
+Read [`AGENTS.md`](AGENTS.md) first: the posture, the Non-negotiables and the naming and comment rules
 are all there, and they apply to a human contributor exactly as they do to an agent.
 [`docs/standards.md`](docs/standards.md) is the full version: architecture, naming, Swift style,
 concurrency and the performance budgets. [`docs/ui.md`](docs/ui.md) before any new view or restyle. Look before "fixing" something that looks
-wrong — it may be deliberate.
+wrong; it may be deliberate.
 
 Two things that are only about contributing, and so are not in those docs:
 
@@ -74,11 +77,8 @@ Two things that are only about contributing, and so are not in those docs:
 
 ## Spam
 
-- Don't ping maintainers with `@` mentions, bumps or "any update?" comments. Every issue and pull
-  request is read.
-- Syncing a fork? Keep this repository's issue and pull request numbers out of your PR title and
-  description. Each one posts a "mentioned this" notice on the original thread.
-- **Constant spamming leads to a block.**
+No pings, bumps or issue numbers in your fork's commits. The full list is in the
+[Code of Conduct](CODE_OF_CONDUCT.md#notifications). **Constant spamming leads to a block.**
 
 ## Bugs
 
@@ -86,7 +86,7 @@ macOS version, Tinycast version + channel, steps, expected vs actual. A recordin
 
 ## Security
 
-Not in the issue tracker — see [`SECURITY.md`](SECURITY.md).
+Not in the issue tracker; see [`SECURITY.md`](SECURITY.md).
 
 ## License
 

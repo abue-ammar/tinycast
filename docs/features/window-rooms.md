@@ -2,7 +2,7 @@
 
 A **room** is a project you walk into: a named set of windows, in order, and how they lay out.
 Entering one brings its windows to the display you are on, tiles them with Window Management's
-gap, and steps everything else back — apps with nothing in the room hide, and other windows of
+gap, and steps everything else back: apps with nothing in the room hide, and other windows of
 the room's apps park just off-screen. Nothing is ever closed.
 
 The palette's **Switch Room** screen lists the rooms; the selected one is previewed over a blurred
@@ -16,8 +16,8 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
 
 - **A window's way back is on disk before it moves.** `RoomParkingLedger.record` writes
   synchronously and returns false when the write fails, and then the window is not parked. An
-  entry is forgotten only once its window is confirmed back — mostly inside its room spot, or
-  within 16 pt of its saved frame — so a busy app keeps its way back for the next try.
+  entry is forgotten only once its window is confirmed back (mostly inside its room spot, or
+  within 16 pt of its saved frame), so a busy app keeps its way back for the next try.
 - **Every parked window comes home** on quit (`prepareForTermination`, which is synchronous for
   that reason), when the feature switch turns off, and at the next launch after a crash
   (`recoverParkedWindows`). Switching the feature off also unhides the apps rooms hid, and only
@@ -45,32 +45,32 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
 
 ## Layout
 
-| File | Role |
-| --- | --- |
-| `Model/Room.swift`, `RoomWindow.swift`, `RoomLayoutKind.swift` | The record: windows in order, a layout, per-display layouts, recency |
-| `Model/RoomLayoutEngine.swift` | **Pure.** Focus, Stack, Columns, Grid and Auto, honouring minimum sizes |
-| `Model/RoomGrid.swift` | **Pure.** A room's own arrangement on a 12 × 12 grid with even gaps |
-| `Model/RoomArrangement.swift` | **Pure.** Reads a hand-made arrangement; rebuilds a room from open windows |
-| `Model/RoomWindowMatcher.swift` | **Pure.** Which open window fills which room window |
-| `Model/RoomParking.swift` | **Pure.** The parking corner and the way back on a connected display |
-| `Model/RoomPlan.swift` | **Pure.** What entering does, and the layouts Tab offers |
-| `Model/RoomStore.swift` | The library, as JSON in `UserDefaults` (`windowRooms`) |
-| `Model/RoomMinimumSizeStore.swift` | Minimum sizes learned by trying (`roomMinimumWindowSizes`) |
-| `Model/RoomParkingLedger.swift` | Parked windows' ways back, `room-parking.json` in Application Support |
-| `Service/RoomWindowSweep.swift` | One AX sweep, minimized and hidden apps' windows included |
-| `Service/RoomRunner.swift` | Enters a room; returns parked windows |
-| `Service/RoomSession.swift` | The Rooms screens' state while open |
-| `UI/RoomCoordinator.swift` | The one funnel, the preview, the picker, the library, cleanup |
-| `UI/RoomsScreen.swift`, `RoomsList.swift` | Switch Room |
-| `UI/RoomPickerScreen.swift`, `RoomPickerList.swift` | Choosing a room's windows |
-| `UI/RoomPreviewController.swift`, `RoomPreviewView.swift` | The gliding preview |
-| `Settings/RoomsSection.swift` | The Rooms section of Settings › Window Management |
+| File                                                           | Role                                                                       |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `Model/Room.swift`, `RoomWindow.swift`, `RoomLayoutKind.swift` | The record: windows in order, a layout, per-display layouts, recency       |
+| `Model/RoomLayoutEngine.swift`                                 | **Pure.** Focus, Stack, Columns, Grid and Auto, honouring minimum sizes    |
+| `Model/RoomGrid.swift`                                         | **Pure.** A room's own arrangement on a 12 × 12 grid with even gaps        |
+| `Model/RoomArrangement.swift`                                  | **Pure.** Reads a hand-made arrangement; rebuilds a room from open windows |
+| `Model/RoomWindowMatcher.swift`                                | **Pure.** Which open window fills which room window                        |
+| `Model/RoomParking.swift`                                      | **Pure.** The parking corner and the way back on a connected display       |
+| `Model/RoomPlan.swift`                                         | **Pure.** What entering does, and the layouts Tab offers                   |
+| `Model/RoomStore.swift`                                        | The library, as JSON in `UserDefaults` (`windowRooms`)                     |
+| `Model/RoomMinimumSizeStore.swift`                             | Minimum sizes learned by trying (`roomMinimumWindowSizes`)                 |
+| `Model/RoomParkingLedger.swift`                                | Parked windows' ways back, `room-parking.json` in Application Support      |
+| `Service/RoomWindowSweep.swift`                                | One AX sweep, minimized and hidden apps' windows included                  |
+| `Service/RoomRunner.swift`                                     | Enters a room; returns parked windows                                      |
+| `Service/RoomSession.swift`                                    | The Rooms screens' state while open                                        |
+| `UI/RoomCoordinator.swift`                                     | The one funnel, the preview, the picker, the library, cleanup              |
+| `UI/RoomsScreen.swift`, `RoomsList.swift`                      | Switch Room                                                                |
+| `UI/RoomPickerScreen.swift`, `RoomPickerList.swift`            | Choosing a room's windows                                                  |
+| `UI/RoomPreviewController.swift`, `RoomPreviewView.swift`      | The gliding preview                                                        |
+| `Settings/RoomsSection.swift`                                  | The Rooms section of Settings › Window Management                          |
 
 ## Layouts
 
 `RoomLayoutKind.allCases` is Tab's order: Auto, Focus, Stack, Columns, Grid, Custom, As Arranged.
 
-- **Focus** puts the main window left — 60% of the width, or 50% when that is what fits — and the
+- **Focus** puts the main window left (60% of the width, or 50% when that is what fits) and the
   rest in the right column, one to three across. When one app needs the width, its window may move
   to the last row, which spans the column.
 - **Stack** is Focus with the side windows overlapping, offset 32 pt so each title bar shows.
@@ -80,14 +80,14 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
 - **Custom** is Remember Arrangement's reading of windows placed side by side by hand, snapped to
   the grid and filled so no hole remains. **As Arranged** keeps an overlapping arrangement exactly.
 
-Every candidate is judged by `works` — on screen, every window at least 320 × 240 — before
+Every candidate is judged by `works` (on screen, every window at least 320 × 240) before
 anything is clamped. `distribute` splits a length into whole points that add up exactly, never
 below an app's minimum; minimums that cannot all fit overflow, and the candidate that spills least
 is pulled back on screen, because overlap beats off-screen.
 
 AX reports no minimum size, so the runner learns one: a window that stays larger than its slot is
 asked once more after 150 ms, and what it still refuses is kept per app. A new minimum re-plans
-the room, at most twice — minimums only grow, so the loop ends.
+the room, at most twice; minimums only grow, so the loop ends.
 
 ## The Rooms screen
 
@@ -95,8 +95,8 @@ the room, at most twice — minimums only grow, so the loop ends.
 entered comes first, so the room you just left is one row away. Typing a new name offers
 **Create Room “…”**, and an existing room's name offers **Choose Windows**.
 
-- **↵** enters the selected room. **⇥ / ⇧⇥** step through `RoomPlan.layoutChoices` — the layouts
-  that fit its open windows here, each drawn differently; Stack only when nothing tidier fits — and
+- **↵** enters the selected room. **⇥ / ⇧⇥** step through `RoomPlan.layoutChoices` (the layouts
+  that fit its open windows here, each drawn differently; Stack only when nothing tidier fits) and
   store the choice for this display. A single choice says so in a message.
 - **⌘K** holds Enter Room, Next Layout, Remember Arrangement, Choose Windows… and Delete Room (**⌃X**, confirmed through `DialogController`). **⌘N** creates a room.
 - The screen claims ⇥ through `PaletteScreen.tab(at:backwards:)`, asked before `tabTarget` and the
@@ -105,7 +105,7 @@ entered comes first, so the room you just left is one row away. Typing a new nam
 `PaletteMode.roomWindows` is the picker, opened from a name typed on the Rooms screen (Create Room
 with no name opens that screen first), so the search field filters. The windows you can see come
 first, front to back, then parked, hidden and minimized ones; a query also lists installed apps with
-no open window, which join the room as their app — a `RoomWindow` with no title and no ID, which
+no open window, which join the room as their app: a `RoomWindow` with no title and no ID, which
 the matcher fills with any window of the app and the runner opens on entry. ↵ adds or removes the
 selected member, whose number is its place (1 is the main window); ⌘↵ saves and walks in. Editing a
 room starts with every member picked, a closed window standing as its app rather than dropped.
@@ -114,7 +114,7 @@ room starts with every member picked, a closed window standing as its app rather
 
 `RoomPreviewController` owns one borderless, click-through, non-activating panel per display at
 `.paletteDropGuide`, just under the palette, each hosting `RoomPreviewView`: the desk blurred
-behind the window and dimmed, and one card per window — a title bar with the app and window name,
+behind the window and dimmed, and one card per window: a title bar with the app and window name,
 the app's icon, an accent stroke. The cards are keyed by the window's number, so a card that
 exists before and after a change glides: `Theme.RoomMotion.glide`, 0.32 s on (0.2, 0, 0, 1). New
 cards fade in over 0.2 s, removed ones fade out over 0.18 s. Reduce Motion drops every animation.
@@ -133,19 +133,19 @@ and Settings' Enter button. It hides the palette with `restoreFocus: false`, the
 1. Prompts for Accessibility once, launches the room's apps that are not running, unhides the
    hidden ones and waits up to 600 ms for them to come back.
 2. Sweeps and plans on the palette's display (`openOnCursorScreen` decides, as for the palette);
-   a launched or just-unhidden app is waited on — 10 s or 600 ms — for its windows.
+   a launched or just-unhidden app is waited on (10 s or 600 ms) for its windows.
 3. Places every window in one step, one `AXEnhancedUserInterface` suppression per app, through
    `AXWindowAccess.write`; learns minimum sizes and re-plans if one was new.
-4. Parks the other windows of the room's apps — ledger first — and returns any parked window whose
+4. Parks the other windows of the room's apps (ledger first) and returns any parked window whose
    app is about to hide, then raises the room back to front, one app at a time 40 ms apart, and
    focuses the main window.
 5. Hides every other app (`hide()`, falling back to the AX attribute); the desktop's own app parks
    instead, because it reappears whenever another app hides.
-6. After 250 ms, re-places a window that applied its frame late or bounced — once, never a loop —
+6. After 250 ms, re-places a window that applied its frame late or bounced (once, never a loop)
    and forgets the ledger entries of windows confirmed back.
 
 A clean enter says nothing; a missing window names its app in a message, and a room with no open
-window is a notice — and steps nothing back, since hiding everything around an empty room would
+window is a notice, and steps nothing back, since hiding everything around an empty room would
 leave an empty desk. Switching the feature off unhides the apps rooms hid first and waits for them
 to come back before returning parked windows.
 
@@ -158,7 +158,7 @@ to come back before returning parked windows.
 - **Commands**: Switch Room and Create Room, owned by
   `SettingsTab.windowManagement` and gated with the feature.
 - **Settings**: `windowRoomsShowInLauncher` (on), which also dims each room row's alias field. Rooms
-  and their shortcuts ride in settings backups; learned minimum sizes and the ledger do not — one is
+  and their shortcuts ride in settings backups; learned minimum sizes and the ledger do not: one is
   a cache, the other this Mac's state.
   The [settings file](settings-file.md) carries rooms without their window numbers or entry times, and
   an edit made there keeps both through `Room.keepingRuntime(of:)`.

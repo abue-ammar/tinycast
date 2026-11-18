@@ -139,16 +139,16 @@ To change a quicklink from the launcher, select it and press <kbd>⌘</kbd><kbd>
 The **Search Quicklinks** command opens a screen with the list on the left and details on the right:
 the link, the app it opens with, its shortcut and when you created it.
 
-| Action                          | Shortcut                             |
-| ------------------------------- | ------------------------------------ |
-| Open Quicklink                  | <kbd>return</kbd>                    |
-| Open With Default App           | <kbd>⌘</kbd><kbd>return</kbd>        |
-| Copy Link                       | <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> |
-| Edit Quicklink                  | <kbd>⌘</kbd><kbd>E</kbd>             |
-| Duplicate Quicklink             | <kbd>⌘</kbd><kbd>D</kbd>             |
-| Pin / Unpin Quicklink           | <kbd>⌘</kbd><kbd>.</kbd>             |
-| Show in Finder                  | <kbd>⌘</kbd><kbd>F</kbd>             |
-| Delete Quicklink                | <kbd>⌘</kbd><kbd>delete</kbd>        |
+| Action                | Shortcut                             |
+| --------------------- | ------------------------------------ |
+| Open Quicklink        | <kbd>return</kbd>                    |
+| Open With Default App | <kbd>⌘</kbd><kbd>return</kbd>        |
+| Copy Link             | <kbd>⌃</kbd><kbd>⌘</kbd><kbd>C</kbd> |
+| Edit Quicklink        | <kbd>⌘</kbd><kbd>E</kbd>             |
+| Duplicate Quicklink   | <kbd>⌘</kbd><kbd>D</kbd>             |
+| Pin / Unpin Quicklink | <kbd>⌘</kbd><kbd>.</kbd>             |
+| Show in Finder        | <kbd>⌘</kbd><kbd>F</kbd>             |
+| Delete Quicklink      | <kbd>⌘</kbd><kbd>delete</kbd>        |
 
 **Open With Default App** only appears when the quicklink opens with a specific app, and
 **Show in Finder** only appears for files and folders.

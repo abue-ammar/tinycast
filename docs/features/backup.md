@@ -20,10 +20,10 @@ A backup carries five independently selectable categories, ticked on export and 
   `SettingsBackupCoverage` like `snippetsEnabled` or kept out of `AppSettings` entirely. Importing a
   config must not be able to grant something the user never granted. `FallbackStore` is the second
   case: its order and checkboxes live on their own `UserDefaults` keys precisely so an import cannot
-  arm **Run Shell Command** in someone's launcher. This change adds *content*, never a capability.
+  arm **Run Shell Command** in someone's launcher. This change adds _content_, never a capability.
 - **No absolute path may enter a `.tinycast`.** A clip's `imagePath` names a file on the Mac that wrote
   it, so `BackupClipboardItem` carries a bundle-relative `imageName` instead. `BackupArchiveTests`
-  asserts the produced file contains neither `/Users` nor `/Library` — the analogue of
+  asserts the produced file contains neither `/Users` nor `/Library`, the analogue of
   `SettingsBackupTests`'s `snippetsEnabled` check, and for the same reason: this file gets sent to
   people.
 - **The file carries a format version and a reader accepts only its own.** That is a guard, not a
@@ -33,31 +33,31 @@ A backup carries five independently selectable categories, ticked on export and 
   extension is third-party code and third-party data; chat history and API keys stay on the Mac that
   had them; a cache regenerates on its own.
 - **`BackupCategory` names every category, and its `descriptor` switch is exhaustive.** A new case
-  fails to build until it names a label, a symbol, a bundle subpath and a count noun — the same
+  fails to build until it names a label, a symbol, a bundle subpath and a count noun, the same
   bargain `AppEntry.Kind` makes, and why the bundle layout is never spelled out twice.
 
 ## Layout
 
-| File | Role |
-| --- | --- |
-| `Model/BackupCategory.swift` | The categories and the descriptor every one of them must name |
-| `Model/BackupManifest.swift` | The table of contents, the format constant and its guard |
-| `Model/BackupBundle.swift` | The payload directory's layout and part-by-part encode/decode |
-| `Model/BackupArchive.swift` | Directory ⇄ `.tinycast`; the only file importing `AppleArchive` |
-| `Model/BackupClipboardItem.swift` | The portable clip, with no path in it |
-| `Model/SettingsBackup.swift` | The settings, fixed/per-item hotkey payloads, and their `Codable` shape |
-| `Model/SettingsBackupCoverage.swift` | The coverage declaration the harness checks |
-| `Model/RaycastImport.swift` | The importable categories, the `Result` and its per-category trim |
-| `Model/RaycastImportError.swift` | The three failures an import reports |
-| `Service/BackupStaging.swift` | One scratch tree, created on init and removed on discard |
-| `Service/BackupComposer.swift` | Stores → staging; `plan` on main, `write` off it |
-| `Service/BackupApplier.swift` | Staging → stores, returning a per-category summary |
-| `Service/BackupActions.swift` | The effectful half: file pickers, the archive calls, dialogs, the settings-file switch |
-| `Service/RaycastDecoder.swift` | Container recognition, decrypt and decode |
-| `Service/RaycastImportReader.swift` | Raycast → Tinycast field mapping |
-| `Service/Scrypt.swift`, `Platform/Compression/Zlib.swift` | The crypto and decompression primitives |
-| `Settings/BackupCategorySelection.swift` | The category checkboxes, on both halves of the pane |
-| `Settings/BackupSettingsView.swift` | The pane, which also holds the [settings file](settings-file.md) switch |
+| File                                                      | Role                                                                                   |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `Model/BackupCategory.swift`                              | The categories and the descriptor every one of them must name                          |
+| `Model/BackupManifest.swift`                              | The table of contents, the format constant and its guard                               |
+| `Model/BackupBundle.swift`                                | The payload directory's layout and part-by-part encode/decode                          |
+| `Model/BackupArchive.swift`                               | Directory ⇄ `.tinycast`; the only file importing `AppleArchive`                        |
+| `Model/BackupClipboardItem.swift`                         | The portable clip, with no path in it                                                  |
+| `Model/SettingsBackup.swift`                              | The settings, fixed/per-item hotkey payloads, and their `Codable` shape                |
+| `Model/SettingsBackupCoverage.swift`                      | The coverage declaration the harness checks                                            |
+| `Model/RaycastImport.swift`                               | The importable categories, the `Result` and its per-category trim                      |
+| `Model/RaycastImportError.swift`                          | The three failures an import reports                                                   |
+| `Service/BackupStaging.swift`                             | One scratch tree, created on init and removed on discard                               |
+| `Service/BackupComposer.swift`                            | Stores → staging; `plan` on main, `write` off it                                       |
+| `Service/BackupApplier.swift`                             | Staging → stores, returning a per-category summary                                     |
+| `Service/BackupActions.swift`                             | The effectful half: file pickers, the archive calls, dialogs, the settings-file switch |
+| `Service/RaycastDecoder.swift`                            | Container recognition, decrypt and decode                                              |
+| `Service/RaycastImportReader.swift`                       | Raycast → Tinycast field mapping                                                       |
+| `Service/Scrypt.swift`, `Platform/Compression/Zlib.swift` | The crypto and decompression primitives                                                |
+| `Settings/BackupCategorySelection.swift`                  | The category checkboxes, on both halves of the pane                                    |
+| `Settings/BackupSettingsView.swift`                       | The pane, which also holds the [settings file](settings-file.md) switch                |
 
 ## Inside the file
 
@@ -77,7 +77,7 @@ import picker greys a row out instead of importing nothing and saying nothing.
 **Clipboard history is JSONL, everything else is JSON.** A single JSON array of 200,000 clips has to be
 built in memory to encode and again to decode; a line per clip is one small encode through an open
 `FileHandle` on the way out and one mapped read on the way back. Splitting on `\n` is legal precisely
-because a newline inside a clip is escaped as `\n` by the encoder and can never appear raw —
+because a newline inside a clip is escaped as `\n` by the encoder and can never appear raw;
 `BackupArchiveTests` asserts the line count equals the clip count for exactly that reason.
 
 **AppleArchive, LZFSE, and a deliberately narrow keyset.** `"TYP,PAT,DAT,MOD,MTM"` rather than
@@ -88,7 +88,7 @@ payload and are already compressed.
 
 **Extraction is filtered, not trusted.** `BackupArchive.open` passes an `ArchiveHeader.EntryFilter`
 that returns `.skip` for any entry whose path is absolute or contains `..`, and then refuses an extract
-holding a symbolic link — a link entry names no `..` at all, so the path filter passes it, and reading
+holding a symbolic link: a link entry names no `..` at all, so the path filter passes it, and reading
 through one would leave the tree the caller chose. Composing resolves a link for the same reason, so a
 symlinked note travels as a file. `BackupArchiveTests` builds both hostile archives header-by-header
 and asserts nothing escapes.
@@ -102,22 +102,22 @@ anything a day old on the next run, since a run killed mid-flight leaves its tre
 
 `SettingsBackupCoverage` holds three tables:
 
-- `mirrored` — each `SettingsData` field paired with the `AppSettings` key it carries.
-- `externallySourced` — fields no `AppSettings` key stands behind, each saying what it reads instead.
+- `mirrored`: each `SettingsData` field paired with the `AppSettings` key it carries.
+- `externallySourced`: fields no `AppSettings` key stands behind, each saying what it reads instead.
   `launchAtLogin` comes from `LaunchAtLogin`, which owns the login item.
-- `deliberatelyExcluded` — keys kept out on purpose, each with its reason as a string.
+- `deliberatelyExcluded`: keys kept out on purpose, each with its reason as a string.
 
 `SettingsBackupTests` asserts that every `AppSettingsKey` appears in exactly one table, that no field
 claims a key twice, that every exclusion names a real key and carries a non-empty reason, and that each
-capability-granting key — `snippetsEnabled`, `extensionsEnabled`, `calendarEnabled`,
-`autoJoinMeetings`, `cameraPreview`, `quickActionsEnabled` — is named individually as excluded. The
+capability-granting key (`snippetsEnabled`, `extensionsEnabled`, `calendarEnabled`,
+`autoJoinMeetings`, `cameraPreview`, `quickActionsEnabled`) is named individually as excluded. The
 duplication between `AppSettings` and this file is the point: it forces a decision about every new
 setting rather than defaulting it into a backup.
 
 ## Importing
 
 Applying an import writes through `AppSettings` like any other change, so feature switches reproject into
-the launcher through the normal observation path. An import reports a summary of what it applied — it is
+the launcher through the normal observation path. An import reports a summary of what it applied; it is
 not silent, because a settings file that quietly changes hotkeys is hostile.
 
 Per category:

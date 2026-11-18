@@ -10,7 +10,7 @@ camera preview, and individual events as searchable launcher entries.
 - **Nothing polls, and there is one timer.** `.EKEventStoreChanged` is the reload signal, held
   through the RAII `NotificationToken`, and `NSWorkspace.didWakeNotification` covers the sleep it
   cannot. `MeetingClock` is the only timer: one tick on the minute boundary, running **while
-  something is watching** — the palette, the menu bar, or auto join. With all three off, an idle Mac
+  something is watching**: the palette, the menu bar, or auto join. With all three off, an idle Mac
   owns no timer at all. `CalendarCoordinator.applyClock` is the one place that decides, and the
   clock's `Task` is stored and cancelled in `stop()` and in an `isolated deinit`.
 - **Auto join fires at most once per meeting per launch**, and only for a meeting starting at or
@@ -18,7 +18,7 @@ camera preview, and individual events as searchable launcher entries.
   already-joined set rather than reading a clock of its own.
 - **The camera settles before the panel opens, and stops after it closes.**
   `CameraSession.start()` resolves access and blocks on `startRunning` first, then hands
-  `CameraPreviewController` a settled `Feed` — so the panel's first frame is live video rather than a
+  `CameraPreviewController` a settled `Feed`, so the panel's first frame is live video rather than a
   stage it has to swap out, and the TCC prompt never takes key from a panel already up.
   `stop()` runs once AppKit's close animation has left the screen, so the camera light never
   outlives the preview but is never torn down under a visible one either.
@@ -27,11 +27,11 @@ camera preview, and individual events as searchable launcher entries.
 - **Recurrence comes from `predicateForEvents(withStart:end:calendars:)`**, which expands occurrences
   itself. Masters are never fetched and recurrence is never hand-rolled.
 - **`MeetingSpan` narrows the fetch, never the surfaces.** `calendarSpan` reaches EventKit through
-  `CalendarStore.span`, so a shorter span shortens the query and every surface — the menu bar's
-  agenda included — follows from the one snapshot. No surface filters days out of a snapshot fetched
+  `CalendarStore.span`, so a shorter span shortens the query and every surface (the menu bar's
+  agenda included) follows from the one snapshot. No surface filters days out of a snapshot fetched
   wider, which is why `Days to Show` sits under Menu Bar yet sets every surface's days. The same
   type owns the wording, so a sentence naming the days can never outlive the query it describes.
-- **`UpcomingWindow.agenda` is the only place that says which events count** — timed, not declined,
+- **`UpcomingWindow.agenda` is the only place that says which events count**: timed, not declined,
   not over, in start order. The card, the chord, the menu bar, the schedule and the launcher slice all
   go through it, so they cannot drift apart. Because an event ending changes nothing in EventKit,
   the filter alone is not enough for the launcher slice: `CalendarCoordinator` republishes it on the
@@ -43,10 +43,10 @@ camera preview, and individual events as searchable launcher entries.
   and only `CalendarCoordinator.setCalendarEnabled` may write it. Tinycast's own dialog comes first,
   the macOS prompt second, and only from the gesture that asked. **It is written only after macOS
   grants**, so a prompt that fails or is dismissed can never leave the feature reading as on with no
-  access. Enabling is re-offered whenever access is anything but granted — by the Calendar pane and by
-  the Permissions pane — so a TCC record lost after the setting was already on never strands it.
+  access. Enabling is re-offered whenever access is anything but granted, by the Calendar pane and by
+  the Permissions pane, so a TCC record lost after the setting was already on never strands it.
 - **Per-calendar toggles live on `CalendarStore`, not `AppSettings`.** Calendar identifiers are
-  machine-specific, so they are deliberately outside the backup mirror — the same reasoning as
+  machine-specific, so they are deliberately outside the backup mirror, the same reasoning as
   `palettePosition`.
 - **`MeetingEvent` carries only what a row needs.** Location, notes and attendees are read for one
   occurrence when its details page opens, never for the whole span, so a busy calendar's invites
@@ -58,18 +58,18 @@ camera preview, and individual events as searchable launcher entries.
 
 `Model/` holds the whole decision, with every clock read injected:
 
-- **`MeetingLink`** — the join link plus its `Provider` and the account whose calendar carried it.
+- **`MeetingLink`**: the join link plus its `Provider` and the account whose calendar carried it.
   Eleven named services, plus `.generic` for any other `http(s)` link the event carries.
-- **`MeetingEvent`** — one occurrence, flattened out of `EKEvent`.
-- **`UpcomingWindow`** — `agenda`, `carded`, `joinable`, `countdown` and a row's `rowPill`.
-- **`MeetingDay`** — the day a meeting falls on, titled `Today, Oct 2`, `Tomorrow, Oct 3`, then
+- **`MeetingEvent`**: one occurrence, flattened out of `EKEvent`.
+- **`UpcomingWindow`**: `agenda`, `carded`, `joinable`, `countdown` and a row's `rowPill`.
+- **`MeetingDay`**: the day a meeting falls on, titled `Today, Oct 2`, `Tomorrow, Oct 3`, then
   `Monday, Oct 5`. A meeting still running from before midnight is Today. `MeetingDayGroup.grouping` cuts
   the agenda into days, so My Schedule and the menu bar head the same days the same way.
-- **`MeetingSpan`** — how far ahead the store reads, and the phrasing that names those days.
-- **`MenuBarSummary`** — which event the menu bar carries, and for how long.
-- **`AutoJoinPolicy`** — whether a meeting should open itself, and which one.
-- **`EventDraft`** — what the Create Event editor collects, before anything touches the calendar.
-- **`MeetingDetails`** — one occurrence's location, notes as plain text, and attendees.
+- **`MeetingSpan`**: how far ahead the store reads, and the phrasing that names those days.
+- **`MenuBarSummary`**: which event the menu bar carries, and for how long.
+- **`AutoJoinPolicy`**: whether a meeting should open itself, and which one.
+- **`EventDraft`**: what the Create Event editor collects, before anything touches the calendar.
+- **`MeetingDetails`**: one occurrence's location, notes as plain text, and attendees.
 
 ### Finding the link
 
@@ -82,24 +82,24 @@ rebuilding one per event costs more than the scan it replaces. A URL ends at whi
 and trailing punctuation is trimmed, so `(https://whereby.com/acme).` yields the URL alone.
 
 **A URL on a known host that fails that provider's path rule is rejected outright, not demoted to
-`.generic`** — `zoom.us/download` sits in half the invites people are sent, and `meet.google.com/tel/…`
+`.generic`**: `zoom.us/download` sits in half the invites people are sent, and `meet.google.com/tel/…`
 is a dial-in helper rather than a meeting.
 
 ### Opening it
 
 `MeetingLauncher.join` prefers the desktop app: `MeetingLink.appURL` rewrites a Zoom link to
 `zoommtg://zoom.us/join?confno=…` (carrying `pwd` when present) and a `teams.microsoft.com` link to
-`msteams:` plus its path and query. Nothing else is rewritten — the rest of the table has no
+`msteams:` plus its path and query. Nothing else is rewritten; the rest of the table has no
 unambiguous scheme, and guessing one would open the wrong thing. If no app claims the scheme, the
-plain `https` link opens instead — in `meetingBrowserBundleID` when one is chosen under
+plain `https` link opens instead, in `meetingBrowserBundleID` when one is chosen under
 `Open Meeting Links In`, otherwise in the default browser. A chosen browser since uninstalled falls
 back to the default rather than failing the join, and the picker reads it as `Default Browser`.
 
 **A Google Meet link opens as the account whose calendar carried it.** Someone signed into several
 Google accounts otherwise lands on the account chooser, so `MeetingLink.webURL` appends
-`?authuser=<address>` — the address the current user carries in the invite, taken from their attendee
+`?authuser=<address>`: the address the current user carries in the invite, taken from their attendee
 entry or, for a meeting booked with no guests, from the organizer. EventKit's `mailto:` participant
-URLs are opaque — `path` sees nothing on them — so `MeetingLink.accountAddress(of:isCurrentUser:)`
+URLs are opaque (`path` sees nothing on them), so `MeetingLink.accountAddress(of:isCurrentUser:)`
 reads the address out of the absolute string and percent-decodes it there, before `accountURL`
 encodes it again. A link that already names an
 `authuser` was written deliberately and is left alone, and no other provider takes an account in its
@@ -114,7 +114,7 @@ carries the identity; `.generic` draws `link`.
 The card is `LauncherScreen.Row.meeting`, prepended the way the calculator card is. The two can never
 both lead: **the calculator only answers a typed query and the card only an empty one**, which is what
 keeps the flat selection index a single-row offset. `LauncherList.LeadCard` is that fact made
-structural — one optional card, one selected flag, one activate closure, whichever feature owns it.
+structural: one optional card, one selected flag, one activate closure, whichever feature owns it.
 
 The countdown re-renders from `MeetingClock.now`, not from a keystroke, so `in 4 min` becomes
 `in 3 min` on the boundary. A partial minute rounds **up** (`in 1 min` at 20 seconds out), and the
@@ -127,7 +127,7 @@ by one row. That is the existing behaviour of the row above it and is left alone
 
 `UpcomingWindow.joinable` is deliberately wider than `carded`, and answers in this order:
 
-1. Whatever the card is showing — so the chord always joins what is on screen.
+1. Whatever the card is showing, so the chord always joins what is on screen.
 2. Anything currently running, however long ago it started.
 3. The next meeting with a link.
 
@@ -150,13 +150,13 @@ For the menu bar, **Keep visible — show time left** leaves a started meeting u
 changes from `Now` during the first five minutes to its remaining time. The other choices preserve
 the option to hide a current event immediately or after a chosen delay.
 
-| Command | Does | Bindable |
-| --- | --- | --- |
-| Join Next Meeting | Opens the link for the carded, running, or next meeting. | yes |
-| My Schedule | Opens the `.schedule` palette mode. | yes |
-| Create Event | Opens the launcher form for a title, a start and a duration, and writes the event. | yes |
-| Copy Meeting Link | The same meeting's link, to the pasteboard. | no |
-| Open in Calendar | Hands the meeting to Calendar.app, or opens another default calendar app. | no |
+| Command           | Does                                                                               | Bindable |
+| ----------------- | ---------------------------------------------------------------------------------- | -------- |
+| Join Next Meeting | Opens the link for the carded, running, or next meeting.                           | yes      |
+| My Schedule       | Opens the `.schedule` palette mode.                                                | yes      |
+| Create Event      | Opens the launcher form for a title, a start and a duration, and writes the event. | yes      |
+| Copy Meeting Link | The same meeting's link, to the pasteboard.                                        | no       |
+| Open in Calendar  | Hands the meeting to Calendar.app, or opens another default calendar app.          | no       |
 
 **A command that opens a surface is bindable**; the two that act on the next meeting are reached
 through the join card's own ⌘K menu instead, where the meeting they act on is on screen.
@@ -181,8 +181,8 @@ while the palette is hidden with that editor kept, it summons the palette back o
 
 ## Reading the store
 
-`CalendarStore` queries `MeetingSpan.interval(from:calendar:)` — midnight today through midnight one,
-two or seven days on, in the Mac's own zone — and re-reads whenever `span` changes under it, but only once
+`CalendarStore` queries `MeetingSpan.interval(from:calendar:)` (midnight today through midnight one,
+two or seven days on, in the Mac's own zone) and re-reads whenever `span` changes under it, but only once
 it has read at all, so enabling the feature never fires two queries. **The fetch stays on the main
 actor**: at most a week of events is a sub-millisecond query and `EKEventStore` is not `Sendable`, so
 pushing it off-main would be a fight with no measurable gain. Both the launch-time load and the
@@ -190,7 +190,7 @@ per-summon refresh are deferred into a `Task`, because the first EventKit query 
 warm-up and both of those paths are protected.
 
 The `EKEventStore` itself is built on first use, so a Mac with the feature off never loads EventKit.
-After a grant the store is dropped and rebuilt — one built before the grant does not see the new
+After a grant the store is dropped and rebuilt; one built before the grant does not see the new
 calendars.
 
 `MeetingEvent.id` is the event identifier plus the occurrence's start, because a recurring series
@@ -203,8 +203,8 @@ already-finished one with it.
 ## The details page
 
 `MeetingActionsMenu` is a meeting's ⌘K menu everywhere it is a row: the card, the launcher's Meetings
-section, My Schedule and the details page. Its `secondary` and `perform` answer the menu's chords —
-⌘↵ copies the link, ⌘O opens Calendar, ⌘I shows details — so every label has a key that works.
+section, My Schedule and the details page. Its `secondary` and `perform` answer the menu's chords
+(⌘↵ copies the link, ⌘O opens Calendar, ⌘I shows details), so every label has a key that works.
 
 `Show Details` pushes `.meetingDetails`. `CalendarCoordinator.showDetails(of:)` has `CalendarStore`
 load the details before the push, so the page's first frame is already filled. The store queries only
@@ -233,28 +233,28 @@ next with no extra logic.
 inserted by one preference and reading nothing off the other: `showInMenuBar` on General for
 Tinycast's, `calendarMenuBarDisplay` here for the calendar's. Either may be the only one in the menu
 bar, both may be, or neither. Dragging the calendar item out writes `.disabled`, which is what the
-picker already said — it never touches `showInMenuBar`.
+picker already said; it never touches `showInMenuBar`.
 
 The display choice is **Disabled**, **Meeting Icon**, or **Meeting Title**; the title reads
-`title • in X min` and is capped at `MenuBarSummary.titleCap` characters — a hard cap is the only
+`title • in X min` and is capped at `MenuBarSummary.titleCap` characters: a hard cap is the only
 thing that bounds a menu bar. `CalendarMenuBarLabel` reads the coordinator rather than the stores,
 which scopes Observation to the label instead of re-running either scene. It falls back to a calendar
 glyph when nothing is due, so the calendar item never disappears out from under the user. In **Meeting
 Title** mode, once no event remains today it instead reads `No upcoming events`.
 
 **Hide when there are no upcoming events** instead takes the item out whenever it would show the bare
-glyph or that placeholder — whenever `menuBarEvent` is nil — so it follows `Show Upcoming Events`,
+glyph or that placeholder (whenever `menuBarEvent` is nil), so it follows `Show Upcoming Events`,
 `Only show events with meetings` and `Hide Current Event` rather than adding a rule of its own: on
-*Today* it leaves after the day's last event, on a minutes lead it also leaves between meetings. The
+_Today_ it leaves after the day's last event, on a minutes lead it also leaves between meetings. The
 scene has to read that fact, so `CalendarCoordinator.hasMenuBarEvent` is **stored and written only
-when it flips** — a derived read would re-run `TinycastApp.body`, and the main menu with it, on every
+when it flips**: a derived read would re-run `TinycastApp.body`, and the main menu with it, on every
 minute tick. SwiftUI writes
 `false` back through `isInserted` when it removes the item itself, so the insertion setter ignores a
 removal while the item is hidden for being empty: only a drag-out turns the display to `.disabled`.
 
-`CalendarMenuBarMenu` lists calendar actions only — `Join <title>`, `Open in Calendar` and
+`CalendarMenuBarMenu` lists calendar actions only: `Join <title>`, `Open in Calendar` and
 `Dismiss Event` for the displayed event, then the agenda, then `My Schedule` (⌘O) and
-`Calendar Settings…` (⌘,) — so the two menus never repeat each other. Each block is a `Section`, so
+`Calendar Settings…` (⌘,), so the two menus never repeat each other. Each block is a `Section`, so
 SwiftUI draws the separators and a missing block never leaves a stray one. `Join` is absent for a linkless appointment rather than
 opening Calendar under a name that lies. **A bare click never joins**: the menu bar is not a button,
 and a mis-click there would open a call.
@@ -268,16 +268,16 @@ decide only what the item itself shows, and keeps the displayed event so the lis
 under a handover.
 
 `Dismiss Event` takes the displayed occurrence out of the menu bar, and `MenuBarSummary.event` filters it
-out exactly as it filters a lapsed one — so the next event inside its own lead takes the space with
+out exactly as it filters a lapsed one, so the next event inside its own lead takes the space with
 no second rule, and with nothing behind it the item falls back to the glyph or leaves under **Hide
 when there are no upcoming events**. The set lives on `CalendarCoordinator` and lasts the launch, the
 way `autoJoined` does: a dismissal is a reaction to what is on screen now, not a preference worth
 persisting, and the ids are pruned against the store so the set cannot grow. It is deliberately per
-occurrence rather than per series — dismissing today's standup says nothing about tomorrow's.
+occurrence rather than per series: dismissing today's standup says nothing about tomorrow's.
 
 ## Auto join and the preview
 
-`AutoJoinPolicy` answers the meeting the join card is already showing, narrowed by three rules —
+`AutoJoinPolicy` answers the meeting the join card is already showing, narrowed by three rules:
 `start >= armedAt`, `now >= start`, and not already joined. Reusing `UpcomingWindow.carded` rather
 than inventing a second window is what keeps one knob, `joinWindowMinutes`, governing the card, the
 chord and auto join alike.
@@ -287,12 +287,12 @@ to the eleven named providers. A `.generic` link is as often a booking page, a d
 own help link as it is a call, and placeholder events carry plenty of them. The bare links are set
 aside **before** `carded` picks, not after: filtering the pick would let a placeholder starting a
 minute earlier hold the card's slot and starve the call beside it. The card, the chord and the menu
-bar still offer a bare link — only the unattended join skips it.
+bar still offer a bare link; only the unattended join skips it.
 
 The meeting is marked joined **before** the confirmation is raised, so declining does not re-ask a
 minute later.
 
-Every join — the card, the chord, the menu bar, auto join — funnels through
+Every join (the card, the chord, the menu bar, auto join) funnels through
 `CalendarCoordinator.join(_:uninvited:)`:
 
 ```
@@ -305,14 +305,14 @@ join(meeting)
 
 **The preview is itself a confirmation**, so it stands in for one when both are on rather than asking
 twice. `CameraPanel` sits at `.floating`, below a dialog's `.dialog`, so a failure report
-still lands on top of it. The session, the panel and the stage are the `Camera` feature's — see
-[camera.md](camera.md); only the join-specific controller and footer live here.
+still lands on top of it. The session, the panel and the stage are the `Camera` feature's (see
+[camera.md](camera.md)); only the join-specific controller and footer live here.
 
 ## Settings
 
 The Calendar pane carries the master switch (routed through the coordinator so the consent gate cannot
 be bypassed), the `Join Next Meeting` recorder, the
-join-window picker, and the per-calendar checkbox list — one `Form` row holding a `LazyVStack`,
+join-window picker, and the per-calendar checkbox list: one `Form` row holding a `LazyVStack`,
 because a `Form` realizes every row it is handed; a few light rows don't need `LauncherItemsTable`.
 
 The hidden-calendar set stores **exclusions**, so a calendar added after the setting was written
@@ -325,8 +325,8 @@ app installed on this Mac, which another Mac may not have. The menu-bar settings
 normally, and so does `calendarSpan`: it sets how far ahead is read rather than widening what
 can be reached.
 
-Because the span is a setting, the two sentences that name the days — the consent dialog and the
-pane's own subtitle — interpolate `MeetingSpan.possessivePhrase` rather than spelling the days out,
+Because the span is a setting, the two sentences that name the days (the consent dialog and the
+pane's own subtitle) interpolate `MeetingSpan.possessivePhrase` rather than spelling the days out,
 and the empty schedule reads `MeetingSpan.orPhrase` off the store that did the query. The `.schedule`
 placeholder names no days at all: it is a static `PaletteMode` string, and one that advertised a span
 it could not read would be wrong half the time.
@@ -336,14 +336,14 @@ preference lands on `.disabled` and `.today` rather than fighting them. `MenuBar
 `.disabled` is the one switch that takes the item out of the menu bar, and a second one would only
 disagree with it.
 
-`CalendarStore.access` is a snapshot, refreshed on `start`, on every `reload` and after a request —
+`CalendarStore.access` is a snapshot, refreshed on `start`, on every `reload` and after a request;
 TCC announces nothing when a grant changes in Settings. `refreshAccess()` is why anything that acts on
 `access` outside those three re-reads first: the enable path, so its guard cannot bounce off a stale
 `.granted` and leave a dead button, and the Calendar pane on appear, so a grant made in Settings while
 the feature was off is not reported as still missing.
 
 The Permissions pane shows calendar access alongside Accessibility, and when TCC has no record it
-offers the same consent path rather than only opening System Settings — the Calendars pane there
+offers the same consent path rather than only opening System Settings: the Calendars pane there
 lists no app that has never asked, so a `notDetermined` state that could only be sent to Settings was
 a dead end. Both entry points funnel through `CalendarCoordinator.setCalendarEnabled`, so Tinycast's
 dialog still comes first. A denial is the one state that Settings alone can undo, and both panes send

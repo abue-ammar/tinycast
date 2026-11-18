@@ -12,7 +12,7 @@ registered, so re-enabling restores every global shortcut.
 ## Invariants
 
 - **Shortcuts owns the library.** Nothing about a shortcut is stored except what every launcher entry
-  already keys by `preferenceKey` — alias, visibility, favorite, ranking — and its hotkey binding.
+  already keys by `preferenceKey` (alias, visibility, favorite, ranking) and its hotkey binding.
 - **`run(id:)` is the single funnel** for a launcher row and a global shortcut alike, so the switch
   can't be bypassed.
 - **A failed read keeps the last good library.** Emptying the launcher because one spawn failed would
@@ -32,7 +32,7 @@ shortcuts list --show-identifiers   →   Set Volume to 50% (97A1DDFA-76F3-4872-
 ```
 
 `AppleShortcut.parseList` anchors on the **trailing** `(UUID)`, so a name carrying parentheses of its
-own survives, and drops every other line — `ToolRunner` merges standard error into the output. The
+own survives, and drops every other line: `ToolRunner` merges standard error into the output. The
 identifier, not the name, is the shortcut's identity: it survives a rename in Shortcuts, so an alias
 or a binding follows the shortcut rather than its old title. The entry id is
 `apple-shortcut:<uuid>`, with no bundle id, so shortcuts never share a `preferenceKey` with the
@@ -44,8 +44,8 @@ unchanged list publishes nothing.
 
 ## Sweeping deleted shortcuts
 
-A read that differs from the last one — and the first read after launch, so a shortcut deleted while
-Tinycast wasn't running is caught too — sweeps. `AppleShortcut.staleIDs` collects every
+A read that differs from the last one (and the first read after launch, so a shortcut deleted while
+Tinycast wasn't running is caught too) sweeps. `AppleShortcut.staleIDs` collects every
 `apple-shortcut:` key the alias, favorite, visibility and ranking stores hold, plus
 `boundAppleShortcutIDs`, and returns those the library no longer names. Each is unbound and its
 per-entry preferences removed, the way deleting a quicklink unwinds them. A shortcut renamed in
@@ -58,7 +58,7 @@ shortcut's references linger until the library holds one again.
 ## Running
 
 `shortcuts run <uuid>` runs the shortcut headless. The palette hides first and hands focus back, since
-a shortcut usually acts on the app the user was in. There is **no timeout** — a shortcut can wait on a
+a shortcut usually acts on the app the user was in. There is **no timeout**: a shortcut can wait on a
 dialog of its own for as long as it likes. Success is silent; a non-zero exit shows the tool's last
 lines in Tinycast's own dialog.
 

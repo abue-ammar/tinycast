@@ -43,7 +43,7 @@ design follows [fsearch](https://github.com/noahdunnagan/fsearch).
   own dialogs because a question or a report is Tinycast's to word. A share sheet is neither: it is
   AirDrop, Mail and Messages, and re-drawing it would mean re-implementing the transports and losing
   whatever the system adds. So this row hands off, and the two rules it does keep are that the palette
-  is never hidden and that the row stays visible beside the sheet — which is what anchoring to
+  is never hidden and that the row stays visible beside the sheet, which is what anchoring to
   `PaletteWindowController.anchorView` buys. The picker is retained on the coordinator, because it
   dies with its last reference, and `NSItemProvider(contentsOf:)` failing (a file that vanished between
   the query and the keystroke) leaves the palette exactly as it was, which is the only failure this row
@@ -170,17 +170,17 @@ somewhere on another; `/` is shown as the startup volume's name. The helper reso
 
 `FileSearchIgnoreList` compiles each pattern once into one of three buckets:
 
-| Pattern shape | Matched against | Example |
-| --- | --- | --- |
-| no `/`, no metacharacters | the entry name, case-insensitively | `node_modules` |
-| no `/`, has `*` `?` `[` | the entry name, via `fnmatch` | `*.tmp` |
+| Pattern shape                     | Matched against                        | Example                      |
+| --------------------------------- | -------------------------------------- | ---------------------------- |
+| no `/`, no metacharacters         | the entry name, case-insensitively     | `node_modules`               |
+| no `/`, has `*` `?` `[`           | the entry name, via `fnmatch`          | `*.tmp`                      |
 | contains `/`, or starts with `~/` | the whole absolute path, via `fnmatch` | `~/Movies`, `**/[Cc]ache/**` |
 
 The defaults skip what a search for one's own files never wants: build output and dependency
 folders (`node_modules`, `.git`, `build`, `DerivedData`, `.venv`, …), the worktrees AI coding agents
 keep (`**/.claude/worktrees`, `**/.codex/worktrees`, `**/conductor/workspaces`, …), each a full copy of
 a repository, the Photos library, the Trash,
-the `~/.cache` and `~/.npm` caches, and the noisy parts of `~/Library` — `Application Support`,
+the `~/.cache` and `~/.npm` caches, and the noisy parts of `~/Library`: `Application Support`,
 `Caches`, `Containers`, `Developer`, `Group Containers` and `Mail`. Together they hold most of a home
 folder's entries and most of its churn: one browser's cache alone rewrites tens of thousands of files
 on every page load. `Preferences`, `LaunchAgents` and the cloud drives stay indexed. `/Library/Caches`
@@ -205,32 +205,32 @@ keep the full-path match.
 290pt column beside a preview pane, split by the same `Theme.Colors.separator` hairline the clipboard
 draws. The list uses the shared Results header, row metrics, edge dissolve, thin scrollbar and scroll
 intent; its header reads **Recent** on the blank screen and **Results** under a query. A row shows
-a fitted native file icon and the full filename — a folder prefixed by its parent's name, dimmed, since
+a fitted native file icon and the full filename: a folder prefixed by its parent's name, dimmed, since
 half the folder hits on a developer machine are some `src` or `Tinycast`. The path itself is the preview's
 `Where` row rather than a second column the narrow list has no width for. A click selects and a double
 click opens, both through `onRowClick`, which answers on the press: `.onTapGesture(count: 2)` makes the
-single tap wait out the system's double-click interval first, and that wait *is* the second a click used
+single tap wait out the system's double-click interval first, and that wait _is_ the second a click used
 to take before the preview moved.
 
 Fitted row icons use a separate 8 MB transient cache. Leaving the list or hiding the palette purges it
 and invalidates in-flight decodes, so scrolling stays warm within one result set without retaining its
 icons after File Search closes. Persistent launcher icons remain in their own cache.
 
-The preview pane is the file itself over an Information block — Name, Where, Type, Size, Created,
+The preview pane is the file itself over an Information block: Name, Where, Type, Size, Created,
 Modified. The stage is **16:9 and sized before the block beneath it**, which then scrolls in whatever is
 left; without that layout priority the aspect ratio shrinks to the leftover height instead of claiming
 it. `FileSearchPreviewKind` picks what draws the file, and `FileSearchSurface` mounts it:
 
-| Kind | Surface | Why not QuickLook |
-| --- | --- | --- |
-| movies, audio | `FileSearchMediaPlayer` | it draws a movie's first frame but never plays one inside a non-activating panel |
-| PDF | `PDFSurface`, PDFKit in process | it draws a PDF in an out-of-process `NSRemoteView` that never scrolls inside the palette |
-| text QuickLook shows as an icon | `PlainTextSurface` | it renders only a declared `public.text` type as text |
-| everything else | `QuickLookSurface` | — |
+| Kind                            | Surface                         | Why not QuickLook                                                                        |
+| ------------------------------- | ------------------------------- | ---------------------------------------------------------------------------------------- |
+| movies, audio                   | `FileSearchMediaPlayer`         | it draws a movie's first frame but never plays one inside a non-activating panel         |
+| PDF                             | `PDFSurface`, PDFKit in process | it draws a PDF in an out-of-process `NSRemoteView` that never scrolls inside the palette |
+| text QuickLook shows as an icon | `PlainTextSurface`              | it renders only a declared `public.text` type as text                                    |
+| everything else                 | `QuickLookSurface`              | -                                                                                        |
 
 The extension decides without touching the disk, except where it cannot: an undeclared extension
 (`.jsx`, `.vue`) or `.ts`, which the system declares as MPEG-TS video. Those read their first 256 KB
-off the main actor once per selection — no NUL and valid UTF-8 is text, anything else falls back to
+off the main actor once per selection: no NUL and valid UTF-8 is text, anything else falls back to
 what the extension declares. `PlainTextSurface` copies QuickLook's own text preview (fixed-pitch 11pt,
 3pt inset, unselectable), so a `.jsx` reads like a `.swift`.
 **Nothing autoplays**: arrow-keying a list must not start a movie.
@@ -241,44 +241,44 @@ sizing, and copying forty lines of `AVPlayerView` teardown is the cheaper trade.
 
 **The surface outlives the selection**, and there is no timer in front of it. A move hands the same
 `QLPreviewView` another item rather than closing one and building the next, which is the whole cost:
-measured against the real machinery inside a panel shaped like the palette's — borderless, floating,
-non-activating — a swap paints in about 8 ms, and the first load in a process in about 130 ms. Nothing
+measured against the real machinery inside a panel shaped like the palette's (borderless, floating,
+non-activating), a swap paints in about 8 ms, and the first load in a process in about 130 ms. Nothing
 about that is worth debouncing, and the debounce that was there only made a click feel slow. The surface
 is torn down by not being mounted: when the palette is ordered out, or on
 a folder, whose preview is its icon. Information rows are the compact variant; their disk reads happen once per selection
-in a detached task, never in `body`, and a folder shows no Size — its own record is a few bytes, which is
+in a detached task, never in `body`, and a folder shows no Size: its own record is a few bytes, which is
 never what the row means.
 
 **There is no Quick Look action.** The pane already previews the selection, and ↵ opens the file in
 its default app. A system `QLPreviewPanel` would take key, and the palette hides on `windowDidResignKey`.
 
-| Row | Chord | What it does |
-| --- | --- | --- |
-| Open File / Open Folder | ↵ | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller |
-| Show in Finder | ⌘↵ | reveals and dismisses |
-| Share… | — | `NSSharingServicePicker`, anchored to the palette's trailing edge so the row it was opened from stays visible beside it. Escape or a click elsewhere dismisses it, and the palette is never hidden, so the flow returns to the same row. There is no chord: the destinations are the system's, and it is the only place a system popover is right |
-| Copy File | ⇧⌘C | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string` |
-| Copy Name | ⌥⌘C | through `Paster`, palette stays open |
-| Copy Path | ⌃⌘C | the standardized path, palette stays open |
-| Paste File to … | ⇧⌘V | `Paster.pasteFile` into the app the palette was summoned over, named by `PasteTarget` |
-| Add / Remove from Favorites | ⇧⌘F | saves the file or folder in the launcher’s shared Favorites order |
-| Move to Trash | ⌃X | `FileManager.trashItem` off the main actor, then the row leaves the session |
+| Row                         | Chord | What it does                                                                                                                                                                                                                                                                                                                                      |
+| --------------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Open File / Open Folder     | ↵     | `NSWorkspace`'s asynchronous configuration API; hides the palette without restoring focus, and reports a failure through the dialog controller                                                                                                                                                                                                    |
+| Show in Finder              | ⌘↵    | reveals and dismisses                                                                                                                                                                                                                                                                                                                             |
+| Share…                      | None  | `NSSharingServicePicker`, anchored to the palette's trailing edge so the row it was opened from stays visible beside it. Escape or a click elsewhere dismisses it, and the palette is never hidden, so the flow returns to the same row. There is no chord: the destinations are the system's, and it is the only place a system popover is right |
+| Copy File                   | ⇧⌘C   | the file itself on the pasteboard through `PasteboardFiles.write`, which declares `.fileURL` and the path as `.string`                                                                                                                                                                                                                            |
+| Copy Name                   | ⌥⌘C   | through `Paster`, palette stays open                                                                                                                                                                                                                                                                                                              |
+| Copy Path                   | ⌃⌘C   | the standardized path, palette stays open                                                                                                                                                                                                                                                                                                         |
+| Paste File to …             | ⇧⌘V   | `Paster.pasteFile` into the app the palette was summoned over, named by `PasteTarget`                                                                                                                                                                                                                                                             |
+| Add / Remove from Favorites | ⇧⌘F   | saves the file or folder in the launcher’s shared Favorites order                                                                                                                                                                                                                                                                                 |
+| Move to Trash               | ⌃X    | `FileManager.trashItem` off the main actor, then the row leaves the session                                                                                                                                                                                                                                                                       |
 
 None of the copies is marked with `ClipboardManager.internalType`, so a copied file enters clipboard
-history like any other copy. Move to Trash rides the clipboard's own ⌃X, asks nothing first — trashing is
-undoable, as it is for Uninstall and for an extension's `trash` — and has no ⌃⇧X counterpart, since there
+history like any other copy. Move to Trash rides the clipboard's own ⌃X, asks nothing first (trashing is
+undoable, as it is for Uninstall and for an extension's `trash`) and has no ⌃⇧X counterpart, since there
 is no "all" to trash. The three ⌘C chords differ only by their second modifier, which
-`PaletteShortcut` reads in order — ⇧, then ⌥, then ⌃; bare ⌘C stays with the search field.
+`PaletteShortcut` reads in order: ⇧, then ⌥, then ⌃; bare ⌘C stays with the search field.
 
-The first in-flight query says nothing — the rows it is about to replace would only flash a message — an
+The first in-flight query says nothing (the rows it is about to replace would only flash a message); an
 empty completed query says what the active filter admits ("No files found", "No images found"), and a
 blank screen with no recents says "Type to search files and folders". Without Full Disk Access the screen
 says so and ↵ opens the Privacy & Security pane; during the first build it shows the running item count.
 
 ### Dragging out
 
-A row drags its file or folder straight into another app — a Finder window, a browser's upload field,
-a mail being written — through the same `onRowClick(drag:)` the clipboard uses, so the press, the
+A row drags its file or folder straight into another app (a Finder window, a browser's upload field,
+a mail being written) through the same `onRowClick(drag:)` the clipboard uses, so the press, the
 **copy-only** operation and the fly-back are the ones [clipboard.md](clipboard.md#dragging-out)
 explains. Copy matters more here than there: every result is the user's own file, and on the boot
 volume a plain file-URL drag would default to moving it. The image is the row's fitted tile, already
@@ -309,7 +309,7 @@ favorites remain searchable by filename at any query length with **Show in launc
 favorites lead indexed file hits in the Files section, with repeated paths removed and the same
 five-row cap. Disabling File Search hides file favorites without deleting them. It is
 `LauncherScreen.Row.file`, id-prefixed `file-` because an application's entry id is its bundle path. It
-draws `FileSearchRow` with its location — name, dimmed parent path, then File or Folder — and answers
+draws `FileSearchRow` with its location (name, dimmed parent path, then File or Folder) and answers
 the screen's own row actions: ↵ opens, ⌘↵ reveals, the copy, paste and trash chords run
 `FileSearchActionsMenu.perform`, and a row drags out as a copy. Row icons come from the same transient
 fitted cache, purged when the palette hides.
@@ -329,12 +329,12 @@ guards entry into `.fileSearch`, so neither a stale selected command nor the glo
 the screen after the feature is disabled. Disabling cancels the session and returns an open File Search
 screen to the launcher without changing palette visibility.
 
-Search Files is bindable like every other built-in command — `AppEntry.hotKeyAction` answers
+Search Files is bindable like every other built-in command: `AppEntry.hotKeyAction` answers
 `.command(.searchFiles)`, so its launcher row prints a bound chord as a keycap.
 
 This pane is the command's only one: `SettingsTab.ownedCommands` names it, so Settings ▸ Commands
 neither lists it nor gates it behind `Enable Commands`. Launcher visibility is `VisibilityStore`'s,
 keyed on the entry's `preferenceKey`. The entry behind it comes from
 `CommandCatalog.entry(for:)` rather than `AppIndex`, because the index drops the command entirely while
-the feature switch is off — exactly when the pane still has to draw the row. Hiding the command leaves
+the feature switch is off, exactly when the pane still has to draw the row. Hiding the command leaves
 the shortcut working, as it does for every other feature.

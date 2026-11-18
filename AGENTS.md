@@ -38,36 +38,36 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 
 | Folder                   | Holds                                                                                   |
 | ------------------------ | --------------------------------------------------------------------------------------- |
-| `Tinycast/App/`          | `@main`, `AppDelegate`, `AppCore` — the composition root                                |
+| `Tinycast/App/`          | `@main`, `AppDelegate`, `AppCore` (the composition root)                                |
 | `Tinycast/DesignSystem/` | shared visual primitives; `Theme.swift` is the only design-token source                 |
 | `Tinycast/Platform/`     | system shims: `Permissions`, `AppPaths`, `Signposts`, `NotificationToken`, …            |
 | `Tinycast/Palette/`      | the palette shell: panel, window controller, `RootPaletteView`, `PaletteScreen`         |
 | `Tinycast/Windows/`      | the non-palette AppKit surfaces: `Dialog/`, `HUD/`, `About/`, `AppWindowController`     |
 | `Tinycast/Features/`     | one folder per feature; larger ones split `Model/` `Service/` `UI/` `Settings/`         |
 | `Tinycast/Migrations/`   | one-shot repairs of state an older release left behind, each deleted after one release  |
-| `Tests/`                 | the standalone harnesses — one Swift file each, no XCTest target                        |
+| `Tests/`                 | the standalone harnesses: one Swift file each, no XCTest target                         |
 | `Scripts/`               | every executable script: test runner, data generators, packaging, linting, editor setup |
 
-| Read it before you                                          | Doc                                                          |
-| ----------------------------------------------------------- | ------------------------------------------------------------ |
-| change how anything is wired or owned                       | [architecture.md](docs/architecture.md)                      |
-| write Swift — naming, style, concurrency, budgets, comments | [standards.md](docs/standards.md)                            |
-| claim a change is done                                      | [testing.md](docs/testing.md)                                |
-| build, run or regenerate data                               | [development.md](docs/development.md)                        |
-| add or restyle any view                                     | [ui.md](docs/ui.md)                                          |
-| touch one feature's internals                               | [features/](docs/features/) — each opens with its invariants |
-| remove or rename anything persisted                         | [migrations.md](docs/migrations.md)                          |
-| package or ship a build                                     | [release.md](docs/release.md)                                |
+| Read it before you                                         | Doc                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| change how anything is wired or owned                      | [architecture.md](docs/architecture.md)                      |
+| write Swift: naming, style, concurrency, budgets, comments | [standards.md](docs/standards.md)                            |
+| claim a change is done                                     | [testing.md](docs/testing.md)                                |
+| build, run or regenerate data                              | [development.md](docs/development.md)                        |
+| add or restyle any view                                    | [ui.md](docs/ui.md)                                          |
+| touch one feature's internals                              | [features/](docs/features/) (each opens with its invariants) |
+| remove or rename anything persisted                        | [migrations.md](docs/migrations.md)                          |
+| package or ship a build                                    | [release.md](docs/release.md)                                |
 
 ## Non-negotiables
 
 Never break these without an explicit task to do so. Anything feature-specific lives in that
 feature's doc, under its own `## Invariants`.
 
-- **`AppCore` is the sole owner.** New long-lived state goes on `AppCore`, wired in `start()` — never a
+- **`AppCore` is the sole owner.** New long-lived state goes on `AppCore`, wired in `start()`, never a
   competing singleton. Views reach a feature's **coordinator** through `@Environment`, not `AppCore`.
 - **A file under `Features/*/Model/` may not import AppKit or SwiftUI**, and takes every environment
-  fact — clock, filesystem, home directory, rates — as an injected parameter. The harnesses compile the
+  fact (clock, filesystem, home directory, rates) as an injected parameter. The harnesses compile the
   shipped sources, so this is enforced by compilation rather than convention.
 - **Swift 6 language mode: data-race violations are hard errors.** `@MainActor` is the default,
   model values shared across isolation boundaries are `Sendable`, and exclusive ownership transfer
@@ -79,22 +79,22 @@ feature's doc, under its own `## Invariants`.
   detached or callback-backed work owned by a caller follows that caller's cancellation.
 - **Dark is the baseline, and a colour's dark branch is the literal it always was.** `Theme.Colors`
   resolves per appearance through `ramp`/`adaptive`; every dark value is the `Color.white.opacity(…)`
-  the forced-dark build shipped, restated rather than re-derived. Retune a light branch freely — change
+  the forced-dark build shipped, restated rather than re-derived. Retune a light branch freely; change
   a dark one only when the task is to change Dark. `AppAppearance` drives `NSApp.appearance`, and
   `.system` maps to `nil` so AppKit follows macOS on its own.
-- **Tinycast presents its own dialogs — never `NSAlert` or a system popover.** A question
+- **Tinycast presents its own dialogs, never `NSAlert` or a system popover.** A question
   goes through `DialogController`, a report through a HUD via `HUDPresenter`. The Settings window is
   the one exception: a stock titled window, its panes ask with SwiftUI's `confirmationDialog` or
   `alert`, which present as a sheet on it.
 - **A networked feature fetches on a private `.ephemeral`, `urlCache = nil` session**, never
   `URLSession.shared`, so its own cache file stays the only copy on disk. `CurrencyRateStore` is the
-  reference — copy it rather than inventing a second shape. A flag that grants a capability is never
+  reference: copy it rather than inventing a second shape. A flag that grants a capability is never
   carried by a backup or by `settings.json`: `snippetsEnabled` is excluded from settings backups so an
   import cannot grant keystroke listening.
 - **Extensions stay inside `Features/Extensions/`.** Every view, row, menu, geometry and sizing
-  constant an extension needs is written and owned there — never added to `DesignSystem/`, never bolted
+  constant an extension needs is written and owned there, never added to `DesignSystem/`, never bolted
   onto `Theme`, and never lifted somewhere another feature can build on it. Another surface may render
-  one as an opaque box — `LauncherScreen` does exactly that with `ExtensionArgumentsAccessory` — but it
+  one as an opaque box (`LauncherScreen` does exactly that with `ExtensionArgumentsAccessory`), but it
   never reaches inside one. An extension renders untrusted third-party code whose shape we do not
   control, so it must never be able to force a change on a launcher surface.
   **Duplicating a view or a piece of layout maths to keep it here is the correct trade**, and the one
@@ -104,12 +104,12 @@ feature's doc, under its own `## Invariants`.
   "how an extension looks or moves" in it. `ExtensionActionsPanel` and `ExtensionGridGeometry` exist
   precisely because the palette's own menu and the emoji grid must stay free to change without them.
 - **`AppEntry.Kind` is the only thing that says what an entry is.** One case per launcher section and
-  per `VisibilityStore` category — never re-derive a category by sniffing an entry ID. Which _pane_
+  per `VisibilityStore` category; never re-derive a category by sniffing an entry ID. Which _pane_
   lists a command is a separate fact, and `SettingsTab.ownedCommands` is the only place that states it.
 - **Generated files are never hand-edited.** `EmojiData.generated.swift` and
   `Resources/EmojiKeywords/` come from `node Scripts/gen-emoji.js`, `CurrencyData.generated.swift` from `node Scripts/gen-currencies.js`,
   `CountryZoneData.generated.swift` from `node Scripts/gen-countries.js`, and
-  `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs` — the runtime is
+  `Resources/RaycastRuntime.generated.js` from `Scripts/raycast-runtime/build.mjs`; the runtime is
   committed so building the app never needs Node.
 - **`DesignSystem/Scrolling/EdgeDissolve.swift` and `ThinScrollbar.swift` are off-limits.** Both are
   tuned by eye against the palette's floating bars, so any edit is a visual regression. Needing to touch
@@ -128,17 +128,17 @@ feature's doc, under its own `## Invariants`.
 - **A new preference also gets a `SettingsFileKey`** and its binding in `SettingsFileSchema`, so the
   opt-in `settings.json` mirror carries it; the exhaustive switch fails the build until it is bound.
   See [settings-file.md](docs/features/settings-file.md).
-- **A type's suffix says what it _is_** — `Store`, `Coordinator`, `Controller`, `Manager`, `Engine`,
+- **A type's suffix says what it _is_**: `Store`, `Coordinator`, `Controller`, `Manager`, `Engine`,
   `Policy` and the rest each name a specific responsibility. **Semantic correctness always wins over
   suffix consistency:** pick the suffix that describes the type honestly, add a new one when none fits,
   and never rename a well-named type just to match the table.
   Full table: [standards.md#naming](docs/standards.md#naming).
-- **Comments are rare, one line, and explain the _why_** — the gotcha or invariant, never the what.
+- **Comments are rare, one line, and explain the _why_**: the gotcha or invariant, never the what.
   **Never two in a row, never extended into a block**: if one line can't carry it, name a function,
   constant or type instead. Cap 100 characters, delete rather than update, and never comment a change
   you just made. Nothing lints this; get it right the first time.
   Full rules: [standards.md#comments](docs/standards.md#comments).
-- **Debug builds are their own channel** — `Tinycast Dev.app` / `com.abueammar.tinycast.dev` — so a
+- **Debug builds are their own channel** (`Tinycast Dev.app` / `com.abueammar.tinycast.dev`), so a
   local run never shares prefs, caches, TCC grants or the login item with an installed copy. Anything
   newly persisted must stay keyed by `Bundle.main.bundleIdentifier`.
 - **XcodeGen owns the project.** `Tinycast.xcodeproj` is committed but generated from `project.yml`;

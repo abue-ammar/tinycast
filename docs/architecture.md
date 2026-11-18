@@ -56,22 +56,22 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
-│ SwiftUI screens, views and each feature's coordinator — declarative, thin  │
+│ SwiftUI screens, views and each feature's coordinator: declarative, thin   │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
 
-In the folder tree those become `Model/`, `Service/`, and `UI/` plus `Settings/` — observable state lives
+In the folder tree those become `Model/`, `Service/`, and `UI/` plus `Settings/`; observable state lives
 in whichever of the two owns it.
 
-- **`Model/` — pure.** Foundation only, plus SQLite3 or CoreGraphics where the data demands it.
+- **`Model/`: pure.** Foundation only, plus SQLite3 or CoreGraphics where the data demands it.
   Everything from the environment is **injected**: `CalcEngine` takes `now` / `calendar` / `rates`,
   `LauncherRankingStore` takes `now` and its file URL, `WindowActionMemory` takes `now` as a parameter,
-  `UninstallRules` is handed directory *names* rather than URLs, and `QuicklinkStore` is handed the home
+  `UninstallRules` is handed directory _names_ rather than URLs, and `QuicklinkStore` is handed the home
   directory. This is the layer that **decides** things.
-- **`Service/` — effects.** Stores, monitors, runners, scanners and AppKit glue. Every `AXUIElement`
+- **`Service/`: effects.** Stores, monitors, runners, scanners and AppKit glue. Every `AXUIElement`
   call, `CGEventTap`, `NSWorkspace.open`, `URLSession` request, `FileManager` walk and CoreAudio read
   lives here. This is the layer that **does** things.
-- **`UI/` and `Settings/` — views**, plus the feature's coordinator. Declarative, thin, holding no policy.
+- **`UI/` and `Settings/`: views**, plus the feature's coordinator. Declarative, thin, holding no policy.
 
 The rule is checkable, which is the point: **a file under `Model/` may not import AppKit or SwiftUI**,
 because the harnesses compile the shipped sources rather than a copy. A harness that stops compiling is
@@ -79,7 +79,7 @@ the signal that a decision leaked into the effect layer, or an effect into the d
 
 The boundary keeps effects out of decisions: `CalcEngine.evaluate` is handed a finished
 `CurrencyRates?` rather than reaching for one, which is what keeps it Foundation-only and testable.
-Confirmation gates live in the coordinator, never in the runner — which is why `ShellCommandRunner`
+Confirmation gates live in the coordinator, never in the runner, which is why `ShellCommandRunner`
 and `SystemActionRunner` stay harness-compilable while the "are you sure?" step still cannot be bypassed.
 
 Two things sit deliberately outside a feature folder: `Features/PaletteRowIndex.swift`, because the
@@ -97,8 +97,8 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 `HotKeyManager`, `HyperKeyManager`, `DictationKeyManager`, `RunningAppsMonitor`,
 `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `MenuSearchSession`, `UninstallSession`,
-`MeetingClock`), `NotesStore`, the twenty-two feature coordinators — `CloudSyncCoordinator` owns the
-opt-in iCloud Sync session — and the
+`MeetingClock`), `NotesStore`, the twenty-two feature coordinators (`CloudSyncCoordinator` owns the
+opt-in iCloud Sync session) and the
 window controllers.
 
 `AppDelegate.applicationDidFinishLaunching` calls `AppCore.shared.start(launchedByUser:)` and nothing
@@ -107,8 +107,8 @@ launch. That is the one wiring point, and `start` reads as the app's whole boot 
 
 **Feature actions live on that feature's coordinator, and a view must never reach past a coordinator
 into a store to mutate it.** That is the rule; `AppCore` holds only the closure wiring that connects a
-hotkey to a coordinator. Views inject `AppCore` through `@Environment` and use it as the *locator* for
-those coordinators — `core.quicklinkCoordinator.deleteQuicklink(…)` is the shape, and the alternative
+hotkey to a coordinator. Views inject `AppCore` through `@Environment` and use it as the _locator_ for
+those coordinators: `core.quicklinkCoordinator.deleteQuicklink(…)` is the shape, and the alternative
 is injecting fifteen coordinators separately for no gain. Reading a store off `AppCore` to render it is
 fine too; deciding something with one is what the rule forbids. `showNotice`, `confirm`,
 `reportFailure`, `showMessage` and `pickVolume` are forwarders on `AppCore` itself, so
@@ -119,7 +119,7 @@ New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a c
 Clipboard text recognition runs outside the process. `AppCore` owns the indexer;
 the stateless `ClipboardTextWorker` runs one bundled `ClipboardTextHelper` per item, from
 `Contents/Helpers`, and reaps it before returning. Vision's and PDFKit's allocations therefore belong
-to a process that exits, and the helper — which has no database, clipboard or settings access — is
+to a process that exits, and the helper (which has no database, clipboard or settings access) is
 handed an input path and answers with bounded text down a pipe. Its `thumbnail` mode writes the
 clipboard's downscaled image copies, so a full-size decode stays out of the app unless that fails.
 
@@ -131,46 +131,46 @@ store starts the helper on demand and reaps it after the selected idle delay or 
 ## Entry points and windows
 
 `TinycastLaunch` (`@main`) pins the interface language, then runs `TinycastApp`, which declares
-only two `MenuBarExtra` scenes — Tinycast's own item and the
+only two `MenuBarExtra` scenes: Tinycast's own item and the
 calendar's, each inserted by one preference and independent of the other; everything else visible is
 driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem`s owned entirely by
 `Features/Extensions/`, through `ExtensionManager`, with no scene or lifecycle wiring in the core.
 
-- **Command palette** — a borderless floating `NSPanel` (`Palette/PalettePanel.swift`) hosting SwiftUI
+- **Command palette**: a borderless floating `NSPanel` (`Palette/PalettePanel.swift`) hosting SwiftUI
   via `NSHostingView`, managed by `PaletteWindowController`. It toggles between a compact bar and the
   full launcher by resizing the window. The controller **solely** owns the frame, resolved once per show
   to a top-left anchor so it grows downward, and the hosting view sets `sizingOptions = []` so SwiftUI
-  never drives the window size — without that the hosting view resizes the panel to fit content and the
+  never drives the window size; without that the hosting view resizes the panel to fit content and the
   top edge drifts on the compact↔expanded swap. The panel auto-dismisses on `windowDidResignKey`,
   unless a modal panel holds key.
   See [features/palette.md](features/palette.md).
-- **Settings and Onboarding** — titled `NSWindow`s, one `Windows/AppWindowController.swift` each, owned
+- **Settings and Onboarding**: titled `NSWindow`s, one `Windows/AppWindowController.swift` each, owned
   by `SettingsCoordinator` and `OnboardingCoordinator`. SwiftUI `Settings` and `Window` scenes are
   unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
   palette's in both directions. Onboarding stays accessory rather than registering Dock ownership,
   so completing it can open the palette without an activation-policy change stealing focus.
-- **Notes** — a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
+- **Notes**: a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
   Its height fits the note up to 860pt and AppKit autosaves the frame; its TextKit 2 editor renders
   Markdown over the literal source, switches among local Markdown files and stays visible on focus
   loss. The displayed string is the canonical file source; there is no source/display mapping.
   See [features/notes.md](features/notes.md).
-- **AI Chat** — a titled `AppWindowController` window owned by `AIChatCoordinator`: an
+- **AI Chat**: a titled `AppWindowController` window owned by `AIChatCoordinator`: an
   `NSSplitViewController` with a collapsible sidebar of saved chats beside the open conversation, as
   Settings is built. The conversation lives on `AppCore.aiChats`, not the window, so closing it cancels
   nothing. Quick AI is the same feature's palette screen. See [features/ai.md](features/ai.md).
-- **The main menu** — shaped by `TinycastApp`'s `.commands`, which rebinds ⌘Q to Close Window: the AI
+- **The main menu**: shaped by `TinycastApp`'s `.commands`, which rebinds ⌘Q to Close Window: the AI
   Chat window when it is key, otherwise Settings. It is only ever on screen while a titled window is
   open, so it is those windows' menu bar. It must stay declarative.
-- **Dialogs** — borderless `DialogPanel`s driven by `DialogController`, the app's only presenter for
+- **Dialogs**: borderless `DialogPanel`s driven by `DialogController`, the app's only presenter for
   confirmations, failure reports and value prompts outside Settings, whose panes ask with SwiftUI's
   sheet-style `confirmationDialog` or `alert`. Presentation is `async`, so nothing blocks the main
-  actor, and the presenter refuses a second dialog while one is up — that, not a flag, is what stops a
+  actor, and the presenter refuses a second dialog while one is up; that, not a flag, is what stops a
   held hotkey stacking dialogs.
-- **Support** — a titled `AppWindowController` window owned by `SupportCoordinator`, sized to the
-  height its content measured. Every route into it — the palette's menu circle, Settings → About, the
-  menu bar, the launcher, and the 30-day reminder — lands on `showSupport()`, which is what moves the
+- **Support**: a titled `AppWindowController` window owned by `SupportCoordinator`, sized to the
+  height its content measured. Every route into it (the palette's menu circle, Settings → About, the
+  menu bar, the launcher, and the 30-day reminder) lands on `showSupport()`, which is what moves the
   reminder's anchor. See [features/support.md](features/support.md).
-- **The camera surfaces** — a borderless, non-activating `CameraPanel` at `.floating`, in two
+- **The camera surfaces**: a borderless, non-activating `CameraPanel` at `.floating`, in two
   shapes over one `CameraSession`: `CameraPreviewController`, owned by `CalendarCoordinator`, gates a
   join and doubles as auto join's confirmation; `CameraCoordinator`, owned by `AppCore`, is the
   standalone `Open Camera` command. See [features/camera.md](features/camera.md) and
@@ -202,15 +202,15 @@ Three things about this model are easy to get wrong:
   adding a hosting view.
 
 `AppCore.track` is the pattern for reacting to a settings change outside a view.
-`withObservationTracking`'s `onChange` is a **willSet** hook — it fires before the write lands and is
-one-shot — so the closure defers the re-read into a `Task` and re-arms the tracking there. Both halves
+`withObservationTracking`'s `onChange` is a **willSet** hook (it fires before the write lands and is
+one-shot), so the closure defers the re-read into a `Task` and re-arms the tracking there. Both halves
 are required; removing the `Task` reads the old value.
 
 ## Concurrency
 
 The target builds in **Swift 6 language mode**, so data-race violations are hard errors. Almost
-everything is `@MainActor`; cross-actor model types are `Sendable`. Heavy and IO-bound work — the app
-scan, image decode, the settings-pane scan, shell execution, the FX rate fetch — is pushed off-main as
+everything is `@MainActor`; cross-actor model types are `Sendable`. Heavy and IO-bound work (the app
+scan, image decode, the settings-pane scan, shell execution, the FX rate fetch) is pushed off-main as
 `nonisolated static` functions driven by `Task.detached`. There is exactly one actor, deliberately.
 
 House idioms for the sharp edges:
@@ -225,12 +225,12 @@ House idioms for the sharp edges:
 
 ## The tree
 
-The folder layout is the layering above, made navigable — one folder per feature, each holding
+The folder layout is the layering above, made navigable: one folder per feature, each holding
 everything that feature owns.
 
 ```
 Tinycast/
-  App/              @main, AppDelegate, AppCore — the composition root
+  App/              @main, AppDelegate, AppCore: the composition root
   DesignSystem/     Theme (the token source), KeyCapChip, Tooltip, SymbolImage,
                     GlassEffectView, PopoverMenu, SettingsComponents, Scrolling/, Interaction/
   Platform/         system shims: Permissions, LaunchAtLogin, InputSourceSwitcher, ScreenTarget,
@@ -244,13 +244,13 @@ Tinycast/
   Assets.xcassets/  the app icon and the bundled image sets some catalog symbols resolve to
   Migrations/       one-shot repairs, each deleted after one stable release (migrations.md)
   Features/
-    PaletteRowIndex.swift   the flat selection index — palette-owned, so it sits at the top
+    PaletteRowIndex.swift   the flat selection index, palette-owned, so it sits at the top
     Launcher/ Clipboard/ Calculator/ Calendar/ Emoji/ FileSearch/ MenuSearch/ Notes/
     Quicklinks/ Snippets/ Uninstall/ SystemActions/ CustomCommands/ HotKeys/ Backup/
     WindowManagement/ Onboarding/ Updates/ Support/ AI/ Settings/
     Extensions/
-        Model/      pure — the harness inputs
-        Service/    effects — stores, monitors, runners, AppKit glue
+        Model/      pure: the harness inputs
+        Service/    effects: stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator
         Settings/   the feature's own panes
     Settings/       the Settings shell only: SettingsCoordinator, the root/sidebar/detail views, the chrome,
@@ -265,9 +265,9 @@ A larger feature splits into all four sub-folders; a small one stays flat, as `O
 shell rather than the feature.
 
 Every `SettingsTab` maps to one `…SettingsView`, and each is a stock `Form` with
-`.formStyle(.grouped)` — see [ui.md](ui.md#settings). A pane lives with its feature; only a pane no
-feature owns (General, Permissions) lives in `Settings/Panes/`. The four launcher-category panes —
-Applications, System Settings, System Actions, Commands — are thin wrappers over the shared
+`.formStyle(.grouped)` (see [ui.md](ui.md#settings)). A pane lives with its feature; only a pane no
+feature owns (General, Permissions) lives in `Settings/Panes/`. The four launcher-category panes
+(Applications, System Settings, System Actions, Commands) are thin wrappers over the shared
 `LauncherItemsSection`; Apple Shortcuts pairs its feature switch with the same `LauncherItemsList`.
 
 `SettingsTab` and `SettingsSection` both identify by the case itself, never by an index. A selectable

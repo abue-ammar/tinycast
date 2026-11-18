@@ -45,7 +45,7 @@ commands and global shortcuts can show, search, or extend the collection.
   edit keep their old origins, so neither the frame nor the last fragment's position can be read on
   `didChange`.
 - **The editor is a surface snippets expand into.** `NoteTextView` adopts `InjectableTextView`,
-  so a typed keyword — and the Snippets browser's ↵ — is written straight into the text storage
+  so a typed keyword (and the Snippets browser's ↵) is written straight into the text storage
   rather than posted as events at whichever app happens to be frontmost. Quick Actions also read and
   replace its selected text in process. Only AI Chat's composer adopts it too: see
   [snippets.md](snippets.md#text-delivery-and-pasteboard-safety).
@@ -70,18 +70,18 @@ files, and symbolic links are ignored.
 
 Create uses `Untitled.md`, then `Untitled 2.md`, and so on, and rename claims a free name by the same
 rule. `importNotes` claims one the same way, so a note restored from a backup lands beside the note it
-shares a title with rather than over it. Collisions with *another* note are case- and diacritic-insensitive, so `plán` beside `Plan`
+shares a title with rather than over it. Collisions with _another_ note are case- and diacritic-insensitive, so `plán` beside `Plan`
 becomes `plán 2.md`. A note never collides with itself: only an exact filename match is a no-op, which
 is what lets a rename change nothing but the case or the accents. The active filename is local UI state
 in UserDefaults and does not ride settings backups.
 
 ## Derived titles
 
-A note still carrying a name `create` claimed — `Untitled`, `Untitled 2`, … — shows the first line of
+A note still carrying a name `create` claimed (`Untitled`, `Untitled 2`, …) shows the first line of
 its source that carries visible text. `NoteTitle` owns that rule: blank, rule and fence lines are
 skipped, block and inline Markdown markers are dropped whether or not rendering is on, and the line is
 capped to 120 characters so no row or title bar has to carry a paragraph. `NoteSummary.title` remains the filename; `displayTitle` is what every
-surface renders — switcher rows and their VoiceOver labels, the Trash confirmation, the window title,
+surface renders: switcher rows and their VoiceOver labels, the Trash confirmation, the window title,
 and the title band of `NoteSearch`, so a fuzzy query reaches a note nobody has named.
 An empty unnamed note displays a localized Untitled label, preserving its filename and numeric suffix.
 
@@ -103,7 +103,7 @@ coordinator through `@Environment`; it never receives `AppCore` or mutates the s
 Settings > Notes owns `AppSettings.notesEnabled`, which is false when absent. The pane lists **Show
 Notes**, **Create Note**, and **Search Notes** from `CommandCatalog`, so it can still render them while
 `AppIndex` omits them. It is their only pane: `SettingsTab.ownedCommands` names the three, which takes
-them out of Settings > Commands and out of reach of `Enable Commands` — Notes' own switch is the one
+them out of Settings > Commands and out of reach of `Enable Commands`; Notes' own switch is the one
 that decides they exist.
 
 `AppCore` observes enablement and calls `NotesCoordinator.applyEnabled()`. Disabling hides the panel,
@@ -125,7 +125,7 @@ status item rather than hiding it.
 Command-N creates, Command-P opens or refocuses the switcher, Command-O opens the Notes folder, and
 Command-F opens AppKit's find bar in the active note. Escape closes the find bar or switcher before
 hiding; Command-W and the red traffic light both hide directly. Hiding
-restores the prior external application or Tinycast window and flushes without delaying the order-out —
+restores the prior external application or Tinycast window and flushes without delaying the order-out,
 but only while that app is still the frontmost one, so closing a window the user has already left behind
 leaves them in whatever app they moved to.
 Command-Q is bound to nothing app-wide, so no chord over Notes can quit Tinycast.
@@ -141,7 +141,7 @@ The yellow and green traffic lights are disabled; double-clicking the free title
 unchanged window to the top-right of its current screen's visible area.
 
 The switcher is a borderless child window centred on its host and hung below the title bar, not an
-in-window screen — a note window may be 180pt tall, and the list must not be. It carries the same glass
+in-window screen: a note window may be 180pt tall, and the list must not be. It carries the same glass
 surface as a `PopoverMenu`, and its 240-point height is a ceiling rather than a size: the list reports
 its own height and the window shrinks to it with the top edge pinned. It travels with its host, dismisses
 like a popover when it resigns key, and closes outright when the last note goes. An empty query lists
@@ -243,17 +243,17 @@ reaches autosave.
   last glyph, which places the caret. Only `http`, `https` and `mailto` open. A revealed line carries
   no link attribute, so its URL is edited as text.
 
-| Shortcut | Does |
-| --- | --- |
-| ⌘Z, ⇧⌘Z | undo, redo |
-| ⌘B, ⌘I, ⌘E | bold, italic, inline code |
-| ⇧⌘X | strikethrough |
-| ⌥⌘C | code block |
-| ⇧⌘B | quote |
-| ⌘K | link |
+| Shortcut      | Does                        |
+| ------------- | --------------------------- |
+| ⌘Z, ⇧⌘Z       | undo, redo                  |
+| ⌘B, ⌘I, ⌘E    | bold, italic, inline code   |
+| ⇧⌘X           | strikethrough               |
+| ⌥⌘C           | code block                  |
+| ⇧⌘B           | quote                       |
+| ⌘K            | link                        |
 | ⇧⌘7, ⇧⌘8, ⇧⌘9 | numbered, bullet, task list |
-| ⌥⌘1, ⌥⌘2, ⌥⌘3 | heading 1, 2, 3 |
-| ⌥⌘0 | plain paragraph |
+| ⌥⌘1, ⌥⌘2, ⌥⌘3 | heading 1, 2, 3             |
+| ⌥⌘0           | plain paragraph             |
 
 Digits match by key code. The text view sees these chords before `NotesPanel` claims its own, and none
 collide. In a note, ⌘E replaces AppKit's Use Selection for Find.
@@ -324,7 +324,7 @@ flush before loading another source. Termination awaits that flush before the ap
 vetoes the quit.
 
 **A save overwrites whatever is on disk.** There is no watcher, no revision comparison and no conflict
-state: editing the *active* note in another app while Tinycast has it open loses that edit the next time
+state: editing the _active_ note in another app while Tinycast has it open loses that edit the next time
 the debounce fires. Open Notes Folder (⌘O) invites exactly that, and this is the accepted trade for a
 feature whose whole job is one local editor. Showing the window re-lists the folder and reloads the
 active note if it is clean, waiting for an in-flight save first. An unsaved draft, including one whose

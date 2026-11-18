@@ -46,7 +46,7 @@ generated and not committed.
 `shadow-key`) rather than raw sizes.
 
 Token names are semantic: `canvas` is near-black in Dark and near-white in Light. Dark is the frozen
-baseline and Light restates it with the ink inverted — the same rule the app itself follows.
+baseline and Light restates it with the ink inverted, the same rule the app itself follows.
 
 **Any new token must also be registered in `src/lib/cn.ts`.** Its `extendTailwindMerge` call teaches
 tailwind-merge about the custom groups; an unregistered `shadow-*` is misclassified as a color and
@@ -58,7 +58,7 @@ One Markdown file per page under `content/docs/`, with a `meta.json` per folder 
 order. Adding a page means adding a file and a line.
 
 Shiki highlighting is limited to `bash`, `json` and `markdown` in `source.config.ts`. Keep it that
-way — highlighting a keyboard shortcut or a placeholder buys nothing and costs bytes. Keyboard keys
+way: highlighting a keyboard shortcut or a placeholder buys nothing and costs bytes. Keyboard keys
 use `<kbd>`, which renders through the same keycap component as the marketing page.
 
 ## Support page

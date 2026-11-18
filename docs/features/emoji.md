@@ -4,7 +4,7 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 
 ## Invariants
 
-- **`Model/` stays Foundation-only** — `EmojiCatalog`, `EmojiGridGeometry` and the generated dataset are
+- **`Model/` stays Foundation-only**: `EmojiCatalog`, `EmojiGridGeometry` and the generated dataset are
   compiled by `EmojiTests`, so an `import AppKit` there breaks the test suite.
 - **`EmojiData.generated.swift` and `Resources/EmojiKeywords/` are emitted by `node Scripts/gen-emoji.js`**
   (Node 18+ for global `fetch`) and are never edited by hand. Regenerate and commit instead.
@@ -15,8 +15,8 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 
 | Path                                                | Role                                        |
 | --------------------------------------------------- | ------------------------------------------- |
-| `Model/EmojiCatalog.swift`                          | The catalog model — groups, names, keywords |
-| `Model/EmojiGridGeometry.swift`                     | Pure grid math — columns, item sizing       |
+| `Model/EmojiCatalog.swift`                          | The catalog model: groups, names, keywords  |
+| `Model/EmojiGridGeometry.swift`                     | Pure grid math: columns, item sizing        |
 | `Model/EmojiData.generated.swift`                   | The dataset                                 |
 | `Resources/EmojiKeywords/<language>.txt`            | CLDR keyword packs, `glyph\|terms` per line |
 | `Service/EmojiIndex.swift`                          | Search index over the catalog               |
@@ -25,7 +25,7 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 | `UI/EmojiGridView.swift`                            | The SwiftUI grid                            |
 | `UI/EmojiScreen.swift`, `UI/EmojiCoordinator.swift` | The palette screen and its action surface   |
 
-The index and the store are **effects**, so they live under `Service/` — only the three files above them
+The index and the store are **effects**, so they live under `Service/`; only the three files above them
 are pure.
 
 ## Search
@@ -58,7 +58,7 @@ grid can realize.
 
 **Interaction lives on the row, never the cell.** Tap, double-tap, right-click and hover are attached
 once per `EmojiGridRowView`. A fast scroll realizes every cell, and per-cell interaction
-machinery — notably the `NSView`-backed right-click catcher — costs roughly **100 MB** at that scale,
+machinery (notably the `NSView`-backed right-click catcher) costs roughly **100 MB** at that scale,
 which lazy containers never release. Per-row keeps it bounded to the handful of visible rows, so the
 cell view stays pure content: no gestures, no overlays, no hover tracking. Hover is resolved by
 mapping the pointer's x through the shared cell size and gap; points in a gap and empty trailing slots
@@ -71,7 +71,7 @@ section-namespaced, because a frequently-used emoji also appears inside its own 
 into the first row scrolls to the origin rather than the row, so the section header shows too.
 
 The grid list uses the palette scrollbar (`.thinScrollbar()` + `.hideNativeScrollers()`). Its local
-section header adds the item count without changing list headers elsewhere — see [ui.md](../ui.md).
+section header adds the item count without changing list headers elsewhere; see [ui.md](../ui.md).
 Rows keep the same gap in both axes, while a selected cell expands its own blurred glyph behind the
 foreground glyph so the colour wash and slim outer ring remain specific to that emoji.
 
@@ -83,7 +83,7 @@ shows the most recently used emoji, regardless of count, in at most two rows at 
 count; when a use or a density change rewrites it, the selection follows its emoji. Pinned glyphs live in `emoji-pinned.json` under Application Support; their order is explicit
 user data and is also carried by the configuration backup. A new pin is appended without moving the
 current selection; the Actions menu or ⌥⌘↑/↓ can then move it up or down inside Pinned. Every position
-is counted over the pins the catalog can show, so a stored glyph it lacks — from a newer backup — never
+is counted over the pins the catalog can show, so a stored glyph it lacks (from a newer backup) never
 shifts one.
 
 Grid density is six through ten columns. `AppSettings.emojiGridColumns` is the default for a fresh
