@@ -434,6 +434,7 @@ final class AppCore {
                 windowRoomIDs: Set(rooms.rooms.map(\.id)),
                 customWindowSizeIDs: Set(customWindowSizes.sizes.map(\.id)),
                 quickActionIDs: Set(customQuickActions.actions.map(\.id)))
+            trackHotKeyAllowance()
             // After `hotKeys.start`: Secure Input equivalents are built from the loaded bindings.
             hyperKey.onProblem = { [weak self] in self?.showMessage($0, tone: .danger) }
             hyperKey.start()
@@ -867,6 +868,15 @@ final class AppCore {
                 self.track(store, reads, reproject: reproject)
                 reproject(self)
             }
+        }
+    }
+
+    /// Re-arms on whatever `allowsHotKeyAction` read: feature switches, visibility, dictation.
+    private func trackHotKeyAllowance() {
+        withObservationTracking {
+            hotKeys.applyAllowance()
+        } onChange: { [weak self] in
+            Task { @MainActor in self?.trackHotKeyAllowance() }
         }
     }
 

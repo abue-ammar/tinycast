@@ -106,7 +106,9 @@ action exactly as its command row does.
 Like a window command, the chord registers regardless of the launcher row. Search Files and Notes both
 re-check their feature switches before opening; see [file-search.md](file-search.md#invocation) and
 [notes.md](notes.md#ownership-and-enablement). A hidden launcher row does not disable its shortcut, but
-disabling the feature does. `SettingsBackup.HotkeyBackup` carries them as one `commands` map keyed by
+disabling the feature does: whatever `AppCore.allowsHotKeyAction` refuses, `HotKeyManager.applyAllowance`
+unregisters from Carbon, so the key reaches other apps rather than being swallowed and ignored.
+`SettingsBackup.HotkeyBackup` carries them as one `commands` map keyed by
 `CommandID` raw value.
 
 System actions and window commands are the fixed-catalog case: they persist under
