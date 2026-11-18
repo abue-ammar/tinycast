@@ -6,7 +6,7 @@ global shortcuts. 39 commands, plus any number of user-defined [custom sizes](#c
 dependencies and no new permission: they reuse the Accessibility grant clipboard paste already needs.
 
 Ships **off**. Settings › Window Management is the switch, and while it is off there are no launcher
-entries and a still-registered shortcut moves nothing.
+entries and its shortcuts are unregistered, so their keys reach other apps.
 
 ## Invariants
 
