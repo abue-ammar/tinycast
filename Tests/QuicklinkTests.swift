@@ -354,7 +354,7 @@ struct QuicklinkTests {
         expect(!restored.isEnabled, "the enabled flag survives")
     }
 
-    /// The bound column order must match the read order, and an older table must gain `is_enabled`.
+    /// The bound column order must match the read order, whatever order the table stores.
     static func readsADatabaseWrittenElsewhere() {
         let dir = scratchDirectory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -365,7 +365,7 @@ struct QuicklinkTests {
             CREATE TABLE quicklinks(
               id TEXT PRIMARY KEY NOT NULL, name TEXT NOT NULL, link TEXT NOT NULL,
               open_with TEXT, icon TEXT, in_root_search INTEGER NOT NULL DEFAULT 1,
-              pinned_at REAL, created_at REAL NOT NULL
+              pinned_at REAL, created_at REAL NOT NULL, is_enabled INTEGER NOT NULL DEFAULT 1
             );
             INSERT INTO quicklinks(id, name, link, open_with, icon, in_root_search, created_at)
               VALUES('\(id.uuidString)', 'Jira', 'https://jira.example.com', NULL, 'ticket', 0, 1000);
@@ -382,12 +382,7 @@ struct QuicklinkTests {
         expect(row.openWithBundleID == nil, "a null open-with reads as none")
         expect(!row.showsInRootSearch, "the root-search flag lines up")
         expect(!row.isPinned, "a null pin stamp reads as unpinned")
-        expect(row.isEnabled, "a table written before is_enabled loads its rows as enabled")
-
-        // A second open must find the column already there rather than adding it twice.
-        let reopened = QuicklinkStore(directory: dir)
-        reopened.load()
-        expect(reopened.quicklinks.count == 1, "the migrated table reopens cleanly")
+        expect(row.isEnabled, "the enabled column lines up")
     }
 
     /// Quicklinks are authored data, so an unreadable database is reported, never recreated.

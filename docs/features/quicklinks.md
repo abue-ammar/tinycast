@@ -254,10 +254,9 @@ prepared statements, an `isolated deinit`):
   `QuicklinkError.storageUnavailable`, and the pane says so. `Tests/QuicklinkTests.swift` asserts the
   file survives byte-for-byte.
 
-`CREATE TABLE IF NOT EXISTS` leaves an existing table alone, so a new column arrives as an unchecked
-`ALTER TABLE … ADD COLUMN … DEFAULT` right after the schema, which fails harmlessly once the column is
-there. That appends it physically, so the prepared statements **name their columns in the struct's
-order** rather than the table's, and the row reader stays a straight top-to-bottom read.
+The table stores `is_enabled` last, after `created_at`, so the prepared statements **name their
+columns in the struct's order** rather than the table's, and the row reader stays a straight
+top-to-bottom read.
 
 Editing preserves the UUID, and with it the quicklink's shortcut, favorite slot, visibility and
 learned ranking. Deleting goes through `QuicklinkCoordinator`, which unwinds all four after removing

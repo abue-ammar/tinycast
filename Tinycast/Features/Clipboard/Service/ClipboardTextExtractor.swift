@@ -17,7 +17,13 @@ nonisolated enum ClipboardTextExtractor {
 
     static func extract(at url: URL, isPDF: Bool) async throws -> String {
         try Task.checkCancellation()
-        let values = try url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+        let values: URLResourceValues
+        do {
+            values = try url.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey])
+        } catch CocoaError.fileReadNoSuchFile {
+            // A deleted file is final, while an unreadable one may be allowed later.
+            return ""
+        }
         guard values.isRegularFile == true, let size = values.fileSize,
             size <= maximumFileBytes
         else { return "" }

@@ -221,8 +221,8 @@ naming it, so it cannot recreate a deleted entry. Backups stream the original fi
 OCR metadata.
 
 Work is bounded: files up to 32 MB, the first 64 PDF pages, a 4,194,304-pixel bitmap budget with a
-4096-pixel maximum edge, and 32 KB of UTF-8 text per item. An empty, unsupported or oversized input
-is a completed attempt. Failed recognition, a locked or unreadable input and a helper failure go to
+4096-pixel maximum edge, and 32 KB of UTF-8 text per item. An empty, unsupported, oversized or
+deleted input is a completed attempt. Failed recognition, a locked or unreadable input and a helper failure go to
 `item_text_failures` instead: up to three attempts 30 seconds apart, which never block another item.
 Success and deletion clear that state. Enabling text search resets failures and earlier empty
 attempts so they can be tried again, keeping recognized text that is not empty, so an empty input
