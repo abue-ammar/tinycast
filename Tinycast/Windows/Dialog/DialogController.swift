@@ -197,7 +197,10 @@ final class DialogController: NSObject, NSWindowDelegate {
     /// After AppKit's own first-responder pick, which a view's focus request can't outlast.
     func windowDidBecomeKey(_ notification: Notification) {
         guard let panel, notification.object as? NSWindow === panel else { return }
-        if case .snippetArguments(let arguments) = accessory {
+        // A text field must be made first responder by AppKit; SwiftUI's request for one is lost.
+        if case .snippetArguments(let arguments) = accessory,
+            arguments.arguments.first?.options.isEmpty == false
+        {
             arguments.focusFirstArgument()
         } else {
             panel.focusFirstTextField()

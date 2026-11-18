@@ -721,8 +721,9 @@ text fields keep their caret, and `acceptsLineBreaks` from the accessory of the 
 Edit Entry's `dialogTextHeight` text area takes ↵. Create Event uses the launcher form instead.
 
 The first text field or text view takes focus from `DialogController.windowDidBecomeKey`, never from
-the view; the snippet prompt instead sets `SnippetArgumentsState.focusedIndex` there, which its view
-mirrors into a `FocusState`, so a leading options list can hold focus. When the panel turns key
+the view. A snippet prompt that opens on an options list sets `SnippetArgumentsState.focusedIndex`
+there instead, which its view mirrors into a `FocusState`; a SwiftUI request to focus a text field
+there is lost, so a leading text field still goes through `focusFirstTextField`. When the panel turns key
 AppKit picks its own first responder (the Cancel button with Keyboard navigation on), and over
 another app that happens only after `show` returns, so focus a SwiftUI view asks for loses to it.
 The panel can also turn key inside `makeKeyAndOrderFront`, before SwiftUI has built the field, so
