@@ -15,13 +15,13 @@ selectable Markdown renderer with AI Chat.
 ## Invariants
 
 - **Off out of the box, and off means the shortcuts do nothing.** `AppSettings.quickActionsEnabled`
-  is the flag and `QuickActionCoordinator` is the only place that reads it: no selection is read, no
-  provider is built, no panel opens. The four commands leave the launcher's Quick Actions slice
+  is the flag and `QuickActionCoordinator` refuses every run while it is off: no selection is read,
+  no provider is built, no panel opens. The four commands leave the launcher's Quick Actions slice
   through `AppIndex.setCommandsVisible`, and the custom ones leave it through
-  `AppIndex.setCustomQuickActions`, the way Notes and AI Chat drop theirs. Carbon bindings stay
-  registered, so re-enabling restores every shortcut without touching the hotkey layer. The flag
-  grants keystroke delivery into other apps, so like `snippetsEnabled` it is excluded from settings
-  backups; an import must never arm it.
+  `AppIndex.setCustomQuickActions`, the way Notes and AI Chat drop theirs.
+  `AppCore.allowsHotKeyAction` also reads the flag, so their shortcuts leave Carbon while it is off
+  and return when it is on. The flag grants keystroke delivery into other apps, so like
+  `snippetsEnabled` it is excluded from settings backups; an import must never arm it.
 - **One funnel, whichever way an action started.** A shortcut and a launcher row both land on
   `QuickActionCoordinator.run(_:)`, which captures the target **before** hiding the palette. An
   external app remains the usual target; a selected passage in the Notes editor is captured directly

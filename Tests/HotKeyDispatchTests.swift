@@ -14,6 +14,7 @@ struct HotKeyDispatchTests {
 
     static func main() {
         for includesShift in [false, true] { dispatch(includesShift: includesShift) }
+        allowance()
         print("\(checks) dispatch checks; \(failures) failures")
         if failures > 0 { exit(1) }
     }
@@ -119,5 +120,64 @@ struct HotKeyDispatchTests {
         check(
             "Hyper selects the other action in a shared registration",
             palette == 3 && presses == beforePress + 1)
+    }
+
+    static func allowance() {
+        let domain = "tinycast.hotkey-allowance-test.\(UUID())"
+        let defaults = UserDefaults(suiteName: domain)!
+        defer { defaults.removePersistentDomain(forName: domain) }
+        let manager = HotKeyManager(defaults: defaults)
+        let center = HotKeyCenter.current!
+        var refused: Set<HotKeyAction> = []
+        manager.allowsAction = { !refused.contains($0) }
+        let actions: [HotKeyAction] = [
+            .command(.sample), .customCommand(id: UUID()), .windowCommand(id: .sample),
+            .windowLayout(id: UUID()), .windowRoom(id: UUID()), .customWindowSize(id: UUID()),
+            .quicklink(id: UUID()), .quickAction(id: UUID()), .appleShortcut(id: UUID()),
+            .snippet(id: "sample"), .extensionCommand(entryID: "sample"), .dictation
+        ]
+        for (offset, action) in actions.enumerated() {
+            let shortcut = KeyShortcut(carbonKeyCode: kVK_F1 + offset, carbonModifiers: cmdKey)
+            manager.setBinding(.combo(shortcut), for: action)
+        }
+        func registered(_ action: HotKeyAction) -> Bool { center.entries[action.defaultsKey] != nil }
+        check("allowed actions register", actions.allSatisfy(registered))
+        refused = Set(actions)
+        manager.applyAllowance()
+        check("refused actions unregister", !actions.contains(where: registered))
+        let late = HotKeyAction.quicklink(id: UUID())
+        refused.insert(late)
+        manager.setBinding(.combo(KeyShortcut(carbonKeyCode: kVK_ANSI_Q, carbonModifiers: cmdKey)), for: late)
+        check("binding a refused action leaves it unregistered", !registered(late))
+        refused = []
+        manager.applyAllowance()
+        check("re-allowed actions register again", (actions + [late]).allSatisfy(registered))
+
+        let chord = KeyShortcut.hyperChord(includesShift: false)
+        let hyper = KeyShortcut(
+            carbonKeyCode: kVK_ANSI_H, carbonModifiers: KeyShortcut.carbonModifiers(from: chord))
+        let windowCommand = HotKeyAction.windowCommand(id: .sample)
+        let equivalentID = "secureInputEquivalent." + windowCommand.defaultsKey
+        manager.setBinding(.combo(hyper), for: windowCommand)
+        refused = [windowCommand]
+        manager.applyAllowance()
+        manager.setSecureInputEquivalents(includesShift: false)
+        check("refused action gets no Secure Input equivalent", center.entries[equivalentID] == nil)
+        refused = []
+        manager.applyAllowance()
+        check("re-allowed action gets its Secure Input equivalent", center.entries[equivalentID] != nil)
+
+        let snippet = HotKeyAction.snippet(id: "sample")
+        let relaunched = HotKeyManager(defaults: defaults)
+        let relaunchedCenter = HotKeyCenter.current!
+        var snippetsLoaded = false
+        relaunched.allowsAction = { $0 != snippet || snippetsLoaded }
+        relaunched.start(
+            customCommandIDs: [], quicklinkIDs: [], windowLayoutIDs: [], windowRoomIDs: [],
+            customWindowSizeIDs: [], quickActionIDs: [])
+        check("snippet waits at launch", relaunchedCenter.entries[snippet.defaultsKey] == nil)
+        snippetsLoaded = true
+        relaunched.applyAllowance()
+        check("snippet registers once loaded", relaunchedCenter.entries[snippet.defaultsKey] != nil)
     }
 }

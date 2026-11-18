@@ -588,7 +588,7 @@ final class AppSettings {
         didSet { defaults.set(hideCurrentEvent.rawValue, forKey: Key.hideCurrentEvent.rawValue) }
     }
 
-    /// Off means fully off: no launcher entries, and a still-registered shortcut moves nothing.
+    /// Off means fully off: no launcher entries and no registered shortcut.
     var windowManagementEnabled: Bool {
         didSet {
             defaults.set(windowManagementEnabled, forKey: Key.windowManagementEnabled.rawValue)
@@ -637,7 +637,7 @@ final class AppSettings {
         }
     }
 
-    /// Off means fully off, down to a still-registered shortcut opening nothing.
+    /// Off means fully off: no launcher entries and no registered shortcut.
     var quicklinksEnabled: Bool {
         didSet { defaults.set(quicklinksEnabled, forKey: Key.quicklinksEnabled.rawValue) }
     }

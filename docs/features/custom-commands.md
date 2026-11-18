@@ -9,8 +9,8 @@ finishes.
 The pane carries the feature switch (off out of the box) and its launcher-visibility companion,
 both in `AppSettings` and in settings backups. Switching the feature off empties the launcher section and makes
 `CustomCommandCoordinator.runCustomCommand` (the single funnel for palette activation and global shortcuts) refuse to
-run anything; Carbon registrations and their bindings stay put, so re-enabling restores every shortcut
-without re-registering. "Show in launcher" only hides the section; shortcuts keep working.
+run anything; shortcuts leave Carbon but their bindings stay put, so re-enabling registers every
+shortcut again. "Show in launcher" only hides the section; shortcuts keep working.
 
 ## Invariants
 
@@ -20,7 +20,7 @@ without re-registering. "Show in launcher" only hides the section; shortcuts kee
 - A command that runs arbitrary shell is a security surface: the confirmation step cannot be bypassed, and
   an import of executable commands warns before it applies.
 - **A disabled command is inert, not gone.** `isEnabled == false` takes it out of the launcher slice
-  and `runCustomCommand` refuses it, so neither a row nor its still-registered shortcut can run it.
+  and `runCustomCommand` refuses it, and its shortcut leaves Carbon, so neither a row nor a key runs it.
   Name, command text, arguments, alias, favorite slot and shortcut stay exactly as they were, and the
   **Settings → Commands** row is the one place that turns it back on.
 - **An argument value is never spliced into the command text.** It is handed to zsh as a positional

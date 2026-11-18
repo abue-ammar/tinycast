@@ -6,8 +6,8 @@ them and nothing else: creating, editing, permissions and the actions themselves
 
 The feature ships **off**. **Settings → Apple Shortcuts** carries the one switch, and lists the
 library only while it is on. Off is fully off: the `shortcuts` tool is never spawned, the launcher
-section is empty, and `AppleShortcutCoordinator.run(id:)` refuses to run anything. Bindings stay
-registered, so re-enabling restores every global shortcut.
+section is empty, and `AppleShortcutCoordinator.run(id:)` refuses to run anything. Global shortcuts
+leave Carbon while it is off, and re-enabling registers them again.
 
 ## Invariants
 

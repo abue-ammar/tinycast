@@ -37,7 +37,7 @@ final class HotKeyManager {
     var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
-    /// Whether the action's launcher category is switched on. Set in `AppCore.start()`.
+    /// Whether the action's category, feature and item are switched on. Set in `AppCore.start()`.
     var allowsAction: ((HotKeyAction) -> Bool)?
 
     /// The recorder currently capturing, which also pauses both engines.
@@ -75,6 +75,8 @@ final class HotKeyManager {
     /// Part of `AppIndex`'s cache key: a bound entry leaves the launcher's Suggestions.
     private(set) var revision = 0
     @ObservationIgnored private var candidateActionsCache: [HotKeyAction]?
+    /// Bound combos left unregistered because `allowsAction` refuses them.
+    @ObservationIgnored private var suppressedActions: Set<HotKeyAction> = []
     // Reused: the startup load decodes once per candidate action.
     private let decoder = JSONDecoder()
     private let encoder = JSONEncoder()
@@ -258,6 +260,23 @@ final class HotKeyManager {
         center.register(id: Self.secureInputHintID, shortcut: shortcut, onKeyDown: { _ in onPress() })
     }
 
+    /// A refused combo must leave Carbon, which otherwise swallows the key in every other app.
+    func applyAllowance() {
+        var changed = false
+        for action in candidateActions where binding(for: action)?.shortcut != nil {
+            let allowed = allowsAction?(action) ?? true
+            guard allowed == suppressedActions.contains(action) else { continue }
+            changed = true
+            if allowed {
+                register(action)
+            } else {
+                center.unregister(id: action.defaultsKey)
+                suppressedActions.insert(action)
+            }
+        }
+        if changed, secureInputEquivalentsIncludeShift != nil { syncSecureInputEquivalents() }
+    }
+
     /// Rebuilt wholesale, like the modifier-tap map, so an equivalent cannot outlive its binding.
     private func syncSecureInputEquivalents() {
         clearSecureInputEquivalents()
@@ -267,7 +286,7 @@ final class HotKeyManager {
         let originalActions = actions.reduce(into: [KeyShortcut: HotKeyAction]()) { result, action in
             if let shortcut = binding(for: action)?.shortcut { result[shortcut] = action }
         }
-        for action in actions {
+        for action in actions where allowsAction?(action) ?? true {
             guard let equivalent = binding(for: action)?.shortcut?.secureInputEquivalent(of: chord)
             else { continue }
             let original = originalActions[equivalent]
@@ -394,6 +413,11 @@ final class HotKeyManager {
     /// Hands a combo to Carbon; a modifier-only binding has no per-action registration.
     private func register(_ action: HotKeyAction) {
         guard let shortcut = binding(for: action)?.shortcut else { return }
+        guard allowsAction?(action) ?? true else {
+            suppressedActions.insert(action)
+            return
+        }
+        suppressedActions.remove(action)
         center.register(
             id: action.defaultsKey, shortcut: shortcut,
             onKeyDown: { [weak self] _ in self?.perform(action) },
