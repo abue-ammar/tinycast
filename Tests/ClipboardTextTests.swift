@@ -79,11 +79,19 @@ struct ClipboardTextTests {
         let missing = ClipboardItem(
             filePath: directory.appendingPathComponent("missing.pdf").path,
             sourceBundleID: nil)
+        let missingText = try await ClipboardTextExtractor.extract(
+            at: URL(fileURLWithPath: missing.filePath!), isPDF: true)
+        expect(missingText.isEmpty, "a deleted file completes empty rather than failing")
+        let locked = directory.appendingPathComponent("locked")
+        try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
+        try Data().write(to: locked.appendingPathComponent("scan.png"))
+        try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: locked.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
         do {
             _ = try await ClipboardTextExtractor.extract(
-                at: URL(fileURLWithPath: missing.filePath!), isPDF: true)
-            expect(false, "missing file throws")
-        } catch { expect(true, "missing file throws") }
+                at: locked.appendingPathComponent("scan.png"), isPDF: false)
+            expect(false, "an unreadable file throws so it is retried")
+        } catch { expect(true, "an unreadable file throws so it is retried") }
         let cancelled = Task.detached {
             try Task.checkCancellation()
             try await Task.sleep(for: .seconds(1))
