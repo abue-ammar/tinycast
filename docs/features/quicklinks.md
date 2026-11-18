@@ -7,8 +7,8 @@ one quicklink adapt to typed input, the clipboard, the selection, or the date.
 The feature ships **off**. **Settings → Quicklinks** carries the switch and its launcher-visibility
 companion. Off is fully off: no launcher section, no `Create` / `Search` / `Import` / `Export`
 Quicklinks commands, and `QuicklinkCoordinator.openQuicklink` (the single funnel palette activation and global
-shortcuts both reach) refuses to open anything. Bindings stay registered, so re-enabling restores
-every shortcut without re-registering.
+shortcuts both reach) refuses to open anything. Shortcuts leave Carbon while it is off, so their keys
+reach other apps, and re-enabling registers them again.
 
 ## Invariants
 

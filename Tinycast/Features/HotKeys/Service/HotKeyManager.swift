@@ -37,7 +37,7 @@ final class HotKeyManager {
     var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
-    /// Whether the action's launcher category is switched on. Set in `AppCore.start()`.
+    /// Whether the action's category, feature and item are switched on. Set in `AppCore.start()`.
     var allowsAction: ((HotKeyAction) -> Bool)?
 
     /// The recorder currently capturing, which also pauses both engines.
