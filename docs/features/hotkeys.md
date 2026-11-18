@@ -108,6 +108,8 @@ re-check their feature switches before opening; see [file-search.md](file-search
 [notes.md](notes.md#ownership-and-enablement). A hidden launcher row does not disable its shortcut, but
 disabling the feature does: whatever `AppCore.allowsHotKeyAction` refuses, `HotKeyManager.applyAllowance`
 unregisters from Carbon, so the key reaches other apps rather than being swallowed and ignored.
+Disabling one snippet, quicklink or custom command does the same for its own shortcut. Snippets load
+after `start()`, so their shortcuts register once the store's `snippets` arrive.
 `SettingsBackup.HotkeyBackup` carries them as one `commands` map keyed by
 `CommandID` raw value.
 

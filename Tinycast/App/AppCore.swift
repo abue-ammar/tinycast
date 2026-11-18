@@ -529,10 +529,14 @@ final class AppCore {
         case .command(let id): return appIndex.isCommandEnabled(id)
         case .windowCommand, .customWindowSize, .windowLayout, .windowRoom:
             return settings.windowManagementEnabled
-        case .customCommand: return settings.customCommandsEnabled
-        case .snippet: return settings.snippetsEnabled
+        case .customCommand(let id):
+            return settings.customCommandsEnabled && customCommands.command(id: id)?.isEnabled == true
+        // Snippets load after `start()`; observing `snippets` re-registers them once they arrive.
+        case .snippet(let id):
+            return settings.snippetsEnabled && snippetsStore.record(id: id)?.snippet.isEnabled == true
         case .quickAction: return settings.quickActionsEnabled
-        case .quicklink: return settings.quicklinksEnabled
+        case .quicklink(let id):
+            return settings.quicklinksEnabled && quicklinks.quicklink(id: id)?.isEnabled == true
         case .appleShortcut: return settings.appleShortcutsEnabled
         case .extensionCommand: return settings.extensionsEnabled
         case .togglePalette, .app, .settingsPane, .systemAction: return true
