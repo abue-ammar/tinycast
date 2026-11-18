@@ -1,74 +1,143 @@
 import SwiftUI
 
-/// A class, so the caller can read the `{argument}` values back after the dialog.
-@MainActor
-@Observable
-final class SnippetArgumentsState {
-    let arguments: [SnippetTemplateEngine.MissingArgument]
-    var values: [String: String]
-
-    init(arguments: [SnippetTemplateEngine.MissingArgument]) {
-        self.arguments = arguments
-        // An options list has no empty state, so it starts on its first choice.
-        values = arguments.reduce(into: [:]) { values, argument in
-            values[argument.name] = argument.options.first ?? ""
-        }
-    }
-}
-
 struct SnippetArgumentFields: View {
     @Environment(\.metrics) private var metrics
-    let state: SnippetArgumentsState
+    @Bindable var state: SnippetArgumentsState
+    let onSubmit: () -> Void
+    @FocusState private var focus: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: metrics.spacing.xl) {
-            ForEach(state.arguments, id: \.name) { argument in
-                VStack(alignment: .leading, spacing: metrics.spacing.sm) {
-                    Text(argument.name)
-                        .font(metrics.typography.rowTrailing)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                    if argument.options.isEmpty {
-                        TextField(
-                            "", text: value(for: argument.name),
-                            prompt: Text(argument.name)
-                        )
-                        .dialogTextField()
-                    } else {
-                        OptionChips(
-                            options: argument.options,
-                            selection: value(for: argument.name))
-                    }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Snippet argument \(argument.name)")
+            ForEach(state.arguments.indices, id: \.self) { index in
+                field(at: index)
             }
+        }
+        .onChange(of: state.focusedIndex) { _, index in focus = index }
+        .onChange(of: focus) { _, index in
+            if let index { state.focusedIndex = index }
         }
     }
 
-    private func value(for name: String) -> Binding<String> {
-        Binding(get: { state.values[name] ?? "" }, set: { state.values[name] = $0 })
+    private func field(at index: Int) -> some View {
+        let argument = state.arguments[index]
+        return VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+            if state.showsNames {
+                Text(argument.name)
+                    .font(metrics.typography.rowTrailing)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+            }
+            if argument.options.isEmpty {
+                TextField("", text: $state.texts[index], prompt: Text(argument.name))
+                    .dialogTextField()
+                    .focused($focus, equals: index)
+            } else {
+                SnippetOptionList(
+                    state: state, index: index, isFocused: focus == index,
+                    onFocus: { focus = index }, onSubmit: onSubmit
+                )
+                .focused($focus, equals: index)
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Snippet argument \(argument.name)")
     }
 }
 
-private struct OptionChips: View {
+private struct SnippetOptionList: View {
     @Environment(\.metrics) private var metrics
-    let options: [String]
-    @Binding var selection: String
+    let state: SnippetArgumentsState
+    let index: Int
+    let isFocused: Bool
+    let onFocus: () -> Void
+    let onSubmit: () -> Void
+
+    private var options: [String] { state.arguments[index].options }
+    private var choice: Int { state.choices[index] }
 
     var body: some View {
-        // A list too long for one row stacks, rather than running past the dialog's edge.
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: metrics.spacing.md) { chips }
-            VStack(alignment: .leading, spacing: metrics.spacing.md) { chips }
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: metrics.spacing.xxs) {
+                    ForEach(options.indices, id: \.self) { option in
+                        SnippetOptionRow(
+                            title: options[option], isChosen: option == choice,
+                            isFocused: isFocused,
+                            onPick: {
+                                state.choices[index] = option
+                                onFocus()
+                            },
+                            onSubmit: onSubmit
+                        )
+                        .id(option)
+                    }
+                }
+            }
+            .scrollIndicators(.never)
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(height: height)
+            .onChange(of: choice) { proxy.scrollTo(choice) }
+        }
+        .focusable()
+        // The chosen row's fill marks focus, so AppKit's blue ring would be a second one.
+        .focusEffectDisabled()
+        .onKeyPress(.upArrow, phases: [.down, .repeat]) { _ in
+            state.moveChoice(at: index, by: -1)
+            return .handled
+        }
+        .onKeyPress(.downArrow, phases: [.down, .repeat]) { _ in
+            state.moveChoice(at: index, by: 1)
+            return .handled
         }
     }
 
-    /// Indexed, since nothing stops an `options=` list from repeating a value.
-    private var chips: some View {
-        ForEach(options.indices, id: \.self) { index in
-            DialogChip(title: options[index], selected: options[index] == selection) {
-                selection = options[index]
+    private var height: CGFloat {
+        let rows = min(CGFloat(options.count), Theme.Size.menuVisibleRows)
+        let pitch = metrics.size.dialogButtonHeight + metrics.spacing.xxs
+        return (rows * pitch - metrics.spacing.xxs).rounded()
+    }
+}
+
+private struct SnippetOptionRow: View {
+    @Environment(\.metrics) private var metrics
+    let title: String
+    let isChosen: Bool
+    let isFocused: Bool
+    let onPick: () -> Void
+    let onSubmit: () -> Void
+    @State private var hovered = false
+
+    private var fill: Color {
+        if isChosen, isFocused { return Theme.Colors.selection }
+        if hovered { return Theme.Colors.rowHover }
+        return .clear
+    }
+
+    var body: some View {
+        Button(action: onPick) {
+            HStack(spacing: metrics.spacing.md) {
+                Text(title)
+                    .font(metrics.typography.rowTitle)
+                    .foregroundStyle(Theme.Colors.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: metrics.spacing.sm)
+                if isChosen {
+                    Image(systemName: "checkmark")
+                        .font(metrics.typography.rowTrailing.weight(.semibold))
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                }
             }
+            .padding(.horizontal, metrics.spacing.lg)
+            .frame(height: metrics.size.dialogButtonHeight)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill))
         }
+        .buttonStyle(.plain)
+        // Alongside the button, so the first click still picks without waiting out a double.
+        .simultaneousGesture(TapGesture(count: 2).onEnded(onSubmit))
+        .onHover { hovered = $0 }
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(isChosen ? [.isButton, .isSelected] : .isButton)
     }
 }

@@ -86,7 +86,9 @@ struct ClipboardTextTests {
         try FileManager.default.createDirectory(at: locked, withIntermediateDirectories: true)
         try Data().write(to: locked.appendingPathComponent("scan.png"))
         try FileManager.default.setAttributes([.posixPermissions: 0], ofItemAtPath: locked.path)
-        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path) }
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: locked.path)
+        }
         do {
             _ = try await ClipboardTextExtractor.extract(
                 at: locked.appendingPathComponent("scan.png"), isPDF: false)

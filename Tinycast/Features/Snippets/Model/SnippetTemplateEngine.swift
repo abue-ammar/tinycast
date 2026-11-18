@@ -80,6 +80,8 @@ enum SnippetTemplateEngine {
         case percentEncoding
     }
 
+    static let defaultArgumentName = "Argument"
+
     private static let maximumReferenceDepth = 5
     private static let comparisonLocale = Locale(identifier: "en_US_POSIX")
 
@@ -479,7 +481,8 @@ enum SnippetTemplateEngine {
 
     private static func parseArgument(_ token: ParsedToken) -> ArgumentToken? {
         guard token.hasOnly(["name", "default", "options"]) else { return nil }
-        let name = token.parameters["name"]?.trimmingCharacters(in: .whitespaces) ?? "Argument"
+        let name =
+            token.parameters["name"]?.trimmingCharacters(in: .whitespaces) ?? defaultArgumentName
         guard !name.isEmpty else { return nil }
         let options = (token.parameters["options"] ?? "")
             .split(separator: ",")
@@ -544,30 +547,28 @@ enum SnippetTemplateEngine {
     private static func splitOnPipes(_ body: String) -> [String]? {
         var parts: [String] = []
         var current = ""
-        var inQuotes = false
+        var quoteEnd: Character?
         var escaped = false
 
         for character in body {
             if escaped {
-                current.append(character)
                 escaped = false
-                continue
-            }
-            switch character {
-            case "\\" where inQuotes:
-                current.append(character)
-                escaped = true
-            case "\"":
-                inQuotes.toggle()
-                current.append(character)
-            case "|" where !inQuotes:
+            } else if let end = quoteEnd {
+                if character == "\\" {
+                    escaped = true
+                } else if character == end {
+                    quoteEnd = nil
+                }
+            } else if character == "|" {
                 parts.append(current.trimmingCharacters(in: .whitespaces))
                 current = ""
-            default:
-                current.append(character)
+                continue
+            } else {
+                quoteEnd = closingQuote(opening: character)
             }
+            current.append(character)
         }
-        guard !inQuotes, !escaped else { return nil }
+        guard quoteEnd == nil, !escaped else { return nil }
         parts.append(current.trimmingCharacters(in: .whitespaces))
         guard parts.allSatisfy({ !$0.isEmpty }) else { return nil }
         return parts
@@ -595,9 +596,9 @@ enum SnippetTemplateEngine {
             remainder = remainder.drop(while: \Character.isWhitespace)
 
             let value: String
-            if remainder.first == "\"" {
+            if let opening = remainder.first, let closing = closingQuote(opening: opening) {
                 remainder = remainder.dropFirst()
-                guard let decoded = decodeQuoted(&remainder) else { return nil }
+                guard let decoded = decodeQuoted(&remainder, closing: closing) else { return nil }
                 value = decoded
             } else {
                 guard let bare = takeBareValue(&remainder) else { return nil }
@@ -633,7 +634,16 @@ enum SnippetTemplateEngine {
         return text.dropFirst(key.count).drop(while: \Character.isWhitespace).first == "="
     }
 
-    private static func decodeQuoted(_ remainder: inout Substring) -> String? {
+    /// Curly quotes count too: a template written in a text editor gets them by substitution.
+    private static func closingQuote(opening: Character) -> Character? {
+        switch opening {
+        case "\"": "\""
+        case "\u{201C}": "\u{201D}"
+        default: nil
+        }
+    }
+
+    private static func decodeQuoted(_ remainder: inout Substring, closing: Character) -> String? {
         var decoded = ""
         var escaped = false
         while let character = remainder.first {
@@ -650,7 +660,7 @@ enum SnippetTemplateEngine {
                 escaped = false
             } else if character == "\\" {
                 escaped = true
-            } else if character == "\"" {
+            } else if character == closing {
                 return decoded
             } else {
                 decoded.append(character)

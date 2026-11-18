@@ -23,6 +23,7 @@ struct SnippetsTests {
         testTemplateExpansion()
         testDynamicPlaceholders()
         testTemplateEncodingAndSelectionAlias()
+        testArgumentsPrompt()
         testKeywordPolicy()
         testKeywordLifecycle()
         await testKeywordListenerLifecycle()
@@ -1470,6 +1471,23 @@ struct SnippetsTests {
             "an empty options list leaves the token literal",
             expand("{argument name=\"Tone\" options=\", \"}").text
                 == "{argument name=\"Tone\" options=\", \"}")
+        check(
+            "curly quotes delimit a value as straight ones do",
+            expand("{argument options=\u{201C}a@x.dev, b@x.dev\u{201D}}").missingArguments == [
+                .init(name: SnippetTemplateEngine.defaultArgumentName, options: ["a@x.dev", "b@x.dev"])
+            ])
+        check(
+            "a straight quote inside curly ones is literal",
+            expand("{argument name=\u{201C}Say \"hi\"\u{201D} default=x}").text == "x"
+                && SnippetTemplateEngine.declaredArguments(
+                    in: "{argument name=\u{201C}Say \"hi\"\u{201D}}"
+                ).map(\.name) == ["Say \"hi\""])
+        check(
+            "a pipe inside curly quotes is not a modifier separator",
+            expand("{date format=\u{201C}yyyy|MM\u{201D}}").text == "2026|07")
+        check(
+            "an unterminated curly quote leaves the token literal",
+            expand("{date format=\u{201C}yyyy}").text == "{date format=\u{201C}yyyy}")
 
         // What the header's argument fields are built from, without expanding anything else.
         check(
@@ -1550,6 +1568,58 @@ struct SnippetsTests {
     }
 
     /// Shared with Quicklinks: bare strings, encoding, and Raycast's `{selectedText}`.
+    private static func testArgumentsPrompt() {
+        let emails = SnippetTemplateEngine.MissingArgument(
+            name: SnippetTemplateEngine.defaultArgumentName,
+            options: ["personal@x.dev", "company@x.dev", "third@x.dev"])
+        let single = SnippetArgumentsState(arguments: [emails])
+        check("an options list starts on its first choice", single.values == [emails.name: "personal@x.dev"])
+        check("a lone choice list is a compact prompt", single.asksOnlyForChoices)
+        check("a lone unnamed argument shows no label", !single.showsNames)
+        check("nothing is focused before the dialog turns key", single.focusedIndex == nil)
+
+        single.moveChoice(at: 0, by: -1)
+        check("moving up from the first choice stays put", single.choices == [0])
+        single.moveChoice(at: 0, by: 1)
+        check("moving down picks the next choice", single.values[emails.name] == "company@x.dev")
+        single.moveChoice(at: 0, by: 1)
+        single.moveChoice(at: 0, by: 1)
+        check("moving down stops on the last choice", single.choices == [2])
+
+        let repeated = SnippetArgumentsState(arguments: [
+            .init(name: "Tone", options: ["same", "other", "same"])
+        ])
+        repeated.moveChoice(at: 0, by: 2)
+        check("a repeated option is chosen by position", repeated.choices == [2])
+        check("a named lone argument keeps its label", repeated.showsNames)
+
+        let form = SnippetArgumentsState(arguments: [
+            .init(name: "Tone", options: ["happy", "sad"]),
+            .init(name: "Recipient", options: []),
+            .init(name: "Sign-off", options: ["Best", "Cheers"])
+        ])
+        form.texts[1] = "Sam"
+        form.choices[2] = 1
+        check(
+            "values read the typed field and each list's choice",
+            form.values == ["Tone": "happy", "Recipient": "Sam", "Sign-off": "Cheers"])
+        check("a typed field makes it a form", !form.asksOnlyForChoices)
+        form.moveChoice(at: 1, by: 1)
+        check("a typed field has no choice to move", form.choices == [0, 0, 1])
+
+        form.moveFocus(backwards: false)
+        check("tab before focus lands on the first argument", form.focusedIndex == 0)
+        form.moveFocus(backwards: false)
+        form.moveFocus(backwards: false)
+        form.moveFocus(backwards: false)
+        check("tab wraps from the last argument to the first", form.focusedIndex == 0)
+        form.moveFocus(backwards: true)
+        check("shift-tab wraps from the first argument to the last", form.focusedIndex == 2)
+
+        let untouched = SnippetArgumentsState(arguments: [.init(name: "Recipient", options: [])])
+        check("an untouched field expands to nothing", untouched.values == ["Recipient": ""])
+    }
+
     private static func testTemplateEncodingAndSelectionAlias() {
         var calendar = Calendar(identifier: .gregorian)
         let timeZone = TimeZone(secondsFromGMT: 0)!

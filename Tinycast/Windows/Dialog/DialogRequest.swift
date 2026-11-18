@@ -46,6 +46,12 @@ enum DialogAccessory {
         return false
     }
 
+    /// Whether ⇥ walks the accessory's own fields rather than AppKit's key-view loop.
+    var claimsTabKey: Bool {
+        if case .snippetArguments = self { return true }
+        return false
+    }
+
     /// Whether ↵ belongs to a multi-line field, which leaves ⌘↵ to confirm the dialog.
     var acceptsLineBreaks: Bool {
         if case .clipboardText = self { return true }
