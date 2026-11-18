@@ -137,13 +137,14 @@ so a migrated snippet keeps working.
 | `{argument}` · `{query}`                   | An argument named `Argument`. `{query}` is Raycast's spelling, accepted on the way in; `{argument}` is the canonical one and the only one **Insert Placeholder** writes                                                       |
 | `{argument name="Recipient"}`              | A named argument requested before expansion                                                                                                                                                                                   |
 | `{argument default="Hi"}`                  | Optional argument: the default expands without prompting                                                                                                                                                                      |
-| `{argument options="a, b, c"}`             | The prompt offers a picker instead of a text field                                                                                                                                                                            |
+| `{argument options="a, b, c"}`             | The prompt offers a list instead of a text field, starting on its first option                                                                                                                                                |
 | `{snippet:Name}` · `{snippet name="Name"}` | Another snippet resolved by name, then keyword                                                                                                                                                                                |
 | `{cursor}`                                 | Final insertion point                                                                                                                                                                                                         |
 
 The editor's **Insert Placeholder** menu lists every token above; parameters and modifiers are typed by hand. A
 parameter value needs quotes only to carry a `|`: an unquoted one runs to the next `key=`, so
-`{date format=MMMM d, yyyy}` keeps its spaces the way Raycast writes it.
+`{date format=MMMM d, yyyy}` keeps its spaces the way Raycast writes it. Curly quotes (`“…”`) delimit
+a value exactly as straight ones do, since a text editor's smart-quote substitution writes them.
 
 Any value-producing token accepts a modifier pipeline, applied left to right:
 `{clipboard | trim | uppercase}`. The modifiers are `uppercase`, `lowercase`, `trim`,
@@ -159,8 +160,10 @@ dropped. `{browser-tab}` and `{calculator}` are not supported: the first needs a
 and the second has no defined input inside a snippet.
 
 Arguments are unique and requested in first-appearance order, including arguments inside referenced
-snippets. Inserted clipboard, selection, and argument values are literal: token-shaped text inside a
-value is not expanded again.
+snippets. The prompt is a dialog driven from the keyboard: ⇥/⇧⇥ walk its fields, ↑/↓ move an
+options list's choice, ↵ expands and Esc cancels; double-clicking an option picks it and expands.
+Inserted clipboard, selection, and argument values are literal: token-shaped text inside a value is
+not expanded again.
 
 `{selection}` is read through Accessibility. When that reads nothing, a snippet you insert yourself
 (from the launcher, Search Snippets or its shortcut) falls back to a ⌘C, as described in
