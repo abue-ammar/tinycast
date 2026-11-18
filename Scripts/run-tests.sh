@@ -693,15 +693,6 @@ run HyperKeyTests          Tinycast/Features/HotKeys/Model/HIDKeyMapping.swift \
                            Tinycast/Features/HotKeys/Service/KeyboardRemapper.swift \
                            Tinycast/Features/HotKeys/Service/RemapInstanceLock.swift \
                            Tests/HyperKeyFixtures.swift
-run DictationKeyTests      Tinycast/Features/HotKeys/Model/HIDKeyMapping.swift \
-                           Tinycast/Features/HotKeys/Model/HyperKeyConflictPolicy.swift \
-                           Tinycast/Features/HotKeys/Service/KeyboardRemapper.swift \
-                           Tinycast/Features/HotKeys/Service/RemapInstanceLock.swift \
-                           Tinycast/Features/HotKeys/Service/DictationKeyManager.swift \
-                           Tinycast/Platform/HealthTicker.swift \
-                           Tinycast/Platform/NotificationToken.swift \
-                           Tests/HyperKeyFixtures.swift \
-                           Tests/DictationKeyFixtures.swift
 run HotKeyDispatchTests    Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
                            Tinycast/Features/HotKeys/Model/ModifierKey.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyBinding.swift \
