@@ -132127,6 +132127,58 @@
         }
       }
     },
+    "Tinycast was updated while it was running. Open Settings again after it relaunches." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast wurde aktualisiert, während es lief. Öffne die Einstellungen nach dem Neustart erneut."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast se actualizó mientras estaba abierto. Abre Ajustes de nuevo cuando vuelva a abrirse."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast a été mis à jour pendant son exécution. Rouvrez les Réglages après son redémarrage."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycastは実行中にアップデートされました。再起動後に、もう一度設定を開いてください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast가 실행 중에 업데이트되었습니다. 다시 실행한 후 설정을 다시 여십시오."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O Tinycast foi atualizado enquanto estava aberto. Abra os Ajustes novamente depois que ele reabrir."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast обновился во время работы. Откройте настройки снова после перезапуска."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast 在运行期间已更新。请在它重新打开后再次打开“设置”。"
+          }
+        }
+      }
+    },
     "Tinycast will relearn your preferred results as you use the launcher." : {
       "localizations" : {
         "de" : {

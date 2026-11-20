@@ -193,6 +193,37 @@ macOS by itself. Nothing else in the app sets an appearance. Animations take the
 `AppCore.applyMotion()` projects `AppSettings.animationsEnabled` into `Motion.isEnabled` and re-points
 every live `AnimatedPanel` (see [ui.md](ui.md#non-negotiable-invariants)).
 
+## Processes
+
+Tinycast is the main app and the processes it starts, and each of those links to the main app alone.
+
+| Process               | Runs                                                              | Lives                                  |
+| --------------------- | ----------------------------------------------------------------- | -------------------------------------- |
+| Main app              | every engine and every long-lived store                           | launch to quit                         |
+| Settings              | this executable again, `--role=settings`                          | while its window is open               |
+| `ClipboardTextHelper` | text recognition and the thumbnail for one clipboard item         | one item                               |
+| `FileIndexHelper`     | the File Search crawl                                             | one crawl                              |
+| Tinycast Dictation    | the dictation model adapters, as a helper app with its own bundle | until the idle delay or a model switch |
+
+Three rules decide where new work runs:
+
+- **A role is Tinycast.** A `ProcessRole` runs this executable, so it holds Tinycast's privacy grants,
+  Keychain items, preferences and `AppPaths`, and only Tinycast's own code runs in one. Code from anyone
+  else, an extension's above all, runs in a sandboxed executable of its own and asks the main app for
+  whatever Tinycast's identity grants: macOS charges an unsandboxed child's privacy access to Tinycast.
+- **The main app is the hub.** Only it runs engines. Another process asks it for work and mirrors what it
+  knows, and never talks to a third: Settings sends extension changes to the main app rather than running
+  them.
+- **A process lives as long as its work.** On macOS 27 a long-lived process keeps the pages its freed
+  memory used, so work with a large passing peak gets a process that exits when the work ends. A headless
+  Swift process also costs about 4 MB before it does anything, so always-on work joins a process that is
+  already running rather than starting one of its own.
+
+Both ends of a link must be one build, because its messages are this build's `Codable` types.
+`Platform/LaunchedExecutable.swift` pins the executable's file identity at launch, and
+`ProcessLink.spawn` refuses to start a role once an update or a rebuild has replaced the file; Settings
+then offers a relaunch.
+
 ## The Settings process
 
 Opening Settings starts a second instance of this same executable, `--role=settings`
@@ -225,7 +256,9 @@ and nothing is copied.
   resulting values into its defaults before its stores reload, since cfprefsd delivers writes late.
   Quicklinks, chat presets, custom quick actions, the login item and the learning stores (ranking,
   frequent emoji, calculator history) are domains, re-read whole; the ranking's write settles before the
-  peer is told.
+  peer is told. A store a pane writes outside defaults must be a `SharedDomain`, or the main app writes
+  its stale copy back; `AppCore` binds every case in a switch, so a new one fails to build until both
+  roles can re-read it.
   Every `reload()` assigns only what differs, so side effects still run from the main app's `track` sinks,
   and `AppSettings.reload()` switches over every `AppSettingsKey`, so a new key fails to build until it
   is adopted.
@@ -293,7 +326,7 @@ Tinycast/
   Platform/         system shims: Permissions, LaunchAtLogin, InputSourceSwitcher, ScreenTarget,
                     AppDisplayName,
                     NotificationToken, AppPaths, Signposts, HealthTicker, Memo, ActivationPolicy,
-                    PipeFraming, ProcessLink, ProcessDisplayName,
+                    PipeFraming, ProcessLink, ProcessDisplayName, LaunchedExecutable,
                     Images/, Compression/
   Resources/        RaycastRuntime.generated.js, the embedded extension runtime
   Palette/          the palette shell: PalettePanel, PaletteWindowController, RootPaletteView,

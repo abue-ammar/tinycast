@@ -1,6 +1,6 @@
 import Foundation
 
-/// Which part of Tinycast this process runs; every role is this executable, sharing its identity.
+/// A part of Tinycast run as this executable with its identity, so only Tinycast's code runs as one.
 nonisolated enum ProcessRole: String, Sendable {
     case main
     case settings

@@ -39,6 +39,7 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
 
     /// Starts this executable again as `role`; the child ends itself when the link closes.
     static func spawn(_ role: ProcessRole) throws -> ProcessLink {
+        try LaunchedExecutable.checkUnchanged()
         guard let executable = Bundle.main.executableURL else { throw CocoaError(.fileNoSuchFile) }
         let process = Process()
         let input = Pipe()
