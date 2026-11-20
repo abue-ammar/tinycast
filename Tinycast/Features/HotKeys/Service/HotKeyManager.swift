@@ -39,6 +39,7 @@ final class HotKeyManager {
     var displayName: ((HotKeyAction) -> String?)?
     /// Whether the action's category, feature and item are switched on. Set in `AppCore.start()`.
     var allowsAction: ((HotKeyAction) -> Bool)?
+    var onBindingEdit: ((HotKeyAction, HotKeyBinding?) -> Void)?
 
     /// The recorder currently capturing, which also pauses both engines.
     var recordingAction: HotKeyAction? {
@@ -227,6 +228,10 @@ final class HotKeyManager {
     }
 
     func setBinding(_ binding: HotKeyBinding?, for action: HotKeyAction) {
+        if let onBindingEdit {
+            onBindingEdit(action, binding)
+            return
+        }
         if action == .dictation, binding != self.binding(for: action) { onDictationCancelled?() }
         let previous = bindings[action]
         clearSecureInputEquivalents()

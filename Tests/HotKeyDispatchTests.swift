@@ -210,6 +210,24 @@ struct HotKeyDispatchTests {
         mainApp.reloadBindings()
         check("a binding removed elsewhere unregisters", center.entries[action.defaultsKey] == nil)
 
+        let anotherID = UUID()
+        let anotherAction = HotKeyAction.customCommand(id: anotherID)
+        var requestedEdit: (HotKeyAction, HotKeyBinding?)?
+        editor.onBindingEdit = { requestedEdit = ($0, $1) }
+        editor.setBinding(.combo(combo), for: action)
+        check(
+            "the editing role sends an action without writing a shared binding",
+            requestedEdit?.0 == action && requestedEdit?.1 == .combo(combo)
+                && defaults.object(forKey: action.defaultsKey) == nil)
+        if let (action, binding) = requestedEdit { mainApp.setBinding(binding, for: action) }
+        mainApp.setBinding(.doubleTap(.shift), for: anotherAction)
+        editor.reloadBindings()
+        editor.setBinding(nil, for: action)
+        if let (action, binding) = requestedEdit { mainApp.setBinding(binding, for: action) }
+        check(
+            "removing one binding through its owner preserves the other item index",
+            mainApp.binding(for: action) == nil && mainApp.boundCustomCommandIDs == [anotherID])
+
         mainApp.isRecordingInSettings = true
         check("recording in Settings pauses the engines", center.isPaused)
         mainApp.isRecordingInSettings = false

@@ -12,11 +12,9 @@ enum ExtensionCall: Codable, Sendable {
     case uninstall(String)
 }
 
-/// What the main app says while a call runs, ending with `finished`.
 enum ExtensionCallEvent: Codable, Sendable {
     case installing(ExtensionInstaller.Progress)
     case imported(Int)
-    case finished(ExtensionCallResult)
 }
 
 struct ExtensionCallResult: Codable, Sendable {

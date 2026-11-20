@@ -17,7 +17,7 @@ final class AppCore {
     let roomParking = RoomParkingLedger(
         fileURL: AppPaths.applicationSupport().appendingPathComponent("room-parking.json"))
     let roomSession = RoomSession()
-    let clipboardStore = ClipboardStore()
+    let clipboardStore = ClipboardStore(opensDatabase: ProcessRole.current == .main)
     @ObservationIgnored private var clipboardTextIndexer: ClipboardTextIndexer?
     let clipboardManager: ClipboardManager
     let snippetsStore: SnippetsStore
@@ -292,6 +292,7 @@ final class AppCore {
             NSApp.setActivationPolicy(.accessory)
             dictationAudioDucker.recover()
             load()
+            loadHotKeys()
             pinnedEmoji.onPersistenceFailure = { [weak self] in
                 self?.showMessage(String(localized: "Couldn't save Emoji & Symbols pins"), tone: .danger)
             }
@@ -452,12 +453,15 @@ final class AppCore {
         track({ _ = $0.snippetsEnabled }, reproject: { $0.applySnippetsStoreEnabled() })
         let mainApp = MainAppLink(link: link, mirror: makeSharedStateMirror, core: self)
         self.mainApp = mainApp
+        hotKeys.onBindingEdit = { [weak mainApp] action, binding in
+            mainApp?.send(.setShortcut(action, binding))
+        }
+        hotKeys.reloadBindings()
         mainApp.start()
     }
 
     /// Stops only what Settings' process started for its panes; the main app's engines are its own.
     func prepareSettingsForTermination() {
-        mainApp?.flush()
         snippetsStore.stop()
         chatGPTSubscription.stop()
         installedAI.stop()
@@ -484,6 +488,11 @@ final class AppCore {
             guard settings.hyperKey != .none else { return nil }
             return KeyShortcut.hyperChord(includesShift: settings.hyperKeyIncludesShift)
         }
+        if settings.snippetsEnabled { Task { await snippetsStore.start() } }
+        observeSharedSettings()
+    }
+
+    private func loadHotKeys() {
         hotKeys.load(
             customCommandIDs: Set(customCommands.commands.map(\.id)),
             quicklinkIDs: Set(quicklinks.quicklinks.map(\.id)),
@@ -491,8 +500,6 @@ final class AppCore {
             windowRoomIDs: Set(rooms.rooms.map(\.id)),
             customWindowSizeIDs: Set(customWindowSizes.sizes.map(\.id)),
             quickActionIDs: Set(customQuickActions.actions.map(\.id)))
-        if settings.snippetsEnabled { Task { await snippetsStore.start() } }
-        observeSharedSettings()
     }
 
     private func reportInstall(_ report: UpdateCheckStore.InstallReport?) {

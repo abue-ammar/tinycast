@@ -990,10 +990,14 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
 - Settings comes to the front from the menu bar, ⌘, in the palette, the launcher's Settings command,
   About, `tinycast-dev://settings/<pane>` sent from another app, and the Dock icon's reopen
 - ⌘Q in Settings closes only Settings; quitting or killing the main app closes Settings too
+- Close Settings and immediately open it on another pane. The new process lands on the requested
+  pane. Repeat after saving a shortcut and verify the shortcut is still bound.
 - While a shortcut records in Settings, the main app's shortcuts stay silent (⌃Space opens nothing and
   the recorder reports the conflict); `kill -9` the Settings process mid-recording and they work again
 - A palette editor opened from Settings (custom command, quicklink, snippet, room) saves, and the
   pane lists the change; a delete in the pane leaves the launcher at once
+- Favorite a launcher item while a Settings deletion confirmation is open for a different favorite.
+  Confirm the deletion and verify the new favorite survives.
 - Mirrored status updates live: File Search indexing, iCloud Sync, a dictation model download,
   MCP server state, Hyper Key status and diagnostics, extension updates and install progress
 - A feature switch takes effect in the launcher immediately; every setting survives relaunch

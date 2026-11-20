@@ -1,7 +1,7 @@
 import Foundation
 
 struct SystemAction: Identifiable, Hashable, Sendable {
-    enum ID: String, CaseIterable, Sendable {
+    enum ID: String, CaseIterable, Codable, Sendable {
         case lockScreen = "lock-screen"
         case sleep
         case sleepDisplays = "sleep-displays"

@@ -208,10 +208,16 @@ and nothing is copied.
   `SettingsProcessController`, which spawns the child with `ProcessLink.spawn` (stdin and stdout pipes,
   `Platform/ProcessLink.swift`, framed by `Platform/PipeFraming.swift`) and serves it. In the child it
   fronts the `SettingsWindowController`. The child's `SettingsApp` carries the menus, sets `.regular`
-  before any window exists, and ends on the window's close or on the main app's end of stream.
+  before any window exists, and ends on the window's close or on the main app's end of stream. On
+  close, Settings sends pending edits and waits asynchronously for the main app to acknowledge them.
+  It exits after one second if the peer stalls. The main app reopens Settings when an outstanding
+  show request reaches a closing process.
 - **Focus.** macOS lets only the app the user just addressed bring another forward, so the child asks
   (`.activate`) once its window is up and the main app calls `activate(from:)`.
-- **State.** Both processes read and write the same storage. `App/SharedStateMirror.swift` sends
+- **State.** The main app owns shortcut writes, deletion of launcher items and their cross-store
+  references, and backup work. Settings asks for those changes and reads the resulting state through
+  the mirror. The live clipboard database opens only in the main app. For other preferences,
+  `App/SharedStateMirror.swift` sends
   Settings' pending defaults edits to the main app, which orders them with its own edits and
   acknowledges the resulting values. Dictionary edits merge by entry. Scalar values and encoded
   collections are atomic. Settings reapplies later unacknowledged edits when a value arrives, so a
@@ -219,21 +225,21 @@ and nothing is copied.
   resulting values into its defaults before its stores reload, since cfprefsd delivers writes late.
   Quicklinks, chat presets, custom quick actions, the login item and the learning stores (ranking,
   frequent emoji, calculator history) are domains, re-read whole; the ranking's write settles before the
-  peer is told. A backup or Raycast import hands the main app the rest it holds in memory (pins, notes,
-  clipboard) to read from disk again, or its old copy would be written back.
+  peer is told.
   Every `reload()` assigns only what differs, so side effects still run from the main app's `track` sinks,
   and `AppSettings.reload()` switches over every `AppSettingsKey`, so a new key fails to build until it
   is adopted.
 - **Work only the main app can do** goes as a `SettingsAction`: the palette editors, rooms, running a
   layout, iCloud Sync, the file index, dictation models, the settings file, updates and Support. MCP
-  edits, authentication and connection tests are awaited calls to the main app. What only the main app
+  edits, authentication, backup operations and extension changes use the same request and reply
+  lifecycle. Losing the connection finishes all pending requests. What only the main app
   knows comes back as `MainAppStatus`, rebuilt under observation and sent when it changes. Panes reach
   both through `MainAppLink` in the environment.
 - **Shortcut recording** pauses the main app's engines through `HotKeyManager.isRecordingInSettings`; the
   child's own `HotKeyManager` is loaded but never activated, so it registers nothing.
 - **Extensions** never run in Settings. `ExtensionLibrary` reads the catalog from disk and mirrors the
-  rest; every change is an `ExtensionCall` the main app answers. A later extensions process sits behind
-  that same seam.
+  rest. The main app answers extension library requests. Native extension execution can have its own
+  process and permission model without changing how Settings talks to the main app.
 
 ## Observation
 

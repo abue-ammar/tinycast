@@ -10,8 +10,25 @@ final class MainAppLink {
     @ObservationIgnored private let link: ProcessLink<SettingsWire.ToMainApp, SettingsWire.ToSettings>
     @ObservationIgnored private let mirror: SharedStateMirror
     @ObservationIgnored private unowned let core: AppCore
-    @ObservationIgnored private var calls: [UUID: (ExtensionCallEvent) -> Void] = [:]
-    @ObservationIgnored private var mcpCalls: [UUID: CheckedContinuation<MCPSettingsResult, Never>] = [:]
+    private struct PendingCall {
+        let reply: CheckedContinuation<SettingsWire.Reply, Error>
+        let onProgress: (ExtensionCallEvent) -> Void
+    }
+
+    private enum CloseState {
+        case open
+        case waiting((() -> Void)?)
+        case ready
+    }
+
+    @ObservationIgnored private var calls: [UUID: PendingCall] = [:]
+    @ObservationIgnored private var closeTimeout: Task<Void, Never>?
+    @ObservationIgnored private var closeState = CloseState.open
+
+    private var acceptsRequests: Bool {
+        guard case .open = closeState else { return false }
+        return link.isOpen
+    }
 
     init(
         link: ProcessLink<SettingsWire.ToMainApp, SettingsWire.ToSettings>,
@@ -25,7 +42,7 @@ final class MainAppLink {
     func start() {
         link.onReceive = { [weak self] in self?.receive($0) }
         // The main app quit, relaunched or crashed; without it, Settings edits nothing live.
-        link.onClose = { [weak self] in self?.didClose() }
+        link.onClose = { [weak self] _ in self?.didClose() }
         link.start()
         mirror.start()
         observeRecording()
@@ -33,75 +50,131 @@ final class MainAppLink {
 
     /// State goes first, so the main app acts on what the pane just changed.
     func send(_ action: SettingsAction) {
+        guard acceptsRequests else { return }
         mirror.flush()
         link.send(.perform(action))
     }
 
-    /// Cancelling the waiting task cancels the main app's work too, as an in-process call would.
     func call(
         _ call: ExtensionCall, onEvent: @escaping (ExtensionCallEvent) -> Void = { _ in }
     ) async -> ExtensionCallResult {
-        mirror.flush()
-        let id = UUID()
-        return await withTaskCancellationHandler {
-            await withCheckedContinuation { continuation in
-                calls[id] = { [weak self] event in
-                    guard case .finished(let result) = event else { return onEvent(event) }
-                    self?.calls[id] = nil
-                    continuation.resume(returning: result)
-                }
-                link.send(.call(id, call))
-            }
-        } onCancel: {
-            Task { @MainActor [weak self] in self?.link.send(.cancelCall(id)) }
+        do {
+            guard case .extensions(let result) = try await request(.extensions(call), onProgress: onEvent)
+            else { throw CocoaError(.coderReadCorrupt) }
+            return result
+        } catch is CancellationError {
+            return ExtensionCallResult()
+        } catch {
+            return ExtensionCallResult(error: error.localizedDescription)
         }
     }
 
     @discardableResult
     func callMCP(_ call: MCPSettingsCall) async throws -> MCPServerStatus? {
+        guard case .mcp(let status) = try await request(.mcp(call)) else {
+            throw CocoaError(.coderReadCorrupt)
+        }
+        return status
+    }
+
+    func prepareBackup(at url: URL) async throws -> BackupPreview {
+        guard case .backupPreview(let preview) = try await request(.backup(.prepare(url))) else {
+            throw CocoaError(.coderReadCorrupt)
+        }
+        return preview
+    }
+
+    func runBackup(_ call: BackupSettingsCall) async throws -> String {
+        guard case .backupMessage(let message) = try await request(.backup(call)) else {
+            throw CocoaError(.coderReadCorrupt)
+        }
+        return message
+    }
+
+    private func request(
+        _ call: SettingsWire.Call, onProgress: @escaping (ExtensionCallEvent) -> Void = { _ in }
+    ) async throws -> SettingsWire.Reply {
         try Task.checkCancellation()
+        guard acceptsRequests else { throw SettingsWire.Failure.disconnected }
         mirror.flush()
         let id = UUID()
-        let result = await withTaskCancellationHandler {
-            await withCheckedContinuation { continuation in
-                mcpCalls[id] = continuation
-                link.send(.mcpCall(id, call))
+        let reply = try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                calls[id] = PendingCall(reply: continuation, onProgress: onProgress)
+                link.send(.call(id, call))
             }
         } onCancel: {
-            Task { @MainActor [weak self] in self?.link.send(.cancelCall(id)) }
+            Task { @MainActor [weak self] in self?.cancel(id) }
         }
         try Task.checkCancellation()
-        return try result.get()
+        switch reply {
+        case .cancelled: throw CancellationError()
+        case .failure(let message): throw SettingsWire.Failure(errorDescription: message)
+        default: return reply
+        }
+    }
+
+    private func cancel(_ id: UUID) {
+        link.send(.cancelCall(id))
+        calls.removeValue(forKey: id)?.reply.resume(throwing: CancellationError())
     }
 
     private func didClose() {
-        let waiting = mcpCalls.values
-        mcpCalls.removeAll()
-        for continuation in waiting { continuation.resume(returning: .cancelled) }
-        core.terminate()
+        let pending = calls.values
+        calls.removeAll()
+        for call in pending { call.reply.resume(throwing: SettingsWire.Failure.disconnected) }
+        if case .open = closeState {
+            core.terminate()
+        } else {
+            finishClosing()
+        }
     }
 
     func open(_ url: URL) {
         link.send(.openURL(url))
     }
 
-    /// The last changes before exit; the link blocks until they are in the pipe.
-    func flush() {
+    func beginClosing() {
+        guard case .open = closeState else { return }
+        closeState = .waiting(nil)
         mirror.flush()
-        link.flush()
+        link.send(.closing)
+        closeTimeout = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            self?.finishClosing()
+        }
+    }
+
+    func prepareToClose(_ completion: @escaping () -> Void) -> Bool {
+        guard link.isOpen else { return false }
+        beginClosing()
+        guard case .waiting(let registered) = closeState else { return false }
+        if registered == nil { closeState = .waiting(completion) }
+        return true
+    }
+
+    private func finishClosing() {
+        guard case .waiting(let completion) = closeState else { return }
+        closeState = .ready
+        closeTimeout?.cancel()
+        closeTimeout = nil
+        completion?()
     }
 
     private func receive(_ message: SettingsWire.ToSettings) {
         switch message {
-        case .show(let request):
+        case .show(let id, let request):
+            guard acceptsRequests else { return }
             core.settingsCoordinator.show(request)
-            link.send(.activate)
+            link.send(.activate(id))
         case .changed(let change):
             mirror.apply(change)
-        case .callEvent(let id, let event):
-            calls[id]?(event)
-        case .mcpResult(let id, let result):
-            mcpCalls.removeValue(forKey: id)?.resume(returning: result)
+        case .extensionProgress(let id, let event):
+            calls[id]?.onProgress(event)
+        case .reply(let id, let reply):
+            calls.removeValue(forKey: id)?.reply.resume(returning: reply)
+        case .readyToClose:
+            finishClosing()
         case .status(let status):
             self.status = status
             core.appIndex.adoptCommands(hidden: status.hiddenCommands, unlisted: status.unlistedCommands)
@@ -111,6 +184,7 @@ final class MainAppLink {
     }
 
     private func observeRecording() {
+        guard acceptsRequests else { return }
         let isRecording = withObservationTracking {
             core.hotKeys.recordingAction != nil
         } onChange: { [weak self] in

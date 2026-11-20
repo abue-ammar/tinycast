@@ -165,6 +165,15 @@ final class CustomCommandCoordinator {
                 symbol: command.iconSymbol ?? CustomCommand.sfSymbol,
                 confirmTitle: String(localized: "Delete"))
         else { return }
+        if let mainApp = core.mainApp {
+            mainApp.send(.deleteCustomCommand(id))
+        } else {
+            removeCustomCommand(id: id)
+        }
+    }
+
+    func removeCustomCommand(id: UUID) {
+        guard let command = store.command(id: id) else { return }
         removeCustomCommandReferences(ids: [id], entryIDs: [command.entryID])
         store.remove(id: id)
     }

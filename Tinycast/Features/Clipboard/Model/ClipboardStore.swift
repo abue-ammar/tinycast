@@ -286,17 +286,17 @@ final class ClipboardStore {
     @ObservationIgnored private var deleteStaleStmt: OpaquePointer?
 
     /// `directory` defaults to the per-channel store; the harness passes a throwaway one.
-    init(directory: URL? = nil) {
+    init(directory: URL? = nil, opensDatabase: Bool = true) {
         let base = directory ?? Self.defaultDirectory
         imagesDir = base.appendingPathComponent("images", isDirectory: true)
         dbURL = base.appendingPathComponent("clipboard.sqlite3")
-        try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
-        open()
+        if opensDatabase { open() }
     }
 
     /// Idempotent, so the coordinator can re-open the file when the feature is switched back on.
     func open() {
         guard db == nil else { return }
+        try? FileManager.default.createDirectory(at: imagesDir, withIntermediateDirectories: true)
         if openDatabase() { return }
         // Captured, not authored: discard a corrupt or outdated database and start over.
         closeDatabase()
