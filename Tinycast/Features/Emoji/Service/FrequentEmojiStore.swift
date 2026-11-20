@@ -23,14 +23,18 @@ final class FrequentEmojiStore {
 
     init(fileURL: URL = AppPaths.applicationSupport().appendingPathComponent("emoji-frequency.json")) {
         self.fileURL = fileURL
+        records = Self.history(Self.stored(at: fileURL))
+    }
 
-        if let data = try? Data(contentsOf: fileURL),
-            let decoded = try? JSONDecoder().decode([FrequentEmoji].self, from: data)
-        {
-            records = Self.history(decoded)
-        } else {
-            records = []
-        }
+    /// Adopts a history another process wrote, as Settings' own does on a backup import.
+    func reload() {
+        let stored = Self.history(Self.stored(at: fileURL))
+        if stored != records { records = stored }
+    }
+
+    private static func stored(at fileURL: URL) -> [FrequentEmoji] {
+        (try? Data(contentsOf: fileURL))
+            .flatMap { try? JSONDecoder().decode([FrequentEmoji].self, from: $0) } ?? []
     }
 
     func record(_ glyph: String) {

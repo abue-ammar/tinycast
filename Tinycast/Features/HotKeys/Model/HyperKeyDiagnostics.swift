@@ -1,22 +1,22 @@
 import Foundation
 
-struct HyperKeyDiagnostics: Equatable, Sendable {
-    struct ConflictingApp: Equatable, Sendable {
+struct HyperKeyDiagnostics: Codable, Equatable, Sendable {
+    struct ConflictingApp: Codable, Equatable, Sendable {
         let name: String
         let severity: HyperKeyConflictPolicy.Severity
     }
 
-    struct Takeover: Equatable, Sendable {
+    struct Takeover: Codable, Equatable, Sendable {
         let keyboards: [String]
         let likelyApps: [String]
     }
 
-    struct KeyboardTap: Equatable, Sendable {
+    struct KeyboardTap: Codable, Equatable, Sendable {
         let appName: String
         let isSlow: Bool
     }
 
-    struct SecureInput: Equatable, Sendable {
+    struct SecureInput: Codable, Equatable, Sendable {
         let reportedOwner: String?
         let ownerIsLoginWindow: Bool
         let likelyOwners: [String]

@@ -62,10 +62,12 @@ final class DictationWorker: Sendable {
             ) { continuation in
                 queue.async {
                     do {
-                        try DictationWire.write(request, to: self.input)
+                        try PipeFraming.write(
+                            request, to: self.input, maximum: DictationWire.maximumMessageBytes)
                         guard
-                            let ready = try DictationWire.read(
-                                DictationWire.Response.self, from: self.output),
+                            let ready = try PipeFraming.read(
+                                DictationWire.Response.self, from: self.output,
+                                maximum: DictationWire.maximumMessageBytes),
                             ready.id == request.id, ready.status == .ready
                         else {
                             throw DictationWire.Failure.unavailable
@@ -73,8 +75,9 @@ final class DictationWorker: Sendable {
                         continuation.yield(ready)
                         try samples.withUnsafeBytes { try self.input.write(contentsOf: $0) }
                         guard
-                            let result = try DictationWire.read(
-                                DictationWire.Response.self, from: self.output),
+                            let result = try PipeFraming.read(
+                                DictationWire.Response.self, from: self.output,
+                                maximum: DictationWire.maximumMessageBytes),
                             result.id == request.id, result.status == .result
                         else {
                             throw DictationWire.Failure.unavailable

@@ -346,5 +346,6 @@ The Permissions pane shows calendar access alongside Accessibility, and when TCC
 offers the same consent path rather than only opening System Settings: the Calendars pane there
 lists no app that has never asked, so a `notDetermined` state that could only be sent to Settings was
 a dead end. Both entry points funnel through `CalendarCoordinator.setCalendarEnabled`, so Tinycast's
-dialog still comes first. A denial is the one state that Settings alone can undo, and both panes send
+dialog still comes first. It answers whether access was granted, and the pane then asks the main app to
+read access again, since a grant can leave the switch where it was. A denial is the one state that Settings alone can undo, and both panes send
 it there.

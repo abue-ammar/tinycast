@@ -373,11 +373,11 @@ enum SystemActionRunner {
     }
 
     private static func hideOtherApps(except previousApp: NSRunningApplication?) {
-        let ownPID = NSRunningApplication.current.processIdentifier
+        let own = Bundle.main.bundleIdentifier
         let keptPID = previousApp?.processIdentifier
         for app in NSWorkspace.shared.runningApplications
         where app.activationPolicy == .regular
-            && app.processIdentifier != ownPID
+            && app.bundleIdentifier != own
             && app.processIdentifier != keptPID
         {
             app.hide()

@@ -15,6 +15,12 @@ final class MCPSettingsStore {
         servers = Self.decode(defaults.data(forKey: AppSettingsKey.mcpServers.rawValue))
     }
 
+    /// Adopts what another process stored.
+    func reload() {
+        let stored = Self.decode(defaults.data(forKey: AppSettingsKey.mcpServers.rawValue))
+        if stored != servers { servers = stored }
+    }
+
     func server(id: UUID) -> MCPServer? {
         servers.first { $0.id == id }
     }

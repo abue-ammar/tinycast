@@ -79,6 +79,13 @@ Consequences worth knowing:
   enable Hyper in one build at a time so their keyboard owners do not compete. An identical mapping
   already installed by another build is left unowned.
 
+### Debugging Settings
+
+Settings runs as a second instance of the app, started with `--role=settings` and linked to the main app
+over its stdin and stdout, so it cannot be launched on its own. Open Settings, then attach Xcode's
+debugger to that process (Debug › Attach to Process, the `Tinycast Dev` entry whose arguments name the
+role). See [architecture.md](architecture.md#the-settings-process).
+
 ## Editor
 
 Xcode works out of the box and needs nothing here. Everything below is optional, and which editor you

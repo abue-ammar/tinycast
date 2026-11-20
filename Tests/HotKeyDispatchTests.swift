@@ -15,6 +15,7 @@ struct HotKeyDispatchTests {
     static func main() {
         for includesShift in [false, true] { dispatch(includesShift: includesShift) }
         allowance()
+        crossProcess()
         print("\(checks) dispatch checks; \(failures) failures")
         if failures > 0 { exit(1) }
     }
@@ -25,6 +26,7 @@ struct HotKeyDispatchTests {
         defer { defaults.removePersistentDomain(forName: domain) }
         let manager = HotKeyManager(defaults: defaults)
         let center = HotKeyCenter.current!
+        manager.activate()
         var presses = 0
         var releases = 0
         var cancellations = 0
@@ -130,6 +132,7 @@ struct HotKeyDispatchTests {
         let center = HotKeyCenter.current!
         var refused: Set<HotKeyAction> = []
         manager.allowsAction = { !refused.contains($0) }
+        manager.activate()
         let actions: [HotKeyAction] = [
             .command(.sample), .customCommand(id: UUID()), .windowCommand(id: .sample),
             .windowLayout(id: UUID()), .windowRoom(id: UUID()), .customWindowSize(id: UUID()),
@@ -172,12 +175,44 @@ struct HotKeyDispatchTests {
         let relaunchedCenter = HotKeyCenter.current!
         var snippetsLoaded = false
         relaunched.allowsAction = { $0 != snippet || snippetsLoaded }
-        relaunched.start(
+        relaunched.load(
             customCommandIDs: [], quicklinkIDs: [], windowLayoutIDs: [], windowRoomIDs: [],
             customWindowSizeIDs: [], quickActionIDs: [])
+        check("a loaded manager registers nothing", relaunchedCenter.entries.isEmpty)
+        relaunched.activate()
         check("snippet waits at launch", relaunchedCenter.entries[snippet.defaultsKey] == nil)
         snippetsLoaded = true
         relaunched.applyAllowance()
         check("snippet registers once loaded", relaunchedCenter.entries[snippet.defaultsKey] != nil)
+    }
+    /// Settings edits bindings in another process; the main app adopts them and pauses for it.
+    static func crossProcess() {
+        let domain = "tinycast.hotkey-cross-process-test.\(UUID())"
+        let defaults = UserDefaults(suiteName: domain)!
+        defer { defaults.removePersistentDomain(forName: domain) }
+        let editor = HotKeyManager(defaults: defaults)
+        let editorCenter = HotKeyCenter.current!
+        let combo = KeyShortcut(carbonKeyCode: kVK_ANSI_K, carbonModifiers: cmdKey | optionKey)
+        let action = HotKeyAction.customCommand(id: UUID())
+        editor.setBinding(.combo(combo), for: action)
+        check("an editing role never registers", editorCenter.entries.isEmpty)
+
+        let mainApp = HotKeyManager(defaults: defaults)
+        let center = HotKeyCenter.current!
+        mainApp.activate()
+        check("an untouched store adopts nothing", center.entries[action.defaultsKey] == nil)
+        mainApp.reloadBindings()
+        check("a binding stored elsewhere registers", center.entries[action.defaultsKey] != nil)
+        let revision = mainApp.revision
+        mainApp.reloadBindings()
+        check("an equal reload changes nothing", mainApp.revision == revision)
+        editor.setBinding(nil, for: action)
+        mainApp.reloadBindings()
+        check("a binding removed elsewhere unregisters", center.entries[action.defaultsKey] == nil)
+
+        mainApp.isRecordingInSettings = true
+        check("recording in Settings pauses the engines", center.isPaused)
+        mainApp.isRecordingInSettings = false
+        check("ending it resumes them", !center.isPaused)
     }
 }

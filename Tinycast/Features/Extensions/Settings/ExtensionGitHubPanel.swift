@@ -4,7 +4,7 @@ import SwiftUI
 struct ExtensionGitHubPanel: View {
     let onClose: () -> Void
 
-    @Environment(AppCore.self) private var core
+    @Environment(ExtensionLibrary.self) private var library
     @State private var repository = ""
     @State private var progress: ExtensionInstaller.Progress?
     @State private var failure: String?
@@ -102,21 +102,16 @@ struct ExtensionGitHubPanel: View {
 
     private func install() {
         guard let source, !isInstalling else { return }
-        let settings = core.settings
         failure = nil
         installedTitle = nil
         progress = .downloading
         installTask = Task {
             defer { progress = nil }
             do {
-                let installed = try await core.extensions.install(
-                    source, packageManager: settings.extensionPackageManager,
-                    additionalSearchPaths: settings.extensionCustomSearchPaths,
-                    onProgress: { step in
-                        // Guarded: a late hop must not revive the spinner after the install ends.
-                        Task { @MainActor in if progress != nil { progress = step } }
-                    })
-                installedTitle = installed.title
+                installedTitle = try await library.install(source) { step in
+                    // Guarded: a late event must not revive the spinner after the install ends.
+                    if progress != nil { progress = step }
+                }
             } catch {
                 guard !Task.isCancelled else { return }
                 failure = error.localizedDescription

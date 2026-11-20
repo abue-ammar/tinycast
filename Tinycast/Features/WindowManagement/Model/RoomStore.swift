@@ -13,12 +13,23 @@ final class RoomStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let decoded =
-            defaults.data(forKey: Self.defaultsKey)
-            .flatMap { try? JSONDecoder().decode([LossyRoom].self, from: $0) }?
-            .compactMap(\.room) ?? []
+        let decoded = Self.decoded(from: defaults)
         rooms = Self.sanitized(decoded)
         if rooms != decoded { persist() }
+    }
+
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let stored = Self.sanitized(Self.decoded(from: defaults))
+        guard stored != rooms else { return }
+        rooms = stored
+        onChange?(stored)
+    }
+
+    private static func decoded(from defaults: UserDefaults) -> [Room] {
+        defaults.data(forKey: defaultsKey)
+            .flatMap { try? JSONDecoder().decode([LossyRoom].self, from: $0) }?
+            .compactMap(\.room) ?? []
     }
 
     func room(id: UUID) -> Room? {

@@ -316,11 +316,11 @@ enum BackupActions {
         (AppPaths.settingsFile().path as NSString).abbreviatingWithTildeInPath
     }
 
-    /// Turning the mirror on over a file that already exists asks which side wins.
-    static func setSettingsFileEnabled(_ enabled: Bool, core: AppCore) async {
-        guard enabled else { return core.stopSettingsFile() }
+    /// Turning the mirror on over a file that already exists asks which side wins; nil is Cancel.
+    static func settingsFileChange(enabling enabled: Bool, core: AppCore) async -> SettingsFileChange? {
+        guard enabled else { return .stop }
         guard FileManager.default.fileExists(atPath: AppPaths.settingsFile().path) else {
-            return core.startSettingsFile(importing: false)
+            return .start(importing: false)
         }
         let choice = await core.choose(
             title: String(localized: "Import the existing settings file?"),
@@ -337,9 +337,9 @@ enum BackupActions {
             ],
             defaultIndex: 0)
         switch choice {
-        case 0: core.startSettingsFile(importing: true)
-        case 1: core.startSettingsFile(importing: false)
-        default: break
+        case 0: return .start(importing: true)
+        case 1: return .start(importing: false)
+        default: return nil
         }
     }
 

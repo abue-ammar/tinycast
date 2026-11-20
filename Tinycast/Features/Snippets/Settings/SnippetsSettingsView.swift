@@ -3,6 +3,7 @@ import SwiftUI
 struct SnippetsSettingsView: View {
     @Environment(AppCore.self) private var core
     @Environment(SnippetCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(SnippetsStore.self) private var snippetsStore
     @Environment(AppSettings.self) private var settings
 
@@ -21,7 +22,7 @@ struct SnippetsSettingsView: View {
                 showsIcon: true,
                 showsHeader: false)
 
-            if settings.snippetsEnabled, core.snippetListener.status == .needsAccessibility {
+            if settings.snippetsEnabled, mainApp.status.snippetsNeedAccessibility {
                 Section {
                     LabeledContent {
                         Button("Grant Access…") { Permissions.openAccessibilitySettings() }
@@ -71,13 +72,13 @@ struct SnippetsSettingsView: View {
                 ForEach(sortedSnippets) { record in
                     SnippetSettingsRow(
                         record: record,
-                        onEdit: { coordinator.editSnippet(record) },
+                        onEdit: { mainApp.send(.editSnippet(record.id)) },
                         onDelete: { Task { await coordinator.deleteSnippet(id: record.id) } })
                 }
             }
 
             LabeledContent {
-                Button("Add…") { coordinator.editSnippet(nil) }
+                Button("Add…") { mainApp.send(.editSnippet(nil)) }
             } label: {
                 SettingsRowTitle(.snippetsLibrary, "New Snippet")
             }

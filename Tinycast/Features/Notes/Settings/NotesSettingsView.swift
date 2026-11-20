@@ -40,7 +40,9 @@ struct NotesSettingsView: View {
                     Button("Choose…", action: core.notesCoordinator.chooseNotesFolder)
                 } label: {
                     SettingsRowTitle(.notesOptions, "Notes Folder")
-                    Text((core.notesStore.notesDirectory.path as NSString).abbreviatingWithTildeInPath)
+                    Text(
+                        (AppPaths.contentFolder(settings.notesFolder, named: "Notes").path as NSString)
+                            .abbreviatingWithTildeInPath)
                 }
             } header: {
                 SettingsSectionHeader(.notesOptions)

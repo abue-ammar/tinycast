@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MCPSettingsSection: View {
     @Environment(MCPCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var appSettings
     @Environment(MCPSettingsStore.self) private var store
     @State private var editor: MCPServerEditorTarget?
@@ -21,7 +22,7 @@ struct MCPSettingsSection: View {
                 } else {
                     ForEach(store.servers) { server in
                         MCPServerRow(
-                            server: server, status: coordinator.status(of: server.id),
+                            server: server, status: mainApp.status.mcpStatuses[server.id] ?? .stopped,
                             onEdit: { editor = MCPServerEditorTarget(server: server, isNew: false) },
                             onRemove: { pendingRemoval = server })
                     }
@@ -74,6 +75,7 @@ struct MCPSettingsSection: View {
         } catch {
             return String(localized: "The credentials could not be saved to your login Keychain.")
         }
+        mainApp.send(.reconnectMCPServer(server.id))
         editor = nil
         return nil
     }
@@ -82,6 +84,7 @@ struct MCPSettingsSection: View {
         pendingRemoval = nil
         do {
             try coordinator.remove(server.id)
+            mainApp.send(.reconnectMCPServer(server.id))
             removalError = nil
         } catch {
             removalError = String(

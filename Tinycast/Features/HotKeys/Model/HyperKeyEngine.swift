@@ -115,7 +115,8 @@ struct HyperKeyEngine: Sendable {
         guard !isAutorepeat else { return Result(decision: .suppress) }
         let flags = removingSourceFlags(from: flags) & ~CGEventFlags.maskSecondaryFn.rawValue
         return transition(
-            isDown: type == .keyDown, flags: flags, at: time, insideSecureInput: insideSecureInput, timestamp: timestamp)
+            isDown: type == .keyDown, flags: flags, at: time, insideSecureInput: insideSecureInput,
+            timestamp: timestamp)
     }
 
     private mutating func transition(

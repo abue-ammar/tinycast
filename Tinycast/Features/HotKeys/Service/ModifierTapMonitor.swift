@@ -77,6 +77,11 @@ final class ModifierTapMonitor: HealthCheckable {
         syncTapPresence()
     }
 
+    /// Settings' process runs no tap, so its recorders show the main app's answer.
+    func adoptNeedsAccessibility(_ needs: Bool) {
+        if needsAccessibility != needs { needsAccessibility = needs }
+    }
+
     /// Modifier-only bindings currently assigned; an empty set tears the tap down entirely.
     func update(bound: Set<HotKeyBinding>, holdKey: ModifierKey? = nil) {
         guard bound != self.bound || holdKey != self.holdKey else { return }

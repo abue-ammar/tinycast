@@ -3,7 +3,7 @@ import SwiftUI
 struct ExtensionStorePanel: View {
     let storeInstall: ExtensionDeepLink.StoreInstall?
     let onClose: () -> Void
-    @Environment(AppCore.self) private var core
+    @Environment(ExtensionLibrary.self) private var library
 
     @State private var query = ""
     @State private var results: [ExtensionListing] = []
@@ -127,7 +127,7 @@ struct ExtensionStorePanel: View {
         if installed.contains(listing.name) { return .installed }
         if let progress = installing[listing.id] { return .installing(progress.message) }
         if let failure = failures[listing.id] { return .failed(failure) }
-        if core.extensions.installed.contains(where: { $0.manifest.name == listing.name }) {
+        if library.installed.contains(where: { $0.manifest.name == listing.name }) {
             return .alreadyInstalled
         }
         return .idle
@@ -183,11 +183,7 @@ struct ExtensionStorePanel: View {
         installing[listing.id] = .downloading
         Task {
             do {
-                try await core.extensions.install(
-                    listing,
-                    onProgress: { progress in
-                        Task { @MainActor in installing[listing.id] = progress }
-                    })
+                try await library.install(listing) { installing[listing.id] = $0 }
                 installed.insert(listing.name)
             } catch {
                 failures[listing.id] = error.localizedDescription

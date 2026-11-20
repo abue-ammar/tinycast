@@ -30,32 +30,4 @@ nonisolated enum DictationWire {
         let status: Status
         var text = ""
     }
-
-    static func read<Value: Decodable>(_ type: Value.Type, from handle: FileHandle) throws -> Value? {
-        guard let header = try handle.read(upToCount: 1), !header.isEmpty else { return nil }
-        let bytes = header + (try readExactly(3, from: handle))
-        let length = bytes.enumerated().reduce(0) { $0 | (Int($1.element) << ($1.offset * 8)) }
-        guard (1...maximumMessageBytes).contains(length) else { throw CocoaError(.coderReadCorrupt) }
-        return try JSONDecoder().decode(type, from: readExactly(length, from: handle))
-    }
-
-    static func write<Value: Encodable>(_ value: Value, to handle: FileHandle) throws {
-        let data = try JSONEncoder().encode(value)
-        guard data.count <= maximumMessageBytes else { throw CocoaError(.coderInvalidValue) }
-        var length = UInt32(data.count).littleEndian
-        try withUnsafeBytes(of: &length) { try handle.write(contentsOf: $0) }
-        try handle.write(contentsOf: data)
-    }
-
-    static func readExactly(_ count: Int, from handle: FileHandle) throws -> Data {
-        var data = Data()
-        data.reserveCapacity(count)
-        while data.count < count {
-            guard let bytes = try handle.read(upToCount: count - data.count), !bytes.isEmpty else {
-                throw CocoaError(.fileReadCorruptFile)
-            }
-            data.append(bytes)
-        }
-        return data
-    }
 }

@@ -68,7 +68,8 @@ target, so a file linked from a dotfiles repository stays linked.
 
 ## Sync
 
-`AppCore` owns the repository while the switch is on, and nothing while it is off.
+`AppCore` owns the repository while the switch is on, and nothing while it is off. The Backup pane asks
+its questions in Settings' own process and hands the answer to the main app, which runs the repository.
 
 - **Turning it on** with no file writes one from the current settings. Over an existing file, a dialog
   asks: **Import** applies the file, **Replace** overwrites it.

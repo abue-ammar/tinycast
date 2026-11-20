@@ -14,10 +14,17 @@ final class PinnedEmojiStore {
 
     init(fileURL: URL = AppPaths.applicationSupport().appendingPathComponent("emoji-pinned.json")) {
         self.fileURL = fileURL
-        let decoded =
-            (try? Data(contentsOf: fileURL))
-            .flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
-        glyphs = Self.normalized(decoded)
+        glyphs = Self.normalized(Self.stored(at: fileURL))
+    }
+
+    /// Adopts pins another process wrote, as Settings' own does on a backup import.
+    func reload() {
+        let stored = Self.normalized(Self.stored(at: fileURL))
+        if stored != glyphs { glyphs = stored }
+    }
+
+    private static func stored(at fileURL: URL) -> [String] {
+        (try? Data(contentsOf: fileURL)).flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
     }
 
     func toggle(_ glyph: String) {

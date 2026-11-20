@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 struct AboutView: View {
-    @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
 
     private static var version: String {
         let short = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -79,7 +79,7 @@ struct AboutView: View {
     }
 
     private var updates: some View {
-        let updates = core.updateCoordinator
+        let updates = mainApp.status.updates
         return Section {
             HStack(spacing: Theme.Spacing.xl) {
                 tile("arrow.down.circle.fill", tint: Theme.Colors.progress)
@@ -92,14 +92,14 @@ struct AboutView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: Theme.Spacing.lg)
-                Button("Check Now") { updates.checkForUpdates() }
+                Button("Check Now") { mainApp.send(.checkForUpdates) }
                     .disabled(updates.isChecking)
             }
             .padding(.vertical, Theme.Spacing.xs)
         }
     }
 
-    private func updateStatus(_ updates: UpdateCoordinator) -> Text {
+    private func updateStatus(_ updates: MainAppStatus.Updates) -> Text {
         guard updates.updatesItself else {
             return Text("This is a local build — rebuild it to move it forward.")
         }
@@ -107,7 +107,7 @@ struct AboutView: View {
             return Text("Checking for updates…")
         }
         if let version = updates.availableVersion {
-            return Text("Version \(version.description) is available")
+            return Text("Version \(version) is available")
         }
         guard let lastCheckedAt = updates.lastCheckedAt else {
             return Text("Not checked yet")
@@ -143,7 +143,7 @@ struct AboutView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: Theme.Spacing.lg)
-                Button("Support…") { core.supportCoordinator.showSupport() }
+                Button("Support…") { mainApp.send(.showSupport) }
                     .buttonStyle(.borderedProminent)
                     .tint(Theme.Colors.brand)
             }

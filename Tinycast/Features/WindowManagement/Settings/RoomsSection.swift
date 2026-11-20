@@ -3,7 +3,7 @@ import SwiftUI
 /// The room library, inside the Window Management pane: rooms tile with its gap and its grant.
 struct RoomsSection: View {
     @Environment(RoomStore.self) private var store
-    @Environment(RoomCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
@@ -23,7 +23,7 @@ struct RoomsSection: View {
             }
 
             Button {
-                coordinator.createRoom()
+                mainApp.send(.createRoom)
             } label: {
                 SettingsRowTitle(.windowManagementRooms, "New Room")
             }
@@ -38,6 +38,7 @@ private struct RoomSettingsRow: View {
     let showsInLauncher: Bool
 
     @Environment(RoomCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(VisibilityStore.self) private var visibility
 
     private var subtitle: String {
@@ -56,7 +57,7 @@ private struct RoomSettingsRow: View {
             ShortcutRecorder(action: .windowRoom(id: room.id))
 
             Button {
-                coordinator.enterRoom(id: room.id)
+                mainApp.send(.enterRoom(room.id))
             } label: {
                 Image(systemName: "play")
             }
@@ -65,7 +66,7 @@ private struct RoomSettingsRow: View {
             .accessibilityLabel("Enter \(room.name)")
 
             Button {
-                coordinator.editWindows(of: room)
+                mainApp.send(.editRoomWindows(room.id))
             } label: {
                 Image(systemName: "macwindow.badge.plus")
             }

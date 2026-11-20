@@ -5,7 +5,7 @@ import Carbon.HIToolbox
 @MainActor
 @Observable
 final class HyperKeyManager: HealthCheckable {
-    enum Status: Equatable {
+    enum Status: Codable, Equatable, Sendable {
         case off
         case active
         case needsAccessibility

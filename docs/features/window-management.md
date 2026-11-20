@@ -398,7 +398,7 @@ and every shortcut stays editable afterwards.
   flat-selection invariant, so the two must move together.
 - **`HotKeyAction.windowCommand(id:)`**: persisted under
   `hotkey.windowCommand.<raw-id>`, matching the shared `HotKeyAction.defaultsKey` convention. Unlike
-  custom commands there is no bound-ID index to maintain: the catalog is fixed, so `HotKeyManager.start`
+  custom commands there is no bound-ID index to maintain: the catalog is fixed, so `HotKeyManager.load`
   and `conflictOwner` iterate `WindowCommand.ID.allCases` and `register` no-ops on an unbound command.
 - **`WindowCommandCoordinator.runWindowCommand(id:)`** is the one funnel for both palette activation and the global
   hotkey, so the feature switch cannot be bypassed by either. A Space command branches out of it first

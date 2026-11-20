@@ -64,8 +64,9 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 Never break these without an explicit task to do so. Anything feature-specific lives in that
 feature's doc, under its own `## Invariants`.
 
-- **`AppCore` is the sole owner.** New long-lived state goes on `AppCore`, wired in `start()`, never a
-  competing singleton. Views reach a feature's **coordinator** through `@Environment`, not `AppCore`.
+- **`AppCore` is the sole owner.** New long-lived state goes on `AppCore`, wired in `load()` when
+  Settings' own process needs it too and in `start()` otherwise, never a competing singleton. Views
+  reach a feature's **coordinator** through `@Environment`, not `AppCore`.
 - **A file under `Features/*/Model/` may not import AppKit or SwiftUI**, and takes every environment
   fact (clock, filesystem, home directory, rates) as an injected parameter. The harnesses compile the
   shipped sources, so this is enforced by compilation rather than convention.

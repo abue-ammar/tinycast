@@ -2,11 +2,14 @@ import SwiftUI
 
 struct CloudSyncSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     /// The switch's requested position while its confirmation is up.
     @State private var requestedEnabled: Bool?
     @State private var confirmingDelete = false
 
     private var sync: CloudSyncCoordinator { core.cloudSyncCoordinator }
+    /// The session runs in the main app; this process only keeps the switches.
+    private var cloud: MainAppStatus.CloudSync { mainApp.status.cloudSync }
 
     private var switchBinding: Binding<Bool> {
         Binding(get: { sync.isEnabled }, set: { requestedEnabled = $0 })
@@ -19,8 +22,10 @@ struct CloudSyncSettingsView: View {
                     SettingsRowTitle(.iCloudSyncSwitch, "Sync with iCloud")
                     Text("Keep settings and content the same on every Mac signed in to your iCloud account.")
                 }
-                .disabled(sync.status == .unavailable(.unsignedBuild))
-                CloudSyncStatusLine(status: sync.status, stopReason: sync.stopReason, retry: sync.refresh)
+                .disabled(cloud.status == .unavailable(.unsignedBuild))
+                CloudSyncStatusLine(
+                    status: cloud.status, stopReason: cloud.stopReason,
+                    retry: { mainApp.send(.refreshICloudSync) })
             }
             .settingsAnchor(.iCloudSyncSwitch)
 
@@ -80,7 +85,7 @@ struct CloudSyncSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.iCloudSync)
-        .onAppear { sync.refresh() }
+        .onAppear { mainApp.send(.refreshICloudSync) }
         .confirmationDialog(
             requestedEnabled == true ? "Turn on iCloud Sync?" : "Turn off iCloud Sync?",
             isPresented: Binding(
@@ -88,9 +93,9 @@ struct CloudSyncSettingsView: View {
             titleVisibility: .visible
         ) {
             if requestedEnabled == true {
-                Button("Turn On") { sync.setEnabled(true) }
+                Button("Turn On") { mainApp.send(.setICloudSyncEnabled(true)) }
             } else {
-                Button("Turn Off", role: .destructive) { sync.setEnabled(false) }
+                Button("Turn Off", role: .destructive) { mainApp.send(.setICloudSyncEnabled(false)) }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -101,7 +106,7 @@ struct CloudSyncSettingsView: View {
         }
         .confirmationDialog("Delete iCloud data?", isPresented: $confirmingDelete, titleVisibility: .visible)
         {
-            Button("Delete", role: .destructive) { Task { await sync.deleteCloudData() } }
+            Button("Delete", role: .destructive) { mainApp.send(.deleteICloudData) }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(

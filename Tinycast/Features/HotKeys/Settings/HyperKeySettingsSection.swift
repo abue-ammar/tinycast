@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct HyperKeySettingsSection: View {
-    @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var settings
-    @State private var diagnostics: HyperKeyDiagnostics?
-    @State private var takeover: HyperKeyDiagnostics.Takeover?
+    @State private var showsDiagnostics = false
 
-    private var manager: HyperKeyManager { core.hyperKey }
+    /// The main app runs the key, so it alone can say how it is doing.
+    private var hyperKey: MainAppStatus.HyperKey { mainApp.status.hyperKey }
 
     private var hyperGlyphs: String { settings.hyperKeyIncludesShift ? "⌃⌥⇧⌘" : "⌃⌥⌘" }
 
@@ -45,10 +45,11 @@ struct HyperKeySettingsSection: View {
 
             if settings.hyperKey != .none {
                 HyperKeyStatusRow(
-                    status: manager.status, takeover: takeover, isShowingDiagnostics: diagnostics != nil
+                    status: hyperKey.status, takeover: hyperKey.takeover,
+                    isShowingDiagnostics: showsDiagnostics
                 ) {
-                    diagnostics = diagnostics == nil ? manager.diagnostics() : nil
-                    takeover = manager.takeover()
+                    showsDiagnostics.toggle()
+                    mainApp.send(.inspectHyperKey(diagnostics: showsDiagnostics))
                 }
             }
 
@@ -85,24 +86,14 @@ struct HyperKeySettingsSection: View {
         } header: {
             SettingsSectionHeader(.generalHyperKey)
         }
-        .onAppear { takeover = manager.takeover() }
-        .onChange(of: manager.status) {
-            takeover = manager.takeover()
-            if diagnostics != nil { diagnostics = manager.diagnostics() }
-        }
+        .onAppear { mainApp.send(.inspectHyperKey(diagnostics: showsDiagnostics)) }
+        .onChange(of: hyperKey.status) { mainApp.send(.inspectHyperKey(diagnostics: showsDiagnostics)) }
 
-        if let diagnostics, settings.hyperKey != .none {
+        if showsDiagnostics, let diagnostics = hyperKey.diagnostics, settings.hyperKey != .none {
             HyperKeyDiagnosticsSection(
                 diagnostics: diagnostics,
-                refresh: {
-                    self.diagnostics = manager.diagnostics()
-                    takeover = self.diagnostics?.takeover
-                },
-                restart: {
-                    manager.restart()
-                    self.diagnostics = manager.diagnostics()
-                    takeover = self.diagnostics?.takeover
-                })
+                refresh: { mainApp.send(.inspectHyperKey(diagnostics: true)) },
+                restart: { mainApp.send(.restartHyperKey) })
         }
     }
 

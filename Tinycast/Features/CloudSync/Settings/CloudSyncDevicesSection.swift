@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct CloudSyncDevicesSection: View {
-    @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     @State private var name = ""
     @State private var removing: SyncDevice?
 
-    private var sync: CloudSyncCoordinator { core.cloudSyncCoordinator }
+    private var cloud: MainAppStatus.CloudSync { mainApp.status.cloudSync }
 
     var body: some View {
         Section {
@@ -20,11 +20,11 @@ struct CloudSyncDevicesSection: View {
                 TextField("Name", text: $name, prompt: Text("Name"))
                     .labelsHidden()
                     .textFieldStyle(.plain)
-                    .onSubmit { sync.renameThisMac(name) }
+                    .onSubmit { mainApp.send(.renameThisMac(name)) }
                     .accessibilityLabel("This Mac's name")
                 Text("Tinycast \(DeviceSyncSource.appVersion)")
             }
-            ForEach(sync.otherDevices) { device in
+            ForEach(cloud.otherDevices) { device in
                 LabeledContent {
                     Button("Remove…") { removing = device }
                 } label: {
@@ -37,15 +37,15 @@ struct CloudSyncDevicesSection: View {
         } header: {
             SettingsSectionHeader(.iCloudSyncMacs)
         }
-        .onAppear { name = sync.devices.name }
-        .onChange(of: sync.devices.name) { _, updated in name = updated }
+        .onAppear { name = cloud.thisMac }
+        .onChange(of: cloud.thisMac) { _, updated in name = updated }
         .confirmationDialog(
             "Remove \(removing?.name ?? "")?",
             isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }),
             titleVisibility: .visible
         ) {
             Button("Remove", role: .destructive) {
-                if let removing { sync.removeDevice(removing.id) }
+                if let removing { mainApp.send(.removeSyncDevice(removing.id)) }
             }
             Button("Cancel", role: .cancel) {}
         } message: {

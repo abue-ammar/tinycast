@@ -9,6 +9,7 @@ struct MCPServerEditorTarget: Identifiable {
 /// Adds or edits one server, and can prove it connects before the panel is dismissed.
 struct MCPServerEditor: View {
     @Environment(MCPCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     let target: MCPServerEditorTarget
     let onSave: (MCPServer, MCPSecretStore.Secrets) -> String?
     let onCancel: () -> Void
@@ -289,6 +290,7 @@ struct MCPServerEditor: View {
             do {
                 try await coordinator.signIn(draft.server, credentials: credentials)
                 storedOAuth = MCPSecretStore().secrets(for: target.server.id).oauth
+                mainApp.send(.reconnectMCPServer(draft.server.id))
             } catch is CancellationError {
                 return
             } catch {
@@ -300,6 +302,7 @@ struct MCPServerEditor: View {
     private func signOut() {
         do {
             try coordinator.signOut(target.server.id)
+            mainApp.send(.disconnectMCPServer(target.server.id))
             storedOAuth?.token = nil
             probe = .idle
             error = nil

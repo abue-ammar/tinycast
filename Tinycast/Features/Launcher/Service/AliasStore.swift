@@ -4,8 +4,8 @@ import Foundation
 @MainActor
 @Observable
 final class AliasStore {
+    private static let defaultsKey = "launcherAliases"
     private let defaults: UserDefaults
-    private let defaultsKey = "launcherAliases"
 
     private(set) var aliases: [String: String]
     /// AppIndex includes this in its result key, invalidating a ranking when an alias changes.
@@ -13,7 +13,19 @@ final class AliasStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        aliases = defaults.dictionary(forKey: defaultsKey) as? [String: String] ?? [:]
+        aliases = Self.stored(in: defaults)
+    }
+
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let stored = Self.stored(in: defaults)
+        guard stored != aliases else { return }
+        aliases = stored
+        revision &+= 1
+    }
+
+    private static func stored(in defaults: UserDefaults) -> [String: String] {
+        defaults.dictionary(forKey: defaultsKey) as? [String: String] ?? [:]
     }
 
     func alias(for entryKey: String) -> String? { aliases[entryKey] }
@@ -24,7 +36,7 @@ final class AliasStore {
         guard aliases[entryKey] != value else { return }
         aliases[entryKey] = value
         revision &+= 1
-        defaults.set(aliases, forKey: defaultsKey)
+        defaults.set(aliases, forKey: Self.defaultsKey)
     }
 
     func removeKeys(_ keys: Set<String>) {
@@ -32,13 +44,13 @@ final class AliasStore {
         guard remaining.count != aliases.count else { return }
         aliases = remaining
         revision &+= 1
-        defaults.set(aliases, forKey: defaultsKey)
+        defaults.set(aliases, forKey: Self.defaultsKey)
     }
 
     func replace(_ new: [String: String]) {
         // An import obeys the same rule as typing: blank means none, or it lands unclearable.
         aliases = new.filter { !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         revision &+= 1
-        defaults.set(aliases, forKey: defaultsKey)
+        defaults.set(aliases, forKey: Self.defaultsKey)
     }
 }

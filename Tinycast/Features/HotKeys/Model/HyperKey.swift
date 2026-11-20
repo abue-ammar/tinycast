@@ -2,7 +2,7 @@ import Carbon.HIToolbox
 import CoreGraphics
 import Foundation
 
-enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
+enum HyperKeyPhysicalKey: String, CaseIterable, Codable, Identifiable, Sendable {
     case none
     case capsLock
     case leftControl, leftShift, leftOption, leftCommand
@@ -93,7 +93,7 @@ enum HyperKeyPhysicalKey: String, CaseIterable, Identifiable, Sendable {
     }
 }
 
-struct HyperKeyRoute: Equatable, Sendable {
+struct HyperKeyRoute: Codable, Equatable, Sendable {
     let key: HyperKeyPhysicalKey
     let tapKeyCode: Int
     /// Whose device bit tells press from release; nil for F18, which arrives as keyDown/keyUp.

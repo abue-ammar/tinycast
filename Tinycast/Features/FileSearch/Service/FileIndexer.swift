@@ -5,7 +5,7 @@ import Foundation
 @MainActor
 @Observable
 final class FileIndexer {
-    enum Status: Equatable {
+    enum Status: Codable, Equatable, Sendable {
         case off
         case needsAccess
         case building(items: Int)

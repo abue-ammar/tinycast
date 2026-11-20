@@ -19,6 +19,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     private let autosaveName: String?
     private let activation: ActivationPolicy?
     private let closesOnEscape: Bool
+    private let onClose: (() -> Void)?
     private var window: NSWindow?
     /// Rebuilt with the window, so a chrome's state never outlives the window it decorated.
     private var chrome: WindowChrome?
@@ -26,7 +27,8 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     /// The opening size is also the resize floor unless a smaller `minimumSize` is named.
     init(
         title: String, contentSize: CGSize, minimumSize: CGSize? = nil, resizable: Bool = false,
-        autosaveName: String? = nil, activation: ActivationPolicy?, closesOnEscape: Bool = false
+        autosaveName: String? = nil, activation: ActivationPolicy?, closesOnEscape: Bool = false,
+        onClose: (() -> Void)? = nil
     ) {
         self.title = title
         self.contentSize = contentSize
@@ -35,6 +37,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         self.autosaveName = autosaveName
         self.activation = activation
         self.closesOnEscape = closesOnEscape
+        self.onClose = onClose
     }
 
     /// Returns `true` when a window was built, `false` when an already-open one was re-raised.
@@ -100,6 +103,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         self.window = nil
         self.chrome = nil
         activation?.windowDidClose(window)
+        onClose?()
     }
 
     // MARK: - Private
@@ -142,7 +146,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
 
     private func raise(_ window: NSWindow) {
         if window.isMiniaturized { window.deminiaturize(nil) }
-        NSApp.activate(ignoringOtherApps: true)
+        NSApp.activate()
         window.makeKeyAndOrderFront(nil)
         // `NSApp.activate` is async, so re-assert next turn — never onto a window closed since.
         DispatchQueue.main.async { [weak self, weak window] in

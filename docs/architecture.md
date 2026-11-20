@@ -114,7 +114,13 @@ fine too; deciding something with one is what the rule forbids. `showNotice`, `c
 `reportFailure`, `showMessage` and `pickVolume` are forwarders on `AppCore` itself, so
 `DialogController` and `MessageHUDController` stay single-owned.
 
-New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a competing singleton: this is a singleton, not a container.
+New long-lived state belongs on `AppCore`, wired in `load()` when Settings' own process needs it too,
+otherwise in `start()`. Do not create a competing singleton: this is a singleton, not a container.
+
+`start(launchedByUser:)` is the main app's boot: `load()` (preferences applied, stores read, hotkey bindings
+loaded, nothing registered, tapped or polled), then everything that runs an engine. `startSettings()` is
+the Settings process's: `load()` plus its line to the main app. Neither role checks the other's at run
+time; the split is the boundary.
 
 Clipboard text recognition runs outside the process. `AppCore` owns the indexer;
 the stateless `ClipboardTextWorker` runs one bundled `ClipboardTextHelper` per item, from
@@ -144,11 +150,13 @@ driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem
   top edge drifts on the compact↔expanded swap. The panel auto-dismisses on `windowDidResignKey`,
   unless a modal panel holds key.
   See [features/palette.md](features/palette.md).
-- **Settings and Onboarding**: titled `NSWindow`s, one `Windows/AppWindowController.swift` each, owned
-  by `SettingsCoordinator` and `OnboardingCoordinator`. SwiftUI `Settings` and `Window` scenes are
-  unreliable for accessory apps, so this is deliberate. Their lifecycles are independent of the
-  palette's in both directions. Onboarding stays accessory rather than registering Dock ownership,
-  so completing it can open the palette without an activation-policy change stealing focus.
+- **Settings**: runs in its own process, so its memory leaves when the window closes. See
+  [The Settings process](#the-settings-process).
+- **Onboarding**: a titled `NSWindow` in `Windows/AppWindowController.swift`, owned by
+  `OnboardingCoordinator`. SwiftUI `Window` scenes are unreliable for accessory apps, so this is
+  deliberate. Its lifecycle is independent of the palette's in both directions, and it stays accessory
+  rather than registering Dock ownership, so completing it can open the palette without an
+  activation-policy change stealing focus.
 - **Notes**: a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
   Its height fits the note up to 860pt and AppKit autosaves the frame; its TextKit 2 editor renders
   Markdown over the literal source, switches among local Markdown files and stays visible on focus
@@ -158,9 +166,9 @@ driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem
   `NSSplitViewController` with a collapsible sidebar of saved chats beside the open conversation, as
   Settings is built. The conversation lives on `AppCore.aiChats`, not the window, so closing it cancels
   nothing. Quick AI is the same feature's palette screen. See [features/ai.md](features/ai.md).
-- **The main menu**: shaped by `TinycastApp`'s `.commands`, which rebinds ⌘Q to Close Window: the AI
-  Chat window when it is key, otherwise Settings. It is only ever on screen while a titled window is
-  open, so it is those windows' menu bar. It must stay declarative.
+- **The main menu**: shaped by `TinycastApp`'s `.commands`, which rebinds ⌘Q to Close Window for the AI
+  Chat window. It is only ever on screen while a titled window is open, so it is those windows' menu
+  bar. It must stay declarative. Settings' process declares its own, in `SettingsApp`.
 - **Dialogs**: borderless `DialogPanel`s driven by `DialogController`, the app's only presenter for
   confirmations, failure reports and value prompts outside Settings, whose panes ask with SwiftUI's
   sheet-style `confirmationDialog` or `alert`. Presentation is `async`, so nothing blocks the main
@@ -184,6 +192,41 @@ assigns `NSApp.appearance` from `AppSettings.appearance`, and `.system` assigns 
 macOS by itself. Nothing else in the app sets an appearance. Animations take the same shape:
 `AppCore.applyMotion()` projects `AppSettings.animationsEnabled` into `Motion.isEnabled` and re-points
 every live `AnimatedPanel` (see [ui.md](ui.md#non-negotiable-invariants)).
+
+## The Settings process
+
+Opening Settings starts a second instance of this same executable, `--role=settings`
+(`App/ProcessRole.swift`), and closing the window ends it. Activity Monitor shows a second Tinycast row
+for as long as the window is open. On macOS 27, malloc keeps freed small blocks dirty, so a view tree
+torn down in the main app would never return its pages; a process that exits returns all of them. The
+same binary means one identity: preferences, Keychain items, privacy grants and `AppPaths` are shared,
+and nothing is copied.
+
+- **Lifecycle.** `SettingsCoordinator` keeps its API. In the main app it fronts a
+  `SettingsProcessController`, which spawns the child with `ProcessLink.spawn` (stdin and stdout pipes,
+  `Platform/ProcessLink.swift`, framed by `Platform/PipeFraming.swift`) and serves it. In the child it
+  fronts the `SettingsWindowController`. The child's `SettingsApp` carries the menus, sets `.regular`
+  before any window exists, and ends on the window's close or on the main app's end of stream.
+- **Focus.** macOS lets only the app the user just addressed bring another forward, so the child asks
+  (`.activate`) once its window is up and the main app calls `activate(from:)`.
+- **State.** Both processes read and write the same storage; `App/SharedStateMirror.swift` says what to
+  re-read. Defaults travel as values: a diff of `persistentDomain(forName:)`, written into the other
+  side's defaults before its stores `reload()`, since cfprefsd delivers another process's write late.
+  Quicklinks, chat presets, custom quick actions and the login item are domains, re-read whole. A
+  backup or Raycast import hands the main app what it holds in memory (ranking, frequent emoji, calculator
+  history, pins, notes, clipboard) to read from disk again, or its old copy would be written back.
+  Every `reload()` assigns only what differs, so side effects still run from the main app's `track` sinks,
+  and `AppSettings.reload()` switches over every `AppSettingsKey`, so a new key fails to build until it
+  is adopted.
+- **Work only the main app can do** goes as a `SettingsAction`: the palette editors, rooms, running a
+  layout, iCloud Sync, the file index, dictation models, MCP connections, the settings file, updates and
+  Support. What only the main app knows comes back as `MainAppStatus`, rebuilt under observation and sent
+  when it changes. Panes reach both through `MainAppLink` in the environment.
+- **Shortcut recording** pauses the main app's engines through `HotKeyManager.isRecordingInSettings`; the
+  child's own `HotKeyManager` is loaded but never activated, so it registers nothing.
+- **Extensions** never run in Settings. `ExtensionLibrary` reads the catalog from disk and mirrors the
+  rest; every change is an `ExtensionCall` the main app answers. A later extensions process sits behind
+  that same seam.
 
 ## Observation
 
@@ -230,12 +273,14 @@ everything that feature owns.
 
 ```
 Tinycast/
-  App/              @main, AppDelegate, AppCore: the composition root
+  App/              @main, AppDelegate, AppCore (the composition root), ProcessRole, SettingsApp,
+                    SharedStateMirror
   DesignSystem/     Theme (the token source), KeyCapChip, Tooltip, SymbolImage,
                     GlassEffectView, PopoverMenu, SettingsComponents, Scrolling/, Interaction/
   Platform/         system shims: Permissions, LaunchAtLogin, InputSourceSwitcher, ScreenTarget,
                     AppDisplayName,
                     NotificationToken, AppPaths, Signposts, HealthTicker, Memo, ActivationPolicy,
+                    PipeFraming, ProcessLink,
                     Images/, Compression/
   Resources/        RaycastRuntime.generated.js, the embedded extension runtime
   Palette/          the palette shell: PalettePanel, PaletteWindowController, RootPaletteView,
@@ -253,7 +298,8 @@ Tinycast/
         Service/    effects: stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator
         Settings/   the feature's own panes
-    Settings/       the Settings shell only: SettingsCoordinator, the root/sidebar/detail views, the chrome,
+    Settings/       the Settings shell only: SettingsCoordinator, its window and process controllers,
+                    the main app link, the root/sidebar/detail views, the chrome,
                     navigation types, SettingsTab, AppSettings, AppSettingsKey, the settings file
                     (Model/, Service/, SettingsFileSchema), and Panes/ for the two panes no feature
                     owns

@@ -205,19 +205,23 @@ struct DictationWorkerTests {
     }
 
     private static func fixture() throws {
-        while let request = try DictationWire.read(DictationWire.Request.self, from: .standardInput) {
-            try DictationWire.write(
-                DictationWire.Response(id: request.id, status: .ready), to: .standardOutput)
+        while let request = try PipeFraming.read(
+            DictationWire.Request.self, from: .standardInput, maximum: DictationWire.maximumMessageBytes)
+        {
+            try PipeFraming.write(
+                DictationWire.Response(id: request.id, status: .ready), to: .standardOutput,
+                maximum: DictationWire.maximumMessageBytes)
             if CommandLine.arguments.contains("crash") { exit(1) }
-            _ = try DictationWire.readExactly(request.sampleCount * 4, from: .standardInput)
+            _ = try PipeFraming.readExactly(request.sampleCount * 4, from: .standardInput)
             if CommandLine.arguments.contains("wait") {
-                _ = try DictationWire.readExactly(1, from: .standardInput)
+                _ = try PipeFraming.readExactly(1, from: .standardInput)
                 return
             }
-            try DictationWire.write(
+            try PipeFraming.write(
                 DictationWire.Response(
                     id: request.id, status: .result,
-                    text: request.model.rawValue), to: .standardOutput)
+                    text: request.model.rawValue), to: .standardOutput,
+                maximum: DictationWire.maximumMessageBytes)
         }
     }
 }

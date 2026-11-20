@@ -2,7 +2,7 @@ import Foundation
 
 /// What counts as fighting the Hyper Key. Pure, so the app and `HyperKeyTests` read one rule.
 enum HyperKeyConflictPolicy {
-    enum Severity: String, Sendable {
+    enum Severity: String, Codable, Sendable {
         case blocking
         /// The app may remap the same keys; reported, never acted on.
         case warning

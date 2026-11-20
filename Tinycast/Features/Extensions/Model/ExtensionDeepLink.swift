@@ -6,7 +6,7 @@ struct ExtensionDeepLink: Sendable, Equatable {
         case storeInstall(StoreInstall)
     }
 
-    struct StoreInstall: Sendable, Equatable, Identifiable {
+    struct StoreInstall: Codable, Sendable, Equatable, Identifiable {
         let handle: String
         let name: String
 

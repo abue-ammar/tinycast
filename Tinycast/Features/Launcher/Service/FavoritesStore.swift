@@ -3,8 +3,8 @@ import Foundation
 @MainActor
 @Observable
 final class FavoritesStore {
+    private static let defaultsKey = "favoriteApps"
     private let defaults: UserDefaults
-    private let key = "favoriteApps"
 
     private(set) var keys: [String]
     /// AppIndex includes this in its result key, invalidating a list when the pinning changes.
@@ -31,7 +31,15 @@ final class FavoritesStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        keys = defaults.stringArray(forKey: key) ?? []
+        keys = defaults.stringArray(forKey: Self.defaultsKey) ?? []
+    }
+
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let stored = defaults.stringArray(forKey: Self.defaultsKey) ?? []
+        guard stored != keys else { return }
+        keys = stored
+        revision &+= 1
     }
 
     func key(for app: AppEntry) -> String { app.preferenceKey }
@@ -92,7 +100,7 @@ final class FavoritesStore {
 
     private func commit() {
         revision &+= 1
-        defaults.set(keys, forKey: key)
+        defaults.set(keys, forKey: Self.defaultsKey)
     }
 
     /// Split `apps` into favorites (in stored order) and the rest (order preserved).

@@ -293,4 +293,12 @@ final class CalendarStore {
         defaults.set(Array(hiddenCalendarIDs), forKey: hiddenKey)
         reload()
     }
+
+    /// Adopts the switches another process stored, without writing them back.
+    func reloadHiddenCalendars() {
+        let stored = Set(defaults.stringArray(forKey: hiddenKey) ?? [])
+        guard stored != hiddenCalendarIDs else { return }
+        hiddenCalendarIDs = stored
+        if eventStore != nil { reload() }
+    }
 }

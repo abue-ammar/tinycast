@@ -388,6 +388,8 @@ extension View {
             )
             .environment(navigation)
             .environment(core)
+            .environment(core.mainApp)
+            .environment(core.mainApp?.extensions)
             .environment(core.settings)
             .environment(core.dictationCoordinator)
             .environment(core.appIndex)

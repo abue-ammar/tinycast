@@ -3,6 +3,7 @@ import SwiftUI
 
 struct BackupSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     private var runningApps: RunningAppsMonitor { core.runningApps }
     @State private var raycastFile: URL?
     @State private var passphrase = ""
@@ -33,7 +34,13 @@ struct BackupSettingsView: View {
     private var settingsFileSync: Binding<Bool> {
         Binding(
             get: { core.settings.settingsFileEnabled },
-            set: { enabled in Task { await BackupActions.setSettingsFileEnabled(enabled, core: core) } })
+            set: { enabled in
+                Task {
+                    guard let change = await BackupActions.settingsFileChange(enabling: enabled, core: core)
+                    else { return }
+                    mainApp.send(.setSettingsFile(change))
+                }
+            })
     }
 
     private var raycastFileSubtitle: String {
@@ -242,11 +249,18 @@ struct BackupSettingsView: View {
             defer { importingBackup = false }
             let summary = await BackupActions.applyBackup(
                 categories, from: staging, to: core)
+            await handImportToAgent()
             // Staged files are adopted by the stores during apply, so the tree goes either way.
             discardStagedBackup()
             backupFile = nil
             if let summary { backupStatus = .success(BackupActions.summaryText(summary)) }
         }
+    }
+
+    /// The main app holds these in memory and would write its old copy over the import.
+    private func handImportToAgent() async {
+        await core.launcherRanking.flush()
+        mainApp.send(.reloadImportedData)
     }
 
     /// The extracted tree can run to gigabytes, so leaving the pane must not strand it.
@@ -274,6 +288,7 @@ struct BackupSettingsView: View {
             do {
                 let outcome = try await BackupActions.importRaycast(
                     core: core, file: file, passphrase: passphrase, options: selection)
+                await handImportToAgent()
                 status = .success(BackupActions.raycastText(outcome))
                 passphrase = ""
             } catch {

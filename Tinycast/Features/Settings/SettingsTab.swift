@@ -151,3 +151,20 @@ enum SettingsSection: CaseIterable, Identifiable {
         }
     }
 }
+
+/// By slug, the spelling saved links use, so a renamed case still decodes.
+extension SettingsTab: Codable {
+    init(from decoder: any Decoder) throws {
+        let slug = try decoder.singleValueContainer().decode(String.self)
+        guard let tab = Self(slug: slug) else {
+            throw DecodingError.dataCorrupted(
+                .init(codingPath: decoder.codingPath, debugDescription: "Unknown tab \(slug)"))
+        }
+        self = tab
+    }
+
+    func encode(to encoder: any Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(slug)
+    }
+}

@@ -703,6 +703,139 @@ final class AppSettings {
         didSet { defaults.set(allowedDeepLinks, forKey: Key.allowedDeepLinks.rawValue) }
     }
 
+    /// Adopts what another process stored, through each property, so its observers run here too.
+    func reload() {
+        let stored = AppSettings()
+        for key in Key.allCases { adopt(key, from: stored) }
+    }
+
+    /// Not in defaults: the login item is the system's, so it is read back rather than told.
+    func reloadLaunchAtLogin() {
+        let enabled = LaunchAtLogin.isEnabled
+        if launchAtLogin != enabled { launchAtLogin = enabled }
+    }
+
+    /// Exhaustive, so a new key can't build unadopted; key order moves size before position.
+    private func adopt(_ key: Key, from stored: AppSettings) {
+        switch key {
+        case .clipboardEnabled: adopt(\.clipboardEnabled, from: stored)
+        case .clipboardTextSearchEnabled: adopt(\.clipboardTextSearchEnabled, from: stored)
+        case .clipboardRetention: adopt(\.clipboardRetention, from: stored)
+        case .clipboardDefaultAction: adopt(\.clipboardDefaultAction, from: stored)
+        case .clipboardDisabledApps: adopt(\.clipboardDisabledApps, from: stored)
+        case .hyperKey: adopt(\.hyperKey, from: stored)
+        case .hyperKeyIncludesShift: adopt(\.hyperKeyIncludesShift, from: stored)
+        case .hyperKeyQuickPress: adopt(\.hyperKeyQuickPress, from: stored)
+        case .hyperKeySecureInputCompatibility: adopt(\.hyperKeySecureInputCompatibility, from: stored)
+        case .emojiSkinTone: adopt(\.emojiSkinTone, from: stored)
+        case .emojiGridColumns: adopt(\.emojiGridColumns, from: stored)
+        case .showInMenuBar: adopt(\.showInMenuBar, from: stored)
+        case .automaticallyCheckForUpdates: adopt(\.automaticallyCheckForUpdates, from: stored)
+        case .popToRootTimeout: adopt(\.popToRootTimeout, from: stored)
+        case .escapeKeyBehavior: adopt(\.escapeKeyBehavior, from: stored)
+        case .appearance: adopt(\.appearance, from: stored)
+        case .language: adopt(\.language, from: stored)
+        case .calcNumberStyle: adopt(\.calcNumberStyle, from: stored)
+        case .interfaceSize: adopt(\.interfaceSize, from: stored)
+        case .compactMode: adopt(\.compactMode, from: stored)
+        case .compactBarCommands: adopt(\.compactBarCommands, from: stored)
+        case .searchScopes: adopt(\.searchScopes, from: stored)
+        case .launcherShowsSuggestions: adopt(\.launcherShowsSuggestions, from: stored)
+        case .rootSearchSensitivity: adopt(\.rootSearchSensitivity, from: stored)
+        case .openOnCursorScreen: adopt(\.openOnCursorScreen, from: stored)
+        case .autoSwitchInputSource: adopt(\.autoSwitchInputSourceID, from: stored)
+        case .paletteDraggable: adopt(\.paletteDraggable, from: stored)
+        case .animationsEnabled: adopt(\.animationsEnabled, from: stored)
+        case .palettePosition: adopt(\.palettePositions, from: stored)
+        case .paletteExpandedCenterDisplays: adopt(\.paletteExpandedCenterDisplays, from: stored)
+        case .fileSearchEnabled: adopt(\.fileSearchEnabled, from: stored)
+        case .fileSearchScopes: adopt(\.fileSearchScopes, from: stored)
+        case .fileSearchIgnorePatterns: adopt(\.fileSearchIgnorePatterns, from: stored)
+        case .fileSearchRemovedDefaultPatterns: adopt(\.fileSearchRemovedDefaultPatterns, from: stored)
+        case .fileSearchShowInLauncher: adopt(\.fileSearchShowInLauncher, from: stored)
+        case .fileSearchIncludesHiddenFiles: adopt(\.fileSearchIncludesHiddenFiles, from: stored)
+        case .notesEnabled: adopt(\.notesEnabled, from: stored)
+        case .notesRendersMarkdown: adopt(\.notesRendersMarkdown, from: stored)
+        case .notesShowsFormattingBar: adopt(\.notesShowsFormattingBar, from: stored)
+        case .notesShowsInMenuBar: adopt(\.notesShowsInMenuBar, from: stored)
+        case .notesFolder: adopt(\.notesFolder, from: stored)
+        case .customCommandsEnabled: adopt(\.customCommandsEnabled, from: stored)
+        case .customCommandsShowInLauncher: adopt(\.customCommandsShowInLauncher, from: stored)
+        case .snippetsEnabled: adopt(\.snippetsEnabled, from: stored)
+        case .snippetsShowInLauncher: adopt(\.snippetsShowInLauncher, from: stored)
+        case .snippetsFolder: adopt(\.snippetsFolder, from: stored)
+        case .snippetDefaultAction: adopt(\.snippetDefaultAction, from: stored)
+        case .navigationEnabled: adopt(\.navigationEnabled, from: stored)
+        case .menuSearchDisabledApps: adopt(\.menuSearchDisabledApps, from: stored)
+        case .menuSearchShowsAppleMenu: adopt(\.menuSearchShowsAppleMenu, from: stored)
+        case .windowManagementEnabled: adopt(\.windowManagementEnabled, from: stored)
+        case .windowManagementShowInLauncher: adopt(\.windowManagementShowInLauncher, from: stored)
+        case .windowGap: adopt(\.windowGap, from: stored)
+        case .windowCycle: adopt(\.windowCycle, from: stored)
+        case .windowWrapsDisplays: adopt(\.windowWrapsDisplays, from: stored)
+        case .windowKeepsProportions: adopt(\.windowKeepsProportions, from: stored)
+        case .windowLayoutsShowInLauncher: adopt(\.windowLayoutsShowInLauncher, from: stored)
+        case .windowRoomsShowInLauncher: adopt(\.windowRoomsShowInLauncher, from: stored)
+        case .quicklinksEnabled: adopt(\.quicklinksEnabled, from: stored)
+        case .quicklinksShowInLauncher: adopt(\.quicklinksShowInLauncher, from: stored)
+        case .quicklinkOpensNewWindow: adopt(\.quicklinkOpensNewWindow, from: stored)
+        case .quicklinkPassesSelectedText: adopt(\.quicklinkPassesSelectedText, from: stored)
+        case .quicklinkConfirmsBeforeDelete: adopt(\.quicklinkConfirmsBeforeDelete, from: stored)
+        case .appleShortcutsEnabled: adopt(\.appleShortcutsEnabled, from: stored)
+        case .extensionsEnabled: adopt(\.extensionsEnabled, from: stored)
+        case .extensionsShowInLauncher: adopt(\.extensionsShowInLauncher, from: stored)
+        case .extensionPackageManager: adopt(\.extensionPackageManager, from: stored)
+        case .extensionCustomSearchPaths: adopt(\.extensionCustomSearchPaths, from: stored)
+        case .calendarEnabled: adopt(\.calendarEnabled, from: stored)
+        case .calendarShowInLauncher: adopt(\.calendarShowInLauncher, from: stored)
+        case .calendarLauncherLimit: adopt(\.calendarLauncherLimit, from: stored)
+        case .calendarSpan: adopt(\.calendarSpan, from: stored)
+        case .joinWindowMinutes: adopt(\.joinWindowMinutes, from: stored)
+        case .autoJoinMeetings: adopt(\.autoJoinMeetings, from: stored)
+        case .autoJoinConfirms: adopt(\.autoJoinConfirms, from: stored)
+        case .autoJoinNamedProvidersOnly: adopt(\.autoJoinNamedProvidersOnly, from: stored)
+        case .cameraPreview: adopt(\.cameraPreview, from: stored)
+        case .meetingBrowser: adopt(\.meetingBrowserBundleID, from: stored)
+        case .menuBarEvents: adopt(\.menuBarEvents, from: stored)
+        case .calendarMenuBarDisplay: adopt(\.calendarMenuBarDisplay, from: stored)
+        case .menuBarLinkedEventsOnly: adopt(\.menuBarLinkedEventsOnly, from: stored)
+        case .calendarMenuBarHidesWhenEmpty: adopt(\.calendarMenuBarHidesWhenEmpty, from: stored)
+        case .hideCurrentEvent: adopt(\.hideCurrentEvent, from: stored)
+        case .aiEnabled: adopt(\.aiEnabled, from: stored)
+        case .mcpEnabled: adopt(\.mcpEnabled, from: stored)
+        case .quickActionsEnabled: adopt(\.quickActionsEnabled, from: stored)
+        case .dictationEnabled: adopt(\.dictationEnabled, from: stored)
+        case .dictationMode: adopt(\.dictationMode, from: stored)
+        case .dictationModel: adopt(\.dictationModel, from: stored)
+        case .dictationMicrophone: adopt(\.dictationMicrophone, from: stored)
+        case .dictationDestination: adopt(\.dictationDestination, from: stored)
+        case .dictationAdaptsCapitalization: adopt(\.dictationAdaptsCapitalization, from: stored)
+        case .dictationLiveInsertion: adopt(\.dictationLiveInsertion, from: stored)
+        case .dictationPlaysSounds: adopt(\.dictationPlaysSounds, from: stored)
+        case .dictationIdleRelease: adopt(\.dictationIdleRelease, from: stored)
+        case .dictationLanguage: adopt(\.dictationLanguage, from: stored)
+        case .supportReminders: adopt(\.supportRemindersEnabled, from: stored)
+        case .settingsFileEnabled: adopt(\.settingsFileEnabled, from: stored)
+        case .iCloudSyncEnabled: adopt(\.iCloudSyncEnabled, from: stored)
+        case .iCloudSyncDisabledCategories: adopt(\.iCloudSyncDisabledCategories, from: stored)
+        case .allowedDeepLinks: adopt(\.allowedDeepLinks, from: stored)
+        // Read by the AI, Quick Actions and MCP stores, which reload themselves.
+        case .aiInstalledProviders, .aiConnections, .aiDefaultModel, .aiWebSearch, .aiChoices,
+            .aiExpandsReasoning, .aiSystemPrompt, .aiSystemPromptEnabled, .aiRetention, .aiOpensTo,
+            .aiNewChatAfter, .aiToolRounds, .aiShownModels, .aiDisabledRoutes, .aiInstalledOverrides,
+            .mcpServers, .quickActionModel, .quickActionModelOverrides, .quickActionPreviews,
+            .quickActionInstructions, .quickActionLanguage:
+            break
+        }
+    }
+
+    private func adopt<Value: Equatable>(
+        _ property: ReferenceWritableKeyPath<AppSettings, Value>, from stored: AppSettings
+    ) {
+        let value = stored[keyPath: property]
+        if self[keyPath: property] != value { self[keyPath: property] = value }
+    }
+
     /// With no per-app list the bundle follows macOS's languages, so this runs before any lookup.
     static func pinLanguage() {
         UserDefaults.standard.set([storedLanguage.rawValue], forKey: Key.language.rawValue)

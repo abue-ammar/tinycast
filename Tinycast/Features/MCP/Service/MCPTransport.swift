@@ -37,7 +37,7 @@ enum MCPTransportError: LocalizedError, Equatable {
 }
 
 /// What a Settings row shows, and what decides whether a server's tools are on offer.
-enum MCPServerStatus: Equatable, Sendable {
+enum MCPServerStatus: Codable, Equatable, Sendable {
     case stopped
     case signInRequired
     case connecting

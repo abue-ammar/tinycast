@@ -37,7 +37,7 @@ struct InstalledExtension: Sendable, Hashable, Identifiable {
     }
 }
 
-struct ExtensionCommandRef: Sendable, Hashable {
+struct ExtensionCommandRef: Codable, Sendable, Hashable {
     let extensionName: String
     let commandName: String
 

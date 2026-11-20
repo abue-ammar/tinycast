@@ -129,13 +129,22 @@ final class MCPCoordinator {
 
     func signIn(_ server: MCPServer, credentials: MCPOAuth.Credentials) async throws {
         guard isActive else { throw MCPOAuth.Failure.signInRequired }
-        manager.disconnect(server.id)
         try await core.mcpOAuth.signIn(server: server, credentials: credentials)
     }
 
     func signOut(_ id: UUID) throws {
-        manager.disconnect(id)
         try core.mcpOAuth.signOut(id)
+    }
+
+    /// Restarts a server on what is stored now, after its record or credentials changed.
+    func reconnect(_ id: UUID) {
+        manager.disconnect(id)
+        applyEnabled()
+    }
+
+    /// A signed-out server stays stopped and leaves the Codex helper until it signs in again.
+    func disconnectSignedOut(_ id: UUID) {
+        manager.disconnect(id)
         dropWithdrawnServers(besides: id)
     }
 
@@ -143,12 +152,11 @@ final class MCPCoordinator {
 
     func status(of id: UUID) -> MCPServerStatus { manager.status(of: id) }
 
+    /// The record and its credentials only; the process running the servers then `reconnect`s.
     func save(_ server: MCPServer, secrets: MCPSecretStore.Secrets) throws {
         try MCPSecretStore().save(secrets, for: server.id)
         core.mcpOAuth.cancelSignIn(server.id)
-        manager.disconnect(server.id)
         store.save(server)
-        applyEnabled()
     }
 
     /// A synced server brings no credentials or trust: it keeps this Mac's, a twin's, or asks.
@@ -172,7 +180,6 @@ final class MCPCoordinator {
         core.mcpOAuth.cancelSignIn(id)
         try MCPSecretStore().remove(for: id)
         store.remove(id: id)
-        applyEnabled()
     }
 
     func discardUnsaved(_ id: UUID) {

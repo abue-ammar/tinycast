@@ -20,7 +20,9 @@ enum DictationHelper {
         var recognizer: (any DictationRecognizer)?
         var loaded: DictationModel?
         do {
-            while let request = try DictationWire.read(DictationWire.Request.self, from: input) {
+            while let request = try PipeFraming.read(
+                DictationWire.Request.self, from: input, maximum: DictationWire.maximumMessageBytes)
+            {
                 try DictationTensor.checkParent()
                 guard (1...DictationWire.maximumSamples).contains(request.sampleCount),
                     request.directory.isFileURL
@@ -38,15 +40,18 @@ enum DictationHelper {
                         }
                         loaded = request.model
                     } catch {
-                        try DictationWire.write(
-                            DictationWire.Response(id: request.id, status: .failed), to: output)
+                        try PipeFraming.write(
+                            DictationWire.Response(id: request.id, status: .failed), to: output,
+                            maximum: DictationWire.maximumMessageBytes)
                         continue
                     }
                 }
                 guard let recognizer else { throw DictationInferenceError.incompatibleModel }
-                try DictationWire.write(DictationWire.Response(id: request.id, status: .ready), to: output)
+                try PipeFraming.write(
+                    DictationWire.Response(id: request.id, status: .ready), to: output,
+                    maximum: DictationWire.maximumMessageBytes)
                 try autoreleasepool {
-                    let data = try DictationWire.readExactly(
+                    let data = try PipeFraming.readExactly(
                         request.sampleCount * MemoryLayout<Float>.size, from: input)
                     let samples = [Float](unsafeUninitializedCapacity: request.sampleCount) { buffer, count in
                         data.withUnsafeBytes { bytes in
@@ -59,11 +64,13 @@ enum DictationHelper {
                     }
                     do {
                         let text = try recognizer.transcribe(samples, language: request.language)
-                        try DictationWire.write(
-                            DictationWire.Response(id: request.id, status: .result, text: text), to: output)
+                        try PipeFraming.write(
+                            DictationWire.Response(id: request.id, status: .result, text: text), to: output,
+                            maximum: DictationWire.maximumMessageBytes)
                     } catch {
-                        try DictationWire.write(
-                            DictationWire.Response(id: request.id, status: .failed), to: output)
+                        try PipeFraming.write(
+                            DictationWire.Response(id: request.id, status: .failed), to: output,
+                            maximum: DictationWire.maximumMessageBytes)
                     }
                 }
             }

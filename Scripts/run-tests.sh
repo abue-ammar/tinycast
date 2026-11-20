@@ -391,14 +391,17 @@ run DictationVolumeTests   Tinycast/Features/Dictation/Model/DictationVolumeSnap
                            Tinycast/Platform/AppPaths.swift
 run index -O DictationPerformanceTests Tinycast/Platform/ProcessExit.swift \
                            Tinycast/Features/Dictation/Model/DictationModel.swift \
-                           Tinycast/Features/Dictation/Service/DictationWire.swift
+                           Tinycast/Features/Dictation/Service/DictationWire.swift \
+                           Tinycast/Platform/PipeFraming.swift
 run DictationInferenceTests Tinycast/Features/Dictation/Model/DictationAudioChunks.swift \
     Tinycast/Features/Dictation/Service/DictationSpectrum.swift \
     Tinycast/Features/Dictation/Helper/DictationTensor.swift Tinycast/Features/Dictation/Helper/DictationTokenizer.swift \
     Tinycast/Features/Dictation/Helper/DictationMel.swift
+run PipeFramingTests      Tinycast/Platform/PipeFraming.swift
 run DictationWorkerTests   Tinycast/Features/Dictation/Model/DictationModel.swift \
                            Tinycast/Features/Dictation/Model/DictationIdleRelease.swift \
                            Tinycast/Features/Dictation/Service/DictationWire.swift \
+                           Tinycast/Platform/PipeFraming.swift \
                            Tinycast/Features/Dictation/Service/DictationWorker.swift \
                            Tinycast/Features/Dictation/Service/DictationModelStore.swift \
                            Tinycast/Features/Dictation/Service/DictationModelDownloader.swift \

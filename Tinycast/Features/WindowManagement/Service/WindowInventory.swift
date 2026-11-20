@@ -61,12 +61,11 @@ enum WindowInventory {
         }
     }
 
-    /// Every app with a user-facing window, bar us. By pid, since About flips us to `.regular`.
+    /// Every app with a user-facing window, bar ours: by bundle, so Settings' own process too.
     static func candidates() -> [NSRunningApplication] {
-        let ownPID = NSRunningApplication.current.processIdentifier
+        let own = Bundle.main.bundleIdentifier
         return NSWorkspace.shared.runningApplications.filter {
-            $0.activationPolicy == .regular && !$0.isTerminated
-                && $0.processIdentifier != ownPID
+            $0.activationPolicy == .regular && !$0.isTerminated && $0.bundleIdentifier != own
         }
     }
 

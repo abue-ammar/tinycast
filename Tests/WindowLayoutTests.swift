@@ -103,6 +103,7 @@ struct WindowLayoutTests {
         storeValidation()
         storeSanitization()
         storePersistence()
+        storeReload()
         fuzzSweep()
         customSizeRecord()
         customSizeDimensions()
@@ -695,6 +696,31 @@ struct WindowLayoutTests {
         let reopened = WindowLayoutStore(defaults: defaults)
         expect(reopened.layouts.count == 1, "a reopened store finds its library")
         expect(reopened.layouts.first == stored, "every field survives the round trip")
+    }
+
+    /// Settings' own process writes the same defaults; the main app's copies adopt them on reload.
+    static func storeReload() {
+        let name = "tinycast-window-layout-reload-test-\(UUID().uuidString)"
+        guard let defaults = UserDefaults(suiteName: name) else {
+            return expect(false, "a scratch defaults suite opens")
+        }
+        defer { defaults.removePersistentDomain(forName: name) }
+
+        let writer = WindowLayoutStore(defaults: defaults)
+        let reader = WindowLayoutStore(defaults: defaults)
+        var changes = 0
+        reader.onChange = { _ in changes += 1 }
+        _ = try? writer.add(layout(entries: [entry()]))
+        reader.reload()
+        expect(reader.layouts == writer.layouts, "a layout reload adopts another writer's library")
+        reader.reload()
+        expect(changes == 1, "a layout reload fires once, and an equal one not at all")
+
+        let sizes = CustomWindowSizeStore(defaults: defaults)
+        let sizeReader = CustomWindowSizeStore(defaults: defaults)
+        _ = try? sizes.add(customSize())
+        sizeReader.reload()
+        expect(sizeReader.sizes == sizes.sizes, "a size reload adopts another writer's library")
     }
 
     // MARK: - Fuzz

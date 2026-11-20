@@ -72,17 +72,20 @@ struct DictationPerformanceTests {
                 let request = DictationWire.Request(
                     id: UUID(), model: model, directory: directory,
                     sampleCount: samples.count, language: nil)
-                try DictationWire.write(request, to: input.fileHandleForWriting)
+                try PipeFraming.write(
+                    request, to: input.fileHandleForWriting, maximum: DictationWire.maximumMessageBytes)
                 guard
-                    let ready = try DictationWire.read(
-                        DictationWire.Response.self, from: output.fileHandleForReading),
+                    let ready = try PipeFraming.read(
+                        DictationWire.Response.self, from: output.fileHandleForReading,
+                        maximum: DictationWire.maximumMessageBytes),
                     ready.id == request.id, ready.status == .ready
                 else { throw DictationWire.Failure.unavailable }
                 let loaded = ContinuousClock.now
                 try samples.withUnsafeBytes { try input.fileHandleForWriting.write(contentsOf: $0) }
                 guard
-                    let result = try DictationWire.read(
-                        DictationWire.Response.self, from: output.fileHandleForReading),
+                    let result = try PipeFraming.read(
+                        DictationWire.Response.self, from: output.fileHandleForReading,
+                        maximum: DictationWire.maximumMessageBytes),
                     result.id == request.id, result.status == .result
                 else { throw DictationWire.Failure.unavailable }
                 let finished = ContinuousClock.now

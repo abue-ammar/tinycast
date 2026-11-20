@@ -32,14 +32,18 @@ final class CalculatorHistoryStore {
 
     init() {
         fileURL = AppPaths.applicationSupport().appendingPathComponent("calculator-history.json")
+        entries = Self.stored(at: fileURL)
+    }
 
-        if let data = try? Data(contentsOf: fileURL),
-            let decoded = try? JSONDecoder().decode([CalcHistoryEntry].self, from: data)
-        {
-            entries = decoded
-        } else {
-            entries = []
-        }
+    /// Adopts a history another process wrote, as Settings' own does on a backup import.
+    func reload() {
+        let stored = Self.stored(at: fileURL)
+        if stored != entries { entries = stored }
+    }
+
+    private static func stored(at fileURL: URL) -> [CalcHistoryEntry] {
+        (try? Data(contentsOf: fileURL))
+            .flatMap { try? JSONDecoder().decode([CalcHistoryEntry].self, from: $0) } ?? []
     }
 
     func record(expression: String, result: String) {

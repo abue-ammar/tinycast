@@ -88,32 +88,28 @@ final class CalendarCoordinator {
 
     // MARK: - Feature switch
 
-    /// The switch funnels here so enabling, which is also consent, confirms first.
-    func setCalendarEnabled(_ enabled: Bool) {
+    /// The switch funnels here so enabling, also consent, confirms first; true once granted.
+    func setCalendarEnabled(_ enabled: Bool) async -> Bool {
         if !enabled {
-            guard settings.calendarEnabled else { return }
-            settings.calendarEnabled = false
-            return
+            if settings.calendarEnabled { settings.calendarEnabled = false }
+            return false
         }
 
         // Asking again is the only way back: Settings cannot add an app TCC has no record of.
         store.refreshAccess()
-        guard !settings.calendarEnabled || store.access != .granted else { return }
-        NSApp.activate(ignoringOtherApps: true)
-        Task {
-            guard
-                await core.confirm(
-                    title: String(localized: "Enable calendar?"),
-                    message: consentMessage,
-                    symbol: "calendar", confirmTitle: String(localized: "Continue"), tone: .neutral,
-                    confirmRole: .standard)
-            else { return }
-
-            guard await store.requestAccess() else { return }
-            // The flag is consent, so it is written only once macOS has actually granted access.
-            settings.calendarEnabled = true
-            applyEnabled()
-        }
+        guard !settings.calendarEnabled || store.access != .granted else { return false }
+        NSApp.activate()
+        guard
+            await core.confirm(
+                title: String(localized: "Enable calendar?"),
+                message: consentMessage,
+                symbol: "calendar", confirmTitle: String(localized: "Continue"), tone: .neutral,
+                confirmRole: .standard),
+            await store.requestAccess()
+        else { return false }
+        // The flag is consent, so it is written only once macOS has actually granted access.
+        settings.calendarEnabled = true
+        return true
     }
 
     private var consentMessage: String {
