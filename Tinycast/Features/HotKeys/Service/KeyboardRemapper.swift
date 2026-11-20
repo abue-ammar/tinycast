@@ -26,6 +26,7 @@ final class KeyboardRemapper {
 
     private(set) var mapping: HIDKeyMapping?
     private(set) var sawKarabinerConflict = false
+    var onKeyboardConnected: (() -> Void)?
 
     private let defaults: UserDefaults
     private let instanceLock: RemapInstanceLock?
@@ -89,6 +90,7 @@ final class KeyboardRemapper {
                 }
                 return update(keyboard, in: system)
             }
+            onKeyboardConnected?()
         }
         system.watchConnections()
         return system

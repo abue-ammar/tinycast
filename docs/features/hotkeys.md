@@ -299,6 +299,12 @@ input-source preference enabled, turning it on needs 150 ms, and a shorter press
 switches between the last ASCII source and a recent non-ASCII source. `HyperKeyQuickPress.effect` is
 that rule. A combo or a cancelled hold never runs its Quick Press action.
 
+When Universal Control forwards input, the sending Mac's Quartz tap can see Caps Lock go down and up
+while only the receiving Mac sees the letter. While it forwards, Tinycast also reads the physical
+keyboard and runs Quick Press only when the keyboard reports a solo press and Quartz recognizes the
+same release as Hyper. The Accessibility grant covers that read, so nothing is requested. If
+Tinycast is switched off under Input Monitoring, Quick Press uses the events visible to Quartz.
+
 ### Conflicts and diagnostics
 
 `HyperKeyConflictPolicy` is the pure rule, tested by `HyperKeyTests`; `HyperKeyConflictScanner` reads the
