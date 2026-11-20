@@ -249,7 +249,7 @@ struct BackupSettingsView: View {
             defer { importingBackup = false }
             let summary = await BackupActions.applyBackup(
                 categories, from: staging, to: core)
-            await handImportToAgent()
+            handImportToMainApp()
             // Staged files are adopted by the stores during apply, so the tree goes either way.
             discardStagedBackup()
             backupFile = nil
@@ -258,8 +258,7 @@ struct BackupSettingsView: View {
     }
 
     /// The main app holds these in memory and would write its old copy over the import.
-    private func handImportToAgent() async {
-        await core.launcherRanking.flush()
+    private func handImportToMainApp() {
         mainApp.send(.reloadImportedData)
     }
 
@@ -288,7 +287,7 @@ struct BackupSettingsView: View {
             do {
                 let outcome = try await BackupActions.importRaycast(
                     core: core, file: file, passphrase: passphrase, options: selection)
-                await handImportToAgent()
+                handImportToMainApp()
                 status = .success(BackupActions.raycastText(outcome))
                 passphrase = ""
             } catch {

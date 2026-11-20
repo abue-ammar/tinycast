@@ -35,10 +35,12 @@ final class CalculatorHistoryStore {
         entries = Self.stored(at: fileURL)
     }
 
-    /// Adopts a history another process wrote, as Settings' own does on a backup import.
+    /// Adopts a history another process wrote.
     func reload() {
         let stored = Self.stored(at: fileURL)
-        if stored != entries { entries = stored }
+        guard stored != entries else { return }
+        entries = stored
+        revision &+= 1
     }
 
     private static func stored(at fileURL: URL) -> [CalcHistoryEntry] {

@@ -13,6 +13,9 @@ enum SharedDomain: String, Codable, Sendable {
     case chatPresets
     case customQuickActions
     case launchAtLogin
+    case launcherRanking
+    case frequentEmoji
+    case calculatorHistory
 }
 
 /// Keeps two roles' copies of shared state in step: a change says what to re-read, never how.
@@ -21,6 +24,17 @@ final class SharedStateMirror {
     struct Domain {
         let observe: () -> Void
         let reload: () -> Void
+        /// Awaited before the peer is told, for a store whose write lands after its change.
+        let settle: @MainActor () async -> Void
+
+        init(
+            observe: @escaping () -> Void, reload: @escaping () -> Void,
+            settle: @escaping @MainActor () async -> Void = {}
+        ) {
+            self.observe = observe
+            self.reload = reload
+            self.settle = settle
+        }
     }
 
     private let defaults = UserDefaults.standard
@@ -90,6 +104,7 @@ final class SharedStateMirror {
             Task { @MainActor [weak self] in
                 guard let self, generations[domain, default: 0] == generation else { return }
                 watch(domain)
+                await domains[domain]?.settle()
                 send(.domain(domain))
             }
         }

@@ -22,7 +22,17 @@ extension AppCore {
                     }),
                 .launchAtLogin: .init(
                     observe: { [settings] in _ = settings.launchAtLogin },
-                    reload: { [settings] in settings.reloadLaunchAtLogin() })
+                    reload: { [settings] in settings.reloadLaunchAtLogin() }),
+                .launcherRanking: .init(
+                    observe: { [launcherRanking] in _ = launcherRanking.revision },
+                    reload: { [launcherRanking] in launcherRanking.reload() },
+                    settle: { [launcherRanking] in await launcherRanking.flush() }),
+                .frequentEmoji: .init(
+                    observe: { [frequentEmoji] in _ = frequentEmoji.revision },
+                    reload: { [frequentEmoji] in frequentEmoji.reload() }),
+                .calculatorHistory: .init(
+                    observe: { [calcHistory] in _ = calcHistory.entries },
+                    reload: { [calcHistory] in calcHistory.reload() })
             ],
             reloadDefaults: { [weak self] in self?.reloadDefaultsStores() }, send: send)
     }

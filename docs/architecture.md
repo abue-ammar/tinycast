@@ -214,9 +214,10 @@ and nothing is copied.
 - **State.** Both processes read and write the same storage; `App/SharedStateMirror.swift` says what to
   re-read. Defaults travel as values: a diff of `persistentDomain(forName:)`, written into the other
   side's defaults before its stores `reload()`, since cfprefsd delivers another process's write late.
-  Quicklinks, chat presets, custom quick actions and the login item are domains, re-read whole. A
-  backup or Raycast import hands the main app what it holds in memory (ranking, frequent emoji, calculator
-  history, pins, notes, clipboard) to read from disk again, or its old copy would be written back.
+  Quicklinks, chat presets, custom quick actions, the login item and the learning stores (ranking,
+  frequent emoji, calculator history) are domains, re-read whole; the ranking's write settles before the
+  peer is told. A backup or Raycast import hands the main app the rest it holds in memory (pins, notes,
+  clipboard) to read from disk again, or its old copy would be written back.
   Every `reload()` assigns only what differs, so side effects still run from the main app's `track` sinks,
   and `AppSettings.reload()` switches over every `AppSettingsKey`, so a new key fails to build until it
   is adopted.

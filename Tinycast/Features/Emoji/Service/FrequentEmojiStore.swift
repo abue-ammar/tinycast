@@ -26,10 +26,12 @@ final class FrequentEmojiStore {
         records = Self.history(Self.stored(at: fileURL))
     }
 
-    /// Adopts a history another process wrote, as Settings' own does on a backup import.
+    /// Adopts a history another process wrote.
     func reload() {
         let stored = Self.history(Self.stored(at: fileURL))
-        if stored != records { records = stored }
+        guard stored != records else { return }
+        records = stored
+        revision &+= 1
     }
 
     private static func stored(at fileURL: URL) -> [FrequentEmoji] {

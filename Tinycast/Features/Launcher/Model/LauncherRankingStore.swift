@@ -49,10 +49,12 @@ final class LauncherRankingStore {
         visits = Self.live(Self.stored(at: self.fileURL), at: now())
     }
 
-    /// Adopts a table another process wrote, as Settings' own does on a backup import.
+    /// Adopts a table another process wrote.
     func reload() {
         let stored = Self.live(Self.stored(at: fileURL), at: now())
-        if stored != visits { visits = stored }
+        guard stored != visits else { return }
+        visits = stored
+        revision &+= 1
     }
 
     private static func stored(at fileURL: URL) -> [String: LauncherVisit] {

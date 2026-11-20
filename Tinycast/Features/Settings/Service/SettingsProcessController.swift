@@ -169,9 +169,6 @@ final class SettingsProcessController {
         case .setExtensionPreference(let name, let key, let value):
             core.extensions.storage.setPreference(extension: name, key: key, value: value)
         case .reloadImportedData:
-            core.launcherRanking.reload()
-            core.frequentEmoji.reload()
-            core.calcHistory.reload()
             core.pinnedEmoji.reload()
             core.clipboardStore.load()
             Task { _ = await core.notesStore.reload() }
