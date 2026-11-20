@@ -196,8 +196,10 @@ every live `AnimatedPanel` (see [ui.md](ui.md#non-negotiable-invariants)).
 ## The Settings process
 
 Opening Settings starts a second instance of this same executable, `--role=settings`
-(`App/ProcessRole.swift`), and closing the window ends it. Activity Monitor shows a second Tinycast row
-for as long as the window is open. On macOS 27, malloc keeps freed small blocks dirty, so a view tree
+(`App/ProcessRole.swift`), and closing the window ends it. Process lists show it as Tinycast (Settings)
+for as long as the window is open; LaunchServices has no public way to name one process apart from its
+bundle, so `Platform/ProcessDisplayName.swift` sets that name through its SPI, and a macOS without it
+keeps plain Tinycast. On macOS 27, malloc keeps freed small blocks dirty, so a view tree
 torn down in the main app would never return its pages; a process that exits returns all of them. The
 same binary means one identity: preferences, Keychain items, privacy grants and `AppPaths` are shared,
 and nothing is copied.
@@ -280,7 +282,7 @@ Tinycast/
   Platform/         system shims: Permissions, LaunchAtLogin, InputSourceSwitcher, ScreenTarget,
                     AppDisplayName,
                     NotificationToken, AppPaths, Signposts, HealthTicker, Memo, ActivationPolicy,
-                    PipeFraming, ProcessLink,
+                    PipeFraming, ProcessLink, ProcessDisplayName,
                     Images/, Compression/
   Resources/        RaycastRuntime.generated.js, the embedded extension runtime
   Palette/          the palette shell: PalettePanel, PaletteWindowController, RootPaletteView,

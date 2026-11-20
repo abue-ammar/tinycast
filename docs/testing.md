@@ -984,8 +984,8 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
 - Settings → About shows the update row: "Last checked" with a relative time after a check, "Checking
   for updates…" while Check Now runs, and the local-build line in a Dev build
 - Every pane renders and the sidebar switches without flicker
-- Activity Monitor shows a second Tinycast row while Settings is open, and it is gone a moment after
-  the window closes; the main app's own footprint stays flat after visiting every pane
+- Activity Monitor shows a Tinycast Dev (Settings) row while Settings is open, and it is gone a moment
+  after the window closes; the main app's own footprint stays flat after visiting every pane
 - Settings comes to the front from the menu bar, ⌘, in the palette, the launcher's Settings command,
   About, `tinycast-dev://settings/<pane>` sent from another app, and the Dock icon's reopen
 - ⌘Q in Settings closes only Settings; quitting or killing the main app closes Settings too

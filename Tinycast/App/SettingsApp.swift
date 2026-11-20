@@ -30,6 +30,7 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
     /// Before any window: built first, one joins a fullscreen Space its menus never reach.
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.regular)
+        ProcessDisplayName.set(String(localized: "\(Bundle.main.appDisplayName) (Settings)"))
         UserDefaults.standard.set("WhenScrolling", forKey: "AppleShowScrollBars")
     }
 
