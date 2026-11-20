@@ -211,9 +211,12 @@ and nothing is copied.
   before any window exists, and ends on the window's close or on the main app's end of stream.
 - **Focus.** macOS lets only the app the user just addressed bring another forward, so the child asks
   (`.activate`) once its window is up and the main app calls `activate(from:)`.
-- **State.** Both processes read and write the same storage; `App/SharedStateMirror.swift` says what to
-  re-read. Defaults travel as values: a diff of `persistentDomain(forName:)`, written into the other
-  side's defaults before its stores `reload()`, since cfprefsd delivers another process's write late.
+- **State.** Both processes read and write the same storage. `App/SharedStateMirror.swift` sends
+  Settings' pending defaults edits to the main app, which orders them with its own edits and
+  acknowledges the resulting values. Dictionary edits merge by entry. Scalar values and encoded
+  collections are atomic. Settings reapplies later unacknowledged edits when a value arrives, so a
+  pane keeps the user's latest input while the main app catches up. Each process writes the
+  resulting values into its defaults before its stores reload, since cfprefsd delivers writes late.
   Quicklinks, chat presets, custom quick actions, the login item and the learning stores (ranking,
   frequent emoji, calculator history) are domains, re-read whole; the ranking's write settles before the
   peer is told. A backup or Raycast import hands the main app the rest it holds in memory (pins, notes,
@@ -222,9 +225,10 @@ and nothing is copied.
   and `AppSettings.reload()` switches over every `AppSettingsKey`, so a new key fails to build until it
   is adopted.
 - **Work only the main app can do** goes as a `SettingsAction`: the palette editors, rooms, running a
-  layout, iCloud Sync, the file index, dictation models, MCP connections, the settings file, updates and
-  Support. What only the main app knows comes back as `MainAppStatus`, rebuilt under observation and sent
-  when it changes. Panes reach both through `MainAppLink` in the environment.
+  layout, iCloud Sync, the file index, dictation models, the settings file, updates and Support. MCP
+  edits, authentication and connection tests are awaited calls to the main app. What only the main app
+  knows comes back as `MainAppStatus`, rebuilt under observation and sent when it changes. Panes reach
+  both through `MainAppLink` in the environment.
 - **Shortcut recording** pauses the main app's engines through `HotKeyManager.isRecordingInSettings`; the
   child's own `HotKeyManager` is loaded but never activated, so it registers nothing.
 - **Extensions** never run in Settings. `ExtensionLibrary` reads the catalog from disk and mirrors the

@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct MCPSettingsSection: View {
-    @Environment(MCPCoordinator.self) private var coordinator
     @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var appSettings
     @Environment(MCPSettingsStore.self) private var store
     @State private var editor: MCPServerEditorTarget?
     @State private var pendingRemoval: MCPServer?
+    @State private var removing: MCPServer?
     @State private var removalError: String?
 
     var body: some View {
@@ -58,9 +58,17 @@ struct MCPSettingsSection: View {
                 ?? String(localized: "Remove this server?"),
             isPresented: removalBinding, presenting: pendingRemoval
         ) { server in
-            Button("Remove", role: .destructive) { remove(server) }
+            Button("Remove", role: .destructive) {
+                pendingRemoval = nil
+                removing = server
+            }
         } message: { _ in
             Text("Its tools stop being offered, and its stored credentials are deleted.")
+        }
+        .task(id: removing?.id) {
+            guard let server = removing else { return }
+            await remove(server)
+            if removing?.id == server.id { removing = nil }
         }
     }
 
@@ -69,23 +77,24 @@ struct MCPSettingsSection: View {
     }
 
     /// A returned message is shown in the panel; nil closes it.
-    private func save(_ server: MCPServer, _ secrets: MCPSecretStore.Secrets) -> String? {
+    private func save(_ server: MCPServer, _ secrets: MCPSecretStore.Secrets) async -> String? {
         do {
-            try coordinator.save(server, secrets: secrets)
+            try await mainApp.callMCP(.save(server, secrets))
+            editor = nil
+            return nil
+        } catch is CancellationError {
+            return nil
         } catch {
             return String(localized: "The credentials could not be saved to your login Keychain.")
         }
-        mainApp.send(.reconnectMCPServer(server.id))
-        editor = nil
-        return nil
     }
 
-    private func remove(_ server: MCPServer) {
-        pendingRemoval = nil
+    private func remove(_ server: MCPServer) async {
         do {
-            try coordinator.remove(server.id)
-            mainApp.send(.reconnectMCPServer(server.id))
+            try await mainApp.callMCP(.remove(server.id))
             removalError = nil
+        } catch is CancellationError {
+            return
         } catch {
             removalError = String(
                 localized: """

@@ -11,6 +11,7 @@ final class MainAppLink {
     @ObservationIgnored private let mirror: SharedStateMirror
     @ObservationIgnored private unowned let core: AppCore
     @ObservationIgnored private var calls: [UUID: (ExtensionCallEvent) -> Void] = [:]
+    @ObservationIgnored private var mcpCalls: [UUID: CheckedContinuation<MCPSettingsResult, Never>] = [:]
 
     init(
         link: ProcessLink<SettingsWire.ToMainApp, SettingsWire.ToSettings>,
@@ -24,7 +25,7 @@ final class MainAppLink {
     func start() {
         link.onReceive = { [weak self] in self?.receive($0) }
         // The main app quit, relaunched or crashed; without it, Settings edits nothing live.
-        link.onClose = { [unowned core] in core.terminate() }
+        link.onClose = { [weak self] in self?.didClose() }
         link.start()
         mirror.start()
         observeRecording()
@@ -56,6 +57,30 @@ final class MainAppLink {
         }
     }
 
+    @discardableResult
+    func callMCP(_ call: MCPSettingsCall) async throws -> MCPServerStatus? {
+        try Task.checkCancellation()
+        mirror.flush()
+        let id = UUID()
+        let result = await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                mcpCalls[id] = continuation
+                link.send(.mcpCall(id, call))
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in self?.link.send(.cancelCall(id)) }
+        }
+        try Task.checkCancellation()
+        return try result.get()
+    }
+
+    private func didClose() {
+        let waiting = mcpCalls.values
+        mcpCalls.removeAll()
+        for continuation in waiting { continuation.resume(returning: .cancelled) }
+        core.terminate()
+    }
+
     func open(_ url: URL) {
         link.send(.openURL(url))
     }
@@ -75,6 +100,8 @@ final class MainAppLink {
             mirror.apply(change)
         case .callEvent(let id, let event):
             calls[id]?(event)
+        case .mcpResult(let id, let result):
+            mcpCalls.removeValue(forKey: id)?.resume(returning: result)
         case .status(let status):
             self.status = status
             core.appIndex.adoptCommands(hidden: status.hiddenCommands, unlisted: status.unlistedCommands)

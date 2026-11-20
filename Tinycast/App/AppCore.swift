@@ -73,7 +73,7 @@ final class AppCore {
         environmentStore: .keychain,
         isAppleIntelligenceAvailable: { AppleIntelligenceProvider.status().isAvailable })
     let mcpSettings = MCPSettingsStore()
-    let mcpOAuth = MCPOAuthManager()
+    @ObservationIgnored private(set) lazy var mcpOAuth = MCPOAuthManager()
     @ObservationIgnored private(set) lazy var mcp = MCPServerManager(oauth: mcpOAuth)
     let quickActionSettings = QuickActionSettingsStore()
     let customQuickActions = CustomQuickActionStore()
@@ -461,7 +461,6 @@ final class AppCore {
         snippetsStore.stop()
         chatGPTSubscription.stop()
         installedAI.stop()
-        mcpOAuth.stop()
     }
 
     /// Both roles: preferences applied and stores loaded; nothing here registers, taps or polls.

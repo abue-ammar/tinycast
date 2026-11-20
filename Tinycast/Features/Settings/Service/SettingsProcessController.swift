@@ -15,6 +15,7 @@ final class SettingsProcessController {
     /// Read only when the pane asks, as the in-process pane did: the scans are not free.
     private var hyperKeyInspection = HyperKeyInspection()
     private var calls: [UUID: Task<Void, Never>] = [:]
+    private var unsavedMCPServers: Set<UUID> = []
     /// Bumped as each process ends, so its status observer cannot outlive it.
     private var generation = 0
 
@@ -59,6 +60,7 @@ final class SettingsProcessController {
         case .recordingShortcut(let recording): core.hotKeys.isRecordingInSettings = recording
         case .perform(let action): perform(action)
         case .call(let id, let call): calls[id] = run(call, id: id)
+        case .mcpCall(let id, let call): calls[id] = runMCP(call, id: id)
         case .cancelCall(let id): calls.removeValue(forKey: id)?.cancel()
         case .openURL(let url): core.handleOpenURL(url)
         case .activate: activateSettings()
@@ -80,6 +82,8 @@ final class SettingsProcessController {
         hyperKeyInspection = HyperKeyInspection()
         calls.values.forEach { $0.cancel() }
         calls = [:]
+        for id in unsavedMCPServers { core.mcpCoordinator.discardUnsaved(id) }
+        unsavedMCPServers.removeAll()
         generation += 1
         // A Settings process that died mid-recording would otherwise leave every shortcut off.
         core.hotKeys.isRecordingInSettings = false
@@ -148,10 +152,9 @@ final class SettingsProcessController {
             }
         case .installedAILaunchChanged(let kind):
             core.aiSettings.noteLaunchChanged(for: kind)
-        case .reconnectMCPServer(let id):
-            core.mcpCoordinator.reconnect(id)
-        case .disconnectMCPServer(let id):
-            core.mcpCoordinator.disconnectSignedOut(id)
+        case .discardUnsavedMCPServer(let id):
+            core.mcpCoordinator.discardUnsaved(id)
+            unsavedMCPServers.remove(id)
         case .setSettingsFile(.stop):
             core.stopSettingsFile()
         case .setSettingsFile(.start(let importing)):
@@ -228,6 +231,44 @@ final class SettingsProcessController {
         }
     }
 
+    private func runMCP(_ call: MCPSettingsCall, id: UUID) -> Task<Void, Never> {
+        let link = link
+        return Task { [weak self, weak link] in
+            guard let self else { return }
+            let result: MCPSettingsResult
+            do {
+                try Task.checkCancellation()
+                result = try await performMCP(call)
+            } catch is CancellationError {
+                result = .cancelled
+            } catch {
+                result = .failure(error.localizedDescription)
+            }
+            calls[id] = nil
+            if self.link === link { send(makeStatus()) }
+            link?.send(.mcpResult(id, result))
+        }
+    }
+
+    private func performMCP(_ call: MCPSettingsCall) async throws -> MCPSettingsResult {
+        let coordinator = core.mcpCoordinator
+        switch call {
+        case .signIn(let server, let credentials):
+            if core.mcpSettings.server(id: server.id) == nil { unsavedMCPServers.insert(server.id) }
+            try await coordinator.signIn(server, credentials: credentials)
+        case .signOut(let id):
+            try coordinator.signOut(id)
+        case .test(let server, let secrets):
+            return .success(await coordinator.test(server, secrets: secrets))
+        case .save(let server, let secrets):
+            try coordinator.save(server, secrets: secrets)
+            unsavedMCPServers.remove(server.id)
+        case .remove(let id):
+            try coordinator.remove(id)
+        }
+        return .success()
+    }
+
     private func inspectHyperKey(diagnostics: Bool) {
         let manager = core.hyperKey
         let report = diagnostics ? manager.diagnostics() : nil
@@ -285,6 +326,7 @@ final class SettingsProcessController {
                 uniqueKeysWithValues: core.mcpSettings.servers.map {
                     ($0.id, core.mcpCoordinator.status(of: $0.id))
                 }),
+            mcpAuthentication: core.mcpOAuth.statuses,
             updates: MainAppStatus.Updates(
                 updatesItself: updates.updatesItself, isChecking: updates.isChecking,
                 lastCheckedAt: updates.lastCheckedAt, availableVersion: updates.availableVersion?.description),

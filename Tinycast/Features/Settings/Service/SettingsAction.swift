@@ -28,8 +28,7 @@ enum SettingsAction: Codable, Sendable {
     case refreshDictationModels
     case refreshInstalledAI(InstalledAIKind)
     case installedAILaunchChanged(InstalledAIKind)
-    case reconnectMCPServer(UUID)
-    case disconnectMCPServer(UUID)
+    case discardUnsavedMCPServer(UUID)
     case setSettingsFile(SettingsFileChange)
     case setExtensionAppearance(String, ExtensionAppearance?)
     case setExtensionBackground(ExtensionCommandRef, Bool)

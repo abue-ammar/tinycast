@@ -62,6 +62,7 @@ struct MainAppStatus: Codable, Equatable, Sendable {
     var cloudSync = CloudSync()
     var dictationModels = DictationModels()
     var mcpStatuses: [UUID: MCPServerStatus] = [:]
+    var mcpAuthentication: [UUID: MCPOAuthManager.Status] = [:]
     var updates = Updates()
     var extensions = Extensions()
 }

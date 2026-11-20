@@ -398,6 +398,8 @@ run DictationInferenceTests Tinycast/Features/Dictation/Model/DictationAudioChun
     Tinycast/Features/Dictation/Helper/DictationTensor.swift Tinycast/Features/Dictation/Helper/DictationTokenizer.swift \
     Tinycast/Features/Dictation/Helper/DictationMel.swift
 run PipeFramingTests      Tinycast/Platform/PipeFraming.swift
+run SharedStateMirrorTests Tinycast/App/SharedStateMirror.swift Tinycast/App/ProcessRole.swift \
+                           Tinycast/Platform/NotificationToken.swift
 run DictationWorkerTests   Tinycast/Features/Dictation/Model/DictationModel.swift \
                            Tinycast/Features/Dictation/Model/DictationIdleRelease.swift \
                            Tinycast/Features/Dictation/Service/DictationWire.swift \

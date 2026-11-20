@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class MCPOAuthManager {
-    enum Status: Equatable {
+    enum Status: Codable, Equatable, Sendable {
         case signedOut
         case signingIn
         case signedIn
@@ -31,9 +31,7 @@ final class MCPOAuthManager {
 
     init(secrets: MCPSecretStore = MCPSecretStore()) { self.secrets = secrets }
 
-    /// Takes the caller's credentials: a view body asks this and must not read the Keychain.
-    func status(for server: MCPServer, stored credentials: MCPOAuth.Credentials?) -> Status {
-        if let status = statuses[server.id] { return status }
+    static func storedStatus(for server: MCPServer, credentials: MCPOAuth.Credentials?) -> Status {
         guard let registration = credentials?.registration,
             registration.resource == Self.resource(of: server),
             let token = credentials?.token
@@ -92,13 +90,18 @@ final class MCPOAuthManager {
     }
 
     func signOut(_ id: UUID) throws {
-        cancelSignIn(id)
-        revisions[id] = UUID()
-        refreshes.removeValue(forKey: id)?.cancel()
+        invalidate(id)
         var stored = secrets.secrets(for: id)
         stored.oauth?.token = nil
         try secrets.save(stored, for: id)
         statuses[id] = .signedOut
+    }
+
+    func invalidate(_ id: UUID) {
+        cancelSignIn(id)
+        revisions[id] = UUID()
+        refreshes.removeValue(forKey: id)?.cancel()
+        statuses[id] = nil
     }
 
     /// A refresh in flight finishes: a rotating server may already have spent the old token.

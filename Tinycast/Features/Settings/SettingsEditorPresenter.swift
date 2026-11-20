@@ -411,7 +411,6 @@ extension View {
             .environment(core.calendarStore)
             .environment(core.aiSettings)
             .environment(core.mcpSettings)
-            .environment(core.mcpCoordinator)
             .environment(core.quickActionSettings)
             .environment(core.customQuickActions)
             .environment(core.chatPresets)

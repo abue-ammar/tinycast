@@ -40,9 +40,11 @@ not read MCP settings. `AIChatCoordinator.send` is the one place the two meet.
   servers answer with, and the credentials `URLSession` would strip are restored because the origin
   is unchanged; a redirect to any other origin is refused, so no credential ever reaches a second
   host. Refresh tokens go only to the token endpoint retained with their client registration.
-- **OAuth sign-in is explicit.** Settings opens the browser after discovery and PKCE S256 checks.
-  The callback binds only `127.0.0.1:4962`, validates state and any issuer parameter, accepts one
-  response and closes. Cancellation, disabling AI/MCP and the five-minute timeout also close it.
+- **OAuth sign-in is explicit.** Settings asks the main process to run discovery and PKCE S256
+  checks and open the browser. Authentication, refresh and server edits use the same session and
+  Keychain owner. Settings reads the result over its process link. The callback binds only
+  `127.0.0.1:4962`, validates state and any issuer parameter, accepts one response and closes.
+  Cancellation, closing Settings, disabling AI/MCP and the five-minute timeout also close it.
   An occupied port fails instead of choosing another port. No custom URL scheme is involved.
 - **A tool call never enters the conversation.** The whole call-and-result round trip lives inside
   one turn, in `AIToolLoopProvider`, and what `ChatSession` keeps is a `ChatToolUse` render record,

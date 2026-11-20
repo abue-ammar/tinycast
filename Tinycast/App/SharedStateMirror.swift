@@ -2,8 +2,8 @@ import Foundation
 
 /// State one role changed, for the other to adopt from the storage both of them share.
 enum SharedChange: Codable, Sendable {
-    /// The changed values as a binary property list, so they land before cfprefsd delivers them.
-    case defaults(values: Data, removed: [String])
+    case defaultsEdit(SharedDefaultsEdit)
+    case defaultsState(SharedDefaultsState)
     case domain(SharedDomain)
 }
 
@@ -37,14 +37,9 @@ final class SharedStateMirror {
         }
     }
 
-    private let defaults = UserDefaults.standard
-    private let domainName = Bundle.main.bundleIdentifier ?? ""
+    private let defaultsMirror: SharedDefaultsMirror
     private let send: (SharedChange) -> Void
-    private let reloadDefaults: () -> Void
     private let domains: [SharedDomain: Domain]
-    private var snapshot: [String: Any] = [:]
-    private var defaultsObserver: NotificationToken?
-    private var pendingDefaults: Task<Void, Never>?
     /// Bumped before a peer's change is re-read, so the stale observer it trips stays quiet.
     private var generations: [SharedDomain: Int] = [:]
 
@@ -53,36 +48,21 @@ final class SharedStateMirror {
         send: @escaping (SharedChange) -> Void
     ) {
         self.domains = domains
-        self.reloadDefaults = reloadDefaults
         self.send = send
+        defaultsMirror = SharedDefaultsMirror(
+            role: .current, defaults: .standard, domainName: Bundle.main.bundleIdentifier ?? "",
+            reload: reloadDefaults, send: send)
     }
 
     func start() {
-        snapshot = defaults.persistentDomain(forName: domainName) ?? [:]
-        let token = NotificationCenter.default.addObserver(
-            forName: UserDefaults.didChangeNotification, object: defaults, queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.scheduleDefaults() }
-        }
-        defaultsObserver = NotificationToken(token, center: .default)
+        defaultsMirror.start()
         for domain in domains.keys { watch(domain) }
     }
 
     func apply(_ change: SharedChange) {
         switch change {
-        case .defaults(let data, let removed):
-            let values =
-                (try? PropertyListSerialization.propertyList(from: data, format: nil))
-                as? [String: Any] ?? [:]
-            for (key, value) in values {
-                defaults.set(value, forKey: key)
-                snapshot[key] = value
-            }
-            for key in removed {
-                defaults.removeObject(forKey: key)
-                snapshot[key] = nil
-            }
-            reloadDefaults()
+        case .defaultsEdit(let edit): defaultsMirror.apply(edit)
+        case .defaultsState(let state): defaultsMirror.apply(state)
         case .domain(let domain):
             generations[domain, default: 0] += 1
             domains[domain]?.reload()
@@ -90,12 +70,7 @@ final class SharedStateMirror {
         }
     }
 
-    /// Sends what is still waiting out its debounce, so it lands ahead of whatever comes next.
-    func flush() {
-        guard pendingDefaults != nil else { return }
-        pendingDefaults?.cancel()
-        sendDefaults()
-    }
+    func flush() { defaultsMirror.flush() }
 
     private func watch(_ domain: SharedDomain) {
         guard let entry = domains[domain] else { return }
@@ -109,29 +84,172 @@ final class SharedStateMirror {
             }
         }
     }
+}
 
-    /// One send per burst: a pane edit can write several keys in a row.
-    private func scheduleDefaults() {
-        guard pendingDefaults == nil else { return }
-        pendingDefaults = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(50))
-            guard !Task.isCancelled else { return }
-            self?.sendDefaults()
+struct SharedDefaultsEdit: Codable, Sendable {
+    let revision: UInt64
+    let before: Data
+    let after: Data
+}
+
+struct SharedDefaultsState: Codable, Sendable {
+    let acknowledgedEdit: UInt64
+    let values: Data
+    let removed: Set<String>
+}
+
+@MainActor
+final class SharedDefaultsMirror {
+    private let role: ProcessRole
+    private let defaults: UserDefaults
+    private let domainName: String
+    private let reload: () -> Void
+    private let send: (SharedChange) -> Void
+    private var snapshot: [String: Any] = [:]
+    private var observer: NotificationToken?
+    private var pendingFlush: Task<Void, Never>?
+    private var editRevision: UInt64 = 0
+    private var unacknowledged: [(revision: UInt64, patch: DefaultsPatch)] = []
+
+    init(
+        role: ProcessRole, defaults: UserDefaults, domainName: String, reload: @escaping () -> Void,
+        send: @escaping (SharedChange) -> Void
+    ) {
+        self.role = role
+        self.defaults = defaults
+        self.domainName = domainName
+        self.reload = reload
+        self.send = send
+    }
+
+    func start() {
+        snapshot = defaults.persistentDomain(forName: domainName) ?? [:]
+        let token = NotificationCenter.default.addObserver(
+            forName: UserDefaults.didChangeNotification, object: defaults, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.scheduleFlush() }
+        }
+        observer = NotificationToken(token, center: .default)
+    }
+
+    func flush() {
+        guard pendingFlush != nil else { return }
+        pendingFlush?.cancel()
+        pendingFlush = nil
+        let current = defaults.persistentDomain(forName: domainName) ?? [:]
+        let patch = DefaultsPatch(from: snapshot, to: current)
+        snapshot = current
+        guard !patch.keys.isEmpty else { return }
+        if role == .main {
+            publish(patch.keys)
+        } else if let before = Self.encode(patch.before), let after = Self.encode(patch.after) {
+            editRevision += 1
+            unacknowledged.append((editRevision, patch))
+            send(.defaultsEdit(SharedDefaultsEdit(revision: editRevision, before: before, after: after)))
         }
     }
 
-    private func sendDefaults() {
-        pendingDefaults = nil
-        let current = defaults.persistentDomain(forName: domainName) ?? [:]
-        let changed = current.filter { key, value in
-            !((snapshot[key] as AnyObject?)?.isEqual(value) ?? false)
-        }
-        let removed = snapshot.keys.filter { current[$0] == nil }
-        snapshot = current
-        guard !changed.isEmpty || !removed.isEmpty,
-            let data = try? PropertyListSerialization.data(
-                fromPropertyList: changed, format: .binary, options: 0)
+    func apply(_ edit: SharedDefaultsEdit) {
+        guard role == .main, let before = Self.decode(edit.before), let after = Self.decode(edit.after)
         else { return }
-        send(.defaults(values: data, removed: removed))
+        flush()
+        let patch = DefaultsPatch(from: before, to: after)
+        let values = Dictionary(
+            uniqueKeysWithValues: patch.keys.compactMap { key in
+                patch.value(for: key, over: snapshot[key]).map { (key, $0) }
+            })
+        adopt(values, for: patch.keys)
+        editRevision = edit.revision
+        publish(patch.keys)
+    }
+
+    func apply(_ state: SharedDefaultsState) {
+        guard role == .settings, var values = Self.decode(state.values) else { return }
+        flush()
+        unacknowledged.removeAll { $0.revision <= state.acknowledgedEdit }
+        let keys = state.removed.union(values.keys)
+        for (_, patch) in unacknowledged {
+            for key in keys.intersection(patch.keys) {
+                values[key] = patch.value(for: key, over: values[key])
+            }
+        }
+        adopt(values, for: keys)
+    }
+
+    private func scheduleFlush() {
+        guard pendingFlush == nil else { return }
+        pendingFlush = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(50))
+            guard !Task.isCancelled else { return }
+            self?.flush()
+        }
+    }
+
+    private func adopt(_ values: [String: Any], for keys: Set<String>) {
+        for key in keys {
+            if let value = values[key] {
+                defaults.set(value, forKey: key)
+            } else {
+                defaults.removeObject(forKey: key)
+            }
+            snapshot[key] = values[key]
+        }
+        reload()
+    }
+
+    private func publish(_ keys: Set<String>) {
+        let values = snapshot.filter { keys.contains($0.key) }
+        guard let data = Self.encode(values) else { return }
+        send(
+            .defaultsState(
+                SharedDefaultsState(
+                    acknowledgedEdit: editRevision, values: data, removed: keys.subtracting(values.keys))))
+    }
+
+    private static func encode(_ values: [String: Any]) -> Data? {
+        try? PropertyListSerialization.data(fromPropertyList: values, format: .binary, options: 0)
+    }
+
+    private static func decode(_ data: Data) -> [String: Any]? {
+        (try? PropertyListSerialization.propertyList(from: data, format: nil)) as? [String: Any]
+    }
+}
+
+private struct DefaultsPatch {
+    let keys: Set<String>
+    let before: [String: Any]
+    let after: [String: Any]
+
+    init(from before: [String: Any], to after: [String: Any]) {
+        let keys = Set(before.keys).union(after.keys).filter { !Self.equal(before[$0], after[$0]) }
+        self.keys = keys
+        self.before = before.filter { keys.contains($0.key) }
+        self.after = after.filter { keys.contains($0.key) }
+    }
+
+    func value(for key: String, over current: Any?) -> Any? {
+        Self.merge(before: before[key], after: after[key], current: current)
+    }
+
+    private static func merge(before: Any?, after: Any?, current: Any?) -> Any? {
+        guard !equal(before, current),
+            let previous = Self.dictionary(before), let proposed = Self.dictionary(after),
+            var merged = Self.dictionary(current)
+        else { return after }
+
+        let patch = DefaultsPatch(from: previous, to: proposed)
+        for key in patch.keys { merged[key] = patch.value(for: key, over: merged[key]) }
+        return merged.isEmpty && after == nil ? nil : merged
+    }
+
+    private static func dictionary(_ value: Any?) -> [String: Any]? {
+        guard let value else { return [:] }
+        return value as? [String: Any]
+    }
+
+    private static func equal(_ lhs: Any?, _ rhs: Any?) -> Bool {
+        guard let lhs else { return rhs == nil }
+        guard let rhs else { return false }
+        return (lhs as AnyObject).isEqual(rhs)
     }
 }

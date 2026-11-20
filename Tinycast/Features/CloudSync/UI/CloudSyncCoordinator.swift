@@ -318,11 +318,7 @@ final class CloudSyncCoordinator {
             RecordSyncSource.customQuickActions(core.customQuickActions),
             RecordSyncSource.mcpServers(
                 { core.mcpSettings.servers }, apply: { core.mcpCoordinator.applySynced($0) },
-                remove: { id in
-                    guard (try? core.mcpCoordinator.remove(id)) != nil else { return false }
-                    core.mcpCoordinator.reconnect(id)
-                    return true
-                }),
+                remove: { id in (try? core.mcpCoordinator.remove(id)) != nil }),
             ExtensionSyncSource(manager: core.extensions)
         ]
     }

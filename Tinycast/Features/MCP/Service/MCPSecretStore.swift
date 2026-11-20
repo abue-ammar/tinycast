@@ -7,9 +7,12 @@ struct MCPSecretStore: Sendable {
         var environment: [String: String]
         var oauth: MCPOAuth.Credentials?
 
-        init(headerValue: String = "", environment: [String: String] = [:]) {
+        init(
+            headerValue: String = "", environment: [String: String] = [:], oauth: MCPOAuth.Credentials? = nil
+        ) {
             self.headerValue = headerValue
             self.environment = environment
+            self.oauth = oauth
         }
 
         var isEmpty: Bool { headerValue.isEmpty && environment.isEmpty && oauth == nil }

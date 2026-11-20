@@ -315,7 +315,7 @@ struct MCPOAuthTests {
             expect(error as? MCPOAuth.Failure == .network, "\(refresh): a network failure")
         }
         expect(
-            manager.status(for: server, stored: stored.oauth) == .signedIn,
+            MCPOAuthManager.storedStatus(for: server, credentials: stored.oauth) == .signedIn,
             "\(refresh): session survives")
         stored.oauth?.token = MCPOAuth.Token(
             accessToken: "expired", refreshToken: "fixture-refresh",
@@ -616,9 +616,10 @@ struct MCPOAuthTests {
         do { kept = try await manager.accessToken(for: server) } catch { kept = nil }
         expect(
             edited.status == .signInRequired && kept == "fixture-access"
-                && manager.status(for: server, stored: secrets.secrets(for: server.id).oauth) == .signedIn,
+                && manager.statuses[server.id] == .signedIn,
             "testing an edited URL leaves the saved server signed in")
         try manager.signOut(server.id)
+        expect(manager.statuses[server.id] == .signedOut, "the session owner publishes sign-out")
         expect(
             secrets.secrets(for: server.id).oauth?.token == nil, "sign-out deletes access and refresh tokens")
         do {
