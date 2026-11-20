@@ -1,6 +1,7 @@
 import AVFoundation
 import AppKit
 import EventKit
+import IOKit.hidsystem
 // `@preconcurrency` downgrades AX diagnostics: the option key is a constant C global.
 @preconcurrency import ApplicationServices
 
@@ -23,6 +24,11 @@ enum Permissions {
                     "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
         else { return }
         NSWorkspace.shared.open(url)
+    }
+
+    /// Implied by the Accessibility grant, unless Tinycast is switched off under Input Monitoring.
+    static func hasInputMonitoring() -> Bool {
+        IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
     }
 
     /// Full Disk Access has no prompt and no API; opening a file it guards is the only probe.

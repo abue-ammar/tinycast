@@ -24,6 +24,24 @@ struct HyperKeyEngine: Sendable {
     private(set) var isActive = false
     private var downAt: TimeInterval?
     private var used = false
+    private var forwarded: ForwardedQuickPress?
+    private(set) var quickPressGeneration: UInt64 = 0
+
+    mutating func setForwarding(_ enabled: Bool) {
+        guard enabled != (forwarded != nil) else { return }
+        cancelQuickPress()
+        forwarded = enabled ? ForwardedQuickPress() : nil
+    }
+
+    mutating func physicalRelease(timestamp: UInt64, heldFor duration: TimeInterval) -> TimeInterval? {
+        forwarded?.confirm(.keyboard, timestamp: timestamp, duration: duration)
+    }
+
+    private mutating func cancelQuickPress() {
+        downAt = nil
+        if forwarded != nil { forwarded = ForwardedQuickPress() }
+        quickPressGeneration &+= 1
+    }
 
     private enum DeviceFlags {
         static let leftControlOptionCommand: UInt64 = 0x29
@@ -57,6 +75,12 @@ struct HyperKeyEngine: Sendable {
     /// True when a release must be synthesized: a modifier's own release still reaches the tap.
     @discardableResult
     mutating func reset() -> Bool {
+        cancelQuickPress()
+        return endHold()
+    }
+
+    @discardableResult
+    private mutating func endHold() -> Bool {
         let needsRelease = isActive && route?.modifier == nil
         isActive = false
         downAt = nil
@@ -66,15 +90,16 @@ struct HyperKeyEngine: Sendable {
 
     mutating func handle(
         type: CGEventType, keyCode: Int, flags: UInt64, isAutorepeat: Bool = false, at time: TimeInterval,
-        insideSecureInput: Bool = false
+        insideSecureInput: Bool = false, timestamp: UInt64 = 0
     ) -> Result {
         guard let route else { return Result(decision: .pass) }
         if route.key == .capsLock, keyCode == kVK_CapsLock, type == .flagsChanged {
+            cancelQuickPress()
             return Result(decision: .pass, effect: .unmappedCapsLock)
         }
         guard keyCode == route.tapKeyCode else {
             guard isHeld(in: flags) else {
-                reset()
+                if isActive { reset() }
                 return Result(decision: .pass)
             }
             if type == .keyDown || type == .flagsChanged { used = true }
@@ -84,17 +109,17 @@ struct HyperKeyEngine: Sendable {
             guard type == .flagsChanged else { return Result(decision: .pass) }
             return transition(
                 isDown: modifier.isHeld(in: flags), flags: removingSourceFlags(from: flags), at: time,
-                insideSecureInput: insideSecureInput)
+                insideSecureInput: insideSecureInput, timestamp: timestamp)
         }
         guard type == .keyDown || type == .keyUp else { return Result(decision: .pass) }
         guard !isAutorepeat else { return Result(decision: .suppress) }
         let flags = removingSourceFlags(from: flags) & ~CGEventFlags.maskSecondaryFn.rawValue
         return transition(
-            isDown: type == .keyDown, flags: flags, at: time, insideSecureInput: insideSecureInput)
+            isDown: type == .keyDown, flags: flags, at: time, insideSecureInput: insideSecureInput, timestamp: timestamp)
     }
 
     private mutating func transition(
-        isDown: Bool, flags: UInt64, at time: TimeInterval, insideSecureInput: Bool
+        isDown: Bool, flags: UInt64, at time: TimeInterval, insideSecureInput: Bool, timestamp: UInt64
     ) -> Result {
         let command = Int64(kVK_Command)
         if isDown {
@@ -109,10 +134,16 @@ struct HyperKeyEngine: Sendable {
         }
         // A stray F18 release ends nothing, but a modifier's release always clears the chord.
         guard isActive || route?.modifier != nil else { return Result(decision: .suppress) }
-        let effect =
-            !used && route?.key.hasOriginalFunction == true
-            ? downAt.map { Effect.unusedPress(heldFor: time - $0) } : nil
-        reset()
+        var effect: Effect?
+        if !used, route?.key.hasOriginalFunction == true, let downAt {
+            let duration = time - downAt
+            if forwarded == nil {
+                effect = .unusedPress(heldFor: duration)
+            } else if let physical = forwarded?.confirm(.quartz, timestamp: timestamp, duration: duration) {
+                effect = .unusedPress(heldFor: physical)
+            }
+        }
+        endHold()
         return Result(
             decision: .rewrite(flags: flags, keyCode: command, asFlagsChanged: true), effect: effect)
     }

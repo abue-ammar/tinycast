@@ -141,8 +141,11 @@ struct HyperKeyTests {
             check(
                 "idempotent apply avoids writes", remapper.apply(toF18) && HIDEventSystem.writeCount == writes
             )
+            var notifiedAfterRemapping = false
+            remapper.onKeyboardConnected = { notifiedAfterRemapping = HIDEventSystem.mappings[2] == [toF18] }
             HIDEventSystem.connect(2)
             check("hot plug remaps new keyboards", HIDEventSystem.mappings[2] == [toF18])
+            check("forwarding can retry after the new keyboard's remap is applied", notifiedAfterRemapping)
             check("no keyboard is taken over while ours", remapper.overriddenKeyboardNames.isEmpty)
             HIDEventSystem.mappings[2] = [
                 HIDKeyMapping(source: HIDKeyMapping.capsLock, destination: 0x7_0000_006F)
