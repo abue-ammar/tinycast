@@ -1,6 +1,6 @@
 import Foundation
 
-enum HotKeyAction: Hashable, Sendable {
+enum HotKeyAction: Codable, Hashable, Sendable {
     /// Fixed actions with no command row of their own.
     case togglePalette
     case dictation

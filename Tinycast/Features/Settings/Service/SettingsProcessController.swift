@@ -18,6 +18,10 @@ final class SettingsProcessController {
     private var unsavedMCPServers: Set<UUID> = []
     /// Bumped as each process ends, so its status observer cannot outlive it.
     private var generation = 0
+    private var pendingShow: (id: UUID, request: SettingsRequest)?
+    private var hasShown = false
+    private var isClosing = false
+    private var stagedBackup: (preview: BackupPreview, staging: BackupStaging)?
 
     init(core: AppCore) {
         self.core = core
@@ -25,13 +29,16 @@ final class SettingsProcessController {
 
     func show(_ request: SettingsRequest) {
         guard let link else { return launch(request) }
+        let id = UUID()
+        pendingShow = (id, request)
+        guard !isClosing else { return }
         mirror?.flush()
-        link.send(.show(request))
+        link.send(.show(id, request))
     }
 
     func focus() -> Bool {
         guard link != nil else { return false }
-        show(SettingsRequest())
+        if pendingShow == nil { show(SettingsRequest()) }
         return true
     }
 
@@ -45,12 +52,12 @@ final class SettingsProcessController {
         }
         let mirror = core.makeSharedStateMirror { [weak link] in link?.send(.changed($0)) }
         link.onReceive = { [weak self] in self?.receive($0) }
-        link.onClose = { [weak self] in self?.didClose() }
+        link.onClose = { [weak self] error in self?.didClose(error: error) }
         self.link = link
         self.mirror = mirror
         link.start()
         mirror.start()
-        link.send(.show(request))
+        show(request)
         observeStatus()
     }
 
@@ -59,11 +66,19 @@ final class SettingsProcessController {
         case .changed(let change): mirror?.apply(change)
         case .recordingShortcut(let recording): core.hotKeys.isRecordingInSettings = recording
         case .perform(let action): perform(action)
-        case .call(let id, let call): calls[id] = run(call, id: id)
-        case .mcpCall(let id, let call): calls[id] = runMCP(call, id: id)
-        case .cancelCall(let id): calls.removeValue(forKey: id)?.cancel()
+        case .call(let id, let call): start(call, id: id)
+        case .cancelCall(let id):
+            calls.removeValue(forKey: id)?.cancel()
+            if stagedBackup?.preview.id == id { discardStagedBackup() }
         case .openURL(let url): core.handleOpenURL(url)
-        case .activate: activateSettings()
+        case .activate(let id):
+            hasShown = true
+            if pendingShow?.id == id { pendingShow = nil }
+            activateSettings()
+        case .closing:
+            mirror?.flush()
+            isClosing = true
+            link?.send(.readyToClose)
         }
     }
 
@@ -75,18 +90,30 @@ final class SettingsProcessController {
         settings.activate(from: .current)
     }
 
-    private func didClose() {
+    private func didClose(error: Error?) {
+        let reopen = hasShown || isClosing ? pendingShow?.request : nil
+        let showFailure = !isClosing && (error != nil || !hasShown)
+        pendingShow = nil
+        hasShown = false
+        isClosing = false
         link = nil
         mirror = nil
         lastStatus = nil
         hyperKeyInspection = HyperKeyInspection()
         calls.values.forEach { $0.cancel() }
         calls = [:]
+        discardStagedBackup()
         for id in unsavedMCPServers { core.mcpCoordinator.discardUnsaved(id) }
         unsavedMCPServers.removeAll()
         generation += 1
         // A Settings process that died mid-recording would otherwise leave every shortcut off.
         core.hotKeys.isRecordingInSettings = false
+        if let reopen {
+            launch(reopen)
+        } else if showFailure {
+            core.showMessage(
+                SettingsWire.Failure.disconnected.localizedDescription, tone: .danger)
+        }
     }
 
     // MARK: - Actions
@@ -115,8 +142,12 @@ final class SettingsProcessController {
             Task { await core.cloudSyncCoordinator.deleteCloudData() }
         case .editCustomCommand(let id):
             core.customCommandCoordinator.editCustomCommand(id.flatMap(core.customCommands.command(id:)))
+        case .deleteCustomCommand(let id):
+            core.customCommandCoordinator.removeCustomCommand(id: id)
         case .editQuicklink(let id):
             core.quicklinkCoordinator.editQuicklink(id.flatMap(core.quicklinks.quicklink(id:)))
+        case .deleteQuicklink(let id):
+            Task { await core.quicklinkCoordinator.removeQuicklink(id: id) }
         case .editSnippet(let id):
             core.snippetCoordinator.editSnippet(id.flatMap(core.snippetsStore.record(id:)))
         case .createRoom:
@@ -124,10 +155,20 @@ final class SettingsProcessController {
         case .editRoomWindows(let id):
             guard let room = core.rooms.room(id: id) else { return }
             core.roomCoordinator.editWindows(of: room)
+        case .deleteRoom(let id):
+            core.roomCoordinator.removeRoom(id: id)
         case .enterRoom(let id):
             core.roomCoordinator.enterRoom(id: id)
         case .runWindowLayout(let id):
             core.windowLayoutCoordinator.runWindowLayout(id: id)
+        case .deleteWindowLayout(let id):
+            core.windowLayoutCoordinator.deleteWindowLayout(id: id)
+        case .deleteCustomWindowSize(let id):
+            core.customWindowSizeCoordinator.removeCustomWindowSize(id: id)
+        case .deleteCustomQuickAction(let id):
+            core.quickActionCoordinator.removeCustomQuickAction(id: id)
+        case .setShortcut(let action, let binding):
+            core.hotKeys.setBinding(binding, for: action)
         case .clearClipboardHistory:
             core.clipboardCoordinator.clearHistory()
         case .rebuildFileIndex:
@@ -171,10 +212,8 @@ final class SettingsProcessController {
             send(makeStatus())
         case .setExtensionPreference(let name, let key, let value):
             core.extensions.storage.setPreference(extension: name, key: key, value: value)
-        case .reloadImportedData:
-            core.pinnedEmoji.reload()
-            core.clipboardStore.load()
-            Task { _ = await core.notesStore.reload() }
+        case .discardBackup(let id):
+            if stagedBackup?.preview.id == id { discardStagedBackup() }
         case .checkForUpdates:
             core.updateCoordinator.checkForUpdates()
         case .showSupport:
@@ -182,75 +221,75 @@ final class SettingsProcessController {
         }
     }
 
-    /// The extension runtime is the main app's; a later extensions process slots in behind this.
-    private func run(_ call: ExtensionCall, id: UUID) -> Task<Void, Never> {
-        let extensions = core.extensions
-        let report: @MainActor @Sendable (ExtensionCallEvent) -> Void = { [weak self] event in
-            self?.link?.send(.callEvent(id, event))
+    private func start(_ call: SettingsWire.Call, id: UUID) {
+        guard let link, !isClosing, calls[id] == nil else { return }
+        let report: @MainActor @Sendable (ExtensionCallEvent) -> Void = { [weak link] event in
+            link?.send(.extensionProgress(id, event))
         }
+        calls[id] = Task { [weak self, weak link] in
+            guard let self, let link else { return }
+            let reply: SettingsWire.Reply
+            do {
+                try Task.checkCancellation()
+                switch call {
+                case .extensions(let call): reply = try await performExtension(call, report: report)
+                case .mcp(let call): reply = try await performMCP(call)
+                case .backup(let call): reply = try await performBackup(call, id: id)
+                }
+            } catch is CancellationError {
+                reply = .cancelled
+            } catch {
+                reply = .failure(error.localizedDescription)
+            }
+            calls[id] = nil
+            guard self.link === link, !isClosing else { return }
+            mirror?.flush()
+            if case .mcp = call { send(makeStatus()) }
+            link.send(.reply(id, reply))
+        }
+    }
+
+    private func performExtension(
+        _ call: ExtensionCall, report: @escaping @MainActor @Sendable (ExtensionCallEvent) -> Void
+    ) async throws -> SettingsWire.Reply {
+        let extensions = core.extensions
         let onProgress: @Sendable (ExtensionInstaller.Progress) -> Void = { progress in
             Task { @MainActor in report(.installing(progress)) }
         }
-        return Task {
-            var result = ExtensionCallResult()
-            do {
-                switch call {
-                case .refresh:
-                    await extensions.refresh()
-                case .checkForUpdates:
-                    await extensions.checkForUpdates()
-                case .installFolder(let folder):
-                    try await extensions.install(from: folder)
-                case .importFromRaycast(let directories):
-                    let chosen = await Task.detached(priority: .userInitiated) {
-                        ExtensionCatalog.importableFromRaycast().filter { directories.contains($0.directory) }
-                    }.value
-                    result.failures = await extensions.importAllFromRaycast(chosen) { report(.imported($0)) }
-                case .update(let names):
-                    result.failures = await extensions.update(names)
-                case .installListing(let listing):
-                    try await extensions.install(listing, onProgress: onProgress)
-                case .installGitHub(let source):
-                    let settings = core.settings
-                    result.installedTitle =
-                        try await extensions.install(
-                            source, packageManager: settings.extensionPackageManager,
-                            additionalSearchPaths: settings.extensionCustomSearchPaths,
-                            onProgress: onProgress
-                        ).title
-                case .uninstall(let name):
-                    if let owner = extensions.installed.first(where: { $0.manifest.name == name }) {
-                        await extensions.uninstall(owner)
-                    }
-                }
-            } catch {
-                result.error = error.localizedDescription
+        var result = ExtensionCallResult()
+        switch call {
+        case .refresh:
+            await extensions.refresh()
+        case .checkForUpdates:
+            await extensions.checkForUpdates()
+        case .installFolder(let folder):
+            try await extensions.install(from: folder)
+        case .importFromRaycast(let directories):
+            let chosen = await Task.detached(priority: .userInitiated) {
+                ExtensionCatalog.importableFromRaycast().filter { directories.contains($0.directory) }
+            }.value
+            try Task.checkCancellation()
+            result.failures = await extensions.importAllFromRaycast(chosen) { report(.imported($0)) }
+        case .update(let names):
+            result.failures = await extensions.update(names)
+        case .installListing(let listing):
+            try await extensions.install(listing, onProgress: onProgress)
+        case .installGitHub(let source):
+            let settings = core.settings
+            result.installedTitle = try await extensions.install(
+                source, packageManager: settings.extensionPackageManager,
+                additionalSearchPaths: settings.extensionCustomSearchPaths,
+                onProgress: onProgress
+            ).title
+        case .uninstall(let name):
+            if let owner = extensions.installed.first(where: { $0.manifest.name == name }) {
+                await extensions.uninstall(owner)
             }
-            calls[id] = nil
-            report(.finished(result))
         }
+        return .extensions(result)
     }
 
-    private func runMCP(_ call: MCPSettingsCall, id: UUID) -> Task<Void, Never> {
-        let link = link
-        return Task { [weak self, weak link] in
-            guard let self else { return }
-            let result: MCPSettingsResult
-            do {
-                try Task.checkCancellation()
-                result = try await performMCP(call)
-            } catch is CancellationError {
-                result = .cancelled
-            } catch {
-                result = .failure(error.localizedDescription)
-            }
-            calls[id] = nil
-            if self.link === link { send(makeStatus()) }
-            link?.send(.mcpResult(id, result))
-        }
-    }
-
-    private func performMCP(_ call: MCPSettingsCall) async throws -> MCPSettingsResult {
+    private func performMCP(_ call: MCPSettingsCall) async throws -> SettingsWire.Reply {
         let coordinator = core.mcpCoordinator
         switch call {
         case .signIn(let server, let credentials):
@@ -259,14 +298,53 @@ final class SettingsProcessController {
         case .signOut(let id):
             try coordinator.signOut(id)
         case .test(let server, let secrets):
-            return .success(await coordinator.test(server, secrets: secrets))
+            return .mcp(await coordinator.test(server, secrets: secrets))
         case .save(let server, let secrets):
             try coordinator.save(server, secrets: secrets)
             unsavedMCPServers.remove(server.id)
         case .remove(let id):
             try coordinator.remove(id)
         }
-        return .success()
+        return .mcp(nil)
+    }
+
+    private func performBackup(_ call: BackupSettingsCall, id: UUID) async throws -> SettingsWire.Reply {
+        switch call {
+        case .prepare(let file):
+            let generation = generation
+            let (staging, preview) = try await BackupActions.openBackup(at: file, id: id)
+            guard generation == self.generation, !Task.isCancelled, !isClosing else {
+                staging.discard()
+                throw CancellationError()
+            }
+            discardStagedBackup()
+            stagedBackup = (preview, staging)
+            return .backupPreview(preview)
+        case .apply(let id, let categories):
+            guard let stagedBackup, stagedBackup.preview.id == id else { throw CancellationError() }
+            self.stagedBackup = nil
+            defer { stagedBackup.staging.discard() }
+            let selected = categories.intersection(stagedBackup.preview.manifest.categories)
+            let summary = await Task {
+                await BackupApplier.apply(selected, from: stagedBackup.staging.bundle, to: core)
+            }.value
+            return .backupMessage(BackupActions.summaryText(summary))
+        case .export(let destination, let categories):
+            let result = try await BackupActions.exportBackup(
+                core: core, categories: categories, to: destination)
+            return .backupMessage(BackupActions.exportText(result))
+        case .importRaycast(let url, let passphrase, let options):
+            let result = try await Task {
+                try await BackupActions.importRaycast(
+                    core: core, file: url, passphrase: passphrase, options: options)
+            }.value
+            return .backupMessage(BackupActions.raycastText(result))
+        }
+    }
+
+    private func discardStagedBackup() {
+        stagedBackup?.staging.discard()
+        stagedBackup = nil
     }
 
     private func inspectHyperKey(diagnostics: Bool) {
@@ -295,7 +373,7 @@ final class SettingsProcessController {
     }
 
     private func send(_ status: MainAppStatus) {
-        guard let link, status != lastStatus else { return }
+        guard let link, !isClosing, status != lastStatus else { return }
         lastStatus = status
         link.send(.status(status))
     }

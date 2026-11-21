@@ -1,6 +1,6 @@
 import Foundation
 
-enum BackupCategory: String, CaseIterable, Identifiable, Sendable {
+enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case configuration
     case clipboard
     case snippets

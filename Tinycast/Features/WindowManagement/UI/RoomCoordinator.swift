@@ -476,10 +476,19 @@ final class RoomCoordinator {
                 title: String(localized: "Delete “\(room.name)”?"),
                 message: String(localized: "Its windows stay open. Its shortcut goes with it."),
                 symbol: Room.sfSymbol, confirmTitle: String(localized: "Delete"))
-            guard confirmed, let removed = self.store.remove(id: room.id) else { return }
-            if self.currentRoomID == removed.id { self.currentRoomID = nil }
-            self.removeReferences(ids: [removed.id], entryIDs: [removed.entryID])
+            guard confirmed else { return }
+            if let mainApp = self.core.mainApp {
+                mainApp.send(.deleteRoom(room.id))
+            } else {
+                self.removeRoom(id: room.id)
+            }
         }
+    }
+
+    func removeRoom(id: UUID) {
+        guard let removed = store.remove(id: id) else { return }
+        if currentRoomID == removed.id { currentRoomID = nil }
+        removeReferences(ids: [removed.id], entryIDs: [removed.entryID])
     }
 
     @discardableResult

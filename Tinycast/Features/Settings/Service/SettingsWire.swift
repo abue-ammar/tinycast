@@ -3,11 +3,12 @@ import Foundation
 /// What the main app and Settings' own process say to each other over their link.
 enum SettingsWire {
     enum ToSettings: Codable, Sendable {
-        case show(SettingsRequest)
+        case show(UUID, SettingsRequest)
         case changed(SharedChange)
         case status(MainAppStatus)
-        case callEvent(UUID, ExtensionCallEvent)
-        case mcpResult(UUID, MCPSettingsResult)
+        case extensionProgress(UUID, ExtensionCallEvent)
+        case reply(UUID, Reply)
+        case readyToClose
     }
 
     enum ToMainApp: Codable, Sendable {
@@ -15,14 +16,36 @@ enum SettingsWire {
         /// Sent at once, never debounced: the main app's shortcuts go quiet before a key lands.
         case recordingShortcut(Bool)
         case perform(SettingsAction)
-        /// Awaited by the pane: an extension change reports progress and ends with a result.
-        case call(UUID, ExtensionCall)
-        case mcpCall(UUID, MCPSettingsCall)
+        case call(UUID, Call)
         case cancelCall(UUID)
         /// LaunchServices may hand either instance a link; only the main app acts on one.
         case openURL(URL)
         /// The window is up; macOS lets only the app the user just addressed bring it forward.
-        case activate
+        case activate(UUID)
+        case closing
+    }
+
+    enum Call: Codable, Sendable {
+        case extensions(ExtensionCall)
+        case mcp(MCPSettingsCall)
+        case backup(BackupSettingsCall)
+    }
+
+    enum Reply: Codable, Sendable {
+        case extensions(ExtensionCallResult)
+        case mcp(MCPServerStatus?)
+        case backupPreview(BackupPreview)
+        case backupMessage(String)
+        case failure(String)
+        case cancelled
+    }
+
+    struct Failure: LocalizedError {
+        let errorDescription: String?
+
+        static var disconnected: Self {
+            Self(errorDescription: String(localized: "Lost the connection to Tinycast."))
+        }
     }
 }
 
@@ -34,20 +57,16 @@ enum MCPSettingsCall: Codable, Sendable {
     case remove(UUID)
 }
 
-enum MCPSettingsResult: Codable, Sendable {
-    case success(MCPServerStatus? = nil)
-    case failure(String)
-    case cancelled
+enum BackupSettingsCall: Codable, Sendable {
+    case prepare(URL)
+    case apply(UUID, Set<BackupCategory>)
+    case export(URL, Set<BackupCategory>)
+    case importRaycast(URL, passphrase: String, options: RaycastImportOptions)
+}
 
-    struct Failure: LocalizedError {
-        let errorDescription: String?
-    }
-
-    func get() throws -> MCPServerStatus? {
-        switch self {
-        case .success(let status): return status
-        case .failure(let message): throw Failure(errorDescription: message)
-        case .cancelled: throw CancellationError()
-        }
-    }
+struct BackupPreview: Codable, Sendable {
+    let id: UUID
+    let manifest: BackupManifest
+    let customCommands: Int
+    let globalShortcuts: Int
 }

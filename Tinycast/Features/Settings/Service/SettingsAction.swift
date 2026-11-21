@@ -12,12 +12,19 @@ enum SettingsAction: Codable, Sendable {
     case removeSyncDevice(String)
     case deleteICloudData
     case editCustomCommand(UUID?)
+    case deleteCustomCommand(UUID)
     case editQuicklink(UUID?)
+    case deleteQuicklink(UUID)
     case editSnippet(StoredSnippet.ID?)
     case createRoom
     case editRoomWindows(UUID)
+    case deleteRoom(UUID)
     case enterRoom(UUID)
     case runWindowLayout(UUID)
+    case deleteWindowLayout(UUID)
+    case deleteCustomWindowSize(UUID)
+    case deleteCustomQuickAction(UUID)
+    case setShortcut(HotKeyAction, HotKeyBinding?)
     case clearClipboardHistory
     case rebuildFileIndex
     case refreshFileAccess
@@ -34,8 +41,7 @@ enum SettingsAction: Codable, Sendable {
     case setExtensionBackground(ExtensionCommandRef, Bool)
     case setExtensionMenuBar(ExtensionCommandRef, Bool)
     case setExtensionPreference(String, key: String, ExtensionPreferenceValue?)
-    /// After an import in Settings: what the main app holds in memory is read from disk again.
-    case reloadImportedData
+    case discardBackup(UUID)
     case checkForUpdates
     case showSupport
 }

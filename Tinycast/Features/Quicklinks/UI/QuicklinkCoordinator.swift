@@ -288,6 +288,15 @@ final class QuicklinkCoordinator {
                     confirmTitle: String(localized: "Delete"))
             else { return }
         }
+        if let mainApp = core.mainApp {
+            mainApp.send(.deleteQuicklink(id))
+        } else {
+            await removeQuicklink(id: id)
+        }
+    }
+
+    func removeQuicklink(id: UUID) async {
+        guard let quicklink = store.quicklink(id: id) else { return }
         // Unwound only once the row is gone: a failed delete must not strand its references.
         do {
             try store.remove(id: id)

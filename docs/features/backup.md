@@ -95,8 +95,10 @@ and asserts nothing escapes.
 
 **Staging lives in `Caches`, not `temporaryDirectory`.** It has to sit on the same volume as
 Application Support for a clipboard PNG to cross into the bundle as a hardlink rather than a copy.
-Leaving the Settings pane discards a tree the user opened but never imported; `BackupStaging` sweeps
-anything a day old on the next run, since a run killed mid-flight leaves its tree behind.
+The main app stages, reads and applies a backup against its live stores. Settings picks the file and
+categories, confirms executable imports, and displays the result. Leaving the pane or closing
+Settings discards an unused preview. Once the main app starts an import, it keeps the staging tree
+until the import finishes. `BackupStaging` sweeps trees left by crashes after a day.
 
 ## Coverage, and why it is spelled out
 

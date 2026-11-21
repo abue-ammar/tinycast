@@ -1,7 +1,7 @@
 import Foundation
 
 /// The independently importable categories in a Raycast export, so the user can pick a subset.
-struct RaycastImportOptions: OptionSet, Sendable {
+struct RaycastImportOptions: OptionSet, Codable, Sendable {
     let rawValue: Int
     static let shortcuts = RaycastImportOptions(rawValue: 1 << 0)
     static let favorites = RaycastImportOptions(rawValue: 1 << 1)

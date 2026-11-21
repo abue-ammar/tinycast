@@ -15,7 +15,12 @@ final class SettingsCoordinator {
         switch ProcessRole.current {
         case .settings:
             surface = .window(
-                SettingsWindowController(core: core, onClose: { [unowned core] in core.terminate() }))
+                SettingsWindowController(
+                    core: core,
+                    onClose: { [unowned core] in
+                        core.mainApp?.beginClosing()
+                        core.terminate()
+                    }))
         case .main:
             surface = .process(SettingsProcessController(core: core))
         }

@@ -52,13 +52,8 @@ enum BackupActions {
 
     /// Composes off-main, then seals — a clipboard history runs to gigabytes.
     static func exportBackup(
-        core: AppCore, categories: Set<BackupCategory>
-    ) async throws
-        -> BackupComposer.Result
-    {
-        guard let destination = chooseSaveLocation(named: "Tinycast", type: .tinycastBackup) else {
-            throw CancellationError()
-        }
+        core: AppCore, categories: Set<BackupCategory>, to destination: URL
+    ) async throws -> BackupComposer.Result {
         let plan = BackupComposer.plan(categories, from: core)
         return try await Task.detached(priority: .userInitiated) {
             let staging = try BackupStaging()
@@ -69,13 +64,21 @@ enum BackupActions {
         }.value
     }
 
-    /// Opens the archive and reads its manifest, leaving staging for the caller to apply and discard.
-    static func openBackup(at file: URL) async throws -> (BackupStaging, BackupManifest) {
+    static func openBackup(at file: URL, id: UUID = UUID()) async throws -> (BackupStaging, BackupPreview) {
         try await Task.detached(priority: .userInitiated) {
             let staging = try BackupStaging()
             do {
                 try BackupArchive.open(file: file, into: staging.root)
-                return (staging, try staging.bundle.readManifest())
+                let bundle = staging.bundle
+                let manifest = try bundle.readManifest()
+                let configuration: SettingsBackup? =
+                    manifest.categories.contains(.configuration)
+                    ? (try? Data(contentsOf: bundle.settingsURL)).flatMap { try? SettingsBackup(json: $0) }
+                    : nil
+                let preview = BackupPreview(
+                    id: id, manifest: manifest, customCommands: configuration?.customCommands?.count ?? 0,
+                    globalShortcuts: configuration?.hotkeys?.customCommands?.count ?? 0)
+                return (staging, preview)
             } catch {
                 staging.discard()
                 throw error
@@ -83,26 +86,10 @@ enum BackupActions {
         }.value
     }
 
-    static func applyBackup(
-        _ categories: Set<BackupCategory>, from staging: BackupStaging, to core: AppCore
-    ) async -> BackupApplier.Summary? {
-        let bundle = staging.bundle
-        if categories.contains(.configuration),
-            let data = try? Data(contentsOf: bundle.settingsURL),
-            let backup = try? SettingsBackup(json: data)
-        {
-            let commands = backup.customCommands?.count ?? 0
-            let shortcuts = backup.hotkeys?.customCommands?.count ?? 0
-            guard await confirmExecutableImport(core: core, commands: commands, shortcuts: shortcuts)
-            else { return nil }
-        }
-        return await BackupApplier.apply(categories, from: bundle, to: core)
-    }
-
-    /// The launcher has no picker, so its commands take everything; the pane is where you choose.
     static func runExportCommand(core: AppCore) async {
+        guard let destination = chooseSaveLocation(named: "Tinycast", type: .tinycastBackup) else { return }
         do {
-            let result = try await exportBackup(core: core, categories: BackupCategory.all)
+            let result = try await exportBackup(core: core, categories: BackupCategory.all, to: destination)
             await present(
                 core: core, title: String(localized: "Backup Exported"), message: exportText(result),
                 symbol: exportSymbol, tone: .success)
@@ -117,11 +104,14 @@ enum BackupActions {
     static func runImportCommand(core: AppCore) async {
         guard let file = chooseBackupFile() else { return }
         do {
-            let (staging, manifest) = try await openBackup(at: file)
+            let (staging, preview) = try await openBackup(at: file)
             defer { staging.discard() }
             guard
-                let summary = await applyBackup(manifest.categories, from: staging, to: core)
+                await confirmExecutableImport(
+                    core: core, commands: preview.customCommands, shortcuts: preview.globalShortcuts)
             else { return }
+            let summary = await BackupApplier.apply(
+                preview.manifest.categories, from: staging.bundle, to: core)
             await present(
                 core: core, title: String(localized: "Backup Imported"),
                 message: summaryText(summary), symbol: importSymbol, tone: .success)
@@ -347,7 +337,7 @@ enum BackupActions {
         AppLauncher.showInFinder(AppPaths.settingsFile())
     }
 
-    private static func confirmExecutableImport(
+    static func confirmExecutableImport(
         core: AppCore, commands: Int, shortcuts: Int
     ) async
         -> Bool

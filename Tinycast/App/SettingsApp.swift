@@ -52,6 +52,13 @@ final class SettingsAppDelegate: NSObject, NSApplicationDelegate {
         false
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        let deferred = AppCore.shared.mainApp?.prepareToClose {
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return deferred == true ? .terminateLater : .terminateNow
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         AppCore.shared.prepareSettingsForTermination()
     }
