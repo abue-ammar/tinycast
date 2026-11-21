@@ -69,8 +69,8 @@ feature's doc, under its own `## Invariants`.
   reach a feature's **coordinator** through `@Environment`, not `AppCore`.
 - **A role is Tinycast, and the main app is the hub.** A `ProcessRole` runs this executable with
   Tinycast's privacy grants, Keychain items and preferences, so only Tinycast's own code runs in one;
-  anyone else's code runs in a sandboxed executable of its own. Every other process links to the main
-  app and to no other. A store a Settings pane writes outside `UserDefaults` is a `SharedDomain`, or the
+  anyone else's code runs as WebAssembly in a sandboxed worker, never as native code. Every other
+  process links to the main app and to no other. A store a Settings pane writes outside `UserDefaults` is a `SharedDomain`, or the
   main app writes its stale copy back. See [architecture.md](docs/architecture.md#processes).
 - **A file under `Features/*/Model/` may not import AppKit or SwiftUI**, and takes every environment
   fact (clock, filesystem, home directory, rates) as an injected parameter. The harnesses compile the
