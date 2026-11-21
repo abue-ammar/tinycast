@@ -219,11 +219,12 @@ Three rules decide where new work runs:
   Swift process also costs about 4 MB before it does anything, so always-on work joins a process that is
   already running rather than starting one of its own.
 
-`ProcessLink.spawn` starts any executable in the bundle with a typed link on its stdin and stdout, and
-`App/ProcessLink+Role.swift` starts this one as a role. Both ends of a link must be one build, because
-its messages are this build's `Codable` types. `Platform/LaunchedExecutable.swift` pins the
-executable's file identity at launch, and `ProcessLink.spawn` refuses to start anything once an update
-or a rebuild has replaced it; Settings then offers a relaunch.
+`ProcessLink.spawn` starts any executable with a typed link on its stdin and stdout, and
+`App/ProcessLink+Role.swift` starts this one as a role. A role speaks this build's `Codable` types, so
+both ends must be one build: `Platform/LaunchedExecutable.swift` pins the executable's file identity at
+launch, and a role never starts once an update or a rebuild has replaced it; Settings then offers a
+relaunch. Code built apart from Tinycast, such as an extension, declares the Tinycast API version it
+supports instead.
 
 ## The Settings process
 

@@ -37,9 +37,8 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
 
     var childProcessIdentifier: pid_t? { child?.processIdentifier }
 
-    /// Starts an executable from this bundle; the child ends itself when the link closes.
+    /// The child ends itself when the link closes.
     static func spawn(_ executable: URL, arguments: [String]) throws -> ProcessLink {
-        try LaunchedExecutable.checkUnchanged()
         let process = Process()
         let input = Pipe()
         let output = Pipe()
