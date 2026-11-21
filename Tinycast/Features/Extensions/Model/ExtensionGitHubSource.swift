@@ -1,7 +1,7 @@
 import Foundation
 
 /// An extension's source on GitHub: a repository root, or one folder of it, at one ref.
-struct ExtensionGitHubSource: Hashable, Sendable {
+struct ExtensionGitHubSource: Codable, Hashable, Sendable {
     /// Follows the default branch, whatever the repository calls it.
     static let defaultRef = "HEAD"
 

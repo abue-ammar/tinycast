@@ -150,6 +150,16 @@ struct CustomCommandTests {
             "commands survive a reload with their flags",
             CustomCommandStore(defaults: defaults).commands == expected)
 
+        // Settings' own process writes the same defaults; the main app's copy adopts them.
+        let peer = CustomCommandStore(defaults: defaults)
+        var peerChanges = 0
+        peer.onChange = { _ in peerChanges += 1 }
+        _ = try? store.add(CustomCommand(name: "From Settings", command: "/usr/bin/true"))
+        peer.reload()
+        check("reload adopts another writer's library", peer.commands == store.commands)
+        peer.reload()
+        check("reload fires once, and an equal one not at all", peerChanges == 1)
+
         // `replace` runs the import sanitizer, which must carry every flag through.
         store.replace(with: [
             CustomCommand(

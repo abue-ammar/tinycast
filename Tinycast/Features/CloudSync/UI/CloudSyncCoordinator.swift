@@ -6,7 +6,7 @@ import OSLog
 @MainActor
 @Observable
 final class CloudSyncCoordinator {
-    struct Counts: Equatable {
+    struct Counts: Codable, Equatable, Sendable {
         let local: Int
         let cloud: Int
     }
@@ -318,7 +318,7 @@ final class CloudSyncCoordinator {
             RecordSyncSource.customQuickActions(core.customQuickActions),
             RecordSyncSource.mcpServers(
                 { core.mcpSettings.servers }, apply: { core.mcpCoordinator.applySynced($0) },
-                remove: { (try? core.mcpCoordinator.remove($0)) != nil }),
+                remove: { id in (try? core.mcpCoordinator.remove(id)) != nil }),
             ExtensionSyncSource(manager: core.extensions)
         ]
     }

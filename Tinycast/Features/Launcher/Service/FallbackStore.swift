@@ -15,6 +15,14 @@ final class FallbackStore {
         disabledIDs = Set(defaults.stringArray(forKey: disabledKey) ?? [])
     }
 
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let order = defaults.stringArray(forKey: orderKey) ?? []
+        let disabled = Set(defaults.stringArray(forKey: disabledKey) ?? [])
+        if order != orderedIDs { orderedIDs = order }
+        if disabled != disabledIDs { disabledIDs = disabled }
+    }
+
     func ordered(_ available: [Fallback]) -> [Fallback] {
         Fallback.ordered(available, by: orderedIDs)
     }

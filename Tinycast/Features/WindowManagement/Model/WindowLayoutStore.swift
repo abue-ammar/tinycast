@@ -12,11 +12,22 @@ final class WindowLayoutStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let decoded =
-            defaults.data(forKey: Self.defaultsKey)
-            .flatMap { try? JSONDecoder().decode([WindowLayout].self, from: $0) } ?? []
+        let decoded = Self.decoded(from: defaults)
         layouts = Self.sanitized(decoded)
         if layouts != decoded { persist() }
+    }
+
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let stored = Self.sanitized(Self.decoded(from: defaults))
+        guard stored != layouts else { return }
+        layouts = stored
+        onChange?(stored)
+    }
+
+    private static func decoded(from defaults: UserDefaults) -> [WindowLayout] {
+        defaults.data(forKey: defaultsKey)
+            .flatMap { try? JSONDecoder().decode([WindowLayout].self, from: $0) } ?? []
     }
 
     func layout(id: UUID) -> WindowLayout? {

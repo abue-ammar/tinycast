@@ -3,6 +3,7 @@ import SwiftUI
 /// An installed tool's command path and launch variables, saved as each field is left.
 struct AIProviderAdvancedSection: View {
     @Environment(AISettingsStore.self) private var settings
+    @Environment(MainAppLink.self) private var mainApp
 
     let kind: InstalledAIKind
     /// What the lookup found, where Choose… opens.
@@ -160,6 +161,7 @@ struct AIProviderAdvancedSection: View {
                     InstalledAIVariable(
                         name: $0.name.trimmingCharacters(in: .whitespaces), value: $0.value)
                 }, for: kind)
+            mainApp.send(.installedAILaunchChanged(kind))
             saveFailed = false
         } catch {
             saveFailed = true

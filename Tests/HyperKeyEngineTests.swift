@@ -219,68 +219,90 @@ struct HyperKeyEngineTests {
         quartz.setForwarding(true)
         _ = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0x2000, at: 0)
         let release = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 0.25, timestamp: 10)
-        check("Quartz must not request a second Quick Press when the keyboard handles it", release.effect == nil)
-        check("a physical release delivered after Quartz confirms the solo press",
+        check(
+            "Quartz must not request a second Quick Press when the keyboard handles it", release.effect == nil
+        )
+        check(
+            "a physical release delivered after Quartz confirms the solo press",
             quartz.physicalRelease(timestamp: 10, heldFor: 0.2) == 0.2)
-        check("a physical release delivered first waits for Quartz",
+        check(
+            "a physical release delivered first waits for Quartz",
             quartz.physicalRelease(timestamp: 20, heldFor: 0.3) == nil)
         _ = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0x2000, at: 0.5)
-        check("the same release delivered by Quartz consumes the physical duration",
+        check(
+            "the same release delivered by Quartz consumes the physical duration",
             quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 0.9, timestamp: 20).effect
                 == .unusedPress(heldFor: 0.3))
         _ = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0x2000, at: 1)
         _ = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 1.25, timestamp: 30)
         quartz.reset()
-        check("a tap timeout discards Quartz evidence still waiting for the physical callback",
+        check(
+            "a tap timeout discards Quartz evidence still waiting for the physical callback",
             quartz.physicalRelease(timestamp: 30, heldFor: 0.25) == nil)
         for stamp: UInt64 in [40, 50] {
             _ = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0x2000, at: 2)
-            check("Quartz releases can arrive in a batch before the HID callbacks",
-                quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 2.25, timestamp: stamp).effect == nil)
+            check(
+                "Quartz releases can arrive in a batch before the HID callbacks",
+                quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 2.25, timestamp: stamp).effect
+                    == nil)
         }
-        check("a chord with no physical solo release cannot claim the next solo tap",
+        check(
+            "a chord with no physical solo release cannot claim the next solo tap",
             quartz.physicalRelease(timestamp: 50, heldFor: 0.125) == 0.125)
-        check("a consumed release cannot toggle twice", quartz.physicalRelease(timestamp: 50, heldFor: 0.125) == nil)
+        check(
+            "a consumed release cannot toggle twice",
+            quartz.physicalRelease(timestamp: 50, heldFor: 0.125) == nil)
         for mapping in [HIDKeyMapping.capsLockToRightControl, .capsLockToF18] {
             var physical = PhysicalHyperKeyPress(mapping: mapping)
             for trigger in [mapping.source, mapping.destination] {
                 _ = physical.handle(device: 1, usage: trigger, down: true, at: 1)
-                check("a physical solo tap still toggles once",
+                check(
+                    "a physical solo tap still toggles once",
                     physical.handle(device: 1, usage: trigger, down: false, at: 1.25) == 0.25)
-                check("a duplicate release cannot toggle again",
+                check(
+                    "a duplicate release cannot toggle again",
                     physical.handle(device: 1, usage: trigger, down: false, at: 1.26) == nil)
                 _ = physical.handle(device: 1, usage: trigger, down: true, at: 2)
                 _ = physical.handle(device: 1, usage: 0x7_0000_000D, down: true, at: 2.1)
                 _ = physical.handle(device: 1, usage: 0x7_0000_000D, down: false, at: 2.15)
-                check("a J seen only on the keyboard disqualifies the press",
+                check(
+                    "a J seen only on the keyboard disqualifies the press",
                     physical.handle(device: 1, usage: trigger, down: false, at: 2.25) == nil)
             }
             _ = physical.handle(device: 1, usage: mapping.source, down: true, at: 3)
             physical.remove(device: 1)
-            check("disconnect cancels the hold", physical.handle(device: 1, usage: mapping.source, down: false, at: 4) == nil)
+            check(
+                "disconnect cancels the hold",
+                physical.handle(device: 1, usage: mapping.source, down: false, at: 4) == nil)
             _ = physical.handle(device: 1, usage: mapping.source, down: true, at: 5)
             _ = physical.handle(device: 2, usage: 0x7_0000_00E1, down: true, at: 5.1)
-            check("another keyboard's Shift participates in the chord",
+            check(
+                "another keyboard's Shift participates in the chord",
                 physical.handle(device: 1, usage: mapping.source, down: false, at: 5.25) == nil)
             _ = physical.handle(device: 1, usage: mapping.source, down: true, at: 6)
             _ = physical.handle(device: 1, usage: 0x7_0000_00E1, down: false, at: 6.1)
-            check("releasing a held Shift participates like Quartz flagsChanged",
+            check(
+                "releasing a held Shift participates like Quartz flagsChanged",
                 physical.handle(device: 1, usage: mapping.source, down: false, at: 6.25) == nil)
             for fn: UInt64 in [0x00FF_0000_0003, 0xFF01_0000_0003] {
                 _ = physical.handle(device: 1, usage: mapping.source, down: true, at: 7)
                 _ = physical.handle(device: 1, usage: fn, down: false, at: 7.1)
-                check("releasing Fn while Caps Lock is held cancels a solo press",
+                check(
+                    "releasing Fn while Caps Lock is held cancels a solo press",
                     physical.handle(device: 1, usage: mapping.source, down: false, at: 7.25) == nil)
             }
         }
         quartz.setForwarding(false)
         _ = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0x2000, at: 5)
-        check("returning to the local Mac restores Quartz Quick Press",
-            quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 5.25).effect == .unusedPress(heldFor: 0.25))
+        check(
+            "returning to the local Mac restores Quartz Quick Press",
+            quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 5.25).effect
+                == .unusedPress(heldFor: 0.25))
         _ = quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0x2000, at: 6)
         quartz.setForwarding(true)
         quartz.setForwarding(false)
-        check("a press spanning a change of focus is cancelled",
+        check(
+            "a press spanning a change of focus is cancelled",
             quartz.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 6.25).effect == nil)
     }
 
@@ -290,11 +312,14 @@ struct HyperKeyEngineTests {
         var physical = PhysicalHyperKeyPress(mapping: .capsLockToRightControl)
         _ = physical.handle(device: 1, usage: HIDKeyMapping.capsLock, down: true, at: 1)
         let duration = physical.handle(device: 1, usage: HIDKeyMapping.capsLock, down: false, at: 1.25)
-        check("an unremapped physical Caps Lock cannot authorize Quick Press by itself",
+        check(
+            "an unremapped physical Caps Lock cannot authorize Quick Press by itself",
             duration.flatMap { engine.physicalRelease(timestamp: 100, heldFor: $0) } == nil)
-        _ = engine.handle(type: .flagsChanged, keyCode: kVK_CapsLock, flags: 0x10000, at: 1.25, timestamp: 100)
+        _ = engine.handle(
+            type: .flagsChanged, keyCode: kVK_CapsLock, flags: 0x10000, at: 1.25, timestamp: 100)
         _ = engine.handle(type: .flagsChanged, keyCode: 62, flags: 0x2000, at: 2)
-        check("a later remapped press cannot claim the earlier raw Caps Lock release",
+        check(
+            "a later remapped press cannot claim the earlier raw Caps Lock release",
             engine.handle(type: .flagsChanged, keyCode: 62, flags: 0, at: 2.25, timestamp: 200).effect == nil)
     }
 
@@ -303,13 +328,15 @@ struct HyperKeyEngineTests {
         engine.setForwarding(true)
         _ = engine.physicalRelease(timestamp: 100, heldFor: 0.25)
         _ = engine.handle(type: .keyDown, keyCode: kVK_F18, flags: 0, at: 1)
-        check("an F18 solo release confirms its physical press",
+        check(
+            "an F18 solo release confirms its physical press",
             engine.handle(type: .keyUp, keyCode: kVK_F18, flags: 0, at: 1.25, timestamp: 100).effect
                 == .unusedPress(heldFor: 0.25))
         _ = engine.handle(type: .keyDown, keyCode: kVK_F18, flags: 0, at: 2)
         engine.reset()
         _ = engine.physicalRelease(timestamp: 200, heldFor: 0.25)
-        check("the release of an interrupted F18 press cannot confirm a solo tap",
+        check(
+            "the release of an interrupted F18 press cannot confirm a solo tap",
             engine.handle(type: .keyUp, keyCode: kVK_F18, flags: 0, at: 2.25, timestamp: 200).effect == nil)
     }
 
@@ -317,9 +344,11 @@ struct HyperKeyEngineTests {
         var releases = ForwardedQuickPress()
         _ = releases.confirm(.keyboard, timestamp: 90, duration: 0.25)
         _ = releases.confirm(.keyboard, timestamp: 80, duration: 0.125)
-        check("queued reports from different keyboards can arrive out of timestamp order",
+        check(
+            "queued reports from different keyboards can arrive out of timestamp order",
             releases.confirm(.quartz, timestamp: 80, duration: 1) == 0.125)
-        check("each report keeps its physical duration",
+        check(
+            "each report keeps its physical duration",
             releases.confirm(.quartz, timestamp: 90, duration: 1) == 0.25)
     }
 

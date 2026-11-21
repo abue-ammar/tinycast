@@ -337,6 +337,15 @@ struct QuicklinkCoordinatorTests {
                     && (fixture.store.quicklink(id: fixture.link.id) != nil) == confirmsInSettings,
                 "launcher deletion still follows its confirmation setting")
         }
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        let mainApp = MainAppLink()
+        fixture.core.mainApp = mainApp
+        fixture.core.confirms = true
+        await fixture.coordinator.deleteQuicklink(id: fixture.link.id, alwaysConfirm: true)
+        expect(
+            mainApp.deletions == [fixture.link.id] && fixture.store.quicklink(id: fixture.link.id) != nil,
+            "a confirmed Settings deletion leaves the shared data for the main app to change")
     }
 
     static func revealing() throws {
@@ -553,6 +562,8 @@ final class AppCore {
     let deepLinkCoordinator = DeepLinkCoordinator()
     var messages: [String] = []
     var confirmations = 0
+    var confirms = false
+    var mainApp: MainAppLink?
     func showNotice(title: String, message: String, symbol: String, tone: DialogTone) async {}
     func reportFailure(title: String, message: String, symbol: String, recovery: String) async -> Bool {
         false
@@ -563,9 +574,22 @@ final class AppCore {
         tone: DialogTone = .danger, confirmRole: ConfirmRole = .destructive
     ) async -> Bool {
         confirmations += 1
-        return false
+        return confirms
     }
     func showMessage(_ message: String, tone: DialogTone = .success) { messages.append(message) }
+}
+
+@MainActor
+final class MainAppLink {
+    enum Action { case deleteQuicklink(UUID) }
+
+    private(set) var deletions: [UUID] = []
+
+    func send(_ action: Action) {
+        switch action {
+        case .deleteQuicklink(let id): deletions.append(id)
+        }
+    }
 }
 
 @MainActor

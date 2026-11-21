@@ -129,23 +129,30 @@ final class MCPCoordinator {
 
     func signIn(_ server: MCPServer, credentials: MCPOAuth.Credentials) async throws {
         guard isActive else { throw MCPOAuth.Failure.signInRequired }
-        manager.disconnect(server.id)
+        let isSavedEndpoint =
+            store.server(id: server.id).map {
+                $0.oauth == true && $0.transport == server.transport
+            } ?? false
+        if isSavedEndpoint { manager.disconnect(server.id) }
+        defer { if isSavedEndpoint { applyEnabled() } }
+        let credentials = resolvedSecrets(.init(oauth: credentials), for: server).oauth ?? credentials
         try await core.mcpOAuth.signIn(server: server, credentials: credentials)
     }
 
     func signOut(_ id: UUID) throws {
-        manager.disconnect(id)
         try core.mcpOAuth.signOut(id)
+        manager.disconnect(id)
         dropWithdrawnServers(besides: id)
     }
-
-    func cancelSignIn(_ id: UUID) { core.mcpOAuth.cancelSignIn(id) }
 
     func status(of id: UUID) -> MCPServerStatus { manager.status(of: id) }
 
     func save(_ server: MCPServer, secrets: MCPSecretStore.Secrets) throws {
-        try MCPSecretStore().save(secrets, for: server.id)
-        core.mcpOAuth.cancelSignIn(server.id)
+        let keychain = MCPSecretStore()
+        let stored = keychain.secrets(for: server.id)
+        let resolved = resolvedSecrets(secrets, for: server)
+        try keychain.save(resolved, for: server.id)
+        if resolved.oauth != stored.oauth { core.mcpOAuth.invalidate(server.id) }
         manager.disconnect(server.id)
         store.save(server)
         applyEnabled()
@@ -169,34 +176,39 @@ final class MCPCoordinator {
     }
 
     func remove(_ id: UUID) throws {
-        core.mcpOAuth.cancelSignIn(id)
         try MCPSecretStore().remove(for: id)
+        core.mcpOAuth.invalidate(id)
+        manager.disconnect(id)
         store.remove(id: id)
         applyEnabled()
     }
 
     func discardUnsaved(_ id: UUID) {
-        cancelSignIn(id)
-        if store.server(id: id) == nil { try? MCPSecretStore().remove(for: id) }
-    }
-
-    func authenticationStatus(
-        _ server: MCPServer, stored: MCPOAuth.Credentials?
-    ) -> MCPOAuthManager.Status {
-        core.mcpOAuth.status(for: server, stored: stored)
+        guard store.server(id: id) == nil else { return }
+        core.mcpOAuth.invalidate(id)
+        try? MCPSecretStore().remove(for: id)
     }
 
     func test(_ server: MCPServer, secrets: MCPSecretStore.Secrets) async -> MCPServerStatus {
-        if server.oauth == true {
-            let stored = MCPSecretStore().secrets(for: server.id).oauth
-            guard stored?.clientID == secrets.oauth?.clientID,
-                stored?.clientSecret == secrets.oauth?.clientSecret
-            else { return .signInRequired }
-        }
-        let connection = MCPServerConnection(server: server, secrets: secrets, oauth: core.mcpOAuth)
+        let resolved = resolvedSecrets(secrets, for: server)
+        if server.oauth == true, resolved.oauth?.token == nil { return .signInRequired }
+        let connection = MCPServerConnection(server: server, secrets: resolved, oauth: core.mcpOAuth)
         defer { connection.stop() }
         await connection.start()
         return connection.status
+    }
+
+    private func resolvedSecrets(
+        _ supplied: MCPSecretStore.Secrets, for server: MCPServer
+    ) -> MCPSecretStore.Secrets {
+        guard let input = supplied.oauth, case .http(let url, _) = server.transport,
+            let stored = MCPSecretStore().secrets(for: server.id).oauth,
+            stored.clientID == input.clientID, stored.clientSecret == input.clientSecret,
+            stored.registration?.resource == (try? MCPOAuth.resource(url))
+        else { return supplied }
+        var result = supplied
+        result.oauth = stored
+        return result
     }
 
     private func isPermitted(_ server: MCPServer, tool: String, in chat: UUID) async -> Bool {

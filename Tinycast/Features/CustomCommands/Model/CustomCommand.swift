@@ -156,11 +156,22 @@ final class CustomCommandStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let decoded =
-            defaults.data(forKey: Self.defaultsKey)
-            .flatMap { try? JSONDecoder().decode([CustomCommand].self, from: $0) } ?? []
+        let decoded = Self.decoded(from: defaults)
         commands = Self.sanitized(decoded)
         if commands != decoded { persist() }
+    }
+
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let stored = Self.sanitized(Self.decoded(from: defaults))
+        guard stored != commands else { return }
+        commands = stored
+        onChange?(stored)
+    }
+
+    private static func decoded(from defaults: UserDefaults) -> [CustomCommand] {
+        defaults.data(forKey: defaultsKey)
+            .flatMap { try? JSONDecoder().decode([CustomCommand].self, from: $0) } ?? []
     }
 
     func command(id: UUID) -> CustomCommand? {

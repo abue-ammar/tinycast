@@ -1,6 +1,6 @@
 import Foundation
 
-enum CloudSyncStatus: Equatable, Sendable {
+enum CloudSyncStatus: Codable, Equatable, Sendable {
     case off
     case unavailable(CloudSyncUnavailability)
     case syncing(initial: Bool)
@@ -18,7 +18,7 @@ enum CloudSyncStatus: Equatable, Sendable {
     }
 }
 
-enum CloudSyncUnavailability: Equatable, Sendable {
+enum CloudSyncUnavailability: Codable, Equatable, Sendable {
     case unsignedBuild, noAccount, restricted, temporarilyUnavailable
 
     var message: String {
@@ -35,7 +35,7 @@ enum CloudSyncUnavailability: Equatable, Sendable {
     }
 }
 
-enum CloudSyncProblem: Equatable, Sendable {
+enum CloudSyncProblem: Codable, Equatable, Sendable {
     case network, busy, storageFull, accountNeedsAttention, other(String)
 
     var message: String {

@@ -400,9 +400,9 @@ final class AppIndex {
     private var extensionEntries: [AppEntry] = []
     private var meetingEntries: [AppEntry] = []
     /// The catalog's commands a disabled feature hides; the Commands slice is recomputed from it.
-    private var hiddenCommands: Set<CommandID> = []
+    private(set) var hiddenCommands: Set<CommandID> = []
     /// Kept out of launcher search by a "Show in launcher" switch, yet still runnable by shortcut.
-    private var unlistedCommands: Set<CommandID> = []
+    private(set) var unlistedCommands: Set<CommandID> = []
     private var nameCache = BundleNameCache()
     private var paneCache: SettingsPaneScanner.Cache?
     private var isRefreshing = false
@@ -442,6 +442,14 @@ final class AppIndex {
         let updated = visible ? hiddenCommands.subtracting(commands) : hiddenCommands.union(commands)
         guard updated != hiddenCommands else { return }
         hiddenCommands = updated
+        publishEntries()
+    }
+
+    /// Settings' process starts no feature, so it takes the main app's verdicts whole.
+    func adoptCommands(hidden: Set<CommandID>, unlisted: Set<CommandID>) {
+        guard hidden != hiddenCommands || unlisted != unlistedCommands else { return }
+        hiddenCommands = hidden
+        unlistedCommands = unlisted
         publishEntries()
     }
 

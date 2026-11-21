@@ -1,19 +1,19 @@
 import Foundation
 
-enum CommandID: String, CaseIterable, Sendable {
+enum CommandID: String, CaseIterable, Codable, Sendable {
     case sample
     var name: String { rawValue }
     var hotKeyAction: HotKeyAction? { .command(self) }
 }
 struct SystemAction {
-    enum ID: String, CaseIterable, Sendable { case sample }
+    enum ID: String, CaseIterable, Codable, Sendable { case sample }
     let name: String
 }
 enum SystemActionCatalog {
     static func action(id: SystemAction.ID) -> SystemAction { SystemAction(name: id.rawValue) }
 }
 struct WindowCommand {
-    enum ID: String, CaseIterable, Sendable { case sample }
+    enum ID: String, CaseIterable, Codable, Sendable { case sample }
     let name: String
 }
 enum WindowCommandCatalog {

@@ -160,6 +160,7 @@ targets:
       - Tinycast/Features/Dictation/Model/DictationAudioChunks.swift
       - Tinycast/Features/Dictation/Model/DictationLanguage.swift
       - Tinycast/Features/Dictation/Service/DictationWire.swift
+      - Tinycast/Platform/PipeFraming.swift
     configFiles:
       Debug: Config/Tinycast.xcconfig
     settings:

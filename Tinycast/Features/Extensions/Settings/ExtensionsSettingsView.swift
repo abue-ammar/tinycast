@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ExtensionsSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(ExtensionLibrary.self) private var library
     @Environment(SettingsNavigationState.self) private var navigation
     @State private var expanded: String?
     @State private var filter = ""
@@ -35,7 +36,7 @@ struct ExtensionsSettingsView: View {
 
             Group {
                 install
-                library
+                installedSection
                 compatibility
             }
             .settingsEnabled(settings.extensionsEnabled)
@@ -77,12 +78,13 @@ struct ExtensionsSettingsView: View {
             storeInstall = request
             core.pendingExtensionStoreInstall = nil
         }
-        .onChange(of: core.extensions.installed.count) { Task { await measureReclaimable() } }
+        .onChange(of: library.installed.count) { Task { await measureReclaimable() } }
+        .onChange(of: library.catalogRevision) { Task { await library.rescan() } }
         .task {
-            await core.extensions.refresh()
+            await library.refresh()
             await measureReclaimable()
             await findPending()
-            await core.extensions.checkForUpdates()
+            await library.checkForUpdates()
         }
     }
 
@@ -119,16 +121,16 @@ struct ExtensionsSettingsView: View {
 
     // MARK: - The library
 
-    private var library: some View {
+    private var installedSection: some View {
         Section {
-            if !core.extensions.updates.isEmpty {
+            if !library.updates.isEmpty {
                 updatesRow
             }
-            if core.extensions.installed.isEmpty {
+            if library.installed.isEmpty {
                 Text("Nothing installed yet.")
                     .foregroundStyle(.secondary)
             } else {
-                if core.extensions.installed.count > 3 {
+                if library.installed.count > 3 {
                     SettingsFilterField(prompt: "Filter extensions…", query: $filter)
                 }
                 if matching.isEmpty {
@@ -141,21 +143,19 @@ struct ExtensionsSettingsView: View {
                         ExtensionDisclosure(
                             installed: installed,
                             isExpanded: expanded == name,
-                            isUpdating: core.extensions.updating.contains(name),
+                            isUpdating: library.updating.contains(name),
                             onToggle: { expanded = expanded == name ? nil : name },
-                            onUpdate: core.extensions.updates[name] == nil ? nil : { update([name]) },
-                            onUninstall: {
-                                core.extensionCoordinator.confirmUninstall(installed)
-                            })
+                            onUpdate: library.updates[name] == nil ? nil : { update([name]) },
+                            onUninstall: { uninstall(installed) })
                     }
                 }
             }
         } header: {
             SettingsSectionHeader(anchor: .extensionsInstalled) {
                 Text(
-                    core.extensions.installed.isEmpty
+                    library.installed.isEmpty
                         ? LocalizedStringResource("extensions-installed-section", defaultValue: "Installed")
-                        : "Installed (\(core.extensions.installed.count))")
+                        : "Installed (\(library.installed.count))")
             }
         } footer: {
             if let updateError {
@@ -170,22 +170,30 @@ struct ExtensionsSettingsView: View {
     private var updatesRow: some View {
         SettingsRow(
             title: String(localized: "Updates available"),
-            subtitle: listed(core.extensions.updates.values.map(\.title)) + "."
+            subtitle: listed(Array(library.updates.values)) + "."
         ) {
             ExtensionSettingsIcon(systemName: "arrow.down.circle")
         } trailing: {
-            if core.extensions.updating.isEmpty {
-                Button("Update All") { update(core.extensions.updates.keys.sorted()) }
+            if library.updating.isEmpty {
+                Button("Update All") { update(library.updates.keys.sorted()) }
             } else {
                 ProgressView().controlSize(.small)
             }
         }
     }
 
+    /// The question is asked here; the main app, which runs extensions, removes it.
+    private func uninstall(_ installed: InstalledExtension) {
+        Task {
+            guard await core.extensionCoordinator.confirmsUninstall(installed) else { return }
+            await library.uninstall(installed)
+        }
+    }
+
     private func update(_ names: [String]) {
         updateError = nil
         Task {
-            let failed = await core.extensions.update(names)
+            let failed = await library.update(names)
             if !failed.isEmpty {
                 updateError = String(localized: "Couldn't update \(failed.joined(separator: ", ")).")
             }
@@ -193,8 +201,8 @@ struct ExtensionsSettingsView: View {
     }
 
     private var matching: [InstalledExtension] {
-        guard !filter.isEmpty else { return core.extensions.installed }
-        return core.extensions.installed.filter { entry in
+        guard !filter.isEmpty else { return library.installed }
+        return library.installed.filter { entry in
             entry.title.localizedCaseInsensitiveContains(filter)
                 || entry.manifest.commands.contains {
                     $0.title.localizedCaseInsensitiveContains(filter)
@@ -271,7 +279,15 @@ struct ExtensionsSettingsView: View {
             } trailing: {
                 Button("Clean Up…") {
                     Task {
-                        await core.extensionCoordinator.confirmCleanup(reclaimable)
+                        if await core.extensionCoordinator.confirmsCleanup(reclaimable) {
+                            let freed = await library.cleanUp()
+                            core.showMessage(
+                                freed.isEmpty
+                                    ? String(localized: "Nothing to clean up")
+                                    : String(
+                                        localized:
+                                            "Reclaimed \(ExtensionCleanup.formatted(bytes: freed.bytes))"))
+                        }
                         await measureReclaimable()
                     }
                 }
@@ -290,7 +306,7 @@ struct ExtensionsSettingsView: View {
 
     /// Off-main: measuring walks a `node_modules`, which is tens of thousands of files.
     private func measureReclaimable() async {
-        let installed = Set(core.extensions.installed.map(\.manifest.name))
+        let installed = Set(library.installed.map(\.manifest.name))
         let roots = ExtensionCleanup.defaultRoots()
         reclaimable = await Task.detached(priority: .utility) {
             ExtensionCleanup.reclaimable(installed: installed, in: roots)
@@ -330,7 +346,7 @@ struct ExtensionsSettingsView: View {
     private func openImport() {
         Task {
             importCandidates = ImportCandidates(
-                entries: await core.extensions.raycastImportCandidates())
+                entries: await library.raycastImportCandidates())
         }
     }
 
@@ -345,7 +361,7 @@ struct ExtensionsSettingsView: View {
             error = nil
             for url in panel.urls {
                 do {
-                    try await core.extensions.install(from: url)
+                    try await library.install(from: url)
                 } catch {
                     self.error = error.localizedDescription
                 }
@@ -357,7 +373,7 @@ struct ExtensionsSettingsView: View {
         error = nil
         importSummary = nil
         importProgress = (0, chosen.count)
-        let failed = await core.extensions.importAllFromRaycast(chosen) { done in
+        let failed = await library.importAllFromRaycast(chosen) { done in
             importProgress = (done, chosen.count)
         }
         importProgress = nil
@@ -376,7 +392,7 @@ struct ExtensionsSettingsView: View {
             pending = []
             return
         }
-        pending = await core.extensions.raycastImportCandidates().filter { !$0.isInstalled }
+        pending = await library.raycastImportCandidates().filter { !$0.isInstalled }
     }
 }
 
@@ -558,7 +574,7 @@ private struct SettingsCardRow<Control: View>: View {
 private struct CommandRows: View {
     let installed: InstalledExtension
     let command: ExtensionCommand
-    @Environment(AppCore.self) private var core
+    @Environment(ExtensionLibrary.self) private var library
     @Environment(AppSettings.self) private var settings
     @Environment(VisibilityStore.self) private var visibility
 
@@ -595,8 +611,8 @@ private struct CommandRows: View {
                 Toggle(
                     "Show in menu bar",
                     isOn: Binding(
-                        get: { core.extensionCoordinator.menuBarIsEnabled(reference) },
-                        set: { core.extensionCoordinator.setMenuBarEnabled($0, reference: reference) })
+                        get: { library.menuBarIsEnabled(reference) },
+                        set: { library.setMenuBarEnabled($0, reference: reference) })
                 )
                 .labelsHidden()
             }
@@ -623,7 +639,7 @@ private struct ExtensionRefreshRow: View {
     let command: ExtensionCommand
     let schedule: String
     var indent: CGFloat = 0
-    @Environment(AppCore.self) private var core
+    @Environment(ExtensionLibrary.self) private var library
 
     private static let relative: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
@@ -632,7 +648,7 @@ private struct ExtensionRefreshRow: View {
     }()
 
     var body: some View {
-        let info = core.extensions.backgroundInfo(extension: extensionName, command: command.name)
+        let info = library.backgroundInfo(extension: extensionName, command: command.name)
         SettingsCardRow(
             title: String(localized: "Background refresh"), detail: detail(for: info), indent: indent
         ) {
@@ -660,7 +676,7 @@ private struct ExtensionRefreshRow: View {
     }
 
     private func setEnabled(_ enabled: Bool) {
-        core.extensions.setBackgroundEnabled(enabled, extension: extensionName, command: command.name)
+        library.setBackgroundEnabled(enabled, extension: extensionName, command: command.name)
     }
 }
 
@@ -698,12 +714,12 @@ private struct ExtensionLauncherRow: View {
 
 private struct ExtensionIconRow: View {
     let installed: InstalledExtension
-    @Environment(AppCore.self) private var core
+    @Environment(ExtensionLibrary.self) private var library
     @State private var picking = false
 
     /// From the store, not the manager: picking publishes there, so both observe it.
     private var appearance: ExtensionAppearance? {
-        core.extensions.appearances.appearance(for: installed.manifest.name)
+        library.appearance(for: installed.manifest.name)
     }
 
     var body: some View {
@@ -718,9 +734,9 @@ private struct ExtensionIconRow: View {
                         ExtensionAppearancePicker(
                             current: appearance ?? .fallback,
                             isCustom: appearance != nil,
-                            onPick: { core.extensions.setAppearance($0, for: installed.manifest.name) },
+                            onPick: { library.setAppearance($0, for: installed.manifest.name) },
                             onReset: {
-                                core.extensions.setAppearance(nil, for: installed.manifest.name)
+                                library.setAppearance(nil, for: installed.manifest.name)
                             })
                     }
             }
@@ -744,11 +760,9 @@ private struct ExtensionPreferenceRow: View {
     let extensionName: String
     let schema: ExtensionPreferenceSchema
     var indent: CGFloat = 0
-    @Environment(AppCore.self) private var core
+    @Environment(ExtensionLibrary.self) private var library
     @State private var text: String = ""
     @State private var flag: Bool = false
-
-    private var storage: ExtensionStorage { core.extensions.storage }
 
     var body: some View {
         SettingsCardRow(title: schema.displayTitle, detail: detail, indent: indent) {
@@ -771,7 +785,7 @@ private struct ExtensionPreferenceRow: View {
             Toggle(schema.label ?? "", isOn: $flag)
                 .labelsHidden()
                 .onChange(of: flag) { _, value in
-                    storage.setPreference(
+                    library.setPreference(
                         extension: extensionName, key: schema.name, value: .bool(value))
                 }
         case .dropdown:
@@ -807,14 +821,14 @@ private struct ExtensionPreferenceRow: View {
 
     private func load() {
         let value =
-            storage.preference(extension: extensionName, key: schema.name)
+            library.preference(extension: extensionName, key: schema.name)
             ?? schema.effectiveDefault
         text = value.stringValue
         flag = value.boolValue
     }
 
     private func save(_ value: String) {
-        storage.setPreference(extension: extensionName, key: schema.name, value: .string(value))
+        library.setPreference(extension: extensionName, key: schema.name, value: .string(value))
     }
 
     private func choosePath() {

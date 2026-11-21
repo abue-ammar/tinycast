@@ -3,6 +3,7 @@ import SwiftUI
 
 struct BackupSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     private var runningApps: RunningAppsMonitor { core.runningApps }
     @State private var raycastFile: URL?
     @State private var passphrase = ""
@@ -16,9 +17,8 @@ struct BackupSettingsView: View {
     @State private var importingBackup = false
     @State private var backupStatus: Status?
     @State private var backupFile: URL?
-    @State private var openedManifest: BackupManifest?
-    /// Held between opening the file and applying it, so the extracted tree survives the picker.
-    @State private var openedStaging: BackupStaging?
+    @State private var preview: BackupPreview?
+    @State private var preparingBackup: Task<Void, Never>?
 
     private enum Status {
         case success(String)
@@ -33,7 +33,13 @@ struct BackupSettingsView: View {
     private var settingsFileSync: Binding<Bool> {
         Binding(
             get: { core.settings.settingsFileEnabled },
-            set: { enabled in Task { await BackupActions.setSettingsFileEnabled(enabled, core: core) } })
+            set: { enabled in
+                Task {
+                    guard let change = await BackupActions.settingsFileChange(enabling: enabled, core: core)
+                    else { return }
+                    mainApp.send(.setSettingsFile(change))
+                }
+            })
     }
 
     private var raycastFileSubtitle: String {
@@ -67,11 +73,12 @@ struct BackupSettingsView: View {
             Section {
                 LabeledContent {
                     Button("Choose…") { chooseBackupFile() }
+                        .disabled(importingBackup || preparingBackup != nil)
                 } label: {
                     SettingsRowTitle(.backupImport, "Backup File")
                     Text(backupFileSubtitle)
                 }
-                if let manifest = openedManifest {
+                if let manifest = preview?.manifest {
                     BackupCategorySelection(
                         selection: $importSelection, available: available(in: manifest))
                     LabeledContent {
@@ -146,7 +153,11 @@ struct BackupSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.backup)
-        .onDisappear { if !importingBackup { discardStagedBackup() } }
+        .onDisappear {
+            preparingBackup?.cancel()
+            preparingBackup = nil
+            if !importingBackup { discardPreview() }
+        }
     }
 
     @ViewBuilder
@@ -186,7 +197,8 @@ struct BackupSettingsView: View {
         guard let name = backupFile?.lastPathComponent else {
             return String(localized: "A .tinycast file exported from Tinycast.")
         }
-        return openedManifest == nil ? String(localized: "\(name) — couldn't be read") : name
+        if preparingBackup != nil { return name }
+        return preview == nil ? String(localized: "\(name) — couldn't be read") : name
     }
 
     private func available(in manifest: BackupManifest) -> [BackupCategory: Int] {
@@ -197,18 +209,18 @@ struct BackupSettingsView: View {
     }
 
     private func runExport() {
-        guard !exporting else { return }
+        guard !exporting,
+            let destination = BackupActions.chooseSaveLocation(named: "Tinycast", type: .tinycastBackup)
+        else { return }
         exporting = true
         backupStatus = nil
         let categories = exportSelection
         Task {
             defer { exporting = false }
             do {
-                let result = try await BackupActions.exportBackup(
-                    core: core, categories: categories)
-                backupStatus = .success(BackupActions.exportText(result))
+                let message = try await mainApp.runBackup(.export(destination, categories))
+                backupStatus = .success(message)
             } catch is CancellationError {
-                // The user closed the save panel; nothing to report.
             } catch {
                 backupStatus = .failure(error.localizedDescription)
             }
@@ -217,15 +229,16 @@ struct BackupSettingsView: View {
 
     private func chooseBackupFile() {
         guard let url = BackupActions.chooseBackupFile() else { return }
-        discardStagedBackup()
+        discardPreview()
         backupFile = url
         backupStatus = nil
-        Task {
+        preparingBackup = Task {
+            defer { if !Task.isCancelled { preparingBackup = nil } }
             do {
-                let (staging, manifest) = try await BackupActions.openBackup(at: url)
-                openedStaging = staging
-                openedManifest = manifest
-                importSelection = manifest.categories
+                let prepared = try await mainApp.prepareBackup(at: url)
+                preview = prepared
+                importSelection = prepared.manifest.categories
+            } catch is CancellationError {
             } catch {
                 backupStatus = .failure(error.localizedDescription)
             }
@@ -233,27 +246,34 @@ struct BackupSettingsView: View {
     }
 
     private func runBackupImport() {
-        guard let staging = openedStaging, !importingBackup, !importSelection.isEmpty else {
-            return
-        }
+        guard let preview, !importingBackup, !importSelection.isEmpty else { return }
         importingBackup = true
         let categories = importSelection
         Task {
-            defer { importingBackup = false }
-            let summary = await BackupActions.applyBackup(
-                categories, from: staging, to: core)
-            // Staged files are adopted by the stores during apply, so the tree goes either way.
-            discardStagedBackup()
-            backupFile = nil
-            if let summary { backupStatus = .success(BackupActions.summaryText(summary)) }
+            defer {
+                discardPreview()
+                backupFile = nil
+                importingBackup = false
+            }
+            if categories.contains(.configuration) {
+                guard
+                    await BackupActions.confirmExecutableImport(
+                        core: core, commands: preview.customCommands, shortcuts: preview.globalShortcuts)
+                else { return }
+            }
+            do {
+                let message = try await mainApp.runBackup(.apply(preview.id, categories))
+                backupStatus = .success(message)
+            } catch is CancellationError {
+            } catch {
+                backupStatus = .failure(error.localizedDescription)
+            }
         }
     }
 
-    /// The extracted tree can run to gigabytes, so leaving the pane must not strand it.
-    private func discardStagedBackup() {
-        openedStaging?.discard()
-        openedStaging = nil
-        openedManifest = nil
+    private func discardPreview() {
+        if let preview { mainApp.send(.discardBackup(preview.id)) }
+        preview = nil
     }
 
     private func chooseRaycastFile() {
@@ -272,10 +292,11 @@ struct BackupSettingsView: View {
         Task {
             defer { importing = false }
             do {
-                let outcome = try await BackupActions.importRaycast(
-                    core: core, file: file, passphrase: passphrase, options: selection)
-                status = .success(BackupActions.raycastText(outcome))
+                let message = try await mainApp.runBackup(
+                    .importRaycast(file, passphrase: passphrase, options: selection))
+                status = .success(message)
                 passphrase = ""
+            } catch is CancellationError {
             } catch {
                 status = .failure(error.localizedDescription)
             }

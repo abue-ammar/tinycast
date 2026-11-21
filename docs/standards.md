@@ -48,7 +48,8 @@ Full detail in [architecture.md](architecture.md); the rules a new feature has t
   scannable, not on principle.
 - **`Model/` may not import AppKit or SwiftUI.** Everything from the environment is injected: the clock,
   the filesystem, the home directory, the rates table. This is the enforced rule below.
-- New long-lived state belongs on `AppCore`, wired in `start()`. Do not create a second singleton.
+- New long-lived state belongs on `AppCore`, wired in `load()` or `start()`. Do not create a second
+  singleton.
 - A Settings pane lives with its feature. Only a pane no feature owns lives in `Settings/Panes/`.
 - Shared visual primitives go in `DesignSystem/`, system shims in `Platform/`. Neither may depend on a
   feature.
@@ -90,6 +91,9 @@ fit the table.
 | `Remapper`    | Keeps one HID key mapping on every matching device, including later arrivals  |
 | `Migration`   | Repairs state an older release left behind; deleted after one stable release  |
 | `Lock`        | Holds a cross-process exclusive claim that the kernel frees on exit           |
+| `Link`        | One process's typed line to another of this app's processes                   |
+| `Mirror`      | Keeps two processes' copies of shared state in step                           |
+| `Library`     | Another process's collection, read locally and changed through its owner      |
 
 `Manager` is the one worth thinking twice about. It means _lifecycle plus policy_, which is a lot for one
 type, so there are only three: `ClipboardManager` (polls, and owns the capture policy and the

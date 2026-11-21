@@ -41,6 +41,14 @@ final class QuickActionSettingsStore {
             ?? [:]
     }
 
+    /// Adopts what another process stored.
+    func reload() {
+        let stored = QuickActionSettingsStore(defaults: defaults)
+        if stored.settings != settings { settings = stored.settings }
+        if stored.model != model { model = stored.model }
+        if stored.modelOverrides != modelOverrides { modelOverrides = stored.modelOverrides }
+    }
+
     func select(_ selection: AIModelSelection?) {
         model = selection
     }

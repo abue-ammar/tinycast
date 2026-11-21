@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CalendarSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var settings
     @Environment(CalendarStore.self) private var store
 
@@ -34,9 +35,7 @@ struct CalendarSettingsView: View {
                         title: String(localized: "Calendar access is needed"),
                         subtitle: String(localized: "Needed to read events and find join links.")
                     ) {
-                        Button("Allow Calendar Access…") {
-                            core.calendarCoordinator.setCalendarEnabled(true)
-                        }
+                        Button("Allow Calendar Access…") { setCalendarEnabled(true) }
                     }
                 }
             } else if store.access == .denied {
@@ -159,10 +158,16 @@ struct CalendarSettingsView: View {
 
     /// Routed through the coordinator so enabling, which is also consent, confirms first.
     private var enabledBinding: Binding<Bool> {
-        Binding(
-            get: { settings.calendarEnabled },
-            set: { core.calendarCoordinator.setCalendarEnabled($0) }
-        )
+        Binding(get: { settings.calendarEnabled }, set: setCalendarEnabled)
+    }
+
+    /// A grant can leave the switch where it was, so the main app is told to read access again.
+    private func setCalendarEnabled(_ enabled: Bool) {
+        Task {
+            guard await core.calendarCoordinator.setCalendarEnabled(enabled) else { return }
+            store.start()
+            mainApp.send(.reloadCalendar)
+        }
     }
 }
 

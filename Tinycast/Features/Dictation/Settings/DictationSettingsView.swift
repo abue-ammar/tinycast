@@ -4,6 +4,7 @@ import SwiftUI
 
 struct DictationSettingsView: View {
     @Environment(DictationCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var settings
     @State private var microphones: [AVCaptureDevice] = []
     @State private var modelSize: Int64?
@@ -104,21 +105,21 @@ struct DictationSettingsView: View {
                         Text(settings.dictationModel.summary)
                     }
 
-                    let installed = coordinator.models.isInstalled(settings.dictationModel)
-                    let downloading = coordinator.models.downloading == settings.dictationModel
+                    let installed = models.isInstalled(settings.dictationModel)
+                    let downloading = models.downloading == settings.dictationModel
                     if downloading {
-                        DownloadProgressView(models: coordinator.models)
+                        DownloadProgressView(models: models) { mainApp.send(.cancelDictationDownload) }
                     } else {
                         LabeledContent {
                             if installed {
                                 Button("Remove") { removeModel(settings.dictationModel) }
                                     .disabled(
-                                        coordinator.models.transcribing || coordinator.models.removing != nil)
+                                        models.transcribing || models.removing != nil)
                             } else {
                                 Button("Download") { downloadModel(settings.dictationModel) }
                                     .disabled(
-                                        coordinator.models.downloading != nil
-                                            || coordinator.models.removing == settings.dictationModel)
+                                        models.downloading != nil
+                                            || models.removing == settings.dictationModel)
                             }
                         } label: {
                             Text(
@@ -215,10 +216,16 @@ struct DictationSettingsView: View {
         .task(id: settings.dictationEnabled ? settings.dictationModel : nil) {
             modelSize = nil
             guard settings.dictationEnabled else { return }
-            coordinator.models.refreshInstalledModels()
+            mainApp.send(.refreshDictationModels)
             await refreshModelSize(settings.dictationModel)
         }
+        .onChange(of: models.installed) {
+            Task { await refreshModelSize(settings.dictationModel) }
+        }
     }
+
+    /// Downloads, removals and the helper run in the main app, which reports their state here.
+    private var models: MainAppStatus.DictationModels { mainApp.status.dictationModels }
 
     private var enabledBinding: Binding<Bool> {
         Binding(
@@ -256,13 +263,14 @@ struct DictationSettingsView: View {
     }
 
     private struct DownloadProgressView: View {
-        let models: DictationModelStore
+        let models: MainAppStatus.DictationModels
+        let cancel: () -> Void
 
         var body: some View {
             let progress = models.downloadProgress
             VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                 LabeledContent {
-                    Button("Cancel") { models.cancelDownload() }
+                    Button("Cancel", action: cancel)
                 } label: {
                     Text(title)
                 }
@@ -305,16 +313,10 @@ struct DictationSettingsView: View {
     }
 
     private func downloadModel(_ model: DictationModel) {
-        Task {
-            await coordinator.downloadModel(model)
-            await refreshModelSize(model)
-        }
+        mainApp.send(.downloadDictationModel(model))
     }
 
     private func removeModel(_ model: DictationModel) {
-        Task {
-            await coordinator.removeModel(model)
-            await refreshModelSize(model)
-        }
+        mainApp.send(.removeDictationModel(model))
     }
 }

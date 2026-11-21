@@ -26,6 +26,7 @@ struct ClipboardTests {
         typeFilterSplitsTheHistory()
         typeFilterJoinsTheSearchMemo()
         persistence()
+        deferredOpen()
         exportSeesPastTheMemoryWindow()
         importedImagesArriveOnce()
         imageCopiesLeaveWithTheirBlob()
@@ -47,6 +48,18 @@ struct ClipboardTests {
     }
 
     // MARK: - Cases
+
+    static func deferredOpen() {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = ClipboardStore(directory: directory, opensDatabase: false)
+        expect(
+            !FileManager.default.fileExists(atPath: directory.path),
+            "creating the Settings role's store leaves the database directory untouched")
+        store.open()
+        expect(
+            FileManager.default.fileExists(atPath: store.dbURL.path), "an explicit open creates the database")
+    }
 
     static func retiredImageCapturesStayRetired() async throws {
         let directory = FileManager.default.temporaryDirectory

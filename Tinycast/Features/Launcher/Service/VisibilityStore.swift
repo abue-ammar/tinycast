@@ -4,9 +4,9 @@ import Foundation
 @MainActor
 @Observable
 final class VisibilityStore {
+    private static let itemsKey = "hiddenLauncherItems"
+    private static let kindsKey = "hiddenLauncherKinds"
     private let defaults: UserDefaults
-    private let itemsKey = "hiddenLauncherItems"
-    private let kindsKey = "hiddenLauncherKinds"
 
     private(set) var hiddenItemKeys: Set<String>
     private(set) var disabledKinds: Set<String>
@@ -15,16 +15,26 @@ final class VisibilityStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        hiddenItemKeys = Set(defaults.stringArray(forKey: itemsKey) ?? [])
-        disabledKinds = Set(defaults.stringArray(forKey: kindsKey) ?? [])
+        hiddenItemKeys = Set(defaults.stringArray(forKey: Self.itemsKey) ?? [])
+        disabledKinds = Set(defaults.stringArray(forKey: Self.kindsKey) ?? [])
+    }
+
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let items = Set(defaults.stringArray(forKey: Self.itemsKey) ?? [])
+        let kinds = Set(defaults.stringArray(forKey: Self.kindsKey) ?? [])
+        guard items != hiddenItemKeys || kinds != disabledKinds else { return }
+        hiddenItemKeys = items
+        disabledKinds = kinds
+        revision &+= 1
     }
 
     func replace(hiddenItems: [String], disabledKinds newKinds: [String]) {
         hiddenItemKeys = Set(hiddenItems)
         disabledKinds = Set(newKinds)
         revision &+= 1
-        defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
-        defaults.set(Array(disabledKinds), forKey: kindsKey)
+        defaults.set(Array(hiddenItemKeys), forKey: Self.itemsKey)
+        defaults.set(Array(disabledKinds), forKey: Self.kindsKey)
     }
 
     func key(for entry: AppEntry) -> String { entry.preferenceKey }
@@ -51,7 +61,7 @@ final class VisibilityStore {
         guard isItemVisible(key: key) != visible else { return }
         if visible { hiddenItemKeys.remove(key) } else { hiddenItemKeys.insert(key) }
         revision &+= 1
-        defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
+        defaults.set(Array(hiddenItemKeys), forKey: Self.itemsKey)
     }
 
     func removeItemKeys(_ keys: Set<String>) {
@@ -60,7 +70,7 @@ final class VisibilityStore {
         hiddenItemKeys.subtract(keys)
         guard hiddenItemKeys != previous else { return }
         revision &+= 1
-        defaults.set(Array(hiddenItemKeys), forKey: itemsKey)
+        defaults.set(Array(hiddenItemKeys), forKey: Self.itemsKey)
     }
 
     func isKindEnabled(_ kind: AppEntry.Kind) -> Bool {
@@ -71,7 +81,7 @@ final class VisibilityStore {
         guard isKindEnabled(kind) != enabled else { return }
         if enabled { disabledKinds.remove(kind.rawValue) } else { disabledKinds.insert(kind.rawValue) }
         revision &+= 1
-        defaults.set(Array(disabledKinds), forKey: kindsKey)
+        defaults.set(Array(disabledKinds), forKey: Self.kindsKey)
     }
 
     /// A feature carrying its own switch is not this store's to gate.

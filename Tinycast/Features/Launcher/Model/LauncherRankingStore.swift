@@ -46,10 +46,20 @@ final class LauncherRankingStore {
     init(fileURL: URL? = nil, now: @escaping () -> Date = Date.init) {
         self.fileURL = fileURL ?? Self.defaultFileURL()
         self.now = now
-        let decoded =
-            (try? Data(contentsOf: self.fileURL))
+        visits = Self.live(Self.stored(at: self.fileURL), at: now())
+    }
+
+    /// Adopts a table another process wrote.
+    func reload() {
+        let stored = Self.live(Self.stored(at: fileURL), at: now())
+        guard stored != visits else { return }
+        visits = stored
+        revision &+= 1
+    }
+
+    private static func stored(at fileURL: URL) -> [String: LauncherVisit] {
+        (try? Data(contentsOf: fileURL))
             .flatMap { try? JSONDecoder().decode([String: LauncherVisit].self, from: $0) } ?? [:]
-        visits = Self.live(decoded, at: now())
     }
 
     var isEmpty: Bool { visits.isEmpty }

@@ -4,6 +4,7 @@ import SwiftUI
 
 struct PermissionsSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     @State private var accessibilityTrusted = Permissions.isAccessibilityTrusted()
     @State private var fullDiskAccess = Permissions.hasFullDiskAccess()
     @State private var calendarAccess = Permissions.calendarAccess()
@@ -86,7 +87,13 @@ struct PermissionsSettingsView: View {
                         Button(calendarNeedsPrompt ? "Grant Access…" : "Open…") {
                             // Settings lists no app TCC was never asked about, so asking is the way in.
                             if calendarNeedsPrompt {
-                                core.calendarCoordinator.setCalendarEnabled(true)
+                                Task {
+                                    guard await core.calendarCoordinator.setCalendarEnabled(true) else {
+                                        return
+                                    }
+                                    core.calendarStore.start()
+                                    mainApp.send(.reloadCalendar)
+                                }
                             } else {
                                 Permissions.openCalendarSettings()
                             }
@@ -198,7 +205,7 @@ struct PermissionsSettingsView: View {
         let diskAccess = Permissions.hasFullDiskAccess()
         if diskAccess != fullDiskAccess {
             fullDiskAccess = diskAccess
-            core.fileIndexer.refreshAccess()
+            mainApp.send(.refreshFileAccess)
         }
         let access = Permissions.calendarAccess()
         if access != calendarAccess { calendarAccess = access }

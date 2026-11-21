@@ -139,6 +139,43 @@ final class AISettingsStore {
         }
     }
 
+    /// Adopts what another process stored; a tool whose launch moved is checked again.
+    func reload() {
+        let stored = AISettingsStore(
+            defaults: defaults, environmentStore: environmentStore,
+            isAppleIntelligenceAvailable: isAppleIntelligenceAvailable)
+        for kind in InstalledAIKind.allCases where stored.override(for: kind) != override(for: kind) {
+            noteLaunchChanged(for: kind)
+        }
+        adopt(\.installedOverrides, from: stored)
+        adopt(\.connections, from: stored)
+        adopt(\.defaultModel, from: stored)
+        adopt(\.webSearchEnabled, from: stored)
+        adopt(\.choicesEnabled, from: stored)
+        adopt(\.expandsReasoning, from: stored)
+        adopt(\.systemPrompt, from: stored)
+        adopt(\.systemPromptEnabled, from: stored)
+        adopt(\.retention, from: stored)
+        adopt(\.opensTo, from: stored)
+        adopt(\.newChatAfter, from: stored)
+        adopt(\.toolRounds, from: stored)
+        adopt(\.shownModels, from: stored)
+        adopt(\.disabledRoutes, from: stored)
+        adopt(\.enabledInstalledProviders, from: stored)
+    }
+
+    /// A Keychain variable can change while every stored name stays the same.
+    func noteLaunchChanged(for kind: InstalledAIKind) {
+        launchRevisions[kind, default: 0] += 1
+    }
+
+    private func adopt<Value: Equatable>(
+        _ property: ReferenceWritableKeyPath<AISettingsStore, Value>, from stored: AISettingsStore
+    ) {
+        let value = stored[keyPath: property]
+        if self[keyPath: property] != value { self[keyPath: property] = value }
+    }
+
     func connection(id: UUID) -> AIConnection? {
         connections.first { $0.id == id }
     }
@@ -313,7 +350,7 @@ final class AISettingsStore {
         override.commandPath = path.trimmingCharacters(in: .whitespacesAndNewlines)
         guard override != self.override(for: kind) else { return }
         installedOverrides[kind] = override.isEmpty ? nil : override
-        launchRevisions[kind, default: 0] += 1
+        noteLaunchChanged(for: kind)
     }
 
     func environment(for kind: InstalledAIKind) throws -> [InstalledAIVariable] {
@@ -335,7 +372,7 @@ final class AISettingsStore {
         var override = override(for: kind)
         override.environmentNames = kept.map(\.name)
         installedOverrides[kind] = override.isEmpty ? nil : override
-        launchRevisions[kind, default: 0] += 1
+        noteLaunchChanged(for: kind)
     }
 
     /// Reads the Keychain only for a tool that has variables, so most launches never touch it.

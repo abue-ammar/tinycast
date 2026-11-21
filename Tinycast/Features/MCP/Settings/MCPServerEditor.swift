@@ -8,9 +8,9 @@ struct MCPServerEditorTarget: Identifiable {
 
 /// Adds or edits one server, and can prove it connects before the panel is dismissed.
 struct MCPServerEditor: View {
-    @Environment(MCPCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     let target: MCPServerEditorTarget
-    let onSave: (MCPServer, MCPSecretStore.Secrets) -> String?
+    let onSave: (MCPServer, MCPSecretStore.Secrets) async -> String?
     let onCancel: () -> Void
 
     private enum Kind: String, CaseIterable, Identifiable {
@@ -49,7 +49,7 @@ struct MCPServerEditor: View {
 
     init(
         target: MCPServerEditorTarget,
-        onSave: @escaping (MCPServer, MCPSecretStore.Secrets) -> String?,
+        onSave: @escaping (MCPServer, MCPSecretStore.Secrets) async -> String?,
         onCancel: @escaping () -> Void
     ) {
         self.target = target
@@ -223,8 +223,7 @@ struct MCPServerEditor: View {
         .settingsEditorPanelSurface()
         .onDisappear {
             operation?.cancel()
-            coordinator.cancelSignIn(target.server.id)
-            if target.isNew { coordinator.discardUnsaved(target.server.id) }
+            if target.isNew { mainApp.send(.discardUnsavedMCPServer(target.server.id)) }
         }
         .onChange(of: url) { cancelOperation() }
         .onChange(of: usesOAuth) { cancelOperation() }
@@ -267,7 +266,9 @@ struct MCPServerEditor: View {
         server.transport = .http(
             url: url.trimmingCharacters(in: .whitespaces),
             headerName: headerName.trimmingCharacters(in: .whitespaces))
-        let status = coordinator.authenticationStatus(server, stored: storedOAuth)
+        let status =
+            mainApp.status.mcpAuthentication[server.id]
+            ?? MCPOAuthManager.storedStatus(for: server, credentials: storedOAuth)
         let supplied = supplied
         guard storedOAuth?.clientID == supplied.clientID, storedOAuth?.clientSecret == supplied.clientSecret,
             storedOAuth?.registration?.resource == (try? MCPOAuth.resource(url))
@@ -287,7 +288,7 @@ struct MCPServerEditor: View {
         operation = Task {
             defer { operation = nil }
             do {
-                try await coordinator.signIn(draft.server, credentials: credentials)
+                try await mainApp.callMCP(.signIn(draft.server, credentials))
                 storedOAuth = MCPSecretStore().secrets(for: target.server.id).oauth
             } catch is CancellationError {
                 return
@@ -298,19 +299,24 @@ struct MCPServerEditor: View {
     }
 
     private func signOut() {
-        do {
-            try coordinator.signOut(target.server.id)
-            storedOAuth?.token = nil
-            probe = .idle
-            error = nil
-        } catch {
-            self.error = String(localized: "The credentials could not be removed from your login Keychain.")
+        operation = Task {
+            defer { operation = nil }
+            do {
+                try await mainApp.callMCP(.signOut(target.server.id))
+                storedOAuth?.token = nil
+                probe = .idle
+                error = nil
+            } catch is CancellationError {
+                return
+            } catch {
+                self.error = String(
+                    localized: "The credentials could not be removed from your login Keychain.")
+            }
         }
     }
 
     private func cancelOperation() {
         operation?.cancel()
-        coordinator.cancelSignIn(target.server.id)
         probe = .idle
     }
 
@@ -349,22 +355,8 @@ struct MCPServerEditor: View {
                 url: url.trimmingCharacters(in: .whitespaces),
                 headerName: headerName.trimmingCharacters(in: .whitespaces))
             server.oauth = usesOAuth ? true : nil
-            var secrets = MCPSecretStore.Secrets(headerValue: usesOAuth ? "" : headerValue)
-            if usesOAuth {
-                var credentials = MCPSecretStore().secrets(for: server.id).oauth ?? MCPOAuth.Credentials()
-                let supplied = supplied
-                if credentials.clientID != supplied.clientID
-                    || credentials.clientSecret != supplied.clientSecret
-                {
-                    credentials = supplied
-                }
-                if let registration = credentials.registration,
-                    registration.resource != (try? MCPOAuth.resource(url))
-                {
-                    credentials.token = nil
-                }
-                secrets.oauth = credentials
-            }
+            let secrets = MCPSecretStore.Secrets(
+                headerValue: usesOAuth ? "" : headerValue, oauth: usesOAuth ? supplied : nil)
             return (server, secrets)
         case .stdio:
             server.oauth = nil
@@ -387,8 +379,15 @@ struct MCPServerEditor: View {
         let draft = draft
         operation = Task {
             defer { operation = nil }
-            let status = await coordinator.test(draft.server, secrets: draft.secrets)
-            guard !Task.isCancelled else { return }
+            let status: MCPServerStatus?
+            do {
+                status = try await mainApp.callMCP(.test(draft.server, draft.secrets))
+            } catch is CancellationError {
+                return
+            } catch {
+                probe = .failed(error.localizedDescription)
+                return
+            }
             switch status {
             case .ready(let tools): probe = .found(tools)
             case .failed(let message): probe = .failed(message)
@@ -404,7 +403,10 @@ struct MCPServerEditor: View {
             return
         }
         let draft = draft
-        error = onSave(draft.server, draft.secrets)
+        operation = Task {
+            defer { operation = nil }
+            error = await onSave(draft.server, draft.secrets)
+        }
     }
 
     private func validate() -> String? {

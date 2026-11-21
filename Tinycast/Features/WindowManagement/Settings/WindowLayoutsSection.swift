@@ -70,6 +70,7 @@ private struct WindowLayoutSettingsRow: View {
     let onDelete: () -> Void
 
     @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(VisibilityStore.self) private var visibility
 
     var body: some View {
@@ -84,7 +85,7 @@ private struct WindowLayoutSettingsRow: View {
             ShortcutRecorder(action: .windowLayout(id: layout.id))
 
             Button {
-                core.windowLayoutCoordinator.runWindowLayout(id: layout.id)
+                mainApp.send(.runWindowLayout(layout.id))
             } label: {
                 Image(systemName: "play")
             }

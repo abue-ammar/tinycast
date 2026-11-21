@@ -12,11 +12,22 @@ final class CustomWindowSizeStore {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
-        let decoded =
-            defaults.data(forKey: Self.defaultsKey)
-            .flatMap { try? JSONDecoder().decode([CustomWindowSize].self, from: $0) } ?? []
+        let decoded = Self.decoded(from: defaults)
         sizes = Self.sanitized(decoded)
         if sizes != decoded { persist() }
+    }
+
+    /// Adopts what another process stored, without writing it back.
+    func reload() {
+        let stored = Self.sanitized(Self.decoded(from: defaults))
+        guard stored != sizes else { return }
+        sizes = stored
+        onChange?(stored)
+    }
+
+    private static func decoded(from defaults: UserDefaults) -> [CustomWindowSize] {
+        defaults.data(forKey: defaultsKey)
+            .flatMap { try? JSONDecoder().decode([CustomWindowSize].self, from: $0) } ?? []
     }
 
     func size(id: UUID) -> CustomWindowSize? {

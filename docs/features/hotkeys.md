@@ -429,3 +429,10 @@ Setting `recordingAction` is what starts and stops the capture, so there is exac
 callout above the field render the live state from outside the row that opened it. The field itself
 only ever shows the binding; the prompt, the live preview and the conflict message all live in the
 callout. See [ui.md](../ui.md#the-shortcut-recorder-callout).
+
+Settings records in its own process, where `reloadBindings()` reads the bindings without starting
+the shortcut engines. Its `recordingAction` is sent to the main app the moment it
+changes and sets `isRecordingInSettings`, which pauses the main app's engines exactly as a local recorder
+does. The main app clears it if Settings' process ends mid-recording. Settings sends the action and
+the binding to the main app, which updates the registration and saves the shortcut. The recorder
+checks conflicts against its local copy, which reloads when the main app publishes changes.

@@ -321,7 +321,9 @@ final class HyperKeyTap {
                 Task { @MainActor [self] in
                     if case .unusedPress = effect,
                         !state.withLock({ $0.isRunning && $0.engine.quickPressGeneration == generation })
-                    { return }
+                    {
+                        return
+                    }
                     deliver(route, effect)
                 }
             }

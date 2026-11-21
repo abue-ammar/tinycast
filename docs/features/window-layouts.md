@@ -200,7 +200,7 @@ also removes a whole failure class and any run-time dependency on `QuicklinkStor
   `assert` proves membership but **not** order, so the two arrays must move together.
 - **`HotKeyAction.windowLayout(id:)`**: persisted under `hotkey.windowLayout.<uuid>` with a
   `boundWindowLayoutIDs` index, the shape quicklinks and custom commands use. `WindowLayoutStore`
-  decodes in `init`, so its live IDs are known by the time `hotKeys.start` prunes.
+  decodes in `init`, so its live IDs are known by the time `hotKeys.load` prunes.
 - **Settings**: one new key, `windowLayoutsShowInLauncher` (on). Its own flag rather than sharing
   `windowManagementShowInLauncher`: 34 command rows and three named layouts are different amounts of
   launcher noise, and wanting the layouts without the commands is the likelier preference. Layouts

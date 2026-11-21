@@ -2,11 +2,13 @@ import AppKit
 import SwiftUI
 
 /// Identifies the editor to present; nil is "new", and the UUID keeps two opens distinct.
-struct WindowLayoutEditRequest: Identifiable {
+struct WindowLayoutEditRequest: Identifiable, Codable, Sendable {
     let id = UUID()
     var layout: WindowLayout?
     /// Set by capture, so the panel says what it is showing.
     var isCapture = false
+
+    private enum CodingKeys: CodingKey { case layout, isCapture }
 }
 
 struct WindowLayoutEditorPanel: View {

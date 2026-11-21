@@ -1,7 +1,7 @@
 import Foundation
 
 struct WindowCommand: Identifiable, Hashable, Sendable {
-    enum ID: String, CaseIterable, Sendable {
+    enum ID: String, CaseIterable, Codable, Sendable {
         case leftHalf = "left-half"
         case rightHalf = "right-half"
         case topHalf = "top-half"

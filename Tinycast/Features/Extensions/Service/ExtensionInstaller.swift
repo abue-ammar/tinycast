@@ -3,7 +3,7 @@ import Foundation
 /// Installs from the store or from GitHub source, in a workspace removed whichever way this ends.
 struct ExtensionInstaller: Sendable {
     /// An install can take minutes from source, and silence for that long reads as a hang.
-    enum Progress: Sendable, Equatable {
+    enum Progress: Codable, Sendable, Equatable {
         case downloading
         case installingDependencies(manager: String)
         case building

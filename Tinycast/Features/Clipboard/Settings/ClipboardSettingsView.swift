@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct ClipboardSettingsView: View {
     @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var settings
     @State private var confirmingClear = false
 
@@ -70,7 +71,7 @@ struct ClipboardSettingsView: View {
             titleVisibility: .visible
         ) {
             Button("Clear History", role: .destructive) {
-                core.clipboardCoordinator.clearHistory()
+                mainApp.send(.clearClipboardHistory)
             }
             Button("Cancel", role: .cancel) {}
         } message: {

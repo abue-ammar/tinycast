@@ -32,7 +32,7 @@ struct FileSearchSettingsView: View {
 }
 
 private struct FileSearchAccessSection: View {
-    @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
     @State private var granted = Permissions.hasFullDiskAccess()
     /// Nothing announces a grant made in System Settings, so the pane asks while it is open.
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -83,19 +83,20 @@ private struct FileSearchAccessSection: View {
         let now = Permissions.hasFullDiskAccess()
         guard now != granted else { return }
         granted = now
-        core.fileIndexer.refreshAccess()
+        mainApp.send(.refreshFileAccess)
     }
 }
 
 private struct FileSearchIndexSection: View {
-    @Environment(AppCore.self) private var core
+    @Environment(MainAppLink.self) private var mainApp
 
-    private var indexer: FileIndexer { core.fileIndexer }
+    /// The index lives in the main app, which crawls and maps it.
+    private var status: FileIndexer.Status { mainApp.status.fileIndex }
 
     var body: some View {
         Section {
             LabeledContent {
-                Button("Rebuild Index") { core.fileSearchCoordinator.rebuildIndex() }
+                Button("Rebuild Index") { mainApp.send(.rebuildFileIndex) }
                     .disabled(!canRebuild)
                     .help("Crawls every scope again from scratch.")
             } label: {
@@ -120,7 +121,7 @@ private struct FileSearchIndexSection: View {
     }
 
     private var canRebuild: Bool {
-        switch indexer.status {
+        switch status {
         case .ready, .failed: return true
         case .off, .needsAccess, .building: return false
         }
@@ -128,7 +129,7 @@ private struct FileSearchIndexSection: View {
 
     @ViewBuilder
     private var summary: some View {
-        switch indexer.status {
+        switch status {
         case .off:
             Text("Not indexed")
         case .needsAccess:

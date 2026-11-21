@@ -68,7 +68,7 @@ struct ExtensionPreferenceSchema: Sendable, Hashable {
     }
 }
 
-enum ExtensionPreferenceValue: Sendable, Hashable {
+enum ExtensionPreferenceValue: Codable, Sendable, Hashable {
     case string(String)
     case bool(Bool)
     case number(Double)

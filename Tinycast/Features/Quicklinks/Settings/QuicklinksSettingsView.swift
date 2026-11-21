@@ -3,6 +3,7 @@ import SwiftUI
 struct QuicklinksSettingsView: View {
     @Environment(QuicklinkStore.self) private var store
     @Environment(QuicklinkCoordinator.self) private var coordinator
+    @Environment(MainAppLink.self) private var mainApp
     @Environment(AppSettings.self) private var settings
     @State private var query = ""
 
@@ -65,14 +66,14 @@ struct QuicklinksSettingsView: View {
                             set: {
                                 coordinator.setQuicklinkEnabled($0, id: quicklink.id)
                             }),
-                        onEdit: { coordinator.editQuicklink(quicklink) },
+                        onEdit: { mainApp.send(.editQuicklink(quicklink.id)) },
                         onDelete: {
                             Task { await coordinator.deleteQuicklink(id: quicklink.id, alwaysConfirm: true) }
                         })
                 }
             }
             Button {
-                coordinator.editQuicklink(nil)
+                mainApp.send(.editQuicklink(nil))
             } label: {
                 SettingsRowTitle(.quicklinksQuicklinks, "Add Quicklink")
             }

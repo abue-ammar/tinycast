@@ -1,7 +1,7 @@
 import Foundation
 
 /// One extension as the store lists it, before anything is downloaded.
-struct ExtensionListing: Identifiable, Hashable, Sendable {
+struct ExtensionListing: Codable, Identifiable, Hashable, Sendable {
     let id: String
     /// The manifest `name`, which is what an install is keyed by.
     let name: String
