@@ -219,10 +219,11 @@ Three rules decide where new work runs:
   Swift process also costs about 4 MB before it does anything, so always-on work joins a process that is
   already running rather than starting one of its own.
 
-Both ends of a link must be one build, because its messages are this build's `Codable` types.
-`Platform/LaunchedExecutable.swift` pins the executable's file identity at launch, and
-`ProcessLink.spawn` refuses to start a role once an update or a rebuild has replaced the file; Settings
-then offers a relaunch.
+`ProcessLink.spawn` starts any executable in the bundle with a typed link on its stdin and stdout, and
+`App/ProcessLink+Role.swift` starts this one as a role. Both ends of a link must be one build, because
+its messages are this build's `Codable` types. `Platform/LaunchedExecutable.swift` pins the
+executable's file identity at launch, and `ProcessLink.spawn` refuses to start anything once an update
+or a rebuild has replaced it; Settings then offers a relaunch.
 
 ## The Settings process
 

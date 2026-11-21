@@ -872,6 +872,7 @@
 		EAF55A2080AAF3AC70D4FB93 /* CustomQuickAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5ADCDDCEBA1EBB74810BDFC4 /* CustomQuickAction.swift */; };
 		EAFC40D8851C50EB62198C7E /* InstalledAIManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AD0BCEEE45732BE94136EEA8 /* InstalledAIManager.swift */; };
 		EB82D89089E4B0E615F7E4B1 /* ChatSyncSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94FDB669FD82D8AFD0934CA9 /* ChatSyncSource.swift */; };
+		EBCCF1B0A4C08B4B531789F7 /* ProcessLink+Role.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE0EB052E2A10EA35187BF0A /* ProcessLink+Role.swift */; };
 		EBCDF88CD59A4B6F21F945C6 /* Quicklink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3AA3385A84985A52E2DA3596 /* Quicklink.swift */; };
 		EBEE0D4CF84E9A9676002070 /* WindowTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65D4EEE2968877B45565C85F /* WindowTarget.swift */; };
 		EBEE65FFD3412E6EC4DCEB2E /* CustomQuickActionEditorPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C464FF06F4AD0883F035290D /* CustomQuickActionEditorPanel.swift */; };
@@ -1895,6 +1896,7 @@
 		ED5AAA98FFF7A4D34D7B490D /* ExtensionBootConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionBootConfig.swift; sourceTree = "<group>"; };
 		ED866D346B2D97A12AD15CE9 /* DictationSpectrum.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DictationSpectrum.swift; sourceTree = "<group>"; };
 		EDBAD3F666C10A869A4EAADB /* MeetingDetailsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingDetailsView.swift; sourceTree = "<group>"; };
+		EE0EB052E2A10EA35187BF0A /* ProcessLink+Role.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ProcessLink+Role.swift"; sourceTree = "<group>"; };
 		EE1C64977153EF104F583008 /* CalcTokenizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcTokenizer.swift; sourceTree = "<group>"; };
 		EE21578FB7500CB744855654 /* FileSearchFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileSearchFilter.swift; sourceTree = "<group>"; };
 		EEAFF79E9897975CAC5EAC0E /* NoteEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteEditorView.swift; sourceTree = "<group>"; };
@@ -3647,6 +3649,7 @@
 				776CB0E6FA254A488D965E0D /* AppCore+SettingsProcess.swift */,
 				9C37CCD024267EB21876C7E9 /* AppDelegate.swift */,
 				2902B904C7BD2FC23856EDB9 /* MenuBarItem.swift */,
+				EE0EB052E2A10EA35187BF0A /* ProcessLink+Role.swift */,
 				B2DF1F9689C15146A54C294C /* ProcessRole.swift */,
 				F1182F5DFD69CA2F557B2F72 /* SettingsApp.swift */,
 				ECFA2DB8D86CF212732BBD08 /* SharedStateMirror.swift */,
@@ -5018,6 +5021,7 @@
 				6C052B83FAE453D1011E3FB4 /* PopoverMenu.swift in Sources */,
 				8ABE1F08D8A558EF68FE7593 /* ProcessDisplayName.swift in Sources */,
 				5CB834F0059FC98C26E7A515 /* ProcessExit.swift in Sources */,
+				EBCCF1B0A4C08B4B531789F7 /* ProcessLink+Role.swift in Sources */,
 				2D059BDECA9630F2E90039A7 /* ProcessLink.swift in Sources */,
 				F704BED4BA1E7D30BDF169FE /* ProcessRole.swift in Sources */,
 				4D462D0F116A5C04E4DEFCCF /* PseudoTerminal.swift in Sources */,

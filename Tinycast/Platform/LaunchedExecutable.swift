@@ -1,6 +1,6 @@
 import Foundation
 
-/// The executable as this process found it at launch, so a process spawned from it runs this build.
+/// This app's executable as found at launch; once it changes, the bundle holds another build.
 @MainActor
 enum LaunchedExecutable {
     /// An update or a rebuild replaced the file, so its messages may no longer decode here.
