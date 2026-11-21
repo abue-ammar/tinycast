@@ -3,7 +3,6 @@ import Foundation
 /// This app's executable as found at launch; once it changes, the bundle holds another build.
 @MainActor
 enum LaunchedExecutable {
-    /// An update or a rebuild replaced the file, so its messages may no longer decode here.
     struct Replaced: Error {}
 
     private static var launched: Identity?

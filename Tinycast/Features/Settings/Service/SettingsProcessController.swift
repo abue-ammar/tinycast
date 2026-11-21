@@ -64,7 +64,6 @@ final class SettingsProcessController {
         observeStatus()
     }
 
-    /// The file on disk is another build now, and only a relaunched main app can link to it.
     private func offerRelaunch() {
         Task {
             guard
