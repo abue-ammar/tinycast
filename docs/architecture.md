@@ -209,10 +209,8 @@ Three rules decide where new work runs:
 
 - **A role is Tinycast.** A `ProcessRole` runs this executable, so it holds Tinycast's privacy grants,
   Keychain items, preferences and `AppPaths`, and only Tinycast's own code runs in one. Code from anyone
-  else, an extension's above all, runs as WebAssembly in a sandboxed worker, never as native code, and
-  asks the main app for whatever Tinycast's identity grants. A module is data, so it needs no signature
-  or notarization of its own. The worker still needs its sandbox: macOS charges an unsandboxed child's
-  privacy access to Tinycast.
+  else, an extension's above all, never runs as a role, so it never holds Tinycast's identity. How
+  extensions run is not decided yet.
 - **The main app is the hub.** Only it runs engines. Another process asks it for work and mirrors what it
   knows, and never talks to a third: Settings sends extension changes to the main app rather than running
   them.
