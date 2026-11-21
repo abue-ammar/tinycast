@@ -3,6 +3,7 @@ import SwiftUI
 @main
 enum TinycastLaunch {
     static func main() {
+        LaunchedExecutable.pin()
         AppSettings.pinLanguage()
         switch ProcessRole.current {
         case .main: TinycastApp.main()

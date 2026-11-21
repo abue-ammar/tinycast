@@ -4,7 +4,7 @@ import os
 /// Generous: one defaults delta after a backup import carries every library at once.
 private let maximumFrameBytes = 32 << 20
 
-/// Typed messages both ways between two roles, delivered on the main actor in the order sent.
+/// Typed messages both ways between two Tinycast processes, delivered on the main actor in order.
 @MainActor
 final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Sendable> {
     var onReceive: ((Incoming) -> Void)?
@@ -37,14 +37,13 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
 
     var childProcessIdentifier: pid_t? { child?.processIdentifier }
 
-    /// Starts this executable again as `role`; the child ends itself when the link closes.
-    static func spawn(_ role: ProcessRole) throws -> ProcessLink {
-        guard let executable = Bundle.main.executableURL else { throw CocoaError(.fileNoSuchFile) }
+    /// The child ends itself when the link closes.
+    static func spawn(_ executable: URL, arguments: [String]) throws -> ProcessLink {
         let process = Process()
         let input = Pipe()
         let output = Pipe()
         process.executableURL = executable
-        process.arguments = [role.argument]
+        process.arguments = arguments
         process.standardInput = input
         process.standardOutput = output
         guard fcntl(input.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1) == 0 else {

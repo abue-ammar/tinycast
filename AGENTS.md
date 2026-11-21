@@ -38,7 +38,7 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 
 | Folder                   | Holds                                                                                   |
 | ------------------------ | --------------------------------------------------------------------------------------- |
-| `Tinycast/App/`          | `@main`, `AppDelegate`, `AppCore` (the composition root)                                |
+| `Tinycast/App/`          | `@main`, the process roles, `AppDelegate`, `AppCore` (the composition root)             |
 | `Tinycast/DesignSystem/` | shared visual primitives; `Theme.swift` is the only design-token source                 |
 | `Tinycast/Platform/`     | system shims: `Permissions`, `AppPaths`, `Signposts`, `NotificationToken`, …            |
 | `Tinycast/Palette/`      | the palette shell: panel, window controller, `RootPaletteView`, `PaletteScreen`         |
@@ -67,6 +67,11 @@ feature's doc, under its own `## Invariants`.
 - **`AppCore` is the sole owner.** New long-lived state goes on `AppCore`, wired in `load()` when
   Settings' own process needs it too and in `start()` otherwise, never a competing singleton. Views
   reach a feature's **coordinator** through `@Environment`, not `AppCore`.
+- **A role is Tinycast, and the main app is the hub.** A `ProcessRole` runs this executable with
+  Tinycast's privacy grants, Keychain items and preferences, so only Tinycast's own code runs in one;
+  anyone else's code runs in a sandboxed executable of its own. Every other process links to the main
+  app and to no other. A store a Settings pane writes outside `UserDefaults` is a `SharedDomain`, or the
+  main app writes its stale copy back. See [architecture.md](docs/architecture.md#processes).
 - **A file under `Features/*/Model/` may not import AppKit or SwiftUI**, and takes every environment
   fact (clock, filesystem, home directory, rates) as an injected parameter. The harnesses compile the
   shipped sources, so this is enforced by compilation rather than convention.

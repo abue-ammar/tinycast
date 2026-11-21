@@ -46,6 +46,9 @@ final class SettingsProcessController {
         let link: ProcessLink<SettingsWire.ToSettings, SettingsWire.ToMainApp>
         do {
             link = try .spawn(.settings)
+        } catch is LaunchedExecutable.Replaced {
+            offerRelaunch()
+            return
         } catch {
             core.showMessage(String(localized: "Couldn't open Settings"), tone: .danger)
             return
@@ -59,6 +62,23 @@ final class SettingsProcessController {
         mirror.start()
         show(request)
         observeStatus()
+    }
+
+    private func offerRelaunch() {
+        Task {
+            guard
+                await core.confirm(
+                    title: String(localized: "Relaunch Tinycast?"),
+                    message: String(
+                        localized: """
+                            Tinycast was updated while it was running. \
+                            Open Settings again after it relaunches.
+                            """),
+                    symbol: "arrow.down.circle", confirmTitle: String(localized: "Relaunch"), tone: .neutral,
+                    confirmRole: .standard, dismissTitle: String(localized: "Later"))
+            else { return }
+            core.relaunch()
+        }
     }
 
     private func receive(_ message: SettingsWire.ToMainApp) {

@@ -9,6 +9,7 @@ enum PipeFramingTests {
 
     @MainActor
     static func main() async throws {
+        LaunchedExecutable.pin()
         if ProcessRole.current == .settings {
             await runPeer()
             return
@@ -73,6 +74,15 @@ enum PipeFramingTests {
         oversizedLink.send(Message(text: String(repeating: "x", count: 32 << 20)))
         let refused = await waitUntil { !oversizedLink.isOpen }
         check("a stalled peer does not hide an oversized message error", refused && failure != nil)
+
+        guard let executable = Bundle.main.executablePath else { throw CocoaError(.fileNoSuchFile) }
+        try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: executable)
+        do {
+            _ = try ProcessLink<Message, Message>.spawn(.settings)
+            check("a replaced executable is never spawned", false)
+        } catch {
+            check("a replaced executable is never spawned", error is LaunchedExecutable.Replaced)
+        }
 
         print("\(checks - failures)/\(checks) framing checks passed")
         if failures > 0 { exit(1) }

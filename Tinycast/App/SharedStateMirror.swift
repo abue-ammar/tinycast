@@ -8,7 +8,7 @@ enum SharedChange: Codable, Sendable {
 }
 
 /// Shared state kept outside `UserDefaults`, re-read whole when the other role changes it.
-enum SharedDomain: String, Codable, Sendable {
+enum SharedDomain: String, Codable, CaseIterable, Sendable {
     case quicklinks
     case chatPresets
     case customQuickActions
@@ -44,10 +44,10 @@ final class SharedStateMirror {
     private var generations: [SharedDomain: Int] = [:]
 
     init(
-        domains: [SharedDomain: Domain], reloadDefaults: @escaping () -> Void,
+        domain: (SharedDomain) -> Domain, reloadDefaults: @escaping () -> Void,
         send: @escaping (SharedChange) -> Void
     ) {
-        self.domains = domains
+        domains = Dictionary(uniqueKeysWithValues: SharedDomain.allCases.map { ($0, domain($0)) })
         self.send = send
         defaultsMirror = SharedDefaultsMirror(
             role: .current, defaults: .standard, domainName: Bundle.main.bundleIdentifier ?? "",

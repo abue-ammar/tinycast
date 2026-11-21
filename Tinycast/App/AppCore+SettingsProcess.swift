@@ -4,37 +4,48 @@ import Foundation
 extension AppCore {
     func makeSharedStateMirror(send: @escaping (SharedChange) -> Void) -> SharedStateMirror {
         SharedStateMirror(
-            domains: [
-                .quicklinks: .init(
-                    observe: { [quicklinks] in _ = quicklinks.quicklinks },
-                    reload: { [quicklinks] in
-                        quicklinks.load()
-                        quicklinks.onChange?(quicklinks.quicklinks)
-                    }),
-                .chatPresets: .init(
-                    observe: { [chatPresets] in _ = chatPresets.presets },
-                    reload: { [weak self] in self?.reloadChatPresets() }),
-                .customQuickActions: .init(
-                    observe: { [customQuickActions] in _ = customQuickActions.actions },
-                    reload: { [customQuickActions] in
-                        customQuickActions.load()
-                        customQuickActions.onChange?(customQuickActions.actions)
-                    }),
-                .launchAtLogin: .init(
-                    observe: { [settings] in _ = settings.launchAtLogin },
-                    reload: { [settings] in settings.reloadLaunchAtLogin() }),
-                .launcherRanking: .init(
-                    observe: { [launcherRanking] in _ = launcherRanking.revision },
-                    reload: { [launcherRanking] in launcherRanking.reload() },
-                    settle: { [launcherRanking] in await launcherRanking.flush() }),
-                .frequentEmoji: .init(
-                    observe: { [frequentEmoji] in _ = frequentEmoji.revision },
-                    reload: { [frequentEmoji] in frequentEmoji.reload() }),
-                .calculatorHistory: .init(
-                    observe: { [calcHistory] in _ = calcHistory.entries },
-                    reload: { [calcHistory] in calcHistory.reload() })
-            ],
-            reloadDefaults: { [weak self] in self?.reloadDefaultsStores() }, send: send)
+            domain: sharedDomain, reloadDefaults: { [weak self] in self?.reloadDefaultsStores() }, send: send)
+    }
+
+    /// Exhaustive, so a new domain fails to build until both roles know how to re-read it.
+    private func sharedDomain(_ domain: SharedDomain) -> SharedStateMirror.Domain {
+        switch domain {
+        case .quicklinks:
+            .init(
+                observe: { [quicklinks] in _ = quicklinks.quicklinks },
+                reload: { [quicklinks] in
+                    quicklinks.load()
+                    quicklinks.onChange?(quicklinks.quicklinks)
+                })
+        case .chatPresets:
+            .init(
+                observe: { [chatPresets] in _ = chatPresets.presets },
+                reload: { [weak self] in self?.reloadChatPresets() })
+        case .customQuickActions:
+            .init(
+                observe: { [customQuickActions] in _ = customQuickActions.actions },
+                reload: { [customQuickActions] in
+                    customQuickActions.load()
+                    customQuickActions.onChange?(customQuickActions.actions)
+                })
+        case .launchAtLogin:
+            .init(
+                observe: { [settings] in _ = settings.launchAtLogin },
+                reload: { [settings] in settings.reloadLaunchAtLogin() })
+        case .launcherRanking:
+            .init(
+                observe: { [launcherRanking] in _ = launcherRanking.revision },
+                reload: { [launcherRanking] in launcherRanking.reload() },
+                settle: { [launcherRanking] in await launcherRanking.flush() })
+        case .frequentEmoji:
+            .init(
+                observe: { [frequentEmoji] in _ = frequentEmoji.revision },
+                reload: { [frequentEmoji] in frequentEmoji.reload() })
+        case .calculatorHistory:
+            .init(
+                observe: { [calcHistory] in _ = calcHistory.entries },
+                reload: { [calcHistory] in calcHistory.reload() })
+        }
     }
 
     /// Stores before shortcuts: whether a binding may register reads the stores' switches.
