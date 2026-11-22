@@ -3,6 +3,7 @@ import { Footer } from "../../components/footer";
 import { Nav } from "../../components/nav";
 import { SupportFlow } from "../../components/support/support-flow";
 import { SupporterCount } from "../../components/support/supporter-count";
+import { ogImage } from "../../data/site";
 import { supportHero } from "../../data/support";
 
 const description =
@@ -12,7 +13,12 @@ export const metadata: Metadata = {
   title: "Enjoying Tinycast?",
   description,
   alternates: { canonical: "/support/" },
-  openGraph: { title: "Enjoying Tinycast?", description, url: "/support/" },
+  openGraph: {
+    title: "Enjoying Tinycast?",
+    description,
+    url: "/support/",
+    images: [ogImage],
+  },
 };
 
 function Intro() {

@@ -4,6 +4,7 @@ import { Footer } from "../../components/footer";
 import { Nav } from "../../components/nav";
 import { ScrollTop } from "../../components/ui/scroll-top";
 import { changelogCopy } from "../../data/changelog";
+import { ogImage } from "../../data/site";
 import { stableReleases } from "../../lib/changelog";
 
 export const metadata: Metadata = {
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
     title: "Tinycast Changelog",
     description: changelogCopy.description,
     url: "/changelog/",
+    images: [ogImage],
   },
 };
 
