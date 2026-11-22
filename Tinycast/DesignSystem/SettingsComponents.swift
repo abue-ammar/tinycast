@@ -103,7 +103,7 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
 }
 
 enum SettingsListMetrics {
-    static let iconSize = Theme.Size.settingsRowIcon + Theme.Spacing.xs
+    static let iconSize = (Theme.Size.settingsRowIcon / IconCache.appIconBody).rounded()
     static let featureIconSize = Theme.Size.settingsRowIcon * 1.5
 }
 
