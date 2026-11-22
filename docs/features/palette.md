@@ -643,6 +643,10 @@ whether macOS has claimed the chord, before assuming the handler is wrong.
 to select Search or a shortcut; on the emoji grid all four step the selection. Other screens leave
 the horizontal pair to the caret.
 
+A grid takes only a bare ←/→, and only while it shows two or more items. With ⇧, ⌥, ⌘ or ⌃ the
+arrow always reaches the field editor, so ⌥←, ⌘← and ⌘⇧← move or select in the query, and with one
+result or none a bare arrow moves the caret too: there is nothing to step to.
+
 None of them reach `onKeyPress` on their own: AppKit's key-binding table hands the field editor
 `moveDown:` / `moveUp:` / `moveForward:` / `moveBackward:` first, and in a one-line field the vertical
 pair walks the caret to the end or the start rather than moving anything.

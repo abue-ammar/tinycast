@@ -473,6 +473,8 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
   candidate is committed; check on a second summon too, where first responder never moved
 - Typing filters instantly; ↑/↓ move the highlight and scroll it into view without yanking the list
 - ⌃N/⌃P move the highlight as ↓/↑ do; ⌃F/⌃B step compact shortcuts or the emoji grid's selection, and the caret elsewhere
+- In the emoji grid, ⇧←, ⌥←, ⌘← and ⌘⇧← edit the query while the selection stays put; with one
+  result or none, bare ←/→ move the caret
 - The highlight always sits on the row the footer pill describes
 - With a calculation typed, the calculator card is first and is selected first
 - ⌘↵ on a number, unit or money card puts the answer in the search bar with the caret after it, so

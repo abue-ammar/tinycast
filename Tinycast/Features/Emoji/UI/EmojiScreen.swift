@@ -113,13 +113,15 @@ struct EmojiScreen: PaletteScreen {
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? {
         let sections = sections
         let count = sections.reduce(0) { $0 + $1.entries.count }
-        guard count > 0 else { return selection }
         switch axis {
         case .vertical:
+            guard count > 0 else { return selection }
             let geometry = EmojiGridGeometry(
                 counts: sections.map(\.entries.count), columns: columns.rawValue)
             return delta > 0 ? geometry.down(from: selection) : geometry.up(from: selection)
         case .horizontal:
+            // With one result or none there is nothing to step to, so the caret keeps ←/→.
+            guard count > 1 else { return nil }
             return min(max(selection + delta, 0), count - 1)
         }
     }
