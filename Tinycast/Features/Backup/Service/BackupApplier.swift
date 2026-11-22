@@ -18,11 +18,16 @@ enum BackupApplier {
         _ categories: Set<BackupCategory>, from bundle: BackupBundle, to core: AppCore
     ) async -> Summary {
         var summary = Summary()
-        if categories.contains(.configuration), let data = try? Data(contentsOf: bundle.settingsURL),
-            let backup = try? SettingsBackup(json: data)
-        {
-            summary.settings = backup.apply(to: core)
+        var settings = SettingsBackup.ApplySummary()
+        var appliedSlice = false
+        for category in SettingsBackup.sliceCategories where categories.contains(category) {
+            guard let data = try? Data(contentsOf: bundle.location(of: category)),
+                let slice = try? SettingsBackup(json: data)
+            else { continue }
+            slice.apply(to: core, into: &settings)
+            appliedSlice = true
         }
+        if appliedSlice { summary.settings = settings }
         if categories.contains(.clipboard) {
             summary.clipboard = await importClipboard(bundle, into: core.clipboardStore)
             if summary.clipboard > 0 { core.clipboardStore.load() }

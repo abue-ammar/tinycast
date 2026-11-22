@@ -71,6 +71,16 @@ struct BackupSettingsView: View {
             }
 
             Section {
+                ForEach(BackupExclusion.allCases, id: \.self) { exclusion in
+                    SettingsInfoRow(
+                        title: exclusion.title, symbol: exclusion.symbol, tint: exclusion.tint,
+                        detail: exclusion.detail)
+                }
+            } header: {
+                SettingsSectionHeader(.backupNotIncluded)
+            }
+
+            Section {
                 LabeledContent {
                     Button("Choose…") { chooseBackupFile() }
                         .disabled(importingBackup || preparingBackup != nil)
@@ -255,7 +265,7 @@ struct BackupSettingsView: View {
                 backupFile = nil
                 importingBackup = false
             }
-            if categories.contains(.configuration) {
+            if categories.contains(.customCommands) {
                 guard
                     await BackupActions.confirmExecutableImport(
                         core: core, commands: preview.customCommands, shortcuts: preview.globalShortcuts)

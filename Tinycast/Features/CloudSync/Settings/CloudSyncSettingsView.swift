@@ -56,7 +56,7 @@ struct CloudSyncSettingsView: View {
 
             Section {
                 ForEach(SyncExclusion.allCases, id: \.self) { exclusion in
-                    CloudSyncInfoRow(
+                    SettingsInfoRow(
                         title: exclusion.title, symbol: exclusion.symbol, tint: exclusion.tint,
                         detail: exclusion.detail)
                 }

@@ -38,8 +38,8 @@ Editing preserves the UUID and therefore its alias, favorite, visibility, and ho
 **Enabled** checkbox is the only writer of `isEnabled`, so the editor carries its current value through a
 save rather than offering a second control for it. Deleting
 goes through `CustomCommandCoordinator`, which unregisters the hotkey and clears those references before removing the
-command. Native settings backups include both commands and bindings; import warns before accepting
-executable content.
+command. A native backup's Custom Commands category carries both commands and bindings; import warns
+before accepting executable content.
 Deletion from Settings or the command browser confirms through Tinycast's dialog before removing the command.
 
 ## Launcher integration

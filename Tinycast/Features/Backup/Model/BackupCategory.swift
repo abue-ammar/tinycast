@@ -5,6 +5,9 @@ enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     case clipboard
     case snippets
     case notes
+    case quicklinks
+    case customCommands
+    case windowManagement
     case learning
 
     var id: Self { self }
@@ -13,7 +16,7 @@ enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         let label: String
         let symbol: String
         let tint: IconTint
-        /// Where this category's files sit inside the bundle; empty means the bundle root.
+        /// Where this category sits inside the bundle: its JSON file, or its directory.
         let subpath: String
     }
 
@@ -22,7 +25,7 @@ enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .configuration:
             return .init(
                 label: String(localized: "Settings & Shortcuts"), symbol: "slider.horizontal.3",
-                tint: .gray, subpath: "")
+                tint: .gray, subpath: "settings.json")
         case .clipboard:
             return .init(
                 label: String(localized: "Clipboard History"), symbol: "list.clipboard.fill",
@@ -35,6 +38,18 @@ enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
             return .init(
                 label: String(localized: "Notes"), symbol: "text.page.fill", tint: .yellow,
                 subpath: "notes")
+        case .quicklinks:
+            return .init(
+                label: String(localized: "Quicklinks"), symbol: "link", tint: .blue,
+                subpath: "quicklinks.json")
+        case .customCommands:
+            return .init(
+                label: String(localized: "Custom Commands"), symbol: "terminal.fill", tint: .graphite,
+                subpath: "custom-commands.json")
+        case .windowManagement:
+            return .init(
+                label: String(localized: "Window Management"), symbol: "macwindow", tint: .mint,
+                subpath: "window-management.json")
         case .learning:
             return .init(
                 label: String(localized: "Launcher Learning"), symbol: "chart.line.uptrend.xyaxis",
@@ -49,6 +64,9 @@ enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .clipboard: return String(localized: "\(count) clips")
         case .snippets: return String(localized: "\(count) snippets")
         case .notes: return String(localized: "\(count) notes")
+        case .quicklinks: return String(localized: "\(count) quicklinks")
+        case .customCommands: return String(localized: "\(count) custom commands")
+        case .windowManagement: return String(localized: "\(count) layouts, rooms and sizes")
         case .learning: return String(localized: "\(count) records")
         }
     }

@@ -132,6 +132,57 @@ struct SettingsBackup: Codable {
     }
 }
 
+// MARK: - Slices
+
+extension SettingsBackup {
+    /// Settings & Shortcuts last: its favorites and aliases may name an item another slice brings.
+    static let sliceCategories: [BackupCategory] = [
+        .quicklinks, .customCommands, .windowManagement, .configuration
+    ]
+
+    func slice(for category: BackupCategory) -> SettingsBackup? {
+        var part = SettingsBackup()
+        switch category {
+        case .configuration:
+            part.settings = settings
+            part.hotkeys = hotkeys
+            part.hotkeys?.customCommands = nil
+            part.hotkeys?.quicklinks = nil
+            part.hotkeys?.windowLayouts = nil
+            part.hotkeys?.windowRooms = nil
+            part.hotkeys?.customWindowSizes = nil
+            part.favoriteApps = favoriteApps
+            part.hiddenLauncherItems = hiddenLauncherItems
+            part.hiddenLauncherKinds = hiddenLauncherKinds
+            part.launcherAliases = launcherAliases
+            part.pinnedEmoji = pinnedEmoji
+        case .quicklinks:
+            part.quicklinks = quicklinks
+            part.hotkeys = HotkeyBackup(quicklinks: hotkeys?.quicklinks)
+        case .customCommands:
+            part.customCommands = customCommands
+            part.hotkeys = HotkeyBackup(customCommands: hotkeys?.customCommands)
+        case .windowManagement:
+            part.windowLayouts = windowLayouts
+            part.windowRooms = windowRooms
+            part.customWindowSizes = customWindowSizes
+            part.hotkeys = HotkeyBackup(
+                windowLayouts: hotkeys?.windowLayouts, windowRooms: hotkeys?.windowRooms,
+                customWindowSizes: hotkeys?.customWindowSizes)
+        case .clipboard, .snippets, .notes, .learning:
+            return nil
+        }
+        return part
+    }
+
+    var contentCount: Int {
+        [
+            customCommands?.count, quicklinks?.count, windowLayouts?.count, windowRooms?.count,
+            customWindowSizes?.count
+        ].reduce(0) { $0 + ($1 ?? 0) }
+    }
+}
+
 // MARK: - Gather / apply (main-actor: reads and writes the live stores)
 
 @MainActor
@@ -270,50 +321,47 @@ extension SettingsBackup {
         return backup
     }
 
-    @discardableResult
-    func apply(to core: AppCore) -> ApplySummary {
-        var summary = ApplySummary()
-        if let s = settings { summary.settingsFields = applySettings(s, to: core) }
+    func apply(to core: AppCore, into summary: inout ApplySummary) {
+        if let s = settings { summary.settingsFields += applySettings(s, to: core) }
         if let customCommands {
-            summary.customCommands = core.customCommandCoordinator.replaceCustomCommands(customCommands)
+            summary.customCommands += core.customCommandCoordinator.replaceCustomCommands(customCommands)
         }
         // Before the hotkeys, so a restored binding has its quicklink to attach to.
         if let quicklinks {
-            summary.quicklinks = core.quicklinkCoordinator.replaceQuicklinks(quicklinks)
+            summary.quicklinks += core.quicklinkCoordinator.replaceQuicklinks(quicklinks)
         }
         // Before the hotkeys too, for the same reason: a binding needs its layout to attach to.
         if let windowLayouts {
-            summary.windowLayouts =
+            summary.windowLayouts +=
                 core.windowLayoutCoordinator.replaceWindowLayouts(windowLayouts)
         }
         if let windowRooms {
-            summary.windowRooms = core.roomCoordinator.replaceRooms(windowRooms)
+            summary.windowRooms += core.roomCoordinator.replaceRooms(windowRooms)
         }
         if let customWindowSizes {
-            summary.customWindowSizes =
+            summary.customWindowSizes +=
                 core.customWindowSizeCoordinator.replaceCustomWindowSizes(customWindowSizes)
         }
-        if let hotkeys { summary.hotkeys = applyHotkeys(hotkeys, to: core) }
+        if let hotkeys { summary.hotkeys += applyHotkeys(hotkeys, to: core) }
         if let favoriteApps {
             core.favorites.replace(keys: favoriteApps)
-            summary.favorites = favoriteApps.count
+            summary.favorites += favoriteApps.count
         }
         if hiddenLauncherItems != nil || hiddenLauncherKinds != nil {
             let items = hiddenLauncherItems ?? Array(core.visibility.hiddenItemKeys)
             let kinds = hiddenLauncherKinds ?? Array(core.visibility.disabledKinds)
             core.visibility.replace(hiddenItems: items, disabledKinds: kinds)
-            summary.hiddenItems = items.count
+            summary.hiddenItems += items.count
         }
         if let launcherAliases {
             core.aliases.replace(launcherAliases)
             // Counted after the store, which drops blanks the file may carry.
-            summary.aliases = core.aliases.aliases.count
+            summary.aliases += core.aliases.aliases.count
         }
         if let pinnedEmoji {
             core.pinnedEmoji.replace(pinnedEmoji)
-            summary.pinnedEmoji = core.pinnedEmoji.glyphs.count
+            summary.pinnedEmoji += core.pinnedEmoji.glyphs.count
         }
-        return summary
     }
 
     private func applySettings(_ s: SettingsData, to core: AppCore) -> Int {

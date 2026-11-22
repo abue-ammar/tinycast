@@ -1013,6 +1013,8 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
 - Cancelling the save panel leaves nothing in `~/Library/Caches/com.abueammar.tinycast.dev/backup-staging/`
 - **`snippetsEnabled` is not in the exported file**, and importing does not enable snippets
 - Nothing in the extracted tree names a Keychain item, an extension, or an AI conversation
+- Export only Quicklinks: the file holds `quicklinks.json` with their shortcuts, and importing it
+  restores both without touching settings; every Not Included row shows its reason on hover
 
 ### iCloud Sync
 

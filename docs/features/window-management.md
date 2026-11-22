@@ -409,7 +409,8 @@ and every shortcut stays editable afterwards.
   `boundCustomWindowSizeIDs` index, the shape window layouts use. It dispatches through
   `WindowCommandCoordinator.runCustomWindowSize(id:)`, the same funnel and the same feature gate.
 - **`AppIndex.setCustomWindowSizes(_:)`** publishes the custom-size slice immediately after the
-  window commands, inside the same section. Custom sizes and their bindings ride in settings backups.
+  window commands, inside the same section. Custom sizes and their bindings ride in a backup's
+  Window Management category, with layouts and rooms.
 - **Settings**: `windowManagementEnabled` (off), `windowManagementShowInLauncher` (on), `windowGap`
   (0), `windowCycle` (`.off`), `windowWrapsDisplays` (on) and `windowKeepsProportions` (on). All six
   ride in settings backups: unlike `snippetsEnabled` they grant no permission class of their own.

@@ -682,6 +682,9 @@ enum SettingsSearchCatalog {
             .backupExport, "Export Backup",
             keywords: ["save", "tinycast file", "archive"]),
         .init(
+            group: .backupNotIncluded, "Not Included",
+            keywords: ["excluded", "extensions", "chats", "passwords", "api keys"]),
+        .init(
             .backupImport, "Backup File",
             keywords: ["restore", "choose", "tinycast file"]),
         .init(
