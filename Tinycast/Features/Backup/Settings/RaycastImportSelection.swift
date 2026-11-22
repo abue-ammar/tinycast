@@ -2,37 +2,46 @@ import SwiftUI
 
 struct RaycastImportSelection: View {
     @Binding var selection: RaycastImportOptions
-    @Environment(\.colorScheme) private var colorScheme
 
     private struct Category: Identifiable {
         let option: RaycastImportOptions
         let symbol: String
+        let tint: IconTint
         let label: String
         var id: Int { option.rawValue }
     }
 
     private static let categories: [Category] = [
-        .init(option: .shortcuts, symbol: "command", label: String(localized: "Shortcuts")),
-        .init(option: .favorites, symbol: "star", label: String(localized: "Favorites")),
         .init(
-            option: .aliases, symbol: "character.cursor.ibeam", label: String(localized: "Aliases")),
+            option: .shortcuts, symbol: "command", tint: SettingsTab.commands.tint,
+            label: String(localized: "Shortcuts")),
+        .init(option: .favorites, symbol: "star.fill", tint: .gray, label: String(localized: "Favorites")),
         .init(
-            option: .emojiSkinTone, symbol: "face.smiling",
+            option: .aliases, symbol: "character.cursor.ibeam", tint: SettingsTab.commands.tint,
+            label: String(localized: "Aliases")),
+        .init(
+            option: .emojiSkinTone, symbol: SettingsTab.emoji.systemImage, tint: SettingsTab.emoji.tint,
             label: String(localized: "Emoji skin tone")),
-        .init(option: .launchAtLogin, symbol: "power", label: String(localized: "Launch at login")),
         .init(
-            option: .menuBarVisibility, symbol: "menubar.rectangle",
+            option: .launchAtLogin, symbol: "power", tint: .gray,
+            label: String(localized: "Launch at login")),
+        .init(
+            option: .menuBarVisibility, symbol: "menubar.rectangle", tint: .gray,
             label: String(localized: "Menu-bar icon")),
         .init(
-            option: .clipboardHistory, symbol: "doc.on.clipboard",
-            label: String(localized: "Clipboard history")),
-        .init(option: .snippets, symbol: "curlybraces", label: String(localized: "Snippets")),
+            option: .clipboardHistory, symbol: SettingsTab.clipboard.systemImage,
+            tint: SettingsTab.clipboard.tint, label: String(localized: "Clipboard history")),
         .init(
-            option: .quicklinks, symbol: Quicklink.sfSymbol, label: String(localized: "Quicklinks")),
+            option: .snippets, symbol: SettingsTab.snippets.systemImage, tint: SettingsTab.snippets.tint,
+            label: String(localized: "Snippets")),
         .init(
-            option: .popToRoot, symbol: "arrow.uturn.backward",
+            option: .quicklinks, symbol: Quicklink.sfSymbol, tint: SettingsTab.quicklinks.tint,
+            label: String(localized: "Quicklinks")),
+        .init(
+            option: .popToRoot, symbol: "arrow.uturn.backward", tint: .gray,
             label: String(localized: "Pop to root")),
-        .init(option: .compactMode, symbol: "macwindow", label: String(localized: "Compact mode"))
+        .init(
+            option: .compactMode, symbol: "macwindow", tint: .gray, label: String(localized: "Compact mode"))
     ]
 
     private static let columns = Array(
@@ -50,12 +59,7 @@ struct RaycastImportSelection: View {
                 ForEach(Self.categories) { category in
                     Toggle(isOn: included(category.option)) {
                         HStack(spacing: Theme.Spacing.sm) {
-                            Image(
-                                systemName: SystemSymbolName.resolve(
-                                    category.symbol, isDark: colorScheme == .dark)
-                            )
-                            .foregroundStyle(.secondary)
-                            .frame(width: 16)
+                            SettingsSymbolTile(symbol: category.symbol, tint: category.tint)
                             Text(category.label).lineLimit(1)
                         }
                     }

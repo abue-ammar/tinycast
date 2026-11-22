@@ -15,11 +15,19 @@ enum SyncExclusion: CaseIterable, Sendable {
 
     var symbol: String {
         switch self {
-        case .clipboardHistory: "doc.on.clipboard"
-        case .customCommands: "terminal"
+        case .clipboardHistory: "list.clipboard.fill"
+        case .customCommands: "terminal.fill"
         case .searchRanking: "magnifyingglass"
-        case .credentials: "key"
+        case .credentials: "key.fill"
         case .macSpecific: "desktopcomputer"
+        }
+    }
+
+    var tint: IconTint {
+        switch self {
+        case .clipboardHistory: .indigo
+        case .customCommands: .graphite
+        case .searchRanking, .credentials, .macSpecific: .gray
         }
     }
 

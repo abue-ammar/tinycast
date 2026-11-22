@@ -87,8 +87,8 @@ private struct CustomCommandSettingsRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        SettingsRow(title: command.name, subtitle: command.command) {
-            Image(systemName: command.symbol)
+        SettingsRow(title: command.name) {
+            SettingsSymbolTile(symbol: command.symbol, tint: SettingsTab.commands.tint)
         } trailing: {
             if !command.showsInRootSearch {
                 Image(systemName: "eye.slash")

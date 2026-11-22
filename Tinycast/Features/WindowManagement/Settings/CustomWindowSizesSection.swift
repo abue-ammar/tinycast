@@ -43,7 +43,7 @@ private struct CustomWindowSizeRow: View {
         let entry = AppEntry(size)
         let isVisible = visibility.isItemVisible(entry)
         SettingsRow(title: size.name, subtitle: size.summary) {
-            Image(systemName: CustomWindowSize.sfSymbol)
+            SettingsSymbolTile(symbol: CustomWindowSize.sfSymbol, tint: SettingsTab.windowManagement.tint)
         } trailing: {
             AliasField(entry: entry)
                 .settingsEnabled(showsInLauncher && isVisible)

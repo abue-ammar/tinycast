@@ -426,9 +426,9 @@ or pass `includingTop: true` for a bounded popup whose title and rows scroll tog
 
 ## Icon pack
 
-Source: `DesignSystem/IconTile.swift`, `DesignSystem/IconTint.swift`, `Theme.IconTile`. Every icon,
-previewed, with this guide: the **Tinycast Icon Pack** artifact
-(https://claude.ai/artifact/9jWyGYLNGDFPQHiNb3s3KB, files `icons.js` and `glyphs/`).
+Source: `DesignSystem/IconTile.swift`, `DesignSystem/IconTint.swift`, `Theme.IconTile`. The pack's
+first icons, previewed with this guide, are in the **Tinycast Icon Pack** artifact
+(https://claude.ai/artifact/9jWyGYLNGDFPQHiNb3s3KB); the code, not the artifact, is the full list.
 
 Every launcher entry drawn from a symbol is an `IconTile`: a white SF Symbol on its tint's gradient,
 the way System Settings draws its sidebar. The Settings sidebar uses the same tile.
@@ -445,8 +445,9 @@ the way System Settings draws its sidebar. The Settings sidebar uses the same ti
   icon red. Red also marks an action that ends or deletes something. Two sidebar neighbours never share
   one. The values live only in `Theme.IconTile.fill(_:)`, fixed in both appearances.
 - **Built-in entries** declare the tint beside the symbol: `SettingsTab.systemImage` and `.tint`,
-  `CommandID.sfSymbol` and `.tint`, `SystemActionCatalog.symbol(for:)` and `tint(for:)`. The switches
-  are exhaustive, so a new case fails the build until it has both.
+  `CommandID.sfSymbol` and `.tint`, `SystemActionCatalog.symbol(for:)` and `tint(for:)`,
+  `SyncCategory` and `SyncExclusion`'s `.symbol` and `.tint`, `BackupCategory.descriptor`. The
+  switches are exhaustive, so a new case fails the build until it has both.
 - **User-made entries** keep the symbol the user picked and take their feature tab's tint:
   `SettingsTab.quicklinks.tint` for a quicklink, `.windowManagement` for window commands, layouts and
   rooms, `.extensions` for an extension's icon override. There is no colour to choose. Each feature's
@@ -454,6 +455,14 @@ the way System Settings draws its sidebar. The Settings sidebar uses the same ti
   same tile. `AppEntry.iconSource` turns either kind into `EntryIcon.tile`.
 - **Not in the pack.** Clipboard rows keep the plain tile, since their glyph names the content's type.
   Menus, icon pickers, dialogs, HUDs, the compact bar and menu-bar items draw the symbol with no tile.
+- **Settings list rows** draw a tile through `SettingsSymbolTile`: `.row` at an app icon's body size
+  so it matches the app icons in other lists, `.feature` at a feature switch's size for a row with a
+  subtitle. A Settings list of user-made items, window commands or quick actions draws the same
+  symbol and tint as the launcher row; a custom command or quicklink row has no subtitle. The
+  Permissions pane's rows are `.feature`: Accessibility takes the Permissions tab's tint, Full Disk
+  Access gray, and Calendars and Microphone the Calendar and Dictation tabs' tints. iCloud Sync gives a
+  row for a whole feature that feature's tab icon, and a row for part of one its own symbol in that
+  feature's tint; General settings are gray. The Backup pane's checkbox grids follow the same rule.
 - **Vector only.** `IconCache` cannot draw the rounded design off-main, so `AppIconView` draws
   `EntryIcon.tile` itself; a bitmap consumer of one gets the plain symbol tile.
 
@@ -464,9 +473,8 @@ the way System Settings draws its sidebar. The Settings sidebar uses the same ti
    `Assets.xcassets`, as `bluetooth` is.
 2. Pick the tint of the feature it belongs to. Add a new `IconTint` (and its pair in
    `Theme.IconTile.fill(_:)`) only for a new feature whose sidebar neighbours use every fitting one.
-3. Add both to the catalog's switches, next to the case.
-4. Add the row to the artifact's `icons.js`, render its preview with `tools/render-symbols.swift.txt`,
-   and republish, so the reference stays complete.
+3. Add both to the catalog's switches, next to the case. A surface with no catalog, such as the
+   Permissions pane, states the pair where it draws the tile.
 
 ## Rows, selection, hover
 

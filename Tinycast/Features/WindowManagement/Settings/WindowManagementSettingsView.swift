@@ -150,7 +150,7 @@ private struct WindowCommandSettingsRow: View {
         let entry = AppEntry(command)
         let isVisible = visibility.isItemVisible(entry)
         SettingsRow(title: command.name) {
-            Image(systemName: command.sfSymbol)
+            SettingsSymbolTile(symbol: command.sfSymbol, tint: SettingsTab.windowManagement.tint)
         } trailing: {
             // The ranker never sees a hidden entry, so typing here would match nothing.
             AliasField(entry: entry)

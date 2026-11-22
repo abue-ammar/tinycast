@@ -33,9 +33,8 @@ struct BackupCategorySelection: View {
                 ForEach(offered) { category in
                     Toggle(isOn: included(category)) {
                         HStack(spacing: Theme.Spacing.sm) {
-                            Image(systemName: category.descriptor.symbol)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 16)
+                            SettingsSymbolTile(
+                                symbol: category.descriptor.symbol, tint: category.descriptor.tint)
                             Text(category.descriptor.label).lineLimit(1)
                             if let subtitle = subtitle(category) {
                                 Text(subtitle)

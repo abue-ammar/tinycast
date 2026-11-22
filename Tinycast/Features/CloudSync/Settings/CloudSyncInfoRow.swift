@@ -3,6 +3,7 @@ import SwiftUI
 struct CloudSyncInfoRow: View {
     let title: String
     let symbol: String
+    let tint: IconTint
     let detail: String?
 
     var body: some View {
@@ -14,7 +15,11 @@ struct CloudSyncInfoRow: View {
                     .accessibilityLabel(detail)
             }
         } label: {
-            Label(title, systemImage: symbol)
+            Label {
+                Text(title)
+            } icon: {
+                SettingsSymbolTile(symbol: symbol, tint: tint)
+            }
         }
     }
 }

@@ -130,7 +130,7 @@ feature's doc, under its own `## Invariants`.
 - **Every symbol icon comes from the icon pack.** Settings tabs, system actions and built-in commands
   pair an SF Symbol with an `IconTint` in their catalog; a user-made item keeps its symbol and takes its
   feature tab's tint. All draw as `IconTile`. To add one, follow
-  [ui.md#adding-an-icon](docs/ui.md#adding-an-icon), which includes updating the artifact.
+  [ui.md#adding-an-icon](docs/ui.md#adding-an-icon).
 - **A new preference also gets a `SettingsFileKey`** and its binding in `SettingsFileSchema`, so the
   opt-in `settings.json` mirror carries it; the exhaustive switch fails the build until it is bound.
   See [settings-file.md](docs/features/settings-file.md).

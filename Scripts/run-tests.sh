@@ -114,7 +114,7 @@ run() {
 
 L=Tinycast/Features/Launcher/Model
 # What a sync source needs from iCloud Sync, for harnesses compiling a whole Service folder.
-SYNC="Tinycast/Features/CloudSync/Model/*.swift Tinycast/Features/CloudSync/Service/SyncSource.swift Tinycast/Features/CloudSync/Service/RecordSyncSource.swift Tinycast/Features/Settings/Model/SettingsFileKey.swift"
+SYNC="Tinycast/Features/CloudSync/Model/*.swift Tinycast/Features/CloudSync/Service/SyncSource.swift Tinycast/Features/CloudSync/Service/RecordSyncSource.swift Tinycast/Features/Settings/Model/SettingsFileKey.swift Tinycast/DesignSystem/IconTint.swift"
 run slow -O FuzzTests      $L/SearchRelevance.swift $L/ScriptRomanization.swift \
                            $L/LauncherMatch.swift $L/EntryNaming.swift $L/LauncherOrder.swift \
                            $L/LauncherRankingStore.swift $L/LauncherSuggestions.swift
@@ -685,7 +685,8 @@ run slow -O RaycastTests   Tinycast/Features/Backup/Model/RaycastImportError.swi
                            Tinycast/Features/Clipboard/Model/ColorFormat.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift
 run CloudSyncTests         Tinycast/Features/CloudSync/Model/*.swift \
-                           Tinycast/Features/Settings/Model/SettingsFileKey.swift
+                           Tinycast/Features/Settings/Model/SettingsFileKey.swift \
+                           Tinycast/DesignSystem/IconTint.swift
 run SettingsBackupTests    Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/Backup/Model/SettingsBackupCoverage.swift
 run HyperKeyEngineTests    Tinycast/Features/HotKeys/Model/HyperKeyEngine.swift \
@@ -720,6 +721,7 @@ run BackupArchiveTests     Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/Backup/Model/BackupArchive.swift \
                            Tinycast/Features/Backup/Model/BackupBundle.swift \
                            Tinycast/Features/Backup/Model/BackupCategory.swift \
+                           Tinycast/DesignSystem/IconTint.swift \
                            Tinycast/Features/Backup/Model/BackupClipboardItem.swift \
                            Tinycast/Features/Backup/Model/BackupManifest.swift \
                            Tinycast/Features/Backup/Service/BackupStaging.swift

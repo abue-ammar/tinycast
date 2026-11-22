@@ -53,25 +53,42 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
         }
     }
 
+    /// A whole feature's row is that feature's tab icon; a part of one takes only its tint.
     var symbol: String {
         switch self {
         case .aiCommands: "sparkles"
-        case .aiChats: "bubble.left.and.bubble.right"
-        case .dictation: "mic"
+        case .aiChats: "bubble.left.fill"
+        case .dictation: "waveform"
         case .mcpServers: "server.rack"
         case .quicklinks: "link"
-        case .notes: "note.text"
-        case .snippets: "text.badge.plus"
-        case .windowLayouts: "rectangle.split.2x2"
-        case .extensions: "puzzlepiece.extension"
+        case .notes: "text.page.fill"
+        case .snippets: "curlybraces"
+        case .windowLayouts: "rectangle.split.2x2.fill"
+        case .extensions: "puzzlepiece.extension.fill"
         case .launchAtLogin: "power"
         case .showInMenuBar: "menubar.rectangle"
-        case .appearance: "paintbrush"
+        case .appearance: "paintbrush.fill"
         case .interfaceSize: "textformat.size"
         case .windowMode: "macwindow"
-        case .hotkeysAndAliases: "keyboard"
-        case .favoritesAndFallbacks: "star"
-        case .otherSettings: "gearshape"
+        case .hotkeysAndAliases: "keyboard.fill"
+        case .favoritesAndFallbacks: "star.fill"
+        case .otherSettings: "gearshape.fill"
+        }
+    }
+
+    var tint: IconTint {
+        switch self {
+        case .aiCommands, .aiChats, .mcpServers: .purple
+        case .dictation: .pink
+        case .quicklinks: .blue
+        case .notes: .yellow
+        case .snippets: .brown
+        case .windowLayouts: .mint
+        case .extensions: .green
+        case .hotkeysAndAliases: .graphite
+        case .launchAtLogin, .showInMenuBar, .appearance, .interfaceSize, .windowMode,
+            .favoritesAndFallbacks, .otherSettings:
+            .gray
         }
     }
 

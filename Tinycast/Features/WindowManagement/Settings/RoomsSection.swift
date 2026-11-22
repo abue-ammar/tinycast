@@ -49,7 +49,7 @@ private struct RoomSettingsRow: View {
         let entry = AppEntry(room)
         let isVisible = visibility.isItemVisible(entry)
         SettingsRow(title: room.name, subtitle: subtitle) {
-            SymbolImage(name: Room.sfSymbol, size: 13)
+            SettingsSymbolTile(symbol: Room.sfSymbol, tint: SettingsTab.windowManagement.tint)
         } trailing: {
             AliasField(entry: entry)
                 .settingsEnabled(showsInLauncher && isVisible)

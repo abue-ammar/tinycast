@@ -12,6 +12,7 @@ enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
     struct Descriptor: Sendable {
         let label: String
         let symbol: String
+        let tint: IconTint
         /// Where this category's files sit inside the bundle; empty means the bundle root.
         let subpath: String
     }
@@ -21,20 +22,23 @@ enum BackupCategory: String, CaseIterable, Codable, Identifiable, Sendable {
         case .configuration:
             return .init(
                 label: String(localized: "Settings & Shortcuts"), symbol: "slider.horizontal.3",
-                subpath: "")
+                tint: .gray, subpath: "")
         case .clipboard:
             return .init(
-                label: String(localized: "Clipboard History"), symbol: "doc.on.clipboard",
-                subpath: "clipboard")
+                label: String(localized: "Clipboard History"), symbol: "list.clipboard.fill",
+                tint: .indigo, subpath: "clipboard")
         case .snippets:
             return .init(
-                label: String(localized: "Snippets"), symbol: "curlybraces", subpath: "snippets")
+                label: String(localized: "Snippets"), symbol: "curlybraces", tint: .brown,
+                subpath: "snippets")
         case .notes:
-            return .init(label: String(localized: "Notes"), symbol: "note.text", subpath: "notes")
+            return .init(
+                label: String(localized: "Notes"), symbol: "text.page.fill", tint: .yellow,
+                subpath: "notes")
         case .learning:
             return .init(
                 label: String(localized: "Launcher Learning"), symbol: "chart.line.uptrend.xyaxis",
-                subpath: "learning")
+                tint: .gray, subpath: "learning")
         }
     }
 
