@@ -244,15 +244,14 @@ struct RootPaletteView: View {
                     core.supportCoordinator.showSupport()
                 },
                 PopoverMenuItem(
-                    title: String(localized: "Settings"), systemImage: "gearshape",
-                    startsSection: true, shortcut: "⌘,"
+                    title: String(localized: "Settings"), systemImage: "gearshape", shortcut: "⌘,"
                 ) {
                     core.settingsCoordinator.showSettings()
                 },
                 PopoverMenuItem(
                     title: String(localized: "Quit \(appName)"),
                     systemImage: "rectangle.portrait.and.arrow.right",
-                    isDestructive: true
+                    startsSection: true, isDestructive: true
                 ) {
                     NSApp.terminate(nil)
                 }

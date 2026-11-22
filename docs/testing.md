@@ -490,7 +490,7 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
 - The bottom-left app menu also searches from its bottom band; every header menu (including Emoji
   categories, File Search filters and extension dropdowns) searches from its top band
 - The app menu opens at the ⌘K Actions menu's height with Check for Updates and Changelog, a
-  separator, About and Support, a separator, then Settings partially visible; Settings and Quit
+  separator, About, Support, then Settings partially visible; Settings and, after a separator, Quit
   scroll fully into view with the pointer or arrow keys. Filtering to fewer rows shrinks the menu
 - A long menu opens with unchanged row insets; while scrolling, rows can reach the panel edges
 - A click in the palette but outside its menu closes only the menu; a click outside the palette
