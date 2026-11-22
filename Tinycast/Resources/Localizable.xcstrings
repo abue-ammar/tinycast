@@ -17043,54 +17043,54 @@
         }
       }
     },
-    "A native macOS launcher for everyday productivity. Lightweight and open source." : {
+    "A native macOS launcher built for productivity. Fast, lightweight, and open source." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ein nativer macOS-Launcher für die tägliche Produktivität. Leichtgewichtig und Open Source."
+            "value" : "Ein nativer macOS-Launcher, gemacht für Produktivität. Schnell, leichtgewichtig und Open Source."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un lanzador nativo de macOS para la productividad diaria. Ligero y de código abierto."
+            "value" : "Un lanzador nativo de macOS creado para la productividad. Rápido, ligero y de código abierto."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Un lanceur macOS natif pour la productivité au quotidien. Léger et open source."
+            "value" : "Un lanceur macOS natif conçu pour la productivité. Rapide, léger et open source."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "毎日の生産性を高めるネイティブなmacOSランチャー。軽量でオープンソースです。"
+            "value" : "生産性のために作られたネイティブなmacOSランチャー。高速、軽量、そしてオープンソースです。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "일상의 생산성을 위한 네이티브 macOS 런처. 가볍고 오픈 소스입니다."
+            "value" : "생산성을 위해 만든 네이티브 macOS 런처. 빠르고 가벼우며 오픈 소스입니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Um iniciador nativo do macOS para a produtividade do dia a dia. Leve e de código aberto."
+            "value" : "Um iniciador nativo do macOS criado para a produtividade. Rápido, leve e de código aberto."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Нативный лаунчер macOS для повседневной продуктивности. Лёгкий и с открытым исходным кодом."
+            "value" : "Нативный лаунчер macOS, созданный для продуктивности. Быстрый, лёгкий и с открытым исходным кодом."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "为日常效率打造的原生 macOS 启动器。轻巧且开源。"
+            "value" : "为效率而生的原生 macOS 启动器。快速、轻巧且开源。"
           }
         }
       }

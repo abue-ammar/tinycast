@@ -4,7 +4,7 @@
 // The page title and meta description, shared by the layout and /llms.txt. Google truncates a
 // description near 160 characters, so `summary` is written to land under it rather than be cut.
 export const pageTitle =
-  "Tinycast: a native macOS launcher for everyday productivity";
+  "Tinycast: a native macOS launcher built for productivity";
 export const summary =
   "A lightweight, open source macOS launcher with app search, clipboard history, snippets, window management, your own AI keys and Raycast extensions.";
 
@@ -38,7 +38,7 @@ export const hero = {
     rest: "on your Mac.",
     second: "One keystroke away",
   },
-  sub: "A native macOS launcher for everyday productivity. Lightweight and open source, with no account and no telemetry.",
+  sub: "A native macOS launcher built for productivity. Fast, lightweight, and open source, with no account and no telemetry.",
   // The mono line under the buttons. Each fact is stated in the docs.
   facts: ["Under 100 MB of memory", "Zero dependencies", "Free & open source"],
 } as const;
