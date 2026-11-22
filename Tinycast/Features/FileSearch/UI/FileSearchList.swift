@@ -61,7 +61,6 @@ struct FileSearchRow: View {
     let selected: Bool
     let showsLocation: Bool
     let slot: Character?
-    @Environment(PaletteState.self) private var palette
     @State private var image: NSImage?
     @State private var hovered = false
 
@@ -114,15 +113,12 @@ struct FileSearchRow: View {
                     .truncationMode(.middle)
             }
             Spacer(minLength: 0)
-            if let slot, palette.commandHeld {
-                HStack(spacing: metrics.spacing.xxs) {
-                    KeyCapChip(text: "⌘", style: .outline)
-                    KeyCapChip(text: String(slot), style: .outline)
+            SlotChordReveal(slot: slot) {
+                if showsLocation {
+                    Text(result.isDirectory ? "Folder" : "File")
+                        .font(metrics.typography.rowTrailing)
+                        .foregroundStyle(.secondary)
                 }
-            } else if showsLocation {
-                Text(result.isDirectory ? "Folder" : "File")
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
             }
         }
         .padding(.horizontal, metrics.spacing.md)

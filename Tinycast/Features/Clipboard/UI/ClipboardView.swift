@@ -133,7 +133,6 @@ private struct ClipboardRow: View {
     let ownsImage: Bool
     /// This row's ⌘-digit, or nil when it is not among the first ten visible pins.
     let slot: Character?
-    @Environment(PaletteState.self) private var palette
     @State private var hovered = false
 
     /// Selection wins over hover when a row is both; otherwise hover shows its fainter layer.
@@ -153,12 +152,7 @@ private struct ClipboardRow: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 0)
-            if let slot, palette.commandHeld {
-                HStack(spacing: metrics.spacing.xxs) {
-                    KeyCapChip(text: "⌘", style: .outline)
-                    KeyCapChip(text: String(slot), style: .outline)
-                }
-            }
+            SlotChordReveal(slot: slot)
         }
         .padding(.horizontal, metrics.spacing.md)
         .padding(.vertical, metrics.spacing.sm)

@@ -871,7 +871,8 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
 - Move files and apps across each other with ⌥⌘↑/↓ and the matching menu actions; selection follows
   the moved row. Remove a favorite through either path; selection stays within Favorites.
 - Hold ⌘ and check that each displayed ⌘1–⌘0 opens that favorite, including with the meeting card
-  above Favorites and from the compact palette.
+  above Favorites and from the compact palette. The chords slide in from the trailing edge and
+  vanish at once on release; ⌘, never shows them before Settings opens, even with ⌘ held past the delay.
 - Search for a saved filename, including a short query and accented text: the favorite appears once.
   Turn Show in launcher off: saved files remain available; disable File Search: they disappear.
   Re-enable it: their order returns.

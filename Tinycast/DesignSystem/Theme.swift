@@ -369,6 +369,10 @@ enum Theme {
             0.16, 1, 0.3, 1, duration: Theme.Duration.menuChevron)
     }
 
+    enum SlotChordMotion {
+        static let reveal = Animation.easeOut(duration: 0.15)
+    }
+
     enum Typography {
         /// One size, two frameworks: `TextTrailingDragHandle` measures what the field renders.
         static let searchFieldSize: CGFloat = 20

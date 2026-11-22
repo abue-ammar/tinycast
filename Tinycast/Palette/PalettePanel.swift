@@ -186,6 +186,9 @@ final class PalettePanel: NSPanel, AnimatedPanel {
         // Keys and scrolling both slide rows under the pointer without it choosing any of them.
         case .keyDown, .scrollWheel:
             paletteState?.disarmHoverHighlight(pointerAt: NSEvent.mouseLocation)
+            if event.type == .keyDown, event.modifierFlags.contains(.command) {
+                paletteState?.noteCommandChord()
+            }
         case .flagsChanged:
             paletteState?.noteCommandHeld(event.modifierFlags.contains(.command))
         default: break

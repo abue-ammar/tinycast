@@ -761,11 +761,16 @@ into `PaletteState.commandHeld` from `.flagsChanged` and clears it in `resignKey
 which a re-show that preserves state skips entirely. The flag flips **400 ms after** the press, not
 on it: every ⌘ chord in the palette starts as a ⌘ press, so revealing on the down edge flashed the
 numbering under ⌘↵ and ⌘K. `noteCommandHeld` schedules the reveal and any release cancels it, so a
-chord's own tap never outlives its keystroke while a deliberate hold still lights every row. **`AppRow` observes that flag itself**: reading
-it any higher would attach it to `RootPaletteView`'s body and rebuild the whole palette on every ⌘
-press, where a row-level read re-runs only the handful of rows the `LazyVStack` has realized. The
-digit each row shows is carried on its `Row` case from the section build, so no row searches for its
-own position.
+chord's own tap never outlives its keystroke while a deliberate hold still lights every row. A key
+pressed under ⌘ calls `noteCommandChord`, which cancels the reveal and hides any shown numbering until
+⌘ is released: a chord whose work outlasts the delay, such as ⌘, starting Settings, would otherwise
+light the rows before the palette leaves. **`SlotChordReveal` observes that flag itself**, in the
+launcher, file and clipboard rows alike: reading it any higher would attach it to `RootPaletteView`'s
+body and rebuild the whole palette on every ⌘ press, where this read re-runs only the trailing label
+of each numbered row the `LazyVStack` has realized. Each chord slides in from the trailing edge as the
+label under it fades, over `SlotChordMotion.reveal`; Reduce Motion keeps only the fade. Clearing is
+never animated, so a release or a chord leaves nothing behind. The digit each row shows is carried on
+its `Row` case from the section build, so no row searches for its own position.
 
 ## Hiding one result
 
