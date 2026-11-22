@@ -71,11 +71,9 @@ enum BackupActions {
                 try BackupArchive.open(file: file, into: staging.root)
                 let bundle = staging.bundle
                 let manifest = try bundle.readManifest()
-                let commands: SettingsBackup? =
+                let commands =
                     manifest.categories.contains(.customCommands)
-                    ? (try? Data(contentsOf: bundle.location(of: .customCommands)))
-                        .flatMap { try? SettingsBackup(json: $0) }
-                    : nil
+                    ? SettingsBackup.read(.customCommands, from: bundle) : nil
                 let preview = BackupPreview(
                     id: id, manifest: manifest, customCommands: commands?.customCommands?.count ?? 0,
                     globalShortcuts: commands?.hotkeys?.customCommands?.count ?? 0)

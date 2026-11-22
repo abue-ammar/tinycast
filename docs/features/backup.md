@@ -24,6 +24,10 @@ forgotten.
   config must not be able to grant something the user never granted. `FallbackStore` is the second
   case: its order and checkboxes live on their own `UserDefaults` keys precisely so an import cannot
   arm **Run Shell Command** in someone's launcher. This change adds _content_, never a capability.
+- **A ticked category applies only its own fields.** Import reads every JSON file back through
+  `slice(for:)`, so a crafted `settings.json` that also names custom commands cannot restore them
+  unless **Custom Commands** is ticked and `confirmExecutableImport` is answered. `BackupArchiveTests`
+  writes one file holding every field under each category's name and checks what each reads back.
 - **No absolute path may enter a `.tinycast`.** A clip's `imagePath` names a file on the Mac that wrote
   it, so `BackupClipboardItem` carries a bundle-relative `imageName` instead. `BackupArchiveTests`
   asserts the produced file contains neither `/Users` nor `/Library`, the analogue of
@@ -60,6 +64,7 @@ forgotten.
 | `Service/BackupStaging.swift`                             | One scratch tree, created on init and removed on discard                               |
 | `Service/BackupComposer.swift`                            | Stores → staging; `plan` on main, `write` off it                                       |
 | `Service/BackupApplier.swift`                             | Staging → stores, returning a per-category summary                                     |
+| `Service/SettingsBackup+Stores.swift`                     | Live stores ⇄ `SettingsBackup`: `gather` and the field-by-field `apply`                |
 | `Service/BackupActions.swift`                             | The effectful half: file pickers, the archive calls, dialogs, the settings-file switch |
 | `Service/RaycastDecoder.swift`                            | Container recognition, decrypt and decode                                              |
 | `Service/RaycastImportReader.swift`                       | Raycast → Tinycast field mapping                                                       |
@@ -88,8 +93,8 @@ import picker greys a row out instead of importing nothing and saying nothing.
 **Each JSON file is a slice of one `SettingsBackup`.** Export gathers it once and writes
 `slice(for:)` per ticked category; an item's shortcuts sit in the slice that holds the item, so
 quicklinks travel with their bindings and Settings & Shortcuts carries only bindings that need no
-item. Import decodes each ticked slice and applies it through the same field-by-field merge, adding
-into one summary.
+item. Import reads each ticked file back through `slice(for:)` and applies it through the same
+field-by-field merge, adding into one summary.
 
 **Clipboard history is JSONL, everything else is JSON.** A single JSON array of 200,000 clips has to be
 built in memory to encode and again to decode; a line per clip is one small encode through an open

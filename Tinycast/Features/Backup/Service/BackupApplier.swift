@@ -21,9 +21,7 @@ enum BackupApplier {
         var settings = SettingsBackup.ApplySummary()
         var appliedSlice = false
         for category in SettingsBackup.sliceCategories where categories.contains(category) {
-            guard let data = try? Data(contentsOf: bundle.location(of: category)),
-                let slice = try? SettingsBackup(json: data)
-            else { continue }
+            guard let slice = SettingsBackup.read(category, from: bundle) else { continue }
             slice.apply(to: core, into: &settings)
             appliedSlice = true
         }

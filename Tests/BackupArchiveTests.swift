@@ -37,6 +37,8 @@ struct BackupArchiveTests {
         refusesTraversal(in: root)
         refusesSymbolicLinks(in: root)
         categoriesAreComplete()
+        slicesPartitionTheBackup()
+        slicesReadOnlyTheirOwnFields(in: root)
         staging()
 
         print(failures == 0 ? "\nALL PASSED" : "\n\(failures) FAILED")
@@ -300,6 +302,88 @@ struct BackupArchiveTests {
         check(
             "ordering follows declaration order",
             BackupCategory.ordered(BackupCategory.all) == BackupCategory.allCases)
+    }
+
+    /// Every field set, so a field added later fails here until it joins a slice.
+    static func fullSettingsBackup() -> SettingsBackup {
+        var backup = SettingsBackup()
+        backup.settings = SettingsBackup.SettingsData()
+        backup.hotkeys = SettingsBackup.HotkeyBackup(
+            togglePalette: .globe, commands: [:], apps: [:], panes: [:],
+            customCommands: [UUID().uuidString: .doubleGlobe], systemActions: [:], windowCommands: [:],
+            quicklinks: [:], windowLayouts: [:], windowRooms: [:], customWindowSizes: [:])
+        backup.customCommands = [CustomCommand(name: "Crafted", command: "echo crafted")]
+        backup.quicklinks = []
+        backup.windowLayouts = []
+        backup.windowRooms = []
+        backup.customWindowSizes = []
+        backup.favoriteApps = []
+        backup.hiddenLauncherItems = []
+        backup.hiddenLauncherKinds = []
+        backup.launcherAliases = [:]
+        backup.pinnedEmoji = []
+        return backup
+    }
+
+    static func unsetFields(of value: Any) -> [String] {
+        Mirror(reflecting: value).children.compactMap { child in
+            let mirror = Mirror(reflecting: child.value)
+            return mirror.displayStyle == .optional && mirror.children.isEmpty ? child.label : nil
+        }
+    }
+
+    /// Top-level keys, with each shortcut table named on its own as `hotkeys.<table>`.
+    static func fieldKeys(of backup: SettingsBackup) -> Set<String> {
+        guard let data = try? backup.encoded(),
+            let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return [] }
+        var keys = Set(object.keys).subtracting(["hotkeys"])
+        if let hotkeys = object["hotkeys"] as? [String: Any] {
+            keys.formUnion(hotkeys.keys.map { "hotkeys.\($0)" })
+        }
+        return keys
+    }
+
+    static func slicesPartitionTheBackup() {
+        let full = fullSettingsBackup()
+        let unset = unsetFields(of: full) + (full.hotkeys.map(unsetFields) ?? [])
+        check(unset.isEmpty ? "the fixture sets every backup field" : "unset fields: \(unset)", unset.isEmpty)
+
+        var owners: [String: [BackupCategory]] = [:]
+        for category in SettingsBackup.sliceCategories {
+            for key in full.slice(for: category).map(fieldKeys) ?? [] {
+                owners[key, default: []].append(category)
+            }
+        }
+        let dropped = fieldKeys(of: full).subtracting(owners.keys).sorted()
+        check(dropped.isEmpty ? "every backup field travels in a slice" : "in no slice: \(dropped)", dropped.isEmpty)
+        let doubled = owners.filter { $0.value.count > 1 }.keys.sorted()
+        check(doubled.isEmpty ? "no backup field travels in two slices" : "in two slices: \(doubled)", doubled.isEmpty)
+    }
+
+    /// A crafted file may name any field; only a ticked Custom Commands may hand over commands.
+    static func slicesReadOnlyTheirOwnFields(in root: URL) {
+        let full = fullSettingsBackup()
+        let bundle = BackupBundle(root: root.appendingPathComponent("slices", isDirectory: true))
+        do {
+            try FileManager.default.createDirectory(at: bundle.root, withIntermediateDirectories: true)
+            let everything = try full.encoded()
+            for category in SettingsBackup.sliceCategories {
+                try bundle.write(everything, to: bundle.location(of: category))
+            }
+        } catch {
+            return check("slice files are written: \(error)", false)
+        }
+        for category in SettingsBackup.sliceCategories {
+            let read = SettingsBackup.read(category, from: bundle)
+            check(
+                "\(category.rawValue) reads back only its own slice of a file holding everything",
+                read.map(fieldKeys) == full.slice(for: category).map(fieldKeys))
+            let carriesCommands = read?.customCommands != nil || read?.hotkeys?.customCommands != nil
+            check(
+                "\(category.rawValue) carries commands only as Custom Commands",
+                carriesCommands == (category == .customCommands))
+        }
     }
 
     static func staging() {
