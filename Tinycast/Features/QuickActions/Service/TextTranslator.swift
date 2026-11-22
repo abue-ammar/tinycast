@@ -37,7 +37,7 @@ enum TextTranslator {
     /// Installed pairs only: a missing language is downloaded in System Settings, never from here.
     static func translate(_ text: String, to target: Locale.Language) async throws -> String {
         guard let source = sourceLanguage(of: text) else { throw Failure.undetectableSource }
-        guard !source.isEquivalent(to: target) else { return text }
+        guard !isSameLanguage(source, target) else { return text }
         let availability = LanguageAvailability()
         switch await availability.status(from: source, to: target) {
         case .installed:
@@ -88,6 +88,13 @@ enum TextTranslator {
             }
         }
         return nil
+    }
+
+    /// A region is not a language: the translator calls Egyptian into Saudi Arabic an unsupported pair.
+    private static func isSameLanguage(_ lhs: Locale.Language, _ rhs: Locale.Language) -> Bool {
+        let lhs = Locale.Language(identifier: lhs.maximalIdentifier)
+        let rhs = Locale.Language(identifier: rhs.maximalIdentifier)
+        return lhs.languageCode == rhs.languageCode && lhs.script == rhs.script
     }
 
     /// Region may move, since one English is another's asset, but a different script is a language.

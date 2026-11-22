@@ -2,6 +2,8 @@ import SwiftUI
 
 struct NotesView: View {
     @Environment(NotesCoordinator.self) private var notes
+    /// Measured, since the capsule scales with Interface Size and grows a button while fitting is off.
+    @State private var actionsWidth: CGFloat = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -25,6 +27,7 @@ struct NotesView: View {
             Color.clear
                 .overlay { NoteTitlebarDragRegion(onDoubleClick: notes.moveToTopRight) }
             NoteTitlebarActions()
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { actionsWidth = $0 }
         }
         .frame(height: Theme.Size.noteTitlebar)
         .overlay { title }
@@ -35,8 +38,12 @@ struct NotesView: View {
             .font(Theme.Typography.noteTitle)
             .lineLimit(1)
             .truncationMode(.tail)
-            .padding(.horizontal, Theme.Size.noteTitleInset)
+            .padding(.horizontal, titleInset)
             .allowsHitTesting(false)
+    }
+
+    private var titleInset: CGFloat {
+        max(Theme.Size.noteTitleInset, actionsWidth + Theme.Spacing.md)
     }
 
     @ViewBuilder
@@ -162,6 +169,11 @@ private struct NoteTitlebarActions: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.xxs) {
+            if !notes.fitsWindowToNote {
+                action(
+                    "arrow.up.and.down.text.horizontal", String(localized: "Fit Window to Note"),
+                    String(localized: "Fit Window to Note"), notes.fitWindowToNote)
+            }
             action(
                 "plus", String(localized: "Create Note"), String(localized: "Create Note  ⌘N"),
                 notes.createNote)

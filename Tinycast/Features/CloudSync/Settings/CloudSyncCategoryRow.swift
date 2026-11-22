@@ -32,7 +32,11 @@ struct CloudSyncCategoryRow: View {
                 Toggle(category.title, isOn: $isIncluded)
                     .toggleStyle(.checkbox)
                     .labelsHidden()
-                Label(category.title, systemImage: category.symbol)
+                Label {
+                    Text(category.title)
+                } icon: {
+                    SettingsSymbolTile(symbol: category.symbol, tint: category.tint)
+                }
             }
         }
     }

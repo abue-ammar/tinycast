@@ -8,6 +8,14 @@ export const pageTitle =
 export const summary =
   "A lightweight, open source macOS launcher with app search, clipboard history, snippets, window management, your own AI keys and Raycast extensions.";
 
+// A page that sets its own `openGraph` replaces the layout's whole object, so it names this too.
+export const ogImage = {
+  url: "/og.jpg",
+  width: 1200,
+  height: 630,
+  alt: "The Tinycast logo and tagline beside its command palette, showing fuzzy app search.",
+};
+
 export const site = {
   name: "Tinycast",
   repo: "https://github.com/abue-ammar/tinycast",

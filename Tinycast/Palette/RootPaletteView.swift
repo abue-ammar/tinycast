@@ -244,15 +244,14 @@ struct RootPaletteView: View {
                     core.supportCoordinator.showSupport()
                 },
                 PopoverMenuItem(
-                    title: String(localized: "Settings"), systemImage: "gearshape",
-                    startsSection: true, shortcut: "⌘,"
+                    title: String(localized: "Settings"), systemImage: "gearshape", shortcut: "⌘,"
                 ) {
                     core.settingsCoordinator.showSettings()
                 },
                 PopoverMenuItem(
                     title: String(localized: "Quit \(appName)"),
                     systemImage: "rectangle.portrait.and.arrow.right",
-                    isDestructive: true
+                    startsSection: true, isDestructive: true
                 ) {
                     NSApp.terminate(nil)
                 }
@@ -576,14 +575,14 @@ struct RootPaletteView: View {
                 if menuOpen { return .handled }
                 if vm.isComposing { return .ignored }
                 if moveCompactSelection(-1, modifiers: press.modifiers) { return .handled }
-                return moveHorizontally(-1) ? .handled : .ignored
+                return moveHorizontally(-1, modifiers: press.modifiers) ? .handled : .ignored
             }
             .onKeyPress(keys: [.rightArrow], phases: [.down, .repeat]) { press in
                 if vm.isControlListOpen { return .ignored }
                 if menuOpen { return .handled }
                 if vm.isComposing { return .ignored }
                 if moveCompactSelection(1, modifiers: press.modifiers) { return .handled }
-                return moveHorizontally(1) ? .handled : .ignored
+                return moveHorizontally(1, modifiers: press.modifiers) ? .handled : .ignored
             }
             // Plain ↵ runs an open menu's row or non-form selection; ⌘↵ submits forms.
             .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")], phases: .down) { press in
@@ -1418,8 +1417,9 @@ struct RootPaletteView: View {
         return .handled
     }
 
-    /// ←/→: consumed only by a horizontally navigating screen, else the caret keeps them.
-    private func moveHorizontally(_ delta: Int) -> Bool {
+    /// Bare ←/→ only, on a horizontally navigating screen; ⇧⌥⌘ chords always edit the search text.
+    private func moveHorizontally(_ delta: Int, modifiers: EventModifiers) -> Bool {
+        guard modifiers.isDisjoint(with: [.command, .control, .option, .shift]) else { return false }
         let screen = screen
         guard let next = screen.move(delta, axis: .horizontal, from: selection(in: screen)) else {
             return false

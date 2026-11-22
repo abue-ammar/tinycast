@@ -5,9 +5,14 @@ import Foundation
 enum BackupComposer {
     /// Everything the writer needs, in `Sendable` form, so the heavy half can leave the actor.
     struct Plan: Sendable {
+        struct File: Sendable {
+            var data: Data
+            var count: Int
+        }
+
         var categories: Set<BackupCategory>
         var appVersion: String
-        var settings: Data?
+        var files: [BackupCategory: File] = [:]
         var clipboardDatabase: URL?
         var snippetsDirectory: URL?
         var notesDirectory: URL?
@@ -26,8 +31,15 @@ enum BackupComposer {
             categories: categories,
             appVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString")
                 as? String ?? "unknown")
-        if categories.contains(.configuration) {
-            plan.settings = try? SettingsBackup.gather(from: core).encoded()
+        let slices = SettingsBackup.sliceCategories.filter(categories.contains)
+        if !slices.isEmpty {
+            let backup = SettingsBackup.gather(from: core)
+            for category in slices {
+                guard let slice = backup.slice(for: category), let data = try? slice.encoded()
+                else { continue }
+                let count = category == .configuration ? 1 : slice.contentCount
+                plan.files[category] = Plan.File(data: data, count: count)
+            }
         }
         if categories.contains(.clipboard) { plan.clipboardDatabase = core.clipboardStore.dbURL }
         if categories.contains(.snippets) {
@@ -52,9 +64,9 @@ enum BackupComposer {
         var counts: [String: Int] = [:]
         var missingImages = 0
 
-        if let settings = plan.settings {
-            try bundle.write(settings, to: bundle.settingsURL)
-            counts[BackupCategory.configuration.rawValue] = 1
+        for (category, file) in plan.files {
+            try bundle.write(file.data, to: bundle.location(of: category))
+            counts[category.rawValue] = file.count
         }
         if let database = plan.clipboardDatabase {
             let outcome = try writeClipboard(from: database, into: bundle)

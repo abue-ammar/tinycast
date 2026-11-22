@@ -3,8 +3,11 @@
 Export and import of Tinycast's own data as a single `.tinycast` file, plus the entry point for
 importing a Raycast export. The feature lives in `Features/Backup/`.
 
-A backup carries five independently selectable categories, ticked on export and again on import:
-**Settings & Shortcuts**, **Clipboard History**, **Snippets**, **Notes** and **Launcher Learning**.
+A backup carries one independently selectable category per feature with data of its own, ticked on
+export and again on import: **Settings & Shortcuts**, **Clipboard History**, **Snippets**, **Notes**,
+**Quicklinks**, **Custom Commands**, **Window Management** and **Launcher Learning**. What never
+travels is listed below them under **Not Included**, each with its reason, so no feature looks
+forgotten.
 
 ## Invariants
 
@@ -21,6 +24,10 @@ A backup carries five independently selectable categories, ticked on export and 
   config must not be able to grant something the user never granted. `FallbackStore` is the second
   case: its order and checkboxes live on their own `UserDefaults` keys precisely so an import cannot
   arm **Run Shell Command** in someone's launcher. This change adds _content_, never a capability.
+- **A ticked category applies only its own fields.** Import reads every JSON file back through
+  `slice(for:)`, so a crafted `settings.json` that also names custom commands cannot restore them
+  unless **Custom Commands** is ticked and `confirmExecutableImport` is answered. `BackupArchiveTests`
+  writes one file holding every field under each category's name and checks what each reads back.
 - **No absolute path may enter a `.tinycast`.** A clip's `imagePath` names a file on the Mac that wrote
   it, so `BackupClipboardItem` carries a bundle-relative `imageName` instead. `BackupArchiveTests`
   asserts the produced file contains neither `/Users` nor `/Library`, the analogue of
@@ -29,29 +36,35 @@ A backup carries five independently selectable categories, ticked on export and 
 - **The file carries a format version and a reader accepts only its own.** That is a guard, not a
   migration: the comparison is `==`, so an older and a newer file fail identically and by the same
   statement. Writing it any other way is the first line of a backup-format migration, and there is none.
-- **Extensions, AI chat history, Keychain material and anything in `Caches` never travel.** An
-  extension is third-party code and third-party data; chat history and API keys stay on the Mac that
-  had them; a cache regenerates on its own.
+- **Extensions, custom quick actions, chat presets, AI chat history, MCP servers, dictation, Keychain
+  material and anything in `Caches` never travel.** An extension is third-party code and third-party
+  data; a custom action and a preset follow their own features' invariants
+  ([quick-actions.md](quick-actions.md), [ai.md](ai.md)); chat history and API keys stay on the Mac
+  that had them; a cache regenerates on its own. `BackupExclusion` lists each in the pane, so the
+  rule is visible rather than a silent gap.
 - **`BackupCategory` names every category, and its `descriptor` switch is exhaustive.** A new case
-  fails to build until it names a label, a symbol, a bundle subpath and a count noun, the same
-  bargain `AppEntry.Kind` makes, and why the bundle layout is never spelled out twice.
+  fails to build until it names a label, a symbol, a tint, a bundle subpath (its JSON file or its
+  directory) and a count noun, the same bargain `AppEntry.Kind` makes, and why the bundle layout is
+  never spelled out twice.
 
 ## Layout
 
 | File                                                      | Role                                                                                   |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | `Model/BackupCategory.swift`                              | The categories and the descriptor every one of them must name                          |
+| `Model/BackupExclusion.swift`                             | What never travels, with the reason the pane shows under Not Included                  |
 | `Model/BackupManifest.swift`                              | The table of contents, the format constant and its guard                               |
 | `Model/BackupBundle.swift`                                | The payload directory's layout and part-by-part encode/decode                          |
 | `Model/BackupArchive.swift`                               | Directory ⇄ `.tinycast`; the only file importing `AppleArchive`                        |
 | `Model/BackupClipboardItem.swift`                         | The portable clip, with no path in it                                                  |
-| `Model/SettingsBackup.swift`                              | The settings, fixed/per-item hotkey payloads, and their `Codable` shape                |
+| `Model/SettingsBackup.swift`                              | The settings, hotkey payloads, one slice per JSON category, and their `Codable` shape  |
 | `Model/SettingsBackupCoverage.swift`                      | The coverage declaration the harness checks                                            |
 | `Model/RaycastImport.swift`                               | The importable categories, the `Result` and its per-category trim                      |
 | `Model/RaycastImportError.swift`                          | The three failures an import reports                                                   |
 | `Service/BackupStaging.swift`                             | One scratch tree, created on init and removed on discard                               |
 | `Service/BackupComposer.swift`                            | Stores → staging; `plan` on main, `write` off it                                       |
 | `Service/BackupApplier.swift`                             | Staging → stores, returning a per-category summary                                     |
+| `Service/SettingsBackup+Stores.swift`                     | Live stores ⇄ `SettingsBackup`: `gather` and the field-by-field `apply`                |
 | `Service/BackupActions.swift`                             | The effectful half: file pickers, the archive calls, dialogs, the settings-file switch |
 | `Service/RaycastDecoder.swift`                            | Container recognition, decrypt and decode                                              |
 | `Service/RaycastImportReader.swift`                       | Raycast → Tinycast field mapping                                                       |
@@ -63,7 +76,10 @@ A backup carries five independently selectable categories, ticked on export and 
 
 ```
 manifest.json              format, app version, createdAt, per-category counts
-settings.json              SettingsBackup, exactly as it encoded before
+settings.json              settings, shortcuts, favorites, hidden items, aliases, pinned emoji
+quicklinks.json            quicklinks and their shortcuts
+custom-commands.json       custom commands and their shortcuts
+window-management.json     layouts, rooms, custom sizes and their shortcuts
 clipboard/items.jsonl      one clip per line
 clipboard/images/<uuid>.png
 snippets/<name>.md         copied verbatim
@@ -73,6 +89,12 @@ learning/{ranking,emoji,calculator}.json
 
 A category the user didn't tick has no key in `counts` and no files in the archive, which is how the
 import picker greys a row out instead of importing nothing and saying nothing.
+
+**Each JSON file is a slice of one `SettingsBackup`.** Export gathers it once and writes
+`slice(for:)` per ticked category; an item's shortcuts sit in the slice that holds the item, so
+quicklinks travel with their bindings and Settings & Shortcuts carries only bindings that need no
+item. Import reads each ticked file back through `slice(for:)` and applies it through the same
+field-by-field merge, adding into one summary.
 
 **Clipboard history is JSONL, everything else is JSON.** A single JSON array of 200,000 clips has to be
 built in memory to encode and again to decode; a line per clip is one small encode through an open
@@ -124,8 +146,9 @@ not silent, because a settings file that quietly changes hotkeys is hostile.
 
 Per category:
 
-- **Settings** merge field by field, and a file carrying custom commands or their shortcuts still hits
-  `confirmExecutableImport` first.
+- **Settings & Shortcuts** merge field by field.
+- **Quicklinks**, **Custom Commands** and **Window Management** replace their libraries, then bind the
+  shortcuts their slice carries. Importing custom commands hits `confirmExecutableImport` first.
 - **Clipboard** streams through `ClipboardStore.importStoredItems`, off the main actor and on its own
   connection: a restored history runs past the memory window and must never sit in memory or freeze the
   UI. A row is deduped on its text, or on the path its image takes; the blob keeps the name the bundle

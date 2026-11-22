@@ -13,6 +13,7 @@ final class PaletteState {
     func notePointerMoved(to: CGPoint) {}
     func disarmHoverHighlight(pointerAt: CGPoint) {}
     func noteCommandHeld(_ held: Bool) {}
+    func noteCommandChord() {}
 }
 
 enum PaletteMode {

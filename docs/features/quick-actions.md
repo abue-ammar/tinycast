@@ -158,6 +158,10 @@ read as _Chinese hasn't been downloaded yet_ on a Mac that had Chinese. Both sid
 every supported spelling of the same script before the panel names a language, and the language it
 names is the one with no downloaded asset of its own.
 
+**Text already in the target language comes back unchanged**, whatever its region. The recognizer
+reports Arabic as `ar-EG` and English as `en-US`, and the translator calls a pair that differs only by
+region unsupported, so the check compares language and script, never region.
+
 `TranslationError` is annotated `macOS 26.4` while the deployment floor is `26.0`, so failures are
 caught as plain `Error` and reported by what was asked rather than by matching its cases.
 
@@ -309,6 +313,8 @@ failure handler, so automatic expansion stays silent as before.
   translate rather than call the target language missing.
 - Translate Korean text with Korean not downloaded and the target language installed: the panel names
   Korean, the language that is actually missing.
+- Translate Arabic text into Arabic (Saudi Arabia), or English text into English (UK): the panel shows
+  the text unchanged rather than calling the pair unsupported.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.
 - Harnesses: `QuickActionTests` (action metadata, prompt boundaries, preview choices, routes and
   their repair) and

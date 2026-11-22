@@ -4,7 +4,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
 import localFont from "next/font/local";
 import { Providers } from "../components/providers";
-import { pageTitle, site, summary } from "../data/site";
+import { ogImage, pageTitle, site, summary } from "../data/site";
 
 // next/font self-hosts these at build time and generates a metric-matched
 // fallback for each, so there is no third-party request and no layout shift.
@@ -48,20 +48,13 @@ export const metadata: Metadata = {
     locale: "en_US",
     title: pageTitle,
     description: summary,
-    images: [
-      {
-        url: "/og.png",
-        width: 1200,
-        height: 630,
-        alt: "The Tinycast command palette open over a macOS desktop, showing fuzzy app search.",
-      },
-    ],
+    images: [ogImage],
   },
   twitter: {
     card: "summary_large_image",
     title: pageTitle,
     description: summary,
-    images: ["/og.png"],
+    images: [ogImage.url],
   },
   robots: { index: true, follow: true },
   icons: { icon: "/favicon.svg" },
@@ -76,7 +69,7 @@ const structuredData = {
   name: site.name,
   description: summary,
   url: site.url,
-  image: `${site.url}/og.png`,
+  image: `${site.url}${ogImage.url}`,
   applicationCategory: "UtilitiesApplication",
   operatingSystem: site.platform,
   license: "https://www.gnu.org/licenses/agpl-3.0.html",

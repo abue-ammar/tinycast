@@ -16,6 +16,43 @@ enum NoteRevealPolicy {
         return revealed
     }
 
+    /// Bullets keep their dot under the caret, so their marker stays hidden on a revealed line too.
+    static func hidesMarker(of line: NoteMarkdown.Line, isRevealed: Bool) -> Bool {
+        line.markerRange != nil && (!isRevealed || line.kind == .bullet)
+    }
+
+    /// Never inside syntax its line hides: every spot there looks the same, and typing splits it.
+    static func restingCaret(
+        _ proposed: Int, from previous: Int, steppingByCharacter: Bool, markdown: NoteMarkdown,
+        revealed: IndexSet
+    ) -> Int {
+        guard let index = markdown.lineIndex(at: proposed) else { return proposed }
+        let line = markdown.lines[index]
+        let isRevealed = revealed.contains(index)
+        if let marker = line.markerRange, marker.location..<line.contentRange.location ~= proposed,
+            hidesMarker(of: line, isRevealed: isRevealed)
+        {
+            let contentStart = line.contentRange.location
+            // Only a character step off the content start crosses back; a repeat click there stays put.
+            guard steppingByCharacter, previous == contentStart, index > 0 else { return contentStart }
+            return NSMaxRange(markdown.lines[index - 1].contentRange)
+        }
+        guard !isRevealed else { return proposed }
+        return caret(leavingDelimitersOf: markdown.inlines(of: line), at: proposed)
+    }
+
+    private static func caret(
+        leavingDelimitersOf inlines: [NoteMarkdown.Inline], at proposed: Int
+    ) -> Int {
+        for inline in inlines {
+            for marker in inline.markerRanges
+            where marker.location < proposed && proposed < NSMaxRange(marker) {
+                return marker.location < inline.contentRange.location ? NSMaxRange(marker) : marker.location
+            }
+        }
+        return proposed
+    }
+
     /// Carries a revealed set across an edit so stale lines can still be found and re-hidden.
     static func shifted(
         _ revealed: IndexSet, editedOldLines: Range<Int>, editedNewLines: Range<Int>

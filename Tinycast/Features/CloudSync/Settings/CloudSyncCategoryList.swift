@@ -18,7 +18,9 @@ struct CloudSyncCategoryList: View {
                     counts: sync.isEnabled ? mainApp.status.cloudSync.counts[category] : nil,
                     isSettled: mainApp.status.cloudSync.status.lastSynced != nil)
             } else {
-                CloudSyncInfoRow(title: category.title, symbol: category.symbol, detail: category.detail)
+                SettingsInfoRow(
+                    title: category.title, symbol: category.symbol, tint: category.tint,
+                    detail: category.detail)
             }
         }
     }

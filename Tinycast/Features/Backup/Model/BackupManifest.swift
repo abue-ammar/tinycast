@@ -3,7 +3,7 @@ import Foundation
 /// The bundle's table of contents: what a reader must agree with before it touches anything else.
 struct BackupManifest: Codable, Sendable, Equatable {
     /// A reader accepts only this value. Not a migration point — see docs/features/backup.md.
-    static let currentFormat = 1
+    static let currentFormat = 2
 
     var format = Self.currentFormat
     /// Carried so a person reading a report can place the file; never branched on.

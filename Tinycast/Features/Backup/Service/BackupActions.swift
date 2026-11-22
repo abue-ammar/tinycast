@@ -71,13 +71,12 @@ enum BackupActions {
                 try BackupArchive.open(file: file, into: staging.root)
                 let bundle = staging.bundle
                 let manifest = try bundle.readManifest()
-                let configuration: SettingsBackup? =
-                    manifest.categories.contains(.configuration)
-                    ? (try? Data(contentsOf: bundle.settingsURL)).flatMap { try? SettingsBackup(json: $0) }
-                    : nil
+                let commands =
+                    manifest.categories.contains(.customCommands)
+                    ? SettingsBackup.read(.customCommands, from: bundle) : nil
                 let preview = BackupPreview(
-                    id: id, manifest: manifest, customCommands: configuration?.customCommands?.count ?? 0,
-                    globalShortcuts: configuration?.hotkeys?.customCommands?.count ?? 0)
+                    id: id, manifest: manifest, customCommands: commands?.customCommands?.count ?? 0,
+                    globalShortcuts: commands?.hotkeys?.customCommands?.count ?? 0)
                 return (staging, preview)
             } catch {
                 staging.discard()
@@ -160,7 +159,8 @@ enum BackupActions {
                 quicklinksError = QuicklinkError.storageUnavailable.errorDescription
             }
         }
-        let summary = result.backup.apply(to: core)
+        var summary = SettingsBackup.ApplySummary()
+        result.backup.apply(to: core, into: &summary)
         let imported =
             result.clipboard.isEmpty
             ? 0 : core.clipboardStore.importEntries(result.clipboard)

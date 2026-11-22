@@ -77,7 +77,7 @@ private struct WindowLayoutSettingsRow: View {
         let entry = AppEntry(layout)
         let isVisible = visibility.isItemVisible(entry)
         SettingsRow(title: layout.name, subtitle: layout.summary) {
-            SymbolImage(name: layout.symbol, size: 13)
+            SettingsSymbolTile(symbol: layout.symbol, tint: SettingsTab.windowManagement.tint)
         } trailing: {
             AliasField(entry: entry)
                 .settingsEnabled(showsInLauncher && isVisible)

@@ -13,6 +13,59 @@ struct SettingsTabIcon: View {
     }
 }
 
+struct SettingsSymbolTile: View {
+    enum Scale {
+        /// An app icon's body size, so it matches the app icons in other lists.
+        case row
+        /// A feature switch's size, for a row that leads with a title and a subtitle.
+        case feature
+    }
+
+    let symbol: String
+    let tint: IconTint
+    var scale = Scale.row
+
+    var body: some View {
+        Group {
+            switch scale {
+            case .row:
+                IconTile(symbol: symbol, tint: tint, extent: IconCache.appIconBody)
+                    .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
+            case .feature:
+                IconTile(symbol: symbol, tint: tint)
+                    .frame(
+                        width: SettingsListMetrics.featureIconSize,
+                        height: SettingsListMetrics.featureIconSize)
+            }
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+struct SettingsInfoRow: View {
+    let title: String
+    let symbol: String
+    let tint: IconTint
+    let detail: String?
+
+    var body: some View {
+        LabeledContent {
+            if let detail {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+                    .help(detail)
+                    .accessibilityLabel(detail)
+            }
+        } label: {
+            Label {
+                Text(title)
+            } icon: {
+                SettingsSymbolTile(symbol: symbol, tint: tint)
+            }
+        }
+    }
+}
+
 struct SettingsFeatureToggleLabel: View {
     let anchor: SettingsAnchor
     let title: LocalizedStringResource
@@ -20,7 +73,7 @@ struct SettingsFeatureToggleLabel: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.lg) {
-            SettingsTabIcon(tab: anchor.tab, size: Theme.Size.settingsRowIcon * 1.5)
+            SettingsTabIcon(tab: anchor.tab, size: SettingsListMetrics.featureIconSize)
             VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                 SettingsRowTitle(anchor, title)
                     .fontWeight(.semibold)
@@ -74,7 +127,8 @@ struct SettingsRow<Icon: View, Trailing: View>: View {
 }
 
 enum SettingsListMetrics {
-    static let iconSize = Theme.Size.settingsRowIcon + Theme.Spacing.xs
+    static let iconSize = (Theme.Size.settingsRowIcon / IconCache.appIconBody).rounded()
+    static let featureIconSize = Theme.Size.settingsRowIcon * 1.5
 }
 
 extension SettingsRow where Icon == EmptyView {

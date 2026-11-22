@@ -19,8 +19,11 @@ struct CloudSyncSettingsView: View {
         Form {
             Section {
                 Toggle(isOn: switchBinding) {
-                    SettingsRowTitle(.iCloudSyncSwitch, "Sync with iCloud")
-                    Text("Keep settings and content the same on every Mac signed in to your iCloud account.")
+                    SettingsFeatureToggleLabel(
+                        anchor: .iCloudSyncSwitch, title: "Sync with iCloud",
+                        subtitle:
+                            "Keep settings and content the same on every Mac signed in to your iCloud account."
+                    )
                 }
                 .disabled(cloud.status == .unavailable(.unsignedBuild))
                 CloudSyncStatusLine(
@@ -53,8 +56,9 @@ struct CloudSyncSettingsView: View {
 
             Section {
                 ForEach(SyncExclusion.allCases, id: \.self) { exclusion in
-                    CloudSyncInfoRow(
-                        title: exclusion.title, symbol: exclusion.symbol, detail: exclusion.detail)
+                    SettingsInfoRow(
+                        title: exclusion.title, symbol: exclusion.symbol, tint: exclusion.tint,
+                        detail: exclusion.detail)
                 }
             } header: {
                 SettingsSectionHeader(.iCloudSyncNotSynced)

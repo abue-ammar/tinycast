@@ -7,7 +7,7 @@ import {
   ViewOptionsPopover,
 } from "fumadocs-ui/layouts/docs/page";
 import { notFound } from "next/navigation";
-import { site } from "../../../data/site";
+import { ogImage, site } from "../../../data/site";
 import { markdownUrl } from "../../../lib/markdown-url";
 import { source } from "../../../lib/source";
 import { getMDXComponents } from "../../../mdx-components";
@@ -62,6 +62,7 @@ export async function generateMetadata(props: PageProps<"/docs/[[...slug]]">) {
       url: canonical,
       title: page.data.title,
       description: page.data.description,
+      images: [ogImage],
     },
   };
 }

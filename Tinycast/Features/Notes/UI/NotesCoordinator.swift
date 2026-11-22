@@ -36,6 +36,7 @@ final class NotesCoordinator {
     private(set) var wordCount = 0
     private(set) var formatting = NoteFormatting.plain
     private(set) var isFormattingBarExpanded: Bool
+    private(set) var fitsWindowToNote: Bool
     private(set) var isHeadingMenuPresented = false
     /// A press closes the menu before its button fires, so the button must not reopen it.
     @ObservationIgnored private var headingMenuWasOpenAtPress = false
@@ -45,6 +46,7 @@ final class NotesCoordinator {
     private var presentationGeneration = 0
 
     @ObservationIgnored private let saveFormattingBarExpanded: @Sendable (Bool) -> Void
+    @ObservationIgnored private let saveFitsWindowToNote: @Sendable (Bool) -> Void
 
     init(
         store: NotesStore,
@@ -52,7 +54,9 @@ final class NotesCoordinator {
         appIndex: AppIndex,
         core: AppCore,
         isFormattingBarExpanded: Bool = false,
-        saveFormattingBarExpanded: @escaping @Sendable (Bool) -> Void = { _ in }
+        saveFormattingBarExpanded: @escaping @Sendable (Bool) -> Void = { _ in },
+        fitsWindowToNote: Bool = true,
+        saveFitsWindowToNote: @escaping @Sendable (Bool) -> Void = { _ in }
     ) {
         self.store = store
         self.settings = settings
@@ -60,6 +64,8 @@ final class NotesCoordinator {
         self.core = core
         self.isFormattingBarExpanded = isFormattingBarExpanded
         self.saveFormattingBarExpanded = saveFormattingBarExpanded
+        self.fitsWindowToNote = fitsWindowToNote
+        self.saveFitsWindowToNote = saveFitsWindowToNote
         store.onIssue = { [weak self] issue in self?.present(issue) }
     }
 
@@ -350,6 +356,19 @@ final class NotesCoordinator {
 
     func moveToTopRight() {
         windowController.moveToTopRight()
+    }
+
+    func keepWindowHeight() {
+        guard fitsWindowToNote else { return }
+        fitsWindowToNote = false
+        saveFitsWindowToNote(false)
+    }
+
+    func fitWindowToNote() {
+        guard !fitsWindowToNote else { return }
+        fitsWindowToNote = true
+        saveFitsWindowToNote(true)
+        windowController.fitToEditor()
     }
 
     func updateSource(_ source: String) {

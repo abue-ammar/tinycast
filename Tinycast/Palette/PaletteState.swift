@@ -56,6 +56,8 @@ final class PaletteState {
     private(set) var commandHeld = false
     /// A chord is a tap, so the numbering waits out the tap before it claims the trailing labels.
     @ObservationIgnored private var commandHoldTask: Task<Void, Never>?
+    /// Set by a chord: the numbering stays hidden until ⌘ is let go.
+    @ObservationIgnored private var commandChorded = false
     /// True while a form field owns the keyboard, so the palette's own text keys stay out of it.
     private(set) var isEditingField = false
     /// True while a control inside a screen has a list open, which owns the arrows and ↵ whole.
@@ -192,14 +194,23 @@ final class PaletteState {
         commandHoldTask = nil
         guard held else {
             commandHeld = false
+            commandChorded = false
             return
         }
-        guard !commandHeld else { return }
+        guard !commandHeld, !commandChorded else { return }
         commandHoldTask = Task { [weak self] in
             try? await Task.sleep(for: Self.commandHoldDelay)
             guard !Task.isCancelled else { return }
             self?.commandHeld = true
         }
+    }
+
+    /// A chord's own work, such as Settings starting up, can outlast the hold delay.
+    func noteCommandChord() {
+        commandHoldTask?.cancel()
+        commandHoldTask = nil
+        commandChorded = true
+        commandHeld = false
     }
 
     func noteEditingField(_ editing: Bool) {

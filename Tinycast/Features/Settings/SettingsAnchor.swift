@@ -133,6 +133,7 @@ extension SettingsAnchor {
     static let iCloudSyncMacs = Self(tab: .iCloudSync, title: "Macs")
     static let iCloudSyncData = Self(tab: .iCloudSync, title: "iCloud Data")
     static let backupExport = Self(tab: .backup, title: "Export")
+    static let backupNotIncluded = Self(tab: .backup, title: "Not Included")
     static let backupImport = Self(tab: .backup, title: "Import")
     static let backupImportFromRaycast = Self(tab: .backup, title: "Import from Raycast")
     static let backupSettingsFile = Self(tab: .backup, title: "Settings File")

@@ -10,6 +10,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     private weak var editor: NoteTextView?
     private var editorObservers: [NotificationToken] = []
     private var fitTask: Task<Void, Never>?
+    private var liveResizeStartHeight: CGFloat?
     private var previousApp: NSRunningApplication?
     private weak var previousOwnWindow: NSWindow?
 
@@ -104,6 +105,16 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
             height: max(frameSize.height, Theme.Size.noteWindow.height))
     }
 
+    func windowWillStartLiveResize(_ notification: Notification) {
+        liveResizeStartHeight = panel?.frame.height
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        defer { liveResizeStartHeight = nil }
+        guard let panel, let start = liveResizeStartHeight, panel.frame.height != start else { return }
+        coordinator.keepWindowHeight()
+    }
+
     func windowDidResize(_ notification: Notification) {
         guard let panel else { return }
         seatTrafficLights(in: panel)
@@ -152,8 +163,8 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    private func fitToEditor() {
-        guard let panel, panel.isVisible, !panel.inLiveResize,
+    func fitToEditor() {
+        guard coordinator.fitsWindowToNote, let panel, panel.isVisible, !panel.inLiveResize,
             let editor, let clipView = editor.enclosingScrollView?.contentView,
             let visibleFrame = (panel.screen ?? NSScreen.main)?.visibleFrame
         else { return }
