@@ -720,7 +720,8 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
 - Typing new lines, wrapping text, and pasting grow the note vertically without changing its width,
   and deleting shrinks it back to the 180pt floor; the top edge stays put until growth reaches the
   screen's bottom, then the window moves up. It stops at 860pt or the screen's usable height and
-  scrolls. A dragged height holds until the next keystroke, which fits the window again. Switching
+  scrolls. A dragged height holds through typing, note switches and a relaunch, and Fit Window to
+  Note in the title bar fits the window again; a width-only drag never stops fitting. Switching
   to a shorter note shrinks it. Repeat with rendering on and off, Find and the formatting bar open,
   and on a secondary display
 - Typing, Return and Delete in a bulleted list, in its last item and in the middle, grow or shrink the

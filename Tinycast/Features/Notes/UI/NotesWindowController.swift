@@ -10,6 +10,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     private weak var editor: NoteTextView?
     private var editorObservers: [NotificationToken] = []
     private var fitTask: Task<Void, Never>?
+    private var liveResizeStartHeight: CGFloat?
     private var previousApp: NSRunningApplication?
     private weak var previousOwnWindow: NSWindow?
 
@@ -57,6 +58,10 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         focusEditor(in: panel)
     }
 
+    func fitToNote() {
+        fitToEditor()
+    }
+
     func moveToTopRight() {
         guard let panel, let visible = (panel.screen ?? NSScreen.main)?.visibleFrame else { return }
         let inset: CGFloat = 40
@@ -102,6 +107,16 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         NSSize(
             width: max(frameSize.width, Theme.Size.noteWindow.width),
             height: max(frameSize.height, Theme.Size.noteWindow.height))
+    }
+
+    func windowWillStartLiveResize(_ notification: Notification) {
+        liveResizeStartHeight = panel?.frame.height
+    }
+
+    func windowDidEndLiveResize(_ notification: Notification) {
+        defer { liveResizeStartHeight = nil }
+        guard let panel, let start = liveResizeStartHeight, panel.frame.height != start else { return }
+        coordinator.keepWindowHeight()
     }
 
     func windowDidResize(_ notification: Notification) {
@@ -153,7 +168,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
     }
 
     private func fitToEditor() {
-        guard let panel, panel.isVisible, !panel.inLiveResize,
+        guard coordinator.fitsWindowToNote, let panel, panel.isVisible, !panel.inLiveResize,
             let editor, let clipView = editor.enclosingScrollView?.contentView,
             let visibleFrame = (panel.screen ?? NSScreen.main)?.visibleFrame
         else { return }

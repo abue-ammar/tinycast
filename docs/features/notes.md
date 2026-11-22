@@ -36,14 +36,17 @@ commands and global shortcuts can show, search, or extend the collection.
   commands are absent, and enabling alone does not enumerate or create the Notes directory.
 - **The collection may be empty.** Deleting the last note is allowed and creates no replacement; the
   window shows its empty state and Create Note still works from there.
-- **The window's height always fits the note.** Every edit, note switch and bar toggle grows or
-  shrinks it between the 180pt floor and 860pt, or the screen's visible height; past that the editor
-  scrolls. The top edge holds until the bottom would leave the visible frame, then the window moves
-  up. A manually dragged height lasts until the next edit. The height is the sum of TextKit's layout
-  fragment heights, laid out from the top a paragraph at a time until it passes the tallest window: the
-  text view's frame never gets shorter than its clip view, and until the next draw the lines below an
-  edit keep their old origins, so neither the frame nor the last fragment's position can be read on
-  `didChange`.
+- **The window's height fits the note until the user sets one.** Every edit, note switch and bar
+  toggle grows or shrinks it between the 180pt floor and 860pt, or the screen's visible height; past
+  that the editor scrolls. The top edge holds until the bottom would leave the visible frame, then the
+  window moves up. A drag that changes the height stops fitting: the window keeps that height through
+  every edit and a relaunch, and **Fit Window to Note** joins the title bar's capsule until it is
+  pressed. A width-only drag leaves fitting on. `NotesCoordinator.fitsWindowToNote` is window state,
+  kept in `UserDefaults` beside the formatting bar's, never a setting. The height is the sum of
+  TextKit's layout fragment heights, laid out from the top a paragraph at a time until it passes the
+  tallest window: the text view's frame never gets shorter than its clip view, and until the next draw
+  the lines below an edit keep their old origins, so neither the frame nor the last fragment's
+  position can be read on `didChange`.
 - **The editor is a surface snippets expand into.** `NoteTextView` adopts `InjectableTextView`,
   so a typed keyword (and the Snippets browser's ↵) is written straight into the text storage
   rather than posted as events at whichever app happens to be frontmost. Quick Actions also read and
@@ -135,7 +138,8 @@ Both windows are one `NotesPanel`, a non-activating floating panel that owns the
 claims ⌘N, ⌘P, ⌘O, ⌘F and ⌘W, and the switcher reads ⌘N plus ⌘W and ⌘P as dismissals.
 
 AppKit draws the note window's chrome. Its 52-point title bar holds the traffic lights, the centred
-active title, and one frosted capsule of Create, Browse, and Open Folder. The title is drawn, not
+active title, and one frosted capsule of Create, Browse, and Open Folder, led by Fit Window to Note
+while a dragged height holds. The title is drawn, not
 native, so it centres on the window; it is not hit-testable, so dragging it moves the window.
 The yellow and green traffic lights are disabled; double-clicking the free title bar moves the
 unchanged window to the top-right of its current screen's visible area.
