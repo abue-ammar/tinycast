@@ -213,6 +213,18 @@ and quote lines hang their source marker left of the content indent, so text sta
 line had it. Empty list items keep body-sized invisible markers so their line height does not collapse.
 Other caret lines are raw, keeping the caret out of hidden text.
 
+**A caret never rests inside syntax its line hides.** Every position in a hidden marker draws at the
+same spot, so a click before an item's first letter could land before its `- ` and typing would split
+the item (`like- this`). `NoteRevealPolicy.restingCaret` moves a caret proposed there to the content
+start. Only a character step back (←, or → in right-to-left text) from the content start crosses the
+marker to the end of the line above's content, before its terminator even when that is CRLF;
+`NoteTextView.isSteppingByCharacter` tells that step apart from a second click on the same spot, which
+proposes the same position. A caret inside a hidden inline
+delimiter (`**`, a backtick, a link's `](url)`) moves to the formatted text's side of it. A bullet hides
+its marker even on the caret line, so `hidesMarker` is the one rule the styler and the caret share. The
+renderer applies the rule to every selection change, clicks and keys alike, but only while its parse is
+current, never to a caret AppKit moves mid-edit.
+
 ### Block drawing
 
 `NoteLayoutFragmentProvider` is the text layout manager's delegate. A paragraph whose first character

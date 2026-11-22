@@ -14,6 +14,7 @@ struct NotesTests {
         testMarkdownEditing()
         testMarkdownFormatting()
         testRevealPolicy()
+        testRestingCaret()
         try testUnnamedNotesTitleThemselves()
         try testCreatedNoteHoldsItsSource()
         testSwitcherInteraction()
@@ -1170,6 +1171,66 @@ struct NotesTests {
             "one line replaced by three reveals all three",
             NoteRevealPolicy.shifted(IndexSet([1]), editedOldLines: 1..<2, editedNewLines: 1..<4)
                 == IndexSet([1, 2, 3]))
+    }
+
+    private static func testRestingCaret() {
+        let markdown = NoteMarkdownParser.parse("a\n- b\n1. c\n# d\n")
+        func caret(
+            _ proposed: Int, from previous: Int, stepping: Bool = false, revealed: IndexSet = []
+        ) -> Int {
+            NoteRevealPolicy.restingCaret(
+                proposed, from: previous, steppingByCharacter: stepping, markdown: markdown,
+                revealed: revealed)
+        }
+        check("a click before a hidden bullet lands on its content", caret(2, from: 0) == 4)
+        check("a click inside a hidden bullet lands on its content", caret(3, from: 0) == 4)
+        check(
+            "a bullet stays hidden under the caret, so its line snaps too",
+            caret(2, from: 5, revealed: [1]) == 4)
+        check(
+            "← from a bullet's content crosses to the line above",
+            caret(3, from: 4, stepping: true, revealed: [1]) == 1)
+        check(
+            "a second click before a bullet's content stays on it",
+            caret(3, from: 4, revealed: [1]) == 4)
+        check("→ from the line above skips a hidden bullet", caret(2, from: 1, stepping: true) == 4)
+        check(
+            "← from a bullet's content stops before the line above's CRLF",
+            NoteRevealPolicy.restingCaret(
+                4, from: 5, steppingByCharacter: true, markdown: NoteMarkdownParser.parse("a\r\n- b"),
+                revealed: [1]) == 1)
+        check(
+            "a revealed number is visible, so the caret may enter it",
+            caret(6, from: 9, revealed: [2]) == 6)
+        check("a hidden number keeps the caret out", caret(7, from: 0) == 9)
+        check("a hidden heading marker keeps the caret out", caret(11, from: 0) == 13)
+        check("content is never moved", caret(5, from: 0) == 5)
+        check(
+            "← from the first line's content stays put",
+            NoteRevealPolicy.restingCaret(
+                1, from: 2, steppingByCharacter: true, markdown: NoteMarkdownParser.parse("- x"),
+                revealed: [0]) == 2)
+        let inline = NoteMarkdownParser.parse("a\nTry **bold** text\n")
+        func inlineCaret(_ proposed: Int, revealed: IndexSet = []) -> Int {
+            NoteRevealPolicy.restingCaret(
+                proposed, from: 0, steppingByCharacter: false, markdown: inline, revealed: revealed)
+        }
+        check("a click inside a hidden opening delimiter lands on the bold text", inlineCaret(7) == 8)
+        check("a click inside a hidden closing delimiter lands after the bold text", inlineCaret(13) == 12)
+        check("a caret before an opening delimiter stays outside it", inlineCaret(6) == 6)
+        check(
+            "revealed delimiters are visible, so the caret may enter them", inlineCaret(7, revealed: [1]) == 7
+        )
+        let lines = markdown.lines
+        check(
+            "a revealed bullet still hides its marker",
+            NoteRevealPolicy.hidesMarker(of: lines[1], isRevealed: true))
+        check(
+            "a revealed number shows its marker",
+            !NoteRevealPolicy.hidesMarker(of: lines[2], isRevealed: true))
+        check(
+            "a paragraph has no marker to hide",
+            !NoteRevealPolicy.hidesMarker(of: lines[0], isRevealed: false))
     }
 
     /// Applies an action to a source whose selection is marked `|` or `«…»`; marks the result.

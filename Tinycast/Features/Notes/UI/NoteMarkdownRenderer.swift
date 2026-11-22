@@ -56,6 +56,16 @@ final class NoteMarkdownRenderer: NSObject, @MainActor NSTextStorageDelegate {
         textView.typingAttributes = NoteMarkdownStyler.literal
     }
 
+    /// Left alone mid-edit: a pending edit means the parse no longer matches the text.
+    func restingCaret(_ proposed: NSRange, from previous: NSRange) -> NSRange {
+        guard isEnabled, pendingEdit == nil, proposed.length == 0 else { return proposed }
+        let location = NoteRevealPolicy.restingCaret(
+            proposed.location, from: previous.location,
+            steppingByCharacter: textView?.isSteppingByCharacter == true, markdown: markdown,
+            revealed: revealed)
+        return NSRange(location: location, length: 0)
+    }
+
     /// The parse of the source as it is right now, for edit plans that must not act on a stale one.
     func syncedMarkdown() -> NoteMarkdown {
         syncSource()

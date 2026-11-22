@@ -58,7 +58,7 @@ enum NoteMarkdownStyler {
             }
             if let marker = line.markerRange { runs.append((marker, markerLook)) }
         case .bullet, .ordered, .task:
-            let revealsMarker = isRevealed && line.kind != .bullet
+            let revealsMarker = !NoteRevealPolicy.hidesMarker(of: line, isRevealed: isRevealed)
             let isEmpty = line.contentRange.length == 0
             if let marker = line.markerRange {
                 let listMarkerLook: Attributes =

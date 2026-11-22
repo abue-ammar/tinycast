@@ -141,6 +141,13 @@ struct NoteEditorView: NSViewRepresentable {
         }
 
         func textView(
+            _ textView: NSTextView, willChangeSelectionFromCharacterRange oldRange: NSRange,
+            toCharacterRange newRange: NSRange
+        ) -> NSRange {
+            renderer.restingCaret(newRange, from: oldRange)
+        }
+
+        func textView(
             _ textView: NSTextView, shouldChangeTypingAttributes oldTypingAttributes: [String: Any],
             toAttributes newTypingAttributes: [NSAttributedString.Key: Any]
         ) -> [NSAttributedString.Key: Any] {

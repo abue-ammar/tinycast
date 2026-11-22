@@ -20,6 +20,9 @@ struct NotesEditorTests {
         testCharacterCountReports()
         testRenderingKeepsSourceAndUndo()
         testHiddenMarkersAndReveal()
+        testClickAtMarkdownPrefix()
+        testClickInsideInlineDelimiter()
+        testHiddenBulletCaret()
         testRestyleFollowsEdits()
         testRenderingOffIsLiteral()
         testTaskSpacing()
@@ -421,6 +424,127 @@ struct NotesEditorTests {
             "an unfocused editor reveals nothing",
             editor.coordinator.renderer.revealed.isEmpty
                 && font(in: editor.textView, at: 0)?.pointSize == 0.01)
+    }
+
+    private static func testClickAtMarkdownPrefix() {
+        let cases = [
+            (prefix: "- ", rendersMarkdown: true, revealed: false, hidden: true),
+            (prefix: "- ", rendersMarkdown: true, revealed: true, hidden: true),
+            (prefix: "12. ", rendersMarkdown: true, revealed: false, hidden: true),
+            (prefix: "- [ ] ", rendersMarkdown: true, revealed: false, hidden: true),
+            (prefix: "## ", rendersMarkdown: true, revealed: false, hidden: true),
+            (prefix: "> ", rendersMarkdown: true, revealed: false, hidden: true),
+            (prefix: "12. ", rendersMarkdown: true, revealed: true, hidden: false),
+            (prefix: "- ", rendersMarkdown: false, revealed: false, hidden: false)
+        ]
+        let intro = "Intro\n"
+        let content = "this"
+        let lineStart = intro.utf16.count
+        for item in cases {
+            let source = intro + item.prefix + content
+            let input = NoteEditorInput(id: NoteID(rawValue: "Click.md"), source: source, epoch: 0)
+            let editor = makeEditor(input: input, rendersMarkdown: item.rendersMarkdown)
+            let textView = editor.textView
+            if item.revealed {
+                textView.setSelectedRange(NSRange(location: source.utf16.count, length: 0))
+            }
+            guard let line = firstLine(at: lineStart, in: textView)?.bounds else {
+                check("the Markdown line is laid out before the click", false)
+                continue
+            }
+            click(CGPoint(x: line.minX - 1, y: line.midY), in: textView, window: editor.window)
+
+            let expectedOffset = lineStart + (item.hidden ? item.prefix.utf16.count : 0)
+            let description =
+                "\(item.prefix) with rendering \(item.rendersMarkdown) and reveal \(item.revealed)"
+            check(
+                "a click reaches the visible start of \(description)",
+                textView.selectedRange() == NSRange(location: expectedOffset, length: 0))
+            textView.insertText("like ", replacementRange: NSRange(location: NSNotFound, length: 0))
+            let expectedLine = item.hidden ? item.prefix + "like " + content : "like " + item.prefix + content
+            check(
+                "typing inserts at the visible start of \(description)",
+                textView.string == intro + expectedLine)
+        }
+    }
+
+    private static func testClickInsideInlineDelimiter() {
+        let intro = "Intro\n"
+        let paragraph = "Try **bold** text"
+        let source = intro + paragraph
+        let lineStart = intro.utf16.count
+        let bold = (paragraph as NSString).range(of: "bold")
+        let input = NoteEditorInput(id: NoteID(rawValue: "Click.md"), source: source, epoch: 0)
+        let editor = makeEditor(input: input, rendersMarkdown: true)
+        let textView = editor.textView
+        guard let (line, bounds) = firstLine(at: lineStart, in: textView) else {
+            return check("the inline delimiters are laid out before the click", false)
+        }
+        for (hit, edge) in [(bold.location - 1, bold.location), (NSMaxRange(bold) + 1, NSMaxRange(bold))] {
+            textView.setSelectedRange(NSRange(location: 0, length: 0))
+            let point = CGPoint(x: bounds.minX + line.locationForCharacter(at: hit).x, y: bounds.midY)
+            click(point, in: textView, window: editor.window)
+            check(
+                "a click inside an inline delimiter moves next to the formatted text",
+                textView.selectedRange() == NSRange(location: lineStart + edge, length: 0))
+        }
+    }
+
+    private static func testHiddenBulletCaret() {
+        for terminator in ["\n", "\r\n"] {
+            let intro = "Intro" + terminator
+            let introEnd = "Intro".utf16.count
+            let contentStart = intro.utf16.count + 2
+            let input = NoteEditorInput(
+                id: NoteID(rawValue: "Bullet.md"), source: intro + "- this", epoch: 0)
+            let editor = makeEditor(input: input, rendersMarkdown: true)
+            let textView = editor.textView
+            let ending = terminator == "\n" ? "LF" : "CRLF"
+            guard let line = firstLine(at: intro.utf16.count, in: textView)?.bounds else {
+                check("the \(ending) bullet is laid out before the click", false)
+                continue
+            }
+            for attempt in ["first", "second"] {
+                click(CGPoint(x: line.minX - 1, y: line.midY), in: textView, window: editor.window)
+                check(
+                    "a \(attempt) click before a bullet's text after \(ending) lands on its text",
+                    textView.selectedRange() == NSRange(location: contentStart, length: 0))
+            }
+            textView.moveLeft(nil)
+            check(
+                "← from a bullet's text crosses its hidden marker to the end of the \(ending) line above",
+                textView.selectedRange() == NSRange(location: introEnd, length: 0))
+            textView.moveRight(nil)
+            check(
+                "→ from the \(ending) line above skips the hidden marker",
+                textView.selectedRange() == NSRange(location: contentStart, length: 0))
+        }
+    }
+
+    private static func firstLine(
+        at offset: Int, in textView: NSTextView
+    ) -> (line: NSTextLineFragment, bounds: CGRect)? {
+        guard let fragment = layoutFragments(in: textView)[offset],
+            let line = fragment.textLineFragments.first
+        else { return nil }
+        let bounds = line.typographicBounds.offsetBy(
+            dx: fragment.layoutFragmentFrame.minX + textView.textContainerOrigin.x,
+            dy: fragment.layoutFragmentFrame.minY + textView.textContainerOrigin.y)
+        return (line, bounds)
+    }
+
+    private static func click(_ point: CGPoint, in textView: NSTextView, window: NSWindow) {
+        let location = textView.convert(point, to: nil)
+        let events = [NSEvent.EventType.leftMouseDown, .leftMouseUp].compactMap {
+            NSEvent.mouseEvent(
+                with: $0, location: location, modifierFlags: [],
+                timestamp: ProcessInfo.processInfo.systemUptime,
+                windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1,
+                pressure: $0 == .leftMouseDown ? 1 : 0)
+        }
+        guard events.count == 2 else { return check("the test creates a click", false) }
+        NSApp.postEvent(events[1], atStart: true)
+        textView.mouseDown(with: events[0])
     }
 
     private static func testRestyleFollowsEdits() {
