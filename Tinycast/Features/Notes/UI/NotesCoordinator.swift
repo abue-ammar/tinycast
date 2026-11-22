@@ -368,7 +368,7 @@ final class NotesCoordinator {
         guard !fitsWindowToNote else { return }
         fitsWindowToNote = true
         saveFitsWindowToNote(true)
-        windowController.fitToNote()
+        windowController.fitToEditor()
     }
 
     func updateSource(_ source: String) {

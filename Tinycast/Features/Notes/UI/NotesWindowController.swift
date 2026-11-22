@@ -58,10 +58,6 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         focusEditor(in: panel)
     }
 
-    func fitToNote() {
-        fitToEditor()
-    }
-
     func moveToTopRight() {
         guard let panel, let visible = (panel.screen ?? NSScreen.main)?.visibleFrame else { return }
         let inset: CGFloat = 40
@@ -167,7 +163,7 @@ final class NotesWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    private func fitToEditor() {
+    func fitToEditor() {
         guard coordinator.fitsWindowToNote, let panel, panel.isVisible, !panel.inLiveResize,
             let editor, let clipView = editor.enclosingScrollView?.contentView,
             let visibleFrame = (panel.screen ?? NSScreen.main)?.visibleFrame
