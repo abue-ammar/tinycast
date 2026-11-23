@@ -111,8 +111,7 @@ is a source tree on a great many machines. Narrowing it to dot-folders only move
 named "Local" would then claim `~/.local`, and screening for that needs a hand-kept blocklist with no
 source of truth, the same reasoning that keeps slang out of `CalcCurrency.contested`. Measured
 against 62 installed apps the entire root was worth one 115 kB folder, so it bought almost nothing
-and carried the only catastrophic failure mode in the design. Raycast does list `~/OrbStack`; we
-deliberately don't.
+and carried the only catastrophic failure mode in the design.
 
 Immediate children only, everywhere. `Preferences/ByHost` is its own root rather than raising
 `Preferences` to depth 2, which would descend into every unrelated app's subfolder. Beyond the
@@ -168,9 +167,9 @@ asks for the password this feature never requests.
 
 This is also why `/usr/local/bin/code` stays locked while `/opt/homebrew/bin/orb` does not:
 `/usr/local/bin` is `drwxr-xr-x root:wheel`, so the trash is refused outright (measured, not
-inferred), whereas Homebrew leaves `/opt/homebrew/bin` group-writable. Raycast offers the
-`/usr/local/bin` row as checked; that removal cannot succeed without an administrator password, which
-this feature never asks for.
+inferred), whereas Homebrew leaves `/opt/homebrew/bin` group-writable. Removing from
+`/usr/local/bin` cannot succeed without an administrator password, which this feature never asks
+for.
 
 A locked candidate can never enter the checked set. That invariant lives in `UninstallSelection`,
 whose every mutation funnels through one intersection with `plan.removableIDs`, so re-scanning drops
@@ -217,9 +216,9 @@ trashed. Everything selected is still trashed; only the number in the copy is ea
 
 Sizes are **logical bytes**, not allocated blocks: `.totalFileSizeKey` in the walk and `st_size` in
 `inspect`. Allocated blocks disagree with every other tool on the machine, badly. Xcode ships
-decmpfs-compressed, so its blocks read 4.19 GB against Finder's and Raycast's 9.45 GB, and a
-593-byte plist occupies one block and reads as 4 kB. Blocks are not the safer number either: a
-decmpfs payload can live in an xattr, which `st_blocks` does not count, so they are only a floor.
+decmpfs-compressed, so its blocks read 4.19 GB against Finder's 9.45 GB, and a 593-byte plist
+occupies one block and reads as 4 kB. Blocks are not the safer number either: a decmpfs payload can
+live in an xattr, which `st_blocks` does not count, so they are only a floor.
 
 `measure`'s task group is deliberately built in a `nonisolated` context. It is a structured child of
 `UninstallSession.scanTask`, which is what keeps `cancel()` reaching `Task.checkCancellation()`

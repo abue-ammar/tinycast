@@ -702,6 +702,14 @@ final class AppSettings {
         }
     }
 
+    var iCloudSyncOptedInCategories: Set<SyncCategory> {
+        didSet {
+            defaults.set(
+                iCloudSyncOptedInCategories.map(\.rawValue).sorted(),
+                forKey: Key.iCloudSyncOptedInCategories.rawValue)
+        }
+    }
+
     /// Rows a link from outside may run without asking; only `DeepLinkCoordinator` adds to it.
     var allowedDeepLinks: [String] {
         didSet { defaults.set(allowedDeepLinks, forKey: Key.allowedDeepLinks.rawValue) }
@@ -823,6 +831,7 @@ final class AppSettings {
         case .settingsFileEnabled: adopt(\.settingsFileEnabled, from: stored)
         case .iCloudSyncEnabled: adopt(\.iCloudSyncEnabled, from: stored)
         case .iCloudSyncDisabledCategories: adopt(\.iCloudSyncDisabledCategories, from: stored)
+        case .iCloudSyncOptedInCategories: adopt(\.iCloudSyncOptedInCategories, from: stored)
         case .allowedDeepLinks: adopt(\.allowedDeepLinks, from: stored)
         // Read by the AI, Quick Actions and MCP stores, which reload themselves.
         case .aiInstalledProviders, .aiConnections, .aiDefaultModel, .aiWebSearch, .aiChoices,
@@ -1092,6 +1101,9 @@ final class AppSettings {
         iCloudSyncEnabled = defaults.bool(forKey: Key.iCloudSyncEnabled.rawValue)
         iCloudSyncDisabledCategories = Set(
             (defaults.stringArray(forKey: Key.iCloudSyncDisabledCategories.rawValue) ?? [])
+                .compactMap(SyncCategory.init(rawValue:)))
+        iCloudSyncOptedInCategories = Set(
+            (defaults.stringArray(forKey: Key.iCloudSyncOptedInCategories.rawValue) ?? [])
                 .compactMap(SyncCategory.init(rawValue:)))
         allowedDeepLinks = defaults.stringArray(forKey: Key.allowedDeepLinks.rawValue) ?? []
     }

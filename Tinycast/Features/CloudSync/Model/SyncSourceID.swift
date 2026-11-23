@@ -4,7 +4,7 @@ import Foundation
 /// One kind of synced item; the raw value prefixes every record name, so it never changes.
 enum SyncSourceID: String, CaseIterable, Codable, Sendable {
     case device, settings, launcherShortcuts, launcherLists, snippets, notes, quicklinks, chats
-    case chatPresets, quickActions, mcpServers, extensions
+    case chatPresets, quickActions, mcpServers, extensions, clipboardText, clipboardImages
 
     /// The category a key belongs to; nil for a device, which every Mac always shares.
     func category(of key: String) -> SyncCategory? {
@@ -20,6 +20,8 @@ enum SyncSourceID: String, CaseIterable, Codable, Sendable {
         case .chatPresets, .quickActions: .aiCommands
         case .mcpServers: .mcpServers
         case .extensions: .extensions
+        case .clipboardText: .clipboardText
+        case .clipboardImages: .clipboardImages
         }
     }
 

@@ -11,7 +11,7 @@ struct CustomCommandArgument: Codable, Hashable, Sendable {
         self.isOptional = isOptional
     }
 
-    /// Raycast's own cap, and what keeps the inline fields beside the search field on screen.
+    /// What keeps the inline fields beside the search field on screen.
     static let limit = 3
 
     /// The inline field holding `$n`, keyed by position since two arguments may share a name.

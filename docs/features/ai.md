@@ -6,10 +6,10 @@ builds that chat's route through `AIProviderFactory` to stream an `AIRequest`.
 Chat is the first consumer and [Quick Actions](quick-actions.md) the second; the provider layer
 depends on neither, and Quick Actions carries its own route rather than borrowing this one.
 
-Chat has two surfaces over one history, as Raycast's does. **Quick AI** is the palette screen: Tab
-from the launcher asks what you typed, and the answer appears in place. **AI Chat** is a window:
-saved conversations in a sidebar on the left, the open one on the right, and a composer at the
-bottom with the model picker. ⌘J hands a Quick AI conversation to the window.
+Chat has two surfaces over one history. **Quick AI** is the palette screen: Tab from the launcher
+asks what you typed, and the answer appears in place. **AI Chat** is a window: saved conversations
+in a sidebar on the left, the open one on the right, and a composer at the bottom with the model
+picker. ⌘J hands a Quick AI conversation to the window.
 
 ## Invariants
 
@@ -487,12 +487,12 @@ the pill's job, so the header never has to fit a third control beside the switch
 The second footer control is the palette's normal Actions (`⌘K`) menu. It owns Continue in AI Chat
 (`⌘J`; Open AI Chat while the chat is empty), New Chat (`⌘N`), Chat History (`⌘Y`) and AI Settings
 (`⌥⌘,`), plus Stop Response (`⌘.`), Regenerate Response (`⌘R`), Copy Last Response (`⇧⌘C`) and
-Remove Attachments when those apply. The chords are Raycast's where it has one, and `AIScreen.perform`
-maps each `PaletteShortcut` to its action. AI Settings takes ⌥⌘, because ⌘, stays the app's own
-Settings on every screen. Continuing closes the palette and carries the half-typed line into the
-window's composer with the conversation. Chat History is the palette's own browser over the same
-saved chats the window's sidebar lists: ↵ opens one in Quick AI, or in the window when the window
-already holds it, and Continue in AI Chat (`⌘J`) takes it to the window either way.
+Remove Attachments when those apply. `AIScreen.perform` maps each `PaletteShortcut` to its action.
+AI Settings takes ⌥⌘, because ⌘, stays the app's own Settings on every screen. Continuing closes the
+palette and carries the half-typed line into the window's composer with the conversation. Chat
+History is the palette's own browser over the same saved chats the window's sidebar lists: ↵ opens
+one in Quick AI, or in the window when the window already holds it, and Continue in AI Chat (`⌘J`)
+takes it to the window either way.
 
 ### AI Chat
 

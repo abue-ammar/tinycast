@@ -75,7 +75,11 @@ struct ClipboardSettingsView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This can't be undone.")
+            if core.cloudSyncCoordinator.syncsClipboard {
+                Text("This also clears your other Macs and can't be undone.")
+            } else {
+                Text("This can't be undone.")
+            }
         }
     }
 }

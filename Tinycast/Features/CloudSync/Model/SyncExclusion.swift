@@ -1,11 +1,11 @@
 import Foundation
 
 enum SyncExclusion: CaseIterable, Sendable {
-    case clipboardHistory, customCommands, searchRanking, credentials, macSpecific
+    case copiedFiles, customCommands, searchRanking, credentials, macSpecific
 
     var title: String {
         switch self {
-        case .clipboardHistory: String(localized: "Clipboard History")
+        case .copiedFiles: String(localized: "Copied Files")
         case .customCommands: String(localized: "Custom Commands")
         case .searchRanking: String(localized: "Search Ranking")
         case .credentials: String(localized: "Passwords & API Keys")
@@ -15,7 +15,7 @@ enum SyncExclusion: CaseIterable, Sendable {
 
     var symbol: String {
         switch self {
-        case .clipboardHistory: "list.clipboard.fill"
+        case .copiedFiles: "doc.on.doc.fill"
         case .customCommands: "terminal.fill"
         case .searchRanking: "magnifyingglass"
         case .credentials: "key.fill"
@@ -25,7 +25,7 @@ enum SyncExclusion: CaseIterable, Sendable {
 
     var tint: IconTint {
         switch self {
-        case .clipboardHistory: .indigo
+        case .copiedFiles: .indigo
         case .customCommands: .graphite
         case .searchRanking, .credentials, .macSpecific: .gray
         }
@@ -33,8 +33,8 @@ enum SyncExclusion: CaseIterable, Sendable {
 
     var detail: String {
         switch self {
-        case .clipboardHistory:
-            String(localized: "What you copy stays on the Mac you copied it on.")
+        case .copiedFiles:
+            String(localized: "History keeps where a copied file is on this Mac, not the file.")
         case .customCommands:
             String(localized: "They run code, so each Mac keeps its own.")
         case .searchRanking:

@@ -403,7 +403,7 @@ enum SnippetTemplateEngine {
                 token.hasOnly(["offset"])
             else { return nil }
             return .clipboard(offset: offset, modifiers: modifiers)
-        // `selectedText` is Raycast's spelling, accepted on the way in but never written out.
+        // `selectedText` is an imported spelling, accepted on the way in but never written out.
         case "selection", "selectedtext":
             guard token.parameters.isEmpty else { return nil }
             return .selection(modifiers: modifiers)
@@ -413,7 +413,7 @@ enum SnippetTemplateEngine {
         case "date", "time", "datetime", "day":
             guard let dateTime = parseDateTime(token) else { return nil }
             return .dateTime(dateTime, modifiers: modifiers)
-        // `query` is Raycast's spelling of the same token.
+        // `query` is an imported spelling of the same token.
         case "argument", "query":
             guard let argument = parseArgument(token) else { return nil }
             return .argument(argument, source: source, modifiers: modifiers)

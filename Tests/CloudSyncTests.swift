@@ -32,6 +32,16 @@ struct CloudSyncTests {
             "two sources never share a record name",
             groceries != SyncSourceID.snippets.recordName(for: "Groceries.md"))
 
+        // MARK: Categories
+
+        check(
+            "only the clipboard waits for a Mac to opt in",
+            SyncCategory.allCases.filter(\.isOptIn) == [.clipboardText, .clipboardImages])
+        check(
+            "each clipboard source speaks for its own category",
+            SyncSourceID.clipboardText.category(of: "k") == .clipboardText
+                && SyncSourceID.clipboardImages.category(of: "k") == .clipboardImages)
+
         // MARK: Local changes
 
         var ledger = SyncLedger()

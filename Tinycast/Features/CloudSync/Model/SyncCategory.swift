@@ -1,9 +1,9 @@
 import Foundation
 
-/// What the iCloud Sync pane lists; each optional one is a per-Mac choice, on by default.
+/// What the iCloud Sync pane lists; each optional one is a per-Mac choice, on unless `isOptIn`.
 enum SyncCategory: String, CaseIterable, Codable, Sendable {
-    case aiCommands, aiChats, dictation, mcpServers, quicklinks, notes, snippets, windowLayouts
-    case extensions
+    case aiCommands, aiChats, dictation, mcpServers, quicklinks, notes, snippets
+    case clipboardText, clipboardImages, windowLayouts, extensions
     case launchAtLogin, showInMenuBar, appearance, interfaceSize, windowMode
     case hotkeysAndAliases, favoritesAndFallbacks, otherSettings
 
@@ -14,7 +14,7 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
     var group: Group {
         switch self {
         case .aiCommands, .aiChats, .dictation, .mcpServers, .quicklinks, .notes, .snippets,
-            .windowLayouts, .extensions:
+            .clipboardText, .clipboardImages, .windowLayouts, .extensions:
             .content
         case .launchAtLogin, .showInMenuBar, .appearance, .interfaceSize, .windowMode: .general
         case .hotkeysAndAliases, .favoritesAndFallbacks, .otherSettings: .always
@@ -23,10 +23,15 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
 
     var isOptional: Bool { group != .always }
 
+    /// What you copy can be private, so the clipboard syncs only once a Mac turns it on.
+    var isOptIn: Bool { self == .clipboardText || self == .clipboardImages }
+
     /// Whether the pane counts its items; a setting is one value, not a collection.
     var isCounted: Bool {
         switch self {
-        case .aiCommands, .aiChats, .mcpServers, .quicklinks, .notes, .snippets, .extensions: true
+        case .aiCommands, .aiChats, .mcpServers, .quicklinks, .notes, .snippets, .clipboardText,
+            .clipboardImages, .extensions:
+            true
         default: false
         }
     }
@@ -40,6 +45,8 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
         case .quicklinks: String(localized: "Quicklinks")
         case .notes: String(localized: "Notes")
         case .snippets: String(localized: "Snippets")
+        case .clipboardText: String(localized: "Clipboard Text")
+        case .clipboardImages: String(localized: "Clipboard Images")
         case .windowLayouts: String(localized: "Window Layouts")
         case .extensions: String(localized: "Extensions")
         case .launchAtLogin: String(localized: "Open at Login")
@@ -63,6 +70,8 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
         case .quicklinks: "link"
         case .notes: "text.page.fill"
         case .snippets: "curlybraces"
+        case .clipboardText: "text.alignleft"
+        case .clipboardImages: "photo.fill"
         case .windowLayouts: "rectangle.split.2x2.fill"
         case .extensions: "puzzlepiece.extension.fill"
         case .launchAtLogin: "power"
@@ -83,6 +92,7 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
         case .quicklinks: .blue
         case .notes: .yellow
         case .snippets: .brown
+        case .clipboardText, .clipboardImages: .indigo
         case .windowLayouts: .mint
         case .extensions: .green
         case .hotkeysAndAliases: .graphite
@@ -107,6 +117,8 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
                     """)
         case .dictation:
             String(localized: "The model and microphone stay on each Mac.")
+        case .clipboardImages:
+            String(localized: "Images count toward your iCloud storage.")
         case .hotkeysAndAliases:
             String(
                 localized: """

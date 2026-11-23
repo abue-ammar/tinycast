@@ -86,11 +86,11 @@ The defaults cover `/Applications` and `/System/Applications` plus their `Utilit
 lives; `/Applications/Safari.app` is a symlink flagged hidden, so `.skipsHiddenFiles` never sees it),
 `~/Applications`, and `/System/Library/CoreServices/Finder.app`.
 
-Finder ships as an individual bundle scope rather than by adding `/System/Library/CoreServices`, which
-holds ~120 background-agent bundles. There is no reliable way to filter those: `LSUIElement`,
-`LSBackgroundOnly` and "declares no icon" each also exclude legitimately launchable apps: Raycast,
-Stats, Tinycast itself, Mission Control, Siri, Time Machine, Screenshot, System Information, Font
-Book. Don't reintroduce such a heuristic.
+Finder ships as an individual bundle scope rather than by adding `/System/Library/CoreServices`,
+which holds ~120 background-agent bundles. There is no reliable way to filter those: `LSUIElement`,
+`LSBackgroundOnly` and "declares no icon" each also exclude legitimately launchable apps: Stats,
+Tinycast itself, Mission Control, Siri, Time Machine, Screenshot, System Information, Font Book.
+Don't reintroduce such a heuristic.
 
 `AppIndex.start(settings:)` observes `$searchScopes`, so an edit re-indexes immediately; overlapping
 refreshes collapse into a single trailing scan.

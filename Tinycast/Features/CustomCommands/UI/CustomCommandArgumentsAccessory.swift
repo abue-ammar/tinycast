@@ -30,7 +30,7 @@ enum CustomCommandArgumentsAccessory {
                     arguments: arguments, symbol: command.symbol, tint: SettingsTab.commands.tint,
                     value: value, focused: focus,
                     openOptions: { _ in },
-                    // Raycast's rule: ↵ never runs short, it moves to the required field instead.
+                    // ↵ never runs short, it moves to the required field instead.
                     onSubmit: {
                         guard let owed = firstOwed() else { return onSubmit() }
                         focus.wrappedValue = owed

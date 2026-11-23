@@ -25507,6 +25507,58 @@
         }
       }
     },
+    "Are you sure you want to delete all clipboard history entries on every Mac?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Möchtest du wirklich alle Einträge im Zwischenablageverlauf auf jedem Mac löschen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Seguro que quieres eliminar todas las entradas del historial del portapapeles en todos tus Mac?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Voulez-vous vraiment supprimer toutes les entrées de l’historique du presse-papiers sur chaque Mac ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "すべてのMacで、クリップボード履歴のすべての項目を削除してもよろしいですか?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "모든 Mac에서 클립보드 기록 항목을 모두 삭제하시겠습니까?"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tem certeza de que deseja excluir todas as entradas do histórico da área de transferência em todos os Macs?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Точно удалить все записи истории буфера обмена на всех Mac?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "确定要在每台 Mac 上删除所有剪贴板历史记录条目吗？"
+          }
+        }
+      }
+    },
     "Are you sure you want to proceed with deleting all clipboard history entries?" : {
       "localizations" : {
         "de" : {
@@ -36690,6 +36742,110 @@
         }
       }
     },
+    "Clipboard Images" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwischenablage-Bilder"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imágenes del portapapeles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Images du presse-papiers"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードの画像"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "클립보드 이미지"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Imagens da Área de Transferência"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изображения из буфера обмена"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪贴板图像"
+          }
+        }
+      }
+    },
+    "Clipboard Text" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zwischenablage-Text"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texto del portapapeles"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texte du presse-papiers"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "クリップボードのテキスト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "클립보드 텍스트"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Texto da Área de Transferência"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Текст из буфера обмена"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剪贴板文本"
+          }
+        }
+      }
+    },
     "Clipboard changed, text not copied" : {
       "localizations" : {
         "de" : {
@@ -40971,6 +41127,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已拷贝 %@"
+          }
+        }
+      }
+    },
+    "Copied Files" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kopierte Dateien"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Archivos copiados"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Fichiers copiés"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "コピーしたファイル"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "복사한 파일"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arquivos copiados"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Скопированные файлы"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "拷贝的文件"
           }
         }
       }
@@ -63591,6 +63799,58 @@
         }
       }
     },
+    "History keeps where a copied file is on this Mac, not the file." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Der Verlauf speichert, wo eine kopierte Datei auf diesem Mac liegt, nicht die Datei selbst."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "El historial guarda dónde está un archivo copiado en este Mac, no el archivo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "L’historique conserve l’emplacement d’un fichier copié sur ce Mac, pas le fichier lui-même."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "履歴には、コピーしたファイルそのものではなく、このMac上の場所が保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기록에는 복사한 파일 자체가 아니라 이 Mac에서의 위치가 저장됩니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "O histórico guarda onde um arquivo copiado está neste Mac, não o arquivo."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "История хранит расположение скопированного файла на этом Mac, а не сам файл."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "历史记录保存的是拷贝的文件在此 Mac 上的位置，而不是文件本身。"
+          }
+        }
+      }
+    },
     "Hold a key combination or a single modifier; release it to transcribe. Double taps work in toggle mode." : {
       "localizations" : {
         "de" : {
@@ -64473,6 +64733,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "仅图像"
+          }
+        }
+      }
+    },
+    "Images count toward your iCloud storage." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bilder belegen deinen iCloud-Speicher."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Las imágenes ocupan espacio de tu almacenamiento de iCloud."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les images sont décomptées de votre stockage iCloud."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "画像はiCloudストレージの容量を使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이미지는 iCloud 저장 공간을 사용합니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "As imagens ocupam espaço do seu armazenamento do iCloud."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Изображения занимают место в хранилище iCloud."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "图像会占用你的 iCloud 储存空间。"
           }
         }
       }
@@ -120147,54 +120459,54 @@
         }
       }
     },
-    "Synced content is end-to-end encrypted with iCloud. Clipboard history, passwords and API keys never leave this Mac." : {
+    "Synced content is end-to-end encrypted with iCloud. Passwords and API keys never leave this Mac." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Synchronisierte Inhalte sind mit iCloud durchgehend verschlüsselt. Zwischenablageverlauf, Passwörter und API-Schlüssel verlassen diesen Mac nie."
+            "value" : "Synchronisierte Inhalte sind mit iCloud durchgehend verschlüsselt. Passwörter und API-Schlüssel verlassen diesen Mac nie."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El contenido sincronizado está cifrado de extremo a extremo con iCloud. El historial del portapapeles, las contraseñas y las claves de API nunca salen de este Mac."
+            "value" : "El contenido sincronizado está cifrado de extremo a extremo con iCloud. Las contraseñas y las claves de API nunca salen de este Mac."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le contenu synchronisé est chiffré de bout en bout avec iCloud. L’historique du presse-papiers, les mots de passe et les clés d’API ne quittent jamais ce Mac."
+            "value" : "Le contenu synchronisé est chiffré de bout en bout avec iCloud. Les mots de passe et les clés d’API ne quittent jamais ce Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同期されたコンテンツはiCloudでエンドツーエンドで暗号化されます。クリップボード履歴、パスワード、APIキーがこのMacから出ることはありません。"
+            "value" : "同期されたコンテンツはiCloudでエンドツーエンドで暗号化されます。パスワードとAPIキーがこのMacから出ることはありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "동기화된 콘텐츠는 iCloud에서 종단 간 암호화됩니다. 클립보드 기록, 암호 및 API 키는 이 Mac 밖으로 나가지 않습니다."
+            "value" : "동기화된 콘텐츠는 iCloud에서 종단 간 암호화됩니다. 암호 및 API 키는 이 Mac 밖으로 나가지 않습니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O conteúdo sincronizado é criptografado de ponta a ponta com o iCloud. O histórico da área de transferência, as senhas e as chaves de API nunca saem deste Mac."
+            "value" : "O conteúdo sincronizado é criptografado de ponta a ponta com o iCloud. As senhas e as chaves de API nunca saem deste Mac."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Синхронизированное содержимое защищено сквозным шифрованием iCloud. История буфера обмена, пароли и ключи API никогда не покидают этот Mac."
+            "value" : "Синхронизированное содержимое защищено сквозным шифрованием iCloud. Пароли и ключи API никогда не покидают этот Mac."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同步的内容通过 iCloud 进行端到端加密。剪贴板历史记录、密码和 API 密钥绝不会离开此 Mac。"
+            "value" : "同步的内容通过 iCloud 进行端到端加密。密码和 API 密钥绝不会离开此 Mac。"
           }
         }
       }
@@ -128444,6 +128756,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "本周"
+          }
+        }
+      }
+    },
+    "This also clears your other Macs and can't be undone." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dies löscht auch den Verlauf auf deinen anderen Macs und kann nicht widerrufen werden."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "También se borrará en tus otros Mac y no se puede deshacer."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cette action efface aussi l’historique sur vos autres Mac et est irréversible."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ほかのMacの履歴も消去され、この操作は取り消せません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 Mac의 기록도 지워지며 이 작업은 취소할 수 없습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isso também limpa seus outros Macs e não pode ser desfeito."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "История также очистится на других ваших Mac. Это действие нельзя отменить."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这也会清除你其他 Mac 上的记录，且无法撤销。"
           }
         }
       }
@@ -140895,58 +141259,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已支持的功能"
-          }
-        }
-      }
-    },
-    "What you copy stays on the Mac you copied it on." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Was du kopierst, bleibt auf dem Mac, auf dem du es kopiert hast."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lo que copias se queda en el Mac donde lo copiaste."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ce que vous copiez reste sur le Mac où vous l’avez copié."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "コピーした内容は、コピーしたMacに残ります。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "복사한 내용은 복사한 Mac에 남습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O que você copia fica no Mac em que foi copiado."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Скопированное остаётся на том Mac, где вы его скопировали."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "你拷贝的内容保留在拷贝它的 Mac 上。"
           }
         }
       }

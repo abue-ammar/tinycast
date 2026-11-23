@@ -1514,7 +1514,7 @@ struct SnippetsTests {
             "a template that reads only the clipboard declares no arguments",
             SnippetTemplateEngine.declaredArguments(in: "https://x.dev/?q={clipboard}").isEmpty)
 
-        // Raycast's snippet spelling resolves like Tinycast's.
+        // The `name=` spelling resolves like `{snippet:Name}`.
         let child = record("/tmp/ph-child.md", Snippet(name: "Child", text: "nested"))
         let byName = record("/tmp/ph-name.md", Snippet(name: "ByName", text: "{snippet name=\"Child\"}"))
         let byColon = record("/tmp/ph-colon.md", Snippet(name: "ByColon", text: "{snippet:Child}"))
@@ -1567,7 +1567,7 @@ struct SnippetsTests {
             ).text == "[]")
     }
 
-    /// Shared with Quicklinks: bare strings, encoding, and Raycast's `{selectedText}`.
+    /// Shared with Quicklinks: bare strings, encoding, and the `{selectedText}` alias.
     private static func testArgumentsPrompt() {
         let emails = SnippetTemplateEngine.MissingArgument(
             name: SnippetTemplateEngine.defaultArgumentName,
@@ -1716,7 +1716,7 @@ struct SnippetsTests {
             SnippetTemplateEngine.expand(quoted, snippets: [quoting, quoted], context: context)
                 .readsSelection)
 
-        // {query} is Raycast's spelling of {argument}.
+        // {query} is an alias of {argument}.
         check(
             "query resolves as an argument named Argument",
             expand("{query}", arguments: ["Argument": "hi"]).text == "hi")

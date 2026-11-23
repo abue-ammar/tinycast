@@ -78,8 +78,8 @@ struct CloudSyncSettingsView: View {
                 } footer: {
                     Text(
                         """
-                        Synced content is end-to-end encrypted with iCloud. Clipboard history, \
-                        passwords and API keys never leave this Mac.
+                        Synced content is end-to-end encrypted with iCloud. Passwords and API keys \
+                        never leave this Mac.
                         """
                     )
                     .font(.caption)

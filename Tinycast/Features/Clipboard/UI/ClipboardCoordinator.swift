@@ -150,13 +150,19 @@ final class ClipboardCoordinator {
 
     /// Both the ⌃⇧X chord and the menu row land here, so neither can skip the confirmation.
     func deleteAllClips() async {
+        let message =
+            core.cloudSyncCoordinator.syncsClipboard
+            ? String(
+                localized: """
+                    Are you sure you want to delete all clipboard history entries on every Mac?
+                    """)
+            : String(
+                localized: """
+                    Are you sure you want to proceed with deleting all clipboard history entries?
+                    """)
         guard
             await core.confirm(
-                title: String(localized: "Delete All Entries"),
-                message: String(
-                    localized: """
-                        Are you sure you want to proceed with deleting all clipboard history entries?
-                        """),
+                title: String(localized: "Delete All Entries"), message: message,
                 symbol: PaletteMode.clipboard.systemImage, confirmTitle: String(localized: "Delete All"))
         else { return }
         clearHistory()

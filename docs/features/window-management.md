@@ -221,10 +221,10 @@ the window is still in it. `WindowMover` leaves `cycleTimeout` unset, so waiting
   Display's own single-display behaviour. Center Half hugs no edge, so it has no slot on the strip
   and stays put; Next Display already moves it.
 
-The two are deliberately exclusive rather than composable: a 12-press chain over two displays is not a
-shortcut any more, and Raycast's own setting is the same single choice. `Half` carries the (axis, edge)
-pair that makes both modes one expression: a slot's edge decides which side a ⅓ hugs, so the four
-halves are no longer four hand-written fraction cases.
+The two are deliberately exclusive rather than composable: a 12-press chain over two displays is not
+a shortcut any more. `Half` carries the (axis, edge) pair that makes both modes one expression: a
+slot's edge decides which side a ⅓ hugs, so the four halves are no longer four hand-written fraction
+cases.
 
 Growth is bounded three ways: an LRU cap of 64, an `NSWorkspace.didTerminateApplicationNotification`
 observer (the house `NotificationToken` RAII idiom) dropping a quit app's keys, and lazy invalidation
@@ -399,7 +399,6 @@ and every shortcut stays editable afterwards.
 - **Choose, then Apply.** The pop-up holds a choice that is never stored, and Apply stays disabled
   until one is made, and while `WindowShortcutPreset.matching` reports the chosen preset as fully
   set (other commands don't count), so one edited or cleared key re-enables it.
-- **No Raycast preset.** Raycast ships its window commands unbound, so there is nothing to fill in.
 
 ## Wiring
 

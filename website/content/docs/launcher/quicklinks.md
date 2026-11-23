@@ -62,8 +62,8 @@ https://chat.openai.com/?q={clipboard}
 ~/Notes/{date format="yyyy-MM-dd"}.md
 ```
 
-`{cursor}` and `{snippet:…}` are left as written in a link, because a URL has no cursor. Raycast's
-`{query}` works as `{argument}`.
+`{cursor}` and `{snippet:…}` are left as written in a link, because a URL has no cursor.
+`{query}` also works as `{argument}`.
 
 ### Encoding
 

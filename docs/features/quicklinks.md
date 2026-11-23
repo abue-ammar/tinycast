@@ -90,32 +90,32 @@ that begins with a scheme picks the destination kind: a `{clipboard | raw}` hold
 resolves to a local path rather than to the web link the template looked like. Encoding is what
 normally prevents that, which is why `| raw` is a deliberate authoring choice and not a default.
 
-`{selectedText}` is accepted as an alias for `{selection}`, so a link pasted from Raycast's docs
-works unchanged. `{selection}` stays the canonical spelling and is the only one the editor's
-**Insert Placeholder** menu writes. `{query}` is accepted as an alias for `{argument}` for the same reason;
-a Raycast import rewrites it to `{argument}` before the row is stored.
+`{selectedText}` is accepted as an alias for `{selection}`, so an imported link works unchanged.
+`{selection}` stays the canonical spelling and is the only one the editor's **Insert Placeholder**
+menu writes. `{query}` is accepted as an alias for `{argument}` for the same reason; a Raycast
+import rewrites it to `{argument}` before the row is stored.
 
 ## Arguments
 
 A quicklink whose placeholders still need values doesn't open; it collects them **in the header,
-beside the search field**, as inline chips. There is no argument screen: the row that owns the values
-stays selected and visible the whole time, the way Raycast does it. The mechanics of the strip belong
-to the palette and are described in
-[palette.md](palette.md#inline-row-arguments); what quicklinks own is which fields appear and what an
-answer means.
+beside the search field**, as inline chips. There is no argument screen: the row that owns the
+values stays selected and visible the whole time. The mechanics of the strip belong to the palette
+and are described in [palette.md](palette.md#inline-row-arguments); what quicklinks own is which
+fields appear and what an answer means.
 
 The fields are exactly the `{argument}`s the link declares, read straight off the template by
-`SnippetTemplateEngine.declaredArguments(in:)`: a pure parse, so nothing is expanded and no clipboard
-is read to draw a chip. An argument with a `default=` is still offered, as an optional chip: left
-empty, the default fills it, so a default is a starting value rather than a fixed one. It stays owed
-if any occurrence of that name lacks a `default=`, because expansion falls back per occurrence.
-`QuicklinkArgumentsAccessory` turns that list into the strip; a field declaring `options=` is chosen
-from the palette's own menu rather than typed. **A chip marks nothing up front.** It draws like every
-other field until the caret has been in it and left it empty, and only then takes a red edge: a row
-you have not touched yet is not a row you owe anything on, which is how Raycast reads. The strip is
-given the row's identity, so that memory starts clean on the next quicklink. The strip is placed `.afterQuery` in root search (a
-glyph, then the chips, right after the typed text) and `.besideSearchField` on Search Quicklinks,
-where the field stays a filter with its prompt intact and the row below already carries the glyph.
+`SnippetTemplateEngine.declaredArguments(in:)`: a pure parse, so nothing is expanded and no
+clipboard is read to draw a chip. An argument with a `default=` is still offered, as an optional
+chip: left empty, the default fills it, so a default is a starting value rather than a fixed one. It
+stays owed if any occurrence of that name lacks a `default=`, because expansion falls back per
+occurrence. `QuicklinkArgumentsAccessory` turns that list into the strip; a field declaring
+`options=` is chosen from the palette's own menu rather than typed. **A chip marks nothing up
+front.** It draws like every other field until the caret has been in it and left it empty, and only
+then takes a red edge: a row you have not touched yet is not a row you owe anything on. The strip is
+given the row's identity, so that memory starts clean on the next quicklink. The strip is placed
+`.afterQuery` in root search (a glyph, then the chips, right after the typed text) and
+`.besideSearchField` on Search Quicklinks, where the field stays a filter with its prompt intact and
+the row below already carries the glyph.
 
 **`{selection}` is never a field, and an empty one fails.** It is read when the link opens, after
 every owed argument is in, through the two tiers in

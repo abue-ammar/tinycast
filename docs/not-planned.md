@@ -8,8 +8,8 @@ discussion.
 
 ## Why we say no
 
-**Tinycast is not a copy of Raycast.** We don't add a feature only because Raycast has it. If
-Raycast already does what you need, it may be the better app for you, and that's fine.
+**Tinycast is not a copy of another launcher.** We don't add a feature only because another app has
+it. If another app already does what you need, it may be the better app for you, and that's fine.
 
 **Simple, light and fast comes first.** Each new option makes the app heavier and harder to keep
 working. So we keep fewer settings and fewer special cases.
@@ -231,7 +231,7 @@ These are on hold, not ruled out.
 
 1. Check this page first.
 2. Ask yourself: does it keep Tinycast simple, light and fast?
-3. If Raycast already does it well, Raycast may suit you better.
+3. If another app already does it well, it may suit you better.
 4. Want it anyway? Fork Tinycast and make it yours.
 
 Thank you for your ideas and your understanding.
