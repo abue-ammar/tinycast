@@ -1,6 +1,5 @@
 import Foundation
 
-/// Text entries keyed by their content, or owned images keyed by their blob's file name.
 @MainActor
 final class ClipboardSyncSource: SyncSource {
     private struct Payload: Codable, Sendable {
@@ -85,7 +84,6 @@ final class ClipboardSyncSource: SyncSource {
         return Set(failed.compactMap { keys[$0] })
     }
 
-    /// The local id carries over, so an arrival updates the entry this Mac already shows.
     private func item(for key: String, from payload: Payload, replacing existing: UUID?) -> ClipboardItem? {
         let imagePath: String?
         if kind == .image {
