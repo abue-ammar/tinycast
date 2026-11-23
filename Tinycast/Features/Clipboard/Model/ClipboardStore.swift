@@ -412,14 +412,15 @@ final class ClipboardStore {
         insert(item)
     }
 
+    /// The ids that didn't land, so iCloud Sync tries them again.
     func applySynced(
         _ arrivals: [ClipboardItem], images: [String: Data], removing removed: Set<UUID>
-    ) async {
-        guard isOpen else { return }
-        await Self.writeSynced(
+    ) async -> Set<UUID> {
+        guard isOpen else { return Set(arrivals.map(\.id)).union(removed) }
+        let failed = await Self.writeSynced(
             arrivals, images: images, removing: removed, inDatabaseAt: dbURL, imagesDir: imagesDir)
-        guard isOpen else { return }
-        load()
+        if isOpen { load() }
+        return failed
     }
 
     /// Bulk-insert from an import: original timestamps, external image paths, deduped.
@@ -594,6 +595,19 @@ final class ClipboardStore {
     /// Only an owned blob is immutable and ours, so only it may grow downscaled copies.
     func ownsImage(of item: ClipboardItem) -> Bool {
         item.imagePath.map(owns) ?? false
+    }
+
+    func item(id: UUID) -> ClipboardItem? {
+        guard
+            let stmt = prepare(
+                """
+                SELECT id, kind, text, image_path, created_at, source_app, pinned_at
+                FROM items WHERE id = ?
+                """)
+        else { return nil }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, id.uuidString, -1, SQLITE_TRANSIENT)
+        return sqlite3_step(stmt) == SQLITE_ROW ? Self.row(stmt) : nil
     }
 
     func imageURL(for item: ClipboardItem) -> URL? {
@@ -878,7 +892,8 @@ final class ClipboardStore {
         prune()
     }
 
-    nonisolated private static func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) {
+    @discardableResult
+    nonisolated private static func bindAndInsert(_ stmt: OpaquePointer, _ item: ClipboardItem) -> Bool {
         sqlite3_bind_text(stmt, 1, item.id.uuidString, -1, SQLITE_TRANSIENT)
         sqlite3_bind_text(stmt, 2, item.kind.rawValue, -1, SQLITE_TRANSIENT)
         if let text = item.text {
@@ -902,9 +917,10 @@ final class ClipboardStore {
         } else {
             sqlite3_bind_null(stmt, 7)
         }
-        sqlite3_step(stmt)
+        let inserted = sqlite3_step(stmt) == SQLITE_DONE
         sqlite3_reset(stmt)
         sqlite3_clear_bindings(stmt)
+        return inserted
     }
 
     private func owns(_ path: String) -> Bool {
@@ -1032,66 +1048,109 @@ final class ClipboardStore {
         db = nil
     }
 
-    /// An image row is written only once its blob is on disk, so none points at a missing file.
+    /// An image row lands only with its blob on disk, and a blob goes only once its delete commits.
     @concurrent
     private static func writeSynced(
         _ arrivals: [ClipboardItem], images: [String: Data], removing removed: Set<UUID>,
         inDatabaseAt url: URL, imagesDir: URL
-    ) async {
+    ) async -> Set<UUID> {
+        var failed: Set<UUID> = []
+        var written: [String] = []
         let arrivals = arrivals.filter { item in
             guard let path = item.imagePath, let data = images[path] else { return true }
-            return (try? data.write(to: URL(fileURLWithPath: path), options: .atomic)) != nil
+            guard (try? data.write(to: URL(fileURLWithPath: path), options: .atomic)) != nil else {
+                failed.insert(item.id)
+                return false
+            }
+            written.append(path)
+            return true
         }
+        guard
+            let orphaned = commitSynced(
+                arrivals, removing: removed, inDatabaseAt: url, imagesDir: imagesDir)
+        else {
+            for path in written { removeBlob(atPath: path) }
+            return failed.union(arrivals.map(\.id)).union(removed)
+        }
+        for path in orphaned { removeBlob(atPath: path) }
+        return failed
+    }
+
+    /// The owned blobs the removals freed, or nil once anything failed and the batch rolled back.
+    nonisolated private static func commitSynced(
+        _ arrivals: [ClipboardItem], removing removed: Set<UUID>, inDatabaseAt url: URL,
+        imagesDir: URL
+    ) -> [String]? {
         var db: OpaquePointer?
         guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
             sqlite3_close_v2(db)
-            return
+            return nil
         }
         defer { sqlite3_close_v2(db) }
         sqlite3_busy_timeout(db, busyTimeout)
-        sqlite3_exec(db, "BEGIN IMMEDIATE", nil, nil, nil)
-        var orphaned: [String] = []
-        if let delete = prepare("DELETE FROM items WHERE id = ? RETURNING image_path", in: db) {
-            for id in removed {
-                sqlite3_bind_text(delete, 1, id.uuidString, -1, SQLITE_TRANSIENT)
-                while sqlite3_step(delete) == SQLITE_ROW {
-                    if let path = columnString(delete, 0), owns(path, in: imagesDir) {
-                        orphaned.append(path)
-                    }
-                }
-                sqlite3_reset(delete)
-            }
-            sqlite3_finalize(delete)
+        guard sqlite3_exec(db, "BEGIN IMMEDIATE", nil, nil, nil) == SQLITE_OK else { return nil }
+        guard let orphaned = deleteRows(removed, in: db, imagesDir: imagesDir),
+            upsertRows(arrivals, in: db),
+            arrivals.map(\.createdAt).min().map({ resequence(db, since: $0) }) ?? true,
+            sqlite3_exec(db, "COMMIT", nil, nil, nil) == SQLITE_OK
+        else {
+            sqlite3_exec(db, "ROLLBACK", nil, nil, nil)
+            return nil
         }
-        if let upsert = prepare(upsertSQL, in: db) {
-            for item in arrivals { bindAndInsert(upsert, item) }
-            sqlite3_finalize(upsert)
-        }
-        if let earliest = arrivals.map(\.createdAt).min() { resequence(db, since: earliest) }
-        sqlite3_exec(db, "COMMIT", nil, nil, nil)
-        for path in orphaned { removeBlob(atPath: path) }
+        return orphaned
     }
 
-    nonisolated private static func resequence(_ db: OpaquePointer?, since date: Date) {
+    nonisolated private static func deleteRows(
+        _ ids: Set<UUID>, in db: OpaquePointer?, imagesDir: URL
+    ) -> [String]? {
+        guard let stmt = prepare("DELETE FROM items WHERE id = ? RETURNING image_path", in: db) else {
+            return nil
+        }
+        defer { sqlite3_finalize(stmt) }
+        var orphaned: [String] = []
+        for id in ids {
+            sqlite3_bind_text(stmt, 1, id.uuidString, -1, SQLITE_TRANSIENT)
+            var result = sqlite3_step(stmt)
+            while result == SQLITE_ROW {
+                if let path = columnString(stmt, 0), owns(path, in: imagesDir) { orphaned.append(path) }
+                result = sqlite3_step(stmt)
+            }
+            sqlite3_reset(stmt)
+            guard result == SQLITE_DONE else { return nil }
+        }
+        return orphaned
+    }
+
+    nonisolated private static func upsertRows(_ items: [ClipboardItem], in db: OpaquePointer?) -> Bool {
+        guard let stmt = prepare(upsertSQL, in: db) else { return false }
+        defer { sqlite3_finalize(stmt) }
+        return items.allSatisfy { bindAndInsert(stmt, $0) }
+    }
+
+    nonisolated private static func resequence(_ db: OpaquePointer?, since date: Date) -> Bool {
         guard
             let select = prepare(
                 "SELECT id FROM items WHERE created_at >= ? ORDER BY created_at, rowid", in: db)
-        else { return }
+        else { return false }
         sqlite3_bind_double(select, 1, date.timeIntervalSince1970)
         var ids: [String] = []
-        while sqlite3_step(select) == SQLITE_ROW {
+        var result = sqlite3_step(select)
+        while result == SQLITE_ROW {
             if let id = columnString(select, 0) { ids.append(id) }
+            result = sqlite3_step(select)
         }
         sqlite3_finalize(select)
-        guard let move = prepare("UPDATE items SET rowid = \(nextRowID) WHERE id = ?", in: db) else {
-            return
-        }
+        guard result == SQLITE_DONE,
+            let move = prepare("UPDATE items SET rowid = \(nextRowID) WHERE id = ?", in: db)
+        else { return false }
         defer { sqlite3_finalize(move) }
         for id in ids {
             sqlite3_bind_text(move, 1, id, -1, SQLITE_TRANSIENT)
-            sqlite3_step(move)
+            let moved = sqlite3_step(move) == SQLITE_DONE
             sqlite3_reset(move)
+            guard moved else { return false }
         }
+        return true
     }
 
     /// A staged blob moves into `imagesDirectory`, making `owns` true so retention reclaims it.
@@ -1163,14 +1222,15 @@ final class ClipboardStore {
             || (try? FileManager.default.copyItem(at: from, to: to)) != nil
     }
 
-    /// Past the memory window, off-main. `READWRITE` because a WAL reader still writes `-shm`.
+    /// Every row, off-main; false if the read stopped early. `READWRITE`: a WAL reader writes `-shm`.
+    @discardableResult
     nonisolated static func forEachStoredItem(
         inDatabaseAt url: URL, _ body: (ClipboardItem) -> Void
-    ) {
+    ) -> Bool {
         var db: OpaquePointer?
         guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK else {
             sqlite3_close_v2(db)
-            return
+            return false
         }
         defer { sqlite3_close_v2(db) }
         var stmt: OpaquePointer?
@@ -1178,11 +1238,14 @@ final class ClipboardStore {
             SELECT id, kind, text, image_path, created_at, source_app, pinned_at
             FROM items ORDER BY rowid
             """
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return }
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
         defer { sqlite3_finalize(stmt) }
-        while sqlite3_step(stmt) == SQLITE_ROW {
+        var result = sqlite3_step(stmt)
+        while result == SQLITE_ROW {
             if let item = row(stmt) { body(item) }
+            result = sqlite3_step(stmt)
         }
+        return result == SQLITE_DONE
     }
 
     nonisolated private static func row(_ stmt: OpaquePointer?) -> ClipboardItem? {

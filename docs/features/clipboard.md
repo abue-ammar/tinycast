@@ -38,7 +38,8 @@
   Mac's entries on its own connection off the main actor, in one transaction, then moves every row
   from the earliest arrival on to fresh rowids in time order. Re-indexing FTS is what that costs,
   about 70 µs a row, which is why it never runs on the main actor; the main connection's busy
-  timeout outlasts it, so a capture waits rather than failing.
+  timeout outlasts it, so a capture waits rather than failing. Anything that fails rolls the batch
+  back and comes back as ids to retry, and a removed row's blob is deleted only after the commit.
 - **A link or an address is derived from the text, never persisted.** `ClipboardItem.Kind` holds
   only what capture can tell apart on the pasteboard (`text`, `image`, `file`), so improving the
   _classifier_ stays a code change rather than a database migration plus a backfill, while a new

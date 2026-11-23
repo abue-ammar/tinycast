@@ -327,7 +327,6 @@ final class CloudSyncCoordinator {
                 homeDirectory: FileManager.default.homeDirectoryForCurrentUser)
         }
         let aiIsOn = { core.settings.aiEnabled }
-        let clipboardIsOn = { core.settings.clipboardEnabled }
         let rows = {
             Set(core.appIndex.apps.map(\.id))
                 .union(core.quicklinks.quicklinks.map(\.entryID))
@@ -354,8 +353,12 @@ final class CloudSyncCoordinator {
                 { core.mcpSettings.servers }, apply: { core.mcpCoordinator.applySynced($0) },
                 remove: { id in (try? core.mcpCoordinator.remove(id)) != nil }),
             ExtensionSyncSource(manager: core.extensions),
-            ClipboardSyncSource(.text, store: core.clipboardStore, isActive: clipboardIsOn),
-            ClipboardSyncSource(.image, store: core.clipboardStore, isActive: clipboardIsOn)
+            ClipboardSyncSource(.text, store: core.clipboardStore) { [unowned self] in
+                core.settings.clipboardEnabled && includes(.clipboardText)
+            },
+            ClipboardSyncSource(.image, store: core.clipboardStore) { [unowned self] in
+                core.settings.clipboardEnabled && includes(.clipboardImages)
+            }
         ]
     }
 }

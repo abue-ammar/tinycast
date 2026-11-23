@@ -21,8 +21,9 @@ writes its own data.
   the next fetch, so this Mac's own items still upload.
 
 - **An unavailable source is paused, never empty.** A source answers `nil` while it can't speak
-  for its data (AI off, Snippets off, a folder missing, a store unreadable) and `nil` never
-  produces a deletion. What arrives meanwhile is deferred to disk and applied once it can be.
+  for its data (AI off, Snippets off, a folder missing, a store or table unreadable, a clipboard
+  category off) and `nil` never produces a deletion. What arrives meanwhile is deferred to disk and
+  applied once it can be, unless its category has been turned off since.
 - **Applying never echoes.** After an apply, the ledger records the source's own re-read, not the
   incoming payload, so what a Mac couldn't take (a clashing chord, a missing app) stays local and
   isn't sent back. Identical content is never rewritten, so a note's date doesn't move, and a

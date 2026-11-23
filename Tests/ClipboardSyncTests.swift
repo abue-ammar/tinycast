@@ -18,6 +18,9 @@ struct ClipboardSyncTests {
         await ownedImagesTravelWithTheirBlob()
         await deletionsTakeEveryDuplicate()
         await unavailableHistoryIsPaused()
+        await anUnreadableTablePauses()
+        await aFailedWriteIsRetried()
+        await aPinnedOlderDuplicateTravels()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -87,15 +90,62 @@ struct ClipboardSyncTests {
         }
     }
 
+    static func anUnreadableTablePauses() async {
+        await withMacs { a, _ in
+            a.store.addText("kept", sourceBundleID: nil)
+            let path = a.store.dbURL.path
+            try? FileManager.default.setAttributes([.posixPermissions: 0o000], ofItemAtPath: path)
+            defer { try? FileManager.default.setAttributes([.posixPermissions: 0o644], ofItemAtPath: path) }
+            let snapshot = await a.text.snapshot()
+            expect(snapshot == nil, "a table that can't be read pauses rather than reading as empty")
+        }
+    }
+
+    static func aFailedWriteIsRetried() async {
+        await withMacs { a, b in
+            let owned = a.store.imagesDir.appendingPathComponent(UUID().uuidString + ".png")
+            try? Data("png bytes".utf8).write(to: owned)
+            a.store.importEntries([image(at: owned.path)])
+            let readOnly: [FileAttributeKey: Any] = [.posixPermissions: 0o555]
+            try? FileManager.default.setAttributes(readOnly, ofItemAtPath: b.store.imagesDir.path)
+            defer {
+                let writable: [FileAttributeKey: Any] = [.posixPermissions: 0o755]
+                try? FileManager.default.setAttributes(writable, ofItemAtPath: b.store.imagesDir.path)
+            }
+            let deferred = await send(from: a.images, to: b.images, expectingRetry: true)
+            expect(deferred == [owned.lastPathComponent], "an image that couldn't be written is retried")
+            expect(b.store.items.isEmpty, "and leaves no row pointing at a missing file")
+        }
+    }
+
+    static func aPinnedOlderDuplicateTravels() async {
+        await withMacs { a, b in
+            a.store.addText("A", sourceBundleID: nil)
+            a.store.addText("B", sourceBundleID: nil)
+            a.store.addText("A", sourceBundleID: nil)
+            await send(from: a.text, to: b.text)
+            guard let older = a.store.items.last(where: { $0.text == "A" }) else {
+                return fail("no older duplicate")
+            }
+            a.store.togglePinned(older)
+            await send(from: a.text, to: b.text)
+            expect(item(b.store, "A").isPinned, "pinning the older of two duplicates still travels")
+        }
+    }
+
     // MARK: - Harness
 
-    static func send(from source: ClipboardSyncSource, to target: ClipboardSyncSource) async {
+    @discardableResult
+    static func send(
+        from source: ClipboardSyncSource, to target: ClipboardSyncSource, expectingRetry: Bool = false
+    ) async -> Set<String> {
         var changes = SyncChanges()
         for key in await source.snapshot()?.keys.sorted() ?? [] {
             changes.upserts[key] = await source.payload(for: key)
         }
         let deferred = await target.apply(changes)
-        expect(deferred.isEmpty, "nothing is deferred")
+        if !expectingRetry { expect(deferred.isEmpty, "nothing is deferred") }
+        return deferred
     }
 
     static func withMacs(_ body: (Mac, Mac) async -> Void) async {

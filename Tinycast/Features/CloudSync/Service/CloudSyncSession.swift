@@ -263,14 +263,14 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         onEvent(.ledgerChanged)
     }
 
-    /// Leaves the arrivals on disk untouched while the source still can't take them.
+    /// Waits on disk while the source can't take them; a category turned off since drops its own.
     private func applyDeferred(of source: any SyncSource) async {
         guard store.hasDeferred(of: source.id), let local = await source.snapshot() else { return }
         let arrivals = store.deferredArrivals(of: source.id)
         guard !arrivals.isEmpty else { return }
         store.clearDeferred(arrivals.keys)
         var changes = SyncChanges()
-        for arrival in arrivals.values {
+        for arrival in arrivals.values where accepts(source.id, arrival.key) {
             if let payload = arrival.payload {
                 changes.upserts[arrival.key] = payload
             } else {

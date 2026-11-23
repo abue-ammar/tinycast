@@ -120459,54 +120459,54 @@
         }
       }
     },
-    "Synced content is end-to-end encrypted with iCloud. Passwords and API keys never leave this Mac." : {
+    "Synced content is encrypted in iCloud, end to end with Advanced Data Protection. Passwords and API keys never leave this Mac." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Synchronisierte Inhalte sind mit iCloud durchgehend verschlüsselt. Passwörter und API-Schlüssel verlassen diesen Mac nie."
+            "value" : "Synchronisierte Inhalte werden in iCloud verschlüsselt, mit dem erweiterten Datenschutz durchgehend. Passwörter und API-Schlüssel verlassen diesen Mac nie."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "El contenido sincronizado está cifrado de extremo a extremo con iCloud. Las contraseñas y las claves de API nunca salen de este Mac."
+            "value" : "El contenido sincronizado se cifra en iCloud, y de extremo a extremo con la protección de datos avanzada. Las contraseñas y las claves de API nunca salen de este Mac."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Le contenu synchronisé est chiffré de bout en bout avec iCloud. Les mots de passe et les clés d’API ne quittent jamais ce Mac."
+            "value" : "Le contenu synchronisé est chiffré dans iCloud, et de bout en bout avec la protection avancée des données. Les mots de passe et les clés d’API ne quittent jamais ce Mac."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同期されたコンテンツはiCloudでエンドツーエンドで暗号化されます。パスワードとAPIキーがこのMacから出ることはありません。"
+            "value" : "同期されたコンテンツはiCloudで暗号化され、高度なデータ保護ではエンドツーエンドで暗号化されます。パスワードとAPIキーがこのMacから出ることはありません。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "동기화된 콘텐츠는 iCloud에서 종단 간 암호화됩니다. 암호 및 API 키는 이 Mac 밖으로 나가지 않습니다."
+            "value" : "동기화된 콘텐츠는 iCloud에서 암호화되며, 고급 데이터 보호를 사용하면 종단 간 암호화됩니다. 암호 및 API 키는 이 Mac 밖으로 나가지 않습니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O conteúdo sincronizado é criptografado de ponta a ponta com o iCloud. As senhas e as chaves de API nunca saem deste Mac."
+            "value" : "O conteúdo sincronizado é criptografado no iCloud, e de ponta a ponta com a Proteção Avançada de Dados. As senhas e as chaves de API nunca saem deste Mac."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Синхронизированное содержимое защищено сквозным шифрованием iCloud. Пароли и ключи API никогда не покидают этот Mac."
+            "value" : "Синхронизированное содержимое шифруется в iCloud, а с расширенной защитой данных — сквозным шифрованием. Пароли и ключи API никогда не покидают этот Mac."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "同步的内容通过 iCloud 进行端到端加密。密码和 API 密钥绝不会离开此 Mac。"
+            "value" : "同步的内容在 iCloud 中加密，开启高级数据保护后为端到端加密。密码和 API 密钥绝不会离开此 Mac。"
           }
         }
       }

@@ -28,7 +28,7 @@ enum SyncSourceID: String, CaseIterable, Codable, Sendable {
     /// Hashed, so a file name or a path never becomes a CloudKit identifier.
     func recordName(for key: String) -> String {
         let digest = SHA256.hash(data: Data((rawValue + "\u{0}" + key).utf8))
-        return rawValue + "." + digest.prefix(20).map { String(format: "%02x", $0) }.joined()
+        return rawValue + "." + hex(digest.prefix(20))
     }
 
     init?(recordName: String) {
@@ -40,6 +40,19 @@ enum SyncSourceID: String, CaseIterable, Codable, Sendable {
 /// A content version: equal bytes, equal version, on every Mac.
 enum SyncVersion {
     static func of(_ data: Data) -> String {
-        SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        hex(SHA256.hash(data: data))
+    }
+}
+
+/// Lowercase hex without `String(format:)`, which costs a microsecond a byte on every key.
+private func hex(_ bytes: some Sequence<UInt8>) -> String {
+    let digits = Array("0123456789abcdef".utf8)
+    let bytes = Array(bytes)
+    return String(unsafeUninitializedCapacity: bytes.count * 2) { buffer in
+        for (index, byte) in bytes.enumerated() {
+            buffer[2 * index] = digits[Int(byte >> 4)]
+            buffer[2 * index + 1] = digits[Int(byte & 0x0f)]
+        }
+        return bytes.count * 2
     }
 }
