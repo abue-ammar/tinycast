@@ -32,6 +32,16 @@ struct CloudSyncTests {
             "two sources never share a record name",
             groceries != SyncSourceID.snippets.recordName(for: "Groceries.md"))
 
+        // MARK: Categories
+
+        check(
+            "only the clipboard waits for a Mac to opt in",
+            SyncCategory.allCases.filter(\.isOptIn) == [.clipboardText, .clipboardImages])
+        check(
+            "each clipboard source speaks for its own category",
+            SyncSourceID.clipboardText.category(of: "k") == .clipboardText
+                && SyncSourceID.clipboardImages.category(of: "k") == .clipboardImages)
+
         // MARK: Local changes
 
         var ledger = SyncLedger()
@@ -83,6 +93,21 @@ struct CloudSyncTests {
         _ = paused.record(["emoji.skinTone": "v1"], of: .settings, now: t0, includes: all)
         changes = paused.record([:], of: .settings, now: t1, includes: { $0 != "emoji.skinTone" })
         check("an excluded key is never deleted", changes.isEmpty)
+
+        let clip = SyncSourceID.clipboardText.recordName(for: "clip")
+        let otherClip = SyncSourceID.clipboardText.recordName(for: "other")
+        var retry = SyncLedger()
+        changes = retry.record(
+            ["clip": "v1", "other": "v1"], of: .clipboardText, now: t0, isDeferred: { $0 == clip },
+            includes: all)
+        check("a deferred remote deletion cannot re-upload the clip", changes == [otherClip: .save])
+        _ = retry.record(["clip": "v1"], of: .clipboardText, now: t1, includes: all)
+        _ = retry.willSend(clip)
+        retry.didSave(clip, systemFields: fields, changeTag: tag)
+        changes = retry.record(
+            [:], of: .clipboardText, now: t2, isDeferred: { $0 == clip }, includes: all)
+        check("a deferred remote arrival cannot become a local deletion", changes.isEmpty)
+        check("a deferred key keeps its recorded version", retry.entry(named: clip)?.version == "v1")
 
         // MARK: Last write wins
 

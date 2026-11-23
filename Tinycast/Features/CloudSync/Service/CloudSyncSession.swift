@@ -29,6 +29,7 @@ final class CloudSyncSession: CKSyncEngineDelegate {
     private let onEvent: (Event) -> Void
     private let assetDirectory = AppPaths.caches().appending(path: "CloudSync", directoryHint: .isDirectory)
     private var engine: CKSyncEngine?
+    private var applying: [SyncSourceID: SyncChanges] = [:]
     private var isJoining = false
     private var problem: CloudSyncProblem?
     private var lastSynced: Date?
@@ -108,13 +109,17 @@ final class CloudSyncSession: CKSyncEngineDelegate {
     }
 
     func sync(_ id: SyncSourceID) async {
-        guard let engine, let source = sources[id] else { return }
+        guard let engine, let source = sources[id], applying[id] == nil else { return }
         await applyDeferred(of: source)
-        guard let snapshot = await source.snapshot(), engine === self.engine else { return }
+        guard let snapshot = await source.snapshot(), engine === self.engine, applying[id] == nil
+        else { return }
         let ledger = store.state.ledger
+        let deferred = store.state.deferred
         var changes: [String: SyncLedger.Pending] = [:]
         store.update { state in
-            changes = state.ledger.record(snapshot, of: id, now: .now) { key in
+            changes = state.ledger.record(
+                snapshot, of: id, now: .now, isDeferred: { deferred[$0] != nil }
+            ) { key in
                 self.includes(id, key, ledger: ledger)
             }
         }
@@ -186,6 +191,7 @@ final class CloudSyncSession: CKSyncEngineDelegate {
 
     private func receive(_ records: [CKRecord], deletions: [String]) async {
         var arrivals: [SyncSourceID: SyncChanges] = [:]
+        var superseded: Set<String> = []
         for record in records {
             guard CloudSyncRecordCodec.schemaVersion(of: record) <= CloudSyncRecordCodec.schemaVersion else {
                 return await pauseForUpdate()
@@ -201,6 +207,7 @@ final class CloudSyncSession: CKSyncEngineDelegate {
                     changeTag: record.recordChangeTag,
                     systemFields: CloudSyncRecordCodec.systemFields(of: record))
             }
+            if outcome != .unchanged, store.state.deferred[name] != nil { superseded.insert(name) }
             switch outcome {
             case .apply: arrivals[item.source, default: SyncChanges()].upserts[item.key] = item.payload
             case .keepLocal: requeue(name)
@@ -214,18 +221,28 @@ final class CloudSyncSession: CKSyncEngineDelegate {
             }
             var outcome = SyncLedger.Deletion.ignore
             store.update { outcome = $0.ledger.receiveDeletion(name) }
+            if let deferred = store.state.deferred[name], outcome != .ignore || !deferred.isDeletion {
+                superseded.insert(name)
+            }
             switch outcome {
-            case .apply(let entry) where entry.version != nil || source == .device:
-                arrivals[source, default: SyncChanges()].deletions.insert(entry.key)
+            case .apply(let entry):
+                arrivals[source]?.upserts[entry.key] = nil
+                if entry.version != nil || source == .device || applying[source]?.upserts[entry.key] != nil {
+                    arrivals[source, default: SyncChanges()].deletions.insert(entry.key)
+                }
             case .keepLocal: requeue(name)
-            default: break
+            case .ignore: break
             }
         }
-        for (id, changes) in arrivals { await apply(changes, to: id) }
+        store.clearDeferred(superseded)
+        for (id, changes) in arrivals where !changes.isEmpty { await apply(changes, to: id) }
     }
 
     private func apply(_ arrivals: SyncChanges, to id: SyncSourceID) async {
         guard let source = sources[id] else { return }
+        guard applying[id] == nil else { return deferArrivals(arrivals, of: id) }
+        applying[id] = arrivals
+        defer { applying[id] = nil }
         guard let local = await source.snapshot() else { return deferArrivals(arrivals, of: id) }
         await merge(arrivals, into: source, over: local)
     }
@@ -250,9 +267,13 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         let deferred = changes.isEmpty ? [] : await source.apply(changes)
         let reread = changes.isEmpty ? local : await source.snapshot()
         store.update { state in
-            for key in identical { state.ledger.didApply(id.recordName(for: key), localVersion: local[key]) }
+            for key in identical {
+                let name = id.recordName(for: key)
+                if state.deferred[name] == nil { state.ledger.didApply(name, localVersion: local[key]) }
+            }
             for key in changes.upserts.keys where !deferred.contains(key) {
-                state.ledger.didApply(id.recordName(for: key), localVersion: reread?[key])
+                let name = id.recordName(for: key)
+                if state.deferred[name] == nil { state.ledger.didApply(name, localVersion: reread?[key]) }
             }
         }
         deferArrivals(
@@ -263,28 +284,37 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         onEvent(.ledgerChanged)
     }
 
-    /// Leaves the arrivals on disk untouched while the source still can't take them.
     private func applyDeferred(of source: any SyncSource) async {
-        guard store.hasDeferred(of: source.id), let local = await source.snapshot() else { return }
-        let arrivals = store.deferredArrivals(of: source.id)
+        let id = source.id
+        guard store.hasDeferred(of: id), applying[id] == nil else { return }
+        applying[id] = SyncChanges()
+        defer { applying[id] = nil }
+        guard let local = await source.snapshot() else { return }
+        let arrivals = store.deferredArrivals(of: id)
         guard !arrivals.isEmpty else { return }
         store.clearDeferred(arrivals.keys)
         var changes = SyncChanges()
-        for arrival in arrivals.values {
+        for arrival in arrivals.values where accepts(id, arrival.key) {
             if let payload = arrival.payload {
                 changes.upserts[arrival.key] = payload
             } else {
                 changes.deletions.insert(arrival.key)
             }
         }
+        guard !changes.isEmpty else { return }
+        applying[id] = changes
         await merge(changes, into: source, over: local)
     }
 
     private func deferArrivals(_ changes: SyncChanges, of id: SyncSourceID) {
-        for (key, payload) in changes.upserts {
-            store.deferArrival(id.recordName(for: key), key: key, payload: payload)
+        for (key, payload) in changes.upserts where accepts(id, key) {
+            let name = id.recordName(for: key)
+            if store.state.deferred[name] == nil { store.deferArrival(name, key: key, payload: payload) }
         }
-        for key in changes.deletions { store.deferArrival(id.recordName(for: key), key: key, payload: nil) }
+        for key in changes.deletions where accepts(id, key) {
+            let name = id.recordName(for: key)
+            if store.state.deferred[name] == nil { store.deferArrival(name, key: key, payload: nil) }
+        }
     }
 
     private func pauseForUpdate() async {

@@ -605,7 +605,7 @@ preferences, storage and icon carry over.
 other Macs, found again by handle and name, and installs one only where Extensions is on. An
 uninstall reaches every Mac syncing extensions, and its confirmation says so. Text, checkbox and
 dropdown preferences travel; passwords, file and folder paths, local storage and OAuth tokens stay.
-Which commands show in the launcher stays per Mac, as in Raycast.
+Which commands show in the launcher stays per Mac.
 
 ## Shortcuts
 

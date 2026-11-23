@@ -411,7 +411,7 @@ struct CalcTests {
         expectDisplay("20% of (10kg + 5kg)", "3 kg")
         expectDisplay("3% of 10kg", "0.3 kg")
         expectNil("10kg / 0%")
-        expectDisplay("19m + 47%", "27.93 m")  // documented Raycast behavior
+        expectDisplay("19m + 47%", "27.93 m")
 
         // Incomplete expressions retain the last complete, actionable result
         expectDisplay("10 +", "10")

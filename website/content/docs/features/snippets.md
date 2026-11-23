@@ -132,8 +132,7 @@ Each channel has its own folder, so the stable and beta versions never share sni
 | `{snippet:Name}`               | Another snippet, inserted inline                                   |
 | `{cursor}`                     | Where the cursor goes afterward                                    |
 
-These match [Raycast's dynamic placeholders](https://manual.raycast.com/dynamic-placeholders), so
-snippets you import keep working. Raycast's `{selectedText}` and `{query}` also work, as
+Snippets imported from Raycast keep working: `{selectedText}` and `{query}` also work, as
 `{selection}` and `{argument}`. `{snippet name="Name"}` works the same as `{snippet:Name}`.
 
 A value only needs quotes if it contains `|`. Without quotes, a value continues up to the next

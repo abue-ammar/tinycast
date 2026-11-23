@@ -45,7 +45,14 @@ final class CloudSyncCoordinator {
     }
 
     func includes(_ category: SyncCategory) -> Bool {
-        !category.isOptional || !core.settings.iCloudSyncDisabledCategories.contains(category)
+        guard category.isOptional else { return true }
+        return category.isOptIn
+            ? core.settings.iCloudSyncOptedInCategories.contains(category)
+            : !core.settings.iCloudSyncDisabledCategories.contains(category)
+    }
+
+    var syncsClipboard: Bool {
+        syncs(.clipboardText) || syncs(.clipboardImages)
     }
 
     // MARK: Lifecycle
@@ -69,12 +76,22 @@ final class CloudSyncCoordinator {
 
     func setIncluded(_ included: Bool, for category: SyncCategory) {
         guard category.isOptional, included != includes(category) else { return }
+        let settings = core.settings
         if included {
-            core.settings.iCloudSyncDisabledCategories.remove(category)
+            if category.isOptIn {
+                settings.iCloudSyncOptedInCategories.insert(category)
+            } else {
+                settings.iCloudSyncDisabledCategories.remove(category)
+            }
             guard let session else { return }
             Task { await session.join() }
         } else {
-            core.settings.iCloudSyncDisabledCategories.insert(category)
+            if category.isOptIn {
+                settings.iCloudSyncOptedInCategories.remove(category)
+            } else {
+                settings.iCloudSyncDisabledCategories.insert(category)
+            }
+            store.clearDeferred(in: category)
             store.update { $0.ledger.forget(category) }
             refreshCounts()
         }
@@ -150,6 +167,7 @@ final class CloudSyncCoordinator {
             observeFolders(generation: generation)
             observeWake()
             startRefreshing()
+            forgetRebuiltClipboard()
             await session.start()
             refreshCounts()
         }
@@ -219,23 +237,39 @@ final class CloudSyncCoordinator {
         }
     }
 
-    /// A new folder is a different set of files, so it merges again rather than deleting the old.
+    /// A new folder or a rebuilt clipboard is a different set of items, so it merges, never deletes.
     private func observeFolders(generation: Int) {
         let folders = (core.settings.notesFolder, core.settings.snippetsFolder)
         withObservationTracking {
             _ = core.settings.notesFolder
             _ = core.settings.snippetsFolder
+            _ = core.clipboardStore.wasRebuilt
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
                 guard let self, generation == self.generation, let session else { return }
                 observeFolders(generation: generation)
+                let notesMoved = folders.0 != self.core.settings.notesFolder
+                let snippetsMoved = folders.1 != self.core.settings.snippetsFolder
+                let rebuilt = forgetRebuiltClipboard()
+                guard notesMoved || snippetsMoved || rebuilt else { return }
                 store.update { state in
-                    if folders.0 != self.core.settings.notesFolder { state.ledger.forget(.notes) }
-                    if folders.1 != self.core.settings.snippetsFolder { state.ledger.forget(.snippets) }
+                    if notesMoved { state.ledger.forget(.notes) }
+                    if snippetsMoved { state.ledger.forget(.snippets) }
                 }
                 await session.join()
             }
         }
+    }
+
+    @discardableResult
+    private func forgetRebuiltClipboard() -> Bool {
+        guard core.clipboardStore.wasRebuilt else { return false }
+        core.clipboardStore.wasRebuilt = false
+        store.update { state in
+            state.ledger.forget(.clipboardText)
+            state.ledger.forget(.clipboardImages)
+        }
+        return true
     }
 
     private func schedule(_ id: SyncSourceID) {
@@ -319,7 +353,13 @@ final class CloudSyncCoordinator {
             RecordSyncSource.mcpServers(
                 { core.mcpSettings.servers }, apply: { core.mcpCoordinator.applySynced($0) },
                 remove: { id in (try? core.mcpCoordinator.remove(id)) != nil }),
-            ExtensionSyncSource(manager: core.extensions)
+            ExtensionSyncSource(manager: core.extensions),
+            ClipboardSyncSource(.text, store: core.clipboardStore) { [unowned self] in
+                core.settings.clipboardEnabled && includes(.clipboardText)
+            },
+            ClipboardSyncSource(.image, store: core.clipboardStore) { [unowned self] in
+                core.settings.clipboardEnabled && includes(.clipboardImages)
+            }
         ]
     }
 }

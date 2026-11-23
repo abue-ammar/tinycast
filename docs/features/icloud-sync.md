@@ -1,9 +1,9 @@
 # iCloud Sync
 
 Keeps settings and content the same on every Mac signed in to one iCloud account, through CloudKit's
-private database and `CKSyncEngine`. It is off by default and turned on in **Settings → iCloud Sync**.
-What syncs, and how the pane presents it, follows Raycast's Cloud Sync. The feature lives in
-`Features/CloudSync/`, and each feature owns the source that reads and writes its own data.
+private database and `CKSyncEngine`. It is off by default and turned on in **Settings → iCloud
+Sync**. The feature lives in `Features/CloudSync/`, and each feature owns the source that reads and
+writes its own data.
 
 ## Invariants
 
@@ -21,8 +21,10 @@ What syncs, and how the pane presents it, follows Raycast's Cloud Sync. The feat
   the next fetch, so this Mac's own items still upload.
 
 - **An unavailable source is paused, never empty.** A source answers `nil` while it can't speak
-  for its data (AI off, Snippets off, a folder missing, a store unreadable) and `nil` never
-  produces a deletion. What arrives meanwhile is deferred to disk and applied once it can be.
+  for its data (AI off, Snippets off, a folder missing, a store or table unreadable, a clipboard
+  category off) and `nil` never produces a deletion. What arrives meanwhile is deferred to disk and
+  applied once it can be. Deferred records are skipped by upload scans. A newer arrival replaces the
+  deferred one, and turning a category off discards its deferred records.
 - **Applying never echoes.** After an apply, the ledger records the source's own re-read, not the
   incoming payload, so what a Mac couldn't take (a clashing chord, a missing app) stays local and
   isn't sent back. Identical content is never rewritten, so a note's date doesn't move, and a
@@ -33,7 +35,7 @@ What syncs, and how the pane presents it, follows Raycast's Cloud Sync. The feat
 - **No executable and no grant crosses.** Custom commands never sync. An MCP server's trust is
   each Mac's own. A synced fallback list can turn Run Shell Command off, never on. An extension
   installs only where Extensions is on, since that switch is the consent to run third-party code.
-  Every feature switch (`*.enabled`) stays per Mac, as in Raycast.
+  Every feature switch (`*.enabled`) stays per Mac.
 - **Secrets never sync.** AI keys, MCP credentials, extension passwords, OAuth tokens and anything
   in the Keychain stay where they are. User content travels in `encryptedValues`.
 - **A delegate callback never awaits `fetchChanges` or `sendChanges`.** CKSyncEngine traps on it.
@@ -42,6 +44,12 @@ What syncs, and how the pane presents it, follows Raycast's Cloud Sync. The feat
 - **A newer format pauses sync.** A record with a higher `schemaVersion` stops this Mac with
   "update Tinycast" and is never rewritten.
 - **Deletions from another Mac go to the Trash** for notes and snippets.
+- **The clipboard is opt-in, and only what it captured itself travels.** `isOptIn` categories
+  start off and live in `iCloudSyncOptedInCategories`. Text is keyed by a hash of its content, so a
+  repeat or a Universal Clipboard echo is one entry; an image is keyed by its owned blob's name.
+  A copied file is a path and stays home, and recognized text is each Mac's own. When
+  `ClipboardStore` rebuilds an unreadable database it sets `wasRebuilt`, and both categories join
+  again rather than reading the empty file as deletions.
 - **`iCloudSyncEnabled` and the category choices never ride a backup or `settings.json`.** Sync
   sends this Mac's data off it, so only the pane may turn it on.
 
@@ -54,6 +62,7 @@ What syncs, and how the pane presents it, follows Raycast's Cloud Sync. The feat
 | Content | Dictation                                                                    | `dictation.*` but the model and microphone                            |
 | Content | MCP Servers                                                                  | the server list, without credentials or trust                         |
 | Content | Quicklinks · Notes · Snippets                                                | the items; notes and snippets by file name                            |
+| Content | Clipboard Text · Clipboard Images                                            | text by its content, owned images; off until a Mac opts in            |
 | Content | Window Layouts                                                               | custom sizes, layouts and rooms                                       |
 | Content | Extensions                                                                   | store installs and their text, checkbox and dropdown preferences      |
 | General | Open at Login · Show in Menu Bar · Appearance · Interface Size · Window Mode | one setting each                                                      |
@@ -61,7 +70,7 @@ What syncs, and how the pane presents it, follows Raycast's Cloud Sync. The feat
 | Always  | Favorites & Fallback Order                                                   | both lists                                                            |
 | Always  | Other Settings                                                               | every other `settings.json` key `SyncSettingScope` doesn't keep local |
 
-Never: clipboard history, custom commands, search ranking and frecency, credentials, and
+Never: copied files, custom commands, search ranking and frecency, credentials, and
 Mac-specific settings (feature switches, folders, language, search scopes, palette position).
 
 ## Layout
@@ -83,8 +92,9 @@ Mac-specific settings (feature switches, folders, language, search scopes, palet
 
 The sources sit with their features: `SettingsSyncSource` (through the shared `SettingsBindingSet`),
 `EntryShortcutSyncSource` and `LauncherListSyncSource`, `SnippetSyncSource`, `NoteSyncSource`,
-`QuicklinkSyncSource`, `ChatSyncSource`, `ExtensionSyncSource`, and `RecordSyncSource` factories for
-chat presets, quick actions and MCP servers.
+`QuicklinkSyncSource`, `ChatSyncSource`, `ExtensionSyncSource`, `ClipboardSyncSource` (once for
+text, once for images), and `RecordSyncSource` factories for chat presets, quick actions and MCP
+servers.
 
 ## CloudKit
 

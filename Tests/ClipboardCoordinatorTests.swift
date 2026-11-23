@@ -220,11 +220,17 @@ final class AppCore {
     var editedText: String? = "final selected"
     var onEdit: (() -> Void)?
     var messages: [String] = []
+    let cloudSyncCoordinator = CloudSyncCoordinator()
     func editClipboardText(_ text: String) async -> String? { onEdit?(); return editedText }
     func showMessage(_ text: String, tone: DialogTone = .neutral) { messages.append(text) }
     func showProgress(_ text: String) {}
     func applyClipboardTextSearch() {}
     func confirm(title: String, message: String, symbol: String, confirmTitle: String) async -> Bool { false }
+}
+
+@MainActor
+final class CloudSyncCoordinator {
+    var syncsClipboard = false
 }
 
 enum DialogTone { case neutral, danger }

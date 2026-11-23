@@ -120,21 +120,20 @@ history, selected text, clock, calendar, locale, time zone, and a UUID source. E
 needs is injected, so the whole placeholder surface is covered by the standalone harness. If arguments
 require a prompt, the same context is reused afterward, so nothing can drift while the prompt is open.
 
-The token set follows [Raycast's dynamic placeholders](https://manual.raycast.com/dynamic-placeholders)
-so a migrated snippet keeps working.
+The token set covers what an imported snippet uses, so it keeps working.
 
 | Token                                      | Result                                                                                                                                                                                                                        |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `{clipboard}`                              | Captured plain-text clipboard value                                                                                                                                                                                           |
 | `{clipboard offset=1}`                     | Nth most recent clipboard text; `offset=1` is the one before the current                                                                                                                                                      |
-| `{selection}` · `{selectedText}`           | Captured selected text from the target app, when Accessibility can read it. `{selectedText}` is Raycast's spelling, accepted on the way in; `{selection}` is the canonical one and the only one **Insert Placeholder** writes |
+| `{selection}` · `{selectedText}`           | Captured selected text from the target app, when Accessibility can read it. `{selectedText}` is an alias accepted on the way in; `{selection}` is the canonical one and the only one **Insert Placeholder** writes            |
 | `{date}` · `{time}` · `{datetime}`         | Captured date / time / both, in the context locale                                                                                                                                                                            |
 | `{day}`                                    | Weekday name                                                                                                                                                                                                                  |
 | `{uuid}`                                   | A fresh UUID per token                                                                                                                                                                                                        |
 | `{date format="yyyy-MM-dd"}`               | Any `DateFormatter` format                                                                                                                                                                                                    |
 | `{date locale="fr-FR"}`                    | Renders in another locale; cannot be combined with `format`                                                                                                                                                                   |
 | `{time offset="+3h +30m"}`                 | Signed offsets, space-separated: `m` minutes, `h` hours, `d` days, `M` months, `y` years                                                                                                                                      |
-| `{argument}` · `{query}`                   | An argument named `Argument`. `{query}` is Raycast's spelling, accepted on the way in; `{argument}` is the canonical one and the only one **Insert Placeholder** writes                                                       |
+| `{argument}` · `{query}`                   | An argument named `Argument`. `{query}` is an alias accepted on the way in; `{argument}` is the canonical one and the only one **Insert Placeholder** writes                                                                  |
 | `{argument name="Recipient"}`              | A named argument requested before expansion                                                                                                                                                                                   |
 | `{argument default="Hi"}`                  | Optional argument: the default expands without prompting                                                                                                                                                                      |
 | `{argument options="a, b, c"}`             | The prompt offers a list instead of a text field, starting on its first option                                                                                                                                                |
@@ -143,7 +142,7 @@ so a migrated snippet keeps working.
 
 The editor's **Insert Placeholder** menu lists every token above; parameters and modifiers are typed by hand. A
 parameter value needs quotes only to carry a `|`: an unquoted one runs to the next `key=`, so
-`{date format=MMMM d, yyyy}` keeps its spaces the way Raycast writes it. Curly quotes (`“…”`) delimit
+`{date format=MMMM d, yyyy}` keeps its spaces. Curly quotes (`“…”`) delimit
 a value exactly as straight ones do, since a text editor's smart-quote substitution writes them.
 
 Any value-producing token accepts a modifier pipeline, applied left to right:

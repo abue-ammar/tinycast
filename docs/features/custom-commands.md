@@ -154,28 +154,29 @@ Tinycast quits leaves its file behind in the temporary folder.
 
 ### Arguments
 
-A command may declare **up to three** arguments, each a name and an optional/required flag (Raycast's
-own cap, and what keeps the fields on screen). `CustomCommandArgument.sanitized` enforces it on every
-path in, so a stored or imported command carrying more keeps its first three and drops the rest, the
-way Raycast ignores an `argument4`. The editor's **Add** stops at three.
+A command may declare **up to three** arguments, each a name and an optional/required flag (what
+keeps the fields on screen). `CustomCommandArgument.sanitized` enforces it on every path in, so a
+stored or imported command carrying more keeps its first three and drops the rest. The editor's
+**Add** stops at three.
 
-They are filled **inline beside the search field** when the command's row is selected in root search,
-as a quicklink's are (see [palette.md](palette.md#inline-row-arguments)).
+They are filled **inline beside the search field** when the command's row is selected in root
+search, as a quicklink's are (see [palette.md](palette.md#inline-row-arguments)).
 `CustomCommandArgumentsAccessory` builds the strip; Tab walks into it, and ↵ with a required field
-still empty focuses that field instead of running (Raycast's rule). An optional field left empty is
-never marked as owed.
+still empty focuses that field instead of running. An optional field left empty is never marked as
+owed.
 
 **The fields are keyed by position, not name** (`CustomCommandArgument.fieldID(at:)`, `$1` to `$3`)
 because two arguments may share a name, and keying by name would give them one value and one focus.
 `CustomCommand.positionalValues(from:)` turns the fields back into `$n` order, or nil while a required
 one is empty.
 
-`runCustomCommand(id:values:)` is still the one funnel for every entry point. A launcher row hands it
-the typed values; a **global hotkey or favorite slot** hands it none. Either way, a required value still
-missing opens root search onto that command alone (the query seeded with its name, its row the only
-one listed, its first empty field focused) through `PaletteCoordinator.showArguments(of:values:)`.
-That is what Raycast does for a hotkey. The row is listed even when the command is hidden from the
-launcher, since its shortcut still has to be answered; typing anything else returns to a normal search.
+`runCustomCommand(id:values:)` is still the one funnel for every entry point. A launcher row hands
+it the typed values; a **global hotkey or favorite slot** hands it none. Either way, a required
+value still missing opens root search onto that command alone (the query seeded with its name, its
+row the only one listed, its first empty field focused) through
+`PaletteCoordinator.showArguments(of:values:)`. The row is listed even when the command is hidden
+from the launcher, since its shortcut still has to be answered; typing anything else returns to a
+normal search.
 
 Values reach zsh as **positional parameters**, never as text substituted into the command:
 

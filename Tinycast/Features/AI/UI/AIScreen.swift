@@ -100,7 +100,6 @@ struct AIScreen: PaletteScreen {
 
     func secondary(at selection: Int) -> Bool { false }
 
-    /// Raycast's chords where it has one; ⌘Y is History, as in Safari, and ⌘. is Stop.
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
         switch shortcut {
         case .continueInChat: coordinator.continueInChat()
