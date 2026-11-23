@@ -9,7 +9,6 @@ final class QuickActionPanelState {
         case running
         case finished
         case failed(String)
-        /// The pair is supported but not downloaded; the reader fetches it in System Settings.
         case needsLanguageDownload(language: String)
     }
 

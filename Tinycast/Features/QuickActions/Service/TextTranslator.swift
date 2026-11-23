@@ -24,7 +24,6 @@ enum TextTranslator {
         }
     }
 
-    /// Single words misread, `reproducible` as 92% Spanish, so the reader's languages weigh more.
     private static let readerLanguageOdds = 20.0
 
     /// `TranslationSession(installedSource:)` needs a language; availability reports only a status.

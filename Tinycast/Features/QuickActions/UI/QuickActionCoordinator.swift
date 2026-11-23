@@ -1,7 +1,6 @@
 import AppKit
 import Observation
 
-/// The single funnel for every Quick Action, however it was started.
 @MainActor
 @Observable
 final class QuickActionCoordinator {
