@@ -86,6 +86,8 @@ enum WindowPlacementEngine {
         var screenID: Int
         var anchor: Anchor
         var resizes: Bool
+        /// The tile the window now is, which a later display move re-derives instead of scaling.
+        var tile: WindowCommand.ID?
     }
 
     // MARK: - Tuning
@@ -101,6 +103,24 @@ enum WindowPlacementEngine {
 
     /// The target placement, or `nil` when the mover should write nothing at all.
     static func placement(for input: Input) -> Placement? {
+        guard var placement = geometry(for: input) else { return nil }
+        placement.tile = tile(landedBy: input)
+        return placement
+    }
+
+    /// Off, Keep aspect ratio moves the window in points, so it stops being the tile it was.
+    private static func tile(landedBy input: Input) -> WindowCommand.ID? {
+        switch input.command {
+        case .nextDisplay, .previousDisplay:
+            guard input.keepsProportions, let last = input.lastTileCommand, isTileCommand(last)
+            else { return nil }
+            return last
+        default:
+            return isTileCommand(input.command) ? input.command : nil
+        }
+    }
+
+    private static func geometry(for input: Input) -> Placement? {
         guard let command = WindowCommandCatalog.command(id: input.command),
             command.kind == .geometry || command.kind == .restore,
             !input.screens.isEmpty
@@ -129,10 +149,11 @@ enum WindowPlacementEngine {
         if let half = Half.of(input.command) {
             return halfPlacement(input, half: half, host: host, step: step)
         }
-        if input.command == .centerHalf {
-            return tilePlacement(centeredFractions(sizeCycle[step]), on: host, gap: gap)
-        }
-        if let fractions = tileFractions(input.command) {
+        let base =
+            input.command == .centerHalf
+            ? centeredFractions(sizeCycle[step]) : tileFractions(input.command)
+        if let base {
+            let fractions = oriented(base, for: input.command, on: host)
             return tilePlacement(fractions, on: host, gap: gap)
         }
 
@@ -252,7 +273,8 @@ enum WindowPlacementEngine {
             return rounded(clamped(kept, into: to.visibleFrame))
         }
         // Exactness beats proportion: an untouched tile re-derives instead of being scaled.
-        if let lastTile = input.lastTileCommand, let fractions = tileFractions(lastTile) {
+        if let lastTile = input.lastTileCommand, let base = tileFractions(lastTile) {
+            let fractions = oriented(base, for: lastTile, on: to)
             return tile(
                 to.visibleFrame, x0: fractions.x0, x1: fractions.x1, y0: fractions.y0,
                 y1: fractions.y1, gap: targetGap)
@@ -295,10 +317,30 @@ enum WindowPlacementEngine {
         var y0: CGFloat
         var y1: CGFloat
         var anchor: Anchor
+
+        var transposed: Fractions {
+            Fractions(
+                x0: y0, x1: y1, y0: x0, y1: x1,
+                anchor: Anchor(horizontal: anchor.vertical, vertical: anchor.horizontal))
+        }
     }
 
     private static let oneThird: CGFloat = 1.0 / 3.0
     private static let twoThirds: CGFloat = 2.0 / 3.0
+
+    /// Named by order rather than by side, so a portrait screen stacks them top to bottom.
+    private static let followsLongSide: Set<WindowCommand.ID> = [
+        .firstThreeFourths, .lastThreeFourths, .firstThird, .centerThird, .lastThird,
+        .firstTwoThirds, .lastTwoThirds, .centerHalf, .centerTwoThirds
+    ]
+
+    /// Reads the display's `frame`, so a side or bottom Dock never decides the orientation.
+    private static func oriented(
+        _ fractions: Fractions, for command: WindowCommand.ID, on screen: Screen
+    ) -> Fractions {
+        let portrait = screen.frame.height > screen.frame.width
+        return portrait && followsLongSide.contains(command) ? fractions.transposed : fractions
+    }
 
     private struct Half {
         enum Axis { case horizontal, vertical }

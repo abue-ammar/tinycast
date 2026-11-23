@@ -14,6 +14,7 @@ struct WindowActionMemory<Key: Hashable> {
         var appliedFullScreen: Bool
         /// Nil for a custom size, which never cycles and is never a tile.
         var command: WindowCommand.ID?
+        var tile: WindowCommand.ID?
         var step: Int
         /// Where it landed; a press from any other display starts a new chain.
         var screenID: Int
@@ -30,7 +31,7 @@ struct WindowActionMemory<Key: Hashable> {
         var restoresFullScreen: Bool
         /// False on first sight: there is nothing to go back to, so Restore must do nothing.
         var canRestore: Bool
-        /// Set only when the window still sits exactly where a tile command left it.
+        /// Set only while the window sits where a tile, or a display move of one, left it.
         var lastTileCommand: WindowCommand.ID?
     }
 
@@ -77,9 +78,6 @@ struct WindowActionMemory<Key: Hashable> {
                 restoresFullScreen: isFullScreen, canRestore: true, lastTileCommand: nil)
         }
 
-        let lastTileCommand = record.command.flatMap {
-            WindowPlacementEngine.isTileCommand($0) ? $0 : nil
-        }
         let expired = cycleTimeout.map { now.timeIntervalSince(record.at) > $0 } ?? false
         // A length of 1 covers both a non-cycling command and cycling switched off entirely.
         let continues =
@@ -89,19 +87,19 @@ struct WindowActionMemory<Key: Hashable> {
             step: continues ? (record.step + 1) % cycleLength : 0,
             originScreenID: continues ? record.originScreenID : currentScreenID,
             restoreFrame: record.restoreFrame, restoresFullScreen: record.restoresFullScreen,
-            canRestore: true, lastTileCommand: lastTileCommand)
+            canRestore: true, lastTileCommand: record.tile)
     }
 
     /// Records what actually landed. `appliedFrame` must be read back from the window, not assumed.
     mutating func commit(
-        key: Key, command: WindowCommand.ID?, decision: Decision, appliedFrame: CGRect,
-        screenID: Int, now: Date, appliedFullScreen: Bool = false
+        key: Key, command: WindowCommand.ID?, tile: WindowCommand.ID? = nil, decision: Decision,
+        appliedFrame: CGRect, screenID: Int, now: Date, appliedFullScreen: Bool = false
     ) {
         records[key] = Record(
             restoreFrame: decision.restoreFrame, restoresFullScreen: decision.restoresFullScreen,
             appliedFrame: appliedFrame, appliedFullScreen: appliedFullScreen, command: command,
-            step: decision.step, screenID: screenID, originScreenID: decision.originScreenID,
-            at: now)
+            tile: tile, step: decision.step, screenID: screenID,
+            originScreenID: decision.originScreenID, at: now)
         touch(key)
     }
 

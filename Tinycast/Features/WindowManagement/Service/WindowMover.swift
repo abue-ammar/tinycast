@@ -329,8 +329,8 @@ final class WindowMover {
             WindowPlacementEngine.screen(containing: applied, in: screens)?.id
             ?? placement.screenID
         memory.commit(
-            key: focused.key, command: command, decision: decision, appliedFrame: applied,
-            screenID: landedOn, now: now, appliedFullScreen: endsFullScreen)
+            key: focused.key, command: command, tile: placement.tile, decision: decision,
+            appliedFrame: applied, screenID: landedOn, now: now, appliedFullScreen: endsFullScreen)
         return !applied.equalTo(current)
     }
 
