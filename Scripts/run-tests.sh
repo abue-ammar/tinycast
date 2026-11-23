@@ -269,6 +269,7 @@ run AppearanceTests        Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
                            Tinycast/Features/Settings/AppAppearance.swift \
+                           Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/DesignSystem/IconTint.swift
 run LanguageTests          Tinycast/Features/Settings/AppLanguage.swift
 run LocalizedResourceTests Tinycast/Platform/LocalizedResource.swift
@@ -439,14 +440,17 @@ run CalloutTests           Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/IconTint.swift
 run IconCacheTests         Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \
+                           Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/DesignSystem/IconTint.swift
 run EntryIconTests         Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \
+                           Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/Platform/Images/FileIconStamp.swift \
                            Tinycast/DesignSystem/IconTint.swift
 run ExtensionIconTests     Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/AppDisplayName.swift \
                            Tinycast/Platform/Images/IconCache.swift \
+                           Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/Platform/Compression/Zlib.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
@@ -799,6 +803,7 @@ run slow ExtensionTests    -parse-as-library \
                            Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/AppDisplayName.swift \
                            Tinycast/Platform/Images/IconCache.swift \
+                           Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/DesignSystem/Theme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
                            $E/Model/ExtensionBootConfig.swift \

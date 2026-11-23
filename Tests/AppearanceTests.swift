@@ -92,6 +92,19 @@ struct AppearanceTests {
         check("dark is darkAqua", AppAppearance.dark.nsAppearance?.isDark == true)
         check("an unknown stored value is rejected", AppAppearance(rawValue: "sepia") == nil)
 
+        print("# the system icon style reads as macOS stores it")
+        check("unset is Default", SystemIconTheme(stored: nil) == .standard)
+        check("unknown is Default", SystemIconTheme(stored: "Sepia") == .standard)
+        check("a material without a shade is Default", SystemIconTheme(stored: "Clear") == .standard)
+        let clearDark = SystemIconTheme(stored: "ClearDark")
+        check("ClearDark", clearDark.material == .clear && clearDark.shade == .dark)
+        let tinted = SystemIconTheme(stored: "TintedAutomatic")
+        check("TintedAutomatic", tinted.material == .tinted && tinted.shade == .automatic)
+        check("Dark is RegularDark", SystemIconTheme(stored: "RegularDark").shade == .dark)
+        check("automatic follows the surface", tinted.isDark(onDarkSurface: true))
+        check("automatic follows a light surface", !tinted.isDark(onDarkSurface: false))
+        check("a fixed shade ignores the surface", clearDark.isDark(onDarkSurface: false))
+
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)
     }

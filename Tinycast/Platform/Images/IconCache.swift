@@ -21,8 +21,17 @@ struct IconCacheGeneration {
 @Observable
 final class IconStyleSignal {
     private(set) var generation = 0
+    var tilesFollowSystem = true
+    private var systemTheme = SystemIconTheme.current
 
-    fileprivate func bump() { generation &+= 1 }
+    var tileTheme: SystemIconTheme { tilesFollowSystem ? systemTheme : .standard }
+
+    /// Re-read with the bitmaps, so a tile changes style on the frame its neighbouring app icons do.
+    fileprivate func bump() {
+        generation &+= 1
+        let theme = SystemIconTheme.current
+        if theme != systemTheme { systemTheme = theme }
+    }
 }
 
 /// A view's own icon key plus the generation. Building one in `body` is what subscribes the view.

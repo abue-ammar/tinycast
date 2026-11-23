@@ -476,6 +476,7 @@ final class AppCore {
         UserDefaults.standard.register(defaults: ["NSInitialToolTipDelay": 250])
         applyAppearance()
         applyMotion()
+        applyIconStyle()
         observeEffectiveAppearance()
         appIndex.start(settings: settings)
         Task { await appIndex.refresh() }
@@ -743,6 +744,7 @@ final class AppCore {
     private func observeSharedSettings() {
         track({ _ = $0.appearance }, reproject: { $0.applyAppearance() })
         track({ _ = $0.animationsEnabled }, reproject: { $0.applyMotion() })
+        track({ _ = $0.iconStyle }, reproject: { $0.applyIconStyle() })
         track(
             {
                 _ = $0.dictationEnabled
@@ -890,6 +892,10 @@ final class AppCore {
         for case let panel as any AnimatedPanel in NSApp.windows {
             panel.followMotion()
         }
+    }
+
+    private func applyIconStyle() {
+        IconCache.style.tilesFollowSystem = settings.iconStyle == .system
     }
 
     private var isLanguagePending: Bool { settings.language.rawValue != launchLocalization }
