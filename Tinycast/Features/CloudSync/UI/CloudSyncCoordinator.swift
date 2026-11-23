@@ -91,6 +91,7 @@ final class CloudSyncCoordinator {
             } else {
                 settings.iCloudSyncDisabledCategories.insert(category)
             }
+            store.clearDeferred(in: category)
             store.update { $0.ledger.forget(category) }
             refreshCounts()
         }

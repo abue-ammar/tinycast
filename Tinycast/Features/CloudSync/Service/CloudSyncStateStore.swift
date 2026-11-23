@@ -66,6 +66,13 @@ final class CloudSyncStateStore {
 
     // MARK: Deferred arrivals
 
+    func clearDeferred(in category: SyncCategory) {
+        let names = state.deferred.compactMap { name, entry in
+            SyncSourceID(recordName: name)?.category(of: entry.key) == category ? name : nil
+        }
+        clearDeferred(names)
+    }
+
     func deferArrival(_ name: String, key: String, payload: Data?) {
         if let payload {
             try? FileManager.default.createDirectory(at: deferredDirectory, withIntermediateDirectories: true)
@@ -89,7 +96,8 @@ final class CloudSyncStateStore {
         return arrivals
     }
 
-    func clearDeferred(_ names: some Sequence<String>) {
+    func clearDeferred(_ names: some Collection<String>) {
+        guard !names.isEmpty else { return }
         for name in names { try? FileManager.default.removeItem(at: deferredDirectory.appending(path: name)) }
         update { state in for name in names { state.deferred[name] = nil } }
     }

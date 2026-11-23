@@ -34,8 +34,7 @@ final class ClipboardSyncSource: SyncSource {
     }
 
     func observe() {
-        _ = isActive()
-        _ = store.items
+        if isActive() { _ = store.items }
     }
 
     func snapshot() async -> [String: String]? {
@@ -48,12 +47,15 @@ final class ClipboardSyncSource: SyncSource {
 
     func payload(for key: String) async -> Data? {
         guard isActive(), let row = held[key].flatMap(Self.representative(of:)),
-            let item = store.item(id: row.id)
+            let item = store.item(id: row.id),
+            item.createdAt == row.createdAt, item.pinnedAt == row.pinnedAt,
+            Self.key(of: item, imagesDir: store.imagesDir) == key
         else { return nil }
         let payload = Payload(
             text: item.text, copiedAt: item.createdAt.timeIntervalSince1970,
             pinnedAt: item.pinnedAt?.timeIntervalSince1970, sourceBundleID: item.sourceBundleID)
-        return await Self.encode(payload, imageAt: item.imagePath)
+        let encoded = await Self.encode(payload, imageAt: item.imagePath)
+        return isActive() ? encoded : nil
     }
 
     func apply(_ changes: SyncChanges) async -> Set<String> {

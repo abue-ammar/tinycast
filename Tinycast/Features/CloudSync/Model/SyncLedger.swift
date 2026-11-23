@@ -64,12 +64,13 @@ struct SyncLedger: Codable, Equatable, Sendable {
 
     mutating func record(
         _ snapshot: [String: String], of source: SyncSourceID, now: Date,
+        isDeferred: (String) -> Bool = { _ in false },
         includes: (String) -> Bool
     ) -> [String: Pending] {
         var changes: [String: Pending] = [:]
         for (key, version) in snapshot where includes(key) {
             let name = source.recordName(for: key)
-            guard entries[name]?.version != version else { continue }
+            guard entries[name]?.version != version, !isDeferred(name) else { continue }
             var entry = entries[name] ?? Entry(source: source, key: key, modifiedAt: now)
             entry.version = version
             entry.modifiedAt = now
@@ -79,7 +80,7 @@ struct SyncLedger: Codable, Equatable, Sendable {
         }
         for (name, entry) in entries
         where entry.source == source && entry.version != nil && snapshot[entry.key] == nil
-            && includes(entry.key)
+            && includes(entry.key) && !isDeferred(name)
         {
             guard entry.systemFields != nil else {
                 entries[name] = nil

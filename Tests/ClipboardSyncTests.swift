@@ -21,6 +21,7 @@ struct ClipboardSyncTests {
         await anUnreadableTablePauses()
         await aFailedWriteIsRetried()
         await aPinnedOlderDuplicateTravels()
+        await anEditedClipWaitsForANewSnapshot()
 
         print("\(passes)/\(passes + failures) passed")
         if failures > 0 { exit(1) }
@@ -130,6 +131,26 @@ struct ClipboardSyncTests {
             a.store.togglePinned(older)
             await send(from: a.text, to: b.text)
             expect(item(b.store, "A").isPinned, "pinning the older of two duplicates still travels")
+        }
+    }
+
+    static func anEditedClipWaitsForANewSnapshot() async {
+        await withMacs { a, b in
+            a.store.addText("before", sourceBundleID: nil)
+            guard let oldKey = await a.text.snapshot()?.keys.first,
+                let edited = try? a.store.updateText("after", of: item(a.store, "before"))
+            else { return fail("could not edit the snapshotted clip") }
+            let stale = await a.text.payload(for: oldKey)
+            expect(stale == nil, "an edit no longer matches its previous content key")
+            guard let newKey = await a.text.snapshot()?.keys.first else {
+                return fail("no key for the edited clip")
+            }
+            expect(newKey != oldKey, "the edit gets a new content key")
+            a.store.togglePinned(edited)
+            let unpinned = await a.text.payload(for: newKey)
+            expect(unpinned == nil, "a pin change waits for its new version to be snapshotted")
+            await send(from: a.text, to: b.text)
+            expect(item(b.store, "after").isPinned, "the new snapshot uploads the edited and pinned clip")
         }
     }
 
