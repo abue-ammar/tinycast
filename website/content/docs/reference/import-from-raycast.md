@@ -18,7 +18,7 @@ from a current version of Raycast.
 
 ## Steps
 
-1. In Raycast, export your settings and data, and note the passphrase.
+1. In Raycast, run the **Export Settings & Data** command and note the passphrase.
 2. In Tinycast, go to **Settings → Backup → Raycast Export** and choose the file.
 3. Enter the passphrase, select what you want to import, and import.
 4. **Quit Tinycast and open it again.**
@@ -32,11 +32,11 @@ as a wrong passphrase, not as "this is not a Raycast file".
 
 ## About the passphrase
 
-**Raycast encrypts the export even if you never set a password.** It creates one and stores it in
-your login Keychain.
+**Raycast always encrypts the export.** Raycast 2.0 and later ask for a passphrase of at least 8
+characters the first time you run **Export Settings & Data**, and remember it for later exports.
 
-You can find it in **Raycast → Settings → Extensions → Export Settings & Data**, or in Keychain
-Access under the service `Raycast` and account `export_passphrase`.
+To set or change it, go to **Raycast → Settings → Advanced → Export**. Export is a command in
+Raycast 2.0, so it's no longer under **Settings → Extensions**.
 
 **Tinycast never reads your Keychain.** You paste the passphrase yourself.
 

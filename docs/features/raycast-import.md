@@ -33,10 +33,9 @@ Raycast's own container number and is **3**; anything else is rejected. The payl
 JSON: `settings`, `clipboardHistory`, a top-level `snippets` whose entries name themselves `title`,
 and a `quicklinks` object holding `quicklinks` plus `openWithPlatforms`.
 
-Raycast encrypts even when the user never chose a password: it generates one and stores it in the
-login keychain (service `Raycast`, account `export_passphrase`), viewable at Raycast → Settings →
-Extensions → Export Settings & Data. **Tinycast never reads the keychain**; the user supplies the
-passphrase.
+Raycast always encrypts. Raycast 2.x asks for a passphrase (at least 8 characters) on the first run
+of its **Export Settings & Data** command; it is changed in Raycast → Settings → Advanced → Export.
+**Tinycast never reads the keychain**; the user supplies the passphrase.
 
 ## Mapping
 
