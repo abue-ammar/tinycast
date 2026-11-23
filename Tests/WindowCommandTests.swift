@@ -86,6 +86,34 @@ struct WindowCommandTests {
         return landed
     }
 
+    /// Runs each step in order like `WindowMover`, with Keep aspect ratio as that step sets it.
+    static func sequence(
+        _ steps: [(WindowCommand.ID, keepsProportions: Bool)], from window: CGRect,
+        on list: [WindowPlacementEngine.Screen]
+    ) -> [CGRect] {
+        let clock = Date(timeIntervalSince1970: 1_000_000)
+        var memory = WindowActionMemory<Int>()
+        var current = window
+        var landed: [CGRect] = []
+        for (command, keepsProportions) in steps {
+            let host = WindowPlacementEngine.screen(containing: current, in: list)!
+            let decision = memory.decide(
+                key: 1, command: command, currentFrame: current, currentScreenID: host.id,
+                cycleLength: 1, now: clock)
+            let placement = WindowPlacementEngine.placement(
+                for: WindowPlacementEngine.Input(
+                    command: command, windowFrame: current, screens: list,
+                    lastTileCommand: decision.lastTileCommand,
+                    keepsProportions: keepsProportions))!
+            memory.commit(
+                key: 1, command: command, tile: placement.tile, decision: decision,
+                appliedFrame: placement.frame, screenID: placement.screenID, now: clock)
+            current = placement.frame
+            landed.append(placement.frame)
+        }
+        return landed
+    }
+
     static func length(
         _ command: WindowCommand.ID, _ cycle: WindowCycle,
         _ list: [WindowPlacementEngine.Screen] = [mainScreen]
@@ -98,6 +126,7 @@ struct WindowCommandTests {
         testConventionLock()
         testTiling()
         testNonDivisible()
+        testPortrait()
         testOffOriginScreens()
         testGaps()
         testSizing()
@@ -380,6 +409,81 @@ struct WindowCommandTests {
                 firstFourths.union(lastFourths) == screen.visibleFrame,
                 "\(width): the two three-fourths still cover the screen")
         }
+    }
+
+    // MARK: - Portrait displays
+
+    static func testPortrait() {
+        let portrait = WindowPlacementEngine.Screen(
+            id: 8, frame: CGRect(x: 0, y: 0, width: 900, height: 1440),
+            visibleFrame: CGRect(x: 0, y: 0, width: 900, height: 1440))
+        let stacked: [(WindowCommand.ID, CGRect)] = [
+            (.firstThird, CGRect(x: 0, y: 0, width: 900, height: 480)),
+            (.centerThird, CGRect(x: 0, y: 480, width: 900, height: 480)),
+            (.lastThird, CGRect(x: 0, y: 960, width: 900, height: 480)),
+            (.firstTwoThirds, CGRect(x: 0, y: 0, width: 900, height: 960)),
+            (.lastTwoThirds, CGRect(x: 0, y: 480, width: 900, height: 960)),
+            (.centerTwoThirds, CGRect(x: 0, y: 240, width: 900, height: 960)),
+            (.centerHalf, CGRect(x: 0, y: 360, width: 900, height: 720)),
+            (.firstThreeFourths, CGRect(x: 0, y: 0, width: 900, height: 1080)),
+            (.lastThreeFourths, CGRect(x: 0, y: 360, width: 900, height: 1080))
+        ]
+        for (command, expected) in stacked {
+            expectRect(
+                frame(command, on: portrait)!, expected,
+                "\(command.rawValue) runs top to bottom on a portrait display")
+        }
+        expect(
+            placement(.lastThird, on: portrait)!.anchor
+                == WindowPlacementEngine.Anchor(horizontal: .min, vertical: .max),
+            "a portrait last third pins its bottom edge")
+        expect(
+            frame(.firstThird, on: portrait, gap: 10)!.maxY + 10
+                == frame(.centerThird, on: portrait, gap: 10)!.minY,
+            "portrait thirds leave exactly the gap between rows")
+
+        expectRect(
+            frame(.leftHalf, on: portrait)!, CGRect(x: 0, y: 0, width: 450, height: 1440),
+            "a side-named command keeps its side on a portrait display")
+        expectRect(
+            frame(.centerHalf, on: portrait, step: 1, cycle: .sizes)!,
+            frame(.centerThird, on: portrait)!,
+            "Center Half still cycles onto Center Third on a portrait display")
+        expectRect(
+            frame(.centerHalf, on: portrait, step: 2, cycle: .sizes)!,
+            frame(.centerTwoThirds, on: portrait)!,
+            "Center Half still cycles onto Center Two Thirds on a portrait display")
+
+        let square = WindowPlacementEngine.Screen(
+            id: 9, frame: CGRect(x: 0, y: 0, width: 1200, height: 1200),
+            visibleFrame: CGRect(x: 0, y: 0, width: 1200, height: 1200))
+        expectRect(
+            frame(.firstThird, on: square)!, CGRect(x: 0, y: 0, width: 400, height: 1200),
+            "a square display keeps the side-by-side thirds")
+
+        let sideDock = WindowPlacementEngine.Screen(
+            id: 10, frame: CGRect(x: 0, y: 0, width: 1240, height: 1200),
+            visibleFrame: CGRect(x: 80, y: 25, width: 1160, height: 1175))
+        expect(
+            frame(.firstThird, on: sideDock)!.height == 1175,
+            "a side Dock leaves a landscape display's thirds side by side")
+        let bottomDock = WindowPlacementEngine.Screen(
+            id: 11, frame: CGRect(x: 0, y: 0, width: 1200, height: 1240),
+            visibleFrame: CGRect(x: 0, y: 25, width: 1200, height: 1145))
+        expect(
+            frame(.firstThird, on: bottomDock)!.width == 1200,
+            "a bottom Dock leaves a portrait display's thirds stacked")
+
+        let rotated = WindowPlacementEngine.Screen(
+            id: 2, frame: CGRect(x: 1440, y: 0, width: 900, height: 1440),
+            visibleFrame: CGRect(x: 1440, y: 0, width: 900, height: 1440))
+        let trip = sequence(
+            [(.firstThird, true), (.nextDisplay, true), (.previousDisplay, true)],
+            from: CGRect(x: 100, y: 100, width: 600, height: 400), on: screens(mainScreen, rotated))
+        expectRect(
+            trip[1], CGRect(x: 1440, y: 0, width: 900, height: 480),
+            "a remembered third follows the destination's orientation")
+        expectRect(trip[2], trip[0], "a third keeps its shape across a round trip")
     }
 
     // MARK: - Off-origin displays
@@ -747,6 +851,12 @@ struct WindowCommandTests {
                 allScreens: both)!,
             frame(.firstThird, on: right)!,
             "a remembered third is re-derived exactly on the destination")
+        let keptPoints = sequence(
+            [(.leftHalf, true), (.nextDisplay, false), (.nextDisplay, true)],
+            from: CGRect(x: 100, y: 100, width: 600, height: 400), on: both)
+        expectRect(
+            keptPoints[2], CGRect(x: 0, y: 0, width: 405, height: 563),
+            "a move that kept points leaves no tile for the next move to re-derive")
 
         let maximizedOnLeft = frame(.maximize, on: left, gap: 16)!
         let maximizedOnRight = frame(
@@ -1097,7 +1207,8 @@ struct WindowCommandTests {
             key: 1, command: .leftHalf, currentFrame: original, currentScreenID: 1,
             cycleLength: 3, now: clock)
         dragged.commit(
-            key: 1, command: .leftHalf, decision: seed, appliedFrame: half, screenID: 1, now: clock)
+            key: 1, command: .leftHalf, tile: .leftHalf, decision: seed, appliedFrame: half,
+            screenID: 1, now: clock)
         let movedByUser = CGRect(x: 400, y: 400, width: 500, height: 300)
         decision = dragged.decide(
             key: 1, command: .leftHalf, currentFrame: movedByUser, currentScreenID: 1,

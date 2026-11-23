@@ -67,6 +67,10 @@ large 5K display you get a comfortably sized window. Pressing it again doesn't c
 **Center Half** is half the screen's width at full height, centered. **Center Two Thirds** is the
 same at two thirds of the width.
 
+**On a portrait display**, such as a monitor rotated 90°, the thirds, two thirds, three fourths,
+Center Half and Center Two Thirds stack from top to bottom instead of side by side: First Third is
+the top row and Last Third the bottom row. Left, Right, Top and Bottom commands keep their side.
+
 A window that's too large or partly off-screen is always moved back onto the display. The usable
 area already excludes the menu bar, the Dock and the notch.
 
