@@ -608,7 +608,7 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Several kinds do not. All
 handled in `PalettePanel.sendEvent` before `super` hands the event to the responder chain:
 
 - **A bare backspace**: the field editor consumes it as an edit (`onBareBackspace`).
-- **Chords with no main menu item**: ⌘, and ⌘w, which an app with a menu bar would never see here.
+- **Chords with no main menu item**: ⌘w, which an app with a menu bar would never see here.
 - **The physical number-row slots.** `FavoriteSlots` matches ⌘1…⌘0 by key code before fixed command
   chords, then publishes the resolved position to the active screen. Only the launcher and clipboard
   screens intercept these slots; other screens keep their own ⌘-number shortcuts. The compact bar
