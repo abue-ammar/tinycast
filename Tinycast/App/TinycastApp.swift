@@ -78,7 +78,7 @@ struct TinycastApp: App {
             Button("Check for Updates…") { AppCore.shared.updateCoordinator.checkForUpdates() }
         }
         CommandGroup(replacing: .appSettings) {
-            Button("Settings…") { AppCore.shared.settingsCoordinator.showSettings() }
+            Button("Settings…") { AppCore.shared.launcherCoordinator.runCommand(.settings) }
                 .keyboardShortcut(",")
         }
         CommandGroup(replacing: .appTermination) {
