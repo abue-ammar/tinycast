@@ -24,14 +24,22 @@ enum TextTranslator {
         }
     }
 
+    private static let readerLanguageOdds = 20.0
+
     /// `TranslationSession(installedSource:)` needs a language; availability reports only a status.
-    static func sourceLanguage(of text: String) -> Locale.Language? {
+    private static func sourceLanguage(of text: String) -> Locale.Language? {
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
-        guard let dominant = recognizer.dominantLanguage, dominant != .undetermined else {
-            return nil
-        }
-        return Locale.Language(identifier: dominant.rawValue)
+        let readerLanguages = SystemLanguages.preferred.map(Locale.Language.init(identifier:))
+        let weighted = recognizer.languageHypotheses(withMaximum: .max)
+            .filter { $0.key != .undetermined }
+            .map { code, probability in
+                let language = Locale.Language(identifier: code.rawValue)
+                let isReaders = readerLanguages.contains { isSameLanguage($0, language) }
+                let odds = isReaders ? readerLanguageOdds : 1
+                return (language: language, weight: probability * odds)
+            }
+        return weighted.max { $0.weight < $1.weight }?.language
     }
 
     /// Installed pairs only: a missing language is downloaded in System Settings, never from here.

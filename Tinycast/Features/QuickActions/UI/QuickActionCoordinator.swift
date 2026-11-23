@@ -1,7 +1,6 @@
 import AppKit
 import Observation
 
-/// The single funnel for every Quick Action, however it was started.
 @MainActor
 @Observable
 final class QuickActionCoordinator {
@@ -281,10 +280,10 @@ final class QuickActionCoordinator {
             deliver(text, to: target, action: state.action)
         } catch let error where error is CancellationError || Task.isCancelled {
             return
-        } catch let error as TextTranslator.Failure where error.needsDownload {
+        } catch TextTranslator.Failure.notInstalled(let language) {
             // A HUD cannot say where the download lives, so this has to become a panel.
             if !previewing { present(state, target: target) }
-            state.requireLanguageDownload()
+            state.requireLanguageDownload(language)
         } catch {
             report(error, state: state, previewing: previewing)
         }
@@ -393,12 +392,5 @@ final class QuickActionCoordinator {
             let languages = await TextTranslator.supportedLanguages()
             self?.offeredLanguages = languages
         }
-    }
-}
-
-extension TextTranslator.Failure {
-    var needsDownload: Bool {
-        if case .notInstalled = self { return true }
-        return false
     }
 }

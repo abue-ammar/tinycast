@@ -119,8 +119,8 @@ struct QuickActionResultView: View {
             Label(message, systemImage: "exclamationmark.triangle")
                 .font(metrics.typography.rowTitle)
                 .foregroundStyle(Theme.Colors.textSecondary)
-        case .needsLanguageDownload:
-            downloadPrompt
+        case .needsLanguageDownload(let language):
+            downloadPrompt(naming: language)
         }
     }
 
@@ -164,9 +164,8 @@ struct QuickActionResultView: View {
     }
 
     /// System Settings, not `prepareTranslation`: its sheet never appears over this panel.
-    private var downloadPrompt: some View {
-        let language = TextTranslator.displayName(of: state.targetLanguage)
-        return VStack(alignment: .leading, spacing: metrics.spacing.lg) {
+    private func downloadPrompt(naming language: String) -> some View {
+        VStack(alignment: .leading, spacing: metrics.spacing.lg) {
             VStack(alignment: .leading, spacing: metrics.spacing.xs) {
                 Text("\(language) hasn't been downloaded yet.")
                     .font(metrics.typography.rowTitle)

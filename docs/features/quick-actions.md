@@ -152,6 +152,13 @@ nothing on every route, and a 3B model is markedly worse at it. `NLLanguageRecog
 source language, because `TranslationSession(installedSource:target:)` needs a concrete one and
 `LanguageAvailability` reports only a status.
 
+**The reader's own languages weigh twenty times more.** The recognizer misreads single words:
+`reproducible` scores 0.92 Spanish and `conundrum` reads as Portuguese, so a Mac with only English and
+the target downloaded was told to download a language the text was never in. Every hypothesis in a
+language from macOS's preferred list (`SystemLanguages`, not Tinycast's own interface language) is
+multiplied by `readerLanguageOdds` before the likeliest wins. A foreign sentence keeps its language,
+because it leaves the reader's languages near zero.
+
 **A download is a locale, not a language.** Apple matches `en-US` and `en-GB` separately, so the bare
 `en` the recognizer reports finds only the first and calls an installed `en-GB` pair missing, which
 read as _Chinese hasn't been downloaded yet_ on a Mac that had Chinese. Both sides are retried across
@@ -174,7 +181,8 @@ Names come from `minimalIdentifier`; the maximal form carries the script, and `e
 "Spanish (Latin, Spain)" in a menu that should say "Spanish".
 
 A pair that is supported but not downloaded **opens the panel**, whatever the action's usual result,
-so a shortcut never silently does nothing. **The download happens in System Settings.**
+so a shortcut never silently does nothing. It names the language `TextTranslator` found missing, which
+is the source as often as the target. **The download happens in System Settings.**
 `prepareTranslation` never showed its sheet over this non-activating panel, so the prompt says where
 to go (Language & Region → Translation Languages…) and its one button opens that pane and closes
 the panel. System Settings has no anchor for the sheet itself, so the last click stays the reader's.
@@ -313,6 +321,8 @@ failure handler, so automatic expansion stays silent as before.
   translate rather than call the target language missing.
 - Translate Korean text with Korean not downloaded and the target language installed: the panel names
   Korean, the language that is actually missing.
+- With only English and the target downloaded, translate the single words `reproducible` and
+  `conundrum`: both translate as English rather than asking for Spanish or Portuguese.
 - Translate Arabic text into Arabic (Saudi Arabia), or English text into English (UK): the panel shows
   the text unchanged rather than calling the pair unsupported.
 - Revoke Accessibility while enabled: a HUD explains instead of failing silently.
