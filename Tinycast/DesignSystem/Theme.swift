@@ -549,10 +549,33 @@ enum Theme {
         /// Measured off the system's Clear icons, which `NSWorkspace` flattens onto an opaque ground.
         static let clearDarkGround = ramp(0x2B2B2B, 0x2B2B2B)
         static let clearDarkInk = ramp(0xF7F7F7, 0xC8C8C8)
-        static let clearLightGround = ramp(0xEEEEF1, 0xDDDDE2)
-        static let clearLightInk = ramp(0x8E8E93, 0x636366)
-        /// macOS tints icons with the accent colour unless a custom tint is picked.
-        static let tinted = vertical(Color.accentColor.mix(with: .white, by: 0.2), .accentColor)
+        static let clearLightGround = ramp(0x7D7D7D, 0x7D7D7D)
+        static let clearLightInk = ramp(0xFCFCFC, 0xDCDCDC)
+        static func tinted(_ tint: SystemIconTheme.Tint, isDark: Bool) -> LinearGradient {
+            let color: Color
+            switch tint {
+            case .accent:
+                color = .accentColor
+            case .preset(let preset):
+                color = Color(nsColor: rgb(tintSwatch(preset, isDark: isDark)))
+            case .custom(let red, let green, let blue, let opacity):
+                color = Color(.sRGB, red: red, green: green, blue: blue, opacity: opacity)
+            }
+            return vertical(color.mix(with: .white, by: 0.2), color)
+        }
+
+        private static func tintSwatch(_ preset: SystemIconTheme.Tint.Preset, isDark: Bool) -> UInt32 {
+            switch preset {
+            case .red: isDark ? 0xFF5257 : 0xE0383E
+            case .orange: 0xF7821B
+            case .yellow: isDark ? 0xFFC600 : 0xFFC726
+            case .green: 0x62BA46
+            case .blue: 0x007AFF
+            case .purple: isDark ? 0xA550A7 : 0x953D96
+            case .pink: 0xF74F9E
+            case .graphite: isDark ? 0x8C8C8C : 0x989898
+            }
+        }
 
         /// Fixed in both appearances: a saturated tile carries its own contrast against white ink.
         static func fill(_ tint: IconTint) -> LinearGradient {

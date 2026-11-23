@@ -28,7 +28,7 @@ struct IconTile: View {
                 }
                 .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        // The tile never changes with appearance, so neither may a glyph that swaps in Dark.
+        // Pin the symbol variant independently of the tile's paint.
         .environment(\.colorScheme, .light)
     }
 
@@ -49,8 +49,8 @@ struct IconTile: View {
             case (.regular, true): (ground, ink) = (tile.darkGround, tile.darkInk(tint))
             case (.clear, false): (ground, ink) = (tile.clearLightGround, tile.clearLightInk)
             case (.clear, true): (ground, ink) = (tile.clearDarkGround, tile.clearDarkInk)
-            case (.tinted, false): (ground, ink) = (tile.tinted, tile.whiteInk)
-            case (.tinted, true): (ground, ink) = (tile.darkGround, tile.tinted)
+            case (.tinted, false): (ground, ink) = (tile.tinted(theme.tint, isDark: false), tile.whiteInk)
+            case (.tinted, true): (ground, ink) = (tile.darkGround, tile.tinted(theme.tint, isDark: true))
             }
         }
     }

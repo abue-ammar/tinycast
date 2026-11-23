@@ -104,6 +104,24 @@ struct AppearanceTests {
         check("automatic follows the surface", tinted.isDark(onDarkSurface: true))
         check("automatic follows a light surface", !tinted.isDark(onDarkSurface: false))
         check("a fixed shade ignores the surface", clearDark.isDark(onDarkSurface: false))
+        check("an unset tint uses the accent", tinted.tint == .accent)
+        check(
+            "Clear ignores the saved tint",
+            SystemIconTheme(stored: "ClearDark", storedTint: "Blue") == clearDark)
+        check(
+            "a named tint ignores old custom components",
+            SystemIconTheme(stored: "TintedDark", storedTint: "Graphite", customTint: "0 0.4 1 0.9").tint
+                == .preset(.graphite))
+        check(
+            "a custom tint preserves its RGBA components",
+            SystemIconTheme(stored: "TintedDark", storedTint: "Other", customTint: "0 0.4 1 0.9").tint
+                == .custom(red: 0, green: 0.4, blue: 1, opacity: 0.9))
+        for invalid in ["0 0 1", "0 0 1 1 extra", "nan 0 1 1", "0 0 1 1.5"] {
+            check(
+                "an invalid custom tint uses the accent: \(invalid)",
+                SystemIconTheme(stored: "TintedDark", storedTint: "Other", customTint: invalid).tint
+                    == .accent)
+        }
 
         print("\n\(passes) passed, \(failures) failed")
         exit(failures == 0 ? 0 : 1)

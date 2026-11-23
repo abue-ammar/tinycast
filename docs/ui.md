@@ -449,9 +449,10 @@ the way System Settings draws its sidebar. The Settings sidebar uses the same ti
   `SystemIconTheme` reads the style from the `AppleIconAppearanceTheme` global default, since no API
   exposes it, and `AppCore.applyIconStyle()` projects the choice into `IconCache.style`. Default puts
   the tint on the ground; Dark moves it to the glyph on a near-black ground (graphite lifts to gray);
-  Clear drops it for a neutral ground and glyph, its Dark pair measured off the system's own icons;
-  Tinted uses the accent colour in its place. An Automatic shade follows the surface the tile sits on.
-  Every value lives in `Theme.IconTile`.
+  Clear drops it for a neutral ground and white glyph, both shades measured off the system's own icons;
+  Tinted uses the icon colour selected in macOS. A preset uses the system swatch for the tile's shade,
+  a custom colour uses its saved RGBA components, and Automatic colour uses the accent. An Automatic
+  shade follows the surface the tile sits on. The gradient and preset swatches live in `Theme.IconTile`.
 - **Built-in entries** declare the tint beside the symbol: `SettingsTab.systemImage` and `.tint`,
   `CommandID.sfSymbol` and `.tint`, `SystemActionCatalog.symbol(for:)` and `tint(for:)`,
   `SyncCategory` and `SyncExclusion`'s `.symbol` and `.tint`, `BackupCategory.descriptor`. The
