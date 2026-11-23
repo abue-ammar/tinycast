@@ -278,6 +278,10 @@ final class AppSettings {
         didSet { defaults.set(animationsEnabled, forKey: Key.animationsEnabled.rawValue) }
     }
 
+    var iconStyle: IconStyle {
+        didSet { defaults.set(iconStyle.rawValue, forKey: Key.iconStyle.rawValue) }
+    }
+
     /// Where a drag left the panel's top-left, per display and relative to it.
     var palettePositions: [String: [Double]] {
         didSet { defaults.set(palettePositions, forKey: Key.palettePosition.rawValue) }
@@ -746,6 +750,7 @@ final class AppSettings {
         case .autoSwitchInputSource: adopt(\.autoSwitchInputSourceID, from: stored)
         case .paletteDraggable: adopt(\.paletteDraggable, from: stored)
         case .animationsEnabled: adopt(\.animationsEnabled, from: stored)
+        case .iconStyle: adopt(\.iconStyle, from: stored)
         case .palettePosition: adopt(\.palettePositions, from: stored)
         case .paletteExpandedCenterDisplays: adopt(\.paletteExpandedCenterDisplays, from: stored)
         case .fileSearchEnabled: adopt(\.fileSearchEnabled, from: stored)
@@ -929,6 +934,7 @@ final class AppSettings {
         animationsEnabled =
             defaults.object(forKey: Key.animationsEnabled.rawValue) == nil
             || defaults.bool(forKey: Key.animationsEnabled.rawValue)
+        iconStyle = defaults.string(forKey: Key.iconStyle.rawValue).flatMap(IconStyle.init) ?? .system
         palettePositions =
             defaults.dictionary(forKey: Key.palettePosition.rawValue)
             as? [String: [Double]] ?? [:]

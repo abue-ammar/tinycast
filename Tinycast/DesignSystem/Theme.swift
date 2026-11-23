@@ -544,27 +544,69 @@ enum Theme {
                 .init(color: .white.opacity(0.03), location: 0.6)
             ], startPoint: .top, endPoint: .bottom)
 
+        static let whiteInk = vertical(.white, .white)
+        static let darkGround = ramp(0x2E2E31, 0x0F0F10)
+        /// Measured off the system's Clear icons, which `NSWorkspace` flattens onto an opaque ground.
+        static let clearDarkGround = ramp(0x2B2B2B, 0x2B2B2B)
+        static let clearDarkInk = ramp(0xF7F7F7, 0xC8C8C8)
+        static let clearLightGround = ramp(0x7D7D7D, 0x7D7D7D)
+        static let clearLightInk = ramp(0xFCFCFC, 0xDCDCDC)
+        static func tinted(_ tint: SystemIconTheme.Tint, isDark: Bool) -> LinearGradient {
+            let color: Color
+            switch tint {
+            case .accent:
+                color = .accentColor
+            case .preset(let preset):
+                color = Color(nsColor: rgb(tintSwatch(preset, isDark: isDark)))
+            case .custom(let red, let green, let blue, let opacity):
+                color = Color(.sRGB, red: red, green: green, blue: blue, opacity: opacity)
+            }
+            return vertical(color.mix(with: .white, by: 0.2), color)
+        }
+
+        private static func tintSwatch(_ preset: SystemIconTheme.Tint.Preset, isDark: Bool) -> UInt32 {
+            switch preset {
+            case .red: isDark ? 0xFF5257 : 0xE0383E
+            case .orange: 0xF7821B
+            case .yellow: isDark ? 0xFFC600 : 0xFFC726
+            case .green: 0x62BA46
+            case .blue: 0x007AFF
+            case .purple: isDark ? 0xA550A7 : 0x953D96
+            case .pink: 0xF74F9E
+            case .graphite: isDark ? 0x8C8C8C : 0x989898
+            }
+        }
+
         /// Fixed in both appearances: a saturated tile carries its own contrast against white ink.
         static func fill(_ tint: IconTint) -> LinearGradient {
-            let (top, bottom): (UInt32, UInt32) =
-                switch tint {
-                case .gray: (0xA9A9AF, 0x77777D)
-                case .graphite: (0x55555B, 0x1F1F22)
-                case .blue: (0x4AA3FF, 0x0B6BF5)
-                case .cyan: (0x5CC8F7, 0x1B9BE0)
-                case .mint: (0x56D6C4, 0x12B2A0)
-                case .green: (0x5FDD70, 0x2DBB49)
-                case .yellow: (0xFFD43B, 0xF5AB00)
-                case .orange: (0xFFAD42, 0xFF8600)
-                case .red: (0xFF6A60, 0xEE3B31)
-                case .pink: (0xFF6B87, 0xF52E57)
-                case .purple: (0xC96BF7, 0xA235DB)
-                case .indigo: (0x8583FF, 0x5451E0)
-                case .brown: (0xC2A07A, 0x96744F)
-                }
-            return LinearGradient(
-                colors: [Color(nsColor: rgb(top)), Color(nsColor: rgb(bottom))],
-                startPoint: .top, endPoint: .bottom)
+            switch tint {
+            case .gray: ramp(0xA9A9AF, 0x77777D)
+            case .graphite: ramp(0x55555B, 0x1F1F22)
+            case .blue: ramp(0x4AA3FF, 0x0B6BF5)
+            case .cyan: ramp(0x5CC8F7, 0x1B9BE0)
+            case .mint: ramp(0x56D6C4, 0x12B2A0)
+            case .green: ramp(0x5FDD70, 0x2DBB49)
+            case .yellow: ramp(0xFFD43B, 0xF5AB00)
+            case .orange: ramp(0xFFAD42, 0xFF8600)
+            case .red: ramp(0xFF6A60, 0xEE3B31)
+            case .pink: ramp(0xFF6B87, 0xF52E57)
+            case .purple: ramp(0xC96BF7, 0xA235DB)
+            case .indigo: ramp(0x8583FF, 0x5451E0)
+            case .brown: ramp(0xC2A07A, 0x96744F)
+            }
+        }
+
+        /// Graphite's ramp is the dark ground's own, so there its glyph lifts to gray.
+        static func darkInk(_ tint: IconTint) -> LinearGradient {
+            fill(tint == .graphite ? .gray : tint)
+        }
+
+        private static func ramp(_ top: UInt32, _ bottom: UInt32) -> LinearGradient {
+            vertical(Color(nsColor: rgb(top)), Color(nsColor: rgb(bottom)))
+        }
+
+        private static func vertical(_ top: Color, _ bottom: Color) -> LinearGradient {
+            LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom)
         }
     }
 

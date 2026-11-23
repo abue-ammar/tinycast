@@ -191,7 +191,8 @@ driven imperatively from AppKit. Extension menu extras are dynamic `NSStatusItem
 assigns `NSApp.appearance` from `AppSettings.appearance`, and `.system` assigns `nil` so AppKit follows
 macOS by itself. Nothing else in the app sets an appearance. Animations take the same shape:
 `AppCore.applyMotion()` projects `AppSettings.animationsEnabled` into `Motion.isEnabled` and re-points
-every live `AnimatedPanel` (see [ui.md](ui.md#non-negotiable-invariants)).
+every live `AnimatedPanel` (see [ui.md](ui.md#non-negotiable-invariants)), and `AppCore.applyIconStyle()`
+projects `AppSettings.iconStyle` into `IconCache.style` (see [ui.md](ui.md#icon-pack)).
 
 ## Processes
 

@@ -356,9 +356,13 @@ struct BackupArchiveTests {
             }
         }
         let dropped = fieldKeys(of: full).subtracting(owners.keys).sorted()
-        check(dropped.isEmpty ? "every backup field travels in a slice" : "in no slice: \(dropped)", dropped.isEmpty)
+        check(
+            dropped.isEmpty ? "every backup field travels in a slice" : "in no slice: \(dropped)",
+            dropped.isEmpty)
         let doubled = owners.filter { $0.value.count > 1 }.keys.sorted()
-        check(doubled.isEmpty ? "no backup field travels in two slices" : "in two slices: \(doubled)", doubled.isEmpty)
+        check(
+            doubled.isEmpty ? "no backup field travels in two slices" : "in two slices: \(doubled)",
+            doubled.isEmpty)
     }
 
     /// A crafted file may name any field; only a ticked Custom Commands may hand over commands.

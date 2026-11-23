@@ -33,6 +33,7 @@ extension SettingsBackup {
             openOnCursorScreen: s.openOnCursorScreen,
             paletteDraggable: s.paletteDraggable,
             animationsEnabled: s.animationsEnabled,
+            iconStyle: s.iconStyle.rawValue,
             fileSearchEnabled: s.fileSearchEnabled,
             fileSearchScopes: s.fileSearchScopes,
             fileSearchIgnorePatterns: s.fileSearchIgnorePatterns,
@@ -290,6 +291,10 @@ extension SettingsBackup {
         }
         if let flag = s.animationsEnabled {
             settings.animationsEnabled = flag
+            count += 1
+        }
+        if let raw = s.iconStyle, let style = IconStyle(rawValue: raw) {
+            settings.iconStyle = style
             count += 1
         }
         // Writing through AppSettings is enough; AppCore's sinks re-project the rest.
