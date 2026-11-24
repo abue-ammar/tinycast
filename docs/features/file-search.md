@@ -13,11 +13,12 @@ design follows [fsearch](https://github.com/noahdunnagan/fsearch).
   exits; the app only maps the file, whose clean pages never count toward its footprint.
 - **Full Disk Access is required, and nothing is indexed without it.** `Permissions.hasFullDiskAccess()`
   probes a TCC-guarded file, which never prompts. The pane and the palette both say how to grant it.
-- **Scopes are the crawl roots.** Only what lies under a scope is indexed or searched; a scope inside
+- **Scopes are the crawl roots.** Only what lies under a scope appears in indexed results. A scope inside
   another stays listed but folds into it at crawl time, and a cleared list indexes nothing. The default
   is home (`~`): the rest of the disk is the system's, and apps are the launcher's.
 - **A matching ignore pattern skips a folder and everything in it at crawl time.** Changing either list
-  rebuilds the index, debounced by a second; the old index serves until the new one maps.
+  rebuilds the index, debounced by a second; the old index serves until the new one maps. Clearing
+  every scope drops the index at once.
 - **Hidden files are indexed only with Include hidden files on, and it is off by default.** The crawl
   skips a name that starts with a dot in `FileIndexCrawler.append`, the one place a listing is made, so a
   rebuild, a live diff and the walk of a new folder always agree. Bundle contents are always indexed and
@@ -103,12 +104,14 @@ order, so a parent always comes first), and then walks only the children of fold
 empty. A hit is scored on the first term its name holds, with the bonuses above; the overlay of live
 additions takes its folders from its path.
 
-A `/` separates terms as a space does, since no name holds one, and a leading `~/` is dropped, so
-`tinycast/Tinycast/App` or `~/.claude/skills` matches through folders like the same words with spaces.
-A query that reads as a path (`/…`, `~`, `~/…` or a `file://` URL) is also checked on disk with one
-`fileExists`. When the path exists and the type filter admits it, it lists first and only once, even when
-it is hidden, ignored or outside every scope. `FileSearchQuery.path(of:homeDirectory:)` expands it with
-`URL.standardized` rather than `standardizedFileURL`, which drops the leading `/private` the index keeps.
+A `/` separates terms as a space does, since no name holds one, and a leading `~/` or a bare `~` is
+dropped, so `tinycast/Tinycast/App` or `~/.claude/skills` matches through folders like the same words
+with spaces.
+A query that reads as a local path (`/`, `/…`, `~`, `~/…` or a local `file://` URL) is also checked on disk.
+With Full Disk Access this works during the first crawl or with an empty scope list. When the type filter
+admits it, the entry lists first, even if it is hidden, ignored or outside every scope. The filesystem
+resolves parent components and supplies the canonical spelling used to deduplicate indexed hits. A path
+that names a symbolic link directly keeps that link as the target of row actions.
 
 `prior` is set per folder at crawl time and inherited by its files: 2 under home and the cloud drives,
 1 elsewhere in plain sight (`/Applications`, `/Users/Shared`) and for hidden paths, 0 for system
@@ -298,8 +301,9 @@ delay old, since the reset clears its session.
 **Show in launcher** (`fileSearchShowInLauncher`, under the feature switch) adds a **Files** section to
 root search, between the ranked results and the `Use "…" with` fallbacks, so ↵ on a typed app name never
 opens a file. It lists the top five hits (`FileSearchQuery.launcherLimit`) once the trimmed query has
-three characters (`launcherMinimumLength`), the threshold category search uses. Shorter cancels the
-query and releases its rows.
+three characters (`launcherMinimumLength`), the threshold category search uses. Shorter queries
+cancel the search and release its rows, except a path with no words (`/`, `~`, `~/`), which lists only
+its own row.
 
 The launcher borrows this screen's `FileSearchSession` rather than keeping its own. Only one palette
 mode shows at a time, so nothing is held twice. An index swap or a trashed row updates both. And the
