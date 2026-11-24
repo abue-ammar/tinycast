@@ -20,7 +20,6 @@ final class ChatGPTSubscriptionManager {
     private(set) var access: ChatGPTSubscription.Access?
     private(set) var models: [ChatGPTSubscription.Model] = []
     private(set) var usage: PlanUsage?
-    /// Each limits read a chat or a check makes, so the menu bar follows without asking again.
     @ObservationIgnored var onUsage: (@MainActor (PlanUsage) -> Void)?
     /// Copied from the client at each check: the client is not observed, and Settings shows this.
     private(set) var executable: URL?

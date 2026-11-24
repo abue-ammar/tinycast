@@ -25,7 +25,6 @@ final class AISettingsStore {
             defaults.set(expandsReasoning, forKey: AppSettingsKey.aiExpandsReasoning.rawValue)
         }
     }
-    /// Off by default: showing it reads the signed-in commands' limits every five minutes.
     var usageMenuBarEnabled: Bool {
         didSet { defaults.set(usageMenuBarEnabled, forKey: AppSettingsKey.aiUsageMenuBar.rawValue) }
     }

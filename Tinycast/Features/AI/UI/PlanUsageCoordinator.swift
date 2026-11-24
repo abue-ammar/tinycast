@@ -37,7 +37,6 @@ final class PlanUsageCoordinator {
         subscription.onUsage = { [weak monitor] usage in monitor?.apply(usage, for: .chatGPT) }
     }
 
-    /// A route that is off, or signed in with an API key, has no plan limits to read.
     var availableProviders: [PlanUsage.Provider] {
         PlanUsage.Provider.allCases.filter { provider in
             switch provider {
@@ -47,7 +46,6 @@ final class PlanUsageCoordinator {
         }
     }
 
-    /// Launch checks each tool once; until then an empty menu is waiting, not misconfigured.
     var isCheckingProviders: Bool {
         installedAI.status(for: .claude).phase == .checking || subscription.phase == .starting
     }
@@ -116,7 +114,6 @@ final class PlanUsageCoordinator {
         }
     }
 
-    /// Re-read when a tool finishes its check or is switched off, not at the next poll.
     private func trackProviders(generation: Int) {
         guard generation == trackingGeneration else { return }
         let providers = withObservationTracking {

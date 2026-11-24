@@ -20,7 +20,6 @@ struct PlanUsage: Equatable, Sendable {
         }
     }
 
-    /// What one read found: limits, an account that has none (an API key), or no answer.
     enum Reading: Equatable, Sendable {
         case usage(PlanUsage)
         case unavailable
@@ -73,7 +72,6 @@ struct PlanUsage: Equatable, Sendable {
             return min(max(elapsed / duration, 0), 1)
         }
 
-        /// When use at the pace so far fills the window; nil when it lasts until the reset.
         func exhaustion(at now: Date) -> Date? {
             guard let duration, let resetsAt, let elapsed = elapsedFraction(at: now),
                 elapsed >= Self.minimumPaceElapsed, usedPercent > 0, usedPercent < 100

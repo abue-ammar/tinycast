@@ -5,7 +5,6 @@ import Observation
 @Observable
 final class PlanUsageMonitor {
     private static let interval: Duration = .seconds(300)
-    /// Opening the menu asks again, but a provider is never asked twice inside this.
     private static let minimumGap: TimeInterval = 30
 
     private(set) var entries: [PlanUsage.Provider: PlanUsageEntry] = [:]
@@ -14,7 +13,6 @@ final class PlanUsageMonitor {
     @ObservationIgnored var reader: @MainActor (PlanUsage.Provider) async -> PlanUsage.Reading = { _ in
         .failed
     }
-    /// The usage a provider reported before this read, if any, and what it reports now.
     @ObservationIgnored var onChange: (@MainActor (PlanUsage.Provider, PlanUsage?, PlanUsage) -> Void)?
 
     @ObservationIgnored private(set) var isRunning = false

@@ -38,7 +38,6 @@ final class PlanUsageMenuBarController: NSObject, NSMenuDelegate {
         isOpen = false
     }
 
-    /// An open menu is rebuilt as reads land, so it never shows a check that has finished.
     private func observe() {
         guard !isRemoved else { return }
         withObservationTracking {

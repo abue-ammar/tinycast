@@ -31,8 +31,7 @@ enum Theme {
         static let sectionSpacing: CGFloat = 12
         /// Emoji tiles need a little more separation so adjacent category grids stay distinct.
         static let emojiSectionSpacing: CGFloat = 14
-        static let planUsageRow: CGFloat = 14
-        /// Deeper than the top, so a usage section's last meter stands clear of the separator.
+        static let planUsageRow: CGFloat = 16
         static let planUsageSectionBottom: CGFloat = 16
     }
 
@@ -260,14 +259,12 @@ enum Theme {
         /// A Codex usage window's meter, beside its "72% left" readout.
         static let aiUsageBar: CGFloat = 110
         static let planUsageMenuWidth: CGFloat = 320
-        /// Lines a usage section up with the text of the native items below it.
-        static let planUsageMenuInset: CGFloat = 15
-        static let planUsageMeter: CGFloat = 3
-        /// The pace mark stands proud of the meter so it reads over either fill.
-        static let planUsagePaceMark = CGSize(width: 2, height: 7)
+        static let planUsageMenuInset: CGFloat = 16
+        static let planUsageMeter: CGFloat = 4
+        static let planUsagePaceMark = CGSize(width: 2, height: 8)
         static let planUsageGauge: CGFloat = 18
         static let planUsageGaugeLine: CGFloat = 2
-        static let planUsageGaugeGlyph: CGFloat = 9
+        static let planUsageGaugeGlyph: CGFloat = 10
         /// Settings editor modals (Custom Commands, Snippets): fixed width, intrinsic height.
         static let editorSheetWidth: CGFloat = 480
         /// The multi-line box inside those modals; it scrolls rather than grows the panel.

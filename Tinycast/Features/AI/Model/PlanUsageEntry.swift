@@ -6,7 +6,6 @@ struct PlanUsageEntry: Equatable, Sendable {
         case updated(ago: TimeInterval)
     }
 
-    /// Three missed polls; fresher numbers need no date beside them.
     static let staleAfter: TimeInterval = 15 * 60
 
     var usage: PlanUsage?

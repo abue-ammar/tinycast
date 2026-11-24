@@ -1,6 +1,5 @@
 import Foundation
 
-/// Which window the menu bar gauge follows; automatic follows whichever is fullest.
 enum PlanUsagePin: Equatable, Sendable {
     case automatic
     case window(PlanUsage.Provider, id: String)
@@ -25,7 +24,6 @@ enum PlanUsagePin: Equatable, Sendable {
         return "\(provider.rawValue):\(id)"
     }
 
-    /// A pinned window that is gone, or still loading, leaves the gauge following the fullest.
     func effective(in usage: [PlanUsage.Provider: PlanUsage]) -> PlanUsagePin {
         guard case .window(let provider, let id) = self, usage[provider]?.window(id: id) == nil
         else { return self }

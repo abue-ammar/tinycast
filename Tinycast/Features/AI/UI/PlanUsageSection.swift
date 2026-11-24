@@ -64,7 +64,7 @@ private struct WindowRow: View {
     let now: Date
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Spacing.sm) {
                 Text(verbatim: window.title)
                     .lineLimit(1)
@@ -102,30 +102,36 @@ private struct WindowRow: View {
     }
 }
 
-/// The share used, with a mark at the share of the window already gone: fill past it is ahead.
 private struct Meter: View {
     let fraction: Double
     let pace: Double?
     let tint: Color
 
+    /// Overlays, so the taller pace mark can never stretch the meter to its own height.
     var body: some View {
-        GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule()
-                    .fill(Theme.Colors.controlSurface)
-                Capsule()
-                    .fill(tint)
-                    .frame(width: proxy.size.width * fraction)
-                if let pace {
-                    let mark = Theme.Size.planUsagePaceMark
+        Capsule()
+            .fill(Theme.Colors.controlSurface)
+            .overlay(alignment: .leading) {
+                GeometryReader { proxy in
                     Capsule()
-                        .fill(.secondary)
-                        .frame(width: mark.width, height: mark.height)
-                        .offset(x: proxy.size.width * pace - mark.width / 2)
+                        .fill(tint)
+                        .frame(width: proxy.size.width * fraction)
                 }
             }
-        }
-        .frame(height: Theme.Size.planUsageMeter)
-        .accessibilityHidden(true)
+            .frame(height: Theme.Size.planUsageMeter)
+            .overlay {
+                if let pace {
+                    GeometryReader { proxy in
+                        Capsule()
+                            .fill(.secondary)
+                            .frame(
+                                width: Theme.Size.planUsagePaceMark.width,
+                                height: Theme.Size.planUsagePaceMark.height
+                            )
+                            .position(x: proxy.size.width * pace, y: proxy.size.height / 2)
+                    }
+                }
+            }
+            .accessibilityHidden(true)
     }
 }
