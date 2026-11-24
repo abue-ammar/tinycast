@@ -144,6 +144,10 @@ enum SettingsBackupCoverage {
         AppSettingsKey.aiExpandsReasoning.rawValue:
             "How much of a reply a reader sees unasked is this Mac's own choice, and no other AI "
             + "setting travels.",
+        AppSettingsKey.aiUsageMenuBar.rawValue:
+            "Reads the limits of commands signed in on this Mac, and no other AI setting travels.",
+        AppSettingsKey.aiUsageAlerts.rawValue:
+            "Accompanies the menu bar switch it serves, which stays on the Mac that set it.",
         AppSettingsKey.aiSystemPrompt.rawValue:
             "Standing instructions to a model are the one AI setting that changes every answer; an "
             + "import must not carry them onto another Mac unseen.",

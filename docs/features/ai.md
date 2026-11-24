@@ -339,6 +339,15 @@ picker. ⌘J hands a Quick AI conversation to the window.
   on-device model. Every transport funnels through `requestMessages(textBudget:)`, so no route can
   resend every image each turn or let history grow the payload as a chat goes on. The composer refuses a picture
   past the budget and says so, rather than letting send time drop it silently.
+- **Plan usage is read from the signed-in command, never from its credentials.** Claude's windows
+  come from the CLI's own `get_usage` control request, which answers without starting a turn, and
+  ChatGPT's from Codex's `account/rateLimits/read`. Tinycast never opens either tool's credential
+  store or calls a usage endpoint itself. A plan is read only while its route is on and ready, and
+  ChatGPT only when it is signed in with an account rather than an API key.
+- **Usage polling never holds the chat's Codex server.** `ChatGPTSubscriptionManager.readUsage()`
+  and `consumeResetCredit()` each start a server of their own and stop it on return, so a poll
+  every five minutes neither keeps the chat's server resident nor relaunches it mid-turn. A chat
+  turn that ends reads limits on its own server and hands them over through `onUsage`.
 
 ## Connections and routing
 
@@ -898,6 +907,45 @@ reader's round setting caps calls, and the normal tool-result size budgets still
 failure and cancellation stop the listener and its pending calls. Rewrites and title requests get no
 tool session and retain the deny-all configuration.
 
+## Plan usage in the menu bar
+
+Settings → AI → Usage → **Show usage in menu bar** (`aiUsageMenuBar`, off by default, and off with
+AI) adds a status item owned by `PlanUsageCoordinator`. Its gauge is a ring around the provider's
+mark, filled to one window: the fullest by default, or the one picked under **Show in Menu Bar**.
+The pick is menu state in `UserDefaults` (`aiUsageMenuBarPin`), not a preference, and a picked
+window that is gone leaves the gauge on the fullest. The ring is a template image while every limit
+is comfortable and turns orange at 80% and red at 95%, the same `PlanUsage.Level` that colours each
+meter.
+
+The menu is a native `NSMenu`: a hosted `PlanUsageSection` per provider (mark, plan, and per window
+a meter with the share used, the countdown and the clock time of the reset), then native items.
+Each meter carries a pace mark at the share of the window already gone, so fill past it is use
+ahead of pace; once a tenth of the window has passed, a window on course to run out before its
+reset says when. ChatGPT's free resets show as **Reset ChatGPT Limits…**, which asks through
+`DialogController` before `account/rateLimitResetCredit/consume`.
+
+`PlanUsageMonitor` reads every ready provider every five minutes, again when the menu opens (no
+provider more than once in 30 seconds), when a provider finishes its check or is switched off, and
+on wake; it stops polling while the Mac sleeps. A failed read keeps the last numbers and says
+**Couldn't refresh**; numbers older than fifteen minutes say how old. Claude is read again when a
+chat reply on Claude lands, and Codex hands over what each turn read. Nothing is cached on disk:
+the first read takes about a second.
+
+**Usage alerts** (`aiUsageAlerts`, on by default) shows a HUD when a window crosses 80% or 95%,
+and when one that was at least 80% falls below half of where it was, which only a reset does.
+`PlanUsageAlertPolicy` compares one read with the one before it, so a limit already high at launch
+stays quiet, and each refresh earns one notice at most, the most severe.
+
+### Usage sweep
+
+- With Show usage in menu bar on and Claude or Codex ready, the gauge appears within a second of
+  launch, its ring and mark ink like the neighbouring items on a light and a dark menu bar, and its
+  tooltip names the window it follows.
+- The usage menu's sections line up with the native items below them, and its meters' pace marks
+  sit inside the meter's height on both appearances.
+- Picking a window under Show in Menu Bar moves the gauge to it; switching that provider off in
+  Providers moves the gauge back to the fullest remaining window.
+
 ## Web search and attachments
 
 `AIRequest.webSearch`, `AIMessage.images` and `AIMessage.documents` are provider-neutral; each
@@ -1115,6 +1163,8 @@ answer and must not arrive on another Mac unread. `aiRetention`, `aiOpensTo` and
 join them: all three are decisions about conversations that never leave the Mac that had them, and
 an import must not arrive carrying an instruction to delete them. `aiToolRounds` stays behind too: it
 limits what a tool-driven reply may spend, and an import must not raise that unasked.
+`aiUsageMenuBar` and `aiUsageAlerts` stay behind as well: they read the commands signed in on this
+Mac, and no other AI setting travels.
 `aiShownModels` and `aiDisabledRoutes` name this Mac's own tools, connections and their models, which
 another Mac may not have. `aiInstalledOverrides` names a command to run and the variables to run it
 with, and an import must never decide which program a Mac launches. None of the three has a

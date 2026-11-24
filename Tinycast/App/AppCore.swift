@@ -80,6 +80,7 @@ final class AppCore {
     let chatPresets = ChatPresetStore()
     let chatGPTSubscription = ChatGPTSubscriptionManager()
     let installedAI = InstalledAIManager()
+    let planUsage = PlanUsageMonitor()
     @ObservationIgnored private var appliedLaunchRevisions: [InstalledAIKind: Int] = [:]
 
     /// Settings' own process only: its line to the main app, which panes read and ask through.
@@ -241,6 +242,9 @@ final class AppCore {
         chats: aiChats, settings: settings, appIndex: appIndex,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         core: self)
+    @ObservationIgnored private(set) lazy var planUsageCoordinator = PlanUsageCoordinator(
+        monitor: planUsage, settings: settings, aiSettings: aiSettings, installedAI: installedAI,
+        subscription: chatGPTSubscription, core: self)
     @ObservationIgnored private(set) lazy var quickAICoordinator = QuickAICoordinator(
         chats: aiChats, settings: settings, palette: palette,
         paletteCoordinator: paletteCoordinator, core: self)
@@ -315,6 +319,7 @@ final class AppCore {
             fileSearchCoordinator.applyPolicy()
             notesCoordinator.applyEnabled()
             aiChatCoordinator.applyEnabled()
+            planUsageCoordinator.applyEnabled()
             mcpCoordinator.applyEnabled()
             customQuickActions.onChange = { [weak self] _ in
                 self?.quickActionCoordinator.applyCustomQuickActionsPresence()
@@ -819,6 +824,10 @@ final class AppCore {
         track(
             { _ = $0.notesShowsInMenuBar }, reproject: { $0.notesCoordinator.applyMenuBarItem() })
         track({ _ = $0.aiEnabled }, reproject: { $0.aiChatCoordinator.applyEnabled() })
+        track({ _ = $0.aiEnabled }, reproject: { $0.planUsageCoordinator.applyEnabled() })
+        track(
+            aiSettings, { _ = $0.usageMenuBarEnabled },
+            reproject: { $0.planUsageCoordinator.applyEnabled() })
         track(
             { _ = $0.dictationIdleRelease },
             reproject: {

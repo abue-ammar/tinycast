@@ -25,6 +25,13 @@ final class AISettingsStore {
             defaults.set(expandsReasoning, forKey: AppSettingsKey.aiExpandsReasoning.rawValue)
         }
     }
+    /// Off by default: showing it reads the signed-in commands' limits every five minutes.
+    var usageMenuBarEnabled: Bool {
+        didSet { defaults.set(usageMenuBarEnabled, forKey: AppSettingsKey.aiUsageMenuBar.rawValue) }
+    }
+    var usageAlertsEnabled: Bool {
+        didSet { defaults.set(usageAlertsEnabled, forKey: AppSettingsKey.aiUsageAlerts.rawValue) }
+    }
     /// Appended to `AIInstructions.preamble` on every turn, so it is billed on every turn.
     var systemPrompt: String {
         didSet { defaults.set(systemPrompt, forKey: AppSettingsKey.aiSystemPrompt.rawValue) }
@@ -102,6 +109,9 @@ final class AISettingsStore {
             defaults.object(forKey: AppSettingsKey.aiChoices.rawValue) as? Bool ?? true
         expandsReasoning =
             defaults.object(forKey: AppSettingsKey.aiExpandsReasoning.rawValue) as? Bool ?? false
+        usageMenuBarEnabled = defaults.bool(forKey: AppSettingsKey.aiUsageMenuBar.rawValue)
+        usageAlertsEnabled =
+            defaults.object(forKey: AppSettingsKey.aiUsageAlerts.rawValue) as? Bool ?? true
         systemPrompt = defaults.string(forKey: AppSettingsKey.aiSystemPrompt.rawValue) ?? ""
         systemPromptEnabled =
             defaults.object(forKey: AppSettingsKey.aiSystemPromptEnabled.rawValue) as? Bool ?? true
@@ -153,6 +163,8 @@ final class AISettingsStore {
         adopt(\.webSearchEnabled, from: stored)
         adopt(\.choicesEnabled, from: stored)
         adopt(\.expandsReasoning, from: stored)
+        adopt(\.usageMenuBarEnabled, from: stored)
+        adopt(\.usageAlertsEnabled, from: stored)
         adopt(\.systemPrompt, from: stored)
         adopt(\.systemPromptEnabled, from: stored)
         adopt(\.retention, from: stored)

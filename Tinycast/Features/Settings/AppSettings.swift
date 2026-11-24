@@ -835,8 +835,9 @@ final class AppSettings {
         case .allowedDeepLinks: adopt(\.allowedDeepLinks, from: stored)
         // Read by the AI, Quick Actions and MCP stores, which reload themselves.
         case .aiInstalledProviders, .aiConnections, .aiDefaultModel, .aiWebSearch, .aiChoices,
-            .aiExpandsReasoning, .aiSystemPrompt, .aiSystemPromptEnabled, .aiRetention, .aiOpensTo,
-            .aiNewChatAfter, .aiToolRounds, .aiShownModels, .aiDisabledRoutes, .aiInstalledOverrides,
+            .aiExpandsReasoning, .aiUsageMenuBar, .aiUsageAlerts, .aiSystemPrompt,
+            .aiSystemPromptEnabled, .aiRetention, .aiOpensTo, .aiNewChatAfter, .aiToolRounds,
+            .aiShownModels, .aiDisabledRoutes, .aiInstalledOverrides,
             .mcpServers, .quickActionModel, .quickActionModelOverrides, .quickActionPreviews,
             .quickActionInstructions, .quickActionLanguage:
             break

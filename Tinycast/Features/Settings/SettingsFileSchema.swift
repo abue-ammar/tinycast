@@ -79,6 +79,8 @@ enum SettingsFileSchema {
         case .aiWebSearch: return bind(ai, \.webSearchEnabled)
         case .aiChoices: return bind(ai, \.choicesEnabled)
         case .aiExpandsReasoning: return bind(ai, \.expandsReasoning)
+        case .aiUsageMenuBar: return bind(ai, \.usageMenuBarEnabled)
+        case .aiUsageAlerts: return bind(ai, \.usageAlertsEnabled)
         case .aiSystemPrompt: return bind(ai, \.systemPrompt)
         case .aiSystemPromptEnabled: return bind(ai, \.systemPromptEnabled)
         case .aiRetention: return bind(ai, \.retention)
