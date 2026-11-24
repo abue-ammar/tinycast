@@ -15,6 +15,7 @@ enum FileSearchQuery {
         let whole: [UInt8]
         let mask: UInt64
         let termMasks: [UInt64]
+        let location: String?
 
         /// Each term owns one bit of a `UInt8`, so folders can stand in for at most eight.
         var reachesFolders: Bool { (2...8).contains(terms.count) }
@@ -28,13 +29,16 @@ enum FileSearchQuery {
     }
 
     static func answersLauncher(_ query: String) -> Bool {
-        query.trimmingCharacters(in: .whitespacesAndNewlines).count >= launcherMinimumLength
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count < launcherMinimumLength else { return true }
+        return location(in: query) != nil && terms(in: query).isEmpty
     }
 
     static func launcherResults(
         _ query: String, favorites: [FileSearchResult], indexed: [FileSearchResult]
     ) -> [FileSearchResult] {
         guard let prepared = prepare(query) else { return [] }
+        guard !prepared.terms.isEmpty else { return Array(indexed.prefix(launcherLimit)) }
         let favorites = favorites.filter { file in
             var name = fold(file.name)
             return name.withUTF8 { name in
@@ -46,17 +50,39 @@ enum FileSearchQuery {
         return Array((favorites + results).prefix(launcherLimit))
     }
 
+    /// No name holds a `/`, so a typed path searches its components through folders instead.
     static func terms(in query: String) -> [String] {
-        query.split(whereSeparator: \Character.isWhitespace).map(String.init)
+        guard query != "~" else { return [] }
+        let relative = query.hasPrefix("~/") ? query.dropFirst(2) : query[...]
+        return relative.split { $0.isWhitespace || $0 == "/" }.map(String.init)
     }
 
     static func prepare(_ query: String) -> Prepared? {
+        let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let location = location(in: query)
         let terms = terms(in: query).map { Array(fold($0).utf8) }
-        guard !terms.isEmpty else { return nil }
+        guard !terms.isEmpty || location != nil else { return nil }
         let whole = Array(terms.joined(separator: [0x20]))
         // From the terms, not `whole`: its spaces are no letter a name has to contain.
         return Prepared(
-            terms: terms, whole: whole, mask: mask(of: terms.joined()), termMasks: terms.map { mask(of: $0) })
+            terms: terms, whole: whole, mask: mask(of: terms.joined()),
+            termMasks: terms.map { mask(of: $0) }, location: location)
+    }
+
+    private static func location(in query: String) -> String? {
+        if query.hasPrefix("/") || query == "~" || query.hasPrefix("~/") { return query }
+        guard query.prefix(5).lowercased() == "file:", let url = URLComponents(string: query),
+            url.percentEncodedUser == nil, url.percentEncodedPassword == nil, url.port == nil,
+            url.percentEncodedQuery == nil, url.percentEncodedFragment == nil
+        else { return nil }
+        if let host = url.percentEncodedHost, !host.isEmpty, host.lowercased() != "localhost" {
+            return nil
+        }
+        let encodedPath = url.percentEncodedPath
+        guard encodedPath.hasPrefix("/"), !encodedPath.hasPrefix("//"),
+            encodedPath.range(of: "%2f", options: .caseInsensitive) == nil
+        else { return nil }
+        return encodedPath.removingPercentEncoding
     }
 
     static func fold(_ text: String) -> String {

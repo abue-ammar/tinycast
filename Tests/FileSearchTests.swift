@@ -28,6 +28,7 @@ struct FileSearchTests {
 
     static func main() {
         queryMatching()
+        pathQuery()
         termHits()
         launcherQuery()
         ranking()
@@ -47,9 +48,17 @@ struct FileSearchTests {
         expect(!FileSearchQuery.answersLauncher("ab"), "two characters are too few for the launcher")
         expect(FileSearchQuery.answersLauncher("abc"), "three characters reach the launcher")
         expect(!FileSearchQuery.answersLauncher("  ab \n"), "surrounding whitespace does not count")
+        for path in ["/", "~", "~/"] {
+            expect(FileSearchQuery.answersLauncher(path), "a short path with no words reaches the launcher")
+        }
+        expect(!FileSearchQuery.answersLauncher("/a"), "a short path with a word is still too short")
         let folder = result("Documents/Résumé", folder: true)
         let file = result("Documents/Résumé Final.pdf")
         let indexed = result("Downloads/Resume.txt")
+        let root = FileSearchResult(url: URL(filePath: "/"), isDirectory: true, homeDirectory: home)
+        expect(
+            FileSearchQuery.launcherResults("/", favorites: [file], indexed: [root]) == [root],
+            "a path with no terms lists the exact row without matching every favorite")
         expect(
             FileSearchQuery.launcherResults("", favorites: [folder, file], indexed: [indexed]).isEmpty,
             "an empty launcher query leaves files to the Favorites section")
@@ -100,6 +109,45 @@ struct FileSearchTests {
         expect(
             haystack.withUTF8 { FileSearchQuery.find(Array("abc".utf8), in: $0) } == 2,
             "find returns the first case-insensitive occurrence")
+    }
+
+    static func pathQuery() {
+        expect(
+            FileSearchQuery.terms(in: "Dev/tinycast/App") == ["Dev", "tinycast", "App"],
+            "a slash separates terms")
+        expect(
+            FileSearchQuery.terms(in: "~/.claude/skills") == [".claude", "skills"],
+            "a leading tilde is home, not a term")
+        expect(FileSearchQuery.terms(in: "~").isEmpty, "a bare tilde is home, not a term")
+
+        func location(_ query: String) -> String? { FileSearchQuery.prepare(query)?.location }
+        expect(location("Dev/tinycast") == nil, "a relative path names no place")
+        expect(location("~report") == nil, "a tilde starting a name names no place")
+        expect(location("https://example.com/a") == nil, "a web link names no place")
+        expect(location(" ~/.claude \n") == "~/.claude", "a pasted path is trimmed")
+        expect(location("~") == "~", "a bare tilde names home")
+        expect(
+            location("/Users/test/My Notes") == "/Users/test/My Notes",
+            "a path keeps its spaces")
+        expect(
+            location("file:///Users/test/My%20Notes/") == "/Users/test/My Notes/",
+            "a file link keeps its decoded path and trailing slash")
+        expect(
+            location("FILE://LOCALHOST/Users/test") == "/Users/test",
+            "localhost names the local filesystem")
+        expect(location("file://other-mac.example/Users/test") == nil, "remote URLs name no local file")
+        expect(location("file://%FF/Users/test") == nil, "an undecodable host does not become local")
+        expect(location("file:////other-mac/path") == nil, "a network share is not a local path")
+        expect(location("file:///Users/test%2Ffoo") == nil, "a URL cannot encode a slash into a name")
+        expect(location("file:///Users/test#other") == nil, "a fragment is not part of a filename")
+        expect(location("file:///Users/test?%FF") == nil, "an undecodable query is still present")
+        expect(location("/private/tmp/../tmp/x") == "/private/tmp/../tmp/x", "dot segments reach disk")
+        expect(
+            FileSearchQuery.prepare("/")?.terms.isEmpty == true && location("/") == "/",
+            "the root prepares a path with no terms")
+        expect(
+            FileSearchQuery.prepare("~/")?.terms.isEmpty == true && location("~/") == "~/",
+            "home with a trailing slash prepares a path with no terms")
     }
 
     static func hits(_ query: String, _ name: String) -> FileSearchQuery.TermHits {
@@ -398,6 +446,13 @@ struct FileSearchTests {
         expect(
             nested.parentName == "Documents" && result("Notes.txt").parentName == "test",
             "the parent's own name is what a folder row prefixes itself with")
+        let top = FileSearchResult(
+            url: URL(filePath: "/Applications", directoryHint: .isDirectory), isDirectory: true,
+            homeDirectory: home)
+        let root = FileSearchResult(url: URL(filePath: "/"), isDirectory: true, homeDirectory: home)
+        expect(
+            top.parentName.isEmpty && root.parentName.isEmpty,
+            "a folder at the root has no parent name to prefix, so it never reads as //")
         for original in [nested, result("Documents/Résumé #1? 100%.txt"), result("Projects", folder: true)] {
             let restored = FileSearchResult(favoriteKey: original.favoriteKey, homeDirectory: home)
             expect(restored?.id == original.id, "a favorite preserves the exact path and Unicode")

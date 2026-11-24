@@ -95,7 +95,23 @@ final class FileIndex: Sendable {
 
     func search(_ query: FileSearchQuery.Prepared, filter: FileSearchFilter) -> [FileSearchResult] {
         let state = state.withLock { $0 }
-        guard let snapshot = state.snapshot, let policy = state.policy else { return [] }
+        guard let policy = state.policy else { return [] }
+        let place = query.location.flatMap { Self.place($0, filter: filter, home: policy.homeDirectory) }
+        guard let snapshot = state.snapshot, !query.terms.isEmpty else {
+            return place.map { [$0] } ?? []
+        }
+        var found = Self.indexed(query, filter: filter, state: state, snapshot: snapshot, policy: policy)
+        guard let place else { return found }
+        found.removeAll { $0.id == place.id }
+        if found.count == FileSearchQuery.resultLimit { found.removeLast() }
+        found.insert(place, at: 0)
+        return found
+    }
+
+    private static func indexed(
+        _ query: FileSearchQuery.Prepared, filter: FileSearchFilter, state: State,
+        snapshot: FileIndexSnapshot, policy: FileSearchPolicy
+    ) -> [FileSearchResult] {
         let limit = FileSearchQuery.resultLimit
         let named = Self.results(
             Self.named(query, filter: filter, state: state, snapshot: snapshot, limit: limit),
@@ -104,6 +120,29 @@ final class FileIndex: Sendable {
         let throughFolders = Self.throughFolders(
             query, filter: filter, state: state, snapshot: snapshot, limit: limit - named.count)
         return named + Self.results(throughFolders, limit: limit - named.count, policy: policy)
+    }
+
+    private static func place(
+        _ location: String, filter: FileSearchFilter, home: URL
+    ) -> FileSearchResult? {
+        let path = location.hasPrefix("~") ? home.path + location.dropFirst() : location
+        guard !path.utf8.contains(0) else { return nil }
+        let typedURL = URL(filePath: path, directoryHint: .notDirectory)
+        guard
+            let values = try? typedURL.resourceValues(
+                forKeys: [.canonicalPathKey, .isDirectoryKey, .isSymbolicLinkKey]),
+            let canonical = values.canonicalPath, let isDirectory = values.isDirectory
+        else { return nil }
+        if !isDirectory, path.hasSuffix("/") || values.isSymbolicLink == true,
+            !FileManager.default.fileExists(atPath: path)
+        {
+            return nil
+        }
+        let url = URL(filePath: canonical, directoryHint: isDirectory ? .isDirectory : .notDirectory)
+        var types = TypeFilter(filter: filter)
+        var name = url.lastPathComponent
+        guard name.withUTF8({ types.accepts(name: $0, isDirectory: isDirectory) }) else { return nil }
+        return FileSearchResult(url: url, isDirectory: isDirectory, homeDirectory: home)
     }
 
     func recent(filter: FileSearchFilter) -> [FileSearchResult] {

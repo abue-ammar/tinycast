@@ -38,7 +38,7 @@ final class FileIndexer {
         if enabled {
             activate()
         } else {
-            deactivate()
+            resetIndex()
             // An index of every filename is not something to leave behind once it is unused.
             try? FileManager.default.removeItem(at: directory)
             status = .off
@@ -61,7 +61,7 @@ final class FileIndexer {
         if granted, status == .needsAccess {
             activate()
         } else if !granted, status != .needsAccess {
-            deactivate()
+            resetIndex()
             status = .needsAccess
         }
     }
@@ -74,33 +74,38 @@ final class FileIndexer {
     private func activate() {
         guard isEnabled, let policy else { return }
         guard Permissions.hasFullDiskAccess() else {
-            deactivate()
+            resetIndex()
             status = .needsAccess
             return
         }
         guard !policy.roots.isEmpty else {
-            deactivate()
+            resetIndex(policy: policy)
             status = .ready(items: 0, builtAt: .now)
             return
         }
-        if index.snapshot?.fingerprint == policy.fingerprint { return }
+        let current = index.snapshot
+        if current?.fingerprint == policy.fingerprint { return }
         if let snapshot = FileIndexSnapshot(contentsOf: indexURL),
             snapshot.fingerprint == policy.fingerprint
         {
             load(snapshot)
         } else {
+            if current == nil {
+                index.replace(with: nil, policy: policy)
+                onIndexChanged?()
+            }
             build(after: .zero)
         }
     }
 
-    private func deactivate() {
+    private func resetIndex(policy: FileSearchPolicy? = nil) {
         buildTask?.cancel()
         buildTask = nil
         liveRefresh?.cancel()
         liveRefresh = nil
         isRecentStale = false
         watcher = nil
-        index.replace(with: nil, policy: nil)
+        index.replace(with: nil, policy: policy)
         hasIndex = false
         onIndexChanged?()
     }
@@ -167,7 +172,7 @@ final class FileIndexer {
 
     private func requestRebuild() {
         guard buildTask == nil else { return }
-        build(after: .zero)
+        rebuild()
     }
 
     /// At most once a second, so a burst of disk activity redraws the count and Recent once.
@@ -197,7 +202,7 @@ final class FileIndexer {
         let output = indexURL
         buildTask = Task { [weak self] in
             if delay > .zero { try? await Task.sleep(for: delay) }
-            // Checked even with no delay: a deactivate before this ran has already set the status.
+            // A reset before this ran has already set the status.
             guard !Task.isCancelled else { return }
             self?.status = .building(items: 0)
             let report: @Sendable (Int) -> Void = { [weak self] count in

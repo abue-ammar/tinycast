@@ -28,7 +28,7 @@ struct FileSearchResult: Identifiable, Equatable, Sendable {
         self.name = url.lastPathComponent
         self.parentPath = Self.abbreviate(
             parent.path, homePath: homeDirectory.path)
-        self.parentName = parent.lastPathComponent
+        self.parentName = parent.path == "/" ? "" : parent.lastPathComponent
         self.isDirectory = isDirectory
     }
 

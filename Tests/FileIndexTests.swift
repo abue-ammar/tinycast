@@ -35,6 +35,7 @@ struct FileIndexTests {
 
         layout(snapshot, root: root.path)
         search(index, root: root.path)
+        try exactPaths(index, policy: policy, in: scratch)
         try live(index, root: root, policy: policy)
         try folders(in: scratch)
 
@@ -85,10 +86,72 @@ struct FileIndexTests {
         expect(names(index, "report", filter: .images).isEmpty, "the filter narrows")
         expect(names(index, "beach", filter: .images) == ["beach.png"], "an image is an image")
         expect(names(index, "app", filter: .folders) == ["app"], "Folders keeps folders only")
+        expect(paths(index, root + "/Documents/") == ["~/Documents"], "a pasted path lists that place")
+        expect(
+            paths(index, "~/Documents/notes.txt") == ["~/Documents/notes.txt"],
+            "a tilde path is home, listed once though the index finds it too")
+        expect(
+            paths(index, "file://" + root + "/Movies") == ["~/Movies"],
+            "a typed path opens even where the index never looks")
+        expect(paths(index, root + "/Missing").isEmpty, "a path that is not there lists nothing")
+        expect(
+            names(index, root + "/Pictures/beach.png", filter: .documents).isEmpty,
+            "the filter applies to a typed path too")
+        expect(
+            paths(index, "Documents/Archive/todo") == ["~/Documents/Archive/todo.md"],
+            "part of a path searches through folders")
         let recent = index.recent(filter: .all).map(\.name)
         expect(recent.contains("notes.txt"), "recent lists files under home")
         expect(!recent.contains("config"), "recent leaves hidden files out")
         expect(index.itemCount == 15, "the count matches the snapshot")
+    }
+
+    static func exactPaths(_ index: FileIndex, policy: FileSearchPolicy, in scratch: URL) throws {
+        let fm = FileManager.default
+        let directory = URL(filePath: realPath(scratch.path), directoryHint: .isDirectory)
+        let alternate = policy.homeDirectory.appending(path: "documents/NOTES.TXT").path
+        if fm.fileExists(atPath: alternate) {
+            expect(
+                paths(index, "~/documents/NOTES.TXT") == ["~/Documents/notes.txt"],
+                "the spelling on disk deduplicates a case-insensitive match")
+        }
+
+        let nested = directory.appending(path: "Actual/Nested")
+        let report = directory.appending(path: "Actual/Report.txt")
+        let otherReport = directory.appending(path: "Report.txt")
+        let link = directory.appending(path: "Link")
+        try fm.createDirectory(at: nested, withIntermediateDirectories: true)
+        try write(report)
+        try write(otherReport)
+        try fm.createSymbolicLink(at: link, withDestinationURL: nested)
+
+        func ids(_ index: FileIndex, _ query: String) -> [String] {
+            guard let prepared = FileSearchQuery.prepare(query) else { return [] }
+            return index.search(prepared, filter: .all).map(\.id)
+        }
+        expect(ids(index, "/") == ["/"], "the root is itself a result")
+        expect(ids(index, "~/") == [policy.homeDirectory.path], "home is itself a result")
+        expect(
+            ids(index, link.path + "/../Report.txt") == [report.path],
+            "the filesystem follows the symlink before taking its parent")
+        expect(ids(index, link.path) == [link.path], "an action on a symlink keeps the link as its target")
+        expect(
+            ids(index, directory.path + "/Missing/../Report.txt").isEmpty,
+            "a nonexistent intermediate folder cannot produce an exact result")
+        expect(ids(index, otherReport.path + "/").isEmpty, "a trailing slash requires a directory")
+        expect(
+            ids(index, otherReport.absoluteString + "%00extra").isEmpty,
+            "a decoded NUL cannot turn a URL into another file")
+        expect(
+            ids(index, "file://other-mac.example" + otherReport.path).isEmpty,
+            "a remote file URL cannot return the local path")
+
+        let unmapped = FileIndex()
+        unmapped.replace(with: nil, policy: policy)
+        expect(ids(unmapped, otherReport.path) == [otherReport.path], "exact lookup works before a crawl")
+        expect(ids(unmapped, "Report").isEmpty, "name search still requires a snapshot")
+        unmapped.replace(with: nil, policy: nil)
+        expect(ids(unmapped, otherReport.path).isEmpty, "resetting access also clears exact lookup")
     }
 
     static func live(_ index: FileIndex, root: URL, policy: FileSearchPolicy) throws {
