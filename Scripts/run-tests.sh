@@ -550,7 +550,6 @@ run DeepLinkTests          Tinycast/Features/DeepLinks/Model/DeepLink.swift \
                            Tinycast/Features/WindowManagement/Model/RoomLayoutEngine.swift \
                            Tinycast/Features/WindowManagement/Model/RoomGrid.swift \
                            Tinycast/Features/WindowManagement/Model/RoomWindow.swift \
-                           Tinycast/Features/WindowManagement/Model/RoomLiveWindow.swift \
                            Tinycast/Features/WindowManagement/Model/Room.swift \
                            Tinycast/Features/WindowManagement/Model/CustomWindowSize.swift \
                            Tinycast/Platform/LocalizedResource.swift \
@@ -567,7 +566,6 @@ run WindowRoomTests        Tinycast/Features/WindowManagement/Model/WindowComman
                            Tinycast/Features/WindowManagement/Model/RoomLayoutEngine.swift \
                            Tinycast/Features/WindowManagement/Model/RoomGrid.swift \
                            Tinycast/Features/WindowManagement/Model/RoomWindow.swift \
-                           Tinycast/Features/WindowManagement/Model/RoomLiveWindow.swift \
                            Tinycast/Features/WindowManagement/Model/Room.swift \
                            Tinycast/Features/WindowManagement/Model/RoomWindowMatcher.swift \
                            Tinycast/Features/WindowManagement/Model/RoomParking.swift \
@@ -587,7 +585,6 @@ run WindowFileTests        Tinycast/Features/WindowManagement/Model/WindowComman
                            Tinycast/Features/WindowManagement/Model/CustomWindowSize.swift \
                            Tinycast/Features/WindowManagement/Model/Room.swift \
                            Tinycast/Features/WindowManagement/Model/RoomWindow.swift \
-                           Tinycast/Features/WindowManagement/Model/RoomLiveWindow.swift \
                            Tinycast/Features/WindowManagement/Model/RoomLayoutKind.swift \
                            Tinycast/Features/WindowManagement/Model/RoomGrid.swift \
                            Tinycast/Features/WindowManagement/Model/RoomLayoutEngine.swift \
@@ -763,7 +760,6 @@ run BackupArchiveTests     Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/WindowManagement/Model/RoomLayoutEngine.swift \
                            Tinycast/Features/WindowManagement/Model/RoomGrid.swift \
                            Tinycast/Features/WindowManagement/Model/RoomWindow.swift \
-                           Tinycast/Features/WindowManagement/Model/RoomLiveWindow.swift \
                            Tinycast/Features/WindowManagement/Model/Room.swift \
                            Tinycast/Features/WindowManagement/Model/CustomWindowSize.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyBinding.swift \

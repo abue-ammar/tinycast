@@ -240,8 +240,6 @@ final class LauncherCoordinator {
             core.roomCoordinator.enterPreviousRoom()
         case .tidyCurrentRoom:
             core.roomCoordinator.tidyCurrentRoom()
-        case .addWindowToCurrentRoom:
-            core.roomCoordinator.addFocusedWindowToCurrentRoom()
         case .createQuicklink:
             quicklinkCoordinator.editQuicklink(nil)
         case .createCustomCommand:

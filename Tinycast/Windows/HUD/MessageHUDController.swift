@@ -6,12 +6,9 @@ final class MessageHUDController {
     private let presenter: HUDPresenter
     private let settings: AppSettings
 
-    init(settings: AppSettings) {
+    init(settings: AppSettings, presenter: HUDPresenter) {
         self.settings = settings
-        presenter = HUDPresenter(
-            anchor: .edgeInset(Theme.Size.hudEdgeOffset),
-            dwell: Theme.Duration.messageHUD,
-            screen: { settings.openOnCursorScreen ? .underCursor : .primary })
+        self.presenter = presenter
     }
 
     func show(message: String, tone: DialogTone = .success) {

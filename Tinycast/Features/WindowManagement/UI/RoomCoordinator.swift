@@ -40,7 +40,7 @@ final class RoomCoordinator {
         session: RoomSession, settings: AppSettings, appIndex: AppIndex, hotKeys: HotKeyManager,
         favorites: FavoritesStore, visibility: VisibilityStore, ranking: LauncherRankingStore,
         aliases: AliasStore, palette: PaletteState, paletteCoordinator: PaletteCoordinator,
-        core: AppCore
+        hud: RoomHUDController, core: AppCore
     ) {
         self.store = store
         self.minimums = minimums
@@ -55,12 +55,12 @@ final class RoomCoordinator {
         self.aliases = aliases
         self.palette = palette
         self.paletteCoordinator = paletteCoordinator
+        self.hud = hud
         self.core = core
-        hud = RoomHUDController(settings: settings)
     }
 
     private static let commands: Set<CommandID> = [
-        .switchRoom, .createRoom, .switchToPreviousRoom, .tidyCurrentRoom, .addWindowToCurrentRoom
+        .switchRoom, .createRoom, .switchToPreviousRoom, .tidyCurrentRoom
     ]
 
     // MARK: - Feature presence
@@ -278,41 +278,6 @@ final class RoomCoordinator {
     /// Entering again puts every window back in its spot and steps the rest back once more.
     func tidyCurrentRoom() {
         enqueueEntry { $0.currentRoomForCommand() }
-    }
-
-    /// The focused app's front window joins the current room, which then tidies around it.
-    func addFocusedWindowToCurrentRoom() {
-        guard settings.windowManagementEnabled else { return }
-        let focused =
-            Permissions.isAccessibilityTrusted()
-            ? paletteCoordinator.targetApp.flatMap(RoomWindowSweep.focusedWindow(of:)) : nil
-        enqueueEntry { $0.addFocusedWindow(focused) }
-    }
-
-    private func addFocusedWindow(_ focused: WindowInventory.Element?) -> Room? {
-        guard let room = currentRoomForCommand() else { return nil }
-        guard Permissions.ensureAccessibility() else {
-            Task { await reportPermissionFailure() }
-            return nil
-        }
-        guard let window = focused.flatMap(RoomWindowSweep.member(for:)) else {
-            core.showMessage(String(localized: "No window to add"), tone: .neutral)
-            return nil
-        }
-        let openWindowIDs = RoomWindowSweep.openWindowIDs(for: window.bundleID)
-        guard !room.holds(window, openWindowIDs: openWindowIDs) else {
-            core.showMessage(String(localized: "This window is already in \(room.name)"), tone: .neutral)
-            return nil
-        }
-        let updated = room.adding(window)
-        do {
-            try store.update(updated)
-        } catch {
-            core.showMessage(
-                error.errorDescription ?? String(localized: "Couldn't save the room"), tone: .danger)
-            return nil
-        }
-        return store.room(id: updated.id)
     }
 
     private func currentRoomForCommand() -> Room? {

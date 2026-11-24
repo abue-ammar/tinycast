@@ -29,48 +29,6 @@ enum RoomWindowSweep {
         }
     }
 
-    static func focusedWindow(of app: NSRunningApplication) -> WindowInventory.Element? {
-        guard app.activationPolicy == .regular, !app.isTerminated, !app.isHidden,
-            let bundleID = app.bundleIdentifier, bundleID != Bundle.main.bundleIdentifier
-        else { return nil }
-        let application = AXWindowAccess.application(for: app.processIdentifier, timeout: sweepTimeout)
-        guard let window = AXWindowAccess.element(application, kAXFocusedWindowAttribute)
-        else { return nil }
-        AXUIElementSetMessagingTimeout(window, sweepTimeout)
-        return WindowInventory.Element(
-            bundleID: bundleID, app: app, application: application, window: window)
-    }
-
-    static func member(for element: WindowInventory.Element) -> RoomWindow? {
-        let window = element.window
-        let app = element.app
-        guard !app.isTerminated, !app.isHidden, AXWindowAccess.bool(window, kAXMinimizedAttribute) != true,
-            let frame = roomFrame(of: window, app: app, minimized: false)
-        else { return nil }
-        let geometry = AXGeometry(screens: NSScreen.screens)
-        let screens = AXScreens.layoutScreens(geometry: geometry).map(\.screen)
-        guard let screen = WindowPlacementEngine.screen(containing: frame, in: screens)
-        else { return nil }
-        return RoomWindow(
-            bundleID: element.bundleID, appName: app.localizedName ?? element.bundleID,
-            title: AXWindowAccess.string(window, kAXTitleAttribute) ?? "",
-            windowID: AXWindowAccess.windowID(of: window),
-            unitFrame: RoomWindow.unitFrame(of: frame, in: screen.visibleFrame))
-    }
-
-    static func openWindowIDs(for bundleID: String) -> Set<UInt32> {
-        var ids = Set<UInt32>()
-        for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
-        where !app.isTerminated {
-            let application = AXWindowAccess.application(for: app.processIdentifier, timeout: sweepTimeout)
-            for window in reportedWindows(of: application, app: app) {
-                AXUIElementSetMessagingTimeout(window, sweepTimeout)
-                if let id = AXWindowAccess.windowID(of: window) { ids.insert(id) }
-            }
-        }
-        return ids
-    }
-
     static func snapshot() -> Snapshot {
         let geometry = AXGeometry(screens: NSScreen.screens)
         let ranks = frontRanks()
@@ -83,7 +41,9 @@ enum RoomWindowSweep {
             for window in reportedWindows(of: application, app: app) {
                 AXUIElementSetMessagingTimeout(window, sweepTimeout)
                 let minimized = AXWindowAccess.bool(window, kAXMinimizedAttribute) == true
-                guard let frame = roomFrame(of: window, app: app, minimized: minimized)
+                guard isRoomWindow(window, of: app, minimized: minimized),
+                    let frame = AXWindowAccess.frame(of: window),
+                    frame.width >= smallest.width, frame.height >= smallest.height
                 else { continue }
                 let handle = windows.count
                 let windowID = AXWindowAccess.windowID(of: window)
@@ -101,16 +61,6 @@ enum RoomWindowSweep {
         return Snapshot(
             screens: AXScreens.layoutScreens(geometry: geometry), windows: windows,
             elements: elements)
-    }
-
-    private static func roomFrame(
-        of window: AXUIElement, app: NSRunningApplication, minimized: Bool
-    ) -> CGRect? {
-        guard isRoomWindow(window, of: app, minimized: minimized),
-            let frame = AXWindowAccess.frame(of: window),
-            frame.width >= smallest.width, frame.height >= smallest.height
-        else { return nil }
-        return frame
     }
 
     /// A web-based app can list no windows until asked through accessibility; ask, then stop.

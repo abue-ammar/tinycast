@@ -36,7 +36,6 @@ enum CommandID: String, CaseIterable, Codable, Sendable {
     case createRoom = "command:create-room"
     case switchToPreviousRoom = "command:switch-to-previous-room"
     case tidyCurrentRoom = "command:tidy-current-room"
-    case addWindowToCurrentRoom = "command:add-window-to-current-room"
     case createQuicklink = "command:create-quicklink"
     case searchQuicklinks = "command:search-quicklinks"
     case importQuicklinks = "command:import-quicklinks"
@@ -114,7 +113,6 @@ enum CommandID: String, CaseIterable, Codable, Sendable {
         case .createRoom: return "Create Room"
         case .switchToPreviousRoom: return "Switch to Previous Room"
         case .tidyCurrentRoom: return "Tidy Current Room"
-        case .addWindowToCurrentRoom: return "Add Window to Current Room"
         case .createQuicklink: return "Create Quicklink"
         case .searchQuicklinks: return "Search Quicklinks"
         case .importQuicklinks: return "Import Quicklinks"
@@ -165,7 +163,6 @@ enum CommandID: String, CaseIterable, Codable, Sendable {
         case .createRoom: return "rectangle.stack.fill.badge.plus"
         case .switchToPreviousRoom: return "arrowshape.turn.up.backward.fill"
         case .tidyCurrentRoom: return "rectangle.grid.2x2.fill"
-        case .addWindowToCurrentRoom: return "rectangle.fill.badge.plus"
         case .createQuicklink: return "link.badge.plus"
         case .searchQuicklinks: return Quicklink.sfSymbol
         case .importQuicklinks: return "square.and.arrow.down.fill"
@@ -202,7 +199,7 @@ enum CommandID: String, CaseIterable, Codable, Sendable {
             return .red
         case .showNotes, .createNote, .searchNotes: return .yellow
         case .createWindowLayout, .captureWindowLayout, .switchRoom, .createRoom,
-            .switchToPreviousRoom, .tidyCurrentRoom, .addWindowToCurrentRoom:
+            .switchToPreviousRoom, .tidyCurrentRoom:
             return .mint
         case .exportSettings, .importSettings, .importFromRaycast: return .cyan
         case .support: return .pink

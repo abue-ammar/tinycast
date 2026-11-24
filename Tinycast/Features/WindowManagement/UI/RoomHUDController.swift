@@ -9,12 +9,9 @@ final class RoomHUDController {
     private let settings: AppSettings
     private let presenter: HUDPresenter
 
-    init(settings: AppSettings) {
+    init(settings: AppSettings, presenter: HUDPresenter) {
         self.settings = settings
-        presenter = HUDPresenter(
-            anchor: .edgeInset(Theme.Size.hudEdgeOffset),
-            dwell: Theme.Duration.messageHUD,
-            screen: { settings.openOnCursorScreen ? .underCursor : .primary })
+        self.presenter = presenter
     }
 
     func show(_ room: Room) {

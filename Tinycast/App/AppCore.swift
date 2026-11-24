@@ -155,7 +155,8 @@ final class AppCore {
         store: rooms, minimums: roomMinimums, ledger: roomParking, session: roomSession,
         settings: settings, appIndex: appIndex, hotKeys: hotKeys, favorites: favorites,
         visibility: visibility, ranking: launcherRanking, aliases: aliases, palette: palette,
-        paletteCoordinator: paletteCoordinator, core: self)
+        paletteCoordinator: paletteCoordinator,
+        hud: RoomHUDController(settings: settings, presenter: pillPresenter), core: self)
     @ObservationIgnored private(set) lazy var customCommandCoordinator = CustomCommandCoordinator(
         store: customCommands, settings: settings, appIndex: appIndex,
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
@@ -249,7 +250,12 @@ final class AppCore {
         core: self)
 
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
-    @ObservationIgnored private lazy var messageHUD = MessageHUDController(settings: settings)
+    /// Every pill shares this panel, so a later one replaces the earlier rather than stacking.
+    @ObservationIgnored private lazy var pillPresenter = HUDPresenter(
+        anchor: .edgeInset(Theme.Size.hudEdgeOffset), dwell: Theme.Duration.messageHUD,
+        screen: { [settings] in settings.openOnCursorScreen ? .underCursor : .primary })
+    @ObservationIgnored private lazy var messageHUD = MessageHUDController(
+        settings: settings, presenter: pillPresenter)
     private(set) var isShowingDialog = false
     /// A link that launched the app can arrive before `start` wires anything; it waits, then runs.
     @ObservationIgnored private var pendingURLs: [URL]? = []

@@ -44,28 +44,6 @@ struct Room: Codable, Hashable, Identifiable, Sendable {
         return room
     }
 
-    func holds(_ window: RoomWindow, openWindowIDs: Set<UInt32>) -> Bool {
-        windows.contains { member in
-            guard member.bundleID == window.bundleID else { return false }
-            if let id = member.windowID {
-                if id == window.windowID { return true }
-                if openWindowIDs.contains(id) { return false }
-            }
-            return !member.title.isEmpty && member.title == window.title
-        }
-    }
-
-    /// `window` takes the place of a member standing for its whole app, or else joins last.
-    func adding(_ window: RoomWindow) -> Room {
-        var room = self
-        if let index = windows.firstIndex(where: { $0.bundleID == window.bundleID && $0.isWholeApp }) {
-            room.windows[index] = window
-        } else {
-            room.windows.append(window)
-        }
-        return room
-    }
-
     var summary: String { String(localized: "\(windows.count) windows") }
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
