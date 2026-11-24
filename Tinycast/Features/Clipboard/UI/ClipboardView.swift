@@ -164,6 +164,8 @@ private struct ClipboardRow: View {
         .background(
             RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
                 .fill(fill)
+                // A hairline between rows keeps a ⇧ range four shapes, not one slab.
+                .padding(.vertical, metrics.scaled(Theme.Size.hairline))
         )
         .armedHover($hovered)
     }
