@@ -54,6 +54,7 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
 | `Model/RoomWindowMatcher.swift`                                | **Pure.** Which open window fills which room window                        |
 | `Model/RoomParking.swift`                                      | **Pure.** The parking corner and the way back on a connected display       |
 | `Model/RoomPlan.swift`                                         | **Pure.** What entering does, and the layouts Tab offers                   |
+| `Model/RoomLiveWindow.swift`                                   | One open window as the sweep read it, by handle rather than `AXUIElement`  |
 | `Model/RoomStore.swift`                                        | The library, as JSON in `UserDefaults` (`windowRooms`)                     |
 | `Model/RoomMinimumSizeStore.swift`                             | Minimum sizes learned by trying (`roomMinimumWindowSizes`)                 |
 | `Model/RoomParkingLedger.swift`                                | Parked windows' ways back, `room-parking.json` in Application Support      |
@@ -64,6 +65,7 @@ under its MIT licence; [NOTICE.md](../../NOTICE.md) lists the adapted files.
 | `UI/RoomsScreen.swift`, `RoomsList.swift`                      | Switch Room                                                                |
 | `UI/RoomPickerScreen.swift`, `RoomPickerList.swift`            | Choosing a room's windows                                                  |
 | `UI/RoomPreviewController.swift`, `RoomPreviewView.swift`      | The gliding preview                                                        |
+| `UI/RoomHUDController.swift`, `RoomHUDView.swift`              | The pill naming a room entered with no preview                             |
 | `Settings/RoomsSection.swift`                                  | The Rooms section of Settings › Window Management                          |
 
 ## Layouts
@@ -144,10 +146,33 @@ and Settings' Enter button. It hides the palette with `restoreFocus: false`, the
 6. After 250 ms, re-places a window that applied its frame late or bounced (once, never a loop)
    and forgets the ledger entries of windows confirmed back.
 
-A clean enter says nothing; a missing window names its app in a message, and a room with no open
-window is a notice, and steps nothing back, since hiding everything around an empty room would
+A clean enter from the Rooms screen says nothing, since the preview already showed it; any other
+clean enter shows the [room HUD](#the-current-room). A missing window names its app in a message,
+and a room with no open window is a notice, and steps nothing back, since hiding everything around an empty room would
 leave an empty desk. Switching the feature off unhides the apps rooms hid first and waits for them
 to come back before returning parked windows.
+
+## The current room
+
+`currentRoomID` is the room last entered this session; it is not persisted, so after a relaunch
+there is none until a room is entered. Three commands act on it, each a hotkey-able launcher row:
+
+- **Switch to Previous Room** enters `Room.previous(to:in:)`: the room entered most recently other
+  than the current one, so pressing it twice goes back and forth. With no current room it is the last
+  room entered.
+- **Tidy Current Room** enters the current room again, which puts every window back in its spot and
+  steps everything else back once more.
+- **Add Window to Current Room** takes the front window of `PaletteCoordinator.targetApp` from a
+  fresh sweep, then tidies the room so it gets a spot. The window fills a member that names only its
+  app (`RoomWindow.isWholeApp`), or else joins last. `Room.holds` refuses a window the room already
+  has, matched by its number or its exact title, never by app alone. A `.custom` layout falls back to
+  Auto until Remember Arrangement gives the new window a cell.
+
+The **room HUD** is `RoomHUDController`'s own `HUDPresenter`, at the message pill's anchor and dwell:
+the door glyph, the room's name and up to six of its apps' icons. It shows only after a clean enter
+the preview did not announce: a shortcut, a launcher row, Settings' Enter button or the three
+commands above. A failed or partial enter reports through the message pill instead, so one enter
+never shows both.
 
 ## Wiring
 
@@ -155,8 +180,9 @@ to come back before returning parked windows.
   between the window-layout and window-command slices; `LauncherList.rows` mirrors that order.
 - **`HotKeyAction.windowRoom(id:)`**, persisted under `hotkey.windowRoom.<uuid>` with a
   `boundWindowRoomIDs` index, dispatched to `enterRoom(id:)`.
-- **Commands**: Switch Room and Create Room, owned by
-  `SettingsTab.windowManagement` and gated with the feature.
+- **Commands**: Switch Room, Create Room, Switch to Previous Room, Tidy Current Room and Add Window
+  to Current Room, owned by `SettingsTab.windowManagement` and gated with the feature. The last three
+  move windows, so a deeplink to one asks first.
 - **Settings**: `windowRoomsShowInLauncher` (on), which also dims each room row's alias field. Rooms
   and their shortcuts ride in settings backups; learned minimum sizes and the ledger do not: one is
   a cache, the other this Mac's state.
@@ -169,8 +195,9 @@ to come back before returning parked windows.
 minimum sizes, Auto's choice, Stack's peeks, a sampled sweep that a fitting layout never overlaps
 or leaves the canvas), gap 0 and gapped tiling, absurd and non-finite gaps, the grid and its hole
 filling, arrangement reading and learning, window matching, parking corners and ways back, the
-plan's placements, parks and fallbacks, Tab's choices, the record's Codable, and all three stores
-with a scratch suite and a temporary directory.
+plan's placements, parks and fallbacks, Tab's choices, the record's Codable, going back to the
+previous room, a window joining a room, and all three stores with a scratch suite and a temporary
+directory.
 
 `RoomWindowSweep`, `RoomRunner` and the preview need the manual sweep in
 [testing.md](../testing.md#manual-regression-sweep): make a room from the palette; Tab through its

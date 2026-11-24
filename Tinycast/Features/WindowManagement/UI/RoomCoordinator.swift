@@ -21,6 +21,7 @@ final class RoomCoordinator {
     /// Dialog and message-HUD presentation. Never state this type owns.
     @ObservationIgnored private unowned let core: AppCore
     @ObservationIgnored private let preview = RoomPreviewController()
+    @ObservationIgnored private let hud: RoomHUDController
     /// Window work runs one at a time, in order: two passes at once would undo each other.
     @ObservationIgnored private var work: Task<Void, Never>?
     /// Set while ↵ has handed the preview to the windows moving in under it.
@@ -56,9 +57,12 @@ final class RoomCoordinator {
         self.palette = palette
         self.paletteCoordinator = paletteCoordinator
         self.core = core
+        hud = RoomHUDController(settings: settings)
     }
 
-    private static let commands: Set<CommandID> = [.switchRoom, .createRoom]
+    private static let commands: Set<CommandID> = [
+        .switchRoom, .createRoom, .switchToPreviousRoom, .tidyCurrentRoom, .addWindowToCurrentRoom
+    ]
 
     // MARK: - Feature presence
 
@@ -210,7 +214,8 @@ final class RoomCoordinator {
     func enterRoom(id: UUID) {
         guard settings.windowManagementEnabled, let room = store.room(id: id) else { return }
         // The preview holds while the windows move in under it, then fades.
-        isEntering = preview.isShowing
+        let isPreviewed = preview.isShowing
+        isEntering = isPreviewed
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
         let context = RoomRunner.Context(
             gap: gap, displayUUID: targetDisplayUUID,
@@ -227,6 +232,7 @@ final class RoomCoordinator {
                 self.store.markEntered(id: room.id, at: Date())
             }
             await self.report(outcome, for: room)
+            if outcome.isClean, !isPreviewed { self.hud.show(room) }
         }
     }
 
@@ -237,6 +243,60 @@ final class RoomCoordinator {
             guard !Task.isCancelled else { return }
             await body()
         }
+    }
+
+    // MARK: - The current room
+
+    func enterPreviousRoom() {
+        guard settings.windowManagementEnabled else { return }
+        guard let room = Room.previous(to: currentRoomID, in: store.rooms) else {
+            core.showMessage(String(localized: "No room to go back to"), tone: .neutral)
+            return
+        }
+        enterRoom(id: room.id)
+    }
+
+    /// Entering again puts every window back in its spot and steps the rest back once more.
+    func tidyCurrentRoom() {
+        guard settings.windowManagementEnabled else { return }
+        guard let room = currentRoom else { return currentRoomIsMissing() }
+        enterRoom(id: room.id)
+    }
+
+    /// The focused app's front window joins the current room, which then tidies around it.
+    func addFocusedWindowToCurrentRoom() {
+        guard settings.windowManagementEnabled else { return }
+        guard let room = currentRoom else { return currentRoomIsMissing() }
+        guard Permissions.ensureAccessibility() else {
+            Task { await reportPermissionFailure() }
+            return
+        }
+        let snapshot = RoomWindowSweep.snapshot()
+        guard let bundleID = paletteCoordinator.targetApp?.bundleIdentifier,
+            let window = snapshot.frontWindow(of: bundleID),
+            let visible = snapshot.visibleFrame(holding: window)
+        else {
+            core.showMessage(String(localized: "No window to add"), tone: .neutral)
+            return
+        }
+        guard !room.holds(window) else {
+            core.showMessage(String(localized: "This window is already in \(room.name)"), tone: .neutral)
+            return
+        }
+        do {
+            try store.update(room.adding(RoomWindow(window, in: visible)))
+        } catch {
+            core.showMessage(
+                error.errorDescription ?? String(localized: "Couldn't save the room"), tone: .danger)
+            return
+        }
+        enterRoom(id: room.id)
+    }
+
+    private var currentRoom: Room? { currentRoomID.flatMap(store.room(id:)) }
+
+    private func currentRoomIsMissing() {
+        core.showMessage(String(localized: "Enter a room first"), tone: .neutral)
     }
 
     // MARK: - Making and editing rooms

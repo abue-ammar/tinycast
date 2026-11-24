@@ -128,6 +128,7 @@ struct WindowRoomTests {
         planning()
         layoutChoices()
         roomRecord()
+        joiningARoom()
         storeCRUD()
         minimumSizeStore()
         parkingLedger()
@@ -783,6 +784,15 @@ struct WindowRoomTests {
         expect(
             [older, never, newer].sorted(by: Room.enteredMoreRecently).map(\.name) == ["A", "B", "0"],
             "most recent first")
+        expect(
+            Room.previous(to: newer.id, in: [older, never, newer])?.name == "B",
+            "going back skips the current room")
+        expect(
+            Room.previous(to: nil, in: [older, never, newer])?.name == "A",
+            "with no current room, going back enters the last one entered")
+        expect(
+            Room.previous(to: newer.id, in: [never, newer]) == nil,
+            "a room never entered is nowhere to go back to")
 
         let learned = Room(
             name: "Design", windows: [window("figma", id: 12), window("notes", id: 13)],
@@ -797,6 +807,38 @@ struct WindowRoomTests {
         expect(
             edited.windows.map(\.windowID) == [12, nil],
             "a window's number returns only to a window of the same app")
+    }
+
+    static func joiningARoom() {
+        let room = Room(
+            name: "Write",
+            windows: [
+                window("editor", title: "Draft", id: 4), window("notes"), window("mail", title: "Inbox")
+            ])
+        expect(room.holds(live(0, "editor", title: "Renamed", id: 4)), "a member is found by its number")
+        expect(room.holds(live(0, "mail", title: "Inbox", id: 9)), "a member is found by its exact title")
+        expect(
+            !room.holds(live(0, "notes", title: "Ideas", id: 5)), "a whole-app member holds no one window")
+        expect(!room.holds(live(0, "browser", title: "Draft", id: 4)), "another app's window is never held")
+
+        let visible = CGRect(x: 0, y: 25, width: 2000, height: 1000)
+        let ideas = RoomWindow(
+            live(0, "notes", title: "Ideas", id: 5, frame: CGRect(x: 500, y: 525, width: 1000, height: 500)),
+            in: visible)
+        expectRect(
+            ideas.unitFrame, CGRect(x: 0.25, y: 0.5, width: 0.5, height: 0.5),
+            "a joining window keeps its spot as a fraction of its display")
+        let filled = room.adding(ideas)
+        expect(
+            filled.windows.map(\.bundleID) == ["editor", "notes", "mail"] && filled.windows[1] == ideas,
+            "a window takes its app's whole-app place")
+        let joined = room.adding(RoomWindow(live(0, "browser", title: "Docs", id: 6), in: visible))
+        expect(
+            joined.windows.map(\.bundleID) == ["editor", "notes", "mail", "browser"],
+            "a window of a new app joins last")
+        expect(
+            filled.adding(RoomWindow(live(0, "notes", title: "Todo", id: 7), in: visible)).windows.count == 4,
+            "a second window of an app already placed joins last")
     }
 
     static func storeCRUD() {

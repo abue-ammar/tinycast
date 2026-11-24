@@ -27,6 +27,18 @@ enum RoomWindowSweep {
             let uuid = uuid?.lowercased()
             return screens.first { $0.display.uuid == uuid } ?? screens.first
         }
+
+        /// The app's window nearest the front, skipping minimized ones and a hidden app's.
+        func frontWindow(of bundleID: String) -> RoomLiveWindow? {
+            windows.filter { $0.bundleID == bundleID && !$0.isMinimized && !$0.isAppHidden }
+                .min { $0.frontRank < $1.frontRank }
+        }
+
+        /// The visible frame of the display holding `window`, which its stored spot is relative to.
+        func visibleFrame(holding window: RoomLiveWindow) -> CGRect? {
+            WindowPlacementEngine.screen(containing: window.frame, in: screens.map(\.screen))?
+                .visibleFrame
+        }
     }
 
     static func snapshot() -> Snapshot {

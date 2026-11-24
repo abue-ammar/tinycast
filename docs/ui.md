@@ -61,8 +61,8 @@ These are the things that quietly break the look if changed. Preserve them unles
   Native launcher forms save with **⌘↵**; a textarea keeps Return for line breaks.
 - **In the palette, a hover label is Tinycast's `tooltip`, never `.help()`**: an AppKit tooltip never appears while the app sits inactive behind the non-activating panel. A Settings window activates the app, so `.help()` shows there and stays the label to use. The tooltip hangs above its control by default; a control in the palette header passes `edge: .bottom`, since above it is off the window, and a label may run to several lines: the chat's attachment pill lists every staged name.
   Native form controls opt into `dismissOnPress` to hide the label until the next hover.
-- **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; every other success or info confirmation goes through `MessageHUDController`'s pill, whose leading glyph _is_ its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it, and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
-- **Glass is for floating controls, with dialogs as the deliberate modal exception.** The action capsule, menu circle and `PopoverMenu` use it inside the palette; dialogs apply one system `.glassEffect(.regular)` to their root surface. Dialog buttons stay matte so their roles remain legible. Both HUDs keep the lighter `panelScrim` → `GlassEffectView()` → `clipShape` recipe.
+- **A transient readout is a HUD, not a dialog.** `VolumeHUDController`'s box is volume and mute only, since that one needs an actual level and number; the room just entered is `RoomHUDController`'s pill, which names its subject; every other success or info confirmation goes through `MessageHUDController`'s pill, whose leading glyph _is_ its `DialogTone`. A pill has no subject to name, so the icon rule above does not apply to it, and that mapping stays file-scoped so nothing can reach for it when building a `DialogRequest`. A new HUD means a new presenter, not a second shape bolted onto an existing controller.
+- **Glass is for floating controls, with dialogs as the deliberate modal exception.** The action capsule, menu circle and `PopoverMenu` use it inside the palette; dialogs apply one system `.glassEffect(.regular)` to their root surface. Dialog buttons stay matte so their roles remain legible. Every HUD keeps the lighter `panelScrim` → `GlassEffectView()` → `clipShape` recipe.
 
 ---
 
@@ -664,9 +664,13 @@ alike.
   dwell, so it is shown with `dwells: false` and stays up until something replaces it or
   `HUDPresenter.dismiss()` runs; the caller owns that, and `QuickActionCoordinator.produce` pairs the
   two with a `defer` so a throw or a cancellation cannot strand it.
-- **`HUDPresenter`** is what keeps those two controllers from duplicating each other: one panel at a
+- **`RoomHUDController`'s pill** has the message pill's capsule, anchor and dwell, but leads with
+  the room's door glyph in `Color.primary`, then its name and up to six app icons at `menuIcon`
+  size. It names a subject rather than a tone, so it has no glow or rim. It lives in
+  `Features/WindowManagement/UI/`; see [window-rooms.md](features/window-rooms.md#the-current-room).
+- **`HUDPresenter`** is what keeps those controllers from duplicating each other: one panel at a
   time, replace rather than stack, fade in, sit out its dwell, fade away, centred horizontally on
-  a screen. The two HUDs differ only in their content, their anchor (`edgeInset(hudEdgeOffset 48)` for
+  a screen. The HUDs differ only in their content, their anchor (`edgeInset(hudEdgeOffset 48)` for
   the pill, `heightFraction(0.12)` for the box) and how long they dwell, so those are the presenter's
   three arguments. **It sizes its window from a local, never from `host.frame` after attaching the
   content view**: assigning a content view resizes it to the window's current content rect, which is
