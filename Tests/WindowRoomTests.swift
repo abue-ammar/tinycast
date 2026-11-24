@@ -815,11 +815,25 @@ struct WindowRoomTests {
             windows: [
                 window("editor", title: "Draft", id: 4), window("notes"), window("mail", title: "Inbox")
             ])
-        expect(room.holds(live(0, "editor", title: "Renamed", id: 4)), "a member is found by its number")
-        expect(room.holds(live(0, "mail", title: "Inbox", id: 9)), "a member is found by its exact title")
         expect(
-            !room.holds(live(0, "notes", title: "Ideas", id: 5)), "a whole-app member holds no one window")
-        expect(!room.holds(live(0, "browser", title: "Draft", id: 4)), "another app's window is never held")
+            room.holds(window("editor", title: "Renamed", id: 4), openWindowIDs: [4]),
+            "a member is found by its number")
+        let secondDraft = window("editor", title: "Draft", id: 7)
+        expect(
+            !room.holds(secondDraft, openWindowIDs: [4, 7]),
+            "two open windows with the same title are distinct")
+        expect(
+            room.holds(secondDraft, openWindowIDs: [7]),
+            "the exact title finds a member once its old window is closed")
+        expect(
+            room.holds(window("mail", title: "Inbox", id: 9), openWindowIDs: [9]),
+            "a member saved without a number can be found by title")
+        expect(
+            !room.holds(window("notes", title: "Ideas", id: 5), openWindowIDs: [5]),
+            "a whole-app member holds no one window")
+        expect(
+            !room.holds(window("browser", title: "Draft", id: 4), openWindowIDs: [4]),
+            "another app's window is never held")
 
         let visible = CGRect(x: 0, y: 25, width: 2000, height: 1000)
         let ideas = RoomWindow(

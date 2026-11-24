@@ -129,8 +129,8 @@ flip. The panels are released on hide, so memory returns to baseline with the pa
 
 ## Entering a room
 
-`RoomCoordinator.enterRoom(id:)` is the one funnel for a Rooms row, a launcher entry, a shortcut
-and Settings' Enter button. It hides the palette with `restoreFocus: false`, then `RoomRunner.enter`:
+`RoomCoordinator` queues room entries from the Rooms screen, the launcher, a shortcut or Settings.
+When an entry starts, it hides the palette with `restoreFocus: false`, then `RoomRunner.enter`:
 
 1. Prompts for Accessibility once, launches the room's apps that are not running, unhides the
    hidden ones and waits up to 600 ms for them to come back.
@@ -146,11 +146,11 @@ and Settings' Enter button. It hides the palette with `restoreFocus: false`, the
 6. After 250 ms, re-places a window that applied its frame late or bounced (once, never a loop)
    and forgets the ledger entries of windows confirmed back.
 
-A clean enter from the Rooms screen says nothing, since the preview already showed it; any other
-clean enter shows the [room HUD](#the-current-room). A missing window names its app in a message,
-and a room with no open window is a notice, and steps nothing back, since hiding everything around an empty room would
-leave an empty desk. Switching the feature off unhides the apps rooms hid first and waits for them
-to come back before returning parked windows.
+A clean enter shows the [room HUD](#the-current-room) unless the room's preview already announced
+it. The preview of another room fades when the entry starts. A missing window names its app in a
+message, and a room with no open window shows a notice and leaves the desk as it is. Switching the
+feature off unhides the apps rooms hid first and waits for them to come back before returning parked
+windows.
 
 ## The current room
 
@@ -159,14 +159,15 @@ there is none until a room is entered. Three commands act on it, each a hotkey-a
 
 - **Switch to Previous Room** enters `Room.previous(to:in:)`: the room entered most recently other
   than the current one, so pressing it twice goes back and forth. With no current room it is the last
-  room entered.
+  room entered. The command resolves the destination when its turn comes.
 - **Tidy Current Room** enters the current room again, which puts every window back in its spot and
   steps everything else back once more.
-- **Add Window to Current Room** takes the front window of `PaletteCoordinator.targetApp` from a
-  fresh sweep, then tidies the room so it gets a spot. The window fills a member that names only its
-  app (`RoomWindow.isWholeApp`), or else joins last. `Room.holds` refuses a window the room already
-  has, matched by its number or its exact title, never by app alone. A `.custom` layout falls back to
-  Auto until Remember Arrangement gives the new window a cell.
+- **Add Window to Current Room** captures the focused Accessibility window of
+  `PaletteCoordinator.targetApp`. When its turn comes, it checks that the captured window can join,
+  saves it and tidies the room. The window fills a member that names only its app
+  (`RoomWindow.isWholeApp`), or else joins last. `Room.holds` checks the window number first and falls
+  back to an exact title when the saved number no longer identifies an open window. A `.custom`
+  layout falls back to Auto until Remember Arrangement gives the new window a cell.
 
 The **room HUD** is `RoomHUDController`'s own `HUDPresenter`, at the message pill's anchor and dwell:
 the door glyph, the room's name and up to six of its apps' icons. It shows only after a clean enter

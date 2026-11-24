@@ -913,8 +913,11 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
   turning Window Management off each bring every window back.
   Repeat on two displays and with Reduce Motion on
 - Rooms by shortcut: entering one shows the room HUD (never with the preview); Switch to Previous
-  Room toggles between the last two; Tidy Current Room puts moved windows back; Add Window to Current
-  Room tiles the front window in, and a second press says it is already there
+  Room toggles between the last two, including two presses during the first transition. With a
+  different room previewed, the shortcut fades that preview and shows the destination HUD. Tidy
+  Current Room puts moved windows back. Add Window to Current Room accepts a second window of the
+  same app with the same title, and a repeat press on that window says it is already there. With a
+  fullscreen window focused, the command leaves the app's other windows out of the room
 
 ### Deeplinks
 

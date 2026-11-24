@@ -27,10 +27,12 @@ final class RoomPreviewController {
     private let model = RoomPreviewModel()
     private var panels: [RoomPreviewPanel] = []
 
+    private(set) var roomID: UUID?
     var isShowing: Bool { !panels.isEmpty }
 
     /// `cards` back to front; `avoiding` is the palette's frame in screen coordinates.
-    func show(_ cards: [RoomPreviewCard], avoiding: CGRect?) {
+    func show(_ cards: [RoomPreviewCard], roomID: UUID? = nil, avoiding: CGRect?) {
+        self.roomID = roomID
         let geometry = AXGeometry(screens: NSScreen.screens)
         model.avoiding = avoiding.map(geometry.flip)
         guard isShowing else {
@@ -42,8 +44,13 @@ final class RoomPreviewController {
         withAnimation(glide) { model.cards = cards }
     }
 
+    func bindPickerPreview(to roomID: UUID) {
+        if isShowing, self.roomID == nil { self.roomID = roomID }
+    }
+
     /// `settling` is the hold after ↵: the windows move in under the preview, then it fades.
     func hide(settling: Bool = false) {
+        roomID = nil
         guard isShowing else { return }
         let closing = panels
         panels = []

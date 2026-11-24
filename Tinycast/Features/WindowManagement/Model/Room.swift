@@ -44,12 +44,14 @@ struct Room: Codable, Hashable, Identifiable, Sendable {
         return room
     }
 
-    /// Whether `window` is one of this room's own, by its number or else by its exact title.
-    func holds(_ window: RoomLiveWindow) -> Bool {
+    func holds(_ window: RoomWindow, openWindowIDs: Set<UInt32>) -> Bool {
         windows.contains { member in
-            member.bundleID == window.bundleID
-                && ((member.windowID != nil && member.windowID == window.windowID)
-                    || (!member.title.isEmpty && member.title == window.title))
+            guard member.bundleID == window.bundleID else { return false }
+            if let id = member.windowID {
+                if id == window.windowID { return true }
+                if openWindowIDs.contains(id) { return false }
+            }
+            return !member.title.isEmpty && member.title == window.title
         }
     }
 
