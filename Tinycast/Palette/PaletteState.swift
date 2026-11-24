@@ -21,6 +21,8 @@ final class PaletteState {
     var clipboardFilter: ClipboardFilter = .all {
         didSet { if oldValue != clipboardFilter { restoredSelection = nil } }
     }
+    /// The ⇧-extended range on the clipboard screen; every other screen leaves it empty.
+    var clipboardSelection = ClipboardSelection()
     var fileSearchFilter: FileSearchFilter = .all
     var emojiCategoryFilter: EmojiCategoryFilter = .all
     /// Nil means the configured default; zoom only overrides it for this picker session.
@@ -144,6 +146,7 @@ final class PaletteState {
         pendingArgumentEntryID = nil
         argumentEntryID = nil
         clipboardFilter = .all
+        clipboardSelection.clear()
         fileSearchFilter = .all
         emojiCategoryFilter = .all
         emojiGridColumnsOverride = nil

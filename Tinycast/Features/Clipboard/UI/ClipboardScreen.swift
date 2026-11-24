@@ -14,6 +14,10 @@ struct ClipboardScreen: PaletteScreen {
     var landingSelection: Int { store.landingIndex(in: vm.query, filter: vm.clipboardFilter) }
 
     var primaryActionTitle: String {
+        // ↵ pastes a multi-selection whatever the default action is, so the pill says Paste.
+        if vm.clipboardSelection.isMultiple {
+            return ClipboardDefaultAction.paste.title(pastingInto: vm.pasteTarget)
+        }
         let defaultAction = core.settings.clipboardDefaultAction
         let action = item(at: vm.selection).flatMap { defaultAction.action(for: .return, on: $0) }
         return (action ?? defaultAction).title(pastingInto: vm.pasteTarget)
@@ -31,8 +35,35 @@ struct ClipboardScreen: PaletteScreen {
     }
 
     func activate(at selection: Int) {
+        let selected = vm.clipboardSelection.items(in: rows)
+        if !selected.isEmpty {
+            core.clipboardCoordinator.pasteSelection(selected)
+            return
+        }
         guard let item = item(at: selection) else { return }
         core.clipboardCoordinator.activate(item)
+    }
+
+    /// ⇧↑/⇧↓ widens the range from the row the first ⇧ landed on.
+    func extendSelection(_ delta: Int, from selection: Int) -> Bool {
+        let rows = rows
+        guard !rows.isEmpty else { return false }
+        extendSelection(to: min(max(selection + delta, 0), rows.count - 1), in: rows)
+        return true
+    }
+
+    /// The one place a ⇧ gesture moves the highlight and the range together.
+    private func extendSelection(to index: Int, in rows: [ClipboardItem]) {
+        vm.clipboardSelection.extend(to: index, from: vm.selection, rows: rows)
+        vm.selection = index
+        scrollToFollow()
+    }
+
+    /// A bare arrow collapses the range, leaving the palette's own move to land the row.
+    func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? {
+        guard axis == .vertical else { return nil }
+        vm.clipboardSelection.clear()
+        return nil
     }
 
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool {
@@ -141,8 +172,16 @@ struct ClipboardScreen: PaletteScreen {
                 ClipboardList(
                     results: rows,
                     selectedID: selected?.id,
+                    selectedIDs: vm.clipboardSelection.ids,
                     scroll: scroll,
-                    onSelect: { item in vm.selection = rows.firstIndex(of: item) ?? 0 },
+                    onSelect: { item in
+                        vm.clipboardSelection.clear()
+                        vm.selection = rows.firstIndex(of: item) ?? 0
+                    },
+                    onExtend: { item in
+                        guard let index = rows.firstIndex(of: item) else { return }
+                        extendSelection(to: index, in: rows)
+                    },
                     onActivate: { activate(at: vm.selection) },
                     onActions: { item in
                         if let index = rows.firstIndex(of: item) { vm.selection = index }

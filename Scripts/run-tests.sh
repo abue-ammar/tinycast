@@ -224,6 +224,7 @@ run ClipboardThumbnailTests Tinycast/Features/Clipboard/Model/ClipboardStore.swi
 Q=Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift
 run ClipboardSearchTests   Tinycast/Features/Clipboard/Model/*.swift Tinycast/Platform/Images/ImageDerivative.swift $Q
 run PasteSequenceTests     Tinycast/Features/Clipboard/Model/*.swift Tinycast/Platform/Images/ImageDerivative.swift $Q
+run ClipboardSelectionTests Tinycast/Features/Clipboard/Model/*.swift Tinycast/Platform/Images/ImageDerivative.swift $Q
 run ClipboardTextTests     Tinycast/Features/Clipboard/Model/*.swift Tinycast/Platform/Images/ImageDerivative.swift $Q \
                            Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardTextIndexer.swift \
@@ -237,6 +238,7 @@ run PasteboardTests        Tinycast/Platform/PasteboardFiles.swift \
                            Tinycast/Features/Clipboard/Model/ColorValue.swift \
                            Tinycast/Features/Clipboard/Model/ColorFormat.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
+                           Tinycast/Features/Clipboard/Model/PasteSequence.swift \
                            Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
                            Tinycast/Features/Clipboard/Service/Paster.swift
 run index ClipboardFilePerformanceTests \
@@ -336,6 +338,7 @@ run PaletteNavigationTests Tinycast/Palette/PaletteState.swift \
                            Tinycast/Features/Clipboard/Model/ColorValue.swift \
                            Tinycast/Features/Clipboard/Model/ColorFormat.swift \
                            Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
+                           Tinycast/Features/Clipboard/Model/ClipboardSelection.swift \
                            Tinycast/Features/Quicklinks/Model/Quicklink.swift \
                            Tinycast/Features/Quicklinks/Model/QuicklinkDestination.swift \
                            Tinycast/Features/CustomCommands/Model/CustomCommand.swift

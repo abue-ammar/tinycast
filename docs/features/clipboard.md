@@ -25,6 +25,10 @@
 - **Paste Sequentially never promotes, and its walk is frozen at the first press.** `PasteSequence`
   keeps every entry's id, newest first, and resolves each against the live history, so a promotion
   cannot repeat or skip an entry and a deleted one is passed over rather than pasted.
+- **⇧ extends a clipboard range and ↵ pastes it top of the list first.** `ClipboardSelection` holds
+  ids, so an entry deleted before the press is skipped rather than shifting the range. Only ↵ uses
+  the range: ⌘↵, ⌃⌘↵ and ⌥↵ still act on the highlighted row, and the footer pill reads Paste even
+  when the default action is Copy.
 - **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so
   `ClipboardTests` can compile it standalone. It uses `isolated deinit` for its SQLite teardown.
 - **An image capture keeps the generation from its pasteboard poll.** Clear History and store close
@@ -551,3 +555,20 @@ any other Tinycast paste.
 `pasteInPlace` writes the pasteboard at once and posts ⌘V 50ms later, and the target reads the
 pasteboard only when it handles that ⌘V. A press inside that gap would swap the pasteboard first:
 one entry pasted twice, another skipped. A queue would replay a held shortcut as a burst.
+
+## Selecting several entries
+
+**⇧-click or ⇧↑/⇧↓ extends a range from the row the first ⇧ landed on.** A bare click or arrow
+collapses it, as do a new query, filter or screen: `PaletteState.openScreen` and the palette's
+`land()` clear it. `ClipboardSelection` holds ids rather than indexes, so an entry deleted before
+the press drops out instead of shifting the range, and an anchor whose entry is gone re-anchors on
+the highlighted row. Every row in the range draws the selection fill; the preview and the ⌘K Actions
+menu stay on the highlighted row.
+
+**↵ pastes every selected entry, top of the list first**, whatever `clipboardDefaultAction` is, so
+the footer pill reads Paste. That is the order the rows are drawn in, pinned rows included.
+`Paster.pasteSequence` activates the displaced app once, then writes each entry and posts ⌘V, spacing
+the writes by `PasteSequence.settleInterval` so each ⌘V reads the pasteboard before the next write
+swaps it. A file or image gone from disk writes nothing and the run moves on, as Paste Sequentially
+does. Each entry is promoted after its own paste. ⌘↵, ⌃⌘↵ and ⌥↵ still act on the highlighted row
+alone.

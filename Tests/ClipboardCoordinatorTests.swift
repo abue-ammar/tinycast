@@ -15,6 +15,7 @@ struct ClipboardCoordinatorTests {
         await tooLongEditIsRefused()
         await changedScreenKeepsItsSelection()
         await cancelledAndEmptyEditsChangeNothing()
+        multiSelectionPastesInVisibleOrder()
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
     }
@@ -154,6 +155,16 @@ struct ClipboardCoordinatorTests {
         }
     }
 
+    static func multiSelectionPastesInVisibleOrder() {
+        let fixture = Fixture()
+        defer { fixture.cleanUp() }
+        let rows = fixture.store.search("", filter: .all)
+        fixture.palette.clipboardSelection.extend(to: rows.count - 1, from: 0, rows: rows)
+        fixture.coordinator.pasteSelection(rows)
+        expect(Paster.sequences == [rows], "the selected rows are pasted in visible order")
+        expect(!fixture.palette.clipboardSelection.isMultiple, "a multi-paste clears the range")
+    }
+
     static func changedScreenKeepsItsSelection() async {
         let fixture = Fixture()
         defer { fixture.cleanUp() }
@@ -192,6 +203,7 @@ struct ClipboardCoordinatorTests {
         init(text: String = "draft selected", pinned: Bool = false) {
             Paster.copies = []
             Paster.plainCopies = []
+            Paster.sequences = []
             store = ClipboardStore(directory: directory)
             store.addText("other pin", sourceBundleID: nil)
             store.togglePinned(store.items[0])
@@ -281,11 +293,17 @@ enum ClipboardTextWorker {
 enum Paster {
     static var copies: [ClipboardItem] = []
     static var plainCopies: [String] = []
+    static var sequences: [[ClipboardItem]] = []
     @discardableResult
     static func copy(_ item: ClipboardItem, store: ClipboardStore) -> Bool {
         copies.append(item)
         store.promote(item)
         return true
+    }
+    static func pasteSequence(
+        _ items: [ClipboardItem], store: ClipboardStore, previousApp: NSRunningApplication?
+    ) {
+        sequences.append(items)
     }
     @discardableResult
     static func copyPlainText(_ text: String) -> Bool { plainCopies.append(text); return true }

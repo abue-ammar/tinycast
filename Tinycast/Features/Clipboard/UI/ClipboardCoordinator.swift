@@ -98,6 +98,18 @@ final class ClipboardCoordinator {
         }
     }
 
+    /// ↵ on a multi-selection: every entry, top of the list first, into the app in front.
+    func pasteSelection(_ items: [ClipboardItem]) {
+        guard items.count > 1 else {
+            if let item = items.first { paste(item) }
+            return
+        }
+        let previous = windowController.previousApp
+        paletteCoordinator.hidePalette(restoreFocus: false)
+        palette.clipboardSelection.clear()
+        Paster.pasteSequence(items, store: clipboardStore, previousApp: previous)
+    }
+
     /// A file's path stays valid text after the file goes, so this never reports it missing.
     func pasteAsPlainText(_ item: ClipboardItem) {
         let previous = windowController.previousApp

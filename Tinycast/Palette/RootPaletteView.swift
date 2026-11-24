@@ -557,6 +557,10 @@ struct RootPaletteView: View {
                     core.paletteCoordinator.expandFromCompact()
                     return .handled
                 }
+                if press.modifiers.contains(.shift) {
+                    let screen = screen
+                    if screen.extendSelection(1, from: selection(in: screen)) { return .handled }
+                }
                 return moveVertically(1)
             }
             .onKeyPress(keys: [.upArrow], phases: [.down, .repeat]) { press in
@@ -568,6 +572,10 @@ struct RootPaletteView: View {
                     return .handled
                 }
                 if vm.isComposing { return .ignored }
+                if press.modifiers.contains(.shift) {
+                    let screen = screen
+                    if screen.extendSelection(-1, from: selection(in: screen)) { return .handled }
+                }
                 return moveVertically(-1)
             }
             .onKeyPress(keys: [.leftArrow], phases: [.down, .repeat]) { press in
@@ -1389,6 +1397,8 @@ struct RootPaletteView: View {
 
     /// Every reset lands here, so handlers that fire together agree in whatever order they run.
     private func land(restoringSelection: Bool = false) {
+        // A new query, filter or screen leaves no range behind to paste.
+        vm.clipboardSelection.clear()
         let restored = restoringSelection ? vm.restoredSelection : nil
         let landing = restored.map { min($0, max(screen.rows.count - 1, 0)) } ?? screen.landingSelection
         vm.selection = landing

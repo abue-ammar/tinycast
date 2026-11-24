@@ -25,6 +25,25 @@ enum Paster {
         return true
     }
 
+    /// Paste several entries in order, spacing the writes so each ⌘V reads before the next lands.
+    @MainActor
+    static func pasteSequence(
+        _ items: [ClipboardItem], store: ClipboardStore, previousApp: NSRunningApplication?
+    ) {
+        guard !items.isEmpty else { return }
+        Task { @MainActor in
+            previousApp?.activate()
+            try? await Task.sleep(for: .seconds(activationDelay))
+            for item in items {
+                if write(item, store: store) {
+                    store.promote(item)
+                    postCommandV()
+                }
+                try? await Task.sleep(for: .seconds(PasteSequence.settleInterval))
+            }
+        }
+    }
+
     /// Paste only the item's text, so a file arrives as its path and the receiver's style applies.
     @MainActor @discardableResult
     static func pastePlainText(

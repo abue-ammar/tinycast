@@ -6,9 +6,12 @@ struct ClipboardList: View {
     @Environment(\.metrics) private var metrics
     let results: [ClipboardItem]
     let selectedID: ClipboardItem.ID?
+    /// The ⇧-extended range; `selectedID` stays the row the preview shows.
+    let selectedIDs: Set<ClipboardItem.ID>
     /// Changes only when the list should scroll, so mouse selection never yanks it.
     let scroll: ScrollIntent
     let onSelect: (ClipboardItem) -> Void
+    let onExtend: (ClipboardItem) -> Void
     let onActivate: () -> Void
     let onActions: (ClipboardItem) -> Void
     /// Nil when the entry has nothing left to hand over, which is reported rather than dragged.
@@ -61,7 +64,8 @@ struct ClipboardList: View {
                             SectionHeader(title: title, isFirst: row.id == rows.first?.id)
                         case .item(let item, let slot):
                             ClipboardRow(
-                                item: item, selected: item.id == selectedID,
+                                item: item,
+                                selected: item.id == selectedID || selectedIDs.contains(item.id),
                                 imageURL: store.imageURL(for: item),
                                 ownsImage: store.ownsImage(of: item), slot: slot
                             )
@@ -75,6 +79,7 @@ struct ClipboardList: View {
                                     onSelect(item)
                                     onActivate()
                                 },
+                                extend: { onExtend(item) },
                                 drag: RowDrag(
                                     item: { onDragPayload(item)?.dragItem }, dropped: onDropped)
                             )

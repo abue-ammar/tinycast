@@ -100,6 +100,8 @@ private extension MenuPanelCorner {
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool
     /// The selection an arrow key lands on, or nil to leave the key to the palette's own default.
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int?
+    /// ⇧↑/⇧↓. True when the screen widened its own selection instead of moving the highlight.
+    func extendSelection(_ delta: Int, from selection: Int) -> Bool
     /// Controls the row wants beside the search field; `focus` is lent, never owned.
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
@@ -135,6 +137,7 @@ extension PaletteScreen {
     func pasteKeepingWindowOpen(at selection: Int) -> Bool { false }
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool { false }
     func move(_ delta: Int, axis: PaletteAxis, from selection: Int) -> Int? { nil }
+    func extendSelection(_ delta: Int, from selection: Int) -> Bool { false }
     func headerAccessory(
         at selection: Int, focus: FocusState<String?>.Binding
     )
