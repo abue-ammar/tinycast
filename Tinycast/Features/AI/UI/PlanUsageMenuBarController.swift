@@ -72,8 +72,8 @@ final class PlanUsageMenuBarController: NSObject, NSMenuDelegate {
         for (index, (provider, entry)) in entries.enumerated() {
             if index > 0 { menu.addItem(.separator()) }
             menu.addItem(sectionItem(provider, entry: entry, now: now))
-            if let credits = entry.usage?.resetCredits, credits > 0 {
-                menu.addItem(resetItem(credits: credits))
+            if let credit = entry.usage?.resetCredit {
+                menu.addItem(resetItem(credit))
             }
         }
         menu.addItem(.separator())
@@ -107,9 +107,10 @@ final class PlanUsageMenuBarController: NSObject, NSMenuDelegate {
         return item(String(localized: "Turn On Claude or Codex…"), action: #selector(showProviders))
     }
 
-    private func resetItem(credits: Int) -> NSMenuItem {
-        let item = item(String(localized: "Reset ChatGPT Limits…"), action: #selector(useResetCredit))
-        item.subtitle = String(localized: "\(credits) free resets available")
+    private func resetItem(_ credit: PlanUsage.ResetCredit) -> NSMenuItem {
+        let item = item(String(localized: "Reset ChatGPT Limits…"), action: #selector(useResetCredit(_:)))
+        item.representedObject = credit
+        item.subtitle = String(localized: "\(credit.availableCount) free resets available")
         return item
     }
 
@@ -158,8 +159,9 @@ final class PlanUsageMenuBarController: NSObject, NSMenuDelegate {
         coordinator.showProviders()
     }
 
-    @objc private func useResetCredit() {
-        coordinator.useResetCredit()
+    @objc private func useResetCredit(_ sender: NSMenuItem) {
+        guard let credit = sender.representedObject as? PlanUsage.ResetCredit else { return }
+        coordinator.useResetCredit(credit)
     }
 
     @objc private func choosePin(_ sender: NSMenuItem) {

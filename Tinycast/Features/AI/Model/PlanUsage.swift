@@ -26,6 +26,11 @@ struct PlanUsage: Equatable, Sendable {
         case failed
     }
 
+    struct ResetCredit: Equatable, Sendable {
+        let id: String
+        let availableCount: Int
+    }
+
     enum Level: Comparable, Sendable {
         case normal
         case high
@@ -87,7 +92,7 @@ struct PlanUsage: Equatable, Sendable {
 
     let plan: String?
     let windows: [Window]
-    let resetCredits: Int
+    let resetCredit: ResetCredit?
 
     func window(id: String) -> Window? {
         windows.first { $0.id == id }

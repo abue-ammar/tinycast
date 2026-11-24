@@ -5,7 +5,12 @@ import Observation
 @Observable
 final class PlanUsageMonitor {
     private static let interval: Duration = .seconds(300)
-    private static let minimumGap: TimeInterval = 30
+    private static let minimumGap: Duration = .seconds(30)
+
+    private struct Read {
+        let task: Task<Void, Never>
+        var refreshAgain = false
+    }
 
     private(set) var entries: [PlanUsage.Provider: PlanUsageEntry] = [:]
 
@@ -17,8 +22,9 @@ final class PlanUsageMonitor {
 
     @ObservationIgnored private(set) var isRunning = false
     @ObservationIgnored private var isAsleep = false
-    @ObservationIgnored private var reads: [PlanUsage.Provider: Task<Void, Never>] = [:]
-    @ObservationIgnored private var lastRead: [PlanUsage.Provider: Date] = [:]
+    @ObservationIgnored private var reads: [PlanUsage.Provider: Read] = [:]
+    @ObservationIgnored private var lastRead: [PlanUsage.Provider: ContinuousClock.Instant] = [:]
+    @ObservationIgnored private var latestResult: [PlanUsage.Provider: ContinuousClock.Instant] = [:]
     @ObservationIgnored private var poll: Task<Void, Never>?
     @ObservationIgnored private var sleepObservers: [NotificationToken] = []
 
@@ -35,9 +41,10 @@ final class PlanUsageMonitor {
         isAsleep = false
         poll?.cancel()
         poll = nil
-        for read in reads.values { read.cancel() }
+        for read in reads.values { read.task.cancel() }
         reads = [:]
         lastRead = [:]
+        latestResult = [:]
         sleepObservers = []
         entries = [:]
     }
@@ -45,7 +52,7 @@ final class PlanUsageMonitor {
     func refresh(force: Bool = false) {
         guard isRunning, !isAsleep else { return }
         let current = providers()
-        for provider in entries.keys where !current.contains(provider) { drop(provider) }
+        for provider in lastRead.keys where !current.contains(provider) { drop(provider) }
         for provider in current { read(provider, force: force) }
         schedulePoll()
     }
@@ -55,41 +62,78 @@ final class PlanUsageMonitor {
         read(provider, force: force)
     }
 
-    func apply(_ usage: PlanUsage, for provider: PlanUsage.Provider) {
-        guard isRunning, providers().contains(provider) else { return }
-        lastRead[provider] = Date()
-        store(usage, for: provider)
+    func apply(
+        _ usage: PlanUsage, for provider: PlanUsage.Provider, startedAt: ContinuousClock.Instant
+    ) {
+        guard isRunning, providers().contains(provider), isCurrent(provider, since: startedAt)
+        else { return }
+        lastRead[provider] = .now
+        store(usage, for: provider, startedAt: startedAt)
     }
 
     private func read(_ provider: PlanUsage.Provider, force: Bool) {
-        guard reads[provider] == nil else { return }
-        if !force, let last = lastRead[provider], Date().timeIntervalSince(last) < Self.minimumGap {
+        if reads[provider] != nil {
+            if force { reads[provider]?.refreshAgain = true }
             return
         }
-        lastRead[provider] = Date()
+        let startedAt = ContinuousClock.now
+        if !force, let last = lastRead[provider], last.duration(to: startedAt) < Self.minimumGap {
+            return
+        }
+        lastRead[provider] = startedAt
         entries[provider, default: PlanUsageEntry()].isRefreshing = true
         let reader = reader
-        reads[provider] = Task { [weak self] in
+        let task = Task { [weak self] in
+            guard !Task.isCancelled else { return }
             let reading = await reader(provider)
             guard !Task.isCancelled else { return }
-            self?.finish(provider, with: reading)
+            self?.finish(provider, with: reading, startedAt: startedAt)
         }
+        reads[provider] = Read(task: task)
     }
 
-    private func finish(_ provider: PlanUsage.Provider, with reading: PlanUsage.Reading) {
-        reads[provider] = nil
+    private func finish(
+        _ provider: PlanUsage.Provider, with reading: PlanUsage.Reading,
+        startedAt: ContinuousClock.Instant
+    ) {
+        guard let read = reads.removeValue(forKey: provider) else { return }
+        guard providers().contains(provider) else {
+            drop(provider)
+            return
+        }
+        if read.refreshAgain, !isAsleep {
+            self.read(provider, force: true)
+            return
+        }
+        guard !isAsleep, isCurrent(provider, since: startedAt) else {
+            entries[provider]?.isRefreshing = false
+            return
+        }
         switch reading {
         case .usage(let usage):
-            store(usage, for: provider)
+            store(usage, for: provider, startedAt: startedAt)
         case .unavailable:
+            latestResult[provider] = startedAt
             entries[provider] = nil
         case .failed:
-            entries[provider, default: PlanUsageEntry()].isRefreshing = false
+            entries[provider]?.isRefreshing = false
             entries[provider]?.failed = true
         }
     }
 
-    private func store(_ usage: PlanUsage, for provider: PlanUsage.Provider) {
+    private func isCurrent(
+        _ provider: PlanUsage.Provider, since startedAt: ContinuousClock.Instant
+    )
+        -> Bool
+    {
+        if let latest = latestResult[provider] { return startedAt >= latest }
+        return true
+    }
+
+    private func store(
+        _ usage: PlanUsage, for provider: PlanUsage.Provider, startedAt: ContinuousClock.Instant
+    ) {
+        latestResult[provider] = startedAt
         let previous = entries[provider]?.usage
         entries[provider] = PlanUsageEntry(
             usage: usage, updatedAt: Date(), isRefreshing: reads[provider] != nil)
@@ -97,8 +141,9 @@ final class PlanUsageMonitor {
     }
 
     private func drop(_ provider: PlanUsage.Provider) {
-        reads.removeValue(forKey: provider)?.cancel()
+        reads.removeValue(forKey: provider)?.task.cancel()
         lastRead[provider] = nil
+        latestResult[provider] = nil
         entries[provider] = nil
     }
 

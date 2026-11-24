@@ -23,13 +23,14 @@ struct PlanUsageTests {
     static let english = Locale(identifier: "en_US")
     static let now = Date(timeIntervalSince1970: 1_795_500_000)
 
-    static func main() {
+    static func main() async {
         claudeAnswersWithItsWindows()
         claudeWithoutPlanLimitsIsUnavailable()
         claudeErrorsAndSilenceAreFailures()
         claudeModelLimitsReplaceTheirFallbacks()
         claudeIsAnsweredOnlyByAWholeLine()
         codexAnswersWithItsWindowsAndResets()
+        codexResetRequiresAnIdentifiedAvailableCredit()
         codexNamesEveryLimitButTheGeneralOne()
         codexFallsBackToItsSingleLimit()
         levelsFollowTheThresholds()
@@ -38,6 +39,7 @@ struct PlanUsageTests {
         alertsFireOnCrossingsAndResets()
         entriesNoteOnlyOldOrUnrefreshedNumbers()
         formatsReadNaturally()
+        await overlappingReadsKeepTheLatestResult()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -68,7 +70,7 @@ struct PlanUsageTests {
         let reset = usage.windows[0].resetsAt?.timeIntervalSince1970 ?? 0
         expect(abs(reset - 1_795_561_200) < 1, "microsecond reset times parse")
         expect(usage.windows[0].duration == PlanUsage.fiveHours, "the 5-hour window knows its span")
-        expect(usage.resetCredits == 0, "Claude grants no resets")
+        expect(usage.resetCredit == nil, "Claude grants no resets")
     }
 
     static func claudeWithoutPlanLimitsIsUnavailable() {
@@ -127,7 +129,8 @@ struct PlanUsageTests {
         let response = codexResponse(
             """
             {"rateLimits":\(limit),"rateLimitsByLimitId":{"codex":\(limit)},\
-            "rateLimitResetCredits":{"availableCount":2,"credits":[]}}
+            "rateLimitResetCredits":{"availableCount":2,"credits":[
+            {"id":"credit-a","status":"available","resetType":"codexRateLimits"}]}}
             """)
         guard let usage = PlanUsage(codex: response) else {
             return expect(false, "a Codex answer reads as usage")
@@ -139,7 +142,33 @@ struct PlanUsageTests {
             usage.windows[1].resetsAt == Date(timeIntervalSince1970: 1_795_814_198),
             "reset times are Unix seconds")
         expect(usage.windows[1].duration == PlanUsage.week, "a week is a week")
-        expect(usage.resetCredits == 2, "free resets are counted")
+        expect(
+            usage.resetCredit == PlanUsage.ResetCredit(id: "credit-a", availableCount: 2),
+            "the confirmed reset has a specific credit and the available count")
+    }
+
+    static func codexResetRequiresAnIdentifiedAvailableCredit() {
+        let response = codexResponse(
+            """
+            {"rateLimitResetCredits":{"availableCount":2,"credits":[
+            {"id":"spent","status":"redeemed","resetType":"codexRateLimits"},
+            {"id":"unknown","status":"available","resetType":"unknown"},
+            {"id":"credit-a","status":"available","resetType":"codexRateLimits"},
+            {"id":"credit-b","status":"available","resetType":"codexRateLimits"}]}}
+            """)
+        let countOnly = codexResponse(#"{"rateLimitResetCredits":{"availableCount":2,"credits":null}}"#)
+        expect(PlanUsage.availableResetCredit(in: countOnly) == nil, "a count cannot identify a credit")
+        expect(
+            PlanUsage.availableResetCredit(in: response)?.id == "credit-a",
+            "the menu picks an available Codex credit")
+        expect(
+            PlanUsage.availableResetCredit(in: response, matching: "credit-b")?.id == "credit-b",
+            "the server can verify a confirmed credit anywhere in the list")
+        for id in ["spent", "unknown", "other-account"] {
+            expect(
+                PlanUsage.availableResetCredit(in: response, matching: id) == nil,
+                "the server cannot redeem an unavailable, unknown, or foreign credit")
+        }
     }
 
     static func codexNamesEveryLimitButTheGeneralOne() {
@@ -212,8 +241,8 @@ struct PlanUsageTests {
 
         let usage: [PlanUsage.Provider: PlanUsage] = [
             .claude: PlanUsage(
-                plan: nil, windows: [window(40, id: "a"), window(70, id: "b")], resetCredits: 0),
-            .chatGPT: PlanUsage(plan: nil, windows: [window(70, id: "c")], resetCredits: 0)
+                plan: nil, windows: [window(40, id: "a"), window(70, id: "b")], resetCredit: nil),
+            .chatGPT: PlanUsage(plan: nil, windows: [window(70, id: "c")], resetCredit: nil)
         ]
         let fullest = PlanUsagePin.automatic.target(in: usage)
         expect(
@@ -231,7 +260,7 @@ struct PlanUsageTests {
     // MARK: - Alerts
 
     static func usage(_ windows: PlanUsage.Window...) -> PlanUsage {
-        PlanUsage(plan: nil, windows: windows, resetCredits: 0)
+        PlanUsage(plan: nil, windows: windows, resetCredit: nil)
     }
 
     static func alertsFireOnCrossingsAndResets() {
@@ -262,6 +291,72 @@ struct PlanUsageTests {
             policy.alert(for: .claude, from: usage(window(70, id: "a")), to: usage(window(90, id: "b")))
                 == nil,
             "a window seen for the first time has nothing to cross")
+    }
+
+    static func overlappingReadsKeepTheLatestResult() async {
+        let monitor = PlanUsageMonitor()
+        let provider = PlanUsage.Provider.chatGPT
+        let older = usage(window(97))
+        let newer = usage(window(4))
+        var response: CheckedContinuation<PlanUsage.Reading, Never>?
+        var reads = 0
+        var published: [PlanUsage] = []
+        monitor.providers = { [provider] }
+        monitor.reader = { _ in
+            reads += 1
+            return await withCheckedContinuation { response = $0 }
+        }
+        monitor.onChange = { _, _, usage in published.append(usage) }
+        monitor.start()
+        defer { monitor.stop() }
+
+        let earlier = ContinuousClock.now
+        monitor.refresh(provider)
+        guard await waitFor("first poll starts", until: { response != nil }) else { return }
+        monitor.apply(newer, for: provider, startedAt: .now)
+        response?.resume(returning: .usage(older))
+        response = nil
+        guard
+            await waitFor(
+                "first poll finishes",
+                until: {
+                    monitor.entries[provider]?.isRefreshing == false
+                })
+        else { return }
+        expect(published == [newer], "an older poll cannot publish stale usage")
+
+        monitor.refresh(provider, force: true)
+        guard await waitFor("next poll starts", until: { response != nil }) else { return }
+        monitor.refresh(provider, force: true)
+        monitor.refresh(provider, force: true)
+        response?.resume(returning: .usage(older))
+        response = nil
+        guard await waitFor("forced follow-up starts", until: { response != nil }) else { return }
+        expect(reads == 3, "forced refreshes coalesce into a single follow-up")
+        expect(published == [newer], "a superseded poll cannot publish while the follow-up waits")
+
+        let refreshed = usage(window(12))
+        response?.resume(returning: .usage(refreshed))
+        response = nil
+        guard
+            await waitFor(
+                "forced follow-up finishes",
+                until: {
+                    monitor.entries[provider]?.isRefreshing == false
+                })
+        else { return }
+        monitor.apply(older, for: provider, startedAt: earlier)
+        expect(published == [newer, refreshed], "a delayed turn cannot overwrite a newer poll")
+    }
+
+    private static func waitFor(_ description: String, until condition: () -> Bool) async -> Bool {
+        let deadline = ContinuousClock.now + .seconds(3)
+        while !condition(), ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        let succeeded = condition()
+        expect(succeeded, description)
+        return succeeded
     }
 
     // MARK: - Entries and text

@@ -59,7 +59,7 @@ extension PlanUsage {
         }
         guard !windows.isEmpty else { return .failed }
         let plan = InstalledAIAccount(email: nil, plan: payload["subscription_type"]?.stringValue)
-        return .usage(PlanUsage(plan: plan.planTitle, windows: windows, resetCredits: 0))
+        return .usage(PlanUsage(plan: plan.planTitle, windows: windows, resetCredit: nil))
     }
 
     private static func claudeWindow(

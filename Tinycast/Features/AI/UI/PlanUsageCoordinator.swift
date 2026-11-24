@@ -34,7 +34,9 @@ final class PlanUsageCoordinator {
         monitor.onChange = { [weak self] provider, previous, usage in
             self?.alert(provider, from: previous, to: usage)
         }
-        subscription.onUsage = { [weak monitor] usage in monitor?.apply(usage, for: .chatGPT) }
+        subscription.onUsage = { [weak monitor] usage, startedAt in
+            monitor?.apply(usage, for: .chatGPT, startedAt: startedAt)
+        }
     }
 
     var availableProviders: [PlanUsage.Provider] {
@@ -53,10 +55,11 @@ final class PlanUsageCoordinator {
     var target: PlanUsagePin.Target? { pin.target(in: monitor.usage) }
 
     func applyEnabled() {
-        trackingGeneration += 1
         guard settings.aiEnabled, aiSettings.usageMenuBarEnabled else {
-            menuBar?.remove()
-            menuBar = nil
+            guard let menuBar else { return }
+            trackingGeneration += 1
+            menuBar.remove()
+            self.menuBar = nil
             trackedProviders = nil
             monitor.stop()
             return
@@ -90,8 +93,9 @@ final class PlanUsageCoordinator {
         core.settingsCoordinator.showSettings(tab: .ai, revealing: .section(.aiProviders))
     }
 
-    func useResetCredit() {
-        let credits = monitor.usage[.chatGPT]?.resetCredits ?? 0
+    func useResetCredit(_ credit: PlanUsage.ResetCredit) {
+        let generation = trackingGeneration
+        let credits = credit.availableCount
         Task {
             guard
                 await core.confirm(
@@ -104,8 +108,11 @@ final class PlanUsageCoordinator {
                     symbol: "arrow.counterclockwise", confirmTitle: String(localized: "Reset"),
                     tone: .neutral, confirmRole: .standard)
             else { return }
+            guard generation == trackingGeneration, settings.aiEnabled, aiSettings.usageMenuBarEnabled,
+                aiSettings.enabledInstalledProviders.contains(.codex), availableProviders.contains(.chatGPT)
+            else { return }
             do {
-                let outcome = try await subscription.consumeResetCredit()
+                let outcome = try await subscription.consumeResetCredit(credit)
                 core.showMessage(outcome.message, tone: Self.tone(of: outcome))
             } catch {
                 core.showMessage(String(localized: "Couldn't reset ChatGPT limits"), tone: .danger)

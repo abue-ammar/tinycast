@@ -921,15 +921,17 @@ The menu is a native `NSMenu`: a hosted `PlanUsageSection` per provider (mark, p
 a meter with the share used, the countdown and the clock time of the reset), then native items.
 Each meter carries a pace mark at the share of the window already gone, so fill past it is use
 ahead of pace; once a tenth of the window has passed, a window on course to run out before its
-reset says when. ChatGPT's free resets show as **Reset ChatGPT Limits…**, which asks through
-`DialogController` before `account/rateLimitResetCredit/consume`.
+reset says when. **Reset ChatGPT Limits…** appears when Codex identifies an available credit.
+Tinycast confirms that credit through `DialogController` and verifies it is still available on the
+server that redeems it.
 
 `PlanUsageMonitor` reads every ready provider every five minutes, again when the menu opens (no
 provider more than once in 30 seconds), when a provider finishes its check or is switched off, and
 on wake; it stops polling while the Mac sleeps. A failed read keeps the last numbers and says
 **Couldn't refresh**; numbers older than fifteen minutes say how old. Claude is read again when a
-chat reply on Claude lands, and Codex hands over what each turn read. Nothing is cached on disk:
-the first read takes about a second.
+chat reply on Claude lands, and Codex hands over what each turn read. Older reads cannot replace
+newer results, and a forced refresh requested during a read runs as soon as it completes. Nothing
+is cached on disk. The first read takes about a second.
 
 **Usage alerts** (`aiUsageAlerts`, on by default) shows a HUD when a window crosses 80% or 95%,
 and when one that was at least 80% falls below half of where it was, which only a reset does.

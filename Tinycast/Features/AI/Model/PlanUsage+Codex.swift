@@ -40,8 +40,26 @@ extension PlanUsage {
         self.init(
             plan: planType.map { ChatGPTSubscription.Account(email: nil, plan: $0).planTitle },
             windows: windows,
-            resetCredits: response["rateLimitResetCredits"]?.objectValue?["availableCount"]?.intValue
-                ?? 0)
+            resetCredit: Self.availableResetCredit(in: response))
+    }
+
+    static func availableResetCredit(
+        in response: [String: JSONValue], matching expectedID: String? = nil
+    ) -> ResetCredit? {
+        guard let summary = response["rateLimitResetCredits"]?.objectValue,
+            let count = summary["availableCount"]?.doubleValue.flatMap(Int.init(exactly:)),
+            count > 0, let credits = summary["credits"]?.arrayValue
+        else { return nil }
+        for credit in credits {
+            guard let details = credit.objectValue,
+                details["status"]?.stringValue == "available",
+                details["resetType"]?.stringValue == "codexRateLimits",
+                let id = details["id"]?.stringValue, !id.isEmpty,
+                expectedID == nil || id == expectedID
+            else { continue }
+            return ResetCredit(id: id, availableCount: count)
+        }
+        return nil
     }
 
     private static func codexWindow(
