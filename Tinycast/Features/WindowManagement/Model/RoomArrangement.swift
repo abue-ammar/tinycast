@@ -66,12 +66,7 @@ enum RoomArrangement {
                 kind: .auto, order: Array(windows.indices), distance: reading.distance)
         }
         let ordered = keepsOrder ? windows : reading.order.map { windows[$0] }
-        var learned = ordered.map { window in
-            RoomWindow(
-                bundleID: window.bundleID, appName: window.appName, title: window.title,
-                windowID: window.windowID,
-                unitFrame: RoomWindow.unitFrame(of: window.frame, in: visible))
-        }
+        var learned = ordered.map { RoomWindow($0, in: visible) }
         if reading.kind == .custom, let cells = reading.cells, cells.count == learned.count {
             for index in learned.indices { learned[index].cell = cells[index] }
         }

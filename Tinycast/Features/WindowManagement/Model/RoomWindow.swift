@@ -26,6 +26,16 @@ struct RoomWindow: Codable, Hashable, Sendable {
         self.cell = cell
     }
 
+    /// An open window as it sits now, on a display whose visible frame is `visible`.
+    init(_ window: RoomLiveWindow, in visible: CGRect) {
+        self.init(
+            bundleID: window.bundleID, appName: window.appName, title: window.title,
+            windowID: window.windowID, unitFrame: Self.unitFrame(of: window.frame, in: visible))
+    }
+
+    /// Names no window, so any window of its app fills it.
+    var isWholeApp: Bool { windowID == nil && title.isEmpty }
+
     /// Four decimal places, so a stored fraction reads cleanly and resolves to the same point.
     static func unitFrame(of frame: CGRect, in visible: CGRect) -> CGRect {
         guard visible.width > 0, visible.height > 0 else {

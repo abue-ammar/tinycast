@@ -44,6 +44,28 @@ struct Room: Codable, Hashable, Identifiable, Sendable {
         return room
     }
 
+    func holds(_ window: RoomWindow, openWindowIDs: Set<UInt32>) -> Bool {
+        windows.contains { member in
+            guard member.bundleID == window.bundleID else { return false }
+            if let id = member.windowID {
+                if id == window.windowID { return true }
+                if openWindowIDs.contains(id) { return false }
+            }
+            return !member.title.isEmpty && member.title == window.title
+        }
+    }
+
+    /// `window` takes the place of a member standing for its whole app, or else joins last.
+    func adding(_ window: RoomWindow) -> Room {
+        var room = self
+        if let index = windows.firstIndex(where: { $0.bundleID == window.bundleID && $0.isWholeApp }) {
+            room.windows[index] = window
+        } else {
+            room.windows.append(window)
+        }
+        return room
+    }
+
     var summary: String { String(localized: "\(windows.count) windows") }
 
     var entryID: String { Self.entryIDPrefix + id.uuidString.lowercased() }
@@ -65,6 +87,12 @@ struct Room: Codable, Hashable, Identifiable, Sendable {
         let left = lhs.lastEnteredAt ?? .distantPast
         let right = rhs.lastEnteredAt ?? .distantPast
         return left != right ? left > right : precedes(lhs, rhs)
+    }
+
+    /// The room to go back to: the one entered last, other than `current`.
+    static func previous(to current: UUID?, in rooms: [Room]) -> Room? {
+        rooms.filter { $0.id != current && $0.lastEnteredAt != nil }
+            .sorted(by: enteredMoreRecently).first
     }
 
     // Hand-written, so an added field keeps stored rooms and older backups readable.

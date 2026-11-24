@@ -21,10 +21,10 @@ final class RoomCoordinator {
     /// Dialog and message-HUD presentation. Never state this type owns.
     @ObservationIgnored private unowned let core: AppCore
     @ObservationIgnored private let preview = RoomPreviewController()
+    @ObservationIgnored private let hud: RoomHUDController
     /// Window work runs one at a time, in order: two passes at once would undo each other.
     @ObservationIgnored private var work: Task<Void, Never>?
-    /// Set while ↵ has handed the preview to the windows moving in under it.
-    @ObservationIgnored private var isEntering = false
+    @ObservationIgnored private var holdsPreview = false
     /// The room whose windows the picker starts with, held until the desk has been read.
     @ObservationIgnored private var pendingPreselection: Room?
     /// Apps rooms hid since the feature was last switched off; a ⌘H of the user's is never here.
@@ -56,9 +56,12 @@ final class RoomCoordinator {
         self.palette = palette
         self.paletteCoordinator = paletteCoordinator
         self.core = core
+        hud = RoomHUDController(settings: settings)
     }
 
-    private static let commands: Set<CommandID> = [.switchRoom, .createRoom]
+    private static let commands: Set<CommandID> = [
+        .switchRoom, .createRoom, .switchToPreviousRoom, .tidyCurrentRoom, .addWindowToCurrentRoom
+    ]
 
     // MARK: - Feature presence
 
@@ -74,10 +77,13 @@ final class RoomCoordinator {
         applyRoomsPresence()
         guard !settings.windowManagementEnabled else { return }
         if palette.mode == .rooms || palette.mode == .roomWindows { palette.prepare(mode: .launcher) }
-        let hidden = hiddenByRooms
-        hiddenByRooms = []
         currentRoomID = nil
-        inTurn { [ledger] in await RoomRunner.restoreEverything(hiddenApps: hidden, ledger: ledger) }
+        inTurn { [weak self] in
+            guard let self else { return }
+            let hidden = hiddenByRooms
+            hiddenByRooms = []
+            await RoomRunner.restoreEverything(hiddenApps: hidden, ledger: ledger)
+        }
     }
 
     /// Windows a crash left parked come home at launch; nothing is unhidden, nothing else moves.
@@ -126,11 +132,11 @@ final class RoomCoordinator {
         loading?.cancel()
         loading = nil
         session.reset()
-        if !isEntering { preview.hide() }
+        if !holdsPreview { preview.hide() }
     }
 
     func paletteDidHide() {
-        guard !isEntering else { return }
+        guard !holdsPreview else { return }
         pendingPreselection = nil
         loading?.cancel()
         loading = nil
@@ -191,6 +197,8 @@ final class RoomCoordinator {
 
     /// What the room looks like on this display, drawn from the desk the screen read.
     func preview(_ room: Room?) {
+        guard isScreenOpen else { return }
+        holdsPreview = false
         guard let room, let snapshot = session.snapshot,
             let screen = snapshot.screen(uuid: targetDisplayUUID)
         else { return preview.hide() }
@@ -202,32 +210,48 @@ final class RoomCoordinator {
         }
         guard !cards.isEmpty else { return preview.hide() }
         // Back to front, so the main window's card ends on top, as the window itself will.
-        preview.show(cards.reversed(), avoiding: paletteCoordinator.panelFrame)
+        preview.show(cards.reversed(), roomID: room.id, avoiding: paletteCoordinator.panelFrame)
     }
 
     // MARK: - Entering
 
     func enterRoom(id: UUID) {
-        guard settings.windowManagementEnabled, let room = store.room(id: id) else { return }
-        // The preview holds while the windows move in under it, then fades.
-        isEntering = preview.isShowing
+        enqueueEntry { $0.store.room(id: id) }
+    }
+
+    private func enqueueEntry(_ destination: @escaping @MainActor (RoomCoordinator) -> Room?) {
+        guard settings.windowManagementEnabled else { return }
+        let displayUUID = targetDisplayUUID
+        inTurn { [weak self] in
+            guard let self, settings.windowManagementEnabled, let room = destination(self)
+            else { return }
+            await enter(room, on: displayUUID)
+        }
+    }
+
+    private func enter(_ room: Room, on displayUUID: String?) async {
+        let isPreviewed = preview.isShowing && preview.roomID == room.id
+        holdsPreview = isPreviewed
+        if !isPreviewed { preview.hide() }
         if paletteCoordinator.isVisible { paletteCoordinator.hidePalette(restoreFocus: false) }
         let context = RoomRunner.Context(
-            gap: gap, displayUUID: targetDisplayUUID,
+            gap: gap, displayUUID: displayUUID,
             claimed: store.claimedWindowIDs(excluding: room.id), minimums: minimums, ledger: ledger)
-        inTurn { [weak self] in
-            let outcome = await RoomRunner.enter(room, context: context)
-            guard let self else { return }
-            self.isEntering = false
-            self.preview.hide(settling: true)
-            self.session.reset()
-            self.hiddenByRooms.formUnion(outcome.hiddenApps)
-            if outcome.placed > 0 {
-                self.currentRoomID = room.id
-                self.store.markEntered(id: room.id, at: Date())
-            }
-            await self.report(outcome, for: room)
+        let outcome = await RoomRunner.enter(room, context: context)
+        if holdsPreview {
+            holdsPreview = false
+            preview.hide(settling: true)
         }
+        if !isScreenOpen { session.reset() }
+        hiddenByRooms.formUnion(outcome.hiddenApps)
+        guard !Task.isCancelled, settings.windowManagementEnabled, store.room(id: room.id) != nil
+        else { return }
+        if outcome.placed > 0 {
+            currentRoomID = room.id
+            store.markEntered(id: room.id, at: Date())
+        }
+        await report(outcome, for: room)
+        if outcome.isClean, !isPreviewed { hud.show(room) }
     }
 
     private func inTurn(_ body: @escaping @MainActor () async -> Void) {
@@ -237,6 +261,64 @@ final class RoomCoordinator {
             guard !Task.isCancelled else { return }
             await body()
         }
+    }
+
+    // MARK: - The current room
+
+    func enterPreviousRoom() {
+        enqueueEntry { coordinator in
+            let room = Room.previous(to: coordinator.currentRoomID, in: coordinator.store.rooms)
+            if room == nil {
+                coordinator.core.showMessage(String(localized: "No room to go back to"), tone: .neutral)
+            }
+            return room
+        }
+    }
+
+    /// Entering again puts every window back in its spot and steps the rest back once more.
+    func tidyCurrentRoom() {
+        enqueueEntry { $0.currentRoomForCommand() }
+    }
+
+    /// The focused app's front window joins the current room, which then tidies around it.
+    func addFocusedWindowToCurrentRoom() {
+        guard settings.windowManagementEnabled else { return }
+        let focused =
+            Permissions.isAccessibilityTrusted()
+            ? paletteCoordinator.targetApp.flatMap(RoomWindowSweep.focusedWindow(of:)) : nil
+        enqueueEntry { $0.addFocusedWindow(focused) }
+    }
+
+    private func addFocusedWindow(_ focused: WindowInventory.Element?) -> Room? {
+        guard let room = currentRoomForCommand() else { return nil }
+        guard Permissions.ensureAccessibility() else {
+            Task { await reportPermissionFailure() }
+            return nil
+        }
+        guard let window = focused.flatMap(RoomWindowSweep.member(for:)) else {
+            core.showMessage(String(localized: "No window to add"), tone: .neutral)
+            return nil
+        }
+        let openWindowIDs = RoomWindowSweep.openWindowIDs(for: window.bundleID)
+        guard !room.holds(window, openWindowIDs: openWindowIDs) else {
+            core.showMessage(String(localized: "This window is already in \(room.name)"), tone: .neutral)
+            return nil
+        }
+        let updated = room.adding(window)
+        do {
+            try store.update(updated)
+        } catch {
+            core.showMessage(
+                error.errorDescription ?? String(localized: "Couldn't save the room"), tone: .danger)
+            return nil
+        }
+        return store.room(id: updated.id)
+    }
+
+    private func currentRoomForCommand() -> Room? {
+        let room = currentRoomID.flatMap(store.room(id:))
+        if room == nil { core.showMessage(String(localized: "Enter a room first"), tone: .neutral) }
+        return room
     }
 
     // MARK: - Making and editing rooms
@@ -337,8 +419,10 @@ final class RoomCoordinator {
 
     /// The picked members as the room they would make here: Auto, in the order picked.
     func previewPicked() {
+        guard isScreenOpen else { return }
+        holdsPreview = false
         guard let snapshot = session.snapshot, let screen = snapshot.screen(uuid: targetDisplayUUID)
-        else { return }
+        else { return preview.hide() }
         let members = session.picked.compactMap { member(for: $0, in: snapshot) }
         let frames = RoomLayoutEngine.frames(
             count: members.count, kind: .auto, in: screen.screen.visibleFrame, gap: gap,
@@ -416,6 +500,7 @@ final class RoomCoordinator {
                 error.errorDescription ?? String(localized: "Couldn't save the room"), tone: .danger)
             return
         }
+        preview.bindPickerPreview(to: room.id)
         enterRoom(id: room.id)
     }
 

@@ -314,8 +314,8 @@ follow that project. Every adapted file says so on its first line, with a link t
 
 - `Tinycast/Features/WindowManagement/Model/`: `Room.swift`, `RoomWindow.swift`,
   `RoomLayoutKind.swift`, `RoomLayoutEngine.swift`, `RoomGrid.swift`, `RoomArrangement.swift`,
-  `RoomWindowMatcher.swift`, `RoomParking.swift`, `RoomParkingLedger.swift`, `RoomPlan.swift` and
-  `RoomMinimumSizeStore.swift`
+  `RoomWindowMatcher.swift`, `RoomParking.swift`, `RoomParkingLedger.swift`, `RoomPlan.swift`,
+  `RoomLiveWindow.swift` and `RoomMinimumSizeStore.swift`
 - `Tinycast/Features/WindowManagement/Service/`: `RoomRunner.swift`, `RoomWindowSweep.swift`, and
   the window-number lookup in `AXWindowAccess.swift`
 - `Tinycast/Features/WindowManagement/UI/`: `RoomCoordinator.swift`, `RoomsScreen.swift`,

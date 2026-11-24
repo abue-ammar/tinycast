@@ -236,6 +236,12 @@ final class LauncherCoordinator {
             core.roomCoordinator.showRooms()
         case .createRoom:
             core.roomCoordinator.createRoom()
+        case .switchToPreviousRoom:
+            core.roomCoordinator.enterPreviousRoom()
+        case .tidyCurrentRoom:
+            core.roomCoordinator.tidyCurrentRoom()
+        case .addWindowToCurrentRoom:
+            core.roomCoordinator.addFocusedWindowToCurrentRoom()
         case .createQuicklink:
             quicklinkCoordinator.editQuicklink(nil)
         case .createCustomCommand:
