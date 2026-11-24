@@ -15,6 +15,7 @@ enum FileSearchQuery {
         let whole: [UInt8]
         let mask: UInt64
         let termMasks: [UInt64]
+        let location: String?
 
         /// Each term owns one bit of a `UInt8`, so folders can stand in for at most eight.
         var reachesFolders: Bool { (2...8).contains(terms.count) }
@@ -46,8 +47,10 @@ enum FileSearchQuery {
         return Array((favorites + results).prefix(launcherLimit))
     }
 
+    /// No name holds a `/`, so a typed path searches its components through folders instead.
     static func terms(in query: String) -> [String] {
-        query.split(whereSeparator: \Character.isWhitespace).map(String.init)
+        let relative = query.hasPrefix("~/") ? query.dropFirst(2) : query[...]
+        return relative.split { $0.isWhitespace || $0 == "/" }.map(String.init)
     }
 
     static func prepare(_ query: String) -> Prepared? {
@@ -56,7 +59,21 @@ enum FileSearchQuery {
         let whole = Array(terms.joined(separator: [0x20]))
         // From the terms, not `whole`: its spaces are no letter a name has to contain.
         return Prepared(
-            terms: terms, whole: whole, mask: mask(of: terms.joined()), termMasks: terms.map { mask(of: $0) })
+            terms: terms, whole: whole, mask: mask(of: terms.joined()),
+            termMasks: terms.map { mask(of: $0) }, location: location(in: query))
+    }
+
+    static func location(in query: String) -> String? {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.hasPrefix("/") || trimmed == "~" || trimmed.hasPrefix("~/") { return trimmed }
+        guard let url = URL(string: trimmed), url.isFileURL, url.path.hasPrefix("/") else { return nil }
+        return url.path
+    }
+
+    /// Not `standardizedFileURL`, which drops a leading `/private` the index keeps.
+    static func path(of location: String, homeDirectory: URL) -> String {
+        let expanded = location.hasPrefix("~") ? homeDirectory.path + location.dropFirst() : location
+        return URL(filePath: expanded).standardized.path
     }
 
     static func fold(_ text: String) -> String {

@@ -96,6 +96,16 @@ final class FileIndex: Sendable {
     func search(_ query: FileSearchQuery.Prepared, filter: FileSearchFilter) -> [FileSearchResult] {
         let state = state.withLock { $0 }
         guard let snapshot = state.snapshot, let policy = state.policy else { return [] }
+        let found = Self.indexed(query, filter: filter, state: state, snapshot: snapshot, policy: policy)
+        guard let location = query.location, let place = Self.place(location, filter: filter, policy: policy)
+        else { return found }
+        return [place] + found.filter { $0.id != place.id }.prefix(FileSearchQuery.resultLimit - 1)
+    }
+
+    private static func indexed(
+        _ query: FileSearchQuery.Prepared, filter: FileSearchFilter, state: State,
+        snapshot: FileIndexSnapshot, policy: FileSearchPolicy
+    ) -> [FileSearchResult] {
         let limit = FileSearchQuery.resultLimit
         let named = Self.results(
             Self.named(query, filter: filter, state: state, snapshot: snapshot, limit: limit),
@@ -104,6 +114,20 @@ final class FileIndex: Sendable {
         let throughFolders = Self.throughFolders(
             query, filter: filter, state: state, snapshot: snapshot, limit: limit - named.count)
         return named + Self.results(throughFolders, limit: limit - named.count, policy: policy)
+    }
+
+    private static func place(
+        _ location: String, filter: FileSearchFilter, policy: FileSearchPolicy
+    ) -> FileSearchResult? {
+        let path = FileSearchQuery.path(of: location, homeDirectory: policy.homeDirectory)
+        var directory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: path, isDirectory: &directory) else { return nil }
+        let isDirectory = directory.boolValue
+        let url = URL(filePath: path, directoryHint: isDirectory ? .isDirectory : .notDirectory)
+        var types = TypeFilter(filter: filter)
+        var name = url.lastPathComponent
+        guard name.withUTF8({ types.accepts(name: $0, isDirectory: isDirectory) }) else { return nil }
+        return FileSearchResult(url: url, isDirectory: isDirectory, homeDirectory: policy.homeDirectory)
     }
 
     func recent(filter: FileSearchFilter) -> [FileSearchResult] {

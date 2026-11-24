@@ -85,6 +85,20 @@ struct FileIndexTests {
         expect(names(index, "report", filter: .images).isEmpty, "the filter narrows")
         expect(names(index, "beach", filter: .images) == ["beach.png"], "an image is an image")
         expect(names(index, "app", filter: .folders) == ["app"], "Folders keeps folders only")
+        expect(paths(index, root + "/Documents/") == ["~/Documents"], "a pasted path lists that place")
+        expect(
+            paths(index, "~/Documents/notes.txt") == ["~/Documents/notes.txt"],
+            "a tilde path is home, listed once though the index finds it too")
+        expect(
+            paths(index, "file://" + root + "/Movies") == ["~/Movies"],
+            "a typed path opens even where the index never looks")
+        expect(paths(index, root + "/Missing").isEmpty, "a path that is not there lists nothing")
+        expect(
+            names(index, root + "/Pictures/beach.png", filter: .documents).isEmpty,
+            "the filter applies to a typed path too")
+        expect(
+            paths(index, "Documents/Archive/todo") == ["~/Documents/Archive/todo.md"],
+            "part of a path searches through folders")
         let recent = index.recent(filter: .all).map(\.name)
         expect(recent.contains("notes.txt"), "recent lists files under home")
         expect(!recent.contains("config"), "recent leaves hidden files out")

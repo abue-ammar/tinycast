@@ -28,6 +28,7 @@ struct FileSearchTests {
 
     static func main() {
         queryMatching()
+        pathQuery()
         termHits()
         launcherQuery()
         ranking()
@@ -100,6 +101,37 @@ struct FileSearchTests {
         expect(
             haystack.withUTF8 { FileSearchQuery.find(Array("abc".utf8), in: $0) } == 2,
             "find returns the first case-insensitive occurrence")
+    }
+
+    static func pathQuery() {
+        expect(
+            FileSearchQuery.terms(in: "Dev/tinycast/App") == ["Dev", "tinycast", "App"],
+            "a slash separates terms")
+        expect(
+            FileSearchQuery.terms(in: "~/.claude/skills") == [".claude", "skills"],
+            "a leading tilde is home, not a term")
+        expect(FileSearchQuery.terms(in: "~") == ["~"], "a bare tilde is still a term")
+
+        expect(FileSearchQuery.location(in: "Dev/tinycast") == nil, "a relative path names no place")
+        expect(FileSearchQuery.location(in: "~report") == nil, "a tilde starting a name names no place")
+        expect(FileSearchQuery.location(in: "https://example.com/a") == nil, "a web link names no place")
+        expect(FileSearchQuery.location(in: " ~/.claude \n") == "~/.claude", "a pasted path is trimmed")
+        expect(FileSearchQuery.location(in: "~") == "~", "a bare tilde names home")
+        expect(
+            FileSearchQuery.location(in: "/Users/test/My Notes") == "/Users/test/My Notes",
+            "a path keeps its spaces")
+        expect(
+            FileSearchQuery.location(in: "file:///Users/test/My%20Notes/") == "/Users/test/My Notes",
+            "a file link names its decoded path")
+        expect(FileSearchQuery.prepare("~/Documents")?.location == "~/Documents", "prepare keeps it")
+
+        expect(FileSearchQuery.path(of: "~", homeDirectory: home) == "/Users/test", "a tilde expands")
+        expect(
+            FileSearchQuery.path(of: "~/.claude/", homeDirectory: home) == "/Users/test/.claude",
+            "a trailing slash is dropped")
+        expect(
+            FileSearchQuery.path(of: "/private/tmp/../tmp/x", homeDirectory: home) == "/private/tmp/x",
+            "dot segments resolve and /private stays, as the index keeps it")
     }
 
     static func hits(_ query: String, _ name: String) -> FileSearchQuery.TermHits {

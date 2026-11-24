@@ -103,6 +103,13 @@ order, so a parent always comes first), and then walks only the children of fold
 empty. A hit is scored on the first term its name holds, with the bonuses above; the overlay of live
 additions takes its folders from its path.
 
+A `/` separates terms as a space does, since no name holds one, and a leading `~/` is dropped, so
+`tinycast/Tinycast/App` or `~/.claude/skills` matches through folders like the same words with spaces.
+A query that reads as a path (`/…`, `~`, `~/…` or a `file://` URL) is also checked on disk with one
+`fileExists`. When the path exists and the type filter admits it, it lists first and only once, even when
+it is hidden, ignored or outside every scope. `FileSearchQuery.path(of:homeDirectory:)` expands it with
+`URL.standardized` rather than `standardizedFileURL`, which drops the leading `/private` the index keeps.
+
 `prior` is set per folder at crawl time and inherited by its files: 2 under home and the cloud drives,
 1 elsewhere in plain sight (`/Applications`, `/Users/Shared`) and for hidden paths, 0 for system
 folders, `~/Library` and anything inside a bundle. A hidden path at 1 stays out of Recent and out of
