@@ -50,6 +50,7 @@ extension SettingsAnchor {
     static let aiProviders = Self(tab: .ai, title: "Providers")
     static let aiDefault = Self(tab: .ai, title: "Default")
     static let aiChat = Self(tab: .ai, title: "Chat")
+    static let aiUsage = Self(tab: .ai, title: "Usage")
     static let aiConversations = Self(tab: .ai, title: "Conversations")
     static let aiSystemPrompt = Self(tab: .ai, title: "System prompt")
     static let aiChatPresets = Self(tab: .ai, title: "Chat Presets")

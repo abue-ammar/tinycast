@@ -871,6 +871,10 @@ run AIProviderTests        Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Service/CodexAppServerClient.swift \
                            Tinycast/Features/AI/Service/InstalledAIProbe.swift \
                            Tinycast/Platform/ExecutableLocator.swift Tinycast/Platform/ProcessExit.swift
+run PlanUsageTests         Tinycast/Features/Settings/AppSettingsKey.swift \
+                           Tinycast/Features/AI/Model/*.swift \
+                           Tinycast/Features/AI/Service/PlanUsageMonitor.swift \
+                           Tinycast/Platform/NotificationToken.swift
 run OpenCodeMCPTests       Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Platform/ExecutableLocator.swift Tinycast/Platform/ProcessExit.swift \
                            Tinycast/Features/AI/Service/AIProvider.swift \

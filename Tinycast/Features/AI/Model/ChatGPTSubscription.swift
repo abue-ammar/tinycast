@@ -82,17 +82,4 @@ enum ChatGPTSubscription {
             return efforts.first?.id
         }
     }
-
-    struct UsageWindow: Equatable, Sendable {
-        let usedPercent: Int
-        let durationMinutes: Int?
-        let resetsAt: Date?
-
-        var remainingPercent: Int { max(0, min(100, 100 - usedPercent)) }
-    }
-
-    struct RateLimits: Equatable, Sendable {
-        let primary: UsageWindow?
-        let secondary: UsageWindow?
-    }
 }

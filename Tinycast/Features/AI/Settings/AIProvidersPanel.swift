@@ -396,14 +396,7 @@ struct AIProvidersPanel: View {
                     }
                 }
             }
-            if let limits = subscription.rateLimits {
-                if let primary = limits.primary {
-                    usageRow(primary, fallbackTitle: String(localized: "Primary window"))
-                }
-                if let secondary = limits.secondary {
-                    usageRow(secondary, fallbackTitle: String(localized: "Secondary window"))
-                }
-            }
+            ForEach(subscription.usage?.windows ?? []) { usageRow($0) }
             if let executable = subscription.executable { commandRow(executable) }
         case .unavailable(let message):
             LabeledContent {
@@ -521,18 +514,17 @@ struct AIProvidersPanel: View {
         }
     }
 
-    private func usageRow(
-        _ window: ChatGPTSubscription.UsageWindow, fallbackTitle: String
-    ) -> some View {
-        LabeledContent {
+    private func usageRow(_ window: PlanUsage.Window) -> some View {
+        let remaining = Int((100 - window.usedPercent).rounded())
+        return LabeledContent {
             HStack(spacing: Theme.Spacing.md) {
-                ProgressView(value: Double(window.remainingPercent), total: 100)
+                ProgressView(value: Double(remaining), total: 100)
                     .frame(width: Theme.Size.aiUsageBar)
-                Text("\(window.remainingPercent)% left")
+                Text("\(remaining)% left")
                     .monospacedDigit()
             }
         } label: {
-            Text(usageTitle(window, fallback: fallbackTitle))
+            Text(window.title)
             if let reset = window.resetsAt {
                 Text("Resets \(reset, style: .relative)")
             }
@@ -879,15 +871,6 @@ struct AIProvidersPanel: View {
     private func copySignInCommand(_ kind: InstalledAIKind) {
         Paster.copyPlainText(kind.signInCommand)
         core.showMessage(String(localized: "Copied \(kind.signInCommand)"))
-    }
-
-    private func usageTitle(
-        _ window: ChatGPTSubscription.UsageWindow, fallback: String
-    ) -> String {
-        guard let minutes = window.durationMinutes else { return fallback }
-        if minutes >= 1_440 { return String(localized: "\(minutes / 1_440)-day window") }
-        if minutes >= 60 { return String(localized: "\(minutes / 60)-hour window") }
-        return String(localized: "\(minutes)-minute window")
     }
 
     private func loadKeyStatuses() {

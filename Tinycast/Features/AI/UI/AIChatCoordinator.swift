@@ -30,7 +30,11 @@ final class AIChatCoordinator {
             title: String(localized: "AI Chat"), contentSize: Theme.Size.aiChatWindow,
             minimumSize: Theme.Size.aiChatWindowMinimum, resizable: true,
             autosaveName: "AIChatWindow", activation: core.activationPolicy, closesOnEscape: true)
-        chats.onReplyFinished = { [weak self] chat in self?.nameIfNeeded(chat) }
+        chats.onReplyFinished = { [weak self] chat in
+            guard let self else { return }
+            nameIfNeeded(chat)
+            core.planUsageCoordinator.replyFinished(on: model(for: chat))
+        }
     }
 
     func applyEnabled() {

@@ -301,6 +301,10 @@ enum SettingsSearchCatalog {
         .init(.aiChat, "Expand thinking", keywords: ["reasoning", "thoughts", "collapse", "fold", "unfold"]),
         .init(.aiChat, "Tool call rounds", keywords: ["mcp", "tools", "limit", "loop", "agent", "unlimited"]),
         .init(
+            .aiUsage, "Show usage in menu bar",
+            keywords: ["limits", "rate limit", "quota", "claude", "chatgpt", "codex", "status item"]),
+        .init(.aiUsage, "Usage alerts", keywords: ["limits", "notify", "warning", "reset"]),
+        .init(
             .aiConversations, "Opens to",
             keywords: ["new chat", "last", "summon", "resume", "window", "quick ai"]),
         .init(

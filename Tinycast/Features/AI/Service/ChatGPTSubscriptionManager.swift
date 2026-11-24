@@ -19,7 +19,8 @@ final class ChatGPTSubscriptionManager {
     private(set) var phase = ChatGPTSubscription.Phase.idle
     private(set) var access: ChatGPTSubscription.Access?
     private(set) var models: [ChatGPTSubscription.Model] = []
-    private(set) var rateLimits: ChatGPTSubscription.RateLimits?
+    private(set) var usage: PlanUsage?
+    @ObservationIgnored var onUsage: (@MainActor (PlanUsage, ContinuousClock.Instant) -> Void)?
     /// Copied from the client at each check: the client is not observed, and Settings shows this.
     private(set) var executable: URL?
 
@@ -174,30 +175,51 @@ final class ChatGPTSubscriptionManager {
     }
 
     private func loadRateLimits() async {
+        let startedAt = ContinuousClock.now
         do {
-            let response = try await client.request(method: "account/rateLimits/read")
-            guard let limits = response["rateLimits"]?.objectValue else {
-                rateLimits = nil
-                return
-            }
-            rateLimits = ChatGPTSubscription.RateLimits(
-                primary: usageWindow(limits["primary"]),
-                secondary: usageWindow(limits["secondary"]))
+            usage = PlanUsage(codex: try await client.request(method: "account/rateLimits/read"))
         } catch {
-            rateLimits = nil
+            usage = nil
+        }
+        if let usage { onUsage?(usage, startedAt) }
+    }
+
+    /// A server of its own, so polling never holds the chat's resident or relaunches it.
+    func readUsage() async -> PlanUsage.Reading {
+        guard let account, !account.usesAPIKey else { return .unavailable }
+        do {
+            let response = try await withUsageServer {
+                try await $0.request(method: "account/rateLimits/read")
+            }
+            return PlanUsage(codex: response).map(PlanUsage.Reading.usage) ?? .failed
+        } catch {
+            return .failed
         }
     }
 
-    private func usageWindow(_ value: JSONValue?) -> ChatGPTSubscription.UsageWindow? {
-        guard let raw = value?.objectValue, let used = raw["usedPercent"]?.intValue else {
-            return nil
+    func consumeResetCredit(_ credit: PlanUsage.ResetCredit) async throws -> PlanUsage.ResetOutcome {
+        try await withUsageServer { server in
+            let current = try await server.request(method: "account/rateLimits/read")
+            guard PlanUsage.availableResetCredit(in: current, matching: credit.id) != nil else {
+                return .noCredit
+            }
+            let response = try await server.request(
+                method: "account/rateLimitResetCredit/consume",
+                params: ["idempotencyKey": UUID().uuidString, "creditId": credit.id])
+            guard let outcome = response["outcome"]?.stringValue.flatMap(PlanUsage.ResetOutcome.init)
+            else { throw AIProviderError.malformedResponse }
+            return outcome
         }
-        return ChatGPTSubscription.UsageWindow(
-            usedPercent: used,
-            durationMinutes: raw["windowDurationMins"]?.intValue,
-            resetsAt: raw["resetsAt"]?.intValue.map {
-                Date(timeIntervalSince1970: Double($0))
-            })
+    }
+
+    private func withUsageServer<Answer>(
+        _ body: (CodexAppServerClient) async throws -> Answer
+    ) async throws -> Answer {
+        let server = CodexAppServerClient(workspace: client.workspace)
+        server.launchSettings = client.launchSettings
+        defer { server.stop() }
+        try await server.start()
+        return try await body(server)
     }
 
     private func restoreAccess() async throws -> Bool {
@@ -230,7 +252,7 @@ final class ChatGPTSubscriptionManager {
     private func forget() {
         access = nil
         models = []
-        rateLimits = nil
+        usage = nil
         turns.reset()
     }
 

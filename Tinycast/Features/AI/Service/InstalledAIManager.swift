@@ -158,6 +158,20 @@ final class InstalledAIManager {
         return InstalledAIModel.claudeTitle(output).flatMap(ChatTitle.sanitize)
     }
 
+    func claudeUsage() async -> PlanUsage.Reading {
+        guard status(for: .claude).isReady, let executable = status(for: .claude).executable else {
+            return .unavailable
+        }
+        let output = await InstalledAIProbe.request(
+            executable: executable, arguments: Self.claudeControlArguments,
+            workspace: workspace,
+            environment: ExecutableLocator.environment(
+                running: executable, inherited: launchSettings(.claude).inherited(for: .claude)),
+            input: Data(PlanUsage.claudeRequest.utf8),
+            until: { PlanUsage.claudeAnswered($0) })
+        return PlanUsage.claude(output)
+    }
+
     func provider(
         kind: InstalledAIKind, model: String, effort: String?,
         toolServers: AIToolServerSession? = nil, toolSession: AIToolSession? = nil
