@@ -1,32 +1,42 @@
 import Foundation
 
-/// Ordered like a bare backspace: a screen is only left once the search field is empty.
+/// What the palette holds at the moment Escape is pressed; the shipped defaults are a bare root.
+struct PaletteEscapePress {
+    var mode: PaletteMode = .launcher
+    var query = ""
+    /// The open menu's own search text; nil while no menu is open.
+    var menuQuery: String?
+    var isArgumentFocused = false
+    var isAnswering = false
+    var canGoBack = false
+    var isHotkeyRoot = false
+    var extensionCanGoBack = false
+    var behavior: EscapeKeyBehavior = .navigateBackOrClose
+}
+
+/// One Escape press: the first rung that applies is the only one taken.
 enum PaletteEscapeAction: Equatable {
     case clearMenuQuery
     case closeMenu
     case leaveArgumentField
+    case stopAnswer
     case clearQuery
-    case exitExtensionScreen
     case goBack
-    case collapsePalette
-    case hidePalette
+    case close
+    case closeAndPopToRoot
 
-    static func resolve(
-        menuOpen: Bool, menuQuery: String, argumentFocused: Bool, query: String, mode: PaletteMode,
-        canGoBack: Bool, behavior: EscapeKeyBehavior, compactRootExpanded: Bool = false
-    ) -> Self {
-        if menuOpen { return menu(query: menuQuery) }
-        // An argument field is a step deeper than the query, so it is left before anything clears.
-        if argumentFocused { return .leaveArgumentField }
-        if !query.isEmpty { return .clearQuery }
-        if compactRootExpanded { return .collapsePalette }
-        guard behavior == .navigateBackOrClose else { return .hidePalette }
-        // An extension pops its own navigation stack before the command is left.
-        if mode == .extensionCommand { return .exitExtensionScreen }
-        return canGoBack ? .goBack : .hidePalette
-    }
-
-    static func menu(query: String) -> Self {
-        query.isEmpty ? .closeMenu : .clearMenuQuery
+    static func resolve(_ press: PaletteEscapePress) -> Self {
+        if let menuQuery = press.menuQuery { return menuQuery.isEmpty ? .closeMenu : .clearMenuQuery }
+        if press.isArgumentFocused { return .leaveArgumentField }
+        if press.isAnswering { return .stopAnswer }
+        let isRootSearch = press.mode == .launcher
+        if press.behavior == .closeAndPopToRoot {
+            return isRootSearch && press.query.isEmpty ? .close : .closeAndPopToRoot
+        }
+        // Quick AI's field holds a message, not a search, so Escape leaves it rather than wiping it.
+        if !press.query.isEmpty, press.mode != .ai { return .clearQuery }
+        if isRootSearch { return .close }
+        if press.extensionCanGoBack { return .goBack }
+        return press.isHotkeyRoot ? .closeAndPopToRoot : .goBack
     }
 }

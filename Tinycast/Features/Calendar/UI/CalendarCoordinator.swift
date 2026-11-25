@@ -313,7 +313,7 @@ final class CalendarCoordinator {
 
     func cancelEventEditing() {
         guard core.palette.mode == .eventEditor else { return }
-        if !core.palette.pop(preservingSelection: true) {
+        if !core.palette.pop() {
             paletteCoordinator.hidePalette()
             core.palette.prepare(mode: .launcher)
         }

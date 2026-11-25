@@ -9,9 +9,11 @@ final class PalettePanel: NSPanel, AnimatedPanel {
     }
 
     /// Bare backspace, which the field editor swallows before `onKeyPress` could see it.
-    var onBareBackspace: (() -> Bool)?
-    /// Escape, which a focused form field answers before `onKeyPress` could see it.
+    var onBareBackspace: ((_ isRepeat: Bool) -> Bool)?
+    /// Every bare Escape, ahead of any focused field or text view that would answer it first.
     var onEscape: (() -> Bool)?
+    /// ⌘[, which a focused text view would otherwise take for itself.
+    var onGoBackChord: (() -> Bool)?
     /// Command chords the field editor swallows, plus the ones no main menu handles.
     var onCommandShortcut: ((NSEvent) -> Bool)?
     /// The palette's typing context, handed over each time a field takes focus.
@@ -93,6 +95,11 @@ final class PalettePanel: NSPanel, AnimatedPanel {
     ]
 
     /// ⌃N/⌃P/⌃F/⌃B respelled as their arrow, so the arrow handlers serve both spellings.
+    private static func isGoBackChord(_ event: NSEvent) -> Bool {
+        event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command
+            && ASCIIKeyboardLayout.character(for: event) == "["
+    }
+
     private static func emacsArrow(for event: NSEvent) -> NSEvent? {
         guard event.modifierFlags.intersection([.command, .option, .control, .shift]) == .control
         else { return nil }
@@ -207,9 +214,11 @@ final class PalettePanel: NSPanel, AnimatedPanel {
         {
             return
         }
+        // Marked text owns Escape: an IME cancels its composition with it.
         if event.type == .keyDown,
             Int(event.keyCode) == kVK_Escape,
             event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
+            fieldEditor?.hasMarkedText() != true,
             onEscape?() == true
         {
             return
@@ -218,8 +227,11 @@ final class PalettePanel: NSPanel, AnimatedPanel {
             Int(event.keyCode) == kVK_Delete,
             event.modifierFlags.isDisjoint(with: [.command, .option, .control, .shift]),
             fieldEditor?.hasMarkedText() != true,
-            onBareBackspace?() == true
+            onBareBackspace?(event.isARepeat) == true
         {
+            return
+        }
+        if event.type == .keyDown, Self.isGoBackChord(event), onGoBackChord?() == true {
             return
         }
         if event.type == .keyDown, let boundary = headerFieldBoundary(for: event),

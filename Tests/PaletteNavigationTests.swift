@@ -99,7 +99,7 @@ struct PaletteNavigationTests {
         expect(editing.query.isEmpty, "the snippet editor does not inherit the browser query")
         editing.noteEditingField(true)
         expect(
-            editing.pop(preservingSelection: true) && editing.mode == .snippets && editing.query == "sign-off"
+            editing.pop() && editing.mode == .snippets && editing.query == "sign-off"
                 && editing.selection == 2 && editing.restoredSelection == 2 && !editing.isEditingField,
             "leaving a snippet editor restores its browser and releases the form keyboard")
         editing.query = "new search"
@@ -139,7 +139,7 @@ struct PaletteNavigationTests {
             quicklink.mode.isNativeEditor && quicklink.query.isEmpty,
             "the quicklink editor owns its keyboard without inheriting the browser query")
         expect(
-            quicklink.pop(preservingSelection: true) && quicklink.mode == .quicklinks
+            quicklink.pop() && quicklink.mode == .quicklinks
                 && quicklink.query == "GitHub" && quicklink.restoredSelection == 1,
             "leaving a quicklink editor restores its browser query and row")
         quicklink.pushCarryingQuery(mode: .launcher)
@@ -156,7 +156,7 @@ struct PaletteNavigationTests {
             event.mode.isNativeEditor && event.query.isEmpty,
             "the event editor owns its keyboard without inheriting the launcher query")
         expect(
-            event.pop(preservingSelection: true) && event.mode == .launcher
+            event.pop() && event.mode == .launcher
                 && event.query == "Create Event" && event.restoredSelection == 3 && !event.isEditingField,
             "leaving an event editor restores the launcher query and selected row")
         event.prepare(mode: .eventEditor)
@@ -170,7 +170,7 @@ struct PaletteNavigationTests {
             command.mode.isNativeEditor && command.query.isEmpty,
             "the command editor owns its keyboard without inheriting the launcher query")
         expect(
-            command.pop(preservingSelection: true) && command.mode == .launcher
+            command.pop() && command.mode == .launcher
                 && command.query == "Create Custom Command" && command.restoredSelection == 3
                 && !command.isEditingField,
             "leaving a command editor restores the launcher query and selected row")
@@ -184,7 +184,7 @@ struct PaletteNavigationTests {
         commands.push(mode: .customCommandEditor)
         commands.noteEditingField(true)
         expect(
-            commands.pop(preservingSelection: true) && commands.mode == .customCommands
+            commands.pop() && commands.mode == .customCommands
                 && commands.query == "Screens" && commands.restoredSelection == 2
                 && !commands.isEditingField,
             "closing a command editor restores its browser query and selection")
@@ -249,8 +249,136 @@ struct PaletteNavigationTests {
             !pasted.collapseQueryLineBreaks() && pasted.query == "first pasted row, second pasted row third",
             "a single-line query is left alone")
 
+        rootSearchSitsUnderEveryScreen()
+        backRestoresTheWholeScreen()
+        aShortcutsScreenIsItsOwnRoot()
+        rootSearchSurvivesWhatAsked()
+        emptyingTheQueryCollapsesTheBar()
+
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
+    }
+
+    static func rootSearchSitsUnderEveryScreen() {
+        let deepLinked = searchingLauncher()
+        deepLinked.prepare(mode: .clipboard)
+        deepLinked.query = "invoice"
+        deepLinked.goBack()
+        expect(
+            deepLinked.mode == .launcher && deepLinked.query.isEmpty && !deepLinked.canGoBack,
+            "going back from a screen with nothing under it lands on an empty root search")
+
+        let root = searchingLauncher()
+        root.goBack()
+        expect(
+            root.mode == .launcher && root.query == "clipboard",
+            "going back on root search itself changes nothing")
+
+        let pushed = searchingLauncher()
+        pushed.push(mode: .emoji)
+        pushed.goBack()
+        expect(
+            pushed.mode == .launcher && pushed.query == "clipboard" && pushed.selection == 3,
+            "going back over a pushed screen restores the search under it")
+    }
+
+    static func backRestoresTheWholeScreen() {
+        let clipboard = searchingLauncher()
+        clipboard.push(mode: .clipboard)
+        clipboard.clipboardFilter = .text
+        clipboard.push(mode: .meetingDetails)
+        expect(
+            clipboard.pop() && clipboard.mode == .clipboard && clipboard.clipboardFilter == .text,
+            "back restores the type filter the screen was left with")
+
+        let emoji = searchingLauncher()
+        emoji.push(mode: .emoji)
+        emoji.emojiCategoryFilter = .category(.flags)
+        emoji.emojiGridColumnsOverride = .ten
+        emoji.push(mode: .ai)
+        expect(
+            emoji.pop() && emoji.emojiCategoryFilter == .category(.flags)
+                && emoji.emojiGridColumnsOverride == .ten,
+            "back restores the emoji category and grid density")
+
+        let files = searchingLauncher()
+        files.push(mode: .fileSearch)
+        files.fileSearchFilter = .folders
+        files.push(mode: .clipboard)
+        expect(
+            files.clipboardFilter == .all && files.fileSearchFilter == .all,
+            "a pushed screen still opens with every filter cleared")
+        expect(files.pop() && files.fileSearchFilter == .folders, "back restores the file filter")
+
+        let ringed = searchingLauncher()
+        ringed.push(mode: .clipboard)
+        ringed.clipboardFilter = .image
+        ringed.pushCarryingQuery(mode: .launcher)
+        expect(ringed.clipboardFilter == .all, "a ring hop does not carry a filter along")
+
+        let browsed = searchingLauncher()
+        browsed.push(mode: .clipboard)
+        browsed.selection = 4
+        browsed.push(mode: .ai)
+        expect(
+            browsed.pop() && browsed.selection == 4 && browsed.restoredSelection == nil,
+            "only leaving an editor pins the restored row through the observers")
+    }
+
+    static func aShortcutsScreenIsItsOwnRoot() {
+        let hotkey = searchingLauncher()
+        hotkey.push(mode: .ai)
+        hotkey.prepareFromHotkey(mode: .clipboard)
+        expect(
+            hotkey.isHotkeyRoot && !hotkey.canGoBack,
+            "a shortcut's screen starts its own stack, whatever was open before")
+        hotkey.push(mode: .emoji)
+        expect(!hotkey.isHotkeyRoot, "a screen pushed over it is not the shortcut's own")
+        expect(hotkey.pop() && hotkey.isHotkeyRoot, "back on the shortcut's screen, it is again")
+        hotkey.goBack()
+        expect(
+            hotkey.mode == .launcher && !hotkey.isHotkeyRoot,
+            "going back from it reaches root search, which no shortcut opened")
+
+        let summoned = PaletteState()
+        summoned.prepareFromHotkey(mode: .clipboard)
+        summoned.prepare(mode: .clipboard)
+        expect(!summoned.isHotkeyRoot, "an ordinary summon clears the shortcut's claim")
+
+        let ringed = PaletteState()
+        ringed.prepareFromHotkey(mode: .clipboard)
+        ringed.resetNavigation()
+        expect(!ringed.isHotkeyRoot, "closing the Tab ring clears it too")
+    }
+
+    static func rootSearchSurvivesWhatAsked() {
+        let kept = searchingLauncher()
+        kept.push(mode: .extensionCommand)
+        kept.popToRootKeepingSearch()
+        expect(
+            kept.mode == .launcher && kept.query == "clipboard" && !kept.canGoBack,
+            "popping to root can keep the text root search held")
+
+        let underneath = searchingLauncher()
+        underneath.push(mode: .extensionCommand)
+        underneath.clearRootSearch()
+        expect(underneath.mode == .extensionCommand, "clearing root search leaves the screen on top")
+        expect(
+            underneath.pop() && underneath.query.isEmpty && underneath.selection == 0,
+            "and the root search under it comes back empty, scrolled to the top")
+
+        let onScreen = searchingLauncher()
+        onScreen.clearRootSearch()
+        expect(onScreen.query.isEmpty && onScreen.selection == 0, "root search on screen clears in place")
+    }
+
+    static func emptyingTheQueryCollapsesTheBar() {
+        let compact = searchingLauncher()
+        compact.forceExpanded = true
+        compact.query = "c"
+        expect(compact.forceExpanded, "typing keeps an expanded bar expanded")
+        compact.query = ""
+        expect(!compact.forceExpanded, "an emptied query falls back to the compact bar")
     }
 
     static let rest = CGPoint(x: 400, y: 300)

@@ -8,6 +8,7 @@ enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {
     case afterThirty = 30
     case afterSixty = 60
     case afterNinety = 90
+    case afterTwoMinutes = 120
 
     var id: Int { rawValue }
 

@@ -14,6 +14,8 @@ final class PaletteCoordinator {
     var onLauncherShown: (() -> Void)?
     /// Screens that snapshot other apps re-read them on every open, a restored one included.
     var onScreenOpening: ((PaletteMode) -> Void)?
+    /// True only while a key press's own dispatch runs; see `dispatchingHotkey`.
+    private var isHotkeyDispatch = false
 
     init(
         palette: PaletteState,
@@ -54,9 +56,16 @@ final class PaletteCoordinator {
         windowController.isVisible && palette.mode == mode
     }
 
+    /// A key press's own dispatch: a screen it opens starts afresh and closes on Escape.
+    func dispatchingHotkey(_ dispatch: () -> Void) {
+        isHotkeyDispatch = true
+        defer { isHotkeyDispatch = false }
+        dispatch()
+    }
+
     func togglePalette() {
         if isShowing(.launcher) {
-            hidePalette()
+            hidePalette(close: .dismissed)
         } else {
             showPalette(mode: .launcher, restoreAnyMode: true)
         }
@@ -64,16 +73,18 @@ final class PaletteCoordinator {
 
     /// A carried query always opens: it is new input, not the second press that would close.
     func togglePalette(mode: PaletteMode, seeding query: String? = nil) {
-        if isShowing(mode), query == nil {
-            hidePalette()
+        if isShowing(mode), query == nil, !isHotkeyDispatch || palette.isHotkeyRoot {
+            hidePalette(close: .dismissed)
         } else {
             showPalette(mode: mode, seeding: query)
         }
     }
 
-    /// The screen under becomes the back step; the launcher is the root and never has one.
+    /// The screen under becomes the back step; a shortcut's screen and the launcher start afresh.
     func navigate(to mode: PaletteMode) {
-        if windowController.isVisible, palette.mode != mode, mode != .launcher {
+        if isHotkeyDispatch, mode != .launcher {
+            palette.prepareFromHotkey(mode: mode)
+        } else if windowController.isVisible, palette.mode != mode, mode != .launcher {
             palette.push(mode: mode)
         } else {
             palette.prepare(mode: mode)
@@ -85,7 +96,9 @@ final class PaletteCoordinator {
         mode: PaletteMode, restoreAnyMode: Bool = false, seeding query: String? = nil
     ) {
         let preserved = windowController.consumePreservedState()
-        let restoring = preserved && (restoreAnyMode || palette.mode == mode)
+        // A shortcut brings back only the screen it opened itself; anything else opens afresh.
+        let restoresMode = palette.mode == mode && (!isHotkeyDispatch || palette.isHotkeyRoot)
+        let restoring = preserved && (restoreAnyMode || restoresMode)
         // Resetting a screen the pop to root already reset would only re-render the whole palette.
         let alreadyFresh = windowController.isPoppedToRoot && palette.mode == mode
         // A carried query always opens the screen fresh: restoring the previous one would drop it.
@@ -119,19 +132,16 @@ final class PaletteCoordinator {
         palette.pendingArgumentEntryID = entry.id
     }
 
-    func hidePalette(restoreFocus: Bool = true) {
+    /// Most closes follow an action; `close` names the others, which reset on their own terms.
+    func hidePalette(restoreFocus: Bool = true, close: PaletteClose = .afterAction) {
         menuSearch.reset()
         windowSwitch.reset()
-        windowController.hide(restoreFocus: restoreFocus)
+        windowController.hide(restoreFocus: restoreFocus, close: close)
     }
 
     /// A row dragged out and landed is a finished errand, so the palette leaves as after a paste.
     func dragLanded() {
         hidePalette(restoreFocus: false)
-    }
-
-    func popToRootNow() {
-        windowController.popToRootNow()
     }
 
     var paletteIsCollapsed: Bool {

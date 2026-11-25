@@ -357,6 +357,7 @@ struct RootPaletteView: View {
                     WindowReader {
                         hostWindow = $0
                         installHeaderArrowHandler(in: $0)
+                        installNavigationKeys(in: $0)
                     }
                 )
                 // The window's frame is the size source, so the glass and clip stay matched.
@@ -460,10 +461,6 @@ struct RootPaletteView: View {
                 fileSearch.search(vm.query, filter: vm.fileSearchFilter)
             }
             .onChange(of: vm.mode) {
-                vm.clipboardFilter = .all
-                vm.fileSearchFilter = .all
-                vm.emojiCategoryFilter = .all
-                vm.emojiGridColumnsOverride = nil
                 if menuOpen { closeMenus() }
                 land(restoringSelection: true)
                 searchFocused = !screen.hidesSearchField
@@ -486,7 +483,7 @@ struct RootPaletteView: View {
                 if vm.mode != .switchWindows { windowSwitch.reset() }
                 if vm.mode != .meetingDetails { calendarStore.clearDetails() }
                 if vm.mode != .rooms, vm.mode != .roomWindows { core.roomCoordinator.screensDidClose() }
-                // Leaving the screen any other way than Escape still ends the command's session.
+                // Leaving the screen ends the command's session, whichever key or path left it.
                 if vm.mode != .extensionCommand, extensions.running != nil {
                     Task { await extensions.stop() }
                 }
@@ -518,6 +515,7 @@ struct RootPaletteView: View {
             .onDisappear {
                 menuPanel.hide()
                 (hostWindow as? PalettePanel)?.onHeaderFieldBoundaryArrow = nil
+                removeNavigationKeys(from: hostWindow)
             }
             // The first show builds this view after `prepare`, so no handler saw that reset.
             .onAppear {
@@ -619,39 +617,6 @@ struct RootPaletteView: View {
                 }
                 if command { return screen.secondary(at: selection) ? .handled : .ignored }
                 return screen.pasteKeepingWindowOpen(at: selection) ? .handled : .ignored
-            }
-            .onKeyPress(.escape) {
-                // An open control list owns Escape before the palette beneath it.
-                if vm.isControlListOpen { return .ignored }
-                if vm.isComposing, !menuOpen { return .ignored }
-                switch PaletteEscapeAction.resolve(
-                    menuOpen: menuOpen, menuQuery: vm.menuQuery,
-                    argumentFocused: argumentFocused != nil, query: vm.query, mode: vm.mode,
-                    canGoBack: vm.canGoBack,
-                    behavior: settings.escapeKeyBehavior,
-                    compactRootExpanded: settings.compactMode && vm.mode == .launcher && !isCollapsed)
-                {
-                case .clearMenuQuery, .closeMenu:
-                    escapeMenu()
-                case .leaveArgumentField:
-                    returnFocusToSearchField()
-                case .clearQuery:
-                    if settings.compactMode, vm.mode == .launcher { vm.forceExpanded = true }
-                    vm.query = ""
-                case .exitExtensionScreen:
-                    core.extensionCoordinator.exitExtensionScreen()
-                case .goBack:
-                    goBack()
-                case .collapsePalette:
-                    vm.forceExpanded = false
-                    resetCompactSelection()
-                case .hidePalette:
-                    core.paletteCoordinator.hidePalette()
-                    if settings.escapeKeyBehavior == .closeAndPopToRoot {
-                        core.paletteCoordinator.popToRootNow()
-                    }
-                }
-                return .handled
             }
             .onKeyPress(keys: [.tab], phases: .down) { press in
                 // ⇥ inside an open list belongs to the list, not to the form's field order.
@@ -1552,40 +1517,85 @@ struct RootPaletteView: View {
         open(.argumentOptions, highlighting: 0)
     }
 
-    /// An extension keeps its own stack, so it can have a step back the palette cannot see.
-    private var hasBackStep: Bool {
-        vm.canGoBack || (vm.mode == .extensionCommand && extensions.navigationDepth > 1)
+    /// A running command keeps a stack of its own, which it pops before the palette's.
+    private var extensionCanGoBack: Bool {
+        vm.mode == .extensionCommand && extensions.navigationDepth > 1
     }
 
-    /// Never promises a step the click does not take: a root screen closes rather than backs.
+    /// Names the keys that take the chevron's step; the click itself always goes back.
     private var backHelp: String {
-        hasBackStep
-            ? String(localized: "Esc to go back or ⌘ Esc to go to root search")
-            : String(localized: "Esc to close or ⌘ Esc to go to root search")
+        settings.escapeKeyBehavior == .closeAndPopToRoot
+            ? String(localized: "⌘ [ to go back or ⌘ Esc to go to root search")
+            : String(localized: "Esc to go back or ⌘ Esc to go to root search")
     }
 
+    /// The step Escape, ⌫, ⌘[ and the chevron share. It never closes: root search is underneath.
     private func goBack() {
-        if vm.mode == .customCommandEditor {
-            core.customCommandCoordinator.cancelCustomCommandEditing()
+        if extensionCanGoBack {
+            core.extensionCoordinator.popView()
             return
         }
-        if vm.mode == .eventEditor {
-            core.calendarCoordinator.cancelEventEditing()
-            return
+        vm.goBack()
+    }
+
+    /// The panel sees these before any focused field, text view or editor could answer them.
+    private func installNavigationKeys(in window: NSWindow?) {
+        guard let panel = window as? PalettePanel else { return }
+        panel.onEscape = { handleEscape() }
+        panel.onBareBackspace = { isRepeat in handleBareBackspace(isRepeat: isRepeat) }
+        panel.onGoBackChord = { handleGoBackChord() }
+    }
+
+    private func removeNavigationKeys(from window: NSWindow?) {
+        guard let panel = window as? PalettePanel else { return }
+        panel.onEscape = nil
+        panel.onBareBackspace = nil
+        panel.onGoBackChord = nil
+    }
+
+    private func handleEscape() -> Bool {
+        // An open control list owns Escape before the palette beneath it.
+        guard !vm.isControlListOpen else { return false }
+        let press = PaletteEscapePress(
+            mode: vm.mode, query: vm.query, menuQuery: menuOpen ? vm.menuQuery : nil,
+            isArgumentFocused: argumentFocused != nil,
+            isAnswering: vm.mode == .ai && quickAI.isStreaming, canGoBack: vm.canGoBack,
+            isHotkeyRoot: vm.isHotkeyRoot, extensionCanGoBack: extensionCanGoBack,
+            behavior: settings.escapeKeyBehavior)
+        performEscape(PaletteEscapeAction.resolve(press))
+        return true
+    }
+
+    private func performEscape(_ action: PaletteEscapeAction) {
+        switch action {
+        case .clearMenuQuery, .closeMenu: escapeMenu()
+        case .leaveArgumentField: returnFocusToSearchField()
+        case .stopAnswer: core.quickAICoordinator.stopResponse()
+        case .clearQuery: vm.query = ""
+        case .goBack: goBack()
+        case .close: core.paletteCoordinator.hidePalette(close: .dismissed)
+        case .closeAndPopToRoot: core.paletteCoordinator.hidePalette(close: .poppingToRoot)
         }
-        if vm.mode == .quicklinkEditor {
-            core.quicklinkCoordinator.cancelQuicklinkEditing()
-            return
-        }
-        if vm.mode == .snippetEditor {
-            core.snippetCoordinator.cancelSnippetEditing()
-            return
-        }
-        if vm.mode == .extensionCommand {
-            core.extensionCoordinator.exitExtensionScreen()
-            return
-        }
-        if !vm.pop() { core.paletteCoordinator.hidePalette() }
+    }
+
+    /// ⌫ in an empty field takes Escape's back step but never closes; holding it only deletes.
+    private func handleBareBackspace(isRepeat: Bool) -> Bool {
+        // A form field or an open list owns the key: what it deletes is theirs, not the query's.
+        guard vm.query.isEmpty, !vm.isEditingField, !vm.isControlListOpen else { return false }
+        if vm.mode == .ai, core.quickAICoordinator.removeLastAttachment() { return true }
+        if isRepeat { return true }
+        guard vm.mode != .launcher else { return false }
+        goBack()
+        return true
+    }
+
+    /// ⌘[ steps back once Escape closes instead; Quick AI's composer keeps the chord for itself.
+    private func handleGoBackChord() -> Bool {
+        guard settings.escapeKeyBehavior == .closeAndPopToRoot, vm.mode != .launcher,
+            vm.mode != .ai, !menuOpen, !vm.isControlListOpen
+        else { return false }
+        goBack()
+        return true
     }
 
     private func activateSelection() {

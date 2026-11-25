@@ -14,10 +14,10 @@ protocol ExtensionHostContext: AnyObject {
     /// Every app bundle `getApplications()` reports, from the user's own search scopes.
     var applicationURLs: [URL] { get }
 
-    func closeMainWindow(clearRootSearch: Bool)
+    func closeMainWindow(_ close: ExtensionWindowClose)
     /// Bring the palette back after a command hid it — what `raycast://` means to an extension.
     func reopenPalette()
-    func popToRoot()
+    func popToRoot(clearingSearchBar: Bool)
     func clearSearchBar()
     func openPreferences(scope: String)
     /// Persists a `subtitle` (or clears it on `null`); a missing key leaves it alone.
@@ -219,7 +219,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             // A file goes on the pasteboard as a file, so it pastes as the picture it is.
             if let path = content["file"]?.stringValue, !path.isEmpty {
                 let target = context?.pasteTarget
-                if method == "paste" { context?.closeMainWindow(clearRootSearch: false) }
+                if method == "paste" { context?.closeMainWindow(.standard) }
                 writeFileToPasteboard(path, concealed: method == "copy" && concealed)
                 guard method == "paste" else { return nil }
                 target?.activate()
@@ -240,7 +240,7 @@ final class ExtensionHostBridge: ExtensionHostAPI {
                 }
             } else {
                 let target = context?.pasteTarget
-                context?.closeMainWindow(clearRootSearch: false)
+                context?.closeMainWindow(.standard)
                 Paster.pasteString(text, previousApp: target)
             }
             return nil
@@ -366,10 +366,10 @@ final class ExtensionHostBridge: ExtensionHostAPI {
         guard context?.activeLaunchType != .background else { return nil }
         switch method {
         case "close":
-            let options = arguments.first?.objectValue ?? [:]
-            context?.closeMainWindow(clearRootSearch: options["clearRootSearch"]?.boolValue ?? false)
+            context?.closeMainWindow(ExtensionWindowClose(options: arguments.first?.objectValue ?? [:]))
         case "popToRoot":
-            context?.popToRoot()
+            let options = arguments.first?.objectValue ?? [:]
+            context?.popToRoot(clearingSearchBar: options["clearSearchBar"]?.boolValue ?? true)
         case "clearSearchBar":
             context?.clearSearchBar()
         case "openPreferences":
@@ -401,7 +401,9 @@ final class ExtensionHostBridge: ExtensionHostAPI {
             if let id = arguments.first?.doubleValue.map(Int.init) { context.hide(toast: id) }
             return nil
 
+        // A HUD always hides the palette first, taking the same options as `closeMainWindow`.
         case "showHUD":
+            context.closeMainWindow(ExtensionWindowClose(options: arguments[safe: 1]?.objectValue ?? [:]))
             context.showHUD(arguments.first?.stringValue ?? "")
             return nil
 

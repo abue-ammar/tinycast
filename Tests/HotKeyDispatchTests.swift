@@ -16,8 +16,32 @@ struct HotKeyDispatchTests {
         for includesShift in [false, true] { dispatch(includesShift: includesShift) }
         allowance()
         crossProcess()
+        keyPressesAreBracketed()
         print("\(checks) dispatch checks; \(failures) failures")
         if failures > 0 { exit(1) }
+    }
+
+    /// The palette tells a shortcut's own screen from one a deep link opened by this bracket.
+    static func keyPressesAreBracketed() {
+        let domain = "tinycast.hotkey-dispatch-test.\(UUID())"
+        let defaults = UserDefaults(suiteName: domain)!
+        defer { defaults.removePersistentDomain(forName: domain) }
+        let manager = HotKeyManager(defaults: defaults)
+        let center = HotKeyCenter.current!
+        manager.activate()
+        var isInsidePress = false
+        var opened: [Bool] = []
+        manager.onKeyPressDispatch = { dispatch in
+            isInsidePress = true
+            dispatch()
+            isInsidePress = false
+        }
+        manager.onTogglePalette = { opened.append(isInsidePress) }
+        let shortcut = KeyShortcut(carbonKeyCode: kVK_ANSI_K, carbonModifiers: controlKey | optionKey)
+        manager.setBinding(.combo(shortcut), for: .togglePalette)
+        center.entries[HotKeyAction.togglePalette.defaultsKey]?.onKeyDown(0)
+        manager.perform(.togglePalette)
+        check("a key press dispatches inside the press bracket", opened == [true, false])
     }
 
     static func dispatch(includesShift: Bool) {

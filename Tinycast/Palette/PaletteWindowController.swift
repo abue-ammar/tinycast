@@ -10,6 +10,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// Our key window at summon time, so hiding hands focus back to Settings, not a stale app.
     private(set) weak var previousOwnWindow: NSWindow?
     private var popToRootTimer: Timer?
+    /// Set by a close that keeps its screen, which then waits for the next show, not a timer.
+    private var keepsScreen = false
     // Reopen beat the timeout, so select the preserved query.
     private var queryWasPreserved = false
     /// Set by a pop to root while hidden and spent by the next show: that screen is already fresh.
@@ -148,7 +150,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    func hide(restoreFocus: Bool) {
+    func hide(restoreFocus: Bool, close: PaletteClose) {
+        let wasVisible = isVisible
         NotesPanel.refusesInheritedKey = previousOwnWindow?.isVisible != true
         panel?.orderOut(nil)
         NotesPanel.refusesInheritedKey = false
@@ -167,7 +170,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         ImageThumbnail.purgePreviews()
         FilePreviewThumbnail.purgePreviews()
         IconCache.purgeFitted()
-        schedulePopToRoot()
+        schedulePopToRoot(after: close, wasVisible: wasVisible)
         guard restoreFocus else { return }
         // Our own window first: it is still open, and activating another app would bury it.
         if let own = previousOwnWindow, own.isVisible {
@@ -177,15 +180,21 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
-    private func schedulePopToRoot() {
-        guard !core.extensions.isSigningIn else { return }
-        popToRootTimer?.invalidate()
-        let timeout = core.settings.popToRootTimeout
-        guard timeout != .immediately else {
-            popToRoot()
+    /// Hiding a palette that is already hidden closed nothing, so its pending reset stands.
+    private func schedulePopToRoot(after close: PaletteClose, wasVisible: Bool) {
+        guard close != .poppingToRoot else { return popToRootNow() }
+        guard wasVisible, !core.extensions.isSigningIn else { return }
+        cancelPopToRoot()
+        guard
+            let delay = PopToRootPolicy.delay(
+                after: close, timeout: core.settings.popToRootTimeout.interval,
+                isPlainRootSearch: isPlainRootSearch)
+        else {
+            keepsScreen = true
             return
         }
-        popToRootTimer = Timer.scheduledTimer(withTimeInterval: timeout.interval, repeats: false) {
+        guard delay > 0 else { return popToRoot() }
+        popToRootTimer = Timer.scheduledTimer(withTimeInterval: delay, repeats: false) {
             [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
@@ -195,6 +204,12 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    private var isPlainRootSearch: Bool {
+        let palette = core.palette
+        return palette.mode == .launcher && palette.argumentEntryID == nil
+            && palette.commandArguments.isEmpty
+    }
+
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
     private func popToRoot() {
         core.fileSearch.cancel()
@@ -202,18 +217,22 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         isPoppedToRoot = true
     }
 
-    /// Skip the Pop to Root Search delay, for a close that means to reset as well as hide.
-    func popToRootNow() {
+    private func popToRootNow() {
+        cancelPopToRoot()
+        popToRoot()
+    }
+
+    private func cancelPopToRoot() {
         popToRootTimer?.invalidate()
         popToRootTimer = nil
-        popToRoot()
+        keepsScreen = false
     }
 
     /// True while a hidden palette keeps its screen: a reset is pending, or a sign-in holds it.
     func consumePreservedState() -> Bool {
-        guard let timer = popToRootTimer else { return core.extensions.isSigningIn }
-        timer.invalidate()
-        popToRootTimer = nil
+        let isKept = popToRootTimer != nil || keepsScreen
+        cancelPopToRoot()
+        guard isKept else { return core.extensions.isSigningIn }
         queryWasPreserved = true
         return true
     }
@@ -239,7 +258,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             panel?.level = .normal
             return
         }
-        core.paletteCoordinator.hidePalette(restoreFocus: false)
+        core.paletteCoordinator.hidePalette(restoreFocus: false, close: .dismissed)
     }
 
     func windowDidBecomeKey(_ notification: Notification) {
@@ -378,44 +397,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         panel.onFieldEditorFocused = { [weak self] context in
             self?.core.inputSourceSwitcher.applySession(to: context)
         }
-        // Backspace takes Escape's back step but never closes: a root screen falls to the launcher.
-        panel.onBareBackspace = { [weak self] in
-            guard let core = self?.core, core.palette.query.isEmpty else { return false }
-            // A form field owns the key: the text it deletes is the field's, not a query's.
-            if core.palette.isEditingField { return false }
-            if core.palette.mode == .extensionCommand {
-                core.extensionCoordinator.exitExtensionScreen()
-                return true
-            }
-            if core.palette.mode == .ai, core.quickAICoordinator.removeLastAttachment() {
-                return true
-            }
-            if core.palette.pop() { return true }
-            guard core.palette.mode != .launcher else { return false }
-            core.palette.prepare(mode: .launcher)
-            return true
-        }
         installPasteMonitor()
-        panel.onEscape = { [weak self] in
-            guard let self else { return false }
-            if core.palette.mode == .customCommandEditor, !core.palette.isComposing {
-                core.customCommandCoordinator.cancelCustomCommandEditing()
-                return true
-            }
-            if core.palette.mode == .eventEditor, !core.palette.isComposing {
-                core.calendarCoordinator.cancelEventEditing()
-                return true
-            }
-            if core.palette.mode == .quicklinkEditor, !core.palette.isComposing {
-                core.quicklinkCoordinator.cancelQuicklinkEditing()
-                return true
-            }
-            if core.palette.mode == .snippetEditor, !core.palette.isComposing {
-                core.snippetCoordinator.cancelSnippetEditing()
-                return true
-            }
-            return false
-        }
         // Handled at the panel: the field editor or a missing main menu eats these first.
         panel.onCommandShortcut = { [weak self] event in
             guard let self else { return false }
@@ -455,7 +437,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 self.core.palette.notePinChord()
                 return true
             case "w":
-                self.core.paletteCoordinator.hidePalette()
+                self.core.paletteCoordinator.hidePalette(close: .dismissed)
                 return true
             default:
                 return false

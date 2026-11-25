@@ -386,7 +386,7 @@ final class QuicklinkCoordinator {
 
     func cancelQuicklinkEditing() {
         guard core.palette.mode == .quicklinkEditor else { return }
-        if !core.palette.pop(preservingSelection: true) {
+        if !core.palette.pop() {
             paletteCoordinator.hidePalette()
             core.palette.prepare(mode: .launcher)
         }

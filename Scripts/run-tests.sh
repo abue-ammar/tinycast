@@ -805,6 +805,9 @@ run ExtensionAccessoryTests $E/Model/RenderNode.swift \
                            $E/Model/ExtensionPickerItem.swift \
                            $E/Model/ExtensionSearchAccessory.swift \
                            $E/Service/ExtensionStorage.swift
+run PopToRootTests         Tinycast/Palette/PopToRootPolicy.swift \
+                           $E/Model/RenderNode.swift \
+                           $E/Model/ExtensionWindowClose.swift
 run slow ExtensionTests    -parse-as-library \
                            Tests/ExtensionTests+MenuBar.swift \
                            Tests/ExtensionFetchTests.swift \

@@ -1,6 +1,6 @@
 import Foundation
 
-/// What Escape does on the palette once the search field it would have cleared is already empty.
+/// Whether Escape walks back a screen at a time, or closes the launcher and resets it in one press.
 enum EscapeKeyBehavior: String, CaseIterable, Identifiable, Sendable {
     case navigateBackOrClose
     case closeAndPopToRoot

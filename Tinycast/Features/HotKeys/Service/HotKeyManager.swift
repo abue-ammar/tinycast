@@ -35,6 +35,8 @@ final class HotKeyManager {
     var onRunAppleShortcut: ((UUID) -> Void)?
     var onExpandSnippet: ((StoredSnippet.ID) -> Void)?
     var onRunExtensionCommand: ((String) -> Void)?
+    /// Wraps the dispatch a key press starts, so the palette can tell a shortcut opened a screen.
+    var onKeyPressDispatch: ((() -> Void) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
     /// Whether the action's category, feature and item are switched on. Set in `AppCore.start()`.
@@ -129,9 +131,9 @@ final class HotKeyManager {
 
         modifierTapMonitor.onTrigger = { [weak self] binding in
             guard let self, let action = modifierTaps[binding] else { return }
-            perform(action)
+            press(action)
         }
-        modifierTapMonitor.onHoldPressed = { [weak self] in self?.perform(.dictation) }
+        modifierTapMonitor.onHoldPressed = { [weak self] in self?.press(.dictation) }
         modifierTapMonitor.onHoldReleased = { [weak self] in self?.onDictationReleased?() }
         modifierTapMonitor.onHoldCancelled = { [weak self] in self?.onDictationCancelled?() }
         modifierTapMonitor.start()
@@ -346,7 +348,7 @@ final class HotKeyManager {
                         secureInputPressedActions[id] =
                             ModifierKey.rightControl.isHeld(in: flags) ? action : original
                     }
-                    if let selected = secureInputPressedActions[id] { perform(selected) }
+                    if let selected = secureInputPressedActions[id] { press(selected) }
                 },
                 onKeyUp: { [weak self] in
                     isPressed = false
@@ -461,7 +463,7 @@ final class HotKeyManager {
         suppressedActions.remove(action)
         center.register(
             id: action.defaultsKey, shortcut: shortcut,
-            onKeyDown: { [weak self] _ in self?.perform(action) },
+            onKeyDown: { [weak self] _ in self?.press(action) },
             onKeyUp: action == .dictation ? { [weak self] in self?.onDictationReleased?() } : nil)
     }
 
@@ -484,6 +486,12 @@ final class HotKeyManager {
         modifierTapMonitor.update(
             bound: Set(modifierTaps.keys),
             holdKey: dictationBinding.flatMap { modifierTaps[$0] == .dictation ? holdKey : nil })
+    }
+
+    /// The bound keys themselves, unlike a deep link or Settings running the same action.
+    private func press(_ action: HotKeyAction) {
+        guard let onKeyPressDispatch else { return perform(action) }
+        onKeyPressDispatch { perform(action) }
     }
 
     func perform(_ action: HotKeyAction) {

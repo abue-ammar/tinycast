@@ -499,7 +499,7 @@ final class PaletteState {
     var commandArguments: [String: String] = [:]
     var pendingArgumentEntryID: String?
     func prepare(mode: PaletteMode) { self.mode = mode }
-    func pop(preservingSelection: Bool) -> Bool { false }
+    func pop() -> Bool { false }
     static func argumentKey(_ entryID: String, _ name: String) -> String { entryID + "\u{1}" + name }
 }
 

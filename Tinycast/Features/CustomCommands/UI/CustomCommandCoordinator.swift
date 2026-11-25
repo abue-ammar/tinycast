@@ -110,7 +110,7 @@ final class CustomCommandCoordinator {
 
     func cancelCustomCommandEditing() {
         guard core.palette.mode == .customCommandEditor else { return }
-        if !core.palette.pop(preservingSelection: true) {
+        if !core.palette.pop() {
             paletteCoordinator.hidePalette()
             core.palette.prepare(mode: .launcher)
         }

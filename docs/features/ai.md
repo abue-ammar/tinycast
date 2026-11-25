@@ -1063,9 +1063,10 @@ The switcher's glyph comes from the selection. Codex uses OpenAI's mark; Claude 
 marks; OpenCode resolves a brand from the model id or falls back to a sparkle; Cursor uses an SF Symbol;
 an API model resolves through its connection. It never depends on `modelOptions`, which for
 Codex is empty until the app-server has answered `model/list`; opening the chat on a Codex model warms that list so the title is the
-display name from the first frame. Tab hands Quick AI on to the clipboard, and Escape on an empty
-composer takes its own back step: to whatever opened it, or out of the palette when its hotkey
-did; either way the unsent draft is dropped rather than carried into a field that would search it.
+display name from the first frame. Tab hands Quick AI on to the clipboard. Escape first stops an
+answer still arriving, then takes Quick AI's own back step, typed draft or not: to whatever opened
+it, or out of the palette and reset when its hotkey did; either way the unsent draft is dropped
+rather than carried into a field that would search it.
 History is pushed over Quick AI and pops back to it, and Tab carries its query to the launcher
 because there the field really is a search. Neither exit touches the conversation: it lives on
 `AIChatState`, so Tab away and back resumes the same transcript.

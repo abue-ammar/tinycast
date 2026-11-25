@@ -1,7 +1,7 @@
 import Carbon.HIToolbox
 import Foundation
 
-/// One press may never skip a step the user can still see and throw work away.
+/// One press takes exactly one step: never skip one the user can still see, never stall on one.
 @main
 @MainActor
 struct PaletteEscapeTests {
@@ -26,127 +26,106 @@ struct PaletteEscapeTests {
         }
     }
 
-    /// The shipped default, so a case only spells out what it is actually about.
-    static func resolve(
-        menuOpen: Bool = false, menuQuery: String = "", argumentFocused: Bool = false,
-        query: String = "", mode: PaletteMode = .launcher, canGoBack: Bool = false,
-        behavior: EscapeKeyBehavior = .navigateBackOrClose, compactRootExpanded: Bool = false
-    ) -> PaletteEscapeAction {
-        PaletteEscapeAction.resolve(
-            menuOpen: menuOpen, menuQuery: menuQuery, argumentFocused: argumentFocused,
-            query: query, mode: mode, canGoBack: canGoBack, behavior: behavior,
-            compactRootExpanded: compactRootExpanded)
+    static func resolve(_ press: PaletteEscapePress) -> PaletteEscapeAction {
+        PaletteEscapeAction.resolve(press)
     }
 
     static func main() {
+        walkingBack()
+        closingAndPoppingToRoot()
+        layersAboveTheScreen()
+        commandEscapeChord()
+        print("\(passes) passed, \(failures) failed")
+        if failures > 0 { exit(1) }
+    }
+
+    static func walkingBack() {
+        expect(
+            resolve(PaletteEscapePress(query: "notes")), .clearQuery,
+            "a typed root search clears before the palette closes")
+        expect(resolve(PaletteEscapePress()), .close, "an empty root search closes the palette")
+        expect(
+            resolve(PaletteEscapePress(mode: .clipboard, query: "notes", canGoBack: true)), .clearQuery,
+            "a typed query clears before the back step it would otherwise skip")
+        expect(
+            resolve(PaletteEscapePress(mode: .clipboard, canGoBack: true)), .goBack,
+            "a screen opened from root search goes back to it")
+        expect(
+            resolve(PaletteEscapePress(mode: .clipboard)), .goBack,
+            "a screen with nothing pushed under it still goes back, onto root search")
+        expect(
+            resolve(PaletteEscapePress(mode: .clipboard, isHotkeyRoot: true)), .closeAndPopToRoot,
+            "a screen its own shortcut opened closes and resets at once")
+        expect(
+            resolve(PaletteEscapePress(mode: .clipboard, query: "notes", isHotkeyRoot: true)),
+            .clearQuery, "a shortcut's screen still clears its typed query first")
+        expect(
+            resolve(PaletteEscapePress(mode: .extensionCommand, extensionCanGoBack: true)), .goBack,
+            "an extension pops its own pushed view before the command is left")
+        expect(
+            resolve(
+                PaletteEscapePress(
+                    mode: .extensionCommand, isHotkeyRoot: true, extensionCanGoBack: true)),
+            .goBack, "a shortcut's extension still pops its own view before closing")
+        expect(
+            resolve(PaletteEscapePress(mode: .extensionCommand, isHotkeyRoot: true)),
+            .closeAndPopToRoot, "a shortcut's extension closes once its own stack is spent")
+        expect(
+            resolve(PaletteEscapePress(mode: .ai, query: "why is the sky", canGoBack: true)), .goBack,
+            "a Quick AI draft is left behind rather than wiped")
+        expect(
+            resolve(PaletteEscapePress(mode: .ai, query: "why is the sky", isHotkeyRoot: true)),
+            .closeAndPopToRoot, "Quick AI opened by its shortcut closes, draft and all")
+        expect(
+            resolve(PaletteEscapePress(mode: .quicklinkEditor, canGoBack: true)), .goBack,
+            "an editor goes back to the screen that opened it")
+        expect(
+            resolve(PaletteEscapePress(mode: .quicklinkEditor, isHotkeyRoot: true)),
+            .closeAndPopToRoot, "an editor its shortcut opened closes and resets")
+    }
+
+    static func closingAndPoppingToRoot() {
+        let closing = EscapeKeyBehavior.closeAndPopToRoot
+        expect(
+            resolve(PaletteEscapePress(mode: .clipboard, query: "notes", canGoBack: true, behavior: closing)),
+            .closeAndPopToRoot, "the first press closes and resets even with text typed")
+        expect(
+            resolve(PaletteEscapePress(query: "notes", behavior: closing)), .closeAndPopToRoot,
+            "a typed root search closes and resets rather than clearing")
+        expect(
+            resolve(PaletteEscapePress(behavior: closing)), .close,
+            "an empty root search just closes: there is nothing to reset")
+        expect(
+            resolve(PaletteEscapePress(mode: .extensionCommand, extensionCanGoBack: true, behavior: closing)),
+            .closeAndPopToRoot, "an extension's own stack does not hold the close back")
+    }
+
+    static func layersAboveTheScreen() {
         for behavior in EscapeKeyBehavior.allCases {
             expect(
-                resolve(query: "notes", behavior: behavior, compactRootExpanded: true),
-                .clearQuery, "compact root clears text before collapsing under either preference")
+                resolve(PaletteEscapePress(query: "notes", menuQuery: "paste", behavior: behavior)),
+                .clearMenuQuery, "an open menu clears its own search first")
             expect(
-                resolve(behavior: behavior, compactRootExpanded: true),
-                .collapsePalette, "empty expanded compact root collapses under either preference")
-            expect(resolve(behavior: behavior), .hidePalette, "collapsed root closes on the next Escape")
+                resolve(
+                    PaletteEscapePress(
+                        mode: .ai, query: "notes", menuQuery: "", isArgumentFocused: true,
+                        isAnswering: true, behavior: behavior)),
+                .closeMenu, "an empty menu closes before anything beneath it")
             expect(
-                resolve(menuOpen: true, behavior: behavior, compactRootExpanded: true),
-                .closeMenu, "menus still outrank root collapse")
+                resolve(
+                    PaletteEscapePress(query: "search", isArgumentFocused: true, behavior: behavior)),
+                .leaveArgumentField, "an argument field hands focus back before the query clears")
             expect(
-                resolve(argumentFocused: true, behavior: behavior, compactRootExpanded: true),
-                .leaveArgumentField, "argument focus still outranks root collapse")
+                resolve(
+                    PaletteEscapePress(
+                        mode: .ai, query: "and then?", isAnswering: true, isHotkeyRoot: true,
+                        behavior: behavior)),
+                .stopAnswer, "an answer still arriving stops before Quick AI is left")
         }
-        expect(
-            resolve(menuOpen: true, menuQuery: "paste"),
-            .clearMenuQuery,
-            "an open menu clears its own query before it closes")
-        expect(
-            resolve(menuOpen: true, query: "notes"),
-            .closeMenu,
-            "an open menu closes before anything else")
-        expect(
-            resolve(query: "notes"),
-            .clearQuery,
-            "a typed launcher query clears before the palette hides")
-        expect(
-            resolve(query: "notes", mode: .extensionCommand),
-            .clearQuery,
-            "a typed extension query clears before the extension screen exits")
-        expect(
-            resolve(mode: .extensionCommand),
-            .exitExtensionScreen,
-            "an empty extension query exits the extension screen, which owns its own stack")
-        expect(
-            resolve(),
-            .hidePalette,
-            "an empty launcher query hides the palette")
-        // The surface where the field is not a search field: a chat draft.
-        expect(
-            resolve(query: "why is the sky", mode: .ai),
-            .clearQuery,
-            "an unsent chat draft clears before chat itself is left")
+    }
 
-        // Provenance, not the mode, decides whether there is anywhere to go back to.
-        expect(
-            resolve(mode: .clipboard, canGoBack: true),
-            .goBack,
-            "a clipboard screen opened from the root search returns to it")
-        expect(
-            resolve(mode: .clipboard),
-            .hidePalette,
-            "the same screen summoned by its own hotkey is a root, so it hides")
-        expect(
-            resolve(mode: .ai, canGoBack: true),
-            .goBack,
-            "chat is no different: reached from the root, it goes back to it")
-        expect(
-            resolve(mode: .ai),
-            .hidePalette,
-            "chat summoned by its own hotkey hides rather than falling back to the launcher")
-        expect(
-            resolve(query: "notes", mode: .clipboard, canGoBack: true),
-            .clearQuery,
-            "a typed query still clears before the back step it would otherwise skip")
-
-        // Close and pop to root: one press ends the session, whatever it was opened over.
-        expect(
-            resolve(mode: .clipboard, canGoBack: true, behavior: .closeAndPopToRoot),
-            .hidePalette,
-            "close-and-pop-to-root hides even where a back step exists")
-        expect(
-            resolve(mode: .extensionCommand, canGoBack: true, behavior: .closeAndPopToRoot),
-            .hidePalette,
-            "close-and-pop-to-root outranks an extension's own stack too")
-        expect(
-            resolve(query: "notes", behavior: .closeAndPopToRoot),
-            .clearQuery,
-            "clearing the query is the first press under either behavior")
-        expect(
-            resolve(menuOpen: true, canGoBack: true, behavior: .closeAndPopToRoot),
-            .closeMenu,
-            "a menu outranks the behavior setting beneath it")
-
-        expect(
-            resolve(menuOpen: true, mode: .ai),
-            .closeMenu,
-            "a menu outranks the chat screen it is drawn over")
-        expect(
-            resolve(menuOpen: true, mode: .extensionCommand),
-            .closeMenu,
-            "a menu outranks the extension screen it is drawn over")
-        // An inline argument field is deeper than the query that found the command.
-        expect(
-            resolve(argumentFocused: true, query: "search"),
-            .leaveArgumentField,
-            "an argument field hands focus back before the query that found it clears")
-        expect(
-            resolve(argumentFocused: true, canGoBack: true),
-            .leaveArgumentField,
-            "an empty query does not let the argument field skip its own step")
-        expect(
-            resolve(menuOpen: true, argumentFocused: true, query: "search"),
-            .closeMenu,
-            "a menu still outranks the argument field beneath it")
-
-        // ⌘esc never reaches the responder chain, so the tap decides what counts as the chord.
+    // ⌘esc never reaches the responder chain, so the tap decides what counts as the chord.
+    static func commandEscapeChord() {
         expectChord(
             CommandEscapeTap.isChord(keyCode: Int64(kVK_Escape), flags: [.maskCommand]),
             true, "a bare ⌘esc is the root-search chord")
@@ -169,8 +148,5 @@ struct PaletteEscapeTests {
             CommandEscapeTap.isChord(
                 keyCode: Int64(kVK_Escape), flags: [.maskCommand, .maskAlphaShift, .maskSecondaryFn]),
             true, "the flags a real keyboard adds do not disqualify the chord")
-
-        print("\(passes) passed, \(failures) failed")
-        if failures > 0 { exit(1) }
     }
 }

@@ -51,7 +51,7 @@ struct GeneralSettingsView: View {
                     }
                 } label: {
                     SettingsRowTitle(.generalGeneral, "Escape Key Behavior")
-                    Text("When the search field is empty.")
+                    Text("In the launcher.")
                 }
                 // Empty only when TIS fails; one layout still lists, so the row stays put.
                 if !inputSources.isEmpty {

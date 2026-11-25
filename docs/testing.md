@@ -134,7 +134,9 @@ If a change touches anything in the right column, the harness on the left is man
 | `EmojiTests`                | `Emoji/Model/EmojiCatalog.swift`, `EmojiGridGeometry.swift`, the generated data and keyword packs                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `EmojiSearchTests`          | `Emoji/Service/EmojiIndex.swift`, `FrequentEmojiStore.swift`, `Scripts/gen-emoji.js`'s keyword format, multilingual search                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `CommandEscapeTapTests`     | `Palette/CommandEscapeTap.swift`: dedicated run-loop dispatch while main is blocked, timeout recovery, stale actions, installation cancellation and teardown; private ports and unposted events only                                                                                                                                                                                                                                                                                                                                                                                         |
-| `PaletteNavigationTests`    | `Palette/PaletteState.swift`'s screen motions (`prepare`, `replace`, `push`, `pop`) and hover arming, pointer drift, scroll disarming and highlight tokens                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `PaletteNavigationTests`    | `Palette/PaletteState.swift`'s screen motions (`prepare`, `prepareFromHotkey`, `push`, `pop`, `goBack`), restored filters, root search under every screen, and hover arming, pointer drift, scroll disarming and highlight tokens                                                                                                                                                                                                                                                                                                                                                            |
+| `PaletteEscapeTests`        | `Palette/PaletteEscapeAction.swift`: every rung of the Escape ladder under both Escape Key Behaviors, and the ⌘esc chord test                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `PopToRootTests`            | `Palette/PopToRootPolicy.swift`: each close's wait, the 15-second action limit and 5-second root search minimum, and extension close options                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `CompactBarTests`           | Compact shortcut order, selection boundaries, zero-to-four slots, identifiers, isolated preferences and invalid settings-file rejection                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `PaletteSelectionTests`     | `Features/PaletteRowIndex.swift`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `InterfaceSizeTests`        | `DesignSystem/InterfaceMetrics.swift`, `Features/Settings/InterfaceSize.swift`, `Extensions/Model/ExtensionFormMetrics.swift`                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
@@ -435,16 +437,30 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
   then hides on a second press; clicking away closes it
 - Search a mode command (Clipboard History, Search Emoji, Search Quicklinks, Search Files, Quick AI)
   and run it: Escape returns to the launcher **with the query still typed and the row still
-  selected**, and the next press clears it. The same screen from its own global hotkey hides the
-  palette instead, and shows its own header icon rather than a back chevron
+  selected**, and the next press clears it. The same screen from its own global hotkey closes on
+  Escape and resets at once: the launcher hotkey then opens an empty root search. Its back chevron
+  and ⌫ still go to root search instead of closing
+- Pressing a screen's own hotkey while the launcher or a screen pushed from it is open opens that
+  screen fresh; pressing it again on the screen it opened closes the palette
+- Set Clipboard History's type filter and Search Emoji's category, open another screen over each,
+  then go back: both filters come back as they were left
+- Quick AI: Escape while an answer is still arriving stops it; the next Escape leaves Quick AI
+  without wiping a half-typed draft first
 - ⌘esc from any depth lands on an empty root search with the window still open; **must be checked
   on a real keyboard**: macOS claims the chord, so `CommandEscapeTap` is the only thing that
   delivers it and it needs Accessibility granted to the running build. With the palette closed, ⌘esc
   still does whatever macOS does with it. Open a menu or dialog over the palette and verify ⌘esc
   passes through while the palette is not key; after dismissing it, the palette chord works again
-- A bare ⌫ in an empty field walks the same path Escape does
-- General ▸ Escape Key Behavior set to `Close window and pop to root`: Escape on sub-screens closes
-  the window, and reopening lands on the root search whatever Pop to Root Search says
+- A bare ⌫ in an empty field walks the same path Escape does but never closes; holding ⌫ to delete
+  a long query stops at the empty field instead of walking back several screens
+- Escape in a native editor (Create Quicklink, Create Snippet) and in an extension form's multi-line
+  text area goes back, exactly as on a list screen
+- General ▸ Escape Key Behavior set to `Close window and pop to root`: Escape closes the window and
+  resets it on the first press, even with text typed; reopening lands on an empty root search. ⌘[
+  goes back one screen, and the back chevron's tooltip names ⌘[
+- Pop to Root Search: after opening an app, reopening within 15 seconds keeps the root query and later
+  does not, even at 90 seconds. After Escape the full timeout applies. On Immediately, a root search
+  reopened within 5 seconds keeps its text; any other screen resets at once
 - Reopening focuses the search field with an empty query, in the same position and at the same size
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - Compact mode: the opening frames show no shortcut fill beneath the query before the buttons emerge
@@ -453,7 +469,8 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
   it Off in the list and lists it under Off in both menus
 - Compact mode: Left/Right traverses Search and the visible buttons without wrapping; Down expands
   Search or opens a selected shortcut, Return opens only a shortcut, and typing/pasting starts Search
-- Compact mode: Escape at expanded root clears text, then collapses, then closes under both preferences
+- Compact mode: Escape at expanded root clears text and collapses in one press; Escape on an empty bar,
+  expanded with ↓ or not, closes
 - Compact mode: a round button per enabled configured shortcut; the
   capsule fills the rest, the whole width with none on. Each summon and each cleared query buds them out
   of the capsule's end, the last one never clipped at the window's edge; with Show animations off they
@@ -863,7 +880,7 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
   30 min. Blank and whitespace-only titles disable the action, including ⌘↵. Tab/Shift-Tab cycle the
   fields; Return/Space/Down open a focused choice, and Escape closes that menu before the form.
 - Back or Escape restores the search and selection that opened Create Event; a hotkey-opened form
-  closes instead. Disabling Calendar closes the editor, and revoked permission cannot write an event.
+  closes on Escape and resets, while its back chevron goes to root search. Disabling Calendar closes the editor, and revoked permission cannot write an event.
 - Create Event writes to the default calendar and shows up on the card, the schedule and the launcher
   without a relaunch; start offsets are measured at save, not when the editor opens.
 - Arrow keys move the caret in the event title field, and still step the Set Volume slider.

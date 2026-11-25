@@ -203,7 +203,7 @@ final class SnippetCoordinator {
 
     func cancelSnippetEditing() {
         guard palette.mode == .snippetEditor else { return }
-        if !palette.pop(preservingSelection: true) {
+        if !palette.pop() {
             paletteCoordinator.hidePalette()
             palette.prepare(mode: .launcher)
         }

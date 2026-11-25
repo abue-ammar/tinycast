@@ -254,20 +254,20 @@ final class ExtensionCoordinator {
         return command.arguments
     }
 
-    /// Escape past an empty search field: pop the extension's own stack, then leave the command.
-    func exitExtensionScreen() {
-        Task {
-            if await extensions.popNavigation() { return }
-            await extensions.stop()
-            if !palette.pop() { paletteCoordinator.hidePalette() }
-        }
+    /// The back step inside a command that pushed views of its own; leaving it is the palette's.
+    func popView() {
+        Task { _ = await extensions.popNavigation() }
     }
 
-    /// `popToRoot()` from an extension — back to a fresh root search, command torn down.
-    func popExtensionToRoot() {
+    /// `popToRoot()` from an extension: the command is torn down and root search comes back.
+    func popExtensionToRoot(clearingSearchBar: Bool) {
         Task {
             await extensions.stop()
-            palette.prepare(mode: .launcher)
+            if clearingSearchBar {
+                palette.prepare(mode: .launcher)
+            } else {
+                palette.popToRootKeepingSearch()
+            }
         }
     }
 
@@ -288,8 +288,9 @@ final class ExtensionCoordinator {
     /// True while the palette is on screen — a toast has somewhere to render only then.
     var isPaletteVisible: Bool { paletteCoordinator.isVisible }
 
-    func closeMainWindow() {
-        paletteCoordinator.hidePalette(restoreFocus: false)
+    func closeMainWindow(_ close: ExtensionWindowClose) {
+        paletteCoordinator.hidePalette(restoreFocus: false, close: close.popToRoot.paletteClose)
+        if close.clearsRootSearch { palette.clearRootSearch() }
     }
 
     func reopenPalette(hasRunningCommand: Bool) {
@@ -327,5 +328,15 @@ final class ExtensionCoordinator {
             tone: alert.isDestructive ? .danger : .neutral,
             confirmRole: alert.isDestructive ? .destructive : .standard,
             dismissTitle: alert.dismissTitle)
+    }
+}
+
+private extension ExtensionWindowClose.PopToRoot {
+    var paletteClose: PaletteClose {
+        switch self {
+        case .default: .afterAction
+        case .immediate: .poppingToRoot
+        case .suspended: .keepingScreen
+        }
     }
 }

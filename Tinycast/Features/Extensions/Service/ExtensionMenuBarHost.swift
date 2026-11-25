@@ -28,9 +28,9 @@ final class ExtensionMenuBarHost: ExtensionHostContext {
     var applicationURLs: [URL] { coordinator?.applicationURLs ?? [] }
 
     func enableInteraction() { isInteractive = true }
-    func closeMainWindow(clearRootSearch: Bool) {}
+    func closeMainWindow(_ close: ExtensionWindowClose) {}
     func reopenPalette() { coordinator?.reopenPalette(hasRunningCommand: false) }
-    func popToRoot() {}
+    func popToRoot(clearingSearchBar: Bool) {}
     func clearSearchBar() {}
     func openPreferences(scope: String) { coordinator?.showExtensionSettings(for: owner) }
     func updateCommandMetadata(subtitle: String?) {

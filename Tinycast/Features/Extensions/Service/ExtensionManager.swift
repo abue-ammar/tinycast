@@ -897,16 +897,16 @@ final class ExtensionManager: ExtensionRuntimeDelegate, ExtensionHostContext {
     var pasteTarget: NSRunningApplication? { coordinator?.pasteTarget }
     var applicationURLs: [URL] { coordinator?.applicationURLs ?? [] }
 
-    func closeMainWindow(clearRootSearch: Bool) {
-        coordinator?.closeMainWindow()
+    func closeMainWindow(_ close: ExtensionWindowClose) {
+        coordinator?.closeMainWindow(close)
     }
 
     func reopenPalette() {
         coordinator?.reopenPalette(hasRunningCommand: running != nil)
     }
 
-    func popToRoot() {
-        coordinator?.popExtensionToRoot()
+    func popToRoot(clearingSearchBar: Bool) {
+        coordinator?.popExtensionToRoot(clearingSearchBar: clearingSearchBar)
     }
 
     func clearSearchBar() {

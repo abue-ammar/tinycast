@@ -55985,58 +55985,6 @@
         }
       }
     },
-    "Esc to close or ⌘ Esc to go to root search" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esc zum Schließen oder ⌘ Esc zurück zur Hauptsuche"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esc para cerrar o ⌘ Esc para volver a la búsqueda principal"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Échap pour fermer ou ⌘ Échap pour revenir à la recherche principale"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Escで閉じる、⌘ Escでメイン検索に戻る"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esc로 닫기 또는 ⌘ Esc로 기본 검색으로 돌아가기"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esc para fechar ou ⌘ Esc para voltar à busca principal"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Esc — закрыть, ⌘ Esc — вернуться к основному поиску"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按 Esc 关闭，或按 ⌘ Esc 返回主搜索"
-          }
-        }
-      }
-    },
     "Esc to go back or ⌘ Esc to go to root search" : {
       "comment" : "Tooltip on the palette's back button; keep key names",
       "localizations" : {
@@ -68472,6 +68420,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "上下文中"
+          }
+        }
+      }
+    },
+    "In the launcher." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Launcher."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En el lanzador."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dans le lanceur."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ランチャー内で。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "런처에서."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No iniciador."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "В лаунчере."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在启动器中。"
           }
         }
       }
@@ -143457,58 +143457,6 @@
         }
       }
     },
-    "When the search field is empty." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Wenn das Suchfeld leer ist."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuando el campo de búsqueda está vacío."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Lorsque le champ de recherche est vide."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "検索フィールドが空のとき。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "검색 필드가 비어 있을 때."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Quando o campo de busca está vazio."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Когда поле поиска пусто."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "搜索栏为空时。"
-          }
-        }
-      }
-    },
     "When you press and release %@ on its own." : {
       "localizations" : {
         "de" : {
@@ -150585,6 +150533,59 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "↵ 将执行此操作，粘贴则使用此操作的快捷键。"
+          }
+        }
+      }
+    },
+    "⌘ [ to go back or ⌘ Esc to go to root search" : {
+      "comment" : "Tooltip on the palette's back button when Escape closes the window; keep key names",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ [ zum Zurückgehen oder ⌘ Esc zurück zur Hauptsuche"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ [ para volver o ⌘ Esc para volver a la búsqueda principal"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ [ pour revenir en arrière ou ⌘ Échap pour revenir à la recherche principale"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ [で戻る、⌘ Escでメイン検索に戻る"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ [로 뒤로 가기 또는 ⌘ Esc로 기본 검색으로 돌아가기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ [ para voltar ou ⌘ Esc para voltar à busca principal"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘ [ — назад, ⌘ Esc — вернуться к основному поиску"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按 ⌘ [ 返回，或按 ⌘ Esc 返回主搜索"
           }
         }
       }

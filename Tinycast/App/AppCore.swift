@@ -371,6 +371,9 @@ final class AppCore {
             hotKeys.modifierTapMonitor.healthTicker = healthTicker
             snippetListener.healthTicker = healthTicker
 
+            hotKeys.onKeyPressDispatch = { [weak self] dispatch in
+                self?.paletteCoordinator.dispatchingHotkey(dispatch)
+            }
             hotKeys.onTogglePalette = { [weak self] in self?.paletteCoordinator.togglePalette() }
             hotKeys.onDictationPressed = { [weak self] in self?.dictationCoordinator.pressed() }
             hotKeys.onDictationReleased = { [weak self] in self?.dictationCoordinator.released() }

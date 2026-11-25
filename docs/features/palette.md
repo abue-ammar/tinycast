@@ -65,15 +65,25 @@ Window activation does not request another search refocus after a shortcut's arg
 Closing a palette menu explicitly restores search focus after its panel returns key status.
 `prepare` is one of four motions over the screen; see [Navigation](#navigation).
 
-Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path: the
-palette returns to the launcher _and_ chat starts a new conversation, at once or after
-`popToRootTimeout`, unless a re-summon inside that window consumes the pending reset first. An
-unfinished chat is a thing being done, exactly like a typed query, so the screen and the conversation
-are reset together rather than the screen alone. A reply still streaming is one exception: it was
-asked for, and resetting would throw the answer away. Nothing is lost either way: a conversation is
-written to Chat History, and the AI Chat window's sidebar, as soon as it has a message. The other is
-an extension's browser sign-in: while `ExtensionManager.isSigningIn`, hiding schedules no reset and a
-re-summon counts as preserved, because a reset would stop the command and cancel its sign-in.
+Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is its only path back
+to the launcher, unless a re-summon before it consumes the pending reset first. How long the screen
+survives depends on why the palette closed, a `PaletteClose` that `hidePalette(close:)` carries and
+`PopToRootPolicy` turns into a wait:
+
+| `PaletteClose`   | Who closes this way                                                         | Wait                        |
+| ---------------- | --------------------------------------------------------------------------- | --------------------------- |
+| `.afterAction`   | the default: an action ran (open, paste, copy)                              | `popToRootTimeout`, max 15s |
+| `.dismissed`     | Escape on root search, a click elsewhere, ⌘W, the shortcut that summoned it | `popToRootTimeout`          |
+| `.poppingToRoot` | Escape on a shortcut's own screen, Close window and pop to root             | none: resets at once        |
+| `.keepingScreen` | an extension's `PopToRootType.Suspended`                                    | until the next show         |
+
+A plain root search (no inline arguments) survives at least 5 seconds of a timed wait, even on
+Immediately, so a stray close is undone by reopening. Hiding a palette that is already hidden closed
+nothing, so it leaves a pending reset alone. Pop to Root Search defaults to Immediately and goes up
+to 120 seconds. The reset is the screen only: Quick AI decides a conversation's
+lifetime on the way in ([ai.md](ai.md)). An extension's browser sign-in is the one hold: while
+`ExtensionManager.isSigningIn`, hiding schedules no reset and a re-summon counts as preserved, because
+a reset would stop the command and cancel its sign-in.
 
 Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the protocol is what keeps the
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
@@ -124,25 +134,36 @@ one rule: a palette already on screen is being _navigated_, so the current scree
 becomes the step back; a hidden one is being _summoned_, so the new screen is a root with nothing
 behind it. Every mode command and every global hotkey funnels through `showPalette`, which calls it,
 so typing "Clipboard History" at the root and pressing ↵ leaves a step back to the search that found
-it, while the Clipboard History hotkey does not. **The launcher is the exception, because it is the
-root**: ⌘Space over an open clipboard opens the root search with nothing behind it, rather than
-stacking the launcher over the screen it replaced. Nothing per-feature encodes this.
+it. **The launcher is the exception, because it is the root**: ⌘Space over an open clipboard opens
+the root search with nothing behind it, rather than stacking the launcher over the screen it
+replaced. Nothing per-feature encodes this.
 
-`PaletteState` holds the screens below `mode` as `[PaletteFrame]` (mode, query and selection, enough
-that returning looks like never having left) and offers four motions over it:
+**A shortcut's screen is its own root.** `HotKeyManager` runs a key press's dispatch inside
+`PaletteCoordinator.dispatchingHotkey` (deep links and Settings call `perform` and are not presses).
+A screen opened in there starts a fresh stack through `prepareFromHotkey`, even over a palette on
+screen, and `PaletteState.isHotkeyRoot` holds while nothing is pushed over it. The same shortcut
+closes it again only while it is that screen, and a re-summon inside the Pop to Root window brings
+back only a screen the shortcut opened itself; anything else opens afresh.
+
+**Root search sits under every screen.** `goBack()` pops, or lands on an empty root search when
+nothing was pushed, so a back step never closes the palette.
+
+`PaletteState` holds the screens below `mode` as `[PaletteFrame]` (mode, query, selection and the
+screen's filters, enough that returning looks like never having left) and offers these motions:
 
 | Motion                     | Meaning                                                                    |
 | -------------------------- | -------------------------------------------------------------------------- |
 | `prepare(mode:)`           | become the root: open fresh, drop the stack                                |
+| `prepareFromHotkey(mode:)` | the same, for a screen its own shortcut opened (`isHotkeyRoot`)            |
 | `replace(mode:)`           | swap the screen, keep what it was opened over (a new chat, not a new root) |
 | `push(mode:)`              | open over the current screen; replace a transient native editor instead    |
 | `pushCarryingQuery(mode:)` | the same step, with the query and row kept: Tab's hop into the ring        |
 | `pop()`                    | restore the screen underneath; `false` when this one is the root           |
+| `goBack()`                 | `pop()`, else an empty root search; never closes                           |
 
 `pop()` bumps `followToken` rather than `resetToken`: the reset token exists to land a list afresh,
-which would throw away the very selection being restored. The native editors opt into
-`pop(preservingSelection: true)` so `restoredSelection` also carries that row through the mode and query
-observers. Clipboard edits call `preserveSelection()` after clearing a query or type filter that hides
+which would throw away the very selection being restored. Leaving a native editor also sets
+`restoredSelection`, so the edited row survives the mode and query observers. Clipboard edits call `preserveSelection()` after clearing a query or type filter that hides
 the edited row, so both observers keep that row selected. Typing a new query, changing the clipboard
 filter or opening a fresh screen clears it. Other filters keep their screen's own landing row.
 
@@ -151,25 +172,28 @@ keeping its previous browser or search underneath; Back never restores a discard
 Closing a menu releases its hosted actions after the exit animation, while reusing the panel itself.
 Scrolling a native form dismisses its menu before the control's anchor moves.
 
-**Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
-leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
-pushed screen pops, and a root hides the palette. A focused inline argument field is a rung above the
-query, so Escape hands focus back to the search field first; the query that found the command is
-still there to be cleared by the next press. A bare backspace in an empty field takes the same step
-**but never closes**: on a root screen summoned by its own hotkey it falls to the root search, which
-is the step Escape would have taken had that screen been reached by typing its name. ⌘esc skips the
-whole stack for that same root search from any depth.
+**Escape takes one step per press.** `PaletteEscapeAction.resolve` is the whole ladder, pure, so
+`PaletteEscapeTests` covers every rung. In order: an open menu clears its search, then closes; a
+focused inline argument field hands focus back to the search field; a Quick AI answer still arriving
+stops; a non-empty query clears, except Quick AI's draft, which is a message rather than a search;
+root search closes the palette. Off root search, an extension pops its own pushed view first (it
+keeps a stack the palette cannot see), a shortcut's own screen then closes and pops to root at once,
+and any other screen takes `goBack()`. A bare backspace in an empty field takes the same back step
+**but never closes**, and ignores key repeat, so holding it only deletes. ⌘esc skips the whole stack
+for root search from any depth.
 
-`EscapeKeyBehavior` (General settings) can trade the walk back for the old behavior: under
-`closeAndPopToRoot` an empty field closes the window and resets it immediately, whatever Pop to Root
-Search says. Clearing the query is still the first press either way. In compact mode, expanded
-launcher root search always clears, then collapses, then closes, under either preference.
+`PalettePanel.sendEvent` takes Escape, a bare backspace and ⌘[ ahead of any field, text view or
+native editor that would answer them, and hands them to `RootPaletteView` (`onEscape`,
+`onBareBackspace`, `onGoBackChord`). Marked text and an open control list keep them.
+
+`EscapeKeyBehavior` (General settings) `closeAndPopToRoot` keeps the menu, argument-field and answer
+rungs, then closes and pops to root at once on every press, typed text or not; only an empty root
+search just closes. ⌘[ is the back step under it, except in Quick AI, whose composer keeps the chord.
 
 The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
 slot means once you are off the root, and a slot that changed shape with provenance would read
-as two different controls. Where the click lands still depends on the stack (a pushed screen
-pops, a root one closes), so `backHelp` says which, rather than promising a step that is really
-a close. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
+as two different controls. The click always takes `goBack()`, and `backHelp` names the keys that
+take the same step under the current Escape Key Behavior. It lights to `textPrimary` under the pointer over `Theme.Duration.hover`, and
 `HeaderBackButton` keeps that hover state to itself so the header around it never re-renders.
 
 The launcher advertises the first hop in the header: `Quick AI` beside a ⇥ key cap.
@@ -186,7 +210,7 @@ the text is submitted, not seeded, and the hint reads the case back out (`== .as
 restating the rule.
 
 **A ring hop is a step, so Escape walks back out the way Tab came in**: launcher → chat → clipboard
-takes two presses to unwind, and the back chevron's tooltip stops promising a step it cannot take.
+takes two presses to unwind.
 The launcher is the ring's root, so the hop that closes the ring resets the stack instead of stacking
 a third screen; ringing round forever therefore never grows the stack past two.
 
@@ -277,10 +301,9 @@ The compact bar lays `panelScrim` over its capsule and buttons through a mask th
 reveal, as the expanded panel lays it over its glass; the selected button stays out of the mask so
 its tint reads undimmed.
 
-At expanded launcher root, Escape clears the query while setting `forceExpanded`, so clearing and
-collapsing remain separate presses. The next Escape clears that flag and collapses; another closes.
-Menus and argument fields still take precedence, and sub-screen navigation keeps its own behavior.
-A summon clears `forceExpanded` whenever the field is empty, so a launcher Pop to Root Search
+Emptying the query by any means clears `forceExpanded` (`PaletteState.query`), so Escape at an
+expanded launcher root clears and collapses in one press. Escape on an empty root search closes the
+palette, expanded or not. A summon clears `forceExpanded` whenever the field is empty, so a launcher Pop to Root Search
 restores still opens as the bar; a kept query, screen or extension restores expanded as before.
 
 The glass is a background of the header, not a wrapper around it: the field keeps its one structural
@@ -427,8 +450,9 @@ The same empty `query` would read as "nothing left to delete" to the bare-backsp
 `PalettePanel.sendEvent` asks the editor's `hasMarkedText()` itself and lets Backspace through to the
 IME while a composition is in flight. That covers every screen, an extension's search field included.
 
-The palette's arrow, ⇥ and esc handlers return `.ignored` while `isComposing` holds, so the IME
-pages, expands and cancels its candidate window with them. An open menu still claims them first.
+The palette's arrow and ⇥ handlers return `.ignored` while `isComposing` holds, and
+`PalettePanel.sendEvent` passes Escape through while the editor has marked text, so the IME pages,
+expands and cancels its candidate window with them. An open menu still claims them first.
 
 The observation follows first responder, since SwiftUI hands the window's one field editor to
 whichever field holds focus, and it watches `NSTextView.didChangeSelectionNotification`. Measured,
@@ -608,6 +632,8 @@ Most ⌘/⌃ chords reach SwiftUI's `onKeyPress` fine. Several kinds do not. All
 handled in `PalettePanel.sendEvent` before `super` hands the event to the responder chain:
 
 - **A bare backspace**: the field editor consumes it as an edit (`onBareBackspace`).
+- **Escape and ⌘[**: a focused text view or native editor answers them first (`onEscape`,
+  `onGoBackChord`).
 - **Chords with no main menu item**: ⌘w, which an app with a menu bar would never see here.
 - **The physical number-row slots.** `FavoriteSlots` matches ⌘1…⌘0 by key code before fixed command
   chords, then publishes the resolved position to the active screen. Only the launcher and clipboard

@@ -429,7 +429,8 @@ screens hold (see [palette.md](palette.md)).
 - **Feedback**: `showToast` replaces the current toast, a glass pill that takes the footer menu button's place and is
   lit by its style's colour. Hovering turns its mark into an ×, and clicking anywhere but its button dismisses it and
   gives the menu button back. A failure toast's button is always **Copy** (title and message); any other style shows
-  the command's primary action; `showHUD` is a centred pill, and `confirmAlert`
+  the command's primary action; `showHUD` closes the palette first, as `closeMainWindow` would with the
+  same options, then shows a centred pill, and `confirmAlert`
   goes through `DialogController` like every other question the app asks. Its dialog sits at
   `.dialog`, above the palette's `.palette`, so a view command keeps its screen behind it, and
   the palette does not dismiss while it is up (`AppCore.isShowingDialog`), because dismissing pops to
@@ -451,7 +452,8 @@ screens hold (see [palette.md](palette.md)).
 Escape clears a non-empty search field first, and dispatches `onSearchTextChange` as any other edit
 would, so a command that took the search text over sees the empty string. Only over an empty field do
 Escape and a bare backspace pop the extension's own navigation stack, and only leave the command once
-it's at its root. Pushed screens stay mounted, so popping back restores their state. Each pushed
+it's at its root, for the screen it was opened over or root search. A command its own shortcut opened
+closes the palette and resets instead ([palette.md](palette.md#navigation)). Pushed screens stay mounted, so popping back restores their state. Each pushed
 screen starts with an empty search; going back restores the parent's query and selected row.
 
 ## Turning it on
@@ -717,6 +719,11 @@ interval floor instead of sixty.
 `getSelectedText`, `getSelectedFinderItems`, `launchCommand`, `updateCommandMetadata`,
 `openExtensionPreferences`, `OAuth`,
 `useNavigation`, `Icon`, `Color`, `Image.Mask`, `Keyboard.Shortcut.Common`, `LaunchType`.
+
+`closeMainWindow` and `showHUD` honour `clearRootSearch` and `popToRootType`, read once by
+`ExtensionWindowClose`: `Immediate` resets to root search at once, `Suspended` keeps the screen until
+the palette next shows, and `Default` or anything unknown follows Pop to Root Search. `popToRoot`
+honours `clearSearchBar`, which defaults to true; false keeps the text root search held.
 
 **`raycast://` URLs**: extensions address Raycast by scheme; the most common is a bare
 `open("raycast://")` to bring the window back after something stole focus (1Password's auth flow does

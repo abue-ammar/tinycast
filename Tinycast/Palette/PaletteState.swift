@@ -5,6 +5,10 @@ struct PaletteFrame: Equatable {
     let mode: PaletteMode
     let query: String
     let selection: Int
+    let clipboardFilter: ClipboardFilter
+    let fileSearchFilter: FileSearchFilter
+    let emojiCategoryFilter: EmojiCategoryFilter
+    let emojiGridColumnsOverride: EmojiGridColumns?
 }
 
 @MainActor
@@ -13,7 +17,15 @@ final class PaletteState {
     var mode: PaletteMode = .launcher { didSet { restoredSelection = nil } }
     /// The screens below `mode`, innermost last: a summon starts a new one, navigating pushes on.
     private(set) var backStack: [PaletteFrame] = []
-    var query: String = "" { didSet { restoredSelection = nil } }
+    /// The bottom screen came from its own shortcut, so Escape there closes rather than backs out.
+    private(set) var isOpenedByHotkey = false
+    var query: String = "" {
+        didSet {
+            restoredSelection = nil
+            // An emptied root search falls back to the compact bar, however it was expanded.
+            if query.isEmpty { forceExpanded = false }
+        }
+    }
     @ObservationIgnored private(set) var restoredSelection: Int?
     var selection: Int = 0
     /// True while an IME holds marked text, which leaves `query` empty. The panel publishes it.
@@ -86,9 +98,16 @@ final class PaletteState {
 
     var canGoBack: Bool { !backStack.isEmpty }
 
+    /// Escape closes this screen outright: its shortcut opened it and nothing was pushed since.
+    var isHotkeyRoot: Bool { isOpenedByHotkey && backStack.isEmpty }
+
     func prepare(mode: PaletteMode) {
-        backStack.removeAll()
-        replace(mode: mode)
+        start(mode, openedByHotkey: false)
+    }
+
+    /// A fresh stack for a screen its own shortcut opened, whatever was on screen before.
+    func prepareFromHotkey(mode: PaletteMode) {
+        start(mode, openedByHotkey: true)
     }
 
     /// Swap the screen in place, leaving whatever it was opened over still behind it.
@@ -98,27 +117,50 @@ final class PaletteState {
     }
 
     func push(mode: PaletteMode) {
-        if !self.mode.isNativeEditor {
-            backStack.append(PaletteFrame(mode: self.mode, query: query, selection: selection))
-        }
+        if !self.mode.isNativeEditor { backStack.append(currentFrame) }
         replace(mode: mode)
     }
 
-    func pop(preservingSelection: Bool = false) -> Bool {
+    /// The screen underneath, as it was left; false when this one is the bottom.
+    func pop() -> Bool {
         guard let frame = backStack.popLast() else { return false }
-        openScreen(frame.mode)
-        query = frame.query
-        selection = frame.selection
-        restoredSelection = preservingSelection ? frame.selection : nil
+        // Leaving an editor lands back on the row that was being edited.
+        let keepsSelection = mode.isNativeEditor
+        restore(frame)
+        restoredSelection = keepsSelection ? frame.selection : nil
         // Not `resetToken`: landing the list again would throw away the selection restored here.
         followToken = UUID()
         return true
     }
 
+    /// One step back, onto root search once nothing is left: it sits under every screen.
+    func goBack() {
+        guard !pop(), mode != .launcher else { return }
+        prepare(mode: .launcher)
+    }
+
+    /// Root search alone, with the text it held before the screens above it were opened.
+    func popToRootKeepingSearch() {
+        let search = mode == .launcher ? currentFrame : backStack.first { $0.mode == .launcher }
+        prepare(mode: .launcher)
+        if let search { restore(search) }
+    }
+
+    /// Empties root search wherever it sits: on screen, or under the screens stacked over it.
+    func clearRootSearch() {
+        if mode == .launcher {
+            query = ""
+            selection = 0
+        } else if backStack.first?.mode == .launcher {
+            backStack[0] = Self.freshFrame(.launcher)
+        }
+    }
+
     /// Tab's step deeper into the ring: the screen crossed from is the step back, query and all.
     func pushCarryingQuery(mode: PaletteMode) {
-        backStack.append(PaletteFrame(mode: self.mode, query: query, selection: selection))
+        backStack.append(currentFrame)
         self.mode = mode
+        resetFilters()
     }
 
     /// The search field is one line, so pasted line breaks become spaces; true when it rewrote.
@@ -131,6 +173,36 @@ final class PaletteState {
     /// Tab closing the ring on the launcher, which is its root: nothing is left behind it.
     func resetNavigation() {
         backStack.removeAll()
+        isOpenedByHotkey = false
+    }
+
+    private func start(_ mode: PaletteMode, openedByHotkey: Bool) {
+        backStack.removeAll()
+        isOpenedByHotkey = openedByHotkey
+        replace(mode: mode)
+    }
+
+    private var currentFrame: PaletteFrame {
+        PaletteFrame(
+            mode: mode, query: query, selection: selection, clipboardFilter: clipboardFilter,
+            fileSearchFilter: fileSearchFilter, emojiCategoryFilter: emojiCategoryFilter,
+            emojiGridColumnsOverride: emojiGridColumnsOverride)
+    }
+
+    private static func freshFrame(_ mode: PaletteMode) -> PaletteFrame {
+        PaletteFrame(
+            mode: mode, query: "", selection: 0, clipboardFilter: .all, fileSearchFilter: .all,
+            emojiCategoryFilter: .all, emojiGridColumnsOverride: nil)
+    }
+
+    private func restore(_ frame: PaletteFrame) {
+        openScreen(frame.mode)
+        query = frame.query
+        selection = frame.selection
+        clipboardFilter = frame.clipboardFilter
+        fileSearchFilter = frame.fileSearchFilter
+        emojiCategoryFilter = frame.emojiCategoryFilter
+        emojiGridColumnsOverride = frame.emojiGridColumnsOverride
     }
 
     private func openScreen(_ mode: PaletteMode) {
@@ -143,15 +215,19 @@ final class PaletteState {
         commandArguments = [:]
         pendingArgumentEntryID = nil
         argumentEntryID = nil
-        clipboardFilter = .all
-        fileSearchFilter = .all
-        emojiCategoryFilter = .all
-        emojiGridColumnsOverride = nil
+        resetFilters()
         forceExpanded = false
         dropHoverHighlight()
         menuOpen = false
         menuQuery = ""
         focusToken = UUID()
+    }
+
+    private func resetFilters() {
+        clipboardFilter = .all
+        fileSearchFilter = .all
+        emojiCategoryFilter = .all
+        emojiGridColumnsOverride = nil
     }
 
     /// Long enough that ⌘↵ or ⌘K never flashes the numbering, short enough to feel like a reveal.
