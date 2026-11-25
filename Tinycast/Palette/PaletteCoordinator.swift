@@ -96,9 +96,10 @@ final class PaletteCoordinator {
         mode: PaletteMode, restoreAnyMode: Bool = false, seeding query: String? = nil
     ) {
         let preserved = windowController.consumePreservedState()
-        // A shortcut brings back only the screen it opened itself; anything else opens afresh.
+        // A shortcut's screen comes back only to that shortcut; the launcher opens empty over it.
+        let restoresAnyMode = restoreAnyMode && !palette.isOpenedByHotkey
         let restoresMode = palette.mode == mode && (!isHotkeyDispatch || palette.isHotkeyRoot)
-        let restoring = preserved && (restoreAnyMode || restoresMode)
+        let restoring = preserved && (restoresAnyMode || restoresMode)
         // Resetting a screen the pop to root already reset would only re-render the whole palette.
         let alreadyFresh = windowController.isPoppedToRoot && palette.mode == mode
         // A carried query always opens the screen fresh: restoring the previous one would drop it.

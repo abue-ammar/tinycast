@@ -142,7 +142,8 @@ replaced. Nothing per-feature encodes this.
 A screen opened in there starts a fresh stack through `prepareFromHotkey`, even over a palette on
 screen, and `PaletteState.isHotkeyRoot` holds while nothing is pushed over it. The same shortcut
 closes it again only while it is that screen, and a re-summon inside the Pop to Root window brings
-back only a screen the shortcut opened itself; anything else opens afresh.
+back only a screen the shortcut opened itself; anything else opens afresh. The launcher never brings
+one back: over a screen a shortcut opened (`isOpenedByHotkey`), it opens an empty root search.
 
 **Root search sits under every screen.** `goBack()` pops, or lands on an empty root search when
 nothing was pushed, so a back step never closes the palette.
@@ -187,7 +188,7 @@ native editor that would answer them, and hands them to `RootPaletteView` (`onEs
 
 `EscapeKeyBehavior` (General settings) `closeAndPopToRoot` keeps the menu, argument-field and answer
 rungs, then closes and pops to root at once on every press, typed text or not; only an empty root
-search just closes. ⌘[ is the back step under it, except in Quick AI, whose composer keeps the chord.
+search just closes. ⌘[ is the back step under it, on every screen but the launcher.
 
 The header draws a back chevron on **every** screen but the launcher: leaving is what the icon
 slot means once you are off the root, and a slot that changed shape with provenance would read

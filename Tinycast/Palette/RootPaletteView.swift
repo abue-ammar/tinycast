@@ -1589,10 +1589,10 @@ struct RootPaletteView: View {
         return true
     }
 
-    /// ⌘[ steps back once Escape closes instead; Quick AI's composer keeps the chord for itself.
+    /// ⌘[ takes the back step once Escape closes instead.
     private func handleGoBackChord() -> Bool {
-        guard settings.escapeKeyBehavior == .closeAndPopToRoot, vm.mode != .launcher,
-            vm.mode != .ai, !menuOpen, !vm.isControlListOpen
+        guard settings.escapeKeyBehavior == .closeAndPopToRoot, vm.mode != .launcher, !menuOpen,
+            !vm.isControlListOpen
         else { return false }
         goBack()
         return true
