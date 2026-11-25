@@ -77,9 +77,8 @@ survives depends on why the palette closed, a `PaletteClose` that `hidePalette(c
 | `.poppingToRoot` | Escape on a shortcut's own screen, Close window and pop to root             | none: resets at once        |
 | `.keepingScreen` | an extension's `PopToRootType.Suspended`                                    | until the next show         |
 
-A plain root search (no inline arguments) survives at least 5 seconds of a timed wait, even on
-Immediately, so a stray close is undone by reopening. Hiding a palette that is already hidden closed
-nothing, so it leaves a pending reset alone. Pop to Root Search defaults to Immediately and goes up
+Immediately resets every screen at once, root search included. Hiding a palette that is already
+hidden closed nothing, so it leaves a pending reset alone. Pop to Root Search defaults to Immediately and goes up
 to 120 seconds. The reset is the screen only: Quick AI decides a conversation's
 lifetime on the way in ([ai.md](ai.md)). An extension's browser sign-in is the one hold: while
 `ExtensionManager.isSigningIn`, hiding schedules no reset and a re-summon counts as preserved, because

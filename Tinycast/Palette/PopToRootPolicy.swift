@@ -16,20 +16,14 @@ enum PaletteClose: Equatable, Sendable {
 enum PopToRootPolicy {
     /// An action is done with its result, so the search that found it goes stale sooner.
     static let afterActionLimit: TimeInterval = 15
-    /// A stray close of a plain root search is undone by reopening, even on Immediately.
-    static let rootSearchMinimum: TimeInterval = 5
 
     /// Seconds until the reset: zero resets at once, nil keeps the screen until the next close.
-    static func delay(
-        after close: PaletteClose, timeout: TimeInterval, isPlainRootSearch: Bool
-    ) -> TimeInterval? {
-        let wait: TimeInterval
+    static func delay(after close: PaletteClose, timeout: TimeInterval) -> TimeInterval? {
         switch close {
-        case .poppingToRoot: return 0
-        case .keepingScreen: return nil
-        case .afterAction: wait = min(timeout, afterActionLimit)
-        case .dismissed: wait = timeout
+        case .poppingToRoot: 0
+        case .keepingScreen: nil
+        case .afterAction: min(timeout, afterActionLimit)
+        case .dismissed: timeout
         }
-        return isPlainRootSearch ? max(wait, rootSearchMinimum) : wait
     }
 }

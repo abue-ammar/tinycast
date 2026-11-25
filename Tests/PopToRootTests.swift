@@ -21,10 +21,8 @@ struct PopToRootTests {
         }
     }
 
-    static func delay(
-        _ close: PaletteClose, timeout: TimeInterval, plainRootSearch: Bool = false
-    ) -> TimeInterval? {
-        PopToRootPolicy.delay(after: close, timeout: timeout, isPlainRootSearch: plainRootSearch)
+    static func delay(_ close: PaletteClose, timeout: TimeInterval) -> TimeInterval? {
+        PopToRootPolicy.delay(after: close, timeout: timeout)
     }
 
     static func main() {
@@ -38,17 +36,9 @@ struct PopToRootTests {
         expect(delay(.dismissed, timeout: 90) == 90, "a dismissed screen waits the full timeout")
         expect(delay(.afterAction, timeout: 90) == 15, "after an action it waits at most 15 seconds")
         expect(delay(.afterAction, timeout: 5) == 5, "a timeout shorter than that is kept as it is")
-        expect(delay(.dismissed, timeout: 0) == 0, "Immediately resets a screen at once")
-        expect(
-            delay(.dismissed, timeout: 0, plainRootSearch: true) == 5,
-            "a plain root search survives five seconds even on Immediately")
-        expect(
-            delay(.afterAction, timeout: 120, plainRootSearch: true) == 15,
-            "the root search minimum never lengthens the after-action limit")
+        expect(delay(.dismissed, timeout: 0) == 0, "Immediately resets at once, root search too")
+        expect(delay(.afterAction, timeout: 0) == 0, "and after an action as well")
         expect(delay(.poppingToRoot, timeout: 90) == 0, "a popping close resets at once")
-        expect(
-            delay(.poppingToRoot, timeout: 90, plainRootSearch: true) == 0,
-            "even a plain root search, when the close asked to reset")
         expect(delay(.keepingScreen, timeout: 0) == nil, "a kept screen has no reset scheduled")
     }
 

@@ -125,8 +125,8 @@ recompute never touches the published results, so a list on screen holds still. 
 and one that finishes after a newer one is dropped.
 
 Search results follow **Pop to Root Search**: closing Search Files with **Immediately** clears the
-session at once, while root search's own Files rows last the 5 seconds its query does. With a delay, results stay with the preserved query until the reset fires; reopening before it fires
-keeps them. Live updates never re-run a published query, so a file removed meanwhile still lists and
+session at once. With a delay, results stay with the preserved query until the reset fires;
+reopening before it fires keeps them. Live updates never re-run a published query, so a file removed meanwhile still lists and
 reports the failure when opened. Icons and previews are still purged on close.
 
 The 2026-10-13 benchmark (`Tests/FileSearchPerformanceTests.swift`, `/System /Applications /Library /usr`,

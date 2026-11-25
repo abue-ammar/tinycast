@@ -187,8 +187,7 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         cancelPopToRoot()
         guard
             let delay = PopToRootPolicy.delay(
-                after: close, timeout: core.settings.popToRootTimeout.interval,
-                isPlainRootSearch: isPlainRootSearch)
+                after: close, timeout: core.settings.popToRootTimeout.interval)
         else {
             keepsScreen = true
             return
@@ -202,12 +201,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
                 self.popToRoot()
             }
         }
-    }
-
-    private var isPlainRootSearch: Bool {
-        let palette = core.palette
-        return palette.mode == .launcher && palette.argumentEntryID == nil
-            && palette.commandArguments.isEmpty
     }
 
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.

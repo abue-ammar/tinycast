@@ -459,8 +459,8 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
   resets it on the first press, even with text typed; reopening lands on an empty root search. ⌘[
   goes back one screen, and the back chevron's tooltip names ⌘[
 - Pop to Root Search: after opening an app, reopening within 15 seconds keeps the root query and later
-  does not, even at 90 seconds. After Escape the full timeout applies. On Immediately, a root search
-  reopened within 5 seconds keeps its text; any other screen resets at once
+  does not, even at 90 seconds. After Escape the full timeout applies. On Immediately, every screen
+  resets at once, root search included
 - Reopening focuses the search field with an empty query, in the same position and at the same size
 - Compact mode: typing expands it, and the search bar does **not** shift vertically during the swap
 - Compact mode: the opening frames show no shortcut fill beneath the query before the buttons emerge
