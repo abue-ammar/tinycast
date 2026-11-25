@@ -187,14 +187,18 @@ final class SnippetCoordinator {
         let snippet = editor.snippet
         defer { editor.isSaving = false }
         do {
+            let confirmation: String
             if var record = editor.record {
                 record.snippet = snippet
                 try await store.save(record)
+                confirmation = String(localized: "Snippet saved")
             } else {
                 try await store.create(snippet)
+                confirmation = String(localized: "Snippet created")
             }
             guard !Task.isCancelled, self.editor === editor else { return }
             cancelSnippetEditing()
+            showMessage(confirmation, .success)
         } catch {
             guard !Task.isCancelled, self.editor === editor else { return }
             editor.errorMessage = error.localizedDescription

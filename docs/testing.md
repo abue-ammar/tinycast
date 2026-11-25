@@ -1011,6 +1011,8 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
   the recorder reports the conflict); `kill -9` the Settings process mid-recording and they work again
 - A palette editor opened from Settings (custom command, quicklink, snippet, room) saves, and the
   pane lists the change; a delete in the pane leaves the launcher at once
+- Saving a new quicklink, snippet or custom command shows a "… created" HUD, and saving an edit shows
+  "… saved", whether the editor closes or returns to its browser; a failed save shows none
 - Favorite a launcher item while a Settings deletion confirmation is open for a different favorite.
   Confirm the deletion and verify the new favorite survives.
 - Mirrored status updates live: File Search indexing, iCloud Sync, a dictation model download,

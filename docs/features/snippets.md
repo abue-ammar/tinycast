@@ -280,7 +280,8 @@ It uses the palette's searchable popup, keeping its existing placeholder groups.
 **Name**, **Keyword**, **Enabled** and **Show confirmation** are on the right. The draft keeps the
 loaded record and its source revision; no file is created or changed before **Save Snippet**.
 The template grows with its text; only the whole form scrolls, never an individual field or column.
-A blank name disables Save.
+A blank name disables Save. A successful save confirms with a HUD: "Snippet created", or
+"Snippet saved" for an edit.
 An IO or revision failure leaves the draft open and shows the error beside its fields.
 
 **⌘↵** saves; plain **↵** inserts a template line break. **Tab** and **Shift-Tab** walk the fields,

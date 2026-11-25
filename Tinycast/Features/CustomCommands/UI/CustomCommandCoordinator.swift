@@ -91,8 +91,10 @@ final class CustomCommandCoordinator {
         guard settings.customCommandsEnabled, let editor, editor.canSave else { return }
         do {
             var draft = editor.draft()
+            let confirmation: String
             if editor.original == nil {
                 try addCustomCommand(draft)
+                confirmation = String(localized: "Command created")
             } else {
                 guard let current = store.command(id: editor.id) else {
                     editor.errorMessage = String(
@@ -101,8 +103,10 @@ final class CustomCommandCoordinator {
                 }
                 draft.isEnabled = current.isEnabled
                 try updateCustomCommand(draft)
+                confirmation = String(localized: "Command saved")
             }
             cancelCustomCommandEditing()
+            core.showMessage(confirmation)
         } catch {
             editor.errorMessage = error.localizedDescription
         }
