@@ -473,7 +473,9 @@ enum Theme {
             colors: [emblemInk.opacity(0.20), .clear],
             center: .bottom, startRadius: 0, endRadius: featureIconEdgeRadius)
         static let fileCardFill = Colors.cardFill.opacity(0.74)
-        static let returnKeyFill = Color.white.opacity(0.20)
+        static let returnKeyBorder = Color.white.opacity(0.45)
+        /// "↵" falls back to a face that seats high, so it drops as it does in `KeyCapChip`.
+        static let returnGlyphDrop: CGFloat = 1.1
         static let canvas = Colors.adaptive(
             dark: NSColor(srgbRed: 0.051, green: 0.044, blue: 0.073, alpha: 1),
             light: .windowBackgroundColor)

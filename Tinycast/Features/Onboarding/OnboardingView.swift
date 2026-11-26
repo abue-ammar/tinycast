@@ -151,15 +151,7 @@ struct OnboardingView: View {
             HStack(spacing: Theme.Spacing.sm) {
                 if let symbol { Image(systemName: symbol) }
                 Text(title)
-                if usesReturn {
-                    Image(systemName: "return")
-                        .font(Theme.Typography.keyCap.weight(.semibold))
-                        .frame(width: Theme.Size.keyCap, height: Theme.Size.keyCap)
-                        .background(
-                            Theme.Onboarding.returnKeyFill, in: .rect(cornerRadius: Theme.Radius.keyCap)
-                        )
-                        .accessibilityHidden(true)
-                }
+                if usesReturn { ReturnKeyCap() }
             }
             .font(Theme.Typography.bar)
             .foregroundStyle(usesReturn ? Color.white : Color.primary)
@@ -209,6 +201,22 @@ struct OnboardingView: View {
             content
                 .offset(x: -CGFloat(phase.value) * distance)
                 .opacity(phase.isIdentity ? 1 : 0)
+        }
+    }
+
+    /// The app's outlined ↵ keycap, drawn in the button's white ink so it reads on violet.
+    private struct ReturnKeyCap: View {
+        var body: some View {
+            Text(verbatim: "↵")
+                .font(Theme.Typography.keyCap)
+                .offset(y: Theme.Onboarding.returnGlyphDrop)
+                .padding(.horizontal, Theme.Spacing.xs)
+                .frame(minWidth: Theme.Size.keyCap, minHeight: Theme.Size.keyCap)
+                .overlay {
+                    RoundedRectangle(cornerRadius: Theme.Radius.keyCap, style: .continuous)
+                        .strokeBorder(Theme.Onboarding.returnKeyBorder, lineWidth: Theme.Size.hairline)
+                }
+                .accessibilityHidden(true)
         }
     }
 
