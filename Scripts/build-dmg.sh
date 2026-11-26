@@ -24,11 +24,6 @@ VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/
 DMG="build/Tinycast-${VERSION}.dmg"
 
 echo "▸ Packaging ${DMG}"
-STAGE="$(mktemp -d)"
-cp -R "$APP" "$STAGE/"
-ln -s /Applications "$STAGE/Applications"
-rm -f "$DMG"
-diskutil image create from "$STAGE" --format UDZO --volumeName "Tinycast" "$DMG" >/dev/null
-rm -rf "$STAGE"
+Scripts/make-dmg.sh "$APP" "$DMG"
 
 echo "✓ $DMG"

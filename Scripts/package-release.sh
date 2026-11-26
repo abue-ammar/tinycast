@@ -5,15 +5,13 @@ set -euo pipefail
 APP="${1:?usage: package-release.sh <app> <dmg> <zip>}" DMG="${2:?}" ZIP="${3:?}"
 : "${SIGNING_IDENTITY:?}" "${NOTARY_KEY_P8_BASE64:?}" "${NOTARY_KEY_ID:?}" "${NOTARY_ISSUER_ID:?}"
 : "${UPDATE_SIGNING_KEY:?}"
-KEY="$(mktemp)" STAGE="$(mktemp -d)"
-trap 'rm -rf "$KEY" "$STAGE"' EXIT
+KEY="$(mktemp)"
+trap 'rm -f "$KEY"' EXIT
 base64 --decode <<< "$NOTARY_KEY_P8_BASE64" > "$KEY"
 AUTH=(--key "$KEY" --key-id "$NOTARY_KEY_ID" --issuer "$NOTARY_ISSUER_ID")
 
-ditto "$APP" "$STAGE/${APP##*/}"
-ln -s /Applications "$STAGE/Applications"
-mkdir -p "$(dirname "$DMG")" "$(dirname "$ZIP")"
-diskutil image create from "$STAGE" --format UDZO --volumeName "$(basename "$APP" .app)" "$DMG"
+mkdir -p "$(dirname "$ZIP")"
+"$(dirname "$0")/make-dmg.sh" "$APP" "$DMG"
 codesign -s "$SIGNING_IDENTITY" --timestamp "$DMG"
 
 RESULT="$(xcrun notarytool submit "$DMG" "${AUTH[@]}" --wait --timeout 2h --output-format json)" || true
