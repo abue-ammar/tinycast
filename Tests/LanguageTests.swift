@@ -117,7 +117,6 @@ struct LanguageTests {
             ("extensions-install-section", "Install", ["fr": "Installation"]),
             ("unit-category-time", "Time", ["fr": "Durée"]),
             ("window-position-center", "Center", ["fr": "Centre"]),
-            ("onboarding-open-launcher", "App Launcher", ["fr": "Ouvrir le lanceur"]),
             ("ai-pinned-conversations", "Pinned", ["fr": "Épinglées"]),
             ("ai-system-prompt-on", "On", ["fr": "Activées"]),
             ("ai-system-prompt-off", "Off", ["fr": "Désactivées"]),

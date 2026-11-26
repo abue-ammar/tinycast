@@ -10,11 +10,20 @@ final class ShortcutCaptureSession {
         let owner: String
     }
 
+    enum Mode: Equatable {
+        /// A clicked recorder field: every key is captured, and a commit ends the recording.
+        case field
+        /// Onboarding's open listener: plain keys pass through, and macOS's shortcuts count too.
+        case live
+    }
+
     private(set) var heldModifiers: NSEvent.ModifierFlags = []
     private(set) var heldGlobe = false
     private(set) var heldModifier: ModifierKey?
     private(set) var awaitingSecondModifier: ModifierKey?
     private(set) var conflict: Conflict?
+    private(set) var pressedCurrentBinding = false
+    @ObservationIgnored private var mode = Mode.field
 
     /// The applied Hyper route, read here too because Secure Input hides keystrokes from the tap.
     @ObservationIgnored var hyperRoute: HyperKeyRoute? {
@@ -33,8 +42,9 @@ final class ShortcutCaptureSession {
     /// The same recognizer the global monitor uses, so recording needs no tap and no grant.
     @ObservationIgnored private var detector = ModifierKeyDetector()
 
-    func start(action: HotKeyAction, hotKeys: HotKeyManager) {
+    func start(action: HotKeyAction, mode: Mode, hotKeys: HotKeyManager) {
         stop()
+        self.mode = mode
         heldModifiers = NSEvent.modifierFlags.intersection(Self.chordModifiers)
         _ = detector.handle(
             ModifierKey.held(in: UInt64(NSEvent.modifierFlags.rawValue), globeDown: false),
@@ -47,13 +57,13 @@ final class ShortcutCaptureSession {
             handler: { [weak self, weak hotKeys] event in
                 let keyCode = Int(event.keyCode)
                 let flags = event.modifierFlags
-                MainActor.assumeIsolated {
-                    guard let self, let hotKeys else { return }
-                    self.handleKeyDown(
+                let consumed = MainActor.assumeIsolated {
+                    guard let self, let hotKeys else { return true }
+                    return self.handleKeyDown(
                         keyCode: keyCode, flags: flags, action: action,
                         hotKeys: hotKeys)
                 }
-                return nil  // always consume: no beeps, no leaking keys to the window
+                return consumed ? nil : event
             })
         {
             monitors.append(monitor)
@@ -92,14 +102,15 @@ final class ShortcutCaptureSession {
             monitors.append(monitor)
         }
 
-        // A click ends the recording then travels on, so one click can move to another row.
-        if let monitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.leftMouseDown, .rightMouseDown],
-            handler: { @MainActor [weak self, weak hotKeys] event in
-                guard self?.activeRecorderContains(event) != true else { return event }
-                hotKeys?.recordingAction = nil
-                return event
-            })
+        // A click ends a field's recording then travels on, so one click can move to another row.
+        if mode == .field,
+            let monitor = NSEvent.addLocalMonitorForEvents(
+                matching: [.leftMouseDown, .rightMouseDown],
+                handler: { @MainActor [weak self, weak hotKeys] event in
+                    guard self?.activeRecorderContains(event) != true else { return event }
+                    hotKeys?.recordingAction = nil
+                    return event
+                })
         {
             monitors.append(monitor)
         }
@@ -129,6 +140,8 @@ final class ShortcutCaptureSession {
         hyperKeyDown = false
         detector.reset()
         activeRecorderView = nil
+        pressedCurrentBinding = false
+        mode = .field
     }
 
     func setActiveRecorderView(_ view: NSView) {
@@ -144,35 +157,38 @@ final class ShortcutCaptureSession {
         return view.bounds.contains(view.convert(event.locationInWindow, from: nil))
     }
 
+    /// False hands the key back to the window: a field takes every key, so nothing beeps or leaks.
     private func handleKeyDown(
         keyCode: Int, flags: NSEvent.ModifierFlags,
         action: HotKeyAction, hotKeys: HotKeyManager
-    ) {
+    ) -> Bool {
         // A key press makes any modifier held at the moment part of a combo, not a tap.
         detector.cancel()
         cancelModifierCommit()
         if isHyperKey(keyCode) {
             hyperKeyDown = true
             heldModifiers = hyperized(flags).intersection(Self.chordModifiers)
-            return
+            return true
         }
 
         // F-keys also carry `.function`; only the physical Globe press makes it a modifier.
         let flags = hyperized(heldGlobe ? flags.union(.function) : flags.subtracting(.function))
         let bareKey = flags.isDisjoint(with: [.command, .option, .control, .shift, .function])
 
-        if bareKey, keyCode == kVK_Escape {
+        if mode == .field, bareKey, keyCode == kVK_Escape {
             hotKeys.recordingAction = nil
-            return
+            return true
         }
-        if bareKey, keyCode == kVK_Delete || keyCode == kVK_ForwardDelete {
+        if mode == .field, bareKey, keyCode == kVK_Delete || keyCode == kVK_ForwardDelete {
             hotKeys.setBinding(nil, for: action)
             hotKeys.recordingAction = nil
-            return
+            return true
         }
-        // Not a bindable combo (e.g. a bare letter): swallow it and keep recording.
-        guard let shortcut = KeyShortcut(keyCode: keyCode, modifierFlags: flags) else { return }
+        guard let shortcut = KeyShortcut(keyCode: keyCode, modifierFlags: flags) else {
+            return mode == .field
+        }
         commit(.combo(shortcut), action: action, hotKeys: hotKeys)
+        return true
     }
 
     private func handleKeyUp(keyCode: Int) {
@@ -206,6 +222,11 @@ final class ShortcutCaptureSession {
             if key != awaitingSecondModifier { cancelModifierCommit() }
         case .released(let key, let doubleTap, let held):
             cancelModifierCommit()
+            // A lone tap or hold is too easy to make by accident while a listener stays open.
+            if mode == .live {
+                if doubleTap { commit(key.doubleBinding, action: action, hotKeys: hotKeys) }
+                return
+            }
             if doubleTap || held {
                 commit(
                     doubleTap ? key.doubleBinding : key.singleBinding,
@@ -232,12 +253,18 @@ final class ShortcutCaptureSession {
     }
 
     private func commit(_ binding: HotKeyBinding, action: HotKeyAction, hotKeys: HotKeyManager) {
-        if let owner = hotKeys.conflictOwner(of: binding, excluding: action) {
+        if mode == .live, binding == hotKeys.binding(for: action) {
+            pressedCurrentBinding = true
+            return
+        }
+        if let owner = hotKeys.conflictOwner(
+            of: binding, excluding: action, includingExternal: mode == .live)
+        {
             flashConflict(Conflict(binding: binding, owner: owner))
             return
         }
         hotKeys.setBinding(binding, for: action)
-        hotKeys.recordingAction = nil
+        if mode == .field { hotKeys.recordingAction = nil }
     }
 
     private func flashConflict(_ rejected: Conflict) {

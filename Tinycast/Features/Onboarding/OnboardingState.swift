@@ -9,8 +9,8 @@ enum OnboardingState {
         FileManager.default.fileExists(atPath: markerURL.path)
     }
 
-    /// Written at show-time, so onboarding stays one-time even if they quit mid-flow.
-    static func markShown() {
+    /// Written when the wizard closes, so quitting partway shows it again from the start.
+    static func markOnboarded() {
         try? Data().write(to: markerURL)
     }
 }

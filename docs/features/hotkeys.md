@@ -18,6 +18,17 @@ the keycap rendering; only the _engine_ differs.
 Carbon's dispatcher enters through an explicit `@MainActor` callback. Press and release handlers
 return `OSStatus` synchronously, preserving event order and hold-to-talk release handling.
 
+Onboarding's last step listens instead of waiting for a click: `startListening(for:)` opens a
+`.live` capture that stays on while the window is key. It records combinations and double taps as
+they are typed, lets plain keys such as Return reach the window, and reads a press of the current
+binding as a try, which ends onboarding. Only it checks combinations against enabled macOS shortcuts
+and probes for a conflicting Carbon registration. When Spotlight holds the shortcut and no
+Tinycast action does, onboarding offers Replace Spotlight: `SpotlightShortcut` turns that symbolic
+hotkey off live and in `com.apple.symbolichotkeys`, so it stays off after the next login. Tinycast
+takes the shortcut only if nothing else holds it once Spotlight is off, and otherwise turns Spotlight
+back on. Undo turns Spotlight back on, and restores the previous binding while the launcher still
+uses Spotlight's shortcut.
+
 ## Invariants
 
 - **Hotkeys persist as JSON strings under `hotkey.<action>` UserDefaults keys**, and
@@ -43,6 +54,8 @@ return `OSStatus` synchronously, preserving event order and hold-to-talk release
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyEngine` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
+- **The private symbolic-hotkey SPI lives in `Service/SpotlightShortcut.swift` alone**, resolved at
+  runtime, so a macOS without it shows the ordinary conflict warning instead of Replace Spotlight.
 - **The private HID SPI lives in `Platform/HIDEventSystem.swift` alone**, resolved at runtime, so a
   macOS without it degrades the Hyper Key to `.remapUnavailable` instead of crashing.
 - **`KeyboardRemapper` only ever removes the Hyper Key's own entries**, tracked in its recovery journal,

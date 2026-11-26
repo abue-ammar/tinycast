@@ -37,6 +37,11 @@ press. `InputSourceSwitcher` uses HIToolbox's TIS APIs because they remain the p
 enumerating and selecting keyboard input sources. Neither use is inertia, and raw C pointers never
 cross an asynchronous actor boundary.
 
+Private SPI is a last resort for a capability no public API offers. Each is bound with `dlsym` in the
+one file that uses it, so a macOS without it falls back instead of crashing. SPI that changes a macOS
+setting runs only when the user asks and can be reversed: Bluetooth power, the Hyper Key remap, and
+`SpotlightShortcut`, which turns off Spotlight's shortcut only through onboarding's Replace Spotlight.
+
 ## Architecture and feature organization
 
 Full detail in [architecture.md](architecture.md); the rules a new feature has to satisfy:

@@ -7,6 +7,8 @@ enum ModifierKey: String, CaseIterable, Codable, Sendable {
     case leftCommand, rightCommand
     case globe
 
+    static let globeGlyph = "🌐︎"
+
     var modifier: DoubleTapModifier? {
         switch self {
         case .leftControl, .rightControl: .control
@@ -25,7 +27,7 @@ enum ModifierKey: String, CaseIterable, Codable, Sendable {
         }
     }
 
-    var keycaps: [String] { (side.map { [$0] } ?? []) + [modifier?.glyph ?? "🌐︎"] }
+    var keycaps: [String] { (side.map { [$0] } ?? []) + [modifier?.glyph ?? Self.globeGlyph] }
 
     var singleBinding: HotKeyBinding { self == .globe ? .globe : .modifier(self) }
     var doubleBinding: HotKeyBinding { self == .globe ? .doubleGlobe : .doubleModifier(self) }

@@ -37,7 +37,8 @@ final class ModifierTapMonitor {
 }
 @MainActor
 final class ShortcutCaptureSession {
-    func start(action: HotKeyAction, hotKeys: HotKeyManager) {}
+    enum Mode: Equatable { case field, live }
+    func start(action: HotKeyAction, mode: Mode, hotKeys: HotKeyManager) {}
     func stop() {}
 }
 @MainActor
@@ -49,6 +50,7 @@ final class HotKeyCenter {
     }
     static weak var current: HotKeyCenter?
     var entries: [String: Entry] = [:]
+    var reservedShortcuts: Set<KeyShortcut> = []
     var isPaused = false
     init() { Self.current = self }
     func register(
@@ -57,4 +59,5 @@ final class HotKeyCenter {
         entries[id] = Entry(shortcut: shortcut, onKeyDown: onKeyDown, onKeyUp: onKeyUp)
     }
     func unregister(id: String) { entries[id] = nil }
+    func isReservedOutsideApp(_ shortcut: KeyShortcut) -> Bool { reservedShortcuts.contains(shortcut) }
 }

@@ -41,13 +41,23 @@ final class HotKeyManager {
     var allowsAction: ((HotKeyAction) -> Bool)?
     var onBindingEdit: ((HotKeyAction, HotKeyBinding?) -> Void)?
 
+    private struct Recording: Equatable {
+        let action: HotKeyAction
+        let mode: ShortcutCaptureSession.Mode
+    }
+
     /// The recorder currently capturing, which also pauses both engines.
     var recordingAction: HotKeyAction? {
+        get { recording?.action }
+        set { recording = newValue.map { Recording(action: $0, mode: .field) } }
+    }
+
+    private var recording: Recording? {
         didSet {
-            guard recordingAction != oldValue else { return }
+            guard recording != oldValue else { return }
             applyPause()
-            if let recordingAction {
-                capture.start(action: recordingAction, hotKeys: self)
+            if let recording {
+                capture.start(action: recording.action, mode: recording.mode, hotKeys: self)
             } else {
                 capture.stop()
             }
@@ -193,6 +203,11 @@ final class HotKeyManager {
     }
 
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
+
+    /// Onboarding's listener: it stays open across commits until `recordingAction` is cleared.
+    func startListening(for action: HotKeyAction) {
+        recording = Recording(action: action, mode: .live)
+    }
 
     /// Adopts bindings another process stored, re-registering only the ones that moved.
     func reloadBindings() {
@@ -381,7 +396,9 @@ final class HotKeyManager {
     }
 
     /// A hold reserves its physical modifier across both tap gestures.
-    func conflictOwner(of binding: HotKeyBinding, excluding action: HotKeyAction) -> String? {
+    func conflictOwner(
+        of binding: HotKeyBinding, excluding action: HotKeyAction, includingExternal: Bool = false
+    ) -> String? {
         for candidate in candidateActions where candidate != action {
             guard let other = self.binding(for: candidate) else { continue }
             let holdsModifier =
@@ -391,6 +408,9 @@ final class HotKeyManager {
             if binding.conflicts(with: other, holdsModifier: holdsModifier) {
                 return displayName(of: candidate)
             }
+        }
+        if includingExternal, let shortcut = binding.shortcut, center.isReservedOutsideApp(shortcut) {
+            return String(localized: "macOS or another app")
         }
         return nil
     }

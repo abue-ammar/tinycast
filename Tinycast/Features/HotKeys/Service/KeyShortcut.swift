@@ -87,7 +87,7 @@ struct KeyShortcut: Hashable, Sendable {
     /// Modifier symbols in fixed 🌐⌃⌥⇧⌘ order.
     static func modifierSymbols(from flags: NSEvent.ModifierFlags) -> [String] {
         var symbols: [String] = []
-        if flags.contains(.function) { symbols.append("🌐︎") }
+        if flags.contains(.function) { symbols.append(ModifierKey.globeGlyph) }
         if flags.contains(.control) { symbols.append("⌃") }
         if flags.contains(.option) { symbols.append("⌥") }
         if flags.contains(.shift) { symbols.append("⇧") }

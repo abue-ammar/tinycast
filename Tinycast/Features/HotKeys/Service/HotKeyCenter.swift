@@ -69,6 +69,33 @@ final class HotKeyCenter {
         idToKey.removeValue(forKey: entry.carbonID)
     }
 
+    func isReservedOutsideApp(_ shortcut: KeyShortcut) -> Bool {
+        var symbolicHotKeys: Unmanaged<CFArray>?
+        if CopySymbolicHotKeys(&symbolicHotKeys) == noErr,
+            let hotKeys = symbolicHotKeys?.takeRetainedValue() as? [[String: Any]],
+            hotKeys.contains(where: {
+                $0[kHISymbolicHotKeyEnabled] as? Bool == true
+                    && $0[kHISymbolicHotKeyCode] as? Int == shortcut.carbonKeyCode
+                    && $0[kHISymbolicHotKeyModifiers] as? Int == shortcut.carbonModifiers
+            })
+        {
+            return true
+        }
+
+        // A second registration in this process would look like an external conflict.
+        let ownID = entries.first { $0.value.shortcut == shortcut && $0.value.ref != nil }?.key
+        if let ownID { deactivate(ownID) }
+        defer { if let ownID { activate(ownID) } }
+
+        var ref: EventHotKeyRef?
+        let status = RegisterEventHotKey(
+            UInt32(shortcut.carbonKeyCode), UInt32(shortcut.carbonModifiers),
+            EventHotKeyID(signature: signature, id: 0), GetEventDispatcherTarget(),
+            UInt32(kEventHotKeyExclusive), &ref)
+        if let ref { UnregisterEventHotKey(ref) }
+        return status == eventHotKeyExistsErr
+    }
+
     private func activate(_ id: String) {
         guard var entry = entries[id], entry.ref == nil else { return }
         installEventHandlerIfNeeded()

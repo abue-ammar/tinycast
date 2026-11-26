@@ -423,6 +423,185 @@ enum Theme {
         static let composerStop = Font.system(size: 10, weight: .bold)
     }
 
+    enum Onboarding {
+        static let inset: CGFloat = 36
+        static let setupWidth: CGFloat = 460
+        static let importOptionsWidth: CGFloat = 552
+        static let passphraseWidth: CGFloat = 196
+        static let fileCardInset: CGFloat = 16
+        static let fileGlyphSize: CGFloat = 24
+        static let compactSetupHeight: CGFloat = 340
+        static let setupIconSize: CGFloat = 60
+        static let importItemPadding: CGFloat = 5
+        static let titleSize: CGFloat = 42
+        static let stepTitleSize: CGFloat = 34
+        static let markSize: CGFloat = 84
+        static let carouselWidth: CGFloat = 576
+        static let featureIconSize: CGFloat = 37
+        static let featureSymbolSize: CGFloat = 14
+        static let featureIconEdgeRadius: CGFloat = 14
+        static let carouselFade: Gradient = {
+            let leading = (0...6).map { index in
+                let progress = Double(index) / 6
+                return Gradient.Stop(
+                    color: .black.opacity(progress * progress * (3 - 2 * progress)),
+                    location: progress * 0.22)
+            }
+            let trailing = leading.reversed().map {
+                Gradient.Stop(color: $0.color, location: 1 - $0.location)
+            }
+            return Gradient(stops: leading + trailing)
+        }()
+        static let carouselSpeed: CGFloat = 13
+        static let revealDuration = 1.2
+        static let revealBackdropDelay = revealDuration * 0.50
+        static let revealShadowDelay = 0.64
+        static let revealFeather: CGFloat = 480
+        static let shortcutConfirmationDuration = 0.44
+        static let pageTravel: CGFloat = 48
+        static let pageMotion = Animation.smooth(duration: 0.28, extraBounce: 0)
+
+        static let night = Color(red: 0.038, green: 0.025, blue: 0.072)
+        static let lightning = Color(red: 0.87, green: 0.79, blue: 1)
+        static let importItemSelectedFill = Colors.brand.opacity(0.28)
+        static let featureIconFill = Colors.brand.opacity(0.14)
+        static let emblemInk = Colors.brand.mix(with: .primary, by: 0.40)
+        static let featureIconTopEdge = RadialGradient(
+            colors: [emblemInk.opacity(0.34), .clear],
+            center: .top, startRadius: 0, endRadius: featureIconEdgeRadius)
+        static let featureIconBottomEdge = RadialGradient(
+            colors: [emblemInk.opacity(0.20), .clear],
+            center: .bottom, startRadius: 0, endRadius: featureIconEdgeRadius)
+        static let fileCardFill = Colors.cardFill.opacity(0.74)
+        static let returnKeyBorder = Color.white.opacity(0.45)
+        /// "↵" falls back to a face that seats high, so it drops as it does in `KeyCapChip`.
+        static let returnGlyphDrop: CGFloat = 1.1
+        static let canvas = Colors.adaptive(
+            dark: NSColor(srgbRed: 0.051, green: 0.044, blue: 0.073, alpha: 1),
+            light: .windowBackgroundColor)
+
+        /// The shortcut step's keys, in fractions of one key's height so every fitted size matches.
+        enum Keycap {
+            static let size: CGFloat = 92
+            static let compactScale: CGFloat = 0.72
+            static let smallestScale: CGFloat = 0.52
+            static let gap: CGFloat = 0.15
+            static let cornerRadius: CGFloat = 0.14
+            static let labelledWidth: CGFloat = 1.22
+            static let spaceWidth: CGFloat = 3
+            static let horizontalInset: CGFloat = 0.15
+            static let verticalInset: CGFloat = 0.14
+            static let symbolSize: CGFloat = 0.21
+            static let legendSize: CGFloat = 0.17
+            static let glyphSize: CGFloat = 0.26
+            static let nameSize: CGFloat = 0.2
+            static let glyphMinimumScale: CGFloat = 0.65
+            static let plusSize: CGFloat = 0.16
+            static let unboundOpacity = 0.55
+            static let glowReach: CGFloat = 0.6
+            static let edgeWidth: CGFloat = 0.5
+            static let pressDepth: CGFloat = 1
+            static let pressedRimOpacity = 0.5
+            static let contactShadow = Shadow(radius: 1, offset: 1)
+            static let pressedContactShadow = Shadow(radius: 0.5, offset: 0.5)
+            static let ambientShadow = Shadow(radius: 7, offset: 4)
+            static let pressedAmbientShadow = Shadow(radius: 2, offset: 1)
+            static let press = Animation.easeOut(duration: 0.06)
+            static let release = Animation.spring(duration: 0.2, bounce: 0.2)
+
+            struct Shadow {
+                let radius: CGFloat
+                let offset: CGFloat
+            }
+
+            static let face = Colors.adaptive(
+                dark: .srgbInk(0.125, alpha: 0.78), light: .srgbInk(1, alpha: 1))
+            static let pressedFace = Colors.adaptive(
+                dark: .srgbInk(0.09, alpha: 0.78), light: .srgbInk(0.955, alpha: 1))
+            static let pressedTint = Colors.adaptive(
+                dark: NSColor(Colors.brand).withAlphaComponent(0.16),
+                light: NSColor(Colors.brand).withAlphaComponent(0.07))
+            static let sheen = LinearGradient(
+                colors: [
+                    Colors.adaptive(dark: .srgbInk(1, alpha: 0.045), light: .srgbInk(1, alpha: 0)),
+                    Colors.adaptive(dark: .srgbInk(1, alpha: 0), light: .srgbInk(0, alpha: 0.025))
+                ], startPoint: .top, endPoint: .bottom)
+            static let glow = Colors.adaptive(dark: .srgbInk(1, alpha: 0.055), light: .srgbInk(1, alpha: 0))
+            static let rim = LinearGradient(
+                stops: [
+                    .init(
+                        color: Colors.adaptive(dark: .srgbInk(1, alpha: 0.2), light: .srgbInk(1, alpha: 1)),
+                        location: 0),
+                    .init(
+                        color: Colors.adaptive(
+                            dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(1, alpha: 0.6)),
+                        location: 0.18),
+                    .init(
+                        color: Colors.adaptive(dark: .srgbInk(1, alpha: 0.015), light: .srgbInk(1, alpha: 0)),
+                        location: 0.6),
+                    .init(
+                        color: Colors.adaptive(dark: .srgbInk(1, alpha: 0.03), light: .srgbInk(1, alpha: 0)),
+                        location: 1)
+                ], startPoint: .top, endPoint: .bottom)
+            static let edge = Colors.adaptive(dark: .srgbInk(0, alpha: 0.85), light: .srgbInk(0, alpha: 0.11))
+            static let contactShadowColor = Colors.adaptive(
+                dark: .srgbInk(0, alpha: 0.5), light: .srgbInk(0, alpha: 0.12))
+            static let ambientShadowColor = Colors.adaptive(
+                dark: .srgbInk(0, alpha: 0.35), light: .srgbInk(0, alpha: 0.08))
+            static let ink = Colors.adaptive(dark: .srgbInk(0.88, alpha: 1), light: .srgbInk(0.26, alpha: 1))
+            static let pressedInk = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 1), light: .srgbInk(0.1, alpha: 1))
+        }
+
+        enum Notice {
+            static let width: CGFloat = 480
+            /// Held even while no card shows, so the keys never move when one appears.
+            static let reservedHeight: CGFloat = 72
+            static let cornerRadius: CGFloat = 12
+            static let horizontalInset: CGFloat = 16
+            static let verticalInset: CGFloat = 14
+            static let fill = Colors.adaptive(dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(0, alpha: 0.04))
+            static let stroke = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.06), light: .srgbInk(0, alpha: 0.06))
+            static let strokeWidth: CGFloat = 0.5
+            static let disabledOpacity = 0.5
+            static let buttonHeight: CGFloat = 28
+            static let buttonInset: CGFloat = 14
+            static let buttonFill = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.12), light: .srgbInk(0, alpha: 0.07))
+            static let buttonHover = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.16), light: .srgbInk(0, alpha: 0.1))
+            static let buttonPressed = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.2), light: .srgbInk(0, alpha: 0.13))
+        }
+
+        enum Intro {
+            static let duration = 3.16
+            static let markSize: CGFloat = 96
+            static let frameInterval = 1.0 / 60
+            static let dimDuration = 1.30
+            static let dimOpacity = 0.94
+            static let violetDelay = 0.14
+            static let violetDuration = 1.32
+            static let violetCurve = UnitCurve.bezier(
+                startControlPoint: .init(x: 0.16, y: 0), endControlPoint: .init(x: 0.35, y: 1))
+            /// In screen diagonals, so the glow reaches every corner of any display.
+            static let violetRadius: CGFloat = 0.57
+            static let violetCenterOpacity = 0.40
+            static let violetMidOpacity = 0.18
+            static let grainOpacity = 0.055
+            static let zoomDelay = 0.99
+            static let zoomDuration = 1.41
+            /// The mark starts this many screen diagonals tall, so the zoom opens inside it.
+            static let zoomReach: CGFloat = 4.4
+            static let markFadeStart = 0.48
+            static let markFadeLength = 0.44
+            static let liftDelay = 0.09
+            static let liftCurve = UnitCurve.bezier(
+                startControlPoint: .init(x: 0.72, y: 0), endControlPoint: .init(x: 0.28, y: 1))
+        }
+    }
+
     enum Colors {
         /// Resolves against the window's `effectiveAppearance`, so a token repaints on its own.
         static func adaptive(dark: NSColor, light: NSColor) -> Color {
@@ -504,7 +683,6 @@ enum Theme {
         static let searchFlash = Color.accentColor.opacity(0.35)
         static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
         static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
-        /// The violet of the app mark, used only to tint the About support callout.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.
         static let dropGuide = ramp(dark: 0.35, light: 0.35)

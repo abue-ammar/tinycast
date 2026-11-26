@@ -2,8 +2,7 @@ import SwiftUI
 
 struct RaycastImportSelection: View {
     @Binding var selection: RaycastImportOptions
-
-    private struct Category: Identifiable {
+    struct Category: Identifiable {
         let option: RaycastImportOptions
         let symbol: String
         let tint: IconTint
@@ -11,7 +10,7 @@ struct RaycastImportSelection: View {
         var id: Int { option.rawValue }
     }
 
-    private static let categories: [Category] = [
+    static let categories: [Category] = [
         .init(
             option: .shortcuts, symbol: "command", tint: SettingsTab.commands.tint,
             label: String(localized: "Shortcuts")),

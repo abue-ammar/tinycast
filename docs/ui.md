@@ -76,8 +76,9 @@ Add a token rather than a magic number when introducing a new value.
 ### Interface Size (`InterfaceMetrics`)
 
 `AppSettings.interfaceSize` scales the palette and the surfaces that float with it: the ⌘K menu, the
-extension list panel, Quick Actions, dialogs and HUDs. Settings, Onboarding,
-Support, About and Notes never scale.
+extension list panel, Quick Actions, dialogs and HUDs. The onboarding window uses the expanded
+palette dimensions for the chosen size, limited to the available screen space. Its content uses
+standard metrics, as do Settings, Support, About and Notes.
 
 `DesignSystem/InterfaceMetrics.swift` stores **only a scale** and derives every value from the `Theme`
 literal, so `Theme` stays the one place a number is written down. **In any view a scaled surface can
@@ -236,7 +237,7 @@ shipped. Light is the same stop with the ink inverted, and is the only column op
 | `textTertiary`    | white 0.40     | black 0.42     | placeholders, trailing kind labels                |
 | `menuSymbol`      | white 0.70     | black 0.70     | native popover-menu symbols                       |
 | `iconPlaceholder` | white 0.06     | black 0.06     | the empty tile a row paints while an icon decodes |
-| `sheen`           | white 0.04     | black 0.04     | the wash behind the Onboarding header             |
+| `sheen`           | white 0.04     | black 0.04     | the wash behind the Support header                |
 | `cardFill`        | white 0.05     | black 0.04     | settings/calc card fill                           |
 | `cardStroke`      | white 0.10     | black 0.10     | settings/calc card border + inset dividers        |
 | `noteText`        | white 0.90     | black 0.85     | Notes body text                                   |
@@ -823,8 +824,7 @@ system-drawn and a pane reads exactly as macOS System Settings does.
   **`FeatureSwitchSection`** (a feature's master switch plus its launcher-visibility companion),
   **`SettingsFilterField`** (the filter row above a long list), **`launcherVisibilityHelp()`**, and the
   Settings editor header, fields and surface. `ModalActionButtonStyle.swift` keeps every borderless surface's actions on one
-  implementation: dialogs, Settings editors, the camera footers and the Quick Action panel. `Onboarding/OnboardingCard.swift` keeps the older hand-drawn card,
-  which that window still uses.
+  implementation: dialogs, Settings editors, the camera footers and the Quick Action panel.
 - **A Settings editor borrows the dialog language, not its job.** `SettingsEditorPresenter` hosts the
   existing form in an activating, transparent child `NSPanel`, with the same `panel 26` Liquid Glass
   surface, native `.documentWindow` entrance and matte action buttons. AppKit gives this activating
@@ -952,7 +952,7 @@ shortcut"), live held keys with their reported side, a pending second modifier t
 
 - **An ancestor draws it.** The open recorder publishes its bounds via `ShortcutRecorderAnchorKey`;
   `.shortcutRecorderPopoverHost()` sits on `SettingsDetailView`: one host above every pane's
-  `Form`, and on `OnboardingView`. An overlay on the row would be clipped by the scroll view. A
+  `Form`. An overlay on the row would be clipped by the scroll view. A
   recorder in a `LauncherItemsTable` cell sits in its own hosting view, where the preference stops,
   so the cell reports the recorder's frame and `LauncherItemsSection` republishes it as the anchor.
 - **`shortcutPopover.width` is load-bearing.** The callout centres on the recorder only while it
