@@ -76,7 +76,7 @@ struct OnboardingView: View {
             OnboardingSetupPages.Import(
                 model: model, compact: compact, contentHeight: contentHeight, scroll: scroll)
         case .ready:
-            OnboardingShortcutView(confirmed: model.shortcutConfirmed)
+            OnboardingShortcutView(session: model.shortcut, confirmed: model.shortcutConfirmed)
         }
     }
 

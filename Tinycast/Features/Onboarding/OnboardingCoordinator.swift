@@ -63,7 +63,10 @@ final class OnboardingCoordinator {
             title: String(localized: "Welcome to Tinycast"), contentSize: size,
             activation: nil, closesOnEscape: true)
         let chrome = Chrome()
-        let model = OnboardingModel()
+        let model = OnboardingModel(
+            shortcut: OnboardingShortcutSession(hotKeys: core.hotKeys) { [weak self] message in
+                self?.core.showMessage(message, tone: .danger)
+            })
         window = controller
         self.chrome = chrome
         self.model = model

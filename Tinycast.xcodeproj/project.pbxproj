@@ -307,6 +307,7 @@
 		4DA03A170E95F0D08E3569F9 /* ExtensionColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0266BAF4643A4B5C41B600DE /* ExtensionColors.swift */; };
 		4E1BFE20BD4308D1EF05A5F2 /* ClipDrag.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB74C73EB33F368E0890E839 /* ClipDrag.swift */; };
 		4E5F73461C417BE2B3472E6E /* WindowChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D61199EE7B60E91ACBDE2E2 /* WindowChrome.swift */; };
+		4E63B57BAAC235662083937C /* OnboardingShortcutSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5518DD968DDAC8ECB0472A7A /* OnboardingShortcutSession.swift */; };
 		4E756D3AF6529EF3C8D35A5E /* PlanUsageGauge.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBC4D531C6D369A2F015862C /* PlanUsageGauge.swift */; };
 		4EBFBA1CC7DA9B22C396DBEC /* CommandArgumentsRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1590A8769EF787763DE189B7 /* CommandArgumentsRow.swift */; };
 		4F231B3551269815753B8C4C /* BackupCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DA4145CFBB855DF1699C744 /* BackupCategory.swift */; };
@@ -913,6 +914,7 @@
 		EEDDC1AFFBCC75039A873886 /* FormTextInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39EF327E9EFB308B858B58B8 /* FormTextInput.swift */; };
 		EF965E5C84483A45048B153A /* PlanUsageAlertPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31AB9B001D97211C889BCCB6 /* PlanUsageAlertPolicy.swift */; };
 		F03DB7A7898F0388E821FDBB /* AppleIntelligenceProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06B5C0B83C3645AC90639B85 /* AppleIntelligenceProvider.swift */; };
+		F05774F9571908C5A507CFAC /* SpotlightShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E476EA7BDCE1FAC18A38243 /* SpotlightShortcut.swift */; };
 		F13789E3732E844EE7584561 /* ColorValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA9287418DC6C04437FB4BAF /* ColorValue.swift */; };
 		F1D23C09543B7C17A2907EE4 /* DictationAudioChunks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A97F816CB516A9203224A17 /* DictationAudioChunks.swift */; };
 		F244E0064508C29F74363A8C /* ExecutablePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DE505A8B3E665C2C1382B48 /* ExecutablePicker.swift */; };
@@ -1355,6 +1357,7 @@
 		540F98596F09D20BA7160883 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		548C83C4086CD9FB8E85B222 /* ClipboardScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClipboardScreen.swift; sourceTree = "<group>"; };
 		5515DEDA5C7485F4A9C218B5 /* NoteFormattingBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteFormattingBar.swift; sourceTree = "<group>"; };
+		5518DD968DDAC8ECB0472A7A /* OnboardingShortcutSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingShortcutSession.swift; sourceTree = "<group>"; };
 		552EF9B38ABA9443D4FDE5E4 /* AIToolRounds.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIToolRounds.swift; sourceTree = "<group>"; };
 		56D6EE5144AEF889C95B3758 /* QuickActionCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionCoordinator.swift; sourceTree = "<group>"; };
 		570CE37C7133E28F7495ED91 /* MarkdownCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownCodeView.swift; sourceTree = "<group>"; };
@@ -1387,6 +1390,7 @@
 		5DEE02FD2AA017A2F2D14729 /* DarwinNotificationToken.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DarwinNotificationToken.swift; sourceTree = "<group>"; };
 		5DFF1EF5B5DA85F78C040BD1 /* MenuSearchTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuSearchTarget.swift; sourceTree = "<group>"; };
 		5E15E821736036AC4FAF1E37 /* HotKeySpelling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeySpelling.swift; sourceTree = "<group>"; };
+		5E476EA7BDCE1FAC18A38243 /* SpotlightShortcut.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightShortcut.swift; sourceTree = "<group>"; };
 		5E62A0BA3E85C8942167A310 /* ModalActionButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModalActionButtonStyle.swift; sourceTree = "<group>"; };
 		5E7CACFDE8DE0678D8CDC5E7 /* CalcRatePhrases.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcRatePhrases.swift; sourceTree = "<group>"; };
 		5E9F62FD5537ABE16C1DC132 /* MathLayoutEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathLayoutEngine.swift; sourceTree = "<group>"; };
@@ -2100,6 +2104,7 @@
 				5BB75B347B833B81ACBEAF1E /* OnboardingIntro.swift */,
 				A76A387188952CDC5558D308 /* OnboardingModel.swift */,
 				04236DB79CFB5909BAB822B1 /* OnboardingSetupPages.swift */,
+				5518DD968DDAC8ECB0472A7A /* OnboardingShortcutSession.swift */,
 				6B3211AE96CC02B95F40B231 /* OnboardingShortcutView.swift */,
 				02BCAB1F3B6930FE0B819F6D /* OnboardingState.swift */,
 				23591B301A183579098AA019 /* OnboardingView.swift */,
@@ -3462,6 +3467,7 @@
 				E2105A373469CC2662D03478 /* RemapInstanceLock.swift */,
 				0BD0F1989B00B2B3BFF5BFCC /* SecureInputMonitor.swift */,
 				B235DFF451FF4D52A8E44D00 /* ShortcutCaptureSession.swift */,
+				5E476EA7BDCE1FAC18A38243 /* SpotlightShortcut.swift */,
 			);
 			path = Service;
 			sourceTree = "<group>";
@@ -5067,6 +5073,7 @@
 				413F569A3CF868EA3E68B349 /* OnboardingIntro.swift in Sources */,
 				832CF2E45119AE458173A427 /* OnboardingModel.swift in Sources */,
 				7FEAEB98D46EDB352949F85C /* OnboardingSetupPages.swift in Sources */,
+				4E63B57BAAC235662083937C /* OnboardingShortcutSession.swift in Sources */,
 				E53E32A31DCD51400D76C526 /* OnboardingShortcutView.swift in Sources */,
 				19317D6C8A55E3F85BB7AE1F /* OnboardingState.swift in Sources */,
 				0DD808F80666846F4E74BAD8 /* OnboardingView.swift in Sources */,
@@ -5275,6 +5282,7 @@
 				7BDB7CF7F1352015F6AC96C3 /* SnippetsStore.swift in Sources */,
 				9A7BBA93D54AB1638F1EBE6F /* SpaceGesture.swift in Sources */,
 				7C2AA1D827EC87533021BD74 /* SpaceSwitcher.swift in Sources */,
+				F05774F9571908C5A507CFAC /* SpotlightShortcut.swift in Sources */,
 				60E4AA375F0424AAD55799FD /* SteadySegmentedPicker.swift in Sources */,
 				E29056264B57A3F0EC5F5698 /* SupportCoordinator.swift in Sources */,
 				B589C3ECFF03C790102361D4 /* SupportReminderSchedule.swift in Sources */,

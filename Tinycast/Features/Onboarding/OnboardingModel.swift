@@ -18,6 +18,7 @@ final class OnboardingModel {
     }
 
     @ObservationIgnored private(set) var movesForward = true
+    let shortcut: OnboardingShortcutSession
     var shortcutConfirmed = false
     private(set) var file: URL?
     var passphrase = ""
@@ -25,6 +26,10 @@ final class OnboardingModel {
     private(set) var status: ImportStatus?
     var selection: RaycastImportOptions = .all
     private(set) var isRaycastExport = false
+
+    init(shortcut: OnboardingShortcutSession) {
+        self.shortcut = shortcut
+    }
 
     var canImport: Bool {
         isRaycastExport && !passphrase.isEmpty && !selection.isEmpty && !importing

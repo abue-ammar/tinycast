@@ -1084,9 +1084,12 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
 - On the last step, check Launch at login reflects the current setting after importing or skipping.
   Record a shortcut and check it survives Back and Next. Press it and verify the keys respond
   before the palette opens, ready for typing. Onboarding has no Dock entry.
-  With no binding, check that ⌘ Space is offered when available. With Spotlight or another app
-  using it, check the warning below the keys and record a different shortcut. Return activates the
-  violet Get Started button even without a binding.
+  With no binding, check that ⌘ Space is offered when available. With Spotlight on ⌘ Space, Replace
+  Spotlight binds ⌘ Space and unticks Spotlight in System Settings › Keyboard › Keyboard Shortcuts;
+  it stays off after logging out and back in. Undo ticks it again and clears the binding. With
+  another app using ⌘ Space, Replace Spotlight leaves Spotlight on and shows the warning below the
+  keys; record a different shortcut. Return activates the violet Get Started button even without a
+  binding.
   Settings still adds a Dock entry while open and removes it when the last ordinary window closes
 - Palette opens and lists apps; clipboard, quicklinks, snippets and calculator history are all empty
   and all accept a first entry

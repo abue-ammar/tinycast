@@ -1,7 +1,7 @@
-import Carbon.HIToolbox
 import SwiftUI
 
 struct OnboardingShortcutView: View {
+    let session: OnboardingShortcutSession
     let confirmed: Bool
     @Environment(AppSettings.self) private var settings
     @Environment(HotKeyManager.self) private var hotKeys
@@ -9,61 +9,44 @@ struct OnboardingShortcutView: View {
     @Environment(\.appearsActive) private var appearsActive
     @State private var heldModifiers: SwiftUI.EventModifiers = []
     @State private var hoveringShortcut = false
-    @State private var shortcutIsInUse = false
 
-    private static let suggestedBinding = HotKeyBinding.combo(
-        KeyShortcut(carbonKeyCode: kVK_Space, carbonModifiers: cmdKey))
-
-    private var assignedBinding: HotKeyBinding? { hotKeys.binding(for: .togglePalette) }
-    private var binding: HotKeyBinding { assignedBinding ?? Self.suggestedBinding }
-    private var isRecording: Bool { hotKeys.recordingAction == .togglePalette }
+    private var binding: HotKeyBinding { session.binding }
+    private var isRecording: Bool { session.isRecording }
 
     var body: some View {
         @Bindable var settings = settings
-        let showsSuggestion = assignedBinding == nil && !isRecording
+        let notice = session.notice
         VStack(spacing: Theme.Spacing.xxxl) {
             OnboardingSetupPages.Header(
-                title: assignedBinding != nil && !shortcutIsInUse
-                    ? "Try your shortcut" : "Set Up Your Launcher"
+                title: session.isReady ? "Try your shortcut" : "Set Up Your Launcher"
             ) {
-                if assignedBinding != nil && !shortcutIsInUse {
+                if session.isReady {
                     Text("Press this shortcut to open Tinycast.")
                         .foregroundStyle(.secondary)
                 }
             }
             shortcutButton
-            if shortcutIsInUse {
-                let shortcut = Text(verbatim: binding.keycaps.joined(separator: " ")).bold()
-                VStack(spacing: Theme.Spacing.xs) {
-                    Label("\(shortcut) is already in use.", systemImage: "exclamationmark.triangle.fill")
-                        .font(.callout.weight(.semibold))
-                        .foregroundStyle(.orange)
-                    Text("Disable or change it where it’s assigned to use it in Tinycast.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-            } else if showsSuggestion {
-                Button("Use Suggested Shortcut") {
-                    checkAvailability()
-                    guard !shortcutIsInUse else { return }
-                    hotKeys.setBinding(binding, for: .togglePalette)
-                }
-                .buttonStyle(.glass)
+            if let notice {
+                ShortcutNotice(
+                    notice: notice, session: session,
+                    keys: Text(verbatim: binding.keycaps.joined(separator: " ")).bold()
+                )
+                .disabled(confirmed)
             }
             Toggle("Launch at login", isOn: $settings.launchAtLogin)
                 .toggleStyle(.switch)
                 .controlSize(.small)
                 .disabled(confirmed)
-                .padding(.top, shortcutIsInUse || showsSuggestion ? Theme.Spacing.md : 0)
+                .padding(.top, notice == nil ? 0 : Theme.Spacing.md)
         }
         .multilineTextAlignment(.center)
         .onModifierKeysChanged { _, held in heldModifiers = held }
         .onChange(of: appearsActive) { _, active in
-            if active { checkAvailability() } else { heldModifiers = [] }
+            if active { refreshAvailability() } else { heldModifiers = [] }
         }
-        .onChange(of: assignedBinding, initial: true) {
+        .onChange(of: session.assignedBinding, initial: true) {
             heldModifiers = []
-            checkAvailability()
+            refreshAvailability()
         }
         .onChange(of: isRecording) { _, recording in
             if !recording { heldModifiers = [] }
@@ -111,11 +94,9 @@ struct OnboardingShortcutView: View {
         }
     }
 
-    private func checkAvailability() {
+    private func refreshAvailability() {
         guard !confirmed else { return }
-        shortcutIsInUse =
-            hotKeys.conflictOwner(
-                of: binding, excluding: .togglePalette, includingExternal: true) != nil
+        session.refresh()
     }
 
     private func keys(scale: CGFloat) -> some View {
@@ -232,6 +213,50 @@ struct OnboardingShortcutView: View {
                 of: flags.contains(.shift)
                     ? [.command, .option, .control, .shift] : [.command, .option, .control])
         default: return false
+        }
+    }
+}
+
+private struct ShortcutNotice: View {
+    let notice: OnboardingShortcutSession.Notice
+    let session: OnboardingShortcutSession
+    let keys: Text
+
+    var body: some View {
+        switch notice {
+        case .taken:
+            VStack(spacing: Theme.Spacing.xs) {
+                Label("\(keys) is already in use.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(.orange)
+                Text("Disable or change it where it’s assigned to use it in Tinycast.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        case .heldBySpotlight:
+            VStack(spacing: Theme.Spacing.lg) {
+                VStack(spacing: Theme.Spacing.xs) {
+                    Text("Spotlight also uses \(keys).")
+                        .font(.callout.weight(.semibold))
+                    Text("Turn off Spotlight's shortcut and use it to open Tinycast.")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                Button("Replace Spotlight", action: session.replaceSpotlight)
+                    .buttonStyle(.glass)
+            }
+        case .suggestion:
+            Button("Use Suggested Shortcut", action: session.useSuggestion)
+                .buttonStyle(.glass)
+        case .spotlightOff:
+            HStack(spacing: Theme.Spacing.sm) {
+                Text("Spotlight's shortcut is off.")
+                    .foregroundStyle(.secondary)
+                Button("Undo", action: session.undoSpotlightReplacement)
+                    .buttonStyle(.link)
+                    .foregroundStyle(Theme.Colors.brand)
+            }
+            .font(.callout)
         }
     }
 }

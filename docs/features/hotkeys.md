@@ -19,7 +19,12 @@ Carbon's dispatcher enters through an explicit `@MainActor` callback. Press and 
 return `OSStatus` synchronously, preserving event order and hold-to-talk release handling.
 
 The onboarding recorder checks combinations against enabled macOS shortcuts and probes for a
-conflicting Carbon registration. Only the onboarding recorder opts into these checks.
+conflicting Carbon registration. Only the onboarding recorder opts into these checks. When Spotlight
+holds the shortcut and no Tinycast action does, onboarding offers Replace Spotlight: `SpotlightShortcut`
+turns that symbolic hotkey off live and in `com.apple.symbolichotkeys`, so it stays off after the next
+login. Tinycast takes the shortcut only if nothing else holds it once Spotlight is off, and otherwise
+turns Spotlight back on. Undo turns Spotlight back on, and restores the previous binding while the
+launcher still uses Spotlight's shortcut.
 
 ## Invariants
 
@@ -46,6 +51,8 @@ conflicting Carbon registration. Only the onboarding recorder opts into these ch
 - **`KeyShortcut.hyperChord(includesShift:)` is the only spelling of the Hyper chord**, read by both the
   ✦ collapse and the re-point below. `HyperKeyEngine` composes its own flags because it also needs the
   left-side device bits, which no display path wants.
+- **The private symbolic-hotkey SPI lives in `Service/SpotlightShortcut.swift` alone**, resolved at
+  runtime, so a macOS without it shows the ordinary conflict warning instead of Replace Spotlight.
 - **The private HID SPI lives in `Platform/HIDEventSystem.swift` alone**, resolved at runtime, so a
   macOS without it degrades the Hyper Key to `.remapUnavailable` instead of crashing.
 - **`KeyboardRemapper` only ever removes the Hyper Key's own entries**, tracked in its recovery journal,
