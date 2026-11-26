@@ -128,7 +128,6 @@ final class OnboardingIntro {
             }
         }
 
-        /// How far `value` has moved through the span that begins at `start`, held to 0...1.
         private func progress(_ value: Double, from start: Double, over length: Double) -> Double {
             min(max((value - start) / length, 0), 1)
         }

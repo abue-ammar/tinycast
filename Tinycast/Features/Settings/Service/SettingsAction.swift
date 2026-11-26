@@ -46,7 +46,6 @@ enum SettingsAction: Codable, Sendable {
     case showSupport
     case showOnboarding
 
-    /// The main app puts up a window for these, so the focus this process holds goes with them.
     var presentsWindow: Bool {
         switch self {
         case .showSupport, .showOnboarding: true

@@ -6,7 +6,6 @@ enum SpotlightShortcut {
     private static let symbolicHotKeyID: UInt32 = 64
     private static let skyLight = SymbolicHotKeyFunctions()
 
-    /// What Spotlight answers to; nil while its shortcut is off or SkyLight is unavailable.
     static var current: KeyShortcut? {
         guard let skyLight, skyLight.isEnabled(symbolicHotKeyID) else { return nil }
         var character: UInt16 = 0

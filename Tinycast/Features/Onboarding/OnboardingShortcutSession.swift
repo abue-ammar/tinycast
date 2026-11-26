@@ -1,7 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// The last step's launcher shortcut: whether it is free, and the Spotlight swap Undo reverses.
 @MainActor
 @Observable
 final class OnboardingShortcutSession {
@@ -28,7 +27,6 @@ final class OnboardingShortcutSession {
     private static let suggestedBinding = HotKeyBinding.combo(
         KeyShortcut(carbonKeyCode: kVK_Space, carbonModifiers: cmdKey))
 
-    /// Set once the user presses the shortcut they chose, which ends onboarding.
     private(set) var isConfirmed = false
     private var availability = Availability.available
     private var spotlightReplacement: SpotlightReplacement?
@@ -41,11 +39,9 @@ final class OnboardingShortcutSession {
     }
 
     var assignedBinding: HotKeyBinding? { hotKeys.binding(for: .togglePalette) }
-    /// The suggestion stands in until a binding exists, so the keys always show something.
     var binding: HotKeyBinding { assignedBinding ?? Self.suggestedBinding }
     var isReady: Bool { assignedBinding != nil && availability == .available }
 
-    /// The modifiers held right now, so the keys follow the user's fingers before a shortcut lands.
     var heldCaps: [String] {
         guard hotKeys.recordingAction == .togglePalette else { return [] }
         let capture = hotKeys.capture

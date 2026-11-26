@@ -131,7 +131,7 @@ struct OnboardingView: View {
                         ProgressView().controlSize(.small)
                     }
                     if showsPrimary {
-                        footerButton(primaryTitle, usesReturn: primaryUsesReturn, action: primaryAction)
+                        footerButton(primaryTitle, usesReturn: true, action: primaryAction)
                             .disabled(model.step == .importData && !model.didImport && !model.canImport)
                     }
                 }
@@ -160,18 +160,12 @@ struct OnboardingView: View {
         .keyboardShortcut(usesReturn ? .defaultAction : nil)
     }
 
-    private var primaryUsesReturn: Bool {
-        model.step != .accessibility || accessibilityTrusted
-    }
-
-    /// Import has nothing to confirm until an export is chosen, so Skip is the way forward there.
     private var showsPrimary: Bool {
         model.step != .importData || model.isRaycastExport
     }
 
     private var showsSkip: Bool {
-        (model.step == .accessibility && !accessibilityTrusted)
-            || (model.step == .importData && !model.didImport)
+        model.step == .importData && !model.didImport
     }
 
     private var primaryTitle: String {
@@ -208,7 +202,6 @@ struct OnboardingView: View {
         }
     }
 
-    /// The app's outlined ↵ keycap, drawn in the button's white ink so it reads on violet.
     private struct ReturnKeyCap: View {
         var body: some View {
             Text(verbatim: "↵")

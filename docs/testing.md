@@ -1069,9 +1069,10 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
   part of the window that fades. The logo stays visible throughout. The menu bar and the desktop
   brighten together, and the native shadow becomes visible as the dimming clears. With Reduce
   Motion or Tinycast animations disabled, the wizard appears directly with its shadow
-- Welcome leads straight to the pasting step. Without Accessibility, check that Grant Access and
-  Skip are available. With access granted, Next continues to import. Each short page is centered
-  between the top of the window and the footer. Next and Back slide the pages in opposite directions.
+- Welcome leads straight to the pasting step. Without Accessibility there is no Skip: Grant Access is
+  the only way forward, and Return opens System Settings. Once access is granted, the button becomes
+  Next and continues to import. Each short page is centered between the top of the window and the
+  footer. Next and Back slide the pages in opposite directions.
   Escape leaves the wizard open on every step. Closing the wizard opens the launcher, as Get
   Started does, and onboarding does not return on relaunch. Quit Tinycast partway, during the intro
   or on any step: the next launch shows onboarding again from the intro. Settings › General ›

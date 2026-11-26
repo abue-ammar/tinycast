@@ -139,7 +139,6 @@ extension NoticeCard where Action == EmptyView {
     }
 }
 
-/// A quiet pill: the card already says what it does, so the button only has to be found.
 private struct NoticeButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         NoticeButton(configuration: configuration)

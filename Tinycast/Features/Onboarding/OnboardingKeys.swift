@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The launcher shortcut as keys: the binding at rest, and the held modifiers while the user types.
 struct OnboardingKeys: View {
     private typealias Keycap = Theme.Onboarding.Keycap
 

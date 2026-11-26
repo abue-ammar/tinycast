@@ -497,9 +497,7 @@ enum Theme {
             static let nameSize: CGFloat = 0.2
             static let glyphMinimumScale: CGFloat = 0.65
             static let plusSize: CGFloat = 0.16
-            /// A suggestion that isn't bound yet, shown so the keys still say what is on offer.
             static let unboundOpacity = 0.55
-            /// How far the soft glow under a key reaches, in its longer side.
             static let glowReach: CGFloat = 0.6
             static let edgeWidth: CGFloat = 0.5
             static let pressDepth: CGFloat = 1
@@ -529,7 +527,6 @@ enum Theme {
                     Colors.adaptive(dark: .srgbInk(1, alpha: 0), light: .srgbInk(0, alpha: 0.025))
                 ], startPoint: .top, endPoint: .bottom)
             static let glow = Colors.adaptive(dark: .srgbInk(1, alpha: 0.055), light: .srgbInk(1, alpha: 0))
-            /// Lit from above: bright along the top edge, gone by the key's lower half.
             static let rim = LinearGradient(
                 stops: [
                     .init(
@@ -556,7 +553,6 @@ enum Theme {
                 dark: .srgbInk(1, alpha: 1), light: .srgbInk(0.1, alpha: 1))
         }
 
-        /// The card under the keys that offers a shortcut, Spotlight's swap, or explains a conflict.
         enum Notice {
             static let width: CGFloat = 480
             /// Held even while no card shows, so the keys never move when one appears.
@@ -579,7 +575,6 @@ enum Theme {
                 dark: .srgbInk(1, alpha: 0.2), light: .srgbInk(0, alpha: 0.13))
         }
 
-        /// The first-launch intro, timed in seconds from its start.
         enum Intro {
             static let duration = 3.16
             static let markSize: CGFloat = 96
@@ -599,7 +594,6 @@ enum Theme {
             static let zoomDuration = 1.41
             /// The mark starts this many screen diagonals tall, so the zoom opens inside it.
             static let zoomReach: CGFloat = 4.4
-            /// The mark fades in over this stretch of the zoom's progress.
             static let markFadeStart = 0.48
             static let markFadeLength = 0.44
             static let liftDelay = 0.09
@@ -689,7 +683,6 @@ enum Theme {
         static let searchFlash = Color.accentColor.opacity(0.35)
         static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
         static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
-        /// The violet of the app mark.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.
         static let dropGuide = ramp(dark: 0.35, light: 0.35)

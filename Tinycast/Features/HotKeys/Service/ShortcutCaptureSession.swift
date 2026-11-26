@@ -22,7 +22,6 @@ final class ShortcutCaptureSession {
     private(set) var heldModifier: ModifierKey?
     private(set) var awaitingSecondModifier: ModifierKey?
     private(set) var conflict: Conflict?
-    /// Set when a live listener hears the binding the action already has: a try, not an edit.
     private(set) var pressedCurrentBinding = false
     @ObservationIgnored private var mode = Mode.field
 
@@ -185,7 +184,6 @@ final class ShortcutCaptureSession {
             hotKeys.recordingAction = nil
             return true
         }
-        // Not a bindable combo (e.g. a bare letter): a field swallows it, a live listener lets it go.
         guard let shortcut = KeyShortcut(keyCode: keyCode, modifierFlags: flags) else {
             return mode == .field
         }

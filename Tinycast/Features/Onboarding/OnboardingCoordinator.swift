@@ -59,7 +59,6 @@ final class OnboardingCoordinator {
             size.width = min(size.width, bounds.width - Theme.Onboarding.inset * 2)
             size.height = min(size.height, bounds.height - Theme.Onboarding.inset * 2)
         }
-        // Closing the window is Skip, so every way out of onboarding lands in the launcher.
         let controller = AppWindowController(
             title: String(localized: "Welcome to Tinycast"), contentSize: size, activation: nil,
             onClose: { [weak self] in self?.wizardDidClose() })

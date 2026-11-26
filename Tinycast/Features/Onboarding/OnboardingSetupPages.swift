@@ -29,7 +29,7 @@ enum OnboardingSetupPages {
                     .background(Theme.Colors.cardFill, in: Capsule())
                     .accessibilityElement(children: .combine)
                     if !trusted {
-                        Text("Optional — you can enable this later in Settings › Permissions.")
+                        Text("Required to finish setting up Tinycast.")
                             .font(.callout).foregroundStyle(.secondary)
                     }
                 }

@@ -445,7 +445,6 @@ final class AppCore {
 
             observeFeatureSwitches()
 
-            // First launch binds no hotkey, so guide until the wizard is closed.
             if !OnboardingState.hasOnboarded {
                 onboardingCoordinator.showOnboarding()
             } else if launchedByUser {

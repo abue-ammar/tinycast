@@ -95027,58 +95027,6 @@
         }
       }
     },
-    "Optional — you can enable this later in Settings › Permissions." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Optional – du kannst dies später in „Einstellungen › Berechtigungen“ aktivieren."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opcional: puedes activarlo más tarde en Ajustes › Permisos."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vous pourrez autoriser l’accès plus tard dans Réglages › Autorisations."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "オプション — あとで設定 › 許可から有効にできます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "선택 사항 — 나중에 설정 › 권한에서 활성화할 수 있습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Opcional — você pode ativar isto depois em Ajustes › Permissões."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Необязательно — это можно включить позже в разделе «Настройки» › «Разрешения»."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可选，你可以稍后在“设置”›“权限”中启用。"
-          }
-        }
-      }
-    },
     "Optional — you can import later in Settings › Backup." : {
       "localizations" : {
         "de" : {
@@ -106448,6 +106396,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "运行前必填"
+          }
+        }
+      }
+    },
+    "Required to finish setting up Tinycast." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erforderlich, um die Einrichtung von Tinycast abzuschließen."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Es necesario para terminar de configurar Tinycast."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Requis pour terminer la configuration de Tinycast."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycastの設定を完了するには必須です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast 설정을 완료하려면 필요합니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necessário para concluir a configuração do Tinycast."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Требуется, чтобы завершить настройку Tinycast."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成 Tinycast 设置所必需。"
           }
         }
       }
