@@ -22,6 +22,7 @@ struct QuicklinkCoordinatorTests {
         try ownSchemeLink()
         try copying()
         try editing()
+        try savingConfirms()
         try await deleting()
         try revealing()
         print("\(passes) passed, \(failures) failed")
@@ -319,6 +320,24 @@ struct QuicklinkCoordinatorTests {
                 && fixture.coordinator.editor?.original == fixture.link
                 && fixture.store.quicklink(id: fixture.link.id) == nil,
             "saving a removed item reports the failure without losing the draft or recreating it")
+    }
+
+    static func savingConfirms() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        fixture.coordinator.editQuicklink(nil)
+        fixture.coordinator.editor?.name = "New link"
+        fixture.coordinator.editor?.link = "https://example.com/new"
+        fixture.coordinator.saveQuicklink()
+        expect(fixture.core.messages == ["Quicklink created"], "saving a new quicklink says it was created")
+        fixture.coordinator.editQuicklink(fixture.link)
+        fixture.coordinator.editor?.name = "Updated name"
+        fixture.coordinator.saveQuicklink()
+        expect(fixture.core.messages.last == "Quicklink saved", "saving an edit says it was saved")
+        fixture.coordinator.editQuicklink(fixture.link)
+        try fixture.store.remove(id: fixture.link.id)
+        fixture.coordinator.saveQuicklink()
+        expect(fixture.core.messages.count == 2, "a save that fails confirms nothing")
     }
 
     static func deleting() async throws {

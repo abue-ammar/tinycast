@@ -236,7 +236,8 @@ least as wide as its field, using the control's actual bounds.
 Saving uses the existing store's validation and normalisation. Editing preserves the quicklink UUID,
 enabled flag, creation date and existing pin stamp, so its alias, shortcut and order survive. An error
 stays in the form without discarding the draft. Save/cancel returns to the preceding palette screen,
-including its query and selected row; an editor opened directly from settings closes instead.
+including its query and selected row; an editor opened directly from settings closes instead. A
+successful save confirms with a HUD: "Quicklink created", or "Quicklink saved" for an edit.
 
 ## Storage
 

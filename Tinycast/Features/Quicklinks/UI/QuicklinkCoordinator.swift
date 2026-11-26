@@ -367,8 +367,10 @@ final class QuicklinkCoordinator {
         guard settings.quicklinksEnabled, let editor, editor.canSave else { return }
         do {
             var draft = editor.draft(now: Date())
+            let confirmation: String
             if editor.original == nil {
                 try addQuicklink(draft)
+                confirmation = String(localized: "Quicklink created")
             } else {
                 guard let current = store.quicklink(id: draft.id) else {
                     editor.errorMessage = String(
@@ -377,8 +379,10 @@ final class QuicklinkCoordinator {
                 }
                 draft.isEnabled = current.isEnabled
                 try updateQuicklink(draft)
+                confirmation = String(localized: "Quicklink saved")
             }
             cancelQuicklinkEditing()
+            core.showMessage(confirmation)
         } catch {
             editor.errorMessage = error.localizedDescription
         }

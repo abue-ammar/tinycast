@@ -76,8 +76,8 @@ working directory, root-search visibility, up to three arguments and the four ex
 monospaced native textarea without smart substitutions; its content grows with the page rather than
 scrolling internally. Tab walks the form, so ⌥Tab types a tab character.
 Argument rows keep their identities when one is removed, and Tab skips Add at the three-argument cap.
-⌘↵ validates and saves through the existing store; Escape discards the draft and restores the previous
-search and selection. Opening or saving is gated by the feature switch, just like running a command.
+⌘↵ validates and saves through the existing store, then confirms with a HUD: "Command created", or
+"Command saved" for an edit. Escape discards the draft and restores the previous search and selection. Opening or saving is gated by the feature switch, just like running a command.
 If the item is deleted from Settings during editing, Save reports that failure and keeps the draft.
 
 ## Execution contract
