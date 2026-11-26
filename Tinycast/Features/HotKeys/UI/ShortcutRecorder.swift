@@ -118,7 +118,7 @@ struct ShortcutRecorder: View {
     }
 }
 
-struct ShortcutRecorderHitRegion: NSViewRepresentable {
+private struct ShortcutRecorderHitRegion: NSViewRepresentable {
     let capture: ShortcutCaptureSession
 
     func makeNSView(context: Context) -> PassiveView {

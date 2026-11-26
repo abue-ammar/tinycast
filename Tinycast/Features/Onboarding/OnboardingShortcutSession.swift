@@ -1,12 +1,13 @@
+import AppKit
 import Carbon.HIToolbox
-import Observation
 
 /// The last step's launcher shortcut: whether it is free, and the Spotlight swap Undo reverses.
 @MainActor
 @Observable
 final class OnboardingShortcutSession {
-    enum Notice {
+    enum Notice: Equatable {
         case taken
+        case rejected(ShortcutCaptureSession.Conflict)
         case heldBySpotlight
         case suggestion
         case spotlightOff
@@ -27,6 +28,8 @@ final class OnboardingShortcutSession {
     private static let suggestedBinding = HotKeyBinding.combo(
         KeyShortcut(carbonKeyCode: kVK_Space, carbonModifiers: cmdKey))
 
+    /// Set once the user presses the shortcut they chose, which ends onboarding.
+    private(set) var isConfirmed = false
     private var availability = Availability.available
     private var spotlightReplacement: SpotlightReplacement?
     @ObservationIgnored private let hotKeys: HotKeyManager
@@ -40,22 +43,46 @@ final class OnboardingShortcutSession {
     var assignedBinding: HotKeyBinding? { hotKeys.binding(for: .togglePalette) }
     /// The suggestion stands in until a binding exists, so the keys always show something.
     var binding: HotKeyBinding { assignedBinding ?? Self.suggestedBinding }
-    var isRecording: Bool { hotKeys.recordingAction == .togglePalette }
     var isReady: Bool { assignedBinding != nil && availability == .available }
 
+    /// The modifiers held right now, so the keys follow the user's fingers before a shortcut lands.
+    var heldCaps: [String] {
+        guard hotKeys.recordingAction == .togglePalette else { return [] }
+        let capture = hotKeys.capture
+        let flags = capture.heldGlobe ? capture.heldModifiers.union(.function) : capture.heldModifiers
+        return KeyShortcut.collapsedModifierSymbols(
+            from: flags, hyperChord: KeyShortcut.displayedHyperChord())
+    }
+
     var notice: Notice? {
+        if let conflict = hotKeys.capture.conflict { return .rejected(conflict) }
         switch availability {
         case .taken: return .taken
-        case .heldBySpotlight: return isRecording ? nil : .heldBySpotlight
+        case .heldBySpotlight: return .heldBySpotlight
         case .available:
-            guard !isRecording else { return nil }
             if assignedBinding == nil { return .suggestion }
             return spotlightReplacement == nil ? nil : .spotlightOff
         }
     }
 
     func refresh() {
+        guard !isConfirmed else { return }
         availability = availability(of: binding)
+    }
+
+    func startListening() {
+        guard !isConfirmed, hotKeys.recordingAction == nil else { return }
+        hotKeys.startListening(for: .togglePalette)
+    }
+
+    func stopListening() {
+        guard hotKeys.recordingAction == .togglePalette else { return }
+        hotKeys.recordingAction = nil
+    }
+
+    func confirm() {
+        isConfirmed = true
+        stopListening()
     }
 
     func useSuggestion() {

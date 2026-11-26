@@ -87,20 +87,15 @@ final class OnboardingCoordinator {
         return chrome
     }
 
-    func handleLauncherShortcut() -> Bool {
-        guard let model, model.step == .ready, chrome?.window?.isKeyWindow == true else { return false }
-        model.shortcutConfirmed = true
-        return true
-    }
-
     private func wizardDidClose() {
+        // The listener pauses every shortcut, so it must end before the launcher takes the keys.
+        model?.shortcut.stopListening()
         OnboardingState.markOnboarded()
         core.paletteCoordinator.showPalette(mode: .launcher)
     }
 
     private func finishOnboarding(_ model: OnboardingModel) {
         guard self.model === model, chrome?.window?.isVisible == true else { return }
-        self.model = nil
         window?.close()
     }
 

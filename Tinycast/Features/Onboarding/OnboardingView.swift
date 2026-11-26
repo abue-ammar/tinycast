@@ -42,7 +42,6 @@ struct OnboardingView: View {
             footer
         }
         .background { OnboardingArtwork.Atmosphere() }
-        .shortcutRecorderPopoverHost()
         .tint(Theme.Colors.brand)
         .animation(reduceMotion ? nil : Theme.Onboarding.pageMotion, value: step)
         .task(id: model.step) {
@@ -53,8 +52,8 @@ struct OnboardingView: View {
                 try? await Task.sleep(for: .seconds(1))
             }
         }
-        .task(id: model.shortcutConfirmed) {
-            guard model.shortcutConfirmed else { return }
+        .task(id: model.shortcut.isConfirmed) {
+            guard model.shortcut.isConfirmed else { return }
             if Motion.isEnabled, !reduceMotion {
                 try? await Task.sleep(for: .seconds(Theme.Onboarding.shortcutConfirmationDuration))
             }
@@ -76,7 +75,7 @@ struct OnboardingView: View {
             OnboardingSetupPages.Import(
                 model: model, compact: compact, contentHeight: contentHeight, scroll: scroll)
         case .ready:
-            OnboardingShortcutView(session: model.shortcut, confirmed: model.shortcutConfirmed)
+            OnboardingShortcutView(session: model.shortcut)
         }
     }
 
@@ -126,19 +125,19 @@ struct OnboardingView: View {
                 .accessibilityHidden(true)
                 HStack(spacing: Theme.Spacing.xl) {
                     if showsSkip {
-                        footerButton(String(localized: "Skip"), action: advance)
+                        footerButton(String(localized: "Skip"), usesReturn: !showsPrimary, action: advance)
                     }
                     if model.importing {
                         ProgressView().controlSize(.small)
                     }
-                    if model.step != .importData || model.isRaycastExport {
+                    if showsPrimary {
                         footerButton(primaryTitle, usesReturn: primaryUsesReturn, action: primaryAction)
                             .disabled(model.step == .importData && !model.didImport && !model.canImport)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .disabled(model.importing || model.shortcutConfirmed)
+            .disabled(model.importing || model.shortcut.isConfirmed)
             .padding(Theme.Spacing.xxl)
         }
     }
@@ -163,6 +162,11 @@ struct OnboardingView: View {
 
     private var primaryUsesReturn: Bool {
         model.step != .accessibility || accessibilityTrusted
+    }
+
+    /// Import has nothing to confirm until an export is chosen, so Skip is the way forward there.
+    private var showsPrimary: Bool {
+        model.step != .importData || model.isRaycastExport
     }
 
     private var showsSkip: Bool {

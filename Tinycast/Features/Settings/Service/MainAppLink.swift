@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// Settings' line to the main app: the work only the main app can do, and what only it knows.
 @MainActor
@@ -52,7 +52,13 @@ final class MainAppLink {
     func send(_ action: SettingsAction) {
         guard acceptsRequests else { return }
         mirror.flush()
+        if action.presentsWindow { yieldFocusToMainApp() }
         link.send(.perform(action))
+    }
+
+    /// macOS lets an app come forward only when the active one hands over focus, as this one does.
+    private func yieldFocusToMainApp() {
+        NSRunningApplication(processIdentifier: getppid())?.activate(from: .current)
     }
 
     func call(

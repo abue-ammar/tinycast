@@ -46,10 +46,10 @@ struct HotKeyDispatchTests {
         check(
             "onboarding can offer the combination again when it is cleared",
             manager.conflictOwner(of: binding, excluding: .togglePalette, includingExternal: true) == nil)
-        manager.startRecording(.togglePalette, checkingExternalConflicts: true)
-        check("a recording that checks macOS reports its action", manager.recordingAction == .togglePalette)
+        manager.startListening(for: .togglePalette)
+        check("onboarding's listener reports its action", manager.recordingAction == .togglePalette)
         manager.recordingAction = nil
-        check("clearing the action ends that recording", manager.recordingAction == nil)
+        check("clearing the action ends the listener", manager.recordingAction == nil)
     }
 
     static func dispatch(includesShift: Bool) {

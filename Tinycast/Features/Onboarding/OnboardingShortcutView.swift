@@ -1,269 +1,174 @@
 import SwiftUI
 
 struct OnboardingShortcutView: View {
-    private typealias Keycap = Theme.Onboarding.Keycap
-    private static let spaceGlyph = "␣"
-
     let session: OnboardingShortcutSession
-    let confirmed: Bool
     @Environment(AppSettings.self) private var settings
     @Environment(HotKeyManager.self) private var hotKeys
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.appearsActive) private var appearsActive
-    @State private var heldModifiers: SwiftUI.EventModifiers = []
-    @State private var hoveringShortcut = false
-
-    private var binding: HotKeyBinding { session.binding }
-    private var isRecording: Bool { session.isRecording }
 
     var body: some View {
         @Bindable var settings = settings
-        let notice = session.notice
         VStack(spacing: Theme.Spacing.xxxl) {
             OnboardingSetupPages.Header(
                 title: session.isReady ? "Try Your Shortcut" : "Set Up Your Launcher"
             ) {
-                if session.isReady {
-                    Text("Press this shortcut to open Tinycast.")
-                        .foregroundStyle(.secondary)
+                Group {
+                    if session.isReady {
+                        Text(
+                            "Press \(ShortcutNotice.keys(session.binding)) to open Tinycast, or type a new shortcut."
+                        )
+                    } else {
+                        Text("Type the shortcut you want to open Tinycast with.")
+                    }
+                }
+                .foregroundStyle(.secondary)
+            }
+            OnboardingKeys(session: session)
+            Group {
+                if let notice = session.notice {
+                    ShortcutNotice(notice: notice, session: session)
+                        .disabled(session.isConfirmed)
                 }
             }
-            shortcutButton
-            if let notice {
-                ShortcutNotice(
-                    notice: notice, session: session,
-                    keys: Text(verbatim: binding.keycaps.joined(separator: " ")).bold()
-                )
-                .disabled(confirmed)
-            }
+            .frame(minHeight: Theme.Onboarding.Notice.reservedHeight)
             Toggle("Launch at login", isOn: $settings.launchAtLogin)
                 .toggleStyle(.switch)
                 .controlSize(.small)
-                .disabled(confirmed)
-                .padding(.top, notice == nil ? 0 : Theme.Spacing.md)
+                .disabled(session.isConfirmed)
         }
         .multilineTextAlignment(.center)
-        .onModifierKeysChanged { _, held in heldModifiers = held }
-        .onChange(of: appearsActive) { _, active in
-            if active { refreshAvailability() } else { heldModifiers = [] }
+        // The listener ends whenever the window resigns key, so it starts again each time it returns.
+        .onChange(of: appearsActive, initial: true) { _, active in
+            guard active else { return }
+            session.refresh()
+            session.startListening()
         }
-        .onChange(of: session.assignedBinding, initial: true) {
-            heldModifiers = []
-            refreshAvailability()
+        .onChange(of: session.assignedBinding) { session.refresh() }
+        .onChange(of: hotKeys.capture.pressedCurrentBinding) { _, pressed in
+            if pressed { session.confirm() }
         }
-        .onChange(of: isRecording) { _, recording in
-            if !recording { heldModifiers = [] }
-        }
-        .onDisappear { if isRecording { hotKeys.recordingAction = nil } }
-    }
-
-    private var shortcutButton: some View {
-        let hoverShape = RoundedRectangle(cornerRadius: Theme.Radius.menuPanel)
-        let showsHover = hoveringShortcut && !confirmed && !isRecording
-        let hoverAnimation: Animation? =
-            settings.animationsEnabled && !reduceMotion ? .easeOut(duration: Theme.Duration.hover) : nil
-        return Button {
-            if isRecording {
-                hotKeys.recordingAction = nil
-            } else {
-                hotKeys.startRecording(.togglePalette, checkingExternalConflicts: true)
-            }
-        } label: {
-            ViewThatFits(in: .horizontal) {
-                keys(scale: 1)
-                keys(scale: Keycap.compactScale)
-                keys(scale: Keycap.smallestScale)
-            }
-            .padding(Keycap.hoverInset)
-            .background {
-                hoverShape.fill(Theme.Colors.rowHover)
-                    .opacity(showsHover ? 1 : 0)
-                    .animation(hoverAnimation, value: showsHover)
-            }
-            .contentShape(hoverShape)
-            .onHover { hoveringShortcut = $0 }
-        }
-        .buttonStyle(.plain)
-        .disabled(confirmed)
-        .padding(-Keycap.hoverInset)
-        .accessibilityLabel("Record Hotkey")
-        .accessibilityValue(Text(verbatim: binding.keycaps.joined(separator: " ")))
-        .background {
-            if isRecording { ShortcutRecorderHitRegion(capture: hotKeys.capture) }
-        }
-        .anchorPreference(key: ShortcutRecorderAnchorKey.self, value: .bounds) {
-            isRecording ? $0 : nil
-        }
-    }
-
-    private func refreshAvailability() {
-        guard !confirmed else { return }
-        session.refresh()
-    }
-
-    private func keys(scale: CGFloat) -> some View {
-        let caps = binding.recorderKeycaps
-        let space = String(localized: "Space")
-        let unit = Keycap.size * scale
-        return HStack(spacing: unit * Keycap.gap) {
-            ForEach(caps.indices, id: \.self) { index in
-                let cap = caps[index]
-                key(
-                    cap, isSpace: cap == space, scale: scale,
-                    pressed: confirmed || isHeld(cap, at: index, count: caps.count))
-            }
-        }
-        .fixedSize()
-        .background {
-            RoundedRectangle(cornerRadius: unit * Keycap.glowCornerRadius)
-                .fill(Keycap.glow)
-                .padding(-unit * Keycap.glowSpread)
-                .blur(radius: unit * Keycap.glowBlur)
-                .allowsHitTesting(false)
-        }
-    }
-
-    private func key(_ cap: String, isSpace: Bool, scale: CGFloat, pressed: Bool) -> some View {
-        let unit = Keycap.size * scale
-        let legend = keyLegend(cap)
-        let width = unit * widthRatio(of: cap, isSpace: isSpace, hasLegend: legend != nil)
-        let lift = unit * (pressed ? Keycap.pressedLift : Keycap.restingLift)
-        let shape = RoundedRectangle(cornerRadius: unit * Keycap.cornerRadius, style: .continuous)
-        let motion = pressed ? Keycap.press : Keycap.release
-        return ZStack(alignment: .bottom) {
-            shape.fill(Keycap.base)
-                .frame(height: unit + lift)
-                .shadow(
-                    color: .black.opacity(
-                        pressed ? Keycap.pressedShadowOpacity : Keycap.restingShadowOpacity),
-                    radius: unit * Keycap.shadowRadius, y: unit * Keycap.shadowOffset)
-
-            keyLabel(isSpace ? Self.spaceGlyph : cap, legend: legend, unit: unit)
-                .foregroundStyle(Keycap.ink)
-                .frame(width: width, height: unit)
-                .background(Keycap.face, in: shape)
-                .overlay { shape.strokeBorder(Keycap.rim, lineWidth: unit * Keycap.rimWidth) }
-                .offset(y: -lift)
-        }
-        .frame(width: width, height: unit * Keycap.footprint, alignment: .bottom)
-        .animation(reduceMotion ? nil : motion, value: pressed)
-    }
-
-    private func widthRatio(of cap: String, isSpace: Bool, hasLegend: Bool) -> CGFloat {
-        if isSpace { return Keycap.spaceWidth }
-        if cap == ModifierKey.globeGlyph { return Keycap.globeWidth }
-        if hasLegend { return Keycap.modifierWidth }
-        let labelled = CGFloat(cap.count) * Keycap.widthPerCharacter + Keycap.widthPadding
-        return min(Keycap.maximumWidth, max(1, labelled))
-    }
-
-    @ViewBuilder
-    private func keyLabel(_ cap: String, legend: String?, unit: CGFloat) -> some View {
-        let glyph = KeyCapChip.Label(text: cap, prefix: binding.recorderPrefix)
-        if let legend {
-            let symbol = glyph.font(.system(size: unit * Keycap.symbolSize))
-            let title = Text(verbatim: legend).font(.system(size: unit * Keycap.legendSize))
-            Group {
-                if cap == ModifierKey.globeGlyph {
-                    HStack(alignment: .lastTextBaseline, spacing: 0) {
-                        symbol
-                        Spacer(minLength: 0)
-                        title
-                    }
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                } else {
-                    VStack(alignment: .leading, spacing: 0) {
-                        symbol
-                        Spacer(minLength: 0)
-                        title
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, unit * Keycap.legendVerticalInset)
-                }
-            }
-            .padding(.horizontal, unit * Keycap.legendHorizontalInset)
-            .padding(.bottom, unit * Keycap.legendVerticalInset)
-        } else {
-            glyph.font(.system(size: unit * (cap.count > 2 ? Keycap.nameSize : Keycap.glyphSize)))
-                .lineLimit(1)
-                .minimumScaleFactor(Keycap.glyphMinimumScale)
-                .offset(y: cap == Self.spaceGlyph ? -unit * Keycap.spaceGlyphRaise : 0)
-                .padding(.horizontal, unit * Keycap.glyphInset)
-        }
-    }
-
-    private func keyLegend(_ cap: String) -> String? {
-        switch cap {
-        case "⌘": "command"
-        case "⌥": "option"
-        case "⌃": "control"
-        case "⇧": "shift"
-        case ModifierKey.globeGlyph: "fn"
-        default: nil
-        }
-    }
-
-    private func isHeld(_ cap: String, at index: Int, count: Int) -> Bool {
-        if binding.shortcut != nil {
-            guard index < count - 1 else { return false }
-        } else if index > 0 {
-            return false
-        }
-        switch cap {
-        case "⌘": return heldModifiers.contains(.command)
-        case "⌥": return heldModifiers.contains(.option)
-        case "⌃": return heldModifiers.contains(.control)
-        case "⇧": return heldModifiers.contains(.shift)
-        case HyperKeyPhysicalKey.hyperGlyph:
-            guard let flags = KeyShortcut.displayedHyperChord() else { return false }
-            return heldModifiers.isSuperset(
-                of: flags.contains(.shift)
-                    ? [.command, .option, .control, .shift] : [.command, .option, .control])
-        default: return false
-        }
+        .onDisappear { session.stopListening() }
     }
 }
 
 private struct ShortcutNotice: View {
     let notice: OnboardingShortcutSession.Notice
     let session: OnboardingShortcutSession
-    let keys: Text
+
+    static func keys(_ binding: HotKeyBinding) -> Text {
+        Text(verbatim: binding.keycaps.joined(separator: " ")).fontWeight(.semibold).foregroundStyle(.primary)
+    }
 
     var body: some View {
+        let keys = Self.keys(session.binding)
         switch notice {
-        case .taken:
-            VStack(spacing: Theme.Spacing.xs) {
-                Label("\(keys) is already in use.", systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(Theme.Colors.warning)
-                Text("Disable or change it where it’s assigned to use it in Tinycast.")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
+        case .suggestion:
+            NoticeCard(
+                title: Text("Open Tinycast with \(keys)?"),
+                detail: Text("It’s free on this Mac, and you can change it anytime.")
+            ) {
+                Button(action: session.useSuggestion) { Text("Use \(keys)") }
             }
         case .heldBySpotlight:
-            VStack(spacing: Theme.Spacing.lg) {
-                VStack(spacing: Theme.Spacing.xs) {
-                    Text("Spotlight also uses \(keys).")
-                        .font(.callout.weight(.semibold))
-                    Text("Turn off Spotlight's shortcut and use it to open Tinycast.")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
+            NoticeCard(
+                title: Text("Spotlight also uses \(keys)"),
+                detail: Text("Turn off Spotlight’s shortcut and use it for Tinycast.")
+            ) {
                 Button("Replace Spotlight", action: session.replaceSpotlight)
-                    .buttonStyle(.glass)
             }
-        case .suggestion:
-            Button("Use Suggested Shortcut", action: session.useSuggestion)
-                .buttonStyle(.glass)
         case .spotlightOff:
-            HStack(spacing: Theme.Spacing.sm) {
-                Text("Spotlight's shortcut is off.")
-                    .foregroundStyle(.secondary)
+            NoticeCard(
+                title: Text("\(keys) now opens Tinycast"), detail: Text("Spotlight’s shortcut is turned off.")
+            ) {
                 Button("Undo", action: session.undoSpotlightReplacement)
-                    .buttonStyle(.link)
-                    .foregroundStyle(Theme.Colors.brand)
             }
-            .font(.callout)
+        case .taken:
+            NoticeCard(
+                title: Text("\(keys) is already in use"),
+                detail: Text("Disable or change it where it’s assigned to use it in Tinycast."),
+                isWarning: true)
+        case .rejected(let conflict):
+            NoticeCard(
+                title: Text("\(Self.keys(conflict.binding)) is used by \(conflict.owner)"),
+                detail: Text("Press a different shortcut."), isWarning: true)
+        }
+    }
+}
+
+private struct NoticeCard<Action: View>: View {
+    private typealias Notice = Theme.Onboarding.Notice
+
+    let title: Text
+    let detail: Text
+    var isWarning = false
+    @ViewBuilder var action: Action
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Notice.cornerRadius, style: .continuous)
+        HStack(spacing: Theme.Spacing.xxl) {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                HStack(spacing: Theme.Spacing.sm) {
+                    if isWarning {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(Theme.Colors.warning)
+                    }
+                    title
+                }
+                .font(.body.weight(.semibold))
+                detail
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            action
+                .buttonStyle(NoticeButtonStyle())
+        }
+        .multilineTextAlignment(.leading)
+        .padding(.horizontal, Notice.horizontalInset)
+        .padding(.vertical, Notice.verticalInset)
+        .background(Notice.fill, in: shape)
+        .overlay { shape.strokeBorder(Notice.stroke, lineWidth: Notice.strokeWidth) }
+        .frame(width: Notice.width)
+    }
+}
+
+extension NoticeCard where Action == EmptyView {
+    init(title: Text, detail: Text, isWarning: Bool) {
+        self.init(title: title, detail: detail, isWarning: isWarning) { EmptyView() }
+    }
+}
+
+/// A quiet pill: the card already says what it does, so the button only has to be found.
+private struct NoticeButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        NoticeButton(configuration: configuration)
+    }
+
+    private struct NoticeButton: View {
+        private typealias Notice = Theme.Onboarding.Notice
+
+        let configuration: ButtonStyleConfiguration
+        @Environment(\.isEnabled) private var isEnabled
+        @State private var hovered = false
+
+        var body: some View {
+            configuration.label
+                .font(.body.weight(.medium))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, Notice.buttonInset)
+                .frame(height: Notice.buttonHeight)
+                .background(fill, in: Capsule())
+                .contentShape(Capsule())
+                .opacity(isEnabled ? 1 : Notice.disabledOpacity)
+                .onHover { hovered = $0 }
+        }
+
+        private var fill: Color {
+            if configuration.isPressed { return Notice.buttonPressed }
+            return hovered ? Notice.buttonHover : Notice.buttonFill
         }
     }
 }

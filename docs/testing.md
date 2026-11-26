@@ -1075,10 +1075,11 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
   Escape leaves the wizard open on every step. Closing the wizard opens the launcher, as Get
   Started does, and onboarding does not return on relaunch. Quit Tinycast partway, during the intro
   or on any step: the next launch shows onboarding again from the intro. Settings › General ›
-  Welcome guide › Show Again replays it from the intro.
+  Welcome guide › Show Again replays it from the intro, in front of the Settings window.
 - Try both the Raycast file picker and a Finder drop. A recognized export shows its passphrase field.
   The passphrase field keeps the system focus ring, hidden and visible. Toggling the eye while
   editing keeps the selection.
+  Before an export is chosen, Skip is violet and Return skips the step.
   Return activates Import once a passphrase and at least one category are set.
   Open and close the category row: check the chevron rotation and the scroll in both directions.
   Click anywhere on a category tile to toggle it. Selected tiles and Select All use Tinycast violet.
@@ -1086,8 +1087,10 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
   The export stays on disk.
   Choosing an invalid file hides the passphrase and categories.
 - On the last step, check Launch at login reflects the current setting after importing or skipping.
-  Record a shortcut and check it survives Back and Next. Press it and verify the keys respond
-  before the palette opens, ready for typing. Onboarding has no Dock entry.
+  Without clicking anything, hold modifiers: the keys follow them. Type a shortcut: it is saved at
+  once and survives Back and Next. Type one Tinycast already uses: the card names its owner. A lone
+  modifier tap records nothing; a double tap does. Press the saved shortcut and verify the keys
+  respond before the palette opens, ready for typing. Onboarding has no Dock entry.
   With no binding, check that ⌘ Space is offered when available. With Spotlight on ⌘ Space, Replace
   Spotlight binds ⌘ Space and unticks Spotlight in System Settings › Keyboard › Keyboard Shortcuts;
   it stays off after logging out and back in. Undo ticks it again and clears the binding. With

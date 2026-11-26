@@ -19,7 +19,6 @@ final class OnboardingModel {
 
     @ObservationIgnored private(set) var movesForward = true
     let shortcut: OnboardingShortcutSession
-    var shortcutConfirmed = false
     private(set) var file: URL?
     var passphrase = ""
     private(set) var importing = false

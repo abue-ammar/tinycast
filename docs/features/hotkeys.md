@@ -18,9 +18,11 @@ the keycap rendering; only the _engine_ differs.
 Carbon's dispatcher enters through an explicit `@MainActor` callback. Press and release handlers
 return `OSStatus` synchronously, preserving event order and hold-to-talk release handling.
 
-The onboarding recorder checks combinations against enabled macOS shortcuts and probes for a
-conflicting Carbon registration. Only the onboarding recorder opts into these checks, by starting
-with `startRecording(_:checkingExternalConflicts:)`. When Spotlight holds the shortcut and no
+Onboarding's last step listens instead of waiting for a click: `startListening(for:)` opens a
+`.live` capture that stays on while the window is key. It records combinations and double taps as
+they are typed, lets plain keys such as Return reach the window, and reads a press of the current
+binding as a try, which ends onboarding. Only it checks combinations against enabled macOS shortcuts
+and probes for a conflicting Carbon registration. When Spotlight holds the shortcut and no
 Tinycast action does, onboarding offers Replace Spotlight: `SpotlightShortcut` turns that symbolic
 hotkey off live and in `com.apple.symbolichotkeys`, so it stays off after the next login. Tinycast
 takes the shortcut only if nothing else holds it once Spotlight is off, and otherwise turns Spotlight

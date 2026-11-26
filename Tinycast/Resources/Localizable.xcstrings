@@ -1935,54 +1935,54 @@
         }
       }
     },
-    "%@ is already in use." : {
+    "%@ is already in use" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ wird bereits verwendet."
+            "value" : "%@ wird bereits verwendet"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ ya está en uso."
+            "value" : "%@ ya está en uso"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ est déjà utilisé."
+            "value" : "%@ est déjà utilisé"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ はすでに使われています。"
+            "value" : "%@ はすでに使われています"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@은(는) 이미 사용 중입니다."
+            "value" : "%@은(는) 이미 사용 중입니다"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ já está a ser utilizado."
+            "value" : "%@ já está a ser utilizado"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Сочетание %@ уже используется."
+            "value" : "Сочетание %@ уже используется"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%@ 已被占用。"
+            "value" : "%@ 已被占用"
           }
         }
       }
@@ -2191,6 +2191,64 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 已是最新版本"
+          }
+        }
+      }
+    },
+    "%@ is used by %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ wird von %2$@ verwendet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ is used by %2$@"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ lo usa %2$@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ est utilisé par %2$@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ は %2$@ で使われています"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@은(는) %2$@에서 사용 중입니다"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ é utilizado por %2$@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сочетание %1$@ использует %2$@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@ 已被 %2$@ 使用"
           }
         }
       }
@@ -2562,6 +2620,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%@ 需要先下载才能使用。"
+          }
+        }
+      }
+    },
+    "%@ now opens Tinycast" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ öffnet jetzt Tinycast"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ahora abre Tinycast"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ ouvre désormais Tinycast"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ でTinycastが開くようになりました"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이제 %@(으)로 Tinycast가 열립니다"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ abre agora o Tinycast"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Теперь %@ открывает Tinycast"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在按 %@ 即可打开 Tinycast"
           }
         }
       }
@@ -71549,6 +71659,58 @@
         }
       }
     },
+    "It’s free on this Mac, and you can change it anytime." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Er ist auf diesem Mac frei, und du kannst ihn jederzeit ändern."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Está libre en este Mac y puedes cambiarlo cuando quieras."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Il est libre sur ce Mac, et vous pouvez le changer à tout moment."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このMacでは使われておらず、いつでも変更できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 Mac에서 사용 중이 아니며 언제든지 변경할 수 있습니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Está livre neste Mac e pode alterá-lo a qualquer momento."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Оно свободно на этом Mac, и его можно изменить в любой момент."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "它在这台 Mac 上未被占用，您可以随时更改。"
+          }
+        }
+      }
+    },
     "Join" : {
       "comment" : "Button that joins a video meeting",
       "localizations" : {
@@ -73896,6 +74058,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "启动器搜索仍然可用。"
+          }
+        }
+      }
+    },
+    "Launcher shortcut" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kurzbefehl für den Launcher"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atajo del lanzador"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Raccourci du lanceur"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ランチャーのショートカット"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "런처 단축키"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Atalho do iniciador"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Сочетание для лаунчера"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启动器快捷键"
           }
         }
       }
@@ -93357,6 +93571,58 @@
         }
       }
     },
+    "Open Tinycast with %@?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast mit %@ öffnen?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Abrir Tinycast con %@?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ouvrir Tinycast avec %@ ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ でTinycastを開きますか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@(으)로 Tinycast를 열까요?"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Abrir o Tinycast com %@?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Открывать Tinycast сочетанием %@?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "用 %@ 打开 Tinycast？"
+          }
+        }
+      }
+    },
     "Open Trash" : {
       "localizations" : {
         "de" : {
@@ -98466,6 +98732,58 @@
         }
       }
     },
+    "Press %@ to open Tinycast, or type a new shortcut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drücke %@, um Tinycast zu öffnen, oder tippe einen neuen Kurzbefehl."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulsa %@ para abrir Tinycast o escribe un atajo nuevo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appuyez sur %@ pour ouvrir Tinycast, ou saisissez un nouveau raccourci."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を押すとTinycastが開きます。新しいショートカットを入力することもできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@을(를) 눌러 Tinycast를 열거나 새 단축키를 입력하세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pressione %@ para abrir o Tinycast ou introduza um novo atalho."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите %@, чтобы открыть Tinycast, или введите новое сочетание."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按 %@ 打开 Tinycast，或输入新的快捷键。"
+          }
+        }
+      }
+    },
     "Press Return to finish dictating or Escape to cancel. Protected fields may refuse insertion." : {
       "localizations" : {
         "de" : {
@@ -98570,6 +98888,58 @@
         }
       }
     },
+    "Press a different shortcut." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drücke einen anderen Kurzbefehl."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulsa otro atajo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appuyez sur un autre raccourci."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "別のショートカットを押してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다른 단축키를 누르세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pressione outro atalho."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите другое сочетание клавиш."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请按下其他快捷键。"
+          }
+        }
+      }
+    },
     "Press again for a double press" : {
       "localizations" : {
         "de" : {
@@ -98670,58 +99040,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "添加密钥"
-          }
-        }
-      }
-    },
-    "Press this shortcut to open Tinycast." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Drücke diesen Kurzbefehl, um Tinycast zu öffnen."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pulsa este atajo para abrir Tinycast."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ce raccourci ouvre le lanceur."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "このショートカットを押すとTinycastが開きます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "이 단축키를 눌러 Tinycast를 여십시오."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pressione este atalho para abrir o Tinycast."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Нажмите это сочетание клавиш, чтобы открыть Tinycast."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "按下此快捷键以打开 Tinycast。"
           }
         }
       }
@@ -119477,59 +119795,59 @@
         }
       }
     },
-    "Spotlight also uses %@." : {
+    "Spotlight also uses %@" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight verwendet ebenfalls %@."
+            "value" : "Spotlight verwendet ebenfalls %@"
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight también usa %@."
+            "value" : "Spotlight también usa %@"
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight utilise aussi %@."
+            "value" : "Spotlight utilise aussi %@"
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight も %@ を使っています。"
+            "value" : "Spotlight も %@ を使っています"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight도 %@을(를) 사용합니다."
+            "value" : "Spotlight도 %@을(를) 사용합니다"
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "O Spotlight também utiliza %@."
+            "value" : "O Spotlight também utiliza %@"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight тоже использует %@."
+            "value" : "Spotlight тоже использует %@"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight 也在使用 %@。"
+            "value" : "Spotlight 也在使用 %@"
           }
         }
       }
     },
-    "Spotlight's shortcut is off." : {
+    "Spotlight’s shortcut is turned off." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -138393,54 +138711,54 @@
         }
       }
     },
-    "Turn off Spotlight's shortcut and use it to open Tinycast." : {
+    "Turn off Spotlight’s shortcut and use it for Tinycast." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Deaktiviere den Spotlight-Kurzbefehl und öffne damit Tinycast."
+            "value" : "Deaktiviere den Spotlight-Kurzbefehl und verwende ihn für Tinycast."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desactiva el atajo de Spotlight y úsalo para abrir Tinycast."
+            "value" : "Desactiva el atajo de Spotlight y úsalo para Tinycast."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Désactivez le raccourci de Spotlight et utilisez-le pour ouvrir Tinycast."
+            "value" : "Désactivez le raccourci de Spotlight et utilisez-le pour Tinycast."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlightのショートカットをオフにして、Tinycastを開くために使います。"
+            "value" : "Spotlightのショートカットをオフにして、Tinycastで使います。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Spotlight 단축키를 끄고 Tinycast를 여는 데 사용합니다."
+            "value" : "Spotlight 단축키를 끄고 Tinycast에 사용합니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Desative o atalho do Spotlight e utilize-o para abrir o Tinycast."
+            "value" : "Desative o atalho do Spotlight e utilize-o para o Tinycast."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Отключите сочетание клавиш Spotlight и используйте его, чтобы открывать Tinycast."
+            "value" : "Отключите сочетание клавиш Spotlight и используйте его для Tinycast."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "关闭 Spotlight 的快捷键，改用它打开 Tinycast。"
+            "value" : "关闭 Spotlight 的快捷键，改用于 Tinycast。"
           }
         }
       }
@@ -139348,6 +139666,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "输入要查释义的单词"
+          }
+        }
+      }
+    },
+    "Type the shortcut you want to open Tinycast with." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Drücke den Kurzbefehl, mit dem du Tinycast öffnen möchtest."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pulsa el atajo con el que quieres abrir Tinycast."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appuyez sur le raccourci qui ouvrira Tinycast."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycastを開くのに使うショートカットを押してください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast를 열 때 사용할 단축키를 누르세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pressione o atalho com que pretende abrir o Tinycast."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нажмите сочетание клавиш, которым хотите открывать Tinycast."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按下您想用来打开 Tinycast 的快捷键。"
           }
         }
       }
@@ -141549,6 +141919,58 @@
         }
       }
     },
+    "Use %@" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ verwenden"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usar %@"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utiliser %@"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ を使う"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ 사용"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Utilizar %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Использовать %@"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用 %@"
+          }
+        }
+      }
+    },
     "Use Command" : {
       "comment" : "Open-panel confirm button for choosing an executable",
       "localizations" : {
@@ -141755,58 +142177,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用原始图标"
-          }
-        }
-      }
-    },
-    "Use Suggested Shortcut" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Vorgeschlagenen Kurzbefehl verwenden"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Usar el atajo sugerido"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utiliser le raccourci proposé"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提案されたショートカットを使う"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "추천 단축키 사용"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Utilizar o atalho sugerido"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Использовать предложенное сочетание"
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "使用建议的快捷键"
           }
         }
       }

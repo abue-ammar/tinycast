@@ -37,7 +37,8 @@ final class ModifierTapMonitor {
 }
 @MainActor
 final class ShortcutCaptureSession {
-    func start(action: HotKeyAction, checksExternalConflicts: Bool, hotKeys: HotKeyManager) {}
+    enum Mode: Equatable { case field, live }
+    func start(action: HotKeyAction, mode: Mode, hotKeys: HotKeyManager) {}
     func stop() {}
 }
 @MainActor

@@ -482,79 +482,101 @@ enum Theme {
 
         /// The shortcut step's keys, in fractions of one key's height so every fitted size matches.
         enum Keycap {
-            static let size: CGFloat = 71
-            static let hoverInset: CGFloat = 16
+            static let size: CGFloat = 92
             static let compactScale: CGFloat = 0.72
             static let smallestScale: CGFloat = 0.52
-            static let gap: CGFloat = 0.17
-            static let cornerRadius: CGFloat = 0.105
-            static let rimWidth: CGFloat = 0.012
-            static let restingLift: CGFloat = 0.10
-            /// Room for the resting lift, so pressing a key never changes the row's height.
-            static let footprint = 1 + restingLift
-            static let pressedLift: CGFloat = 0.04
-            static let shadowRadius: CGFloat = 0.13
-            static let shadowOffset: CGFloat = 0.055
-            static let restingShadowOpacity = 0.24
-            static let pressedShadowOpacity = 0.14
-            static let glowCornerRadius: CGFloat = 0.16
-            static let glowSpread: CGFloat = 0.06
-            static let glowBlur: CGFloat = 0.38
-            static let spaceWidth: CGFloat = 2.45
-            static let globeWidth: CGFloat = 1.2
-            static let modifierWidth: CGFloat = 1.55
-            /// A named key widens with its label, up to the maximum.
-            static let widthPerCharacter: CGFloat = 0.4
-            static let widthPadding: CGFloat = 0.6
-            static let maximumWidth: CGFloat = 2.2
-            static let symbolSize: CGFloat = 0.33
-            static let legendSize: CGFloat = 0.21
-            static let legendHorizontalInset: CGFloat = 0.17
-            static let legendVerticalInset: CGFloat = 0.11
-            static let glyphSize: CGFloat = 0.44
-            static let nameSize: CGFloat = 0.26
-            static let glyphInset: CGFloat = 0.12
+            static let gap: CGFloat = 0.15
+            static let cornerRadius: CGFloat = 0.14
+            static let labelledWidth: CGFloat = 1.22
+            static let spaceWidth: CGFloat = 3
+            static let horizontalInset: CGFloat = 0.15
+            static let verticalInset: CGFloat = 0.14
+            static let symbolSize: CGFloat = 0.21
+            static let legendSize: CGFloat = 0.17
+            static let glyphSize: CGFloat = 0.26
+            static let nameSize: CGFloat = 0.2
             static let glyphMinimumScale: CGFloat = 0.65
-            /// ␣ sits low in its font, so it is raised to the key's optical center.
-            static let spaceGlyphRaise: CGFloat = 0.15
-            static let press = Animation.easeOut(duration: 0.055)
-            static let release = Animation.spring(duration: 0.18, bounce: 0.15)
-            static let glow = Colors.brand.mix(with: lightning, by: 0.52).opacity(0.11)
-            static let face = LinearGradient(
+            static let plusSize: CGFloat = 0.16
+            /// A suggestion that isn't bound yet, shown so the keys still say what is on offer.
+            static let unboundOpacity = 0.55
+            /// How far the soft glow under a key reaches, in its longer side.
+            static let glowReach: CGFloat = 0.6
+            static let edgeWidth: CGFloat = 0.5
+            static let pressDepth: CGFloat = 1
+            static let pressedRimOpacity = 0.5
+            static let contactShadow = Shadow(radius: 1, offset: 1)
+            static let pressedContactShadow = Shadow(radius: 0.5, offset: 0.5)
+            static let ambientShadow = Shadow(radius: 7, offset: 4)
+            static let pressedAmbientShadow = Shadow(radius: 2, offset: 1)
+            static let press = Animation.easeOut(duration: 0.06)
+            static let release = Animation.spring(duration: 0.2, bounce: 0.2)
+
+            struct Shadow {
+                let radius: CGFloat
+                let offset: CGFloat
+            }
+
+            static let face = Colors.adaptive(
+                dark: .srgbInk(0.125, alpha: 0.78), light: .srgbInk(1, alpha: 1))
+            static let pressedFace = Colors.adaptive(
+                dark: .srgbInk(0.09, alpha: 0.78), light: .srgbInk(0.955, alpha: 1))
+            static let pressedTint = Colors.adaptive(
+                dark: NSColor(Colors.brand).withAlphaComponent(0.16),
+                light: NSColor(Colors.brand).withAlphaComponent(0.07))
+            static let sheen = LinearGradient(
+                colors: [
+                    Colors.adaptive(dark: .srgbInk(1, alpha: 0.045), light: .srgbInk(1, alpha: 0)),
+                    Colors.adaptive(dark: .srgbInk(1, alpha: 0), light: .srgbInk(0, alpha: 0.025))
+                ], startPoint: .top, endPoint: .bottom)
+            static let glow = Colors.adaptive(dark: .srgbInk(1, alpha: 0.055), light: .srgbInk(1, alpha: 0))
+            /// Lit from above: bright along the top edge, gone by the key's lower half.
+            static let rim = LinearGradient(
                 stops: [
                     .init(
-                        color: Colors.adaptive(
-                            dark: NSColor(Color(white: 0.12).mix(with: Colors.brand, by: 0.16, in: .device)),
-                            light: NSColor(srgbRed: 247 / 255, green: 248 / 255, blue: 252 / 255, alpha: 1)),
+                        color: Colors.adaptive(dark: .srgbInk(1, alpha: 0.2), light: .srgbInk(1, alpha: 1)),
                         location: 0),
                     .init(
                         color: Colors.adaptive(
-                            dark: NSColor(Color(white: 0.115).mix(with: Colors.brand, by: 0.07, in: .device)),
-                            light: NSColor(
-                                srgbRed: 242.8 / 255, green: 243.8 / 255, blue: 247.8 / 255, alpha: 1)),
-                        location: 0.70),
+                            dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(1, alpha: 0.6)),
+                        location: 0.18),
                     .init(
-                        color: Colors.adaptive(
-                            dark: NSColor(Color(white: 0.10).mix(with: Colors.brand, by: 0.035, in: .device)),
-                            light: NSColor(srgbRed: 241 / 255, green: 242 / 255, blue: 246 / 255, alpha: 1)),
+                        color: Colors.adaptive(dark: .srgbInk(1, alpha: 0.015), light: .srgbInk(1, alpha: 0)),
+                        location: 0.6),
+                    .init(
+                        color: Colors.adaptive(dark: .srgbInk(1, alpha: 0.03), light: .srgbInk(1, alpha: 0)),
                         location: 1)
                 ], startPoint: .top, endPoint: .bottom)
-            static let base = LinearGradient(
-                colors: [
-                    Colors.adaptive(
-                        dark: .srgbInk(0.12, alpha: 1),
-                        light: NSColor(srgbRed: 223 / 255, green: 225 / 255, blue: 230 / 255, alpha: 1)),
-                    Colors.adaptive(
-                        dark: .srgbInk(0.085, alpha: 1),
-                        light: NSColor(srgbRed: 203 / 255, green: 205 / 255, blue: 210 / 255, alpha: 1))
-                ], startPoint: .top, endPoint: .bottom)
-            static let rim = LinearGradient(
-                colors: [
-                    Colors.adaptive(dark: .srgbInk(1, alpha: 0.12), light: .srgbInk(1, alpha: 0.57)),
-                    Colors.adaptive(dark: .srgbInk(1, alpha: 0.055), light: .srgbInk(1, alpha: 0.41))
-                ], startPoint: .top, endPoint: .bottom)
-            static let ink = Colors.adaptive(
-                dark: .srgbInk(0.97, alpha: 1), light: .srgbInk(135 / 255, alpha: 1))
+            static let edge = Colors.adaptive(dark: .srgbInk(0, alpha: 0.85), light: .srgbInk(0, alpha: 0.11))
+            static let contactShadowColor = Colors.adaptive(
+                dark: .srgbInk(0, alpha: 0.5), light: .srgbInk(0, alpha: 0.12))
+            static let ambientShadowColor = Colors.adaptive(
+                dark: .srgbInk(0, alpha: 0.35), light: .srgbInk(0, alpha: 0.08))
+            static let ink = Colors.adaptive(dark: .srgbInk(0.88, alpha: 1), light: .srgbInk(0.26, alpha: 1))
+            static let pressedInk = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 1), light: .srgbInk(0.1, alpha: 1))
+        }
+
+        /// The card under the keys that offers a shortcut, Spotlight's swap, or explains a conflict.
+        enum Notice {
+            static let width: CGFloat = 480
+            /// Held even while no card shows, so the keys never move when one appears.
+            static let reservedHeight: CGFloat = 72
+            static let cornerRadius: CGFloat = 12
+            static let horizontalInset: CGFloat = 16
+            static let verticalInset: CGFloat = 14
+            static let fill = Colors.adaptive(dark: .srgbInk(1, alpha: 0.05), light: .srgbInk(0, alpha: 0.04))
+            static let stroke = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.06), light: .srgbInk(0, alpha: 0.06))
+            static let strokeWidth: CGFloat = 0.5
+            static let disabledOpacity = 0.5
+            static let buttonHeight: CGFloat = 28
+            static let buttonInset: CGFloat = 14
+            static let buttonFill = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.12), light: .srgbInk(0, alpha: 0.07))
+            static let buttonHover = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.16), light: .srgbInk(0, alpha: 0.1))
+            static let buttonPressed = Colors.adaptive(
+                dark: .srgbInk(1, alpha: 0.2), light: .srgbInk(0, alpha: 0.13))
         }
 
         /// The first-launch intro, timed in seconds from its start.

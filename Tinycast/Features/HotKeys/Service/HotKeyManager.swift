@@ -43,13 +43,13 @@ final class HotKeyManager {
 
     private struct Recording: Equatable {
         let action: HotKeyAction
-        let checksExternalConflicts: Bool
+        let mode: ShortcutCaptureSession.Mode
     }
 
     /// The recorder currently capturing, which also pauses both engines.
     var recordingAction: HotKeyAction? {
         get { recording?.action }
-        set { recording = newValue.map { Recording(action: $0, checksExternalConflicts: false) } }
+        set { recording = newValue.map { Recording(action: $0, mode: .field) } }
     }
 
     private var recording: Recording? {
@@ -57,9 +57,7 @@ final class HotKeyManager {
             guard recording != oldValue else { return }
             applyPause()
             if let recording {
-                capture.start(
-                    action: recording.action, checksExternalConflicts: recording.checksExternalConflicts,
-                    hotKeys: self)
+                capture.start(action: recording.action, mode: recording.mode, hotKeys: self)
             } else {
                 capture.stop()
             }
@@ -206,9 +204,9 @@ final class HotKeyManager {
 
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
 
-    /// Setting `recordingAction` checks only Tinycast's own bindings; this can also check macOS's.
-    func startRecording(_ action: HotKeyAction, checkingExternalConflicts: Bool) {
-        recording = Recording(action: action, checksExternalConflicts: checkingExternalConflicts)
+    /// Onboarding's listener: it stays open across commits until `recordingAction` is cleared.
+    func startListening(for action: HotKeyAction) {
+        recording = Recording(action: action, mode: .live)
     }
 
     /// Adopts bindings another process stored, re-registering only the ones that moved.

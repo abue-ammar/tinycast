@@ -45,6 +45,14 @@ enum SettingsAction: Codable, Sendable {
     case checkForUpdates
     case showSupport
     case showOnboarding
+
+    /// The main app puts up a window for these, so the focus this process holds goes with them.
+    var presentsWindow: Bool {
+        switch self {
+        case .showSupport, .showOnboarding: true
+        default: false
+        }
+    }
 }
 
 /// What the Backup pane decided about the settings file, after asking in its own window.
