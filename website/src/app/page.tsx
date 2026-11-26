@@ -9,6 +9,7 @@ import { Nav } from "../components/nav";
 import { Privacy } from "../components/privacy";
 import { Support } from "../components/support";
 import { Switch } from "../components/switch";
+import { Testimonials } from "../components/testimonials";
 import { RevealOnScroll } from "../components/ui/reveal-on-scroll";
 import { ScrollTop } from "../components/ui/scroll-top";
 
@@ -27,6 +28,7 @@ export default function HomePage() {
           <Privacy />
           <Keyboard />
           <Switch />
+          <Testimonials />
         </div>
         <Ethos />
         <div className="mx-auto max-w-7xl">
