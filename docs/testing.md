@@ -1073,8 +1073,9 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
   Skip are available. With access granted, Next continues to import. Each short page is centered
   between the top of the window and the footer. Next and Back slide the pages in opposite directions.
   Escape leaves the wizard open on every step. Closing the wizard opens the launcher, as Get
-  Started does, and onboarding does not return on relaunch. Settings › General › Welcome guide ›
-  Show Again replays it from the intro.
+  Started does, and onboarding does not return on relaunch. Quit Tinycast partway, during the intro
+  or on any step: the next launch shows onboarding again from the intro. Settings › General ›
+  Welcome guide › Show Again replays it from the intro.
 - Try both the Raycast file picker and a Finder drop. A recognized export shows its passphrase field.
   The passphrase field keeps the system focus ring, hidden and visible. Toggling the eye while
   editing keeps the selection.

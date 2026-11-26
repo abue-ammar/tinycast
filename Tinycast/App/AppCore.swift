@@ -448,9 +448,8 @@ final class AppCore {
 
             observeFeatureSwitches()
 
-            // First launch binds no hotkey, so guide once; the marker is written at show-time.
+            // First launch binds no hotkey, so guide until the wizard is closed.
             if !OnboardingState.hasOnboarded {
-                OnboardingState.markShown()
                 onboardingCoordinator.showOnboarding()
             } else if launchedByUser {
                 paletteCoordinator.showPalette(mode: .launcher)

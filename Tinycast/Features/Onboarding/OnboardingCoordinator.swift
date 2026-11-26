@@ -62,7 +62,7 @@ final class OnboardingCoordinator {
         // Closing the window is Skip, so every way out of onboarding lands in the launcher.
         let controller = AppWindowController(
             title: String(localized: "Welcome to Tinycast"), contentSize: size, activation: nil,
-            onClose: { [weak self] in self?.core.paletteCoordinator.showPalette(mode: .launcher) })
+            onClose: { [weak self] in self?.wizardDidClose() })
         let chrome = Chrome()
         let model = OnboardingModel(
             shortcut: OnboardingShortcutSession(hotKeys: core.hotKeys) { [weak self] message in
@@ -91,6 +91,11 @@ final class OnboardingCoordinator {
         guard let model, model.step == .ready, chrome?.window?.isKeyWindow == true else { return false }
         model.shortcutConfirmed = true
         return true
+    }
+
+    private func wizardDidClose() {
+        OnboardingState.markOnboarded()
+        core.paletteCoordinator.showPalette(mode: .launcher)
     }
 
     private func finishOnboarding(_ model: OnboardingModel) {
