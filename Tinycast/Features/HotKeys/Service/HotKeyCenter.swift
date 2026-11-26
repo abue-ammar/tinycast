@@ -74,9 +74,9 @@ final class HotKeyCenter {
         if CopySymbolicHotKeys(&symbolicHotKeys) == noErr,
             let hotKeys = symbolicHotKeys?.takeRetainedValue() as? [[String: Any]],
             hotKeys.contains(where: {
-                $0["kHISymbolicHotKeyEnabled"] as? Bool == true
-                    && $0["kHISymbolicHotKeyCode"] as? Int == shortcut.carbonKeyCode
-                    && $0["kHISymbolicHotKeyModifiers"] as? Int == shortcut.carbonModifiers
+                $0[kHISymbolicHotKeyEnabled] as? Bool == true
+                    && $0[kHISymbolicHotKeyCode] as? Int == shortcut.carbonKeyCode
+                    && $0[kHISymbolicHotKeyModifiers] as? Int == shortcut.carbonModifiers
             })
         {
             return true

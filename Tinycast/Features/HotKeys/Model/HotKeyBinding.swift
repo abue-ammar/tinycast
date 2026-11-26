@@ -14,9 +14,10 @@ enum HotKeyBinding: Hashable, Sendable, Codable {
         case .combo(let shortcut): shortcut.keycaps
         case .doubleTap(let modifier): modifier.keycaps
         case .modifier(let key): key.keycaps
-        case .doubleModifier(let key): key.modifier?.keycaps ?? ["🌐︎", "🌐︎"]
-        case .globe: ["🌐︎"]
-        case .doubleGlobe: ["🌐︎", "🌐︎"]
+        case .doubleModifier(let key):
+            key.modifier?.keycaps ?? [ModifierKey.globeGlyph, ModifierKey.globeGlyph]
+        case .globe: [ModifierKey.globeGlyph]
+        case .doubleGlobe: [ModifierKey.globeGlyph, ModifierKey.globeGlyph]
         }
     }
 

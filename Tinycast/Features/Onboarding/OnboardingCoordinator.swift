@@ -28,8 +28,8 @@ final class OnboardingCoordinator {
         let intro = OnboardingIntro(on: screen, landing: landing)
         introTask = Task { [weak self] in
             defer { self?.introTask = nil }
-            try? await Task.sleep(for: .seconds(Theme.Onboarding.introDuration))
-            guard !Task.isCancelled, let self else {
+            try? await Task.sleep(for: .seconds(Theme.Onboarding.Intro.duration))
+            guard let self else {
                 intro.close()
                 return
             }
@@ -42,7 +42,7 @@ final class OnboardingCoordinator {
             if chrome.reveal(intro: sameDisplay ? intro : nil) {
                 try? await Task.sleep(for: .seconds(Theme.Onboarding.revealShadowDelay))
                 intro.hideMark()
-                guard !Task.isCancelled, let wizard = chrome.window, wizard.isVisible else { return }
+                guard let wizard = chrome.window, wizard.isVisible else { return }
                 wizard.hasShadow = true
             }
         }
@@ -59,9 +59,10 @@ final class OnboardingCoordinator {
             size.width = min(size.width, bounds.width - Theme.Onboarding.inset * 2)
             size.height = min(size.height, bounds.height - Theme.Onboarding.inset * 2)
         }
+        // Closing the window is Skip, so every way out of onboarding lands in the launcher.
         let controller = AppWindowController(
-            title: String(localized: "Welcome to Tinycast"), contentSize: size,
-            activation: nil, closesOnEscape: true)
+            title: String(localized: "Welcome to Tinycast"), contentSize: size, activation: nil,
+            onClose: { [weak self] in self?.core.paletteCoordinator.showPalette(mode: .launcher) })
         let chrome = Chrome()
         let model = OnboardingModel(
             shortcut: OnboardingShortcutSession(hotKeys: core.hotKeys) { [weak self] message in
@@ -96,7 +97,6 @@ final class OnboardingCoordinator {
         guard self.model === model, chrome?.window?.isVisible == true else { return }
         self.model = nil
         window?.close()
-        core.paletteCoordinator.showPalette(mode: .launcher)
     }
 
     func focusExisting() -> Bool {
@@ -200,7 +200,7 @@ final class OnboardingCoordinator {
                 return layer
             }
             CATransaction.setCompletionBlock { [weak window] in
-                DispatchQueue.main.async {
+                MainActor.assumeIsolated {
                     for layer in layers { layer.mask = nil }
                     intro.close()
                     window?.level = normalLevel

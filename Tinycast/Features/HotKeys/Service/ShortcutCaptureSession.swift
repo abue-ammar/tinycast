@@ -15,7 +15,7 @@ final class ShortcutCaptureSession {
     private(set) var heldModifier: ModifierKey?
     private(set) var awaitingSecondModifier: ModifierKey?
     private(set) var conflict: Conflict?
-    @ObservationIgnored var checksExternalConflicts = false
+    @ObservationIgnored private var checksExternalConflicts = false
 
     /// The applied Hyper route, read here too because Secure Input hides keystrokes from the tap.
     @ObservationIgnored var hyperRoute: HyperKeyRoute? {
@@ -34,8 +34,9 @@ final class ShortcutCaptureSession {
     /// The same recognizer the global monitor uses, so recording needs no tap and no grant.
     @ObservationIgnored private var detector = ModifierKeyDetector()
 
-    func start(action: HotKeyAction, hotKeys: HotKeyManager) {
+    func start(action: HotKeyAction, checksExternalConflicts: Bool, hotKeys: HotKeyManager) {
         stop()
+        self.checksExternalConflicts = checksExternalConflicts
         heldModifiers = NSEvent.modifierFlags.intersection(Self.chordModifiers)
         _ = detector.handle(
             ModifierKey.held(in: UInt64(NSEvent.modifierFlags.rawValue), globeDown: false),

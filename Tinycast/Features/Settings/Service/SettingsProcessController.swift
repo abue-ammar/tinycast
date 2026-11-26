@@ -238,6 +238,8 @@ final class SettingsProcessController {
             core.updateCoordinator.checkForUpdates()
         case .showSupport:
             core.supportCoordinator.showSupport()
+        case .showOnboarding:
+            core.onboardingCoordinator.showOnboarding()
         }
     }
 

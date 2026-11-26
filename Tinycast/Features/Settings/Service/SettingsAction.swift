@@ -44,6 +44,7 @@ enum SettingsAction: Codable, Sendable {
     case discardBackup(UUID)
     case checkForUpdates
     case showSupport
+    case showOnboarding
 }
 
 /// What the Backup pane decided about the settings file, after asking in its own window.

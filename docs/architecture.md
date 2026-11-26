@@ -158,8 +158,9 @@ or lifecycle wiring in the core.
 - **Onboarding**: a titled `NSWindow` in `Windows/AppWindowController.swift`, owned by
   `OnboardingCoordinator`. SwiftUI `Window` scenes are unreliable for accessory apps, so this is
   deliberate. Its lifecycle is independent of the palette's in both directions, and it stays accessory
-  rather than registering Dock ownership, so completing it can open the palette without an
-  activation-policy change stealing focus.
+  rather than registering Dock ownership, so closing it can open the palette without an
+  activation-policy change stealing focus. Closing is Skip: Get Started and the close button both
+  land in the launcher. It shows once on its own; Settings › General › Welcome guide replays it.
 - **Notes**: a persistent, titled, non-activating `NotesPanel` managed by `NotesWindowController`.
   Its height fits the note up to 860pt and AppKit autosaves the frame; its TextKit 2 editor renders
   Markdown over the literal source, switches among local Markdown files and stays visible on focus

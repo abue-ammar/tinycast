@@ -37,7 +37,7 @@ final class ModifierTapMonitor {
 }
 @MainActor
 final class ShortcutCaptureSession {
-    func start(action: HotKeyAction, hotKeys: HotKeyManager) {}
+    func start(action: HotKeyAction, checksExternalConflicts: Bool, hotKeys: HotKeyManager) {}
     func stop() {}
 }
 @MainActor

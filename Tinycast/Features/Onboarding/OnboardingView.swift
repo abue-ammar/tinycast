@@ -88,7 +88,7 @@ struct OnboardingView: View {
                 Text("Welcome to Tinycast")
                     .font(.system(size: Theme.Onboarding.titleSize, weight: .bold))
                     .accessibilityAddTraits(.isHeader)
-                Text("Everything on your Mac. One keystroke away")
+                Text("Everything on your Mac, one keystroke away.")
                     .font(.title3)
                     .foregroundStyle(.secondary)
             }

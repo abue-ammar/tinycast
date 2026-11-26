@@ -65,6 +65,12 @@ struct GeneralSettingsView: View {
                         Text("While the launcher is open.")
                     }
                 }
+                LabeledContent {
+                    Button("Show Again") { mainApp.send(.showOnboarding) }
+                } label: {
+                    SettingsRowTitle(.generalGeneral, "Welcome guide")
+                    Text("The steps Tinycast showed on first launch.")
+                }
             } header: {
                 SettingsSectionHeader(.generalGeneral)
             }

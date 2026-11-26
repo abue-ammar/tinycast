@@ -1072,9 +1072,12 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
 - Welcome leads straight to the pasting step. Without Accessibility, check that Grant Access and
   Skip are available. With access granted, Next continues to import. Each short page is centered
   between the top of the window and the footer. Next and Back slide the pages in opposite directions.
+  Escape leaves the wizard open on every step. Closing the wizard opens the launcher, as Get
+  Started does, and onboarding does not return on relaunch. Settings › General › Welcome guide ›
+  Show Again replays it from the intro.
 - Try both the Raycast file picker and a Finder drop. A recognized export shows its passphrase field.
-  Check the violet focus ring and insertion point with the passphrase hidden and visible. Toggling
-  the eye while editing keeps the selection.
+  The passphrase field keeps the system focus ring, hidden and visible. Toggling the eye while
+  editing keeps the selection.
   Return activates Import once a passphrase and at least one category are set.
   Open and close the category row: check the chevron rotation and the scroll in both directions.
   Click anywhere on a category tile to toggle it. Selected tiles and Select All use Tinycast violet.

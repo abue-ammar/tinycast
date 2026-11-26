@@ -8,7 +8,7 @@ enum OnboardingSetupPages {
         var body: some View {
             VStack(spacing: compact ? Theme.Spacing.xl : Theme.Spacing.xxl) {
                 Icon(symbol: "accessibility", compact: compact)
-                Header(title: "Paste in active app") {
+                Header(title: "Paste in Active App") {
                     Text("Accessibility lets Tinycast paste clipboard items and insert snippets.")
                         .foregroundStyle(.secondary)
                 }
@@ -185,8 +185,7 @@ enum OnboardingSetupPages {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         RevealableSecureField(
                             title: String(localized: "Passphrase"), text: $model.passphrase,
-                            prompt: Text(verbatim: ""), allowsRevealWhenEmpty: true,
-                            focusTint: Theme.Colors.brand, revealIconWeight: .medium
+                            prompt: Text(verbatim: "")
                         )
                         .font(.body)
                         .textFieldStyle(.roundedBorder)

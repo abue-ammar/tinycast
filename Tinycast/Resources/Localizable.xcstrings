@@ -56871,12 +56871,12 @@
         }
       }
     },
-    "Everything on your Mac. One keystroke away" : {
+    "Everything on your Mac, one keystroke away." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Alles auf deinem Mac. Nur einen Kurzbefehl entfernt."
+            "value" : "Alles auf deinem Mac, nur einen Kurzbefehl entfernt."
           }
         },
         "es" : {
@@ -96376,6 +96376,58 @@
         }
       }
     },
+    "Paste in Active App" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "In aktiver App einsetzen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pegar en la app activa"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coller dans l’app active"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用中のAppにペースト"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "활성 앱에 붙여넣기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Colar no app ativo"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вставить в активное приложение"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "粘贴到活跃的 App"
+          }
+        }
+      }
+    },
     "Paste in active app" : {
       "localizations" : {
         "de" : {
@@ -115356,6 +115408,58 @@
         }
       }
     },
+    "Show Again" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut anzeigen"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Volver a mostrar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Afficher à nouveau"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "もう一度表示"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 보기"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mostrar novamente"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Показать снова"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再次显示"
+          }
+        }
+      }
+    },
     "Show All" : {
       "localizations" : {
         "de" : {
@@ -129633,6 +129737,58 @@
         }
       }
     },
+    "The steps Tinycast showed on first launch." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Die Schritte, die Tinycast beim ersten Start gezeigt hat."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Los pasos que Tinycast mostró en el primer inicio."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Les étapes présentées par Tinycast au premier lancement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "初回起動時にTinycastが表示した手順です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처음 실행할 때 Tinycast가 보여 준 단계입니다."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Os passos que o Tinycast mostrou no primeiro arranque."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Шаги, которые Tinycast показал при первом запуске."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tinycast 首次启动时显示的步骤。"
+          }
+        }
+      }
+    },
     "The system automation could not be prepared." : {
       "localizations" : {
         "de" : {
@@ -137873,7 +138029,7 @@
         }
       }
     },
-    "Try your shortcut" : {
+    "Try Your Shortcut" : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -143610,6 +143766,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "重量"
+          }
+        }
+      }
+    },
+    "Welcome guide" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Einführung"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guía de bienvenida"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guide de bienvenue"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ようこそガイド"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "환영 가이드"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guia de boas-vindas"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Вводное руководство"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "欢迎指南"
           }
         }
       }

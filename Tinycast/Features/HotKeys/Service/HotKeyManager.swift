@@ -41,13 +41,25 @@ final class HotKeyManager {
     var allowsAction: ((HotKeyAction) -> Bool)?
     var onBindingEdit: ((HotKeyAction, HotKeyBinding?) -> Void)?
 
+    private struct Recording: Equatable {
+        let action: HotKeyAction
+        let checksExternalConflicts: Bool
+    }
+
     /// The recorder currently capturing, which also pauses both engines.
     var recordingAction: HotKeyAction? {
+        get { recording?.action }
+        set { recording = newValue.map { Recording(action: $0, checksExternalConflicts: false) } }
+    }
+
+    private var recording: Recording? {
         didSet {
-            guard recordingAction != oldValue else { return }
+            guard recording != oldValue else { return }
             applyPause()
-            if let recordingAction {
-                capture.start(action: recordingAction, hotKeys: self)
+            if let recording {
+                capture.start(
+                    action: recording.action, checksExternalConflicts: recording.checksExternalConflicts,
+                    hotKeys: self)
             } else {
                 capture.stop()
             }
@@ -193,6 +205,11 @@ final class HotKeyManager {
     }
 
     func binding(for action: HotKeyAction) -> HotKeyBinding? { bindings[action] }
+
+    /// Setting `recordingAction` checks only Tinycast's own bindings; this can also check macOS's.
+    func startRecording(_ action: HotKeyAction, checkingExternalConflicts: Bool) {
+        recording = Recording(action: action, checksExternalConflicts: checkingExternalConflicts)
+    }
 
     /// Adopts bindings another process stored, re-registering only the ones that moved.
     func reloadBindings() {

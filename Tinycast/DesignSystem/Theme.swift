@@ -39,7 +39,6 @@ enum Theme {
         static let panel: CGFloat = 26
         static let row: CGFloat = 10
         static let formField: CGFloat = 10
-        static let roundedTextField: CGFloat = 7
         /// Emoji tiles are roomier than list rows, so their corners take one larger step.
         static let emojiCell: CGFloat = 12
         static let menu: CGFloat = 6
@@ -146,7 +145,6 @@ enum Theme {
         /// Hit target for a chat message footer glyph; its caption symbol floats inside it.
         static let chatMessageAction: CGFloat = 16
         static let hairline: CGFloat = 1
-        static let focusRingStroke: CGFloat = 2
         static let markdownListMarker: CGFloat = 20
         static let markdownQuoteBar: CGFloat = 2
         static let contextRingStroke: CGFloat = 2
@@ -437,7 +435,6 @@ enum Theme {
         static let importItemPadding: CGFloat = 5
         static let titleSize: CGFloat = 42
         static let stepTitleSize: CGFloat = 34
-        static let introMarkSize: CGFloat = 96
         static let markSize: CGFloat = 84
         static let carouselWidth: CGFloat = 576
         static let featureIconSize: CGFloat = 37
@@ -456,10 +453,6 @@ enum Theme {
             return Gradient(stops: leading + trailing)
         }()
         static let carouselSpeed: CGFloat = 13
-        static let keySize: CGFloat = 71
-        static let keyHoverInset: CGFloat = 16
-        static let spaceKeyWidthRatio: CGFloat = 2.45
-        static let introDuration = 3.16
         static let revealDuration = 1.2
         static let revealBackdropDelay = revealDuration * 0.50
         static let revealShadowDelay = 0.64
@@ -470,7 +463,6 @@ enum Theme {
 
         static let night = Color(red: 0.038, green: 0.025, blue: 0.072)
         static let lightning = Color(red: 0.87, green: 0.79, blue: 1)
-        static let keyGlow = Colors.brand.mix(with: lightning, by: 0.52).opacity(0.11)
         static let importItemSelectedFill = Colors.brand.opacity(0.28)
         static let featureIconFill = Colors.brand.opacity(0.14)
         static let emblemInk = Colors.brand.mix(with: .primary, by: 0.40)
@@ -485,40 +477,111 @@ enum Theme {
         static let canvas = Colors.adaptive(
             dark: NSColor(srgbRed: 0.051, green: 0.044, blue: 0.073, alpha: 1),
             light: .windowBackgroundColor)
-        static let keyFace = LinearGradient(
-            stops: [
-                .init(
-                    color: Colors.adaptive(
-                        dark: NSColor(Color(white: 0.12).mix(with: Colors.brand, by: 0.16, in: .device)),
-                        light: NSColor(srgbRed: 247 / 255, green: 248 / 255, blue: 252 / 255, alpha: 1)),
-                    location: 0),
-                .init(
-                    color: Colors.adaptive(
-                        dark: NSColor(Color(white: 0.115).mix(with: Colors.brand, by: 0.07, in: .device)),
-                        light: NSColor(srgbRed: 242.8 / 255, green: 243.8 / 255, blue: 247.8 / 255, alpha: 1)),
-                    location: 0.70),
-                .init(
-                    color: Colors.adaptive(
-                        dark: NSColor(Color(white: 0.10).mix(with: Colors.brand, by: 0.035, in: .device)),
-                        light: NSColor(srgbRed: 241 / 255, green: 242 / 255, blue: 246 / 255, alpha: 1)),
-                    location: 1)
-            ], startPoint: .top, endPoint: .bottom)
-        static let keyBase = LinearGradient(
-            colors: [
-                Colors.adaptive(
-                    dark: .srgbInk(0.12, alpha: 1),
-                    light: NSColor(srgbRed: 223 / 255, green: 225 / 255, blue: 230 / 255, alpha: 1)),
-                Colors.adaptive(
-                    dark: .srgbInk(0.085, alpha: 1),
-                    light: NSColor(srgbRed: 203 / 255, green: 205 / 255, blue: 210 / 255, alpha: 1))
-            ], startPoint: .top, endPoint: .bottom)
-        static let keyRim = LinearGradient(
-            colors: [
-                Colors.adaptive(dark: .srgbInk(1, alpha: 0.12), light: .srgbInk(1, alpha: 0.57)),
-                Colors.adaptive(dark: .srgbInk(1, alpha: 0.055), light: .srgbInk(1, alpha: 0.41))
-            ], startPoint: .top, endPoint: .bottom)
-        static let keyInk = Colors.adaptive(
-            dark: .srgbInk(0.97, alpha: 1), light: .srgbInk(135 / 255, alpha: 1))
+
+        /// The shortcut step's keys, in fractions of one key's height so every fitted size matches.
+        enum Keycap {
+            static let size: CGFloat = 71
+            static let hoverInset: CGFloat = 16
+            static let compactScale: CGFloat = 0.72
+            static let smallestScale: CGFloat = 0.52
+            static let gap: CGFloat = 0.17
+            static let cornerRadius: CGFloat = 0.105
+            static let rimWidth: CGFloat = 0.012
+            static let restingLift: CGFloat = 0.10
+            /// Room for the resting lift, so pressing a key never changes the row's height.
+            static let footprint = 1 + restingLift
+            static let pressedLift: CGFloat = 0.04
+            static let shadowRadius: CGFloat = 0.13
+            static let shadowOffset: CGFloat = 0.055
+            static let restingShadowOpacity = 0.24
+            static let pressedShadowOpacity = 0.14
+            static let glowCornerRadius: CGFloat = 0.16
+            static let glowSpread: CGFloat = 0.06
+            static let glowBlur: CGFloat = 0.38
+            static let spaceWidth: CGFloat = 2.45
+            static let globeWidth: CGFloat = 1.2
+            static let modifierWidth: CGFloat = 1.55
+            /// A named key widens with its label, up to the maximum.
+            static let widthPerCharacter: CGFloat = 0.4
+            static let widthPadding: CGFloat = 0.6
+            static let maximumWidth: CGFloat = 2.2
+            static let symbolSize: CGFloat = 0.33
+            static let legendSize: CGFloat = 0.21
+            static let legendHorizontalInset: CGFloat = 0.17
+            static let legendVerticalInset: CGFloat = 0.11
+            static let glyphSize: CGFloat = 0.44
+            static let nameSize: CGFloat = 0.26
+            static let glyphInset: CGFloat = 0.12
+            static let glyphMinimumScale: CGFloat = 0.65
+            /// ␣ sits low in its font, so it is raised to the key's optical center.
+            static let spaceGlyphRaise: CGFloat = 0.15
+            static let press = Animation.easeOut(duration: 0.055)
+            static let release = Animation.spring(duration: 0.18, bounce: 0.15)
+            static let glow = Colors.brand.mix(with: lightning, by: 0.52).opacity(0.11)
+            static let face = LinearGradient(
+                stops: [
+                    .init(
+                        color: Colors.adaptive(
+                            dark: NSColor(Color(white: 0.12).mix(with: Colors.brand, by: 0.16, in: .device)),
+                            light: NSColor(srgbRed: 247 / 255, green: 248 / 255, blue: 252 / 255, alpha: 1)),
+                        location: 0),
+                    .init(
+                        color: Colors.adaptive(
+                            dark: NSColor(Color(white: 0.115).mix(with: Colors.brand, by: 0.07, in: .device)),
+                            light: NSColor(
+                                srgbRed: 242.8 / 255, green: 243.8 / 255, blue: 247.8 / 255, alpha: 1)),
+                        location: 0.70),
+                    .init(
+                        color: Colors.adaptive(
+                            dark: NSColor(Color(white: 0.10).mix(with: Colors.brand, by: 0.035, in: .device)),
+                            light: NSColor(srgbRed: 241 / 255, green: 242 / 255, blue: 246 / 255, alpha: 1)),
+                        location: 1)
+                ], startPoint: .top, endPoint: .bottom)
+            static let base = LinearGradient(
+                colors: [
+                    Colors.adaptive(
+                        dark: .srgbInk(0.12, alpha: 1),
+                        light: NSColor(srgbRed: 223 / 255, green: 225 / 255, blue: 230 / 255, alpha: 1)),
+                    Colors.adaptive(
+                        dark: .srgbInk(0.085, alpha: 1),
+                        light: NSColor(srgbRed: 203 / 255, green: 205 / 255, blue: 210 / 255, alpha: 1))
+                ], startPoint: .top, endPoint: .bottom)
+            static let rim = LinearGradient(
+                colors: [
+                    Colors.adaptive(dark: .srgbInk(1, alpha: 0.12), light: .srgbInk(1, alpha: 0.57)),
+                    Colors.adaptive(dark: .srgbInk(1, alpha: 0.055), light: .srgbInk(1, alpha: 0.41))
+                ], startPoint: .top, endPoint: .bottom)
+            static let ink = Colors.adaptive(
+                dark: .srgbInk(0.97, alpha: 1), light: .srgbInk(135 / 255, alpha: 1))
+        }
+
+        /// The first-launch intro, timed in seconds from its start.
+        enum Intro {
+            static let duration = 3.16
+            static let markSize: CGFloat = 96
+            static let frameInterval = 1.0 / 60
+            static let dimDuration = 1.30
+            static let dimOpacity = 0.94
+            static let violetDelay = 0.14
+            static let violetDuration = 1.32
+            static let violetCurve = UnitCurve.bezier(
+                startControlPoint: .init(x: 0.16, y: 0), endControlPoint: .init(x: 0.35, y: 1))
+            /// In screen diagonals, so the glow reaches every corner of any display.
+            static let violetRadius: CGFloat = 0.57
+            static let violetCenterOpacity = 0.40
+            static let violetMidOpacity = 0.18
+            static let grainOpacity = 0.055
+            static let zoomDelay = 0.99
+            static let zoomDuration = 1.41
+            /// The mark starts this many screen diagonals tall, so the zoom opens inside it.
+            static let zoomReach: CGFloat = 4.4
+            /// The mark fades in over this stretch of the zoom's progress.
+            static let markFadeStart = 0.48
+            static let markFadeLength = 0.44
+            static let liftDelay = 0.09
+            static let liftCurve = UnitCurve.bezier(
+                startControlPoint: .init(x: 0.72, y: 0), endControlPoint: .init(x: 0.28, y: 1))
+        }
     }
 
     enum Colors {

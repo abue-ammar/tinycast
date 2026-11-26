@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct OnboardingShortcutView: View {
+    private typealias Keycap = Theme.Onboarding.Keycap
+    private static let spaceGlyph = "␣"
+
     let session: OnboardingShortcutSession
     let confirmed: Bool
     @Environment(AppSettings.self) private var settings
@@ -18,7 +21,7 @@ struct OnboardingShortcutView: View {
         let notice = session.notice
         VStack(spacing: Theme.Spacing.xxxl) {
             OnboardingSetupPages.Header(
-                title: session.isReady ? "Try your shortcut" : "Set Up Your Launcher"
+                title: session.isReady ? "Try Your Shortcut" : "Set Up Your Launcher"
             ) {
                 if session.isReady {
                     Text("Press this shortcut to open Tinycast.")
@@ -63,16 +66,15 @@ struct OnboardingShortcutView: View {
             if isRecording {
                 hotKeys.recordingAction = nil
             } else {
-                hotKeys.recordingAction = .togglePalette
-                hotKeys.capture.checksExternalConflicts = true
+                hotKeys.startRecording(.togglePalette, checkingExternalConflicts: true)
             }
         } label: {
             ViewThatFits(in: .horizontal) {
                 keys(scale: 1)
-                keys(scale: 0.72)
-                keys(scale: 0.52)
+                keys(scale: Keycap.compactScale)
+                keys(scale: Keycap.smallestScale)
             }
-            .padding(Theme.Onboarding.keyHoverInset)
+            .padding(Keycap.hoverInset)
             .background {
                 hoverShape.fill(Theme.Colors.rowHover)
                     .opacity(showsHover ? 1 : 0)
@@ -83,7 +85,7 @@ struct OnboardingShortcutView: View {
         }
         .buttonStyle(.plain)
         .disabled(confirmed)
-        .padding(-Theme.Onboarding.keyHoverInset)
+        .padding(-Keycap.hoverInset)
         .accessibilityLabel("Record Hotkey")
         .accessibilityValue(Text(verbatim: binding.keycaps.joined(separator: " ")))
         .background {
@@ -102,8 +104,8 @@ struct OnboardingShortcutView: View {
     private func keys(scale: CGFloat) -> some View {
         let caps = binding.recorderKeycaps
         let space = String(localized: "Space")
-        let unit = Theme.Onboarding.keySize * scale
-        return HStack(spacing: unit * 0.17) {
+        let unit = Keycap.size * scale
+        return HStack(spacing: unit * Keycap.gap) {
             ForEach(caps.indices, id: \.self) { index in
                 let cap = caps[index]
                 key(
@@ -113,51 +115,56 @@ struct OnboardingShortcutView: View {
         }
         .fixedSize()
         .background {
-            RoundedRectangle(cornerRadius: unit * 0.16)
-                .fill(Theme.Onboarding.keyGlow)
-                .padding(-unit * 0.06)
-                .blur(radius: unit * 0.38)
+            RoundedRectangle(cornerRadius: unit * Keycap.glowCornerRadius)
+                .fill(Keycap.glow)
+                .padding(-unit * Keycap.glowSpread)
+                .blur(radius: unit * Keycap.glowBlur)
                 .allowsHitTesting(false)
         }
     }
 
     private func key(_ cap: String, isSpace: Bool, scale: CGFloat, pressed: Bool) -> some View {
-        let unit = Theme.Onboarding.keySize * scale
+        let unit = Keycap.size * scale
         let legend = keyLegend(cap)
-        let widthRatio: CGFloat =
-            if isSpace { Theme.Onboarding.spaceKeyWidthRatio } else if cap == "🌐︎" {
-                1.2
-            } else if legend != nil { 1.55 } else {
-                min(2.2, max(1, CGFloat(cap.count) * 0.4 + 0.6))
-            }
-        let width = unit * widthRatio
-        let lift = unit * (pressed ? 0.04 : 0.10)
-        let shape = RoundedRectangle(cornerRadius: unit * 0.105, style: .continuous)
-        let pressure = pressed ? Animation.easeOut(duration: 0.055) : .spring(duration: 0.18, bounce: 0.15)
+        let width = unit * widthRatio(of: cap, isSpace: isSpace, hasLegend: legend != nil)
+        let lift = unit * (pressed ? Keycap.pressedLift : Keycap.restingLift)
+        let shape = RoundedRectangle(cornerRadius: unit * Keycap.cornerRadius, style: .continuous)
+        let motion = pressed ? Keycap.press : Keycap.release
         return ZStack(alignment: .bottom) {
-            shape.fill(Theme.Onboarding.keyBase)
+            shape.fill(Keycap.base)
                 .frame(height: unit + lift)
-                .shadow(color: .black.opacity(pressed ? 0.14 : 0.24), radius: unit * 0.13, y: unit * 0.055)
+                .shadow(
+                    color: .black.opacity(
+                        pressed ? Keycap.pressedShadowOpacity : Keycap.restingShadowOpacity),
+                    radius: unit * Keycap.shadowRadius, y: unit * Keycap.shadowOffset)
 
-            keyLabel(isSpace ? "␣" : cap, legend: legend, unit: unit)
-                .foregroundStyle(Theme.Onboarding.keyInk)
+            keyLabel(isSpace ? Self.spaceGlyph : cap, legend: legend, unit: unit)
+                .foregroundStyle(Keycap.ink)
                 .frame(width: width, height: unit)
-                .background(Theme.Onboarding.keyFace, in: shape)
-                .overlay { shape.strokeBorder(Theme.Onboarding.keyRim, lineWidth: unit * 0.012) }
+                .background(Keycap.face, in: shape)
+                .overlay { shape.strokeBorder(Keycap.rim, lineWidth: unit * Keycap.rimWidth) }
                 .offset(y: -lift)
         }
-        .frame(width: width, height: unit * 1.1, alignment: .bottom)
-        .animation(reduceMotion ? nil : pressure, value: pressed)
+        .frame(width: width, height: unit * Keycap.footprint, alignment: .bottom)
+        .animation(reduceMotion ? nil : motion, value: pressed)
+    }
+
+    private func widthRatio(of cap: String, isSpace: Bool, hasLegend: Bool) -> CGFloat {
+        if isSpace { return Keycap.spaceWidth }
+        if cap == ModifierKey.globeGlyph { return Keycap.globeWidth }
+        if hasLegend { return Keycap.modifierWidth }
+        let labelled = CGFloat(cap.count) * Keycap.widthPerCharacter + Keycap.widthPadding
+        return min(Keycap.maximumWidth, max(1, labelled))
     }
 
     @ViewBuilder
     private func keyLabel(_ cap: String, legend: String?, unit: CGFloat) -> some View {
         let glyph = KeyCapChip.Label(text: cap, prefix: binding.recorderPrefix)
         if let legend {
-            let symbol = glyph.font(.system(size: unit * 0.33))
-            let title = Text(verbatim: legend).font(.system(size: unit * 0.21))
+            let symbol = glyph.font(.system(size: unit * Keycap.symbolSize))
+            let title = Text(verbatim: legend).font(.system(size: unit * Keycap.legendSize))
             Group {
-                if cap == "🌐︎" {
+                if cap == ModifierKey.globeGlyph {
                     HStack(alignment: .lastTextBaseline, spacing: 0) {
                         symbol
                         Spacer(minLength: 0)
@@ -171,17 +178,17 @@ struct OnboardingShortcutView: View {
                         title
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, unit * 0.11)
+                    .padding(.top, unit * Keycap.legendVerticalInset)
                 }
             }
-            .padding(.horizontal, unit * 0.17)
-            .padding(.bottom, unit * 0.11)
+            .padding(.horizontal, unit * Keycap.legendHorizontalInset)
+            .padding(.bottom, unit * Keycap.legendVerticalInset)
         } else {
-            glyph.font(.system(size: unit * (cap.count > 2 ? 0.26 : 0.44)))
+            glyph.font(.system(size: unit * (cap.count > 2 ? Keycap.nameSize : Keycap.glyphSize)))
                 .lineLimit(1)
-                .minimumScaleFactor(0.65)
-                .offset(y: cap == "␣" ? -unit * 0.15 : 0)
-                .padding(.horizontal, unit * 0.12)
+                .minimumScaleFactor(Keycap.glyphMinimumScale)
+                .offset(y: cap == Self.spaceGlyph ? -unit * Keycap.spaceGlyphRaise : 0)
+                .padding(.horizontal, unit * Keycap.glyphInset)
         }
     }
 
@@ -191,7 +198,7 @@ struct OnboardingShortcutView: View {
         case "⌥": "option"
         case "⌃": "control"
         case "⇧": "shift"
-        case "🌐︎": "fn"
+        case ModifierKey.globeGlyph: "fn"
         default: nil
         }
     }
@@ -228,7 +235,7 @@ private struct ShortcutNotice: View {
             VStack(spacing: Theme.Spacing.xs) {
                 Label("\(keys) is already in use.", systemImage: "exclamationmark.triangle.fill")
                     .font(.callout.weight(.semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(Theme.Colors.warning)
                 Text("Disable or change it where it’s assigned to use it in Tinycast.")
                     .font(.callout)
                     .foregroundStyle(.secondary)

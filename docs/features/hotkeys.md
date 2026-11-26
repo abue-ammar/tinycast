@@ -19,12 +19,13 @@ Carbon's dispatcher enters through an explicit `@MainActor` callback. Press and 
 return `OSStatus` synchronously, preserving event order and hold-to-talk release handling.
 
 The onboarding recorder checks combinations against enabled macOS shortcuts and probes for a
-conflicting Carbon registration. Only the onboarding recorder opts into these checks. When Spotlight
-holds the shortcut and no Tinycast action does, onboarding offers Replace Spotlight: `SpotlightShortcut`
-turns that symbolic hotkey off live and in `com.apple.symbolichotkeys`, so it stays off after the next
-login. Tinycast takes the shortcut only if nothing else holds it once Spotlight is off, and otherwise
-turns Spotlight back on. Undo turns Spotlight back on, and restores the previous binding while the
-launcher still uses Spotlight's shortcut.
+conflicting Carbon registration. Only the onboarding recorder opts into these checks, by starting
+with `startRecording(_:checkingExternalConflicts:)`. When Spotlight holds the shortcut and no
+Tinycast action does, onboarding offers Replace Spotlight: `SpotlightShortcut` turns that symbolic
+hotkey off live and in `com.apple.symbolichotkeys`, so it stays off after the next login. Tinycast
+takes the shortcut only if nothing else holds it once Spotlight is off, and otherwise turns Spotlight
+back on. Undo turns Spotlight back on, and restores the previous binding while the launcher still
+uses Spotlight's shortcut.
 
 ## Invariants
 

@@ -138,6 +138,9 @@ enum SettingsSearchCatalog {
             .generalGeneral, "Auto-switch input source",
             keywords: ["keyboard", "layout", "language", "abc"]),
         .init(
+            .generalGeneral, "Welcome guide",
+            keywords: ["onboarding", "welcome", "setup", "first run", "intro", "tour"]),
+        .init(
             .generalAppearance, "Appearance",
             keywords: ["dark", "light", "mode", "theme"]),
         .init(
