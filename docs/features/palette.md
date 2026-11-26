@@ -49,6 +49,9 @@ The command palette is a borderless floating `NSPanel` hosting SwiftUI; see
                                             · applies the configured source to the field editor
 ```
 
+When the onboarding window is key on its last page, the same hotkey confirms the displayed shortcut
+and then opens the launcher. Everywhere else, it follows the normal toggle path above.
+
 Everything resolved "once per summon" is resolved there deliberately, not per render. `AppCore` holds
 only the closure wiring; the behaviour is `PaletteCoordinator`'s.
 

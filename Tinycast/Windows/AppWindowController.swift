@@ -43,10 +43,10 @@ final class AppWindowController: NSObject, NSWindowDelegate {
     /// Returns `true` when a window was built, `false` when an already-open one was re-raised.
     @discardableResult
     func show<Content: View>(
-        chrome: WindowChrome? = nil, @ViewBuilder content: () -> Content
+        chrome: WindowChrome? = nil, orderFront: Bool = true, @ViewBuilder content: () -> Content
     ) -> Bool {
         let root = content()
-        return show(chrome: chrome) {
+        return show(chrome: chrome, orderFront: orderFront) {
             let hosting = NSHostingController(rootView: root.motionScope())
             // Keep the window's size authoritative: an unconstrained fill would drive the frame.
             hosting.sizingOptions = []
@@ -56,9 +56,11 @@ final class AppWindowController: NSObject, NSWindowDelegate {
 
     /// A prebuilt controller; Settings needs one to bridge its SwiftUI toolbar into the window.
     @discardableResult
-    func show(chrome: WindowChrome? = nil, contentViewController: () -> NSViewController) -> Bool {
+    func show(
+        chrome: WindowChrome? = nil, orderFront: Bool = true, contentViewController: () -> NSViewController
+    ) -> Bool {
         if let window {
-            raise(window)
+            if orderFront { raise(window) }
             return false
         }
         activation?.windowWillOpen()
@@ -66,7 +68,7 @@ final class AppWindowController: NSObject, NSWindowDelegate {
         self.chrome = chrome
         self.window = window
         activation?.windowDidOpen(window)
-        raise(window)
+        if orderFront { raise(window) }
         return true
     }
 

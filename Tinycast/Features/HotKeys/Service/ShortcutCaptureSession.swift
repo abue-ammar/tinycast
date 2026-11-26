@@ -15,6 +15,7 @@ final class ShortcutCaptureSession {
     private(set) var heldModifier: ModifierKey?
     private(set) var awaitingSecondModifier: ModifierKey?
     private(set) var conflict: Conflict?
+    @ObservationIgnored var checksExternalConflicts = false
 
     /// The applied Hyper route, read here too because Secure Input hides keystrokes from the tap.
     @ObservationIgnored var hyperRoute: HyperKeyRoute? {
@@ -129,6 +130,7 @@ final class ShortcutCaptureSession {
         hyperKeyDown = false
         detector.reset()
         activeRecorderView = nil
+        checksExternalConflicts = false
     }
 
     func setActiveRecorderView(_ view: NSView) {
@@ -232,7 +234,9 @@ final class ShortcutCaptureSession {
     }
 
     private func commit(_ binding: HotKeyBinding, action: HotKeyAction, hotKeys: HotKeyManager) {
-        if let owner = hotKeys.conflictOwner(of: binding, excluding: action) {
+        if let owner = hotKeys.conflictOwner(
+            of: binding, excluding: action, includingExternal: checksExternalConflicts)
+        {
             flashConflict(Conflict(binding: binding, owner: owner))
             return
         }

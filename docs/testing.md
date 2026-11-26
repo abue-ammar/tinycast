@@ -927,7 +927,7 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
 - Type into a quicklink's and a custom command's argument fields, then ⇧⌘C: the link carries the
   values, and opening it fills the same fields
 - Right-click a shortcut field in Settings (a command, a quicklink, an extension command): Copy
-  Deeplink copies its link. Onboarding's and General's App Launcher field offer no menu
+  Deeplink copies its link. The onboarding shortcut keys and General's App Launcher field offer no menu
 - The note switcher's link button, and Copy Deeplink in the AI Chat sidebar and window menu, copy a
   link that reopens that note or chat; a renamed note's old link reports the missing file
 - `open -g` each copied link with the palette closed: it runs what the row's shortcut runs
@@ -1064,7 +1064,29 @@ tccutil reset Accessibility com.abueammar.tinycast.dev 2>/dev/null || true
 - Launches with every store directory absent: no crash, no hang; onboarding runs
 - With no saved app language, onboarding uses the primary system language if supported, otherwise
   English; a saved language stays unchanged on relaunch
-- Onboarding has no Dock entry; completing it leaves the palette open and ready for typing.
+- The onboarding intro dims only the display where the wizard opens. The window is revealed from
+  the logo, at the launcher's default position on that display. The soft circular edge is the only
+  part of the window that fades. The logo stays visible throughout. The menu bar and the desktop
+  brighten together, and the native shadow becomes visible as the dimming clears. With Reduce
+  Motion or Tinycast animations disabled, the wizard appears directly with its shadow
+- Welcome leads straight to the pasting step. Without Accessibility, check that Grant Access and
+  Skip are available. With access granted, Next continues to import. Each short page is centered
+  between the top of the window and the footer. Next and Back slide the pages in opposite directions.
+- Try both the Raycast file picker and a Finder drop. A recognized export shows its passphrase field.
+  Check the violet focus ring and insertion point with the passphrase hidden and visible. Toggling
+  the eye while editing keeps the selection.
+  Return activates Import once a passphrase and at least one category are set.
+  Open and close the category row: check the chevron rotation and the scroll in both directions.
+  Click anywhere on a category tile to toggle it. Selected tiles and Select All use Tinycast violet.
+  Click the selected file row to replace the export. Its × clears the passphrase and selection.
+  The export stays on disk.
+  Choosing an invalid file hides the passphrase and categories.
+- On the last step, check Launch at login reflects the current setting after importing or skipping.
+  Record a shortcut and check it survives Back and Next. Press it and verify the keys respond
+  before the palette opens, ready for typing. Onboarding has no Dock entry.
+  With no binding, check that ⌘ Space is offered when available. With Spotlight or another app
+  using it, check the warning below the keys and record a different shortcut. Return activates the
+  violet Get Started button even without a binding.
   Settings still adds a Dock entry while open and removes it when the last ordinary window closes
 - Palette opens and lists apps; clipboard, quicklinks, snippets and calculator history are all empty
   and all accept a first entry

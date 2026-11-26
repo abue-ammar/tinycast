@@ -49,6 +49,7 @@ final class HotKeyCenter {
     }
     static weak var current: HotKeyCenter?
     var entries: [String: Entry] = [:]
+    var reservedShortcuts: Set<KeyShortcut> = []
     var isPaused = false
     init() { Self.current = self }
     func register(
@@ -57,4 +58,5 @@ final class HotKeyCenter {
         entries[id] = Entry(shortcut: shortcut, onKeyDown: onKeyDown, onKeyUp: onKeyUp)
     }
     func unregister(id: String) { entries[id] = nil }
+    func isReservedOutsideApp(_ shortcut: KeyShortcut) -> Bool { reservedShortcuts.contains(shortcut) }
 }

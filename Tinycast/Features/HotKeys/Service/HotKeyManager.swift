@@ -381,7 +381,9 @@ final class HotKeyManager {
     }
 
     /// A hold reserves its physical modifier across both tap gestures.
-    func conflictOwner(of binding: HotKeyBinding, excluding action: HotKeyAction) -> String? {
+    func conflictOwner(
+        of binding: HotKeyBinding, excluding action: HotKeyAction, includingExternal: Bool = false
+    ) -> String? {
         for candidate in candidateActions where candidate != action {
             guard let other = self.binding(for: candidate) else { continue }
             let holdsModifier =
@@ -391,6 +393,9 @@ final class HotKeyManager {
             if binding.conflicts(with: other, holdsModifier: holdsModifier) {
                 return displayName(of: candidate)
             }
+        }
+        if includingExternal, let shortcut = binding.shortcut, center.isReservedOutsideApp(shortcut) {
+            return String(localized: "macOS or another app")
         }
         return nil
     }

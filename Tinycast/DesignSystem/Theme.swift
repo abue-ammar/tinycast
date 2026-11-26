@@ -39,6 +39,7 @@ enum Theme {
         static let panel: CGFloat = 26
         static let row: CGFloat = 10
         static let formField: CGFloat = 10
+        static let roundedTextField: CGFloat = 7
         /// Emoji tiles are roomier than list rows, so their corners take one larger step.
         static let emojiCell: CGFloat = 12
         static let menu: CGFloat = 6
@@ -145,6 +146,7 @@ enum Theme {
         /// Hit target for a chat message footer glyph; its caption symbol floats inside it.
         static let chatMessageAction: CGFloat = 16
         static let hairline: CGFloat = 1
+        static let focusRingStroke: CGFloat = 2
         static let markdownListMarker: CGFloat = 20
         static let markdownQuoteBar: CGFloat = 2
         static let contextRingStroke: CGFloat = 2
@@ -423,6 +425,102 @@ enum Theme {
         static let composerStop = Font.system(size: 10, weight: .bold)
     }
 
+    enum Onboarding {
+        static let inset: CGFloat = 36
+        static let setupWidth: CGFloat = 460
+        static let importOptionsWidth: CGFloat = 552
+        static let passphraseWidth: CGFloat = 196
+        static let fileCardInset: CGFloat = 16
+        static let fileGlyphSize: CGFloat = 24
+        static let compactSetupHeight: CGFloat = 340
+        static let setupIconSize: CGFloat = 60
+        static let importItemPadding: CGFloat = 5
+        static let titleSize: CGFloat = 42
+        static let stepTitleSize: CGFloat = 34
+        static let introMarkSize: CGFloat = 96
+        static let markSize: CGFloat = 84
+        static let carouselWidth: CGFloat = 576
+        static let featureIconSize: CGFloat = 37
+        static let featureSymbolSize: CGFloat = 14
+        static let featureIconEdgeRadius: CGFloat = 14
+        static let carouselFade: Gradient = {
+            let leading = (0...6).map { index in
+                let progress = Double(index) / 6
+                return Gradient.Stop(
+                    color: .black.opacity(progress * progress * (3 - 2 * progress)),
+                    location: progress * 0.22)
+            }
+            let trailing = leading.reversed().map {
+                Gradient.Stop(color: $0.color, location: 1 - $0.location)
+            }
+            return Gradient(stops: leading + trailing)
+        }()
+        static let carouselSpeed: CGFloat = 13
+        static let keySize: CGFloat = 71
+        static let keyHoverInset: CGFloat = 16
+        static let spaceKeyWidthRatio: CGFloat = 2.45
+        static let introDuration = 3.16
+        static let revealDuration = 1.2
+        static let revealBackdropDelay = revealDuration * 0.50
+        static let revealShadowDelay = 0.64
+        static let revealFeather: CGFloat = 480
+        static let shortcutConfirmationDuration = 0.44
+        static let pageTravel: CGFloat = 48
+        static let pageMotion = Animation.smooth(duration: 0.28, extraBounce: 0)
+
+        static let night = Color(red: 0.038, green: 0.025, blue: 0.072)
+        static let lightning = Color(red: 0.87, green: 0.79, blue: 1)
+        static let keyGlow = Colors.brand.mix(with: lightning, by: 0.52).opacity(0.11)
+        static let importItemSelectedFill = Colors.brand.opacity(0.28)
+        static let featureIconFill = Colors.brand.opacity(0.14)
+        static let emblemInk = Colors.brand.mix(with: .primary, by: 0.40)
+        static let featureIconTopEdge = RadialGradient(
+            colors: [emblemInk.opacity(0.34), .clear],
+            center: .top, startRadius: 0, endRadius: featureIconEdgeRadius)
+        static let featureIconBottomEdge = RadialGradient(
+            colors: [emblemInk.opacity(0.20), .clear],
+            center: .bottom, startRadius: 0, endRadius: featureIconEdgeRadius)
+        static let fileCardFill = Colors.cardFill.opacity(0.74)
+        static let returnKeyFill = Color.white.opacity(0.20)
+        static let canvas = Colors.adaptive(
+            dark: NSColor(srgbRed: 0.051, green: 0.044, blue: 0.073, alpha: 1),
+            light: .windowBackgroundColor)
+        static let keyFace = LinearGradient(
+            stops: [
+                .init(
+                    color: Colors.adaptive(
+                        dark: NSColor(Color(white: 0.12).mix(with: Colors.brand, by: 0.16, in: .device)),
+                        light: NSColor(srgbRed: 247 / 255, green: 248 / 255, blue: 252 / 255, alpha: 1)),
+                    location: 0),
+                .init(
+                    color: Colors.adaptive(
+                        dark: NSColor(Color(white: 0.115).mix(with: Colors.brand, by: 0.07, in: .device)),
+                        light: NSColor(srgbRed: 242.8 / 255, green: 243.8 / 255, blue: 247.8 / 255, alpha: 1)),
+                    location: 0.70),
+                .init(
+                    color: Colors.adaptive(
+                        dark: NSColor(Color(white: 0.10).mix(with: Colors.brand, by: 0.035, in: .device)),
+                        light: NSColor(srgbRed: 241 / 255, green: 242 / 255, blue: 246 / 255, alpha: 1)),
+                    location: 1)
+            ], startPoint: .top, endPoint: .bottom)
+        static let keyBase = LinearGradient(
+            colors: [
+                Colors.adaptive(
+                    dark: .srgbInk(0.12, alpha: 1),
+                    light: NSColor(srgbRed: 223 / 255, green: 225 / 255, blue: 230 / 255, alpha: 1)),
+                Colors.adaptive(
+                    dark: .srgbInk(0.085, alpha: 1),
+                    light: NSColor(srgbRed: 203 / 255, green: 205 / 255, blue: 210 / 255, alpha: 1))
+            ], startPoint: .top, endPoint: .bottom)
+        static let keyRim = LinearGradient(
+            colors: [
+                Colors.adaptive(dark: .srgbInk(1, alpha: 0.12), light: .srgbInk(1, alpha: 0.57)),
+                Colors.adaptive(dark: .srgbInk(1, alpha: 0.055), light: .srgbInk(1, alpha: 0.41))
+            ], startPoint: .top, endPoint: .bottom)
+        static let keyInk = Colors.adaptive(
+            dark: .srgbInk(0.97, alpha: 1), light: .srgbInk(135 / 255, alpha: 1))
+    }
+
     enum Colors {
         /// Resolves against the window's `effectiveAppearance`, so a token repaints on its own.
         static func adaptive(dark: NSColor, light: NSColor) -> Color {
@@ -504,7 +602,7 @@ enum Theme {
         static let searchFlash = Color.accentColor.opacity(0.35)
         static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
         static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
-        /// The violet of the app mark, used only to tint the About support callout.
+        /// The violet of the app mark.
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
         /// The palette's drop guides while dragging, and once a release would snap it home.
         static let dropGuide = ramp(dark: 0.35, light: 0.35)

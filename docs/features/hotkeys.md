@@ -18,6 +18,9 @@ the keycap rendering; only the _engine_ differs.
 Carbon's dispatcher enters through an explicit `@MainActor` callback. Press and release handlers
 return `OSStatus` synchronously, preserving event order and hold-to-talk release handling.
 
+The onboarding recorder checks combinations against enabled macOS shortcuts and probes for a
+conflicting Carbon registration. Only the onboarding recorder opts into these checks.
+
 ## Invariants
 
 - **Hotkeys persist as JSON strings under `hotkey.<action>` UserDefaults keys**, and

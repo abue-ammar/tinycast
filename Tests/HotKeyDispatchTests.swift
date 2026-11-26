@@ -16,8 +16,36 @@ struct HotKeyDispatchTests {
         for includesShift in [false, true] { dispatch(includesShift: includesShift) }
         allowance()
         crossProcess()
+        externalConflicts()
         print("\(checks) dispatch checks; \(failures) failures")
         if failures > 0 { exit(1) }
+    }
+
+    static func externalConflicts() {
+        let domain = "tinycast.hotkey-dispatch-test.\(UUID())"
+        let defaults = UserDefaults(suiteName: domain)!
+        defer { defaults.removePersistentDomain(forName: domain) }
+        let manager = HotKeyManager(defaults: defaults)
+        let center = HotKeyCenter.current!
+        let shortcut = KeyShortcut(carbonKeyCode: kVK_Space, carbonModifiers: cmdKey)
+        let binding = HotKeyBinding.combo(shortcut)
+        center.reservedShortcuts.insert(shortcut)
+        check(
+            "onboarding rejects an external combination",
+            manager.conflictOwner(of: binding, excluding: .togglePalette, includingExternal: true) != nil)
+        check(
+            "existing recorders retain their local conflict policy",
+            manager.conflictOwner(of: binding, excluding: .togglePalette) == nil)
+        manager.setBinding(binding, for: .dictation)
+        check(
+            "a known Tinycast owner takes precedence",
+            manager.conflictOwner(of: binding, excluding: .togglePalette, includingExternal: true)
+                == manager.displayName(of: .dictation))
+        manager.setBinding(nil, for: .dictation)
+        center.reservedShortcuts.remove(shortcut)
+        check(
+            "onboarding can offer the combination again when it is cleared",
+            manager.conflictOwner(of: binding, excluding: .togglePalette, includingExternal: true) == nil)
     }
 
     static func dispatch(includesShift: Bool) {

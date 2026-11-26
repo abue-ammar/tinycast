@@ -5,7 +5,12 @@ struct RevealableSecureField: View {
     let title: String
     @Binding var text: String
     var prompt: Text?
+    var allowsRevealWhenEmpty = false
+    var focusTint: Color?
+    var revealIconWeight: Font.Weight?
 
+    @Environment(\.appearsActive) private var appearsActive
+    @Environment(\.isEnabled) private var isEnabled
     @State private var isRevealed = false
     @State private var carriedSelection: NSRange?
     @FocusState private var focusedField: Field?
@@ -14,31 +19,49 @@ struct RevealableSecureField: View {
 
     var body: some View {
         HStack(spacing: Theme.Spacing.sm) {
-            if isRevealed {
-                TextField(title, text: $text, prompt: prompt)
-                    .autocorrectionDisabled()
-                    .writingToolsBehavior(.disabled)
-                    .focused($focusedField, equals: .plain)
-            } else {
-                SecureField(title, text: $text, prompt: prompt)
-                    .focused($focusedField, equals: .secure)
+            Group {
+                if isRevealed {
+                    TextField(title, text: $text, prompt: prompt)
+                        .autocorrectionDisabled()
+                        .writingToolsBehavior(.disabled)
+                        .focused($focusedField, equals: .plain)
+                } else {
+                    SecureField(title, text: $text, prompt: prompt)
+                        .focused($focusedField, equals: .secure)
+                }
+            }
+            .focusEffectDisabled(focusTint != nil)
+            .overlay {
+                if let focusTint, focusedField != nil, appearsActive, isEnabled {
+                    RoundedRectangle(cornerRadius: Theme.Radius.roundedTextField)
+                        .strokeBorder(focusTint, lineWidth: Theme.Size.focusRingStroke)
+                        .padding(-Theme.Size.hairline)
+                        .allowsHitTesting(false)
+                }
             }
             Button {
                 setRevealed(!isRevealed)
             } label: {
-                Image(systemName: isRevealed ? "eye.slash" : "eye")
+                let icon = Image(systemName: isRevealed ? "eye.slash" : "eye")
                     .foregroundStyle(.secondary)
+                if let revealIconWeight {
+                    icon.fontWeight(revealIconWeight)
+                } else {
+                    icon
+                }
             }
             .buttonStyle(.plain)
             .help(isRevealed ? "Hide" : "Show")
-            .disabled(text.isEmpty)
+            .disabled(text.isEmpty && !allowsRevealWhenEmpty)
             .accessibilityLabel(isRevealed ? "Hide \(title)" : "Show \(title)")
         }
         .onChange(of: text.isEmpty) { _, isEmpty in
-            if isEmpty, isRevealed { setRevealed(false) }
+            if isEmpty, isRevealed, !allowsRevealWhenEmpty { setRevealed(false) }
         }
         .onChange(of: focusedField) { _, field in
-            guard field != nil, let selection = carriedSelection else { return }
+            guard field != nil else { return }
+            if let focusTint { fieldEditor?.insertionPointColor = NSColor(focusTint) }
+            guard let selection = carriedSelection else { return }
             carriedSelection = nil
             restore(selection)
         }
