@@ -10,8 +10,16 @@ the signing identity itself is in [signing.md](signing.md).
 ./Scripts/build-dmg.sh 0.5.7      # -> build/Tinycast-0.5.7.dmg
 ```
 
-It builds a Release `Tinycast.app` signed with `Tinycast Self-Signed` and packs it with an
-`/Applications` symlink. Official per-channel releases are built by CI, below.
+It builds a Release `Tinycast.app` signed with `Tinycast Self-Signed` and packs it with
+`Scripts/make-dmg.sh`, which CI uses too. Official per-channel releases are built by CI, below.
+
+The DMG opens as a styled install window: the Applications folder on the left, the app on the right
+and an arrow between them. `make-dmg.sh` mounts a writable image, and `Scripts/dmg-layout.swift`
+draws the background and writes the volume's `.DS_Store` directly, so packaging never scripts
+Finder and runs the same on a headless runner. Finder picks the label colour from the pixels behind
+each name, so the light pills under the labels make it draw dark text. The `.DS_Store` bookmark to
+the background names the image's own volume, so the layout must happen on the mounted image, not
+on the staging folder.
 
 ## Signing & Gatekeeper
 
