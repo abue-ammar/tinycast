@@ -752,6 +752,13 @@ another app that happens only after `show` returns, so focus a SwiftUI view asks
 The panel can also turn key inside `makeKeyAndOrderFront`, before SwiftUI has built the field, so
 `DialogPanel.focusFirstTextField` lays the content out first.
 
+A dialog without an accessory corrects that pick instead of racing it: the first time any button
+takes focus, `DialogView.redirectFirstFocus` moves it to the default action, so with Keyboard
+navigation on the ring sits on the button ↵ fires, never on the leading Cancel or a stacked dialog's
+first choice. `defaultFocus` cannot do this, since the pick is AppKit's walk to the first
+`KeyViewProxy`, not SwiftUI's. With Keyboard navigation off buttons never take focus, so nothing
+changes, and a dialog with an accessory keeps the focus described above.
+
 ## Settings
 
 Source: `DesignSystem/SettingsComponents.swift`.

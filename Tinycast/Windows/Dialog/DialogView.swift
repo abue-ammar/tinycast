@@ -24,6 +24,8 @@ struct DialogView: View {
     let request: DialogRequest
     let width: CGFloat
     let onChoose: (Int) -> Void
+    @FocusState private var focusedAction: Int?
+    @State private var tookFirstFocus = false
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
@@ -58,6 +60,9 @@ struct DialogView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             actions
+                .onChange(of: focusedAction, initial: true) { _, action in
+                    redirectFirstFocus(action)
+                }
         }
         .padding(metrics.spacing.dialogInset)
         .frame(width: width, alignment: .leading)
@@ -78,6 +83,13 @@ struct DialogView: View {
         }
     }
 
+    /// AppKit gives first focus to the leading key view, but the ring must sit on ↵'s button.
+    private func redirectFirstFocus(_ action: Int?) {
+        guard request.accessory == nil, action != nil, !tookFirstFocus else { return }
+        tookFirstFocus = true
+        focusedAction = request.defaultIndex
+    }
+
     private var actionButtons: some View {
         actionButtons(singleLine: false)
     }
@@ -91,6 +103,7 @@ struct DialogView: View {
                 singleLine: singleLine,
                 onActivate: { onChoose(index) }
             )
+            .focused($focusedAction, equals: index)
         }
     }
 
