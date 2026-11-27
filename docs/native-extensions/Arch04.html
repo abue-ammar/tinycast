@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1356">
+<title>Native Extensions Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --panel: #0e1528;
+    --card: #121a2f;
+    --line: #253049;
+    --purple: #7b6cf6;
+    --purple-text: #a99bff;
+    --green: #34d399;
+    --green-text: #4ade80;
+    --yellow: #facc15;
+    --text: #f4f6fb;
+    --muted: #b8c0d2;
+    --dim: #8d95aa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); }
+  body {
+    width: 1356px;
+    color: var(--text);
+    font-family: "Inter", "Lato", "DejaVu Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { padding: 18px 38px 22px; }
+
+  /* Header */
+  .header { display: flex; align-items: flex-start; gap: 18px; padding: 0 0 12px; border-bottom: 1px solid var(--line); }
+  .logo { width: 50px; height: 50px; border-radius: 10px; border: 2px solid var(--purple); background: #1a1640;
+          display: grid; place-items: center; font-weight: 800; font-size: 30px; }
+  .kicker { font-size: 15px; font-weight: 600; letter-spacing: .02em; color: #dfe3ee; margin-top: 2px; }
+  .title { font-size: 34px; font-weight: 900; letter-spacing: .005em; line-height: 1.1; margin-top: 4px; }
+  .subtitle { font-size: 14.5px; color: var(--muted); margin-top: 6px; }
+  .header .badge { margin-left: auto; margin-top: 8px; }
+
+  .badge { display: inline-block; border: 1.5px solid var(--purple); color: #cfc8ff; border-radius: 999px;
+           padding: 3px 26px; font-size: 12px; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
+  .badge.green { border-color: var(--green); color: var(--green-text); }
+
+  .labels { display: grid; grid-template-columns: 692px 1fr; margin: 8px 0 6px; }
+  .label { font-size: 10.5px; font-weight: 700; letter-spacing: .03em; }
+  .label.l { color: #60a5fa; }
+  .label.r { color: var(--purple-text); }
+
+  /* Top area */
+  .top { display: grid; grid-template-columns: 610px 1fr; column-gap: 82px; }
+  .box { position: relative; border: 1.5px solid var(--purple); border-radius: 14px; background: var(--panel);
+         padding: 14px 14px 14px; }
+  .box.green { border-color: var(--green); }
+  .box-head { display: flex; align-items: center; gap: 12px; }
+  .box-head .badge { margin-left: auto; }
+  .dot { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid var(--purple); color: #d8d2ff;
+         display: grid; place-items: center; font-size: 11px; font-weight: 700; flex: none; }
+  .box.green .dot { border-color: var(--green); color: var(--green-text); }
+  .box-title { font-size: 23px; font-weight: 700; }
+  .box-sub { font-size: 14px; color: var(--muted); margin: 6px 0 12px; }
+
+  .cols3 { display: grid; grid-template-columns: 1fr 1.05fr 1.3fr; gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 12px 12px; }
+  .card-title { font-size: 16.5px; font-weight: 700; border-left: 3px solid #60a5fa; padding-left: 9px; margin-bottom: 10px; }
+  .card-title.green { border-left-color: var(--green); }
+  .card-title.purple { border-left-color: var(--purple); }
+  ul.bullets { list-style: none; }
+  ul.bullets li { font-size: 12px; color: #dfe3ee; padding-left: 12px; position: relative; margin: 0 0 7px; line-height: 1.3; }
+  ul.bullets li::before { content: ""; width: 4px; height: 4px; border-radius: 50%; background: #60a5fa;
+                          position: absolute; left: 2px; top: 7px; }
+
+  .wide { margin-top: 12px; }
+  .wide h3 { font-size: 17.5px; font-weight: 700; margin-bottom: 8px; }
+  .wide p { font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+  .pills { display: flex; justify-content: space-between; margin-top: 10px; }
+  .pill { border: 1.5px solid #4f6fdc; color: #b9c8ff; border-radius: 999px; padding: 2px 26px; font-size: 11.5px; font-weight: 600; }
+  .pill.green { border-color: var(--green); color: var(--green-text); }
+
+  .cols2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 4px; }
+  .mini { border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; background: #0f1730; }
+  .mini b { display: block; font-size: 13px; margin-bottom: 4px; }
+  .mini span { font-size: 12px; color: var(--muted); line-height: 1.45; display: block; }
+  .offline { margin-top: 10px; font-size: 12.5px; font-weight: 700; color: var(--green-text); }
+
+  .right { display: grid; gap: 18px; grid-template-rows: auto 1fr; }
+  .chips { display: flex; gap: 0; border: 1px solid var(--line); border-radius: 8px; background: var(--card);
+           padding: 11px 12px; justify-content: space-between; }
+  .chips span { font-size: 12.5px; font-weight: 600; color: #e6e9f2; }
+  .chips .g { color: var(--green-text); }
+  .chips .p { color: var(--purple-text); }
+  .note { font-size: 13px; margin-top: 9px; color: var(--muted); }
+  .note.purple { color: var(--purple-text); font-weight: 700; font-size: 13.5px; }
+  .note.green { color: var(--green-text); font-weight: 700; }
+  .note.white { color: #eef1f7; font-weight: 700; }
+  .note.yellow { color: var(--yellow); font-weight: 700; }
+
+  .exts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 10px; }
+  .ext { border: 1.5px solid var(--green); border-radius: 7px; padding: 9px 12px; background: #0f1d24; }
+  .ext.off { border: 1px solid var(--line); background: var(--card); }
+  .ext b { display: block; font-size: 15px; }
+  .ext .run { font-size: 12.5px; font-weight: 700; color: var(--green-text); margin: 4px 0 6px; }
+  .ext.off .run { color: var(--dim); font-weight: 600; }
+  .ext small { font-size: 11.5px; color: var(--muted); }
+
+  .pipe { position: absolute; left: -84px; width: 80px; display: grid; justify-items: center; gap: 6px; }
+  .pipe .tag { border: 1.5px solid var(--purple); color: #cfc8ff; border-radius: 999px; font-size: 10.5px;
+               font-weight: 700; padding: 2px 12px; background: var(--bg); }
+  .pipe.green .tag { border-color: var(--green); color: var(--green-text); }
+
+  /* Lifecycles */
+  .section { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; background: #0c1326; padding: 14px 18px 14px; }
+  .section-head { display: flex; align-items: center; gap: 22px; margin-bottom: 12px; }
+  .section-title { font-size: 22px; font-weight: 800; letter-spacing: .01em; }
+  .section-sub { font-size: 14px; color: var(--muted); }
+  .section-head .badge { margin-left: auto; }
+  .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .step { position: relative; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 12px 10px 10px; display: flex; flex-direction: column; }
+  .step:not(:last-child)::after { content: "›"; position: absolute; right: -13px; top: 74px; color: var(--muted); font-size: 22px; }
+  .step-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; padding-left: 4px; }
+  .num { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #8d95aa; font-size: 10.5px; font-weight: 700;
+         display: grid; place-items: center; color: #e6e9f2; flex: none; }
+  .num.p { border-color: var(--purple); }
+  .num.g { border-color: var(--green); }
+  .num.y { border-color: var(--yellow); }
+  .step-title { font-size: 15.5px; font-weight: 800; letter-spacing: .01em; }
+  .step p { font-size: 12.4px; color: var(--muted); line-height: 1.5; padding-left: 6px; flex: 1; }
+  .meter { margin-top: 10px; border: 1px solid var(--line); border-radius: 6px; padding: 6px 4px; text-align: center;
+           font-size: 12px; font-weight: 700; color: #eef1f7; background: #0d1427; }
+  .meter.g { border-color: var(--green); color: var(--green-text); background: #0d1f22; }
+  .foot-note { margin-top: 12px; font-size: 13.5px; font-weight: 700; color: var(--green-text); }
+
+  .footer { margin-top: 12px; }
+  .ref { font-size: 11px; color: var(--muted); }
+  .proposed { font-size: 13px; font-weight: 700; margin-top: 8px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <div class="logo">T</div>
+    <div>
+      <div class="kicker">TINYCAST / SYSTEM DESIGN</div>
+      <div class="title">NATIVE EXTENSIONS</div>
+      <div class="subtitle">Host + native Swift extension processes, installed from the in-app Store</div>
+    </div>
+    <span class="badge">ARCH 04</span>
+  </div>
+
+  <div class="labels">
+    <div class="label l">LONG-LIVED PROCESS</div>
+    <div class="label r">ON-DEMAND PROCESSES · START WHEN NEEDED, EXIT WHEN DONE</div>
+  </div>
+
+  <div class="top">
+    <!-- Main app -->
+    <div class="box">
+      <div class="box-head">
+        <div class="dot">M</div>
+        <div class="box-title">Tinycast · Main App</div>
+        <span class="badge green">RUNNING</span>
+      </div>
+      <div class="box-sub">Long-lived process • authoritative owner of data and services</div>
+
+      <div class="cols3">
+        <div class="card">
+          <div class="card-title">Engines</div>
+          <ul class="bullets">
+            <li>Palette and hotkeys</li>
+            <li>Clipboard and search</li>
+            <li>AI, dictation, iCloud</li>
+            <li>Updates and actions</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title green">Shared state</div>
+          <ul class="bullets">
+            <li>Preferences and stores</li>
+            <li>Clipboard database</li>
+            <li>Installed extensions</li>
+            <li>Single writer</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-title purple">Extension host</div>
+          <ul class="bullets">
+            <li>Verifies and installs ZIPs</li>
+            <li>Checks Developer ID team</li>
+            <li>Does Accessibility and paste</li>
+            <li>Opens the Store in Settings</li>
+            <li>Updates, pins and revokes</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card wide">
+        <h3>Host-rendered extension UI</h3>
+        <p>Swift SDK sends versioned List / Grid / Detail / Form / MenuBar trees with Actions.<br>
+           Main draws every view. Search Extensions opens the Store in Settings.</p>
+        <div class="pills"><span class="pill">Main app stays alive</span><span class="pill green">ONE WRITER</span></div>
+      </div>
+
+      <div class="card wide">
+        <h3>Menu bar and background</h3>
+        <div class="cols2">
+          <div class="mini">
+            <b>Menu bar items</b>
+            <span>One NSStatusItem per shown command, drawn from its last snapshot. Opening the menu refreshes it.</span>
+          </div>
+          <div class="mini">
+            <b>Background refresh</b>
+            <span>macOS schedules each interval (10 min or more). 30 s limit; gives way to the user.</span>
+          </div>
+        </div>
+        <div class="offline">Extensions off → no process, menu bar item, schedule or index fetch</div>
+      </div>
+    </div>
+
+    <!-- On-demand processes -->
+    <div class="right">
+      <div class="box">
+        <div class="pipe" style="top: 52px;">
+          <span class="tag">PIPE</span>
+          <svg width="76" height="26" viewBox="0 0 76 26" fill="none" stroke="#b8c0d2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h66M64 2l6 5-6 5"/><path d="M72 19H6M12 14l-6 5 6 5"/>
+          </svg>
+        </div>
+        <div class="box-head">
+          <div class="dot">S</div>
+          <div class="box-title">Tinycast (Settings)</div>
+          <span class="badge">TEMPORARY</span>
+        </div>
+        <div class="box-sub">Same Tinycast executable: --role=settings • Own process / same app identity</div>
+        <div class="chips">
+          <span>Settings UI</span><span class="g">Extension Store</span><span>SharedStateMirror</span><span>MainAppLink</span><span class="p">No engines</span>
+        </div>
+        <div class="note">Store media loads here, never in Main. Install, update, uninstall → ExtensionCall to Main.</div>
+        <div class="note purple">On Close: pending edits → closing / ack (1s fallback) → exit → RAM reclaimed</div>
+      </div>
+
+      <div class="box green">
+        <div class="pipe green" style="top: 60px;">
+          <span class="tag">PIPE</span>
+          <svg width="76" height="26" viewBox="0 0 76 26" fill="none" stroke="#4ade80" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h66M64 2l6 5-6 5"/><path d="M72 19H6M12 14l-6 5 6 5"/>
+          </svg>
+        </div>
+        <div class="box-head">
+          <div class="dot">E</div>
+          <div class="box-title">Tinycast (Extensions)</div>
+          <span class="badge green">ON DEMAND</span>
+        </div>
+        <div class="box-sub">Own executable per running extension • not sandboxed • never a Tinycast role</div>
+        <div class="exts">
+          <div class="ext"><b>Extension A</b><div class="run">Running · 2–5 MB</div><small>Own process</small></div>
+          <div class="ext"><b>Extension B</b><div class="run">Running · 2–5 MB</div><small>Not shared with A</small></div>
+          <div class="ext off"><b>Extension C</b><div class="run">Not running</div><small>No memory used</small></div>
+        </div>
+        <div class="note white">Signed index → zip SHA-256 → Developer ID team check → Main installs</div>
+        <div class="note green">Developer ID signed • never notarized • no entitlements</div>
+        <div class="note green">Uses Tinycast's macOS permissions • Store lists them • PR review is the guard</div>
+        <div class="note green">Permission off in macOS → standard view → Tinycast's Permissions settings</div>
+        <div class="note yellow">Prototype · 33 ms median to first reply · quarantined copies prompted</div>
+        <div class="cols2" style="margin-top: 12px;">
+          <div class="mini">
+            <b>Data folder</b>
+            <span>Application Support / ExtensionData/&lt;id&gt;, passed in start. Uninstall removes it.</span>
+          </div>
+          <div class="mini">
+            <b>Developer mode</b>
+            <span>Debug builds only. Runs local bundles without the Store or the team check.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings lifecycle -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">SETTINGS LIFECYCLE</div>
+      <div class="section-sub">The Settings process exists only while its window is open.</div>
+      <span class="badge">SAME IN ALL 4</span>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-head"><span class="num">01</span><span class="step-title">CLOSED</span></div>
+        <p>Settings not running<br>Only main app in memory</p><div class="meter">Main 52 MB • Settings 0</div></div>
+      <div class="step"><div class="step-head"><span class="num p">02</span><span class="step-title">OPEN SETTINGS</span></div>
+        <p>Main spawns --role=settings<br>ProcessLink connects</p><div class="meter">Main 52 MB • Settings 62 MB</div></div>
+      <div class="step"><div class="step-head"><span class="num g">03</span><span class="step-title">USE SETTINGS</span></div>
+        <p>Settings loads heavy panes<br>Main app stays stable</p><div class="meter">Main 52 MB • Settings 132 MB</div></div>
+      <div class="step"><div class="step-head"><span class="num y">04</span><span class="step-title">CLOSE SETTINGS</span></div>
+        <p>Send closing + pending edits<br>Host replies; Settings exits</p><div class="meter">Main 52 MB • Exiting</div></div>
+      <div class="step"><div class="step-head"><span class="num g">05</span><span class="step-title">MEMORY RELEASED</span></div>
+        <p>Process is terminated<br>Its private RAM is reclaimed</p><div class="meter g">Main 52 MB • Settings 0</div></div>
+    </div>
+  </div>
+
+  <!-- Extension lifecycle -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">EXTENSION LIFECYCLE</div>
+      <div class="section-sub">An extension process exists only while it has work.</div>
+      <span class="badge">ARCH 04</span>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-head"><span class="num">01</span><span class="step-title">EXTENSIONS OFF</span></div>
+        <p>Feature turned off<br>No process, menu bar item, schedule or fetch</p><div class="meter">Extensions 0 MB</div></div>
+      <div class="step"><div class="step-head"><span class="num p">02</span><span class="step-title">INSTALL</span></div>
+        <p>From the Store in Settings<br>Index → SHA-256 → team check<br>Nothing asks</p><div class="meter">No extension process</div></div>
+      <div class="step"><div class="step-head"><span class="num g">03</span><span class="step-title">RUN A COMMAND</span></div>
+        <p>User, menu open, schedule or launch<br>~33 ms to reply<br>Permission off → standard view</p><div class="meter">Extension 2–5 MB</div></div>
+      <div class="step"><div class="step-head"><span class="num y">04</span><span class="step-title">STOP</span></div>
+        <p>View or menu closes → stops now<br>Work ends → after an idle delay<br>Background run: 30 s at most</p><div class="meter">Extension exiting</div></div>
+      <div class="step"><div class="step-head"><span class="num g">05</span><span class="step-title">MEMORY RELEASED</span></div>
+        <p>Process is terminated<br>Its private RAM is reclaimed</p><div class="meter g">Extension 0 MB</div></div>
+    </div>
+    <div class="foot-note">Global off → workers exit (0 MiB). With 50 installed, Main used 26.8 MiB with a separate Store vs 28.3 MiB in Main.</div>
+  </div>
+
+  <!-- Publishing and updates -->
+  <div class="section">
+    <div class="section-head">
+      <div class="section-title">PUBLISHING AND UPDATES</div>
+      <div class="section-sub">CI builds every extension from reviewed source. Nobody uploads a binary.</div>
+      <span class="badge green">CLOUDFLARE R2</span>
+    </div>
+    <div class="steps">
+      <div class="step"><div class="step-head"><span class="num">01</span><span class="step-title">PULL REQUEST</span></div>
+        <p>Source in tinycast-extensions<br>Review checks the code and its permission list</p><div class="meter">No binary uploads</div></div>
+      <div class="step"><div class="step-head"><span class="num p">02</span><span class="step-title">CI BUILD</span></div>
+        <p>validate → build → pack<br>Developer ID signed<br>Never notarized</p><div class="meter">Universal binary</div></div>
+      <div class="step"><div class="step-head"><span class="num g">03</span><span class="step-title">PUBLISH</span></div>
+        <p>Zip and media to R2<br>Signed index uploaded last</p><div class="meter">extensions.tinycast.dev</div></div>
+      <div class="step"><div class="step-head"><span class="num y">04</span><span class="step-title">APP CHECKS</span></div>
+        <p>Store open, daily, or Check for Updates<br>Unchanged index → empty 304</p><div class="meter">1 request a day</div></div>
+      <div class="step"><div class="step-head"><span class="num g">05</span><span class="step-title">UPDATE</span></div>
+        <p>Auto-update on by default<br>Pinned waits for its Update button<br>Revoked stops</p><div class="meter g">Swaps when not running</div></div>
+    </div>
+    <div class="foot-note">Install counter: one Worker + D1 adds 1 per install, stores no IP, writes stats.json hourly. Counts stay out of the signed index.</div>
+  </div>
+
+  <div class="footer">
+    <div class="ref">Reference: Settings measured on a Debug build, macOS 27.2 / 27.2.1. Extension figures from a notarized test host on macOS 27.2.1; real use varies.</div>
+    <div class="proposed">PROPOSED · Release builds install from the in-app Store only; Debug builds' developer mode also runs local bundles. Main owns installs, updates and preferences. Workers and the Store run on demand.</div>
+  </div>
+
+</div>
+<script>
+  document.fonts.ready.then(() => {
+    document.title = "H=" + Math.ceil(document.documentElement.getBoundingClientRect().height);
+  });
+</script>
+</body>
+</html>
