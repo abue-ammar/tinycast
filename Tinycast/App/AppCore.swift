@@ -299,6 +299,18 @@ final class AppCore {
             NSApp.setActivationPolicy(.accessory)
             dictationAudioDucker.recover()
             load()
+            RaycastExtensionsMigration.run(
+                defaults: .standard, supportDirectory: AppPaths.applicationSupport(),
+                settingsFile: settings.settingsFileEnabled ? AppPaths.settingsFile() : nil)
+            let retired = RaycastExtensionsMigration.retiredEntries(
+                in: favorites.keys, Array(aliases.aliases.keys), Array(visibility.hiddenItemKeys),
+                Array(launcherRanking.visits.keys))
+            if !retired.isEmpty {
+                favorites.remove(keys: retired)
+                aliases.removeKeys(retired)
+                visibility.removeItemKeys(retired)
+                retired.forEach(launcherRanking.reset(itemKey:))
+            }
             loadHotKeys()
             pinnedEmoji.onPersistenceFailure = { [weak self] in
                 self?.showMessage(String(localized: "Couldn't save Emoji & Symbols pins"), tone: .danger)

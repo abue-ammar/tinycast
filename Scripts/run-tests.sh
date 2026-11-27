@@ -280,6 +280,11 @@ run AppearanceTests        Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/DesignSystem/IconTint.swift
 run LanguageTests          Tinycast/Features/Settings/AppLanguage.swift
+run RaycastExtensionsMigrationTests Tinycast/Migrations/RaycastExtensionsMigration.swift \
+                           Tinycast/Features/Settings/Model/*.swift \
+                           Tinycast/Features/CloudSync/Model/*.swift \
+                           Tinycast/Features/CloudSync/Service/SyncSource.swift \
+                           Tinycast/DesignSystem/IconTint.swift
 run LocalizedResourceTests Tinycast/Platform/LocalizedResource.swift
 run RelaunchTests          Tinycast/App/AppDelegate.swift Tinycast/Platform/RelaunchRunner.swift
 run InterfaceSizeTests     Tinycast/Platform/Appearance.swift \

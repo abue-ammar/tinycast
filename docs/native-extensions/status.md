@@ -51,13 +51,26 @@ is a separate feature and stays.
 
 - `extensionCommand` went too, rather than staying unused until Phase 3. The plan now says so;
   Phase 3 adds the kind back.
-- No migration. Old files, UserDefaults keys and CloudKit records stay on disk, unread.
-- One known effect of that: with the settings file on, `extensions.showInLauncher` shows an
-  "unknown setting" message at each launch until any change in the app rewrites the file. This is a
-  deliberate exception to the settings-file rule that a removed key ships a migration.
-- iCloud Sync's saved state named the removed category, and was decoded strictly, so it would have
+- A one-release cleanup, `RaycastExtensionsMigration`, clears what the old runtime left behind:
+  - **On each Mac, at launch:** the `extensions`, `extension-data` and `extension-support` folders
+    and `extension-commands.json` and `extension-versions.json` in Application Support; the old
+    preferences (Show in launcher included), extension hotkeys and menu bar item positions;
+    `extension:` keys in favorites, aliases, hidden items and ranking; and the `extensions` section
+    of `settings.json`, so the import never reports it as unknown.
+  - **In iCloud:** this build re-downloads everything once, because what it syncs changed. Every
+    `extensions.` record that arrives is deleted, and so is the synced Show in launcher setting.
+  - A Mac still on an older version sees those deletions and drops its Raycast extensions, which it
+    would lose at its own update anyway.
+  - A user who skips this release keeps the leftovers. Nothing reads them, so that is harmless.
+- Show in launcher (`extensionsShowInLauncher`, `extensions.showInLauncher`) goes with the rest for
+  now. If native extensions want users' old choice back, drop it from the cleanup before release.
+- `extensionsEnabled` is removed, so native extensions start off for everyone and ask for consent
+  again.
+- iCloud Sync's saved state named the removed category and was decoded strictly, so it would have
   reset every syncing Mac. `SyncLedger` now drops a source or category it no longer knows when it
-  loads. That is a lasting rule, not a migration, and covers later removals too.
+  loads. That is a lasting rule, not part of the cleanup.
+- Native extensions must sync under a new source name, never `extensions`: older Tinycast versions
+  still read those records as Raycast installs, and a Mac still on the cleanup release deletes them.
 
 **Comes back later**
 
@@ -66,3 +79,19 @@ is a separate feature and stays.
 - An extensions rule in AGENTS.md and the extension process in `architecture.md` (Phase 9).
 
 **Next:** Phase 1 in `tinycast-extensions`.
+
+## After the cleanup release ships
+
+Once a stable release (`vX.Y.Z`) contains the cleanup, `./Scripts/lint.sh` and the Release workflow
+fail on purpose until it is deleted. Then remove, in one change:
+
+1. `Tinycast/Migrations/RaycastExtensionsMigration.swift`.
+2. In `AppCore.start()`, the block right after `load()`: the `RaycastExtensionsMigration.run` call
+   and the `retired` keys removed from favorites, aliases, visibility and ranking.
+3. In `CloudSyncSession.receive`, the `isRetiredRecord` check at the top of the records loop.
+4. `Tests/RaycastExtensionsMigrationTests.swift` and its line in `Scripts/run-tests.sh`.
+5. Its row in `docs/testing.md` and its row in `docs/migrations.md`.
+6. Run `xcodegen generate`, then build, `./Scripts/run-tests.sh` and `./Scripts/lint.sh`.
+7. Log it here with the date and the release it shipped in.
+
+Deleting the file alone fails the build at items 2 and 3, so none of them can be missed.
