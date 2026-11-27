@@ -8,7 +8,7 @@ file records what is done, what was decided on the way, and what comes next.
 | Phase | What                                   | Repo                   | State            | Branch / PR                 | Date       |
 | ----- | -------------------------------------- | ---------------------- | ---------------- | --------------------------- | ---------- |
 | 0     | Remove Raycast extensions              | app                    | Done, not merged | `ext/0-remove-raycast`      | 2026-11-28 |
-| 1     | The contract                           | extensions             | Not started      |                             |            |
+| 1     | The contract                           | extensions             | Done             | `main`                      | 2026-11-28 |
 | 2     | SDK, CLI and a first extension         | extensions             | Not started      |                             |            |
 | 3     | The host                               | app                    | Not started      | `ext/3-host`                |            |
 | 4     | Host-drawn UI                          | app                    | Not started      | `ext/4-ui`                  |            |
@@ -22,6 +22,58 @@ App step branches come off `native-extensions` and merge back into it. The exten
 to its own `main`.
 
 ## Log
+
+### 2026-11-28 · Phase 1: the contract
+
+`tinycast-extensions` holds the SDK package and the one definition of everything the app and an
+extension both read. `swift build` and `swift test` pass with warnings as errors, and the schema
+check passes.
+
+**Built**
+
+- The repo: `Package.swift` (tools 6.2, Swift 6, macOS 26, no dependencies), MIT `LICENSE`,
+  `CODEOWNERS`, both AGENTS.md files with `CLAUDE.md` symlinks, and the app's `.swift-format`.
+  `TinycastKit` and `TinycastCLI` are empty targets until Phase 2.
+- `TinycastProtocol` v1: the seven messages, the List, Grid, Detail, Form and MenuBar trees, the
+  host calls and their errors, the manifest with its validation, the permissions, the Store index
+  and `ExtensionAPIVersion`.
+- `schema/extension.schema.json` (JSON Schema 2020-12) and `Scripts/check-schema.sh`, which runs
+  ajv through `npx` over the same fixtures the Swift tests read.
+- Tests: one JSON fixture per message variant, checked by decoding and by comparing the encoded
+  JSON; the plan's sample manifest; one counter-example per manifest rule; the plan's index sample.
+- `ci.yml` builds, tests and checks the schema on every PR and push to `main`. `publish.yml` and
+  `worker.yml` are manual stubs until Phase 7.
+
+**Decided**
+
+- Names: top-level types start with `Extension` (`ExtensionManifest`, `ExtensionPermission`,
+  `ExtensionAPIVersion`, `ExtensionIndexFile`). Messages nest in `ExtensionWire`, like
+  `SettingsWire`; trees nest in `ExtensionUI`, so `List`, `Form` and `Image` never shadow SwiftUI.
+  The index type is `ExtensionIndexFile` because `ExtensionStoreIndex` reads too close to the app's
+  planned `ExtensionIndexStore`.
+- Vendoring: every declaration and extension is `nonisolated` and `public`, so the files compile in
+  the app's module as they are. They were type-checked as one module under the app's settings, and
+  also under MainActor default isolation, so adopting that setting later needs no change.
+- Coding: one enum per direction (`ExtensionWire.ToExtension`, `ExtensionWire.ToMainApp`), as
+  `ProcessLink` wants. Every message is a flat object tagged by `type`; a nested variant
+  (`input`, `call`, `error`, `ui`, images, form fields) is its own tagged object. Values are
+  kebab-case, keys camelCase. Plain `JSONDecoder` works, as `PipeFraming` uses.
+- UI: every item, field and action has an `id` unique within a render. An action is only an ID; its
+  effects are host calls. Images are SF Symbols or paths inside `assets/`, and decoding rejects a
+  path that leaves it. The host filters List and Grid unless the tree sets `handlesSearch`.
+  Navigation, per-action shortcuts and Detail metadata wait for a later minor.
+- Preferences: `text`, `secret`, `checkbox` and `dropdown`. `start` carries each set one as a bare
+  JSON string or bool.
+- Validation: plain decoding checks shape and ignores unknown keys, so an older reader survives a
+  newer minor. `ExtensionManifest.validated(from:)`, which the CLI will call, checks every rule and
+  rejects unknown keys. The one rule the schema cannot state, unique command and preference names,
+  lives in Swift alone.
+- One manifest type for both copies: `api` is optional, absent in the authored file and stamped by
+  `pack`.
+- The index drops an entry it cannot decode instead of failing whole, since a newer minor may name a
+  permission or mode an older app doesn't know.
+
+**Next:** Phase 2 in `tinycast-extensions`: TinycastKit, the CLI and `hello`.
 
 ### 2026-11-28 · Phase 0: remove Raycast extensions
 
