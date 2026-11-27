@@ -404,7 +404,9 @@ card mid-keystroke.
 
 An attached `k` is a thousands suffix (`10k` → `10,000`), while whitespace keeps Kelvin explicit
 (`10 k to c`); the established attached Kelvin conversion form remains valid when the temperature
-target makes the intent unambiguous (`273.15K to C`).
+target makes the intent unambiguous (`273.15K to C`). Bare `c` and `f` convert to each other
+(`10c` → `50 °F`), and the ordinal `º` that Spanish and Portuguese keyboards type reads as `°`
+(`10ºC`).
 
 A whole magnitude word after a literal scales it the same way, spaced or attached and in any case:
 `thousand`, `million`, `billion`, `trillion` and `quadrillion` (`13 million idr to usd`, `1.5 billion`).
