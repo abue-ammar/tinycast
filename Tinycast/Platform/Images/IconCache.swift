@@ -58,14 +58,13 @@ enum SystemSymbolName {
     }
 }
 
-/// A feature sets one rather than branching `AppEntry`; `artwork` carries its extent.
+/// A feature sets one rather than branching `AppEntry`.
 enum EntryIcon: Hashable, Sendable {
     /// The stamp is `FileIconStamp`'s: it moves when the file's icon does, retiring the old bitmap.
     case file(stamp: Int)
     case symbol(String)
     /// Drawn as a vector `IconTile`; the bitmap paths below fall back to the plain symbol tile.
     case tile(symbol: String, tint: IconTint)
-    case artwork(path: String, extent: CGFloat)
     /// A declared type's icon, for a bundle whose own file icon is a placeholder.
     case contentType(String)
 }
@@ -327,29 +326,6 @@ enum IconCache {
         return rasterized(source, into: NSRect(x: inset, y: inset, width: side, height: side))
     }
 
-    /// Keyed by path and extent, so two features wanting different sizes never serve each other's.
-    static func artwork(atPath path: String, extent: CGFloat) -> NSImage {
-        let key = artworkKey(path, extent)
-        if let cached = cache.object(forKey: key) { return cached }
-        guard let source = NSImage(contentsOfFile: path) else {
-            return symbolIcon(named: "questionmark.square.dashed")
-        }
-        let (icon, cost) = fitted(source, to: extent)
-        cache.setObject(icon, forKey: key, cost: cost)
-        return icon
-    }
-
-    static func cachedArtwork(atPath path: String, extent: CGFloat) -> NSImage? {
-        cache.object(forKey: artworkKey(path, extent))
-    }
-
-    static func loadArtworkAsync(atPath path: String, extent: CGFloat) async -> NSImage? {
-        if let cached = cachedArtwork(atPath: path, extent: extent) { return cached }
-        return await Task.detached(priority: .userInitiated) {
-            Decoded(image: artwork(atPath: path, extent: extent))
-        }.value.image
-    }
-
     static func contentTypeIcon(_ identifier: String) -> NSImage {
         let key = contentTypeKey(identifier)
         if let cached = cache.object(forKey: key) { return cached }
@@ -373,10 +349,6 @@ enum IconCache {
         key("type:\(identifier)")
     }
 
-    private static func artworkKey(_ path: String, _ extent: CGFloat) -> NSString {
-        key("artwork:\(extent):\(path)")
-    }
-
     // MARK: - Drawing an `EntryIcon`
 
     /// One switch, so a row never has to know which of these paths its entry wants.
@@ -384,7 +356,6 @@ enum IconCache {
         switch source {
         case .file(let stamp): return icon(forFile: fileURL.path, stamp: stamp)
         case .symbol(let name), .tile(let name, _): return symbolIcon(named: name)
-        case .artwork(let path, let extent): return artwork(atPath: path, extent: extent)
         case .contentType(let identifier): return contentTypeIcon(identifier)
         }
     }
@@ -393,7 +364,6 @@ enum IconCache {
         switch source {
         case .file(let stamp): return cached(forFile: fileURL.path, stamp: stamp, size: size)
         case .symbol(let name), .tile(let name, _): return cachedSymbol(named: name)
-        case .artwork(let path, let extent): return cachedArtwork(atPath: path, extent: extent)
         case .contentType(let identifier): return cachedContentTypeIcon(identifier)
         }
     }
@@ -402,8 +372,6 @@ enum IconCache {
         switch source {
         case .file(let stamp): return await loadAsync(forFile: fileURL.path, stamp: stamp, size: size)
         case .symbol(let name), .tile(let name, _): return await loadSymbolAsync(named: name)
-        case .artwork(let path, let extent):
-            return await loadArtworkAsync(atPath: path, extent: extent)
         case .contentType(let identifier): return await loadContentTypeIconAsync(identifier)
         }
     }

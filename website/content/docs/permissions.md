@@ -32,7 +32,6 @@ Grant it in **System Settings → Privacy & Security → Accessibility**, or fro
 | [Hyper key](/docs/reference/hotkeys#hyper-key)                                | Turns one physical key into a modifier chord           |
 | Double-tap modifier shortcuts, and holding one modifier to dictate            | Detects the tap or hold                                |
 | <kbd>⌘</kbd><kbd>esc</kbd> back to the root search                            | macOS uses this shortcut unless Tinycast intercepts it |
-| `getSelectedText` in [extensions](/docs/extensions)                           | Reads the selection from the frontmost app             |
 
 ### Snippets and keystroke matching
 

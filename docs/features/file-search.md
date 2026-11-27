@@ -276,7 +276,7 @@ its default app. A system `QLPreviewPanel` would take key, and the palette hides
 
 None of the copies is marked with `ClipboardManager.internalType`, so a copied file enters clipboard
 history like any other copy. Move to Trash rides the clipboard's own ⌃X, asks nothing first (trashing is
-undoable, as it is for Uninstall and for an extension's `trash`) and has no ⌃⇧X counterpart, since there
+undoable, as it is for Uninstall) and has no ⌃⇧X counterpart, since there
 is no "all" to trash. The three ⌘C chords differ only by their second modifier, which
 `PaletteShortcut` reads in order: ⇧, then ⌥, then ⌃; bare ⌘C stays with the search field.
 

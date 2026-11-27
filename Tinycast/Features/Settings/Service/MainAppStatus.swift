@@ -34,17 +34,6 @@ struct MainAppStatus: Codable, Equatable, Sendable {
         func isInstalled(_ model: DictationModel) -> Bool { installed.contains(model) }
     }
 
-    struct Extensions: Codable, Equatable, Sendable {
-        /// Moves with the main app's installed set, so Settings reads the disk again.
-        var catalogRevision = 0
-        /// Title by manifest name.
-        var updates: [String: String] = [:]
-        var updating: Set<String> = []
-        var appearances: [String: ExtensionAppearance] = [:]
-        /// By command entry ID; the menu-bar snapshot stays behind, as no pane draws it.
-        var commands: [String: ExtensionCommandMetadata] = [:]
-    }
-
     struct Updates: Codable, Equatable, Sendable {
         var updatesItself = false
         var isChecking = false
@@ -64,5 +53,4 @@ struct MainAppStatus: Codable, Equatable, Sendable {
     var mcpStatuses: [UUID: MCPServerStatus] = [:]
     var mcpAuthentication: [UUID: MCPOAuthManager.Status] = [:]
     var updates = Updates()
-    var extensions = Extensions()
 }

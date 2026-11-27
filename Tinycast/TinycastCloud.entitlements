@@ -5,8 +5,6 @@
 	<!-- Tinycast.entitlements plus iCloud Sync's; only a build with a matching profile may use it. -->
 	<key>com.apple.security.app-sandbox</key>
 	<false/>
-	<key>com.apple.security.cs.allow-jit</key>
-	<true/>
 	<key>com.apple.security.automation.apple-events</key>
 	<true/>
 	<key>com.apple.security.device.camera</key>

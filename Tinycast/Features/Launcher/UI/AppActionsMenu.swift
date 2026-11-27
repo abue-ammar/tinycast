@@ -83,42 +83,6 @@ enum AppActionsMenu {
                     core.quicklinkCoordinator.editQuicklink(quicklink)
                 })
         }
-        if app.kind == .extensionCommand {
-            if core.extensions.isBackgroundSchedulable(for: app) {
-                let enabled = core.extensions.isBackgroundEnabled(for: app)
-                items.append(
-                    PopoverMenuItem(
-                        title: enabled
-                            ? String(localized: "Disable Background Refresh")
-                            : String(localized: "Enable Background Refresh"),
-                        systemImage: enabled ? "pause.circle" : "play.circle", startsSection: true
-                    ) {
-                        core.extensions.toggleBackgroundRefresh(for: app)
-                    })
-                if enabled {
-                    items.append(
-                        PopoverMenuItem(
-                            title: String(localized: "Refresh Now"), systemImage: "arrow.clockwise"
-                        ) {
-                            core.extensions.refreshNow(app)
-                        })
-                }
-            }
-            items.append(
-                PopoverMenuItem(
-                    title: String(localized: "Configure Extension"), systemImage: "slider.horizontal.3",
-                    startsSection: true
-                ) {
-                    core.extensionCoordinator.showExtensionSettings(for: app)
-                })
-            items.append(
-                PopoverMenuItem(
-                    title: String(localized: "Uninstall Extension"), systemImage: "trash",
-                    isDestructive: true
-                ) {
-                    core.extensionCoordinator.confirmUninstall(app)
-                })
-        }
         return PopoverMenuContent(header: app.name, items: items)
     }
 
@@ -137,7 +101,7 @@ enum AppActionsMenu {
         }
         let primarySymbol =
             switch app.kind {
-            case .application, .command, .extensionCommand: "list.dash.header.rectangle"
+            case .application, .command: "list.dash.header.rectangle"
             default: "list.bullet.rectangle"
             }
         var items = [

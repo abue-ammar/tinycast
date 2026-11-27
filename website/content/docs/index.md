@@ -64,7 +64,6 @@ index or use memory. That's how the app stays small with a long feature list.
 | Apple Shortcuts                                       | Settings → Apple Shortcuts   |
 | Dictation                                             | Settings → Dictation         |
 | [Custom commands](/docs/launcher/commands)            | Settings → Commands          |
-| [Extensions](/docs/extensions)                        | Settings → Extensions        |
 
 [Clipboard history](/docs/features/clipboard) is the only feature that starts on. You can turn it
 off in **Settings → Clipboard**.

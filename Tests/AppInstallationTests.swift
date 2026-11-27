@@ -268,7 +268,7 @@ struct AppInstallationTests {
         }
         check(
             "the fixture exposes an interface-localized declaration",
-            Bundle(url: app)?.installedAppName == "InterfaceOnlyFixture")
+            Bundle(url: app)?.appDisplayName == "InterfaceOnlyFixture")
         let domain = "tinycast.language-index-test.\(UUID())"
         let defaults = UserDefaults(suiteName: domain)!
         defer { defaults.removePersistentDomain(forName: domain) }
@@ -533,7 +533,6 @@ enum SettingsTab: Sendable {
     case ai, quickActions, windowManagement, quicklinks, snippets, commands, calendar
     var tint: IconTint { .gray }
 }
-enum ExtensionRefreshState: Hashable, Sendable { case idle }
 enum EntryIcon: Hashable, Sendable {
     case file(stamp: Int), symbol(String), tile(symbol: String, tint: IconTint)
 }
@@ -560,7 +559,7 @@ enum HotKeyAction: Hashable, Sendable {
     case app(bundleID: String), settingsPane(bundleID: String), quickAction(id: UUID)
     case customCommand(id: UUID), systemAction(id: SystemAction.ID), windowCommand(id: WindowCommand.ID)
     case customWindowSize(id: UUID), windowLayout(id: UUID), windowRoom(id: UUID), quicklink(id: UUID)
-    case appleShortcut(id: UUID), snippet(id: UUID), extensionCommand(entryID: String)
+    case appleShortcut(id: UUID), snippet(id: UUID)
     init?(entryID: String) { nil }
 }
 struct OtherEntry<Tag: Sendable>: Sendable {

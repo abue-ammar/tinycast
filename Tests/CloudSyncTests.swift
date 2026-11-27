@@ -193,6 +193,19 @@ struct CloudSyncTests {
         check("forgetting a category drops its items", categories.entry(named: groceries) == nil)
         check("and leaves it to merge again", !categories.isJoined(.notes, key: "x.md"))
 
+        let kept = name(for: "kept.md")
+        let stored = Data(
+            """
+            {"entries": {"\(kept)": {"source": "notes", "key": "kept.md", "modifiedAt": 0},
+                         "retired.x": {"source": "retired", "key": "x", "modifiedAt": 0}},
+             "joined": ["notes", "retired"]}
+            """.utf8)
+        let loaded = try? JSONDecoder().decode(SyncLedger.self, from: stored)
+        check(
+            "a retired source costs only its own entries",
+            loaded?.entry(named: kept)?.key == "kept.md" && loaded?.entry(named: "retired.x") == nil)
+        check("a retired category is dropped, not the ledger", loaded?.joined == [.notes])
+
         var counted = SyncLedger()
         let g = name(for: "g.md")
         _ = counted.receive(

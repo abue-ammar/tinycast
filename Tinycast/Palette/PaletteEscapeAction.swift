@@ -6,14 +6,13 @@ enum PaletteEscapeAction: Equatable {
     case closeMenu
     case leaveArgumentField
     case clearQuery
-    case exitExtensionScreen
     case goBack
     case collapsePalette
     case hidePalette
 
     static func resolve(
-        menuOpen: Bool, menuQuery: String, argumentFocused: Bool, query: String, mode: PaletteMode,
-        canGoBack: Bool, behavior: EscapeKeyBehavior, compactRootExpanded: Bool = false
+        menuOpen: Bool, menuQuery: String, argumentFocused: Bool, query: String, canGoBack: Bool,
+        behavior: EscapeKeyBehavior, compactRootExpanded: Bool = false
     ) -> Self {
         if menuOpen { return menu(query: menuQuery) }
         // An argument field is a step deeper than the query, so it is left before anything clears.
@@ -21,8 +20,6 @@ enum PaletteEscapeAction: Equatable {
         if !query.isEmpty { return .clearQuery }
         if compactRootExpanded { return .collapsePalette }
         guard behavior == .navigateBackOrClose else { return .hidePalette }
-        // An extension pops its own navigation stack before the command is left.
-        if mode == .extensionCommand { return .exitExtensionScreen }
         return canGoBack ? .goBack : .hidePalette
     }
 

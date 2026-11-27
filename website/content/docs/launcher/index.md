@@ -5,7 +5,7 @@ description: One search across everything Tinycast knows about, and how it order
 
 The launcher is the root screen. One search covers your apps, System Settings panes, commands,
 quicklinks, Apple Shortcuts, snippets, system actions, window commands, layouts and rooms, custom
-commands, Quick Actions, extension commands and upcoming meetings.
+commands, Quick Actions and upcoming meetings.
 
 <kbd>return</kbd> opens the selection. <kbd>⌘</kbd><kbd>K</kbd> shows everything else you can do
 with it.
@@ -15,8 +15,8 @@ with it.
 [Favorites](/docs/launcher/favorites) come first, then upcoming Meetings and
 [Suggestions](#suggestions), followed by each section in this order:
 
-Applications → System Settings → Extensions → Quicklinks → Apple Shortcuts → Snippets → System
-Actions → Window Layouts → Rooms → Window Management → Custom Commands → Quick Actions → Commands
+Applications → System Settings → Quicklinks → Apple Shortcuts → Snippets → System Actions → Window
+Layouts → Rooms → Window Management → Custom Commands → Quick Actions → Commands
 
 Within a section, the entries you open most come first, then entries with an alias. The rest are
 sorted alphabetically. Meetings stay in the order they start.
@@ -25,7 +25,7 @@ sorted alphabetically. Meetings stay in the order they start.
 
 **Suggestions** shows up to five entries you're likely to want:
 
-- an app or extension you installed in the last five minutes and haven't opened yet
+- an app you installed in the last five minutes and haven't opened yet
 - the entries you open most, unless they already have a shortcut
 - while you have little history, a few built-in commands like Clipboard History and Search Files
 
@@ -69,7 +69,6 @@ Tinycast checks several names for each entry and gives some of them more weight 
 | Your [alias](/docs/launcher/aliases)  | `ps` for Photoshop                      |
 | The display name                      | `Visual Studio Code`                    |
 | Other names the app is known by       | `iCal` for Calendar, `微信` as `weixin` |
-| The extension a command comes from    | `lucide` for Lucide's Search Icons      |
 | The bundle identifier or program name | `apple.Photos`                          |
 
 How the letters match also counts. From strongest to weakest: an exact match, a match at the start
@@ -84,8 +83,6 @@ A few more rules keep results useful:
 - **Bundle identifiers only match as typed**, never by scattered letters. Otherwise almost any short
   search would match almost every app. They also match without the leading `com.`, so `apple.Photos`
   works, and pasting the full `com.apple.Photos` still finds the app.
-- **An extension's name ranks low.** An extension called `Safari` can't push the real Safari out of
-  first place.
 
 **Settings → General → Search → Search sensitivity** sets how loose a match can be: **Low**,
 **Medium** (default) or **High**. A lower value also shows less exact matches.
@@ -186,7 +183,7 @@ You can also drag an app result into Finder or another app that accepts files.
 results. The palette stays open on the same search.
 
 It works for apps, System Settings panes, commands, Quick Actions, Apple Shortcuts, system actions,
-window commands, window layouts, rooms and extension commands. To show an entry again, select its
+window commands, window layouts and rooms. To show an entry again, select its
 checkbox in the matching Settings pane.
 On a quicklink or custom command it's **Hide from Root Search**, and you turn **Show in root search**
 back on in its editor.

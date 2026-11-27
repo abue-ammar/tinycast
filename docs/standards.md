@@ -98,7 +98,6 @@ fit the table.
 | `Lock`        | Holds a cross-process exclusive claim that the kernel frees on exit           |
 | `Link`        | One process's typed line to another of this app's processes                   |
 | `Mirror`      | Keeps two processes' copies of shared state in step                           |
-| `Library`     | Another process's collection, read locally and changed through its owner      |
 
 `Manager` is the one worth thinking twice about. It means _lifecycle plus policy_, which is a lot for one
 type, so there are only three: `ClipboardManager` (polls, and owns the capture policy and the
@@ -276,9 +275,8 @@ the catalog (Xcode's own build does the same in the IDE). The six privacy prompt
 - **A count is one interpolated string** (`"\(count) items"`) with plural variations in the catalog, never
   a `== 1 ?` branch.
 - **Not language, not in the catalog**: glyphs, separators and samples are `Text(verbatim:)`.
-- **Never localized**: anything from macOS, the user or an extension (app and pane names, user
-  content, everything a Raycast extension supplies or receives) and persisted formats, identifiers,
-  log text, prompts sent to a model, and what the calculator parses.
+- **Never localized**: anything from macOS or the user (app and pane names, user content) and
+  persisted formats, identifiers, log text, prompts sent to a model, and what the calculator parses.
 - **Tinycast's own command names are translated and stay findable in English**: `CommandID`,
   `SystemAction` and `WindowCommand` keep their English source as `englishName`, which the launcher
   indexes as an alternate title.

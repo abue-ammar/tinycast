@@ -59,7 +59,7 @@ enum SyncSettingScope {
             .emojiGridColumns, .calendarShowInLauncher, .calendarLauncherLimit, .calendarSpan,
             .joinWindowMinutes, .autoJoinConfirms, .autoJoinNamedProvidersOnly, .meetingBrowser,
             .calendarMenuBarDisplay, .menuBarEvents, .menuBarLinkedEventsOnly,
-            .calendarMenuBarHidesWhenEmpty, .hideCurrentEvent, .extensionsShowInLauncher:
+            .calendarMenuBarHidesWhenEmpty, .hideCurrentEvent:
             .otherSettings
         }
     }

@@ -13,9 +13,9 @@ in `Features/Settings/` (`Model/`, `Service/`, `SettingsFileSchema.swift`), the 
   deleting it, or updating the app never loses a setting, so there is nothing to migrate.
 - **Off by default, and only the pane turns it on.** `settingsFileEnabled` has no key in the file and is
   excluded from backups: a file or an import must never switch on something that reads a file.
-- **A capability grant never has a key.** Snippets, Extensions, Calendar access, Auto Join, Camera
-  Preview, Quick Actions, MCP and clipboard text recognition are switched on only in the app, which
-  asks first. `SettingsFileTests` checks those paths stay absent.
+- **A capability grant never has a key.** Snippets, Calendar access, Auto Join, Camera Preview,
+  Quick Actions, MCP and clipboard text recognition are switched on only in the app, which asks
+  first. `SettingsFileTests` checks those paths stay absent.
 - **Removing a key ships a migration that strips it.** The import reports a key it no longer knows on
   every launch, until a change made in the app rewrites the file. See [migrations.md](../migrations.md).
 - **`SettingsFileSchema`'s switch is exhaustive.** A new `SettingsFileKey` case fails to build until it
@@ -28,9 +28,8 @@ in `Features/Settings/` (`Model/`, `Service/`, `SettingsFileSchema.swift`), the 
   formatting stays until then.
 - **Content and machine state never enter it.** Notes, snippets, custom commands, quicklinks, MCP
   servers and AI connections stay where they are (the file can say which folder notes and snippets
-  live in, never what is in them), as do the palette's position, the extension toolchain,
-  the shortcuts and aliases of content, extensions and Apple Shortcuts, and what a room learns by
-  being entered.
+  live in, never what is in them), as do the palette's position, the shortcuts and aliases of
+  content and Apple Shortcuts, and what a room learns by being entered.
 
 ## Layout
 
@@ -90,8 +89,8 @@ pane record waiting for its app to be installed is kept in `launcherWaitingRecor
 never drops another Mac's apps from the next render.
 
 A side effect of a setting runs from an `AppCore` `track` sink, never from a pane's `.onChange`: the file
-can change a setting while no pane is open. Clipboard retention, AI retention and the extensions'
-launcher presence are the three that moved for this.
+can change a setting while no pane is open. Clipboard retention and AI retention are the two that
+moved for this.
 
 ## The format
 

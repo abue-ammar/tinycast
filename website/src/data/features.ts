@@ -2,7 +2,6 @@ import type { IconName } from "../components/ui/feature-icons";
 
 export type FeaturePreview =
   | "launcher"
-  | "extensions"
   | "clipboard"
   | "calculator"
   | "aiChat"
@@ -68,13 +67,6 @@ export const coreFeatures: Feature[] = [
     preview: "windows",
   },
   {
-    icon: "extensions",
-    title: "Raycast extensions",
-    body: "Install from the Raycast Store with no Node or build step. They render in SwiftUI.",
-    href: "/docs/extensions",
-    preview: "extensions",
-  },
-  {
     icon: "snippets",
     title: "Snippets",
     body: "Type a keyword in any app to expand it into text, with Markdown and placeholders.",
@@ -83,7 +75,7 @@ export const coreFeatures: Feature[] = [
   },
 ];
 
-// The long tail: named, linked, and kept out of the way of the eight above.
+// The long tail: named, linked, and kept out of the way of the seven above.
 export const moreFeatures: MinorFeature[] = [
   { icon: "notes", title: "Floating notes", href: "/docs/features/notes" },
   {

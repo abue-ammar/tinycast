@@ -3,12 +3,10 @@ import Foundation
 
 enum ZlibError: Error { case notGzip, corrupt, tooLarge }
 
-/// Apple's `Compression` speaks only raw DEFLATE, so framing and checksums are done here.
+/// Apple's `Compression` speaks only raw DEFLATE, so the gzip framing is read here.
 enum Zlib {
     /// The cap stops a bomb: the import envelope is inflated before it is authenticated.
     static let defaultMaxOutput = 64 * 1024 * 1024
-
-    // MARK: - gzip (RFC 1952)
 
     static func gunzip(_ data: Data, maxOutput: Int = defaultMaxOutput) throws -> Data {
         let bytes = [UInt8](data)
@@ -30,46 +28,6 @@ enum Zlib {
         return try inflateRaw(Data(bytes[index..<(bytes.count - 8)]), maxOutput: maxOutput)
     }
 
-    static func gzip(_ data: Data) throws -> Data {
-        var out = Data([0x1f, 0x8b, 0x08, 0x00, 0, 0, 0, 0, 0x00, 0xff])
-        out.append(try deflateRaw(data))
-        out.append(littleEndian(crc32(data)))
-        out.append(littleEndian(UInt32(truncatingIfNeeded: data.count)))
-        return out
-    }
-
-    // MARK: - zlib (RFC 1950)
-
-    static func inflate(_ data: Data, maxOutput: Int = defaultMaxOutput) throws -> Data {
-        // 0x78 is the only CMF byte deflate produces; anything else is already a raw stream.
-        guard data.count > 6, data[data.startIndex] & 0x0f == 8 else {
-            return try inflateRaw(data, maxOutput: maxOutput)
-        }
-        let start = data.startIndex + 2
-        let end = data.endIndex - 4
-        guard start < end else { throw ZlibError.corrupt }
-        return try inflateRaw(data.subdata(in: start..<end), maxOutput: maxOutput)
-    }
-
-    static func deflate(_ data: Data) throws -> Data {
-        var out = Data([0x78, 0x9c])
-        out.append(try deflateRaw(data))
-        out.append(bigEndian(adler32(data)))
-        return out
-    }
-
-    // MARK: - raw DEFLATE (RFC 1951)
-
-    static func inflateRaw(_ data: Data, maxOutput: Int = defaultMaxOutput) throws -> Data {
-        try stream(data, operation: COMPRESSION_STREAM_DECODE, maxOutput: maxOutput)
-    }
-
-    static func deflateRaw(_ data: Data) throws -> Data {
-        try stream(data, operation: COMPRESSION_STREAM_ENCODE, maxOutput: Int.max)
-    }
-
-    // MARK: - Internals
-
     private static func skipCString(_ bytes: [UInt8], from start: Int) throws -> Int {
         var i = start
         while i < bytes.count {
@@ -79,9 +37,7 @@ enum Zlib {
         throw ZlibError.corrupt
     }
 
-    private static func stream(
-        _ input: Data, operation: compression_stream_operation, maxOutput: Int
-    ) throws -> Data {
+    private static func inflateRaw(_ input: Data, maxOutput: Int) throws -> Data {
         let bufferSize = 256 * 1024
         let dst = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
         defer { dst.deallocate() }
@@ -89,7 +45,9 @@ enum Zlib {
         // The C struct has no zero-arg init; the placeholders are overwritten before use.
         var handle = compression_stream(
             dst_ptr: dst, dst_size: bufferSize, src_ptr: dst, src_size: 0, state: nil)
-        guard compression_stream_init(&handle, operation, COMPRESSION_ZLIB) != COMPRESSION_STATUS_ERROR
+        guard
+            compression_stream_init(&handle, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB)
+                != COMPRESSION_STATUS_ERROR
         else { throw ZlibError.corrupt }
         defer { compression_stream_destroy(&handle) }
 
@@ -119,39 +77,5 @@ enum Zlib {
         case .overflow: throw ZlibError.tooLarge
         case .failed: throw ZlibError.corrupt
         }
-    }
-
-    private static let crcTable: [UInt32] = (0..<256).map { index -> UInt32 in
-        var value = UInt32(index)
-        for _ in 0..<8 { value = (value & 1) != 0 ? 0xEDB8_8320 ^ (value >> 1) : value >> 1 }
-        return value
-    }
-
-    static func crc32(_ data: Data) -> UInt32 {
-        var crc: UInt32 = 0xFFFF_FFFF
-        for byte in data { crc = crcTable[Int((crc ^ UInt32(byte)) & 0xff)] ^ (crc >> 8) }
-        return crc ^ 0xFFFF_FFFF
-    }
-
-    static func adler32(_ data: Data) -> UInt32 {
-        var a: UInt32 = 1
-        var b: UInt32 = 0
-        for byte in data {
-            a = (a + UInt32(byte)) % 65521
-            b = (b + a) % 65521
-        }
-        return (b << 16) | a
-    }
-
-    private static func littleEndian(_ value: UInt32) -> Data {
-        Data([
-            UInt8(value & 0xff), UInt8((value >> 8) & 0xff), UInt8((value >> 16) & 0xff), UInt8(value >> 24)
-        ])
-    }
-
-    private static func bigEndian(_ value: UInt32) -> Data {
-        Data([
-            UInt8(value >> 24), UInt8((value >> 16) & 0xff), UInt8((value >> 8) & 0xff), UInt8(value & 0xff)
-        ])
     }
 }

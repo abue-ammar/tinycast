@@ -43,13 +43,7 @@ Settings shortcut field; only the Settings window sets it.
 - **A link that launches the app waits for `start`.** `AppCore.handleOpenURL` queues until every
   handler is wired, then runs the queue in order.
 - **The scheme is the channel's own.** Release answers `tinycast://`, Debug `tinycast-dev://`, set by
-  `TINYCAST_URL_SCHEME` in `project.yml` and read through `AppURLScheme`. `raycast://` and
-  `com.raycast:` never reach a built-in.
-- **The built-in router never touches extension types.** `DeepLinkCoordinator.handles(_:)` leaves
-  the `extensions` host and every Raycast scheme to the extension branch of
-  `AppCore.handleOpenURL`. Copy Deeplink asks `ExtensionCoordinator.deepLink(forEntryID:arguments:)`
-  for an extension row, which builds it in the channel's scheme. Moving extensions out of the app
-  means deleting that one branch.
+  `TINYCAST_URL_SCHEME` in `project.yml` and read through `AppURLScheme`.
 - **A link never runs shell text unasked.** Open in Browser, Run Shell Command and Quit have no link,
   and any link from outside that carries input asks first, so typed text is never one Return from
   a fallback row.
@@ -81,7 +75,6 @@ Settings shortcut field; only the Settings window sets it.
 | `tinycast://note/<file name>`               | Opens that note                                                 |
 | `tinycast://chat/<uuid>`                    | Opens that saved chat in the AI Chat window                     |
 | `tinycast://settings/<tab>`                 | Opens Settings on a tab (`SettingsTab.slug`)                    |
-| `tinycast://extensions/<owner>/<ext>/<cmd>` | Extension command, see [extensions.md](extensions.md#deeplinks) |
 
 A row's path is its `AppEntry.id` with the first `:` turned into `/`: `command:clipboard-history`
 becomes `tinycast://command/clipboard-history`. Built-in commands use their `CommandID` slug. Quick
@@ -171,7 +164,7 @@ through LaunchServices either.
 ## Copy Deeplink
 
 - **Launcher rows**: ⇧⌘C, or ⌘K on the row. Values typed into the row's argument fields ride along:
-  by name for a quicklink or an extension, in order for a custom command. Empty fields are dropped.
+  by name for a quicklink, in order for a custom command. Empty fields are dropped.
 - **Settings**: right-click any shortcut field. The link is the row's, with no fields typed.
 - **Notes**: the link button on a note switcher row.
 - **AI Chat**: the sidebar's menu on a saved chat, and the window's menu.

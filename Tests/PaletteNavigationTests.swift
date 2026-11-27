@@ -145,8 +145,8 @@ struct PaletteNavigationTests {
         quicklink.pushCarryingQuery(mode: .launcher)
         expect(quicklink.restoredSelection == nil, "a ring hop does not carry the restored row along")
         expect(
-            !PaletteMode.extensionCommand.isNativeEditor && !PaletteMode.quicklinks.isNativeEditor,
-            "native editor keyboard routing excludes extensions and browsers")
+            !PaletteMode.quicklinks.isNativeEditor,
+            "native editor keyboard routing excludes browsers")
 
         let event = searchingLauncher()
         event.query = "Create Event"

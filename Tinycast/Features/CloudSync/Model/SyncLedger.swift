@@ -186,3 +186,19 @@ struct SyncLedger: Codable, Equatable, Sendable {
         }
     }
 }
+
+/// A source or category a later build no longer has costs only its own entries, never the ledger.
+extension SyncLedger {
+    init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        entries = try container.decode([String: Readable<Entry>].self, forKey: .entries)
+            .compactMapValues(\.value)
+        joined = Set(try container.decode([String].self, forKey: .joined).compactMap(SyncCategory.init))
+    }
+
+    private struct Readable<Value: Decodable>: Decodable {
+        let value: Value?
+
+        init(from decoder: any Decoder) throws { value = try? Value(from: decoder) }
+    }
+}

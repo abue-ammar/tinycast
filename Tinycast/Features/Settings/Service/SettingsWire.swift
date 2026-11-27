@@ -6,7 +6,6 @@ enum SettingsWire {
         case show(UUID, SettingsRequest)
         case changed(SharedChange)
         case status(MainAppStatus)
-        case extensionProgress(UUID, ExtensionCallEvent)
         case reply(UUID, Reply)
         case readyToClose
     }
@@ -26,13 +25,11 @@ enum SettingsWire {
     }
 
     enum Call: Codable, Sendable {
-        case extensions(ExtensionCall)
         case mcp(MCPSettingsCall)
         case backup(BackupSettingsCall)
     }
 
     enum Reply: Codable, Sendable {
-        case extensions(ExtensionCallResult)
         case mcp(MCPServerStatus?)
         case backupPreview(BackupPreview)
         case backupMessage(String)

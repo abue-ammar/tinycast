@@ -332,7 +332,6 @@ final class CloudSyncCoordinator {
             Set(core.appIndex.apps.map(\.id))
                 .union(core.quicklinks.quicklinks.map(\.entryID))
                 .union(core.snippetsStore.snippets.map(\.entryID))
-                .union(core.extensions.installed.flatMap(\.commandEntryIDs))
         }
         return [
             devices,
@@ -353,7 +352,6 @@ final class CloudSyncCoordinator {
             RecordSyncSource.mcpServers(
                 { core.mcpSettings.servers }, apply: { core.mcpCoordinator.applySynced($0) },
                 remove: { id in (try? core.mcpCoordinator.remove(id)) != nil }),
-            ExtensionSyncSource(manager: core.extensions),
             ClipboardSyncSource(.text, store: core.clipboardStore) { [unowned self] in
                 core.settings.clipboardEnabled && includes(.clipboardText)
             },

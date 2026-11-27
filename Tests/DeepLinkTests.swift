@@ -130,8 +130,7 @@ struct DeepLinkTests {
         }
         let unnamed: [HotKeyAction] = [
             .togglePalette, .dictation, .app(bundleID: "com.apple.Safari"),
-            .settingsPane(bundleID: "com.apple.Wallpaper-Settings.extension"),
-            .extensionCommand(entryID: "extension:demo/search"), .command(.quit)
+            .settingsPane(bundleID: "com.apple.Wallpaper-Settings.extension"), .command(.quit)
         ]
         for action in unnamed {
             expect(action.entryID == nil, "\(action.defaultsKey) has no entry ID, so no link")
@@ -146,21 +145,11 @@ struct DeepLinkTests {
             DeepLink.url(forEntryID: "command:nope", scheme: scheme) == nil,
             "an unknown command has no link")
         expect(
-            DeepLink.url(forEntryID: "extension:demo/search", scheme: scheme) == nil,
-            "extension commands keep their own link")
-        expect(parse("raycast://command/clipboard-history") == nil, "built-in links are Tinycast's alone")
-        expect(
             parse("tinycast-dev://command/clipboard-history") == nil,
             "another channel's scheme is not this build's")
         expect(
             parse("tinycast://command/clipboard-history", scheme: "tinycast-dev") == nil,
             "a Debug build ignores Release's links")
-        expect(
-            parse("tinycast://extensions/demo/search") == nil,
-            "extension links fall through to their own router")
-        expect(
-            parse("tinycast://extensions/owner/demo/search?arguments=%7B%7D") == nil,
-            "an extension link with input still falls through")
         expect(resolve("tinycast://command") == nil, "a kind without an ID is not a command")
         expect(resolve("tinycast://command/") == nil, "an empty ID is not a command")
         expect(resolve("tinycast://command/nope") == nil, "an unknown command does not resolve")

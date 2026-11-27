@@ -6,9 +6,9 @@ enum EntryNaming {
         var name: String
         /// Ranked like the title: a translation, a renamed file, a snippet keyword.
         var alternateTitles: [String] = []
-        /// What the entry comes from, shown beside it: an extension's title.
+        /// Shown beside the name, for an entry whose name alone can't say what it acts on.
         var subtitle: String?
-        /// Found by, never ranked by: a declared name, an extension's keywords.
+        /// Found by, never ranked by: the bundle's declared name.
         var keywords: [String] = []
 
         init(name: String) { self.name = name }

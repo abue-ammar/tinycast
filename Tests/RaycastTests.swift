@@ -79,7 +79,7 @@ enum RaycastTests {
                 "encryption": ["iv": hex(iv), "salt": hex(salt)]
             ]
             guard let headerJSON = try? JSONSerialization.data(withJSONObject: header),
-                let compressedHeader = try? Zlib.gzip(headerJSON)
+                let compressedHeader = gzip(headerJSON)
             else { return nil }
             var file = Data("RAYCFG3\n".utf8)
             let length = UInt32(compressedHeader.count)
@@ -371,7 +371,7 @@ enum RaycastTests {
     /// Built here, never committed: a fixture past the default cap cannot live in the repo.
     static func gunzipCap() {
         let oversized = Data(repeating: 0x5a, count: 70 * 1024 * 1024)
-        guard let gzipped = try? Zlib.gzip(oversized) else {
+        guard let gzipped = gzip(oversized) else {
             failures += 1
             print("FAIL: the oversized fixture did not gzip")
             return
@@ -389,5 +389,18 @@ enum RaycastTests {
         expect(
             (try? Zlib.gunzip(gzipped, maxOutput: 512 * 1024 * 1024))?.count == oversized.count,
             "the same payload inflates under the 512 MB payload cap")
+    }
+
+    /// `gunzip` reads the frame and the DEFLATE stream only, so the trailer's CRC is left zero.
+    nonisolated static func gzip(_ data: Data) -> Data? {
+        guard let deflated = try? (data as NSData).compressed(using: .zlib) else { return nil }
+        let size = UInt32(truncatingIfNeeded: data.count)
+        var out = Data([0x1f, 0x8b, 0x08, 0x00, 0, 0, 0, 0, 0x00, 0xff])
+        out.append(deflated as Data)
+        out.append(contentsOf: [
+            0, 0, 0, 0,
+            UInt8(size & 0xff), UInt8((size >> 8) & 0xff), UInt8((size >> 16) & 0xff), UInt8(size >> 24)
+        ])
+        return out
     }
 }

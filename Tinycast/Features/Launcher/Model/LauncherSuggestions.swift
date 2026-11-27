@@ -3,7 +3,7 @@ import Foundation
 /// What the user reaches for, offered while the search field is empty.
 enum LauncherSuggestions {
     static let limit = 5
-    /// A just-installed app or extension is offered before it has ever been opened.
+    /// A just-installed app is offered before it has ever been opened.
     static let recentInstallLimit = 2
     static let recentInstallWindow: TimeInterval = 5 * 60
 

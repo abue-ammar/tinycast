@@ -68,8 +68,7 @@ brew uninstall --zap --cask tinycast
 That deletes your snippets, notes, quicklinks, clipboard history and AI chats too, so copy out
 anything you want to keep first. For the beta, use `tinycast@beta`.
 
-API keys you saved for AI providers or MCP servers, and extension sign-ins, are stored in your login
-Keychain. Remove them in Keychain Access if you want them gone too.
+API keys you saved for AI providers or MCP servers are stored in your login Keychain. Remove them in Keychain Access if you want them gone too.
 
 To remove a _different_ app and the files it left behind, use Tinycast's
 [built-in uninstaller](/docs/launcher/uninstall).

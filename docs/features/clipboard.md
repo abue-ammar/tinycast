@@ -340,8 +340,7 @@ with a card the way the calculator does.
 `ColorValue` (`Model/`, Foundation-only) is that parser. It takes the CSS spellings people copy
 (the four hex lengths, plus `rgb()`/`hsl()`/`oklch()` and their alpha forms in both the comma
 and CSS4 space-and-slash syntax) and stores **sRGB components**, so every notation derives from
-one source rather than a second parser that can drift from it. An extension's tints and grid
-swatches read the same parser, which is how a colour picker's `oklch()` swatch draws as its colour.
+one source rather than a second parser that can drift from it.
 
 **A colour is rejected rather than approximated**, because a wrong swatch filed under Colors Only
 is worse than none. An HSL channel must carry its `%`, or `hsl(120, 100, 50)` clamps to white.

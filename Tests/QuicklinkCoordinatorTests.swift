@@ -564,10 +564,7 @@ enum DeepLinkSource { case outside, tinycast }
 @MainActor
 final class DeepLinkCoordinator {
     var opened: [(URL, DeepLinkSource)] = []
-    func handles(_ url: URL) -> Bool {
-        url.scheme?.lowercased() == "tinycast"
-            && url.host(percentEncoded: false)?.lowercased() != "extensions"
-    }
+    func handles(_ url: URL) -> Bool { url.scheme?.lowercased() == "tinycast" }
     func open(_ url: URL, source: DeepLinkSource = .outside) { opened.append((url, source)) }
 }
 

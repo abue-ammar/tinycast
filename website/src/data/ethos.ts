@@ -1,5 +1,5 @@
 // The closing statement. Every claim here is stated in the docs — Getting
-// started, Permissions, Extensions and AI. Don't add one that isn't.
+// started, Permissions and AI. Don't add one that isn't.
 
 export type EthosPillar = {
   icon: "native" | "local" | "source" | "free";

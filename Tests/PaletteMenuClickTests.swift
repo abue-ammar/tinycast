@@ -186,7 +186,7 @@ struct PaletteMenuClickTests {
 
         let hosting = NSHostingView(
             rootView: ScrollView {
-                TextField("Extension placeholder", text: .constant(""))
+                TextField("Placeholder", text: .constant(""))
                     .textFieldStyle(.plain)
                     .frame(width: 360, height: 32)
                     .padding(20)

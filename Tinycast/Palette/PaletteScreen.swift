@@ -78,17 +78,10 @@ private extension MenuPanelCorner {
     func hasActions(at selection: Int) -> Bool
     /// True while the selected row edits with ↑/↓ itself, which leaves those keys to it.
     func ownsVerticalKeys(at selection: Int) -> Bool
-    /// Where ⇥ goes inside the screen, or nil to leave the key to the palette's own ring.
-    func tabTarget(from selection: Int, backwards: Bool) -> Int?
-    /// True when the screen acted on ⇥ itself, which it then owns ahead of `tabTarget`.
+    /// True when the screen acted on ⇥ itself, which it then owns ahead of the palette's ring.
     func tab(at selection: Int, backwards: Bool) -> Bool
     /// The ⌘K rows as the palette's own menu; nil when there are none.
     func actions(at selection: Int) -> PopoverMenuContent?
-    /// Defaults to wrapping `actions(at:)`, so a screen implements one or the other.
-    func menuContent(
-        at selection: Int, searchQuery: ActionMenuSearchQuery, menuSelection: Binding<Int>,
-        onActivate: @escaping (Int) -> Void
-    ) -> PaletteMenuContent?
     func activate(at selection: Int)
     /// ⌘↵. False when the selection has no secondary action, leaving the key unhandled.
     func secondary(at selection: Int) -> Bool
@@ -116,21 +109,8 @@ extension PaletteScreen {
     var actsWithoutRows: Bool { false }
     var landingSelection: Int { 0 }
     func ownsVerticalKeys(at selection: Int) -> Bool { false }
-    func tabTarget(from selection: Int, backwards: Bool) -> Int? { nil }
     func tab(at selection: Int, backwards: Bool) -> Bool { false }
     func actions(at selection: Int) -> PopoverMenuContent? { nil }
-    func menuContent(
-        at selection: Int, searchQuery: ActionMenuSearchQuery, menuSelection: Binding<Int>,
-        onActivate: @escaping (Int) -> Void
-    ) -> PaletteMenuContent? {
-        guard let content = actions(at: selection) else { return nil }
-        let filtered = content.matching(searchQuery)
-        return PaletteMenuContent(
-            popover: filtered.content, selection: menuSelection,
-            search: PopoverMenu.Search(
-                placeholder: String(localized: "Search for actions…"), placement: .bottom),
-            onActivate: onActivate, preferredSelection: filtered.bestMatch)
-    }
     func tertiary(at selection: Int) -> Bool { false }
     func pasteKeepingWindowOpen(at selection: Int) -> Bool { false }
     func perform(_ shortcut: PaletteShortcut, at selection: Int) -> Bool { false }

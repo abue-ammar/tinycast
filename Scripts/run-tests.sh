@@ -287,7 +287,6 @@ run InterfaceSizeTests     Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/DesignSystem/InterfaceMetrics.swift \
                            Tinycast/Features/Settings/InterfaceSize.swift \
-                           Tinycast/Features/Extensions/Model/ExtensionFormMetrics.swift \
                            Tinycast/DesignSystem/IconTint.swift
 run PalettePlacementTests  Tinycast/Platform/Appearance.swift \
                            Tinycast/DesignSystem/Theme.swift \
@@ -460,30 +459,6 @@ run EntryIconTests         Tinycast/Platform/Appearance.swift \
                            Tinycast/Platform/Images/IconCache.swift \
                            Tinycast/Platform/Images/SystemIconTheme.swift \
                            Tinycast/Platform/Images/FileIconStamp.swift \
-                           Tinycast/DesignSystem/IconTint.swift
-run ExtensionIconTests     Tinycast/Platform/Appearance.swift \
-                           Tinycast/Platform/AppDisplayName.swift \
-                           Tinycast/Platform/Images/IconCache.swift \
-                           Tinycast/Platform/Images/SystemIconTheme.swift \
-                           Tinycast/Platform/Compression/Zlib.swift \
-                           Tinycast/DesignSystem/Theme.swift \
-                           Tinycast/DesignSystem/InterfaceMetrics.swift \
-                           Tinycast/Features/Extensions/Model/ExtensionBootConfig.swift \
-                           Tinycast/Features/Extensions/Model/ExtensionLaunchType.swift \
-                           Tinycast/Features/Extensions/Model/ExtensionManifest.swift \
-                           Tinycast/Features/Extensions/Model/ExtensionRefreshPolicy.swift \
-                           Tinycast/Features/Extensions/Model/ExtensionRefreshState.swift \
-                           Tinycast/Features/Extensions/Model/RenderNode.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionCatalog.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionFetcher.swift \
-                           Tinycast/Platform/ProcessExit.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionNodeShims.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionRuntime.swift \
-                           Tinycast/Features/Extensions/Service/ExtensionIconCache.swift \
-                           Tinycast/Features/Extensions/UI/ExtensionAnimatedImage.swift \
-                           Tinycast/Features/Extensions/UI/ExtensionImage.swift \
-                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
-                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
                            Tinycast/DesignSystem/IconTint.swift
 run SystemActionTests      Tinycast/Features/SystemActions/Model/SystemAction.swift \
                            Tinycast/Platform/LocalizedResource.swift \
@@ -770,86 +745,6 @@ run BackupArchiveTests     Tinycast/Platform/AppPaths.swift \
                            Tinycast/Features/HotKeys/Service/KeyShortcut.swift \
                            Tinycast/Platform/ASCIIKeyboardLayout.swift \
                            Tinycast/Platform/LocalizedResource.swift
-E=Tinycast/Features/Extensions
-run SymbolsTests           $E/Service/SymbolCatalog.swift
-run ExtensionCleanupTests  $E/Service/ExtensionCleanup.swift \
-                           $E/Service/ExtensionCatalog.swift \
-                           Tinycast/Platform/AppDisplayName.swift \
-                           $E/Model/ExtensionManifest.swift \
-                           $E/Model/ExtensionLaunchType.swift \
-                           $E/Model/ExtensionRefreshPolicy.swift \
-                           $E/Model/ExtensionRefreshState.swift
-run ExtensionRefreshTests  $E/Model/ExtensionManifest.swift \
-                           Tinycast/Platform/AppDisplayName.swift \
-                           $E/Model/ExtensionLaunchType.swift \
-                           $E/Model/ExtensionRefreshPolicy.swift \
-                           $E/Model/ExtensionRefreshState.swift
-run ExtensionMetadataTests $E/Model/ExtensionCommandMetadata.swift \
-                           $E/Model/ExtensionMenuBarSnapshot.swift \
-                           $E/Service/ExtensionCommandMetadataStore.swift
-run ExtensionVersionTests  $E/Model/ExtensionListing.swift \
-                           $E/Service/ExtensionVersionStore.swift
-run ExtensionStoreTests    $E/Model/ExtensionGitHubSource.swift \
-                           $E/Model/ExtensionListing.swift \
-                           $E/Model/ExtensionPackageManager.swift \
-                           $E/Model/ExtensionStoreResponse.swift
-run ExtensionFormTests     $E/Model/ExtensionFormMetrics.swift \
-                           $E/Model/ExtensionFormField.swift \
-                           $E/UI/ExtensionFormKey.swift \
-                           $E/Model/ExtensionDateExpression.swift \
-                           $E/UI/ExtensionListKey.swift \
-                           Tests/ExtensionListKeyTests.swift
-run ExtensionImageSizeTests $E/Model/ExtensionImageSize.swift
-run ExtensionSignInTests   $E/Service/ExtensionSignInSession.swift
-run ExtensionAccessoryTests $E/Model/RenderNode.swift \
-                           $E/Model/ExtensionPickerItem.swift \
-                           $E/Model/ExtensionSearchAccessory.swift \
-                           $E/Service/ExtensionStorage.swift
-run slow ExtensionTests    -parse-as-library \
-                           Tests/ExtensionTests+MenuBar.swift \
-                           Tests/ExtensionFetchTests.swift \
-                           $E/Model/ExtensionLaunchError.swift \
-                           $E/Model/ExtensionMenuBarSnapshot.swift \
-                           $E/Service/ExtensionStorage.swift \
-                           $E/Service/ExtensionMenuBarManager.swift \
-                           $E/Model/ExtensionCommandMetadata.swift \
-                           $E/Service/ExtensionCommandMetadataStore.swift \
-                           $E/UI/ExtensionMenuBarController.swift \
-                           $E/UI/ExtensionMenuBarImage.swift \
-                           Tinycast/Platform/Appearance.swift \
-                           Tinycast/Platform/AppDisplayName.swift \
-                           Tinycast/Platform/Images/IconCache.swift \
-                           Tinycast/Platform/Images/SystemIconTheme.swift \
-                           Tinycast/DesignSystem/Theme.swift \
-                           Tinycast/DesignSystem/InterfaceMetrics.swift \
-                           $E/Model/ExtensionBootConfig.swift \
-                           $E/Model/ExtensionDeepLink.swift \
-                           $E/Model/ExtensionLaunchType.swift \
-                           $E/Model/ExtensionFormField.swift \
-                           $E/Model/ExtensionGridLayout.swift \
-                           $E/Model/ExtensionSearchState.swift \
-                           $E/Model/ExtensionManifest.swift \
-                           $E/Model/ExtensionRefreshPolicy.swift \
-                           $E/Model/ExtensionRefreshState.swift \
-                           $E/Model/RenderNode.swift \
-                           $E/Model/ExtensionPickerItem.swift \
-                           $E/Model/ExtensionSearchAccessory.swift \
-                           $E/Service/ExtensionCatalog.swift \
-                           $E/Service/ExtensionFetcher.swift \
-                           Tinycast/Platform/ProcessExit.swift \
-                           $E/Service/ExtensionIconCache.swift \
-                           $E/Service/ExtensionNodeShims.swift \
-                           $E/Service/ExtensionRuntime.swift \
-                           $E/Service/ExtensionNameResolver.swift \
-                           $E/Service/ExtensionWebSocketBridge.swift \
-                           $E/UI/ExtensionAnimatedImage.swift \
-                           $E/UI/ExtensionImage.swift \
-                           $E/UI/ExtensionScreen.swift \
-                           $L/SearchRelevance.swift \
-                           Tinycast/Platform/Compression/Zlib.swift \
-                           Tinycast/Features/Clipboard/Model/ColorValue.swift \
-                           Tinycast/Features/Clipboard/Model/ColorSpaces.swift \
-                           Tinycast/DesignSystem/IconTint.swift
 run SettingsHistoryTests   Tinycast/Features/Settings/SettingsTab.swift \
                            Tinycast/Features/Settings/SettingsHistory.swift \
                            Tinycast/Features/Settings/SettingsAnchor.swift \

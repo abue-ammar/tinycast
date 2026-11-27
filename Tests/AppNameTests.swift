@@ -18,7 +18,7 @@ struct AppNameTests {
             }
         }
 
-        /// A real bundle on disk: `installedAppName` reads the plist the way the scan does.
+        /// A real bundle on disk, so its plist is read the way the scan reads it.
         func makeApp(_ fileName: String, info: [String: Any]) -> Bundle? {
             let url = root.appendingPathComponent(fileName)
             let contents = url.appendingPathComponent("Contents")
@@ -75,12 +75,12 @@ struct AppNameTests {
             ])
         check(
             "a bundle with a blank display name is named by CFBundleName",
-            rapidAPI?.installedAppName == "RapidAPI")
+            rapidAPI?.infoDictionary.flatMap(AppDisplayName.inInfo) == "RapidAPI")
 
         let unnamed = makeApp("Mystery.app", info: ["CFBundleIdentifier": "com.example.mystery"])
         check(
-            "a bundle naming itself nowhere falls back to its filename",
-            unnamed?.installedAppName == "Mystery")
+            "a bundle naming itself nowhere declares no name",
+            unnamed != nil && unnamed?.infoDictionary.flatMap(AppDisplayName.inInfo) == nil)
 
         let blankBoth = makeApp(
             "Ghost.app",
@@ -89,8 +89,8 @@ struct AppNameTests {
                 "CFBundleIdentifier": "com.example.ghost"
             ])
         check(
-            "two blank keys still fall back to the filename",
-            blankBoth?.installedAppName == "Ghost")
+            "two blank keys declare no name",
+            blankBoth != nil && blankBoth?.infoDictionary.flatMap(AppDisplayName.inInfo) == nil)
 
         func codes(_ preferred: [String]) -> [String] {
             BundleLocalization.indexedLanguages(preferred)
