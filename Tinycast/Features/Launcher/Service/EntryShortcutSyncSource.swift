@@ -10,10 +10,9 @@ final class EntryShortcutSyncSource: SyncSource {
     }
 
     private static let logger = Logger(subsystem: "com.tinycast", category: "CloudSync")
-    private static let extensionPrefix = "extension:"
     private static let prefixes = [
         Quicklink.entryIDPrefix, CustomQuickAction.entryIDPrefix, StoredSnippet.entryIDPrefix,
-        AppleShortcut.entryIDPrefix, extensionPrefix
+        AppleShortcut.entryIDPrefix
     ]
 
     let id = SyncSourceID.launcherShortcuts
@@ -66,7 +65,7 @@ final class EntryShortcutSyncSource: SyncSource {
             }
             guard let shortcut = SyncPayload.decode(Shortcut.self, from: payload) else { continue }
             aliases.setAlias(shortcut.alias ?? "", for: entryID)
-            guard let action = Self.action(for: entryID) else { continue }
+            guard let action = HotKeyAction(entryID: entryID) else { continue }
             if let binding = shortcut.binding,
                 let owner = hotKeys.conflictOwner(of: binding, excluding: action)
             {
@@ -80,7 +79,7 @@ final class EntryShortcutSyncSource: SyncSource {
         for key in changes.deletions {
             let entryID = entryKeys.local(key)
             aliases.setAlias("", for: entryID)
-            if let action = Self.action(for: entryID), hotKeys.binding(for: action) != nil {
+            if let action = HotKeyAction(entryID: entryID), hotKeys.binding(for: action) != nil {
                 hotKeys.setBinding(nil, for: action)
             }
         }
@@ -93,19 +92,13 @@ final class EntryShortcutSyncSource: SyncSource {
         ids.formUnion(hotKeys.boundQuickActionIDs.compactMap { HotKeyAction.quickAction(id: $0).entryID })
         ids.formUnion(hotKeys.boundAppleShortcutIDs.compactMap { HotKeyAction.appleShortcut(id: $0).entryID })
         ids.formUnion(hotKeys.boundSnippetIDs.compactMap { HotKeyAction.snippet(id: $0).entryID })
-        ids.formUnion(hotKeys.boundExtensionCommandEntryIDs)
         return ids
     }
 
     private func shortcut(for entryID: String) -> Shortcut? {
         let shortcut = Shortcut(
             alias: aliases.alias(for: entryID),
-            binding: Self.action(for: entryID).flatMap(hotKeys.binding(for:)))
+            binding: HotKeyAction(entryID: entryID).flatMap(hotKeys.binding(for:)))
         return shortcut == Shortcut() ? nil : shortcut
-    }
-
-    private static func action(for entryID: String) -> HotKeyAction? {
-        entryID.hasPrefix(extensionPrefix)
-            ? .extensionCommand(entryID: entryID) : HotKeyAction(entryID: entryID)
     }
 }

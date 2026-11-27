@@ -37,10 +37,6 @@ enum SettingsAction: Codable, Sendable {
     case installedAILaunchChanged(InstalledAIKind)
     case discardUnsavedMCPServer(UUID)
     case setSettingsFile(SettingsFileChange)
-    case setExtensionAppearance(String, ExtensionAppearance?)
-    case setExtensionBackground(ExtensionCommandRef, Bool)
-    case setExtensionMenuBar(ExtensionCommandRef, Bool)
-    case setExtensionPreference(String, key: String, ExtensionPreferenceValue?)
     case discardBackup(UUID)
     case checkForUpdates
     case showSupport

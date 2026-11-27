@@ -273,7 +273,7 @@ screen has no rows: an empty library would otherwise open a browser with nothing
 and the settings library's **New Snippet** and **Edit** buttons open this same editor; Settings has no
 second editor. The **Create Snippet** command alone (from the launcher, a hotkey or a link) starts
 from the text selected in the app in front, read through `AccessibilityText.selection(in:)` and never
-by sending ⌘C; the browser's ⌘N and Settings start empty. The fields stay inside `Features/Snippets/UI/`, not in the palette shell or the extension form.
+by sending ⌘C; the browser's ⌘N and Settings start empty. The fields stay inside `Features/Snippets/UI/`, not in the palette shell.
 
 The template is on the left, with its own **Insert Placeholder** placeholder menu, separate from Actions.
 It uses the palette's searchable popup, keeping its existing placeholder groups.

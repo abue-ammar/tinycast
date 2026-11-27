@@ -755,115 +755,6 @@ function QuickActionsScene() {
   );
 }
 
-function ExtensionsScene() {
-  const nodes = [
-    { x: 40, label: "Extension", glyph: "{ }", start: 200 },
-    { x: 245, label: "JavaScriptCore", glyph: "JS", start: 900 },
-    { x: 450, label: "SwiftUI", glyph: "▤", start: 1700 },
-  ];
-  return (
-    <Stage>
-      {nodes.map((node) => (
-        <g key={node.label} className="scene-in" style={at(node.start)}>
-          <rect
-            x={node.x}
-            y="44"
-            width="150"
-            height="96"
-            rx="14"
-            className="fill-well stroke-border-strong"
-          />
-          <text
-            x={node.x + 75}
-            y="96"
-            fontSize="22"
-            textAnchor="middle"
-            className="fill-fg font-mono"
-          >
-            {node.glyph}
-          </text>
-          <text
-            x={node.x + 75}
-            y="124"
-            fontSize="12"
-            textAnchor="middle"
-            className="fill-fg-muted"
-          >
-            {node.label}
-          </text>
-        </g>
-      ))}
-      {[190, 395].map((x, i) => (
-        <g key={x}>
-          <path
-            d={`M${x} 92h55`}
-            pathLength="1"
-            className="scene-draw fill-none stroke-border-strong"
-            strokeWidth="1.5"
-            style={at(600 + i * 800)}
-          />
-          <circle
-            cx={x}
-            cy="92"
-            r="3"
-            className="scene-travel fill-violet-bright"
-            style={at(700 + i * 800)}
-          />
-        </g>
-      ))}
-      <rect
-        x="450"
-        y="44"
-        width="150"
-        height="96"
-        rx="14"
-        className="scene-in fill-none stroke-violet-bright"
-        strokeWidth="1.5"
-        style={at(2100)}
-      />
-      <g className="scene-pop" style={at(2400)}>
-        <rect
-          x="40"
-          y="164"
-          width="560"
-          height="160"
-          rx="12"
-          className="fill-canvas stroke-border"
-        />
-        {[220, 170, 250, 190].map((width, i) => (
-          <g key={width}>
-            <rect
-              x="58"
-              y={182 + i * 36}
-              width="20"
-              height="20"
-              rx="6"
-              className="fill-violet/40"
-            />
-            <rect
-              x="90"
-              y={188 + i * 36}
-              width={width}
-              height="8"
-              rx="4"
-              className="scene-grow fill-tint/12"
-              style={at(2600 + i * 120)}
-            />
-            <rect
-              x="520"
-              y={188 + i * 36}
-              width="62"
-              height="8"
-              rx="4"
-              className="fill-tint/6"
-            />
-          </g>
-        ))}
-      </g>
-    </Stage>
-  );
-}
-
 function SnippetsScene() {
   const bullets = [360, 290, 330, 250];
   return (
@@ -960,7 +851,6 @@ const scenes: Record<FeaturePreview, () => ReactNode> = {
   aiChat: AiChatScene,
   quickActions: QuickActionsScene,
   windows: WindowsScene,
-  extensions: ExtensionsScene,
   snippets: SnippetsScene,
 };
 

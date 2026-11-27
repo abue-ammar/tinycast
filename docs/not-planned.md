@@ -105,7 +105,6 @@ launchers. We accept that to keep the app simple.
 - **Type "img" to filter.** **Instead:** press ⌘P to filter by type. ([#403](https://github.com/abue-ammar/tinycast/issues/403), [#1248](https://github.com/abue-ammar/tinycast/issues/1248))
 - **Merge duplicate entries.** ([#632](https://github.com/abue-ammar/tinycast/issues/632))
 - **Turn an entry into a snippet with ⌘S.** ([#1333](https://github.com/abue-ammar/tinycast/issues/1333))
-- **Block chosen extensions.** ([#1522](https://github.com/abue-ammar/tinycast/issues/1522))
 - **A separate screenshot browser.** **Instead:** filter history by images and search the text in
   them. It may come later as a plugin. ([#1211](https://github.com/abue-ammar/tinycast/issues/1211), [#1619](https://github.com/abue-ammar/tinycast/issues/1619))
 
@@ -164,17 +163,6 @@ Tinycast is an all-in-one launcher, not a full window manager. Its window tools 
 - **Your own dictation models or a personal word list.** Tinycast is not a dictation app.
   ([#1529](https://github.com/abue-ammar/tinycast/issues/1529), [#1332](https://github.com/abue-ammar/tinycast/issues/1332))
 
-## Raycast extensions
-
-- **Full Raycast compatibility.** Tinycast runs about 80% of what Raycast extensions use, and **that
-  work has stopped.** Some extensions won't work, or will look a bit different. Tinycast's own
-  shortcuts (like Tab) win over an extension's. Our future is native Tinycast extensions.
-  ([#1592](https://github.com/abue-ammar/tinycast/issues/1592), [#1585](https://github.com/abue-ammar/tinycast/issues/1585), [#1557](https://github.com/abue-ammar/tinycast/issues/1557), [#1561](https://github.com/abue-ammar/tinycast/issues/1561), [#1541](https://github.com/abue-ammar/tinycast/issues/1541), [#1520](https://github.com/abue-ammar/tinycast/issues/1520), [#1495](https://github.com/abue-ammar/tinycast/issues/1495), [#1452](https://github.com/abue-ammar/tinycast/issues/1452), [#1341](https://github.com/abue-ammar/tinycast/issues/1341), [#1129](https://github.com/abue-ammar/tinycast/issues/1129), [#976](https://github.com/abue-ammar/tinycast/issues/976), [#672](https://github.com/abue-ammar/tinycast/issues/672), [#664](https://github.com/abue-ammar/tinycast/issues/664), [#660](https://github.com/abue-ammar/tinycast/issues/660),
-  [#1121](https://github.com/abue-ammar/tinycast/issues/1121), [#1200](https://github.com/abue-ammar/tinycast/issues/1200), [#1397](https://github.com/abue-ammar/tinycast/issues/1397))
-- **Let extensions use Tinycast's AI.** ([#1462](https://github.com/abue-ammar/tinycast/issues/1462))
-- **⚠️ Locking extensions down.** An extension can do anything you can do on your Mac. **Install only
-  extensions you trust.** ([#946](https://github.com/abue-ammar/tinycast/issues/946))
-
 ## Settings and looks
 
 - **A theme editor or a custom font.** ([#640](https://github.com/abue-ammar/tinycast/issues/640), [#781](https://github.com/abue-ammar/tinycast/issues/781))
@@ -214,7 +202,6 @@ Tinycast is an all-in-one launcher, not a full window manager. Its window tools 
 - **Read selected text in every app.** Many apps and websites don't share it. ([#1492](https://github.com/abue-ammar/tinycast/issues/1492), [#1420](https://github.com/abue-ammar/tinycast/issues/1420))
 - **Another app's Quick Look plugin takes your keys** (like Obsidian's). ([#1607](https://github.com/abue-ammar/tinycast/issues/1607))
 - **Duplicate images with Clop running.** ([#1582](https://github.com/abue-ammar/tinycast/issues/1582))
-- **One-time-password extensions that paste for you.** ([#829](https://github.com/abue-ammar/tinycast/issues/829))
 
 ## Not now, but maybe later
 

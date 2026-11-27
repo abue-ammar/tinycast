@@ -65,8 +65,6 @@ final class AppCore {
     let activationPolicy = ActivationPolicy()
     let uninstall = UninstallSession()
     let notesStore: NotesStore
-    /// Lazy, so Settings' own process never builds the extension runtime.
-    @ObservationIgnored private(set) lazy var extensions = ExtensionManager(clipboardStore: clipboardStore)
     let chatHistory: ChatHistoryStore
     let aiChats: AIChatSurfacesState
     let aiSettings = AISettingsStore(
@@ -88,7 +86,6 @@ final class AppCore {
 
     /// Set when a layout editor should open with Settings; the pane consumes it.
     var pendingWindowLayoutEdit: WindowLayoutEditRequest?
-    var pendingExtensionStoreInstall: ExtensionDeepLink.StoreInstall?
 
     @ObservationIgnored private(set) lazy var snippetCoordinator = SnippetCoordinator(
         store: snippetsStore, listener: snippetListener, injector: textInjector,
@@ -134,9 +131,6 @@ final class AppCore {
         session: uninstall, palette: palette, paletteCoordinator: paletteCoordinator,
         appIndex: appIndex, runningApps: runningApps, hotKeys: hotKeys, favorites: favorites,
         visibility: visibility, ranking: launcherRanking, aliases: aliases, core: self)
-    @ObservationIgnored private(set) lazy var extensionCoordinator = ExtensionCoordinator(
-        extensions: extensions, palette: palette, paletteCoordinator: paletteCoordinator,
-        settingsCoordinator: settingsCoordinator, settings: settings, core: self)
     @ObservationIgnored private(set) lazy var windowCommandCoordinator = WindowCommandCoordinator(
         settings: settings, paletteCoordinator: paletteCoordinator, windowMover: windowMover,
         spaceSwitcher: spaceSwitcher, customSizes: customWindowSizes)
@@ -194,7 +188,7 @@ final class AppCore {
         snippetCoordinator: snippetCoordinator, fileSearchCoordinator: fileSearchCoordinator,
         menuSearchCoordinator: menuSearchCoordinator,
         windowSwitchCoordinator: windowSwitchCoordinator,
-        notesCoordinator: notesCoordinator, extensionCoordinator: extensionCoordinator,
+        notesCoordinator: notesCoordinator,
         calendarCoordinator: calendarCoordinator,
         core: self)
     @ObservationIgnored private(set) lazy var fallbackCoordinator = FallbackCoordinator(
@@ -305,14 +299,24 @@ final class AppCore {
             NSApp.setActivationPolicy(.accessory)
             dictationAudioDucker.recover()
             load()
+            RaycastExtensionsMigration.run(
+                defaults: .standard, supportDirectory: AppPaths.applicationSupport(),
+                settingsFile: settings.settingsFileEnabled ? AppPaths.settingsFile() : nil)
+            let retired = RaycastExtensionsMigration.retiredEntries(
+                in: favorites.keys, Array(aliases.aliases.keys), Array(visibility.hiddenItemKeys),
+                Array(launcherRanking.visits.keys))
+            if !retired.isEmpty {
+                favorites.remove(keys: retired)
+                aliases.removeKeys(retired)
+                visibility.removeItemKeys(retired)
+                retired.forEach(launcherRanking.reset(itemKey:))
+            }
             loadHotKeys()
             pinnedEmoji.onPersistenceFailure = { [weak self] in
                 self?.showMessage(String(localized: "Couldn't save Emoji & Symbols pins"), tone: .danger)
             }
 
             clipboardCoordinator.applyEnabled()
-            extensions.start(appIndex: appIndex, coordinator: extensionCoordinator)
-            extensionCoordinator.applyEnabled()
             fileSearchCoordinator.applyEnabled()
             windowSwitchCoordinator.applyEnabled()
             menuSearchCoordinator.applyEnabled()
@@ -403,12 +407,6 @@ final class AppCore {
             }
             hotKeys.onExpandSnippet = { [weak self] id in
                 self?.snippetCoordinator.expandSnippetFromHotKey(id: id)
-            }
-            hotKeys.onRunExtensionCommand = { [weak self] entryID in
-                self?.extensionCoordinator.runExtensionCommand(entryID: entryID)
-            }
-            extensions.onDidUninstall = { [weak self] entryIDs in
-                self?.extensionCoordinator.removeExtensionReferences(entryIDs: entryIDs)
             }
             appIndex.onScan = { [weak self] in
                 guard let self else { return }
@@ -552,21 +550,8 @@ final class AppCore {
             pendingURLs?.append(url)
             return
         }
-        if deepLinkCoordinator.handles(url) {
-            deepLinkCoordinator.open(url)
-            return
-        }
-        guard ExtensionDeepLink.claims(url) else { return }
-        guard let route = ExtensionDeepLink.route(url: url) else {
-            paletteCoordinator.showPalette(mode: .launcher, restoreAnyMode: true)
-            return
-        }
-        switch route {
-        case .command(let link):
-            extensionCoordinator.runDeepLink(link)
-        case .storeInstall(let install):
-            extensionCoordinator.showStoreInstall(install)
-        }
+        guard deepLinkCoordinator.handles(url) else { return }
+        deepLinkCoordinator.open(url)
     }
 
     func allowsHotKeyAction(_ action: HotKeyAction) -> Bool {
@@ -586,7 +571,6 @@ final class AppCore {
         case .quicklink(let id):
             return settings.quicklinksEnabled && quicklinks.quicklink(id: id)?.isEnabled == true
         case .appleShortcut: return settings.appleShortcutsEnabled
-        case .extensionCommand: return settings.extensionsEnabled
         case .togglePalette, .app, .settingsPane, .systemAction: return true
         }
     }
@@ -615,8 +599,6 @@ final class AppCore {
             return appleShortcutCoordinator.name(of: id)
         case .snippet(let id):
             return snippetsStore.record(id: id)?.snippet.name
-        case .extensionCommand(let entryID):
-            return appIndex.apps.first { $0.kind == .extensionCommand && $0.id == entryID }?.name
         case .togglePalette, .dictation, .command, .systemAction, .windowCommand:
             return nil
         }
@@ -886,10 +868,6 @@ final class AppCore {
         track(
             aiSettings, { _ = $0.enabledInstalledProviders },
             reproject: { _ = $0.applyInstalledAILifecycle() })
-        track({ _ = $0.extensionsEnabled }, reproject: { $0.extensionCoordinator.applyEnabled() })
-        track(
-            { _ = $0.extensionsShowInLauncher },
-            reproject: { $0.extensionCoordinator.applyExtensionsLauncherPresence() })
         track({ _ = $0.notesFolder }, reproject: { $0.applyNotesFolder() })
         trackChatRoute()
     }
@@ -1065,7 +1043,7 @@ final class AppCore {
     var currentActivity: UpdateActivity {
         UpdateActivity(
             isExpandingSnippet: textInjector.isDelivering,
-            isRunningExtension: extensions.running != nil,
+
             isUninstalling: uninstall.isTrashing,
             isRecordingHotKey: hotKeys.recordingAction != nil,
             isShowingDialog: isShowingDialog,

@@ -169,7 +169,7 @@ struct HotKeyDispatchTests {
             .command(.sample), .customCommand(id: UUID()), .windowCommand(id: .sample),
             .windowLayout(id: UUID()), .windowRoom(id: UUID()), .customWindowSize(id: UUID()),
             .quicklink(id: UUID()), .quickAction(id: UUID()), .appleShortcut(id: UUID()),
-            .snippet(id: "sample"), .extensionCommand(entryID: "sample"), .dictation
+            .snippet(id: "sample"), .dictation
         ]
         for (offset, action) in actions.enumerated() {
             let shortcut = KeyShortcut(carbonKeyCode: kVK_F1 + offset, carbonModifiers: cmdKey)

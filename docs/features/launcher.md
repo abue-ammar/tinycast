@@ -47,8 +47,8 @@ reports notification-dependent checks as skipped when the session cannot deliver
   apply to applications and quietly skip snippets, and nothing is built per keystroke. `AppIndex.scan`
   names the app slice on its own, off-main: transliterating a CJK index is ICU work, and
   `publishEntries` runs on the main actor whenever any unrelated slice changes.
-- **Tinycast never translates a name it did not write.** Apps, panes, quicklinks, snippets and
-  extensions read the way their source names them. A built-in command shows its translated name and
+- **Tinycast never translates a name it did not write.** Apps, panes, quicklinks and snippets read
+  the way their source names them. A built-in command shows its translated name and
   keeps its English source as an alternate title, so `clipboard` finds it in every language.
 - **The fields stay separate.** Which field matched is half of what the comparator reads: an exact
   subtitle, an exact alternate title and a keyword hit are three different rules.
@@ -101,8 +101,8 @@ refreshes collapse into a single trailing scan.
 | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- | ---------------------------------- |
 | title            | the display name                                                                                                                          | the query read into Latin | yes                                |
 | alternate titles | the bundle's names in the user's other languages and English, a renamed bundle's file name, `CFBundleAlternateNames`, a snippet's keyword | the query as typed        | yes                                |
-| subtitle         | an extension's title, or a row's own subtitle in its place                                                                                | the query read into Latin | yes                                |
-| keywords         | the declared Info.plist name, an extension command's `keywords`, a meeting's calendar, and the title and subtitle joined both ways        | the query read into Latin | no: they only make an entry appear |
+| subtitle         | a row's own subtitle: a second copy's version, or what a command acts on                                                                                | the query read into Latin | yes                  |
+| keywords         | the declared Info.plist name, a meeting's calendar, and the title and subtitle joined both ways        | the query read into Latin | no: they only make an entry appear                                    |
 
 An entry appears when the user's alias is an exact or prefix hit, or when any field passes the
 sensitivity; an alias that is neither counts as one more alternate title. Bundle identifiers and
@@ -154,7 +154,7 @@ The first rule that separates two entries decides:
 2. A boosted term (`ai` and `chat` for AI Chat), unless the other entry is used more.
 3. Past three characters, an exact title or alternate title.
 4. An exact past search term.
-5. An exact subtitle, so typing an extension's title lists its commands.
+5. An exact subtitle.
 6. An alias prefix.
 7. A past search term that starts with the query.
 8. A past search term of three or more characters that the query runs at most three past.
@@ -169,8 +169,7 @@ The first rule that separates two entries decides:
 Two entries that both meet rule 3 go by search-term strength, then frecency; both meeting rule 4 go by
 frecency; both meeting rule 5 go by frecency, then the title's own score. The tiebreak settles the rest
 (what the empty list sorts by too) and is frecency, then having an alias, then kind priority, then the
-name. Rule 5 applies at any length, which is why `zed` lists the Zed extension's commands above
-the Zed app: rule 3 only protects an exact title past three characters.
+name. Rule 5 applies at any length, while rule 3 only protects an exact title past three characters.
 
 ### Kind priority and boosts
 
@@ -264,10 +263,9 @@ different installation.
 
 ### Subtitles
 
-An extension's title is the subtitle of every command it ships; a command's own manifest subtitle takes
-its place, and the title then rides as a keyword. A subtitle ranks like a title in rule 9, and an exact
-one is rule 5: `brew` lists Brew's commands above any title that merely starts with it, by usage, then
-by the title's own score, then by name. The subtitle does not name the entry, so a title scoring the same wins rule 11.
+A subtitle is the row's own: a second installed copy's version, or what a command acts on. It ranks
+like a title in rule 9, and an exact one is rule 5, by usage, then by the title's own score, then by
+name. The subtitle does not name the entry, so a title scoring the same wins rule 11.
 
 ### Category search
 
@@ -402,12 +400,11 @@ beside it; edits store as typed and trim when the field loses focus, and a blank
 list filters by **membership only**, keeping the index's name order; re-ranking it per keystroke
 would move the row being edited out from under its own field editor. A pane with a hand-written row
 hands `AliasField` the key itself: Settings ▸ Quicklinks passes `Quicklink.entryID`, Settings ▸
-Commands passes `CustomCommand.entryID`, Settings ▸ Extensions passes `extension:<name>/<command>`,
-Settings ▸ Window Management passes each command, custom size, layout and room's `AppEntry`, and each
+Commands passes `CustomCommand.entryID`, Settings ▸ Window Management passes each command, custom size, layout and room's `AppEntry`, and each
 dims the field when the entry is hidden from launcher search, whose entry the ranker never sees.
 
 Aliases ride along in a settings backup (`launcherAliases`), and deleting what an alias points at
-(uninstalling an app, deleting a quicklink or custom command, uninstalling an extension) removes it
+(uninstalling an app, deleting a quicklink or custom command) removes it
 with the entry's other per-entry preferences.
 
 ### Alternate names
@@ -483,7 +480,7 @@ so the sectioned view stays 1:1 with the flat selection.
 meeting, an AI command or Tinycast itself. AI is the lowest priority, so Quick AI and AI Chat are
 never suggested, however often they are opened:
 
-1. up to two apps or extensions installed in the last five minutes and never opened:
+1. up to two apps installed in the last five minutes and never opened:
    `AppEntry.installedAt` is the bundle's added-to-directory date;
 2. entries with a score above 1 and no bound shortcut, in empty-list order: a shortcut is already the
    faster way in;
@@ -783,8 +780,8 @@ favorite, alias and learned ranking survive the round trip, and its shortcut kee
 
 The row is offered only where Settings can undo it, and `KindDescriptor.canHideFromSearch` is that
 rule: per kind, and a new `Kind` case has to answer it to compile. Applications, System Settings,
-Commands, Quick Actions, System Actions, Window Commands, Window Layouts, Rooms and extension commands each
-draw a per-row checkbox in their pane, so they carry it. Snippets do not: their pane lists a record
+Commands, Quick Actions, System Actions, Window Commands, Window Layouts and Rooms each draw a per-row
+checkbox in their pane, so they carry it. Snippets do not: their pane lists a record
 with its own switches, not a launcher checkbox; a hide nothing in Settings can visibly undo is a
 trap, not a shortcut. Quicklinks and custom commands differ: each editor has its own **Show in root
 search** switch, so the row offers **Hide from Root Search** and `hideFromSearch(at:)` clears that

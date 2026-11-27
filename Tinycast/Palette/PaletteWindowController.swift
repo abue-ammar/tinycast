@@ -178,7 +178,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     }
 
     private func schedulePopToRoot() {
-        guard !core.extensions.isSigningIn else { return }
         popToRootTimer?.invalidate()
         let timeout = core.settings.popToRootTimeout
         guard timeout != .immediately else {
@@ -209,9 +208,9 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
         popToRoot()
     }
 
-    /// True while a hidden palette keeps its screen: a reset is pending, or a sign-in holds it.
+    /// True while a hidden palette keeps its screen: a reset is still pending.
     func consumePreservedState() -> Bool {
-        guard let timer = popToRootTimer else { return core.extensions.isSigningIn }
+        guard let timer = popToRootTimer else { return false }
         timer.invalidate()
         popToRootTimer = nil
         queryWasPreserved = true
@@ -383,10 +382,6 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
             guard let core = self?.core, core.palette.query.isEmpty else { return false }
             // A form field owns the key: the text it deletes is the field's, not a query's.
             if core.palette.isEditingField { return false }
-            if core.palette.mode == .extensionCommand {
-                core.extensionCoordinator.exitExtensionScreen()
-                return true
-            }
             if core.palette.mode == .ai, core.quickAICoordinator.removeLastAttachment() {
                 return true
             }

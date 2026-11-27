@@ -175,22 +175,6 @@ struct InterfaceSizeTests {
         expect(
             m.typography.chipNSFont == Theme.Typography.chipNSFont,
             "typography.chipNSFont is the Theme font itself")
-
-        // Extensions duplicates the mechanism rather than importing it, so it is checked here too.
-        expect(ExtensionFormMetrics.base.scale, 1, "the form metrics base is unscaled")
-        for size in InterfaceSize.allCases {
-            let metrics = size.metrics
-            let form = ExtensionFormMetrics(scale: metrics.scale)
-            let labelWidth = (metrics.size.panelWidth * 0.16).rounded()
-            expect(
-                form.controlWidth,
-                metrics.size.panelWidth - labelWidth * 2 - metrics.spacing.xxxl * 4
-                    - metrics.spacing.xxl * 2,
-                "extension controls match native form width at \(size)")
-            expect(form.controlHeight, metrics.size.dialogButtonHeight, "matching field height at \(size)")
-            expect(form.textInset, metrics.spacing.xl, "matching horizontal text inset at \(size)")
-            expect(form.verticalInset, metrics.spacing.md, "matching vertical text inset at \(size)")
-        }
     }
 
     // MARK: - Fonts
@@ -265,13 +249,6 @@ struct InterfaceSizeTests {
             expect(
                 m.size.dialogButtonHeight, m.size.menuButton - dialogButtonReduction,
                 "a dialog button stays the scaled reduction below a menu button at \(size.rawValue)")
-
-            let form = ExtensionFormMetrics(scale: size.scale)
-            expect(
-                form.popoverRowsMaxHeight
-                    == (form.popoverVisibleRows * (form.popoverRowHeight + form.popoverRowSpacing))
-                    .rounded(),
-                "a form popover still caps on a whole row at \(size.rawValue)")
         }
     }
 

@@ -33,14 +33,16 @@ writes its own data.
   the server. An edit beats a remote delete and is uploaded again. The open note with unsaved
   edits keeps them.
 - **No executable and no grant crosses.** Custom commands never sync. An MCP server's trust is
-  each Mac's own. A synced fallback list can turn Run Shell Command off, never on. An extension
-  installs only where Extensions is on, since that switch is the consent to run third-party code.
-  Every feature switch (`*.enabled`) stays per Mac.
-- **Secrets never sync.** AI keys, MCP credentials, extension passwords, OAuth tokens and anything
+  each Mac's own. A synced fallback list can turn Run Shell Command off, never on. Every feature
+  switch (`*.enabled`) stays per Mac.
+- **Secrets never sync.** AI keys, MCP credentials, OAuth tokens and anything
   in the Keychain stay where they are. User content travels in `encryptedValues`.
 - **A delegate callback never awaits `fetchChanges` or `sendChanges`.** CKSyncEngine traps on it.
   Every `stateUpdate` is persisted, and the ledger, not the engine, is the record of what still
   has to upload, so a hard failure is re-queued on the next pass.
+- **A retired source or category costs only its own entries.** `SyncLedger` drops an entry or a
+  joined category it no longer knows when `state.json` loads, as an unknown record name is ignored,
+  so removing one never resets this Mac's device identity, engine state or ledger.
 - **A newer format pauses sync.** A record with a higher `schemaVersion` stops this Mac with
   "update Tinycast" and is never rewritten.
 - **Deletions from another Mac go to the Trash** for notes and snippets.
@@ -64,7 +66,6 @@ writes its own data.
 | Content | Quicklinks · Notes · Snippets                                                | the items; notes and snippets by file name                            |
 | Content | Clipboard Text · Clipboard Images                                            | text by its content, owned images; off until a Mac opts in            |
 | Content | Window Layouts                                                               | custom sizes, layouts and rooms                                       |
-| Content | Extensions                                                                   | store installs and their text, checkbox and dropdown preferences      |
 | General | Open at Login · Show in Menu Bar · Appearance · Interface Size · Window Mode | one setting each                                                      |
 | Always  | Hotkeys & Aliases                                                            | every `*.commands`, app, pane and action record, plus content rows'   |
 | Always  | Favorites & Fallback Order                                                   | both lists                                                            |
@@ -92,7 +93,7 @@ Mac-specific settings (feature switches, folders, language, search scopes, palet
 
 The sources sit with their features: `SettingsSyncSource` (through the shared `SettingsBindingSet`),
 `EntryShortcutSyncSource` and `LauncherListSyncSource`, `SnippetSyncSource`, `NoteSyncSource`,
-`QuicklinkSyncSource`, `ChatSyncSource`, `ExtensionSyncSource`, `ClipboardSyncSource` (once for
+`QuicklinkSyncSource`, `ChatSyncSource`, `ClipboardSyncSource` (once for
 text, once for images), and `RecordSyncSource` factories for chat presets, quick actions and MCP
 servers.
 

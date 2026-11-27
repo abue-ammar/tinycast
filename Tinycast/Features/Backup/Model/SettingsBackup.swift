@@ -79,7 +79,6 @@ struct SettingsBackup: Codable {
         // Carried, unlike `snippetsEnabled`: opening a link grants no permission class of its own.
         var quicklinksEnabled: Bool?
         var quicklinksShowInLauncher: Bool?
-        var extensionsShowInLauncher: Bool?
         var quicklinkOpensNewWindow: Bool?
         var quicklinkPassesSelectedText: Bool?
         var quicklinkConfirmsBeforeDelete: Bool?

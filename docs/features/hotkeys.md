@@ -76,7 +76,7 @@ keeps a dropped search scope from deleting a working shortcut, and running on un
 covers LaunchServices still resolving an app for a few seconds after it is trashed.
 
 Shortcuts are also spelled as typeable chords (`ctrl+option+left`) in the opt-in
-[settings file](settings-file.md), all but those of content, extensions and Apple Shortcuts.
+[settings file](settings-file.md), all but those of content and Apple Shortcuts.
 `HotKeySpelling` is that grammar; `HotKeySettingsFile` applies through `setBinding`, so `UserDefaults`
 stays the one store either way.
 

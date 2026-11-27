@@ -185,7 +185,6 @@ struct InterfaceMetrics: Equatable, Sendable {
         @MainActor var chipNSFont: NSFont { scale == 1 ? Theme.Typography.chipNSFont : nsFont(.callout) }
         var disclosure: Font { font(Theme.Typography.disclosure, .caption1, .semibold) }
         var menuRow: Font { font(Theme.Typography.menuRow, .body) }
-        var menuShortcut: Font { font(Theme.Typography.menuShortcut, .callout) }
         var menuIcon: Font { font(Theme.Typography.menuIcon, .body) }
 
         /// The AppKit twin of a text style, for text an `NSTextView` draws beside SwiftUI's own.

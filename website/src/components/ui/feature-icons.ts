@@ -11,7 +11,6 @@ import {
   Link2,
   MessagesSquare,
   NotebookPen,
-  Puzzle,
   Search,
   Smile,
   Sparkles,
@@ -29,7 +28,6 @@ import {
 // name from the data folder; everything else imports lucide directly.
 export const featureIcons = {
   launch: Search,
-  extensions: Puzzle,
   calculator: Calculator,
   clipboard: ClipboardList,
   snippets: SquareTerminal,

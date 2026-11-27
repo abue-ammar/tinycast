@@ -3,7 +3,7 @@ import Foundation
 /// What the iCloud Sync pane lists; each optional one is a per-Mac choice, on unless `isOptIn`.
 enum SyncCategory: String, CaseIterable, Codable, Sendable {
     case aiCommands, aiChats, dictation, mcpServers, quicklinks, notes, snippets
-    case clipboardText, clipboardImages, windowLayouts, extensions
+    case clipboardText, clipboardImages, windowLayouts
     case launchAtLogin, showInMenuBar, appearance, interfaceSize, windowMode
     case hotkeysAndAliases, favoritesAndFallbacks, otherSettings
 
@@ -14,7 +14,7 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
     var group: Group {
         switch self {
         case .aiCommands, .aiChats, .dictation, .mcpServers, .quicklinks, .notes, .snippets,
-            .clipboardText, .clipboardImages, .windowLayouts, .extensions:
+            .clipboardText, .clipboardImages, .windowLayouts:
             .content
         case .launchAtLogin, .showInMenuBar, .appearance, .interfaceSize, .windowMode: .general
         case .hotkeysAndAliases, .favoritesAndFallbacks, .otherSettings: .always
@@ -30,7 +30,7 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
     var isCounted: Bool {
         switch self {
         case .aiCommands, .aiChats, .mcpServers, .quicklinks, .notes, .snippets, .clipboardText,
-            .clipboardImages, .extensions:
+            .clipboardImages:
             true
         default: false
         }
@@ -48,7 +48,6 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
         case .clipboardText: String(localized: "Clipboard Text")
         case .clipboardImages: String(localized: "Clipboard Images")
         case .windowLayouts: String(localized: "Window Layouts")
-        case .extensions: String(localized: "Extensions")
         case .launchAtLogin: String(localized: "Open at Login")
         case .showInMenuBar: String(localized: "Show in Menu Bar")
         case .appearance: String(localized: "Appearance")
@@ -73,7 +72,6 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
         case .clipboardText: "text.alignleft"
         case .clipboardImages: "photo.fill"
         case .windowLayouts: "rectangle.split.2x2.fill"
-        case .extensions: "puzzlepiece.extension.fill"
         case .launchAtLogin: "power"
         case .showInMenuBar: "menubar.rectangle"
         case .appearance: "paintbrush.fill"
@@ -94,7 +92,6 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
         case .snippets: .brown
         case .clipboardText, .clipboardImages: .indigo
         case .windowLayouts: .mint
-        case .extensions: .green
         case .hotkeysAndAliases: .graphite
         case .launchAtLogin, .showInMenuBar, .appearance, .interfaceSize, .windowMode,
             .favoritesAndFallbacks, .otherSettings:
@@ -109,12 +106,6 @@ enum SyncCategory: String, CaseIterable, Codable, Sendable {
             String(localized: "Attachments stay on the Mac they were added on.")
         case .mcpServers:
             String(localized: "Credentials stay on each Mac, and a new server asks before it runs.")
-        case .extensions:
-            String(
-                localized: """
-                    Store extensions install on every Mac where Extensions is on. Passwords and file \
-                    paths in their preferences stay on each Mac.
-                    """)
         case .dictation:
             String(localized: "The model and microphone stay on each Mac.")
         case .clipboardImages:

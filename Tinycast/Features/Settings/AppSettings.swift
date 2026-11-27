@@ -478,33 +478,6 @@ final class AppSettings {
         }
     }
 
-    /// Consent to run third-party JavaScript: it confirms, defaults off, rides no backup.
-    var extensionsEnabled: Bool {
-        didSet { defaults.set(extensionsEnabled, forKey: Key.extensionsEnabled.rawValue) }
-    }
-
-    var extensionsShowInLauncher: Bool {
-        didSet {
-            defaults.set(extensionsShowInLauncher, forKey: Key.extensionsShowInLauncher.rawValue)
-        }
-    }
-
-    /// Only an install from GitHub needs one — the store serves extensions already built.
-    var extensionPackageManager: ExtensionPackageManager {
-        didSet {
-            defaults.set(
-                extensionPackageManager.rawValue, forKey: Key.extensionPackageManager.rawValue)
-        }
-    }
-
-    /// For a toolchain Tinycast doesn't know — mise or Nix shims are the common case.
-    var extensionCustomSearchPaths: [String] {
-        didSet {
-            defaults.set(
-                extensionCustomSearchPaths, forKey: Key.extensionCustomSearchPaths.rawValue)
-        }
-    }
-
     /// Doubles as calendar-access consent, so only `CalendarCoordinator` may write it.
     var calendarEnabled: Bool {
         didSet { defaults.set(calendarEnabled, forKey: Key.calendarEnabled.rawValue) }
@@ -795,10 +768,6 @@ final class AppSettings {
         case .quicklinkPassesSelectedText: adopt(\.quicklinkPassesSelectedText, from: stored)
         case .quicklinkConfirmsBeforeDelete: adopt(\.quicklinkConfirmsBeforeDelete, from: stored)
         case .appleShortcutsEnabled: adopt(\.appleShortcutsEnabled, from: stored)
-        case .extensionsEnabled: adopt(\.extensionsEnabled, from: stored)
-        case .extensionsShowInLauncher: adopt(\.extensionsShowInLauncher, from: stored)
-        case .extensionPackageManager: adopt(\.extensionPackageManager, from: stored)
-        case .extensionCustomSearchPaths: adopt(\.extensionCustomSearchPaths, from: stored)
         case .calendarEnabled: adopt(\.calendarEnabled, from: stored)
         case .calendarShowInLauncher: adopt(\.calendarShowInLauncher, from: stored)
         case .calendarLauncherLimit: adopt(\.calendarLauncherLimit, from: stored)
@@ -1012,17 +981,7 @@ final class AppSettings {
         snippetDefaultAction =
             defaults.string(forKey: Key.snippetDefaultAction.rawValue)
             .flatMap(SnippetDefaultAction.init) ?? .paste
-        // Opt-in, unlike its siblings: until it is asked for, nothing about extensions is loaded.
-        extensionsEnabled = defaults.bool(forKey: Key.extensionsEnabled.rawValue)
-        extensionsShowInLauncher =
-            defaults.object(forKey: Key.extensionsShowInLauncher.rawValue) == nil
-            || defaults.bool(forKey: Key.extensionsShowInLauncher.rawValue)
-        extensionPackageManager =
-            defaults.string(forKey: Key.extensionPackageManager.rawValue)
-            .flatMap(ExtensionPackageManager.init(rawValue:)) ?? .automatic
-        extensionCustomSearchPaths =
-            defaults.stringArray(forKey: Key.extensionCustomSearchPaths.rawValue) ?? []
-        // Opt-in, like extensions: until it is asked for, EventKit is never loaded.
+        // Opt-in, unlike its siblings: until it is asked for, EventKit is never loaded.
         calendarEnabled = defaults.bool(forKey: Key.calendarEnabled.rawValue)
         calendarShowInLauncher =
             defaults.object(forKey: Key.calendarShowInLauncher.rawValue) == nil

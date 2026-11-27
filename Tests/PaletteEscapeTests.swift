@@ -29,12 +29,12 @@ struct PaletteEscapeTests {
     /// The shipped default, so a case only spells out what it is actually about.
     static func resolve(
         menuOpen: Bool = false, menuQuery: String = "", argumentFocused: Bool = false,
-        query: String = "", mode: PaletteMode = .launcher, canGoBack: Bool = false,
+        query: String = "", canGoBack: Bool = false,
         behavior: EscapeKeyBehavior = .navigateBackOrClose, compactRootExpanded: Bool = false
     ) -> PaletteEscapeAction {
         PaletteEscapeAction.resolve(
             menuOpen: menuOpen, menuQuery: menuQuery, argumentFocused: argumentFocused,
-            query: query, mode: mode, canGoBack: canGoBack, behavior: behavior,
+            query: query, canGoBack: canGoBack, behavior: behavior,
             compactRootExpanded: compactRootExpanded)
     }
 
@@ -67,54 +67,27 @@ struct PaletteEscapeTests {
             .clearQuery,
             "a typed launcher query clears before the palette hides")
         expect(
-            resolve(query: "notes", mode: .extensionCommand),
-            .clearQuery,
-            "a typed extension query clears before the extension screen exits")
-        expect(
-            resolve(mode: .extensionCommand),
-            .exitExtensionScreen,
-            "an empty extension query exits the extension screen, which owns its own stack")
-        expect(
             resolve(),
             .hidePalette,
             "an empty launcher query hides the palette")
-        // The surface where the field is not a search field: a chat draft.
         expect(
-            resolve(query: "why is the sky", mode: .ai),
-            .clearQuery,
-            "an unsent chat draft clears before chat itself is left")
-
-        // Provenance, not the mode, decides whether there is anywhere to go back to.
-        expect(
-            resolve(mode: .clipboard, canGoBack: true),
+            resolve(canGoBack: true),
             .goBack,
-            "a clipboard screen opened from the root search returns to it")
+            "a screen opened from the root search returns to it")
         expect(
-            resolve(mode: .clipboard),
+            resolve(),
             .hidePalette,
             "the same screen summoned by its own hotkey is a root, so it hides")
         expect(
-            resolve(mode: .ai, canGoBack: true),
-            .goBack,
-            "chat is no different: reached from the root, it goes back to it")
-        expect(
-            resolve(mode: .ai),
-            .hidePalette,
-            "chat summoned by its own hotkey hides rather than falling back to the launcher")
-        expect(
-            resolve(query: "notes", mode: .clipboard, canGoBack: true),
+            resolve(query: "notes", canGoBack: true),
             .clearQuery,
             "a typed query still clears before the back step it would otherwise skip")
 
         // Close and pop to root: one press ends the session, whatever it was opened over.
         expect(
-            resolve(mode: .clipboard, canGoBack: true, behavior: .closeAndPopToRoot),
+            resolve(canGoBack: true, behavior: .closeAndPopToRoot),
             .hidePalette,
             "close-and-pop-to-root hides even where a back step exists")
-        expect(
-            resolve(mode: .extensionCommand, canGoBack: true, behavior: .closeAndPopToRoot),
-            .hidePalette,
-            "close-and-pop-to-root outranks an extension's own stack too")
         expect(
             resolve(query: "notes", behavior: .closeAndPopToRoot),
             .clearQuery,
@@ -124,14 +97,6 @@ struct PaletteEscapeTests {
             .closeMenu,
             "a menu outranks the behavior setting beneath it")
 
-        expect(
-            resolve(menuOpen: true, mode: .ai),
-            .closeMenu,
-            "a menu outranks the chat screen it is drawn over")
-        expect(
-            resolve(menuOpen: true, mode: .extensionCommand),
-            .closeMenu,
-            "a menu outranks the extension screen it is drawn over")
         // An inline argument field is deeper than the query that found the command.
         expect(
             resolve(argumentFocused: true, query: "search"),

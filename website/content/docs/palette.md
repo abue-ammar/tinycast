@@ -72,8 +72,8 @@ that don't use <kbd>tab</kbd> themselves, it returns to the launcher with your s
 uses it to try layouts, and forms use it to move between fields.
 
 There's one exception: when the selected row takes arguments, like a
-[quicklink](/docs/launcher/quicklinks), a [custom command](/docs/launcher/commands#arguments) or an
-[extension command](/docs/extensions), <kbd>tab</kbd> moves through its fields first.
+[quicklink](/docs/launcher/quicklinks) or a [custom command](/docs/launcher/commands#arguments),
+<kbd>tab</kbd> moves through its fields first.
 
 ## How screens stack
 

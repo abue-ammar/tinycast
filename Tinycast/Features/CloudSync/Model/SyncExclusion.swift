@@ -40,7 +40,7 @@ enum SyncExclusion: CaseIterable, Sendable {
         case .searchRanking:
             String(localized: "Tinycast learns what you pick on each Mac, so ranking stays there.")
         case .credentials:
-            String(localized: "API keys, server credentials and extension passwords are never synced.")
+            String(localized: "API keys and server credentials are never synced.")
         case .macSpecific:
             String(
                 localized: """

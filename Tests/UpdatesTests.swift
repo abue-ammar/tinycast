@@ -359,12 +359,6 @@ struct UpdatesTests {
         expect(UpdateReadiness.evaluate(busy) == .uninstalling, "a running uninstall blocks an interruption")
 
         busy = UpdateActivity()
-        busy.isRunningExtension = true
-        expect(
-            UpdateReadiness.evaluate(busy) == .runningExtension,
-            "a running extension command blocks an interruption")
-
-        busy = UpdateActivity()
         busy.isExpandingSnippet = true
         expect(
             UpdateReadiness.evaluate(busy) == .expandingSnippet,

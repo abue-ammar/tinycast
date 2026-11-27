@@ -22,7 +22,6 @@ final class SettingsWindowController {
     func show(_ request: SettingsRequest) {
         switch request.handoff {
         case .editWindowLayout(let edit): core.pendingWindowLayoutEdit = edit
-        case .installFromStore(let install): core.pendingExtensionStoreInstall = install
         case nil: break
         }
         if window.focus() {

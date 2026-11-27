@@ -186,22 +186,11 @@ struct LauncherScreen: PaletteScreen {
                 placement: .afterQuery, onOpenOptions: openArgumentOptions,
                 onSubmit: { activate(at: selection) })
         }
-        if entry.kind == .customCommand {
-            return CustomCommandArgumentsAccessory.make(
-                command: core.customCommands.command(entryID: entry.id), vm: vm,
-                metrics: core.settings.interfaceSize.metrics, focus: focus,
-                onSubmit: { activate(at: selection) })
-        }
-        return ExtensionArgumentsAccessory.make(
-            entry: entry, coordinator: core.extensionCoordinator,
-            values: { name in headerFieldBinding(entry: entry, name: name) },
-            focus: focus, metrics: core.settings.interfaceSize.metrics,
+        guard entry.kind == .customCommand else { return nil }
+        return CustomCommandArgumentsAccessory.make(
+            command: core.customCommands.command(entryID: entry.id), vm: vm,
+            metrics: core.settings.interfaceSize.metrics, focus: focus,
             onSubmit: { activate(at: selection) })
-    }
-
-    private func headerFieldBinding(entry: AppEntry, name: String) -> Binding<String> {
-        let key = PaletteState.argumentKey(entry.id, name)
-        return Binding(get: { vm.commandArguments[key] ?? "" }, set: { vm.commandArguments[key] = $0 })
     }
 
     private func quicklink(for entry: AppEntry) -> Quicklink? {

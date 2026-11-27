@@ -11,7 +11,7 @@ description: Recording global shortcuts, modifier keys on their own, and the Hyp
 - Every built-in command, except Open in Browser, Run Shell Command and Quit Tinycast. See
   [Commands](/docs/launcher/commands).
 - Every app and every System Settings pane
-- Every quicklink, snippet, custom command, custom Quick Action, Apple Shortcut and extension command
+- Every quicklink, snippet, custom command, custom Quick Action and Apple Shortcut
 - All 32 [system actions](/docs/launcher/system-actions)
 - All 35 [window commands](/docs/features/window-management), every
   [custom size](/docs/features/window-management#custom-sizes), every
@@ -173,8 +173,8 @@ keys on, press fn+🎤. Tinycast sends it as F20, so other apps' F20 shortcuts f
 **Enable System Actions** and **Enable Commands** each turn off every shortcut in their pane.
 
 **Turning off a feature turns off its shortcuts.** File Search, Notes, AI, Quick Actions,
-Navigation, Calendar, window commands, quicklinks, snippets, custom commands and extensions all check
-their switch before doing anything. Turn the feature back on and its shortcuts work again.
+Navigation, Calendar, window commands, quicklinks, snippets and custom commands all check their
+switch before doing anything. Turn the feature back on and its shortcuts work again.
 
 A [system action's confirmation](/docs/launcher/system-actions#confirmation) appears when you use its
 shortcut, the same as in the palette.

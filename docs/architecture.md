@@ -52,7 +52,7 @@ Independently of the folder tree, every mature subsystem has converged on the sa
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ published through
 ┌─ OBSERVABLE STATE ───────────────▼─────────────────────────────────────────┐
-│ 39 @MainActor @Observable stores, sessions, indices and State types        │
+│ 35 @MainActor @Observable stores, sessions, indices and State types        │
 └──────────────────────────────────┬─────────────────────────────────────────┘
                                    │ rendered by
 ┌─ VIEW ───────────────────────────▼─────────────────────────────────────────┐
@@ -97,7 +97,7 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 `HotKeyManager`, `HyperKeyManager`, `RunningAppsMonitor`,
 `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `MenuSearchSession`, `UninstallSession`,
-`MeetingClock`), `NotesStore`, the twenty-two feature coordinators (`CloudSyncCoordinator` owns the
+`MeetingClock`), `NotesStore`, the twenty-one feature coordinators (`CloudSyncCoordinator` owns the
 opt-in iCloud Sync session) and the
 window controllers.
 
@@ -141,9 +141,7 @@ only two `MenuBarExtra` scenes: Tinycast's own item and the
 calendar's, each inserted by one preference and independent of the other; everything else visible is
 driven imperatively from AppKit. Notes' item and the AI usage gauge are `NSStatusItem`s their
 coordinators add and remove (`NotesCoordinator`, `PlanUsageCoordinator`), since a gauge drawn per
-read and a menu of hosted rows are AppKit's to own. Extension menu extras are dynamic
-`NSStatusItem`s owned entirely by `Features/Extensions/`, through `ExtensionManager`, with no scene
-or lifecycle wiring in the core.
+read and a menu of hosted rows are AppKit's to own.
 
 - **Command palette**: a borderless floating `NSPanel` (`Palette/PalettePanel.swift`) hosting SwiftUI
   via `NSHostingView`, managed by `PaletteWindowController`. It toggles between a compact bar and the
@@ -215,11 +213,10 @@ Three rules decide where new work runs:
 
 - **A role is Tinycast.** A `ProcessRole` runs this executable, so it holds Tinycast's privacy grants,
   Keychain items, preferences and `AppPaths`, and only Tinycast's own code runs in one. Code from anyone
-  else, an extension's above all, never runs as a role, so it never holds Tinycast's identity. How
-  extensions run is not decided yet.
+  else never runs as a role, so it never holds Tinycast's identity.
 - **The main app is the hub.** Only it runs engines. Another process asks it for work and mirrors what it
-  knows, and never talks to a third: Settings sends extension changes to the main app rather than running
-  them.
+  knows, and never talks to a third: Settings sends a backup import to the main app rather than running
+  it.
 - **A process lives as long as its work.** On macOS 27 a long-lived process keeps the pages its freed
   memory used, so work with a large passing peak gets a process that exits when the work ends. A headless
   Swift process also costs about 4 MB before it does anything, so always-on work joins a process that is
@@ -229,8 +226,7 @@ Three rules decide where new work runs:
 `App/ProcessLink+Role.swift` starts this one as a role. A role speaks this build's `Codable` types, so
 both ends must be one build: `Platform/LaunchedExecutable.swift` pins the executable's file identity at
 launch, and a role never starts once an update or a rebuild has replaced it; Settings then offers a
-relaunch. Code built apart from Tinycast, such as an extension, declares the Tinycast API version it
-supports instead.
+relaunch.
 
 ## The Settings process
 
@@ -272,19 +268,16 @@ and nothing is copied.
   is adopted.
 - **Work only the main app can do** goes as a `SettingsAction`: the palette editors, rooms, running a
   layout, iCloud Sync, the file index, dictation models, the settings file, updates and Support. MCP
-  edits, authentication, backup operations and extension changes use the same request and reply
-  lifecycle. Losing the connection finishes all pending requests. What only the main app
-  knows comes back as `MainAppStatus`, rebuilt under observation and sent when it changes. Panes reach
-  both through `MainAppLink` in the environment.
+  edits, authentication and backup operations use the same request and reply lifecycle. Losing the
+  connection finishes all pending requests. What only the main app knows comes back as
+  `MainAppStatus`, rebuilt under observation and sent when it changes. Panes reach both through
+  `MainAppLink` in the environment.
 - **Shortcut recording** pauses the main app's engines through `HotKeyManager.isRecordingInSettings`; the
   child's own `HotKeyManager` is loaded but never activated, so it registers nothing.
-- **Extensions** never run in Settings. `ExtensionLibrary` reads the catalog from disk and mirrors the
-  rest. The main app answers extension library requests. Native extension execution can have its own
-  process and permission model without changing how Settings talks to the main app.
 
 ## Observation
 
-39 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
+35 types are `@MainActor @Observable`. Nothing uses `ObservableObject` or `@Published`, and views read
 state through `@Environment` rather than `@EnvironmentObject`.
 
 Three things about this model are easy to get wrong:
@@ -336,7 +329,7 @@ Tinycast/
                     NotificationToken, AppPaths, Signposts, HealthTicker, Memo, ActivationPolicy,
                     PipeFraming, ProcessLink, ProcessDisplayName, LaunchedExecutable,
                     Images/, Compression/
-  Resources/        RaycastRuntime.generated.js, the embedded extension runtime
+  Resources/        the string catalogs and the emoji keyword tables
   Palette/          the palette shell: PalettePanel, PaletteWindowController, RootPaletteView,
                     the PaletteScreen protocol, PaletteCoordinator, PaletteState, PaletteMode
   Windows/          the non-palette AppKit surfaces: AppWindowController, Dialog/, HUD/, About/
@@ -345,9 +338,9 @@ Tinycast/
   Features/
     PaletteRowIndex.swift   the flat selection index, palette-owned, so it sits at the top
     Launcher/ Clipboard/ Calculator/ Calendar/ Emoji/ FileSearch/ MenuSearch/ Notes/
-    Quicklinks/ Snippets/ Uninstall/ SystemActions/ CustomCommands/ HotKeys/ Backup/
+    Quicklinks/ Uninstall/ SystemActions/ CustomCommands/ HotKeys/ Backup/
     WindowManagement/ Onboarding/ Updates/ Support/ AI/ Settings/
-    Extensions/
+    Snippets/
         Model/      pure: the harness inputs
         Service/    effects: stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator

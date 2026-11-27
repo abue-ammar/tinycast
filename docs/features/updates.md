@@ -73,8 +73,7 @@ uninstall` and `brew list` keep working unchanged.
 A pill cannot hold a failure's text, so Details opens a dialog with the reason and Try Again.
 
 The pill sits beside the menu circle in the footer. The compact bar has no footer, so there it ends
-the header row. It cannot reuse `ExtensionToastPill`, because extension views stay in
-`Features/Extensions/`, and an extension toast covers it.
+the header row.
 
 ## Channel and version
 

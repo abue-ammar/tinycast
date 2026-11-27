@@ -1,7 +1,7 @@
 import AppKit
 import OSLog
 
-/// Runs built-in `tinycast://` links, never extension ones. See docs/features/deeplinks.md.
+/// Runs `tinycast://` links. See docs/features/deeplinks.md.
 @MainActor
 final class DeepLinkCoordinator {
     struct AllowedLink: Identifiable {
@@ -38,7 +38,6 @@ final class DeepLinkCoordinator {
 
     func handles(_ url: URL) -> Bool {
         url.scheme?.lowercased() == scheme
-            && url.host(percentEncoded: false)?.lowercased() != DeepLink.extensionsHost
     }
 
     func open(_ url: URL, source: DeepLinkSource = .outside) {

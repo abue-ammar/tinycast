@@ -36,12 +36,11 @@ forgotten.
 - **The file carries a format version and a reader accepts only its own.** That is a guard, not a
   migration: the comparison is `==`, so an older and a newer file fail identically and by the same
   statement. Writing it any other way is the first line of a backup-format migration, and there is none.
-- **Extensions, custom quick actions, chat presets, AI chat history, MCP servers, dictation, Keychain
-  material and anything in `Caches` never travel.** An extension is third-party code and third-party
-  data; a custom action and a preset follow their own features' invariants
-  ([quick-actions.md](quick-actions.md), [ai.md](ai.md)); chat history and API keys stay on the Mac
-  that had them; a cache regenerates on its own. `BackupExclusion` lists each in the pane, so the
-  rule is visible rather than a silent gap.
+- **Custom quick actions, chat presets, AI chat history, MCP servers, dictation, Keychain material
+  and anything in `Caches` never travel.** A custom action and a preset follow their own features'
+  invariants ([quick-actions.md](quick-actions.md), [ai.md](ai.md)); chat history and API keys stay
+  on the Mac that had them; a cache regenerates on its own. `BackupExclusion` lists each in the
+  pane, so the rule is visible rather than a silent gap.
 - **`BackupCategory` names every category, and its `descriptor` switch is exhaustive.** A new case
   fails to build until it names a label, a symbol, a tint, a bundle subpath (its JSON file or its
   directory) and a count noun, the same bargain `AppEntry.Kind` makes, and why the bundle layout is
@@ -133,7 +132,7 @@ until the import finishes. `BackupStaging` sweeps trees left by crashes after a 
 
 `SettingsBackupTests` asserts that every `AppSettingsKey` appears in exactly one table, that no field
 claims a key twice, that every exclusion names a real key and carries a non-empty reason, and that each
-capability-granting key (`snippetsEnabled`, `extensionsEnabled`, `calendarEnabled`,
+capability-granting key (`snippetsEnabled`, `calendarEnabled`,
 `autoJoinMeetings`, `cameraPreview`, `quickActionsEnabled`) is named individually as excluded. The
 duplication between `AppSettings` and this file is the point: it forces a decision about every new
 setting rather than defaulting it into a backup.

@@ -34,7 +34,6 @@ final class HotKeyManager {
     var onRunQuickAction: ((UUID) -> Void)?
     var onRunAppleShortcut: ((UUID) -> Void)?
     var onExpandSnippet: ((StoredSnippet.ID) -> Void)?
-    var onRunExtensionCommand: ((String) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
     /// Whether the action's category, feature and item are switched on. Set in `AppCore.start()`.
@@ -108,7 +107,6 @@ final class HotKeyManager {
     private let boundCustomWindowSizeKey = "boundCustomWindowSizeIDs"
     private let boundAppleShortcutKey = "boundAppleShortcutIDs"
     private let boundSnippetKey = "boundSnippetIDs"
-    private let boundExtensionCommandKey = "boundExtensionCommandEntryIDs"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -146,11 +144,6 @@ final class HotKeyManager {
         modifierTapMonitor.onHoldCancelled = { [weak self] in self?.onDictationCancelled?() }
         modifierTapMonitor.start()
         syncModifierTaps()
-    }
-
-    /// Never pruned at launch: not-installed-yet and gone are indistinguishable there.
-    var boundExtensionCommandEntryIDs: [String] {
-        defaults.stringArray(forKey: boundExtensionCommandKey) ?? []
     }
 
     /// Bundle IDs holding a per-app hotkey, so `start()` knows which records to load.
@@ -286,8 +279,6 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundAppleShortcutKey)
         case .snippet(let id):
             index(id, bound: binding != nil, key: boundSnippetKey)
-        case .extensionCommand(let entryID):
-            index(entryID, bound: binding != nil, key: boundExtensionCommandKey)
         case .togglePalette, .dictation, .command, .systemAction, .windowCommand:
             break
         }
@@ -429,7 +420,6 @@ final class HotKeyManager {
         actions += boundCustomWindowSizeIDs.map { .customWindowSize(id: $0) }
         actions += boundAppleShortcutIDs.map { .appleShortcut(id: $0) }
         actions += boundSnippetIDs.map { .snippet(id: $0) }
-        actions += boundExtensionCommandEntryIDs.map { .extensionCommand(entryID: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
         candidateActionsCache = actions
@@ -466,8 +456,6 @@ final class HotKeyManager {
             return displayName?(action) ?? String(localized: "Apple Shortcut")
         case .snippet:
             return displayName?(action) ?? String(localized: "Snippet")
-        case .extensionCommand:
-            return displayName?(action) ?? String(localized: "Extension Command")
         }
     }
 
@@ -525,7 +513,6 @@ final class HotKeyManager {
         case .quickAction(let id): onRunQuickAction?(id)
         case .appleShortcut(let id): onRunAppleShortcut?(id)
         case .snippet(let id): onExpandSnippet?(id)
-        case .extensionCommand(let entryID): onRunExtensionCommand?(entryID)
         }
     }
 

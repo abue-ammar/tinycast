@@ -193,6 +193,12 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         var arrivals: [SyncSourceID: SyncChanges] = [:]
         var superseded: Set<String> = []
         for record in records {
+            if RaycastExtensionsMigration.isRetiredRecord(record.recordID.recordName) {
+                let name = record.recordID.recordName
+                store.update { _ = $0.ledger.requestDelete(name, now: .now) }
+                queue(name, .delete)
+                continue
+            }
             guard CloudSyncRecordCodec.schemaVersion(of: record) <= CloudSyncRecordCodec.schemaVersion else {
                 return await pauseForUpdate()
             }

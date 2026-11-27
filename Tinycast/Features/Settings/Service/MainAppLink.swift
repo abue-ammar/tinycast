@@ -5,23 +5,17 @@ import AppKit
 @Observable
 final class MainAppLink {
     private(set) var status = MainAppStatus()
-    @ObservationIgnored private(set) lazy var extensions = ExtensionLibrary(mainApp: self)
 
     @ObservationIgnored private let link: ProcessLink<SettingsWire.ToMainApp, SettingsWire.ToSettings>
     @ObservationIgnored private let mirror: SharedStateMirror
     @ObservationIgnored private unowned let core: AppCore
-    private struct PendingCall {
-        let reply: CheckedContinuation<SettingsWire.Reply, Error>
-        let onProgress: (ExtensionCallEvent) -> Void
-    }
-
     private enum CloseState {
         case open
         case waiting((() -> Void)?)
         case ready
     }
 
-    @ObservationIgnored private var calls: [UUID: PendingCall] = [:]
+    @ObservationIgnored private var calls: [UUID: CheckedContinuation<SettingsWire.Reply, Error>] = [:]
     @ObservationIgnored private var closeTimeout: Task<Void, Never>?
     @ObservationIgnored private var closeState = CloseState.open
 
@@ -61,20 +55,6 @@ final class MainAppLink {
         NSRunningApplication(processIdentifier: getppid())?.activate(from: .current)
     }
 
-    func call(
-        _ call: ExtensionCall, onEvent: @escaping (ExtensionCallEvent) -> Void = { _ in }
-    ) async -> ExtensionCallResult {
-        do {
-            guard case .extensions(let result) = try await request(.extensions(call), onProgress: onEvent)
-            else { throw CocoaError(.coderReadCorrupt) }
-            return result
-        } catch is CancellationError {
-            return ExtensionCallResult()
-        } catch {
-            return ExtensionCallResult(error: error.localizedDescription)
-        }
-    }
-
     @discardableResult
     func callMCP(_ call: MCPSettingsCall) async throws -> MCPServerStatus? {
         guard case .mcp(let status) = try await request(.mcp(call)) else {
@@ -97,16 +77,14 @@ final class MainAppLink {
         return message
     }
 
-    private func request(
-        _ call: SettingsWire.Call, onProgress: @escaping (ExtensionCallEvent) -> Void = { _ in }
-    ) async throws -> SettingsWire.Reply {
+    private func request(_ call: SettingsWire.Call) async throws -> SettingsWire.Reply {
         try Task.checkCancellation()
         guard acceptsRequests else { throw SettingsWire.Failure.disconnected }
         mirror.flush()
         let id = UUID()
         let reply = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
-                calls[id] = PendingCall(reply: continuation, onProgress: onProgress)
+                calls[id] = continuation
                 link.send(.call(id, call))
             }
         } onCancel: {
@@ -122,13 +100,13 @@ final class MainAppLink {
 
     private func cancel(_ id: UUID) {
         link.send(.cancelCall(id))
-        calls.removeValue(forKey: id)?.reply.resume(throwing: CancellationError())
+        calls.removeValue(forKey: id)?.resume(throwing: CancellationError())
     }
 
     private func didClose() {
         let pending = calls.values
         calls.removeAll()
-        for call in pending { call.reply.resume(throwing: SettingsWire.Failure.disconnected) }
+        for call in pending { call.resume(throwing: SettingsWire.Failure.disconnected) }
         if case .open = closeState {
             core.terminate()
         } else {
@@ -175,10 +153,8 @@ final class MainAppLink {
             link.send(.activate(id))
         case .changed(let change):
             mirror.apply(change)
-        case .extensionProgress(let id, let event):
-            calls[id]?.onProgress(event)
         case .reply(let id, let reply):
-            calls.removeValue(forKey: id)?.reply.resume(returning: reply)
+            calls.removeValue(forKey: id)?.resume(returning: reply)
         case .readyToClose:
             finishClosing()
         case .status(let status):

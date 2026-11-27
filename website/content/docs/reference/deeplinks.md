@@ -123,8 +123,3 @@ Use `open -g`, so the link runs without bringing Tinycast forward:
 
 Window commands also work with a plain `open`. Snippets and Paste Sequentially need `open -g`, so
 the text goes to the app you're in.
-
-## Extension links
-
-Extension commands use their own links, like `raycast://extensions/<owner>/<extension>/<command>`.
-See [Compatibility](/docs/extensions/compatibility).

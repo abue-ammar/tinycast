@@ -12,7 +12,6 @@ const SECTIONS: Record<string, string> = {
   launcher: "Launcher",
   features: "Features",
   ai: "AI",
-  extensions: "Raycast extensions",
   reference: "Reference",
 };
 

@@ -337,8 +337,10 @@ can run in parallel.
 1. **Remove Raycast extension support completely.** Delete `Features/Extensions/`,
    `RaycastRuntime.generated.js`, `Scripts/raycast-runtime/`, its harnesses, settings keys, strings and
    docs, and every reference in AGENTS.md, `architecture.md` and `not-planned.md`. No migration: files
-   an old install left behind stay where they are. Keep `AppEntry.Kind.extensionCommand` for native
-   commands. Raycast import (snippets, quicklinks, script commands) is a separate feature and stays.
+   an old install left behind stay where they are. `AppEntry.Kind.extensionCommand` goes too, with
+   the palette mode, hotkey action and Settings tab built on it; Phase 3 adds back what native
+   commands need. Raycast import (snippets, quicklinks, script commands) is a separate feature and
+   stays.
    _Done when_ the app builds, tests pass and nothing imports JavaScriptCore.
 
 ### Phase 1: the contract (extensions repo)
@@ -385,8 +387,8 @@ can run in parallel.
     that run without the Store or the signature check. Release builds have neither, so an end user
     installs only from the Store. It grants a capability, so it never rides a backup or
     `settings.json`, like `snippetsEnabled`.
-13. **Launcher**: `extensionCommand` rows come from installed manifests, so listing starts no process.
-    Per-command hotkeys and aliases use the existing command paths.
+13. **Launcher**: add `AppEntry.Kind.extensionCommand`; its rows come from installed manifests, so
+    listing starts no process. Per-command hotkeys and aliases use the existing command paths.
 
 _Done when_ `hello` runs from the palette in Tinycast Dev and exits after the idle delay, and with
 extensions off no extension process exists and the main app's memory matches its baseline.

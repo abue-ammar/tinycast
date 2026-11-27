@@ -36,7 +36,6 @@ extension View {
             .environment(core.uninstall)
             .environment(core.quicklinks)
             .environment(core.snippetsStore)
-            .environment(core.extensions)
             .environment(core.calendarStore)
             .environment(core.meetingClock)
             .environment(core.updateCoordinator)

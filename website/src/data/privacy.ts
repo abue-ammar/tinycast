@@ -1,8 +1,7 @@
 import type { IconName } from "../components/ui/feature-icons";
 
 // Every claim here is stated in the docs: Getting started, Settings → Features,
-// Permissions, Extensions, AI, Snippets, Calendar and Clipboard. Don't add one
-// that isn't.
+// Permissions, AI, Snippets, Calendar and Clipboard. Don't add one that isn't.
 
 export const privacyStats = [
   { value: "0", label: "accounts" },
@@ -28,12 +27,6 @@ export const defaultSwitches: DefaultSwitch[] = [
     isOn: false,
   },
   {
-    icon: "extensions",
-    name: "Extensions",
-    note: "While off, no extension folder is read and no JavaScript engine runs.",
-    isOn: false,
-  },
-  {
     icon: "snippets",
     name: "Snippets",
     note: "The only feature that reads what you type. Matching happens on your Mac.",
@@ -54,4 +47,4 @@ export const defaultSwitches: DefaultSwitch[] = [
 ];
 
 export const permissionNote =
-  "Tinycast asks for a permission only when a feature first needs it, never at launch. Restoring a settings backup can't turn on extensions or snippets.";
+  "Tinycast asks for a permission only when a feature first needs it, never at launch. Restoring a settings backup can't turn on snippets.";

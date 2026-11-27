@@ -126,8 +126,7 @@ Accessibility grant. Each entitlement in `Tinycast/Tinycast.entitlements` earns 
 
 | Entitlement                                         | Without it                                                                                                                                                               |
 | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `com.apple.security.cs.allow-jit`                   | JavaScriptCore cannot JIT, and every extension command runs on the interpreter                                                                                           |
-| `com.apple.security.automation.apple-events`        | Every Apple event is refused with `-1743` and no prompt; Get Info, the Finder selection an extension reads, and the System Events–driven system actions all die silently |
+| `com.apple.security.automation.apple-events`        | Every Apple event is refused with `-1743` and no prompt; Get Info and the System Events–driven system actions all die silently                                           |
 | `com.apple.security.device.camera`                  | The camera prompt never appears and access resolves as denied                                                                                                            |
 | `com.apple.security.personal-information.calendars` | `requestFullAccessToEvents()` returns `false` in milliseconds with no dialog, and Tinycast never appears under System Settings › Calendars                               |
 
@@ -144,7 +143,7 @@ is there so a future feature that adds the usage string but forgets the entitlem
 instead of shipping a prompt that can never appear.
 
 Nothing else is needed: the only `dlopen` is Apple's own IOBluetooth, so library validation is left
-on, and `node`, `ray` and shell commands are separate processes it never reaches. Bluetooth has no
+on, and shell commands are separate processes it never reaches. Bluetooth has no
 hardened-runtime entitlement.
 
 `./Scripts/verify-signature.sh <path-to-.app>` asserts all of this: the runtime flag and a

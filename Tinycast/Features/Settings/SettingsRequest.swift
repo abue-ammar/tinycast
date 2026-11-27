@@ -11,5 +11,4 @@ struct SettingsRequest: Codable, Sendable {
 /// Work a pane picks up as it opens, started from outside Settings.
 enum SettingsHandoff: Codable, Sendable {
     case editWindowLayout(WindowLayoutEditRequest)
-    case installFromStore(ExtensionDeepLink.StoreInstall)
 }

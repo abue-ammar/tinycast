@@ -296,65 +296,6 @@
         }
       }
     },
-    "NSRemindersFullAccessUsageDescription" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycast erlaubt Erweiterungen, die du ausführst, deine Erinnerungen zu lesen und zu bearbeiten."
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycast lets extensions you run read and edit your reminders."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycast permite que las extensiones que ejecutas lean y editen tus recordatorios."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycast permet aux extensions que vous lancez de lire et de modifier vos rappels."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycastは、あなたが実行する拡張機能にリマインダーの読み取りと編集を許可します。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycast는 사용자가 실행하는 확장 프로그램이 미리 알림을 읽고 편집할 수 있게 합니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "O Tinycast permite que as extensões que você executa leiam e editem seus lembretes."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycast позволяет запускаемым вами расширениям читать и редактировать ваши напоминания."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tinycast 允许你运行的扩展读取和编辑你的提醒事项。"
-          }
-        }
-      }
-    },
     "Tinycast Backup" : {
       "localizations" : {
         "de" : {

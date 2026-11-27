@@ -102,6 +102,15 @@ struct LanguageTests {
             "pt": ("1 janela", "2 janelas"), "ru": ("1 окно", "2 окна"),
             "zh-Hans": ("1 个窗口", "2 个窗口")
         ]
+        // No view shows a bare "Installed" or "On", so the word these labels share is spelled out.
+        let installed = [
+            "de": "Installiert", "es": "Instalado", "ja": "インストール済み", "ko": "설치됨", "pt": "Instalado",
+            "ru": "Установлено", "zh-Hans": "已安装"
+        ]
+        let on = [
+            "de": "Ein", "es": "Activado", "ja": "オン", "ko": "켜짐", "pt": "Ativado", "ru": "Вкл.",
+            "zh-Hans": "开启"
+        ]
         let contextualLabels: [(key: String, source: String, overrides: [String: String])] = [
             ("applications-empty", "Nothing here yet.", ["fr": "Aucune application à afficher."]),
             ("system-settings-empty", "Nothing here yet.", ["fr": "Aucun réglage système à afficher."]),
@@ -110,17 +119,15 @@ struct LanguageTests {
             ("apple-shortcuts-empty", "Nothing here yet.", ["fr": "Aucun raccourci à afficher."]),
             ("snippets-use-default-folder", "Use Default", ["fr": "Utiliser le dossier par défaut"]),
             ("notes-use-default-folder", "Use Default", ["fr": "Utiliser le dossier par défaut"]),
-            ("dictation-model-installed", "Installed", ["fr": "Installé"]),
+            ("dictation-model-installed", "Installed", installed.merging(["fr": "Installé"]) { $1 }),
             ("dictation-language-auto", "Auto", ["fr": "Détection automatique"]),
-            ("ai-installed-tools", "Installed", ["fr": "Outils installés"]),
-            ("extensions-installed-section", "Installed", ["fr": "Extensions installées"]),
-            ("extensions-install-section", "Install", ["fr": "Installation"]),
+            ("ai-installed-tools", "Installed", installed.merging(["fr": "Outils installés"]) { $1 }),
             ("unit-category-time", "Time", ["fr": "Durée"]),
             ("window-position-center", "Center", ["fr": "Centre"]),
             ("ai-pinned-conversations", "Pinned", ["fr": "Épinglées"]),
-            ("ai-system-prompt-on", "On", ["fr": "Activées"]),
+            ("ai-system-prompt-on", "On", on.merging(["fr": "Activées"]) { $1 }),
             ("ai-system-prompt-off", "Off", ["fr": "Désactivées"]),
-            ("ai-web-search-on", "On", ["fr": "Activée"]),
+            ("ai-web-search-on", "On", on.merging(["fr": "Activée"]) { $1 }),
             ("ai-web-search-off", "Off", ["fr": "Désactivée"]),
             ("reasoning-effort-low", "Low", ["es": "Bajo", "pt": "Baixo"]),
             ("reasoning-effort-medium", "Medium", ["es": "Medio", "fr": "Moyen", "pt": "Médio"]),
@@ -200,7 +207,7 @@ struct LanguageTests {
                 for (key, expected) in [
                     "Medium": "Moyenne", "High": "Élevée", "Light": "Clair", "Dark": "Sombre",
                     "Time": "Heure", "Center": "Centrer", "Pinned": "Épinglés",
-                    "On": "Activé", "Off": "Désactivé", "Untitled": "Sans titre"
+                    "Off": "Désactivé", "Untitled": "Sans titre"
                 ] {
                     check(
                         "French label \(key) resolves in its context",

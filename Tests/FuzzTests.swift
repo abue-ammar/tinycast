@@ -229,7 +229,7 @@ struct FuzzTests {
             "an exact search term beats a stronger alignment",
             first("sa", [Item(name: "Safari"), Item(name: "Slack", frecency: 150, terms: ["sa"])]) == "Slack")
         check(
-            "an exact subtitle lists an extension's commands first",
+            "an exact subtitle lists the entries it labels first",
             first("brew", [Item(name: "Brewer"), Item(name: "Search", subtitle: "Brew")]) == "Search")
         check(
             "an alias prefix beats a stronger alignment",
@@ -408,7 +408,7 @@ struct FuzzTests {
             ("wx", "微信", "…as pinyin initials"), ("wyyyl", "网易云音乐", "…initials of a longer name"),
             ("telegram", "Телеграм", "a Cyrillic name typed in Latin"),
             ("sig", "Signature Block", "a snippet's keyword"),
-            ("brew", "Search", "an extension's title lists its commands"),
+            ("brew", "Search", "a subtitle lists the entries it labels"),
             ("window", "Switch Windows", "an ordinary command still matches a category prefix")
         ]
         for test in cases {

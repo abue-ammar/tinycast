@@ -29,8 +29,7 @@
   <img src="docs/screenshot.jpg" alt="Tinycast command palette">
 </p>
 
-Built with SwiftUI and AppKit. No dependencies, no Electron, no telemetry. It runs your Raycast
-extensions, too.
+Built with SwiftUI and AppKit. No dependencies, no Electron, no telemetry.
 
 [Explore all features →](https://tinycast.dev/#features)
 

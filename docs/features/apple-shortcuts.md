@@ -77,7 +77,7 @@ shortcut keeps working. Its filter is membership in `AppIndex.matches`, so it an
 `HotKeyAction.appleShortcut(id:)` persists under `hotkey.appleShortcut.<uuid>` with a
 `boundAppleShortcutIDs` index. `appleShortcutsEnabled` rides in settings backups like the quicklink
 flags, since running a shortcut the user built grants no permission class. Bindings are not in
-`HotkeyBackup`, the same as extension commands.
+`HotkeyBackup`.
 
 ## Standalone harness
 

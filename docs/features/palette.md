@@ -69,11 +69,9 @@ Hiding schedules Pop to Root Search, and `PaletteWindowController.popToRoot` is 
 palette returns to the launcher _and_ chat starts a new conversation, at once or after
 `popToRootTimeout`, unless a re-summon inside that window consumes the pending reset first. An
 unfinished chat is a thing being done, exactly like a typed query, so the screen and the conversation
-are reset together rather than the screen alone. A reply still streaming is one exception: it was
+are reset together rather than the screen alone. A reply still streaming is the exception: it was
 asked for, and resetting would throw the answer away. Nothing is lost either way: a conversation is
-written to Chat History, and the AI Chat window's sidebar, as soon as it has a message. The other is
-an extension's browser sign-in: while `ExtensionManager.isSigningIn`, hiding schedules no reset and a
-re-summon counts as preserved, because a reset would stop the command and cancel its sign-in.
+written to Chat History, and the AI Chat window's sidebar, as soon as it has a message.
 
 Each `PaletteMode` maps to one type conforming to `PaletteScreen`, and the protocol is what keeps the
 selection invariant honest: a screen exposes `rows` as its single source of visible order, and the
@@ -108,11 +106,10 @@ every screen but two: the clipboard lands past its pins
 | `.snippets`            | `SnippetsScreen`            | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets))                                |
 | `.snippetEditor`       | `SnippetEditorScreen`       | `SnippetEditorView` (see [snippets.md](snippets.md#launcher-editor))                                     |
 | `.dictionary`          | `DictionaryScreen`          | `DictionaryEntryView` (see [dictionary.md](dictionary.md))                                               |
-| `.extensionCommand`    | `ExtensionCommandScreen`    | `ExtensionCommandView` (see [extensions.md](extensions.md))                                              |
 
 **Tab rings the three surfaces a reader opens directly: launcher → AI chat → clipboard → launcher**,
-unless the screen claims it through `tab(at:backwards:)` (native editors and extension forms walk
-their own fields), or the selected row declares arguments, in which case it walks those fields first (see
+unless the screen claims it through `tab(at:backwards:)` (native editors walk their own fields), or
+the selected row declares arguments, in which case it walks those fields first (see
 below); every other mode stays off the ring, and is reached by a command or a global hotkey, with
 Uninstall only from a launcher app's Actions menu, scoped to that app. Chat is skipped whole when
 `aiEnabled` is off, which leaves the launcher ↔ clipboard flip the ring replaced.
@@ -152,8 +149,7 @@ Closing a menu releases its hosted actions after the exit animation, while reusi
 Scrolling a native form dismisses its menu before the control's anchor moves.
 
 **Escape clears a non-empty query before it leaves the screen**, so one press clears and the next
-leaves: an extension screen exits itself first (it keeps a stack the palette cannot see), then a
-pushed screen pops, and a root hides the palette. A focused inline argument field is a rung above the
+leaves: a pushed screen pops, and a root hides the palette. A focused inline argument field is a rung above the
 query, so Escape hands focus back to the search field first; the query that found the command is
 still there to be cleared by the next press. A bare backspace in an empty field takes the same step
 **but never closes**: on a root screen summoned by its own hotkey it falls to the root search, which
@@ -193,10 +189,10 @@ a third screen; ringing round forever therefore never grows the stack past two.
 ### Inline row arguments
 
 A selected row can declare arguments, and they are typed **in the header, beside the search field**,
-not on a screen of their own. Three features answer this way, each owning its own strip: an extension
-command through `ExtensionArgumentsAccessory`, a quicklink through `QuicklinkArgumentsAccessory`, a
-custom command through `CustomCommandArgumentsAccessory`. The last two draw the same fields,
-`DesignSystem/InlineArgumentFields`; an extension draws its own. The palette knows none of them: `PaletteScreen.headerAccessory(at:focus:)` hands back a `PaletteHeaderAccessory`:
+not on a screen of their own. Two features answer this way, each owning its own strip: a quicklink
+through `QuicklinkArgumentsAccessory`, a custom command through `CustomCommandArgumentsAccessory`.
+Both draw the same fields, `DesignSystem/InlineArgumentFields`. The palette knows neither of them:
+`PaletteScreen.headerAccessory(at:focus:)` hands back a `PaletteHeaderAccessory`:
 a width, the field names in Tab order, the first field still owed a value, a menu for a field that is
 chosen rather than typed, and an opaque view. That costs the header its one simple rule, so it holds
 these invariants:
@@ -281,7 +277,7 @@ At expanded launcher root, Escape clears the query while setting `forceExpanded`
 collapsing remain separate presses. The next Escape clears that flag and collapses; another closes.
 Menus and argument fields still take precedence, and sub-screen navigation keeps its own behavior.
 A summon clears `forceExpanded` whenever the field is empty, so a launcher Pop to Root Search
-restores still opens as the bar; a kept query, screen or extension restores expanded as before.
+restores still opens as the bar; a kept query or screen restores expanded as before.
 
 The glass is a background of the header, not a wrapper around it: the field keeps its one structural
 position, and a container never paints its merged glass over the row. While compact the row is
@@ -425,7 +421,7 @@ would sit under the in-flight pinyin. `PalettePanel` publishes the editor's `has
 
 The same empty `query` would read as "nothing left to delete" to the bare-backspace step back, so
 `PalettePanel.sendEvent` asks the editor's `hasMarkedText()` itself and lets Backspace through to the
-IME while a composition is in flight. That covers every screen, an extension's search field included.
+IME while a composition is in flight. That covers every screen.
 
 The palette's arrow, ⇥ and esc handlers return `.ignored` while `isComposing` holds, so the IME
 pages, expands and cancels its candidate window with them. An open menu still claims them first.
@@ -469,7 +465,7 @@ The policy runs after `super.sendEvent`, so it has the last word, and it writes 
 actually differs. It must stay **symmetric**: an earlier version left the field alone and only forced
 the arrow outside it, and AppKit's own alternation over the field came straight back.
 
-All editable text controls use this same cursor policy, including extension fields. It checks visible
+All editable text controls use this same cursor policy. It checks visible
 native control bounds, since SwiftUI's hit-test can return a hosting view instead of its text field.
 Hidden or clipped controls cannot claim the cursor. The search rectangle remains the stable fallback.
 `FormTextInput` uses an `NSTextField` and its native placeholder; `FormTextArea` uses a growing
@@ -495,15 +491,11 @@ Input menus keep a dedicated 200pt minimum width and expand to fit wider control
 gain 20pt without changing other menus; each dropdown's chevron follows the open menu's control frame.
 `menuContent` resolves the open case to one `PaletteMenuContent` (a row count, a row action
 and a view built on demand), so ↑/↓, plain ↵, Esc and the click-away catcher serve every menu without
-knowing which is up. A screen supplies its rows as a `PopoverMenuContent` through `actions(at:)` and
-the default `menuContent` wraps them; a screen whose rows the palette's menu can't express overrides
-`menuContent` and hands over its own view instead; `ExtensionCommandScreen` is the only one, for
-both its ⌘K panel and its search-bar dropdown, and the reason the seam exists (see
-[extensions.md](extensions.md)). The view is a closure because `moveMenu` resolves the open menu on
+knowing which is up. A screen supplies its rows as a `PopoverMenuContent` through `actions(at:)`,
+and `menuContent` wraps them. The view is a closure because `moveMenu` resolves the open menu on
 every arrow key and needs the row count alone. Every open path goes through `open(_:highlighting:)`
 and states where the highlight starts: the first row, except the pop-up-shaped menus (the type
-filter, the dictionary selector, the AI model and effort menus, an extension's search-bar dropdown),
-which open on the choice
+filter, the dictionary selector, the AI model and effort menus), which open on the choice
 they already hold.
 
 **The palette window consumes a click-away press through its release.** While a menu is open,
@@ -557,12 +549,10 @@ The panel is a second SwiftUI hierarchy, so it observes nothing of `RootPaletteV
 `paletteEnvironment` injects the same stores into both hierarchies so they cannot drift.
 `WindowReader` reports the palette's `NSWindow`, which the menu's frame is placed against.
 
-`PaletteMenuContent` may supply its own host-layer clip path. `MenuPanel` is an `AnimatedPanel` on
+`MenuPanel` is an `AnimatedPanel` on
 `.documentWindow`, so every menu opens and closes with AppKit's native window animation (none while
 **Show animations** is off) and has no motion of its own. The close animation keeps drawing the panel after
-`orderOut`, so the controller releases the hosted tree from `orderOutAnimated`, once it is off screen. AppKit refreshes the shadow after layout and display. Each extension menu supplies its
-own clip path; the controller applies it as an opaque value and never reconstructs extension
-geometry.
+`orderOut`, so the controller releases the hosted tree from `orderOutAnimated`, once it is off screen. AppKit refreshes the shadow after layout and display.
 
 ## Menu-open input freeze
 
@@ -590,7 +580,7 @@ Plain ↵ is claimed by `RootPaletteView`'s own `onKeyPress` whenever the search
 `activateSelection` runs from there; the field carries no `onSubmit`. Letting the field submit ends
 editing, and AppKit tears the field editor down and selects the whole string when focus returns, so a
 screen opened with a carried query (the Search Files fallback) came up with that query selected. An
-IME's composition and any other focused field (the inline argument fields, an extension form) are
+IME's composition and any other focused field (the inline argument fields) are
 left alone: the handler returns `.ignored` for them, and their own `onSubmit` still commits.
 
 ## The query is one line

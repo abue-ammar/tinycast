@@ -61,7 +61,6 @@ extension SettingsBackup {
             windowRoomsShowInLauncher: s.windowRoomsShowInLauncher,
             quicklinksEnabled: s.quicklinksEnabled,
             quicklinksShowInLauncher: s.quicklinksShowInLauncher,
-            extensionsShowInLauncher: s.extensionsShowInLauncher,
             quicklinkOpensNewWindow: s.quicklinkOpensNewWindow,
             quicklinkPassesSelectedText: s.quicklinkPassesSelectedText,
             quicklinkConfirmsBeforeDelete: s.quicklinkConfirmsBeforeDelete,
@@ -400,10 +399,6 @@ extension SettingsBackup {
         }
         if let flag = s.quicklinksEnabled {
             settings.quicklinksEnabled = flag
-            count += 1
-        }
-        if let flag = s.extensionsShowInLauncher {
-            settings.extensionsShowInLauncher = flag
             count += 1
         }
         if let flag = s.quicklinksShowInLauncher {

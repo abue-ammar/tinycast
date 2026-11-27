@@ -22,13 +22,6 @@ extension Bundle {
         infoName("CFBundleDisplayName") ?? infoName("CFBundleName") ?? "Tinycast"
     }
 
-    /// The name a bundle declares for itself. Not what Finder shows — LaunchServices ignores a
-    /// `CFBundleDisplayName` that disagrees with the file name, so the launcher labels rows by that.
-    var installedAppName: String {
-        infoName("CFBundleDisplayName") ?? infoName("CFBundleName")
-            ?? bundleURL.deletingPathExtension().lastPathComponent
-    }
-
     /// Localized: `object(forInfoDictionaryKey:)` consults `InfoPlist.strings`.
     private func infoName(_ key: String) -> String? {
         AppDisplayName.named(object(forInfoDictionaryKey: key))

@@ -108,8 +108,8 @@ enum SettingsSearchCatalog {
     static let entries: [SettingsSearchEntry] =
         general + iCloudSync + applications + systemSettings + systemActions + commands + quicklinks
         + appleShortcuts + fallbacks + clipboard + snippets + fileSearch + windowManagement
-        + navigation + notes + calendar + emoji + ai + quickActions + dictation + extensions + permissions
-        + backup + about
+        + navigation + notes + calendar + emoji + ai + quickActions + dictation + permissions + backup
+        + about
 
     private static let general: [SettingsSearchEntry] = [
         .init(pane: .general, keywords: ["preferences", "settings"]),
@@ -622,38 +622,6 @@ enum SettingsSearchCatalog {
             keywords: ["accounts", "sources", "choose", "icloud", "google"])
     ]
 
-    private static let extensions: [SettingsSearchEntry] = [
-        .init(
-            pane: .extensions,
-            keywords: ["raycast", "plugins", "store", "javascript"]),
-        .init(
-            .extensionsExtensions, "Enable extensions",
-            keywords: ["raycast", "third party", "javascript"]),
-        .init(
-            .extensionsInstall, "Search extensions",
-            keywords: ["store", "browse", "install"]),
-        .init(
-            .extensionsInstall, "Install from GitHub",
-            keywords: ["source", "build", "repository", "package manager", "pnpm", "npm", "yarn", "bun"]),
-        .init(
-            .extensionsInstall, "Import from Raycast",
-            keywords: ["migrate", "existing"]),
-        .init(
-            .extensionsInstall, "Add from folder",
-            keywords: ["local", "develop", "sideload"]),
-        .init(
-            group: .extensionsInstalled, "Installed extensions",
-            keywords: [
-                "library", "uninstall", "update", "preferences", "appearance", "alias", "shortcut"
-            ]),
-        .init(
-            group: .extensionsCompatibility, "Compatibility",
-            keywords: ["supported", "unsupported", "raycast api"]),
-        .init(
-            .extensionsStorage, "Leftover files",
-            keywords: ["clean up", "disk", "reclaim", "cache"])
-    ]
-
     private static let permissions: [SettingsSearchEntry] = [
         .init(
             pane: .permissions,
@@ -678,7 +646,7 @@ enum SettingsSearchCatalog {
         .init(
             group: .iCloudSyncContent, "Synced Content",
             keywords: [
-                "notes", "snippets", "quicklinks", "chats", "extensions", "presets", "clipboard", "images"
+                "notes", "snippets", "quicklinks", "chats", "presets", "clipboard", "images"
             ]),
         .init(group: .iCloudSyncGeneral, "Synced Settings", keywords: ["appearance", "login", "menu bar"]),
         .init(group: .iCloudSyncNotSynced, "Not Synced", keywords: ["copied files", "passwords", "excluded"]),
@@ -695,7 +663,7 @@ enum SettingsSearchCatalog {
             keywords: ["save", "tinycast file", "archive"]),
         .init(
             group: .backupNotIncluded, "Not Included",
-            keywords: ["excluded", "extensions", "chats", "passwords", "api keys"]),
+            keywords: ["excluded", "chats", "passwords", "api keys"]),
         .init(
             .backupImport, "Backup File",
             keywords: ["restore", "choose", "tinycast file"]),

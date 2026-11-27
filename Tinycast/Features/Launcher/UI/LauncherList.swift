@@ -136,7 +136,7 @@ struct LauncherList: View {
         }
         // Publication order, so rows match the flat index.
         let kinds: [AppEntry.Kind] = [
-            .meeting, .application, .systemSettings, .extensionCommand, .quicklink, .appleShortcut,
+            .meeting, .application, .systemSettings, .quicklink, .appleShortcut,
             .snippet, .systemAction, .windowLayout, .windowRoom, .windowCommand, .customCommand,
             .quickAction, .command
         ]
@@ -353,10 +353,6 @@ private struct AppRow: View {
                 }
             }
             Spacer()
-            if let refresh = app.backgroundRefresh {
-                ExtensionRefreshIndicator(state: refresh)
-                    .font(metrics.typography.rowTrailing)
-            }
             SlotChordReveal(slot: slot) {
                 if app.kind == .meeting {
                     MeetingEntryContent(entryID: app.id) { MeetingTiming(meeting: $0, now: $1) }
