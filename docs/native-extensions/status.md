@@ -32,7 +32,7 @@ check passes.
 **Built**
 
 - The repo: `Package.swift` (tools 6.2, Swift 6, macOS 26, no dependencies), MIT `LICENSE`,
-  `CODEOWNERS`, both AGENTS.md files with `CLAUDE.md` symlinks, and the app's `.swift-format`.
+  `CODEOWNERS`, both AGENTS.md files, the app's `.swift-format` and a VS Code launch config.
   `TinycastKit` and `TinycastCLI` are empty targets until Phase 2.
 - `TinycastProtocol` v1: the seven messages, the List, Grid, Detail, Form and MenuBar trees, the
   host calls and their errors, the manifest with its validation, the permissions, the Store index
