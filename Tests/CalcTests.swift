@@ -333,10 +333,12 @@ struct CalcTests {
         expectDisplay("2*3 kg", "6 kg")  // an operator keeps the answer in the units written
         expectDisplay("20 celsius", "68 °F")
         expectDisplay("50cm", "19.68503937 in")
-        // Ambiguous single-letter aliases stay app searches, not bare temperatures
+        expectDisplay("100 c", "212 °F")
+        expectDisplay("32f", "0 °C")
+        expectDisplay("10C", "50 °F")
+        expectDisplay("10ºC", "50 °F")
+        expectDisplay("50 ºf", "10 °C")
         expectNil("5 k")
-        expectNil("100 c")
-        expectNil("32f")
 
         // Unit expressions — addition/subtraction converts the RHS and keeps the leftmost unit
         expectDisplay("10kg + 5kg", "15 kg")

@@ -117,8 +117,8 @@ enum CalcUnitCatalog {
         Da|Daltons|1.6605390666e-27|Da,dalton,daltons,amu
         cwt|Hundredweight|45.359237|cwt,hundredweight
         temperature
-        °C|Celsius|1.0|c,°c,celsius,centigrade|273.15
-        °F|Fahrenheit|0.5555555555555556|f,°f,fahrenheit|255.3722222222222
+        °C|Celsius|1.0|c,°c,ºc,celsius,centigrade|273.15
+        °F|Fahrenheit|0.5555555555555556|f,°f,ºf,fahrenheit|255.3722222222222
         K|Kelvin|1.0|k,kelvin,kelvins
         time
         ms|Milliseconds|0.001|ms,millisecond,milliseconds

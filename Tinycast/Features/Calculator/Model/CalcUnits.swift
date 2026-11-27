@@ -133,10 +133,10 @@ enum CalcUnits {
         return .value(input: 1, from: from, to: to, output: output)
     }
 
-    /// `expr unit` with no connector. c/f/k are excluded, so `5k` stays an app search.
+    /// `expr unit` with no connector. A spaced `k` is excluded, so `5 k` stays an app search.
     static func parseBareConversion(_ tokens: [CalcToken]) -> BareConversion? {
         guard tokens.count >= 2, case .ident(let fromName) = tokens[tokens.count - 1],
-            !["c", "f", "k"].contains(fromName),
+            fromName != "k",
             let from = byName[fromName],
             let mapping = autoTargets[from.symbol],
             let to = byName[mapping.to]
@@ -163,7 +163,6 @@ enum CalcUnits {
         "dm": ("cm", false), "in": ("cm", false), "ft": ("m", false), "yd": ("m", false), "mi": ("km", false),
         "mg": ("g", false), "g": ("oz", false), "kg": ("lb", false), "oz": ("g", false),
         "lb": ("kg", false),
-        // Temperature (bare form requires a spelled/°-prefixed alias — see parseBareConversion)
         "°C": ("f", false), "°F": ("c", false), "K": ("c", false),
         "ms": ("s", false), "s": ("ms", false), "min": ("s", false), "hr": ("min", false),
         "day": ("hr", false), "week": ("day", false),
