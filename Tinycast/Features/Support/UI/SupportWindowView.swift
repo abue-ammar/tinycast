@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 struct SupportWindowView: View {
@@ -9,20 +8,29 @@ struct SupportWindowView: View {
 
     static let width: CGFloat = 460
     /// Only until the first layout measures the real one, which is what the window then takes.
-    static let initialSize = CGSize(width: width, height: 340)
+    static let initialSize = CGSize(width: width, height: 400)
 
-    private static let iconSize: CGFloat = 76
+    private static let markSize: CGFloat = 64
+    /// Narrow enough that the English pitch breaks at its comma.
+    private static let pitchWidth: CGFloat = 260
 
     var body: some View {
         @Bindable var settings = settings
-        return VStack(spacing: Theme.Spacing.xxl) {
-            hero
+        return VStack(spacing: Theme.Spacing.xxxl) {
+            BrandArtwork.Mark(height: Self.markSize)
+            pitch
             action
-            reminder(isOn: $settings.supportRemindersEnabled)
+            Toggle("Remind me occasionally", isOn: $settings.supportRemindersEnabled)
+                .toggleStyle(.checkbox)
+                .font(.callout)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .help(
+                    "About once a month. Turn this off and \(Bundle.main.appDisplayName) asks at most once a year."
+                )
         }
         // Less on top: the title bar already contributes its own 32pt above this.
         .padding(.top, Theme.Spacing.md)
-        .padding([.horizontal, .bottom], Theme.Spacing.xxl)
+        .padding([.horizontal, .bottom], Theme.Spacing.xxxl)
         // The ideal height, not the window's: measuring its own output would feed back.
         .fixedSize(horizontal: false, vertical: true)
         .onGeometryChange(for: CGFloat.self) {
@@ -31,93 +39,35 @@ struct SupportWindowView: View {
             support.fit(height: $0)
         }
         .frame(maxWidth: .infinity, alignment: .top)
-        // Only the gradient reaches under the titlebar; the content stays in the safe area.
-        .background(
-            LinearGradient(
-                colors: [Theme.Colors.sheen, Color.clear], startPoint: .top, endPoint: .center
-            )
-            .ignoresSafeArea()
-        )
+        .background { BrandArtwork.Atmosphere().ignoresSafeArea() }
+        .tint(Theme.Colors.brand)
     }
 
-    // MARK: - Hero
-
-    private var hero: some View {
-        VStack(spacing: Theme.Spacing.xl) {
-            Image(nsImage: NSApp.applicationIconImage)
-                .resizable()
-                .interpolation(.high)
-                .frame(width: Self.iconSize, height: Self.iconSize)
-                .shadow(color: .black.opacity(0.35), radius: 12, y: 6)
-            VStack(spacing: Theme.Spacing.sm) {
-                Text("Support \(Bundle.main.appDisplayName)")
-                    .font(.title2.weight(.semibold))
-                Text("Built with love.")
-                    .font(.callout)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-            }
+    private var pitch: some View {
+        VStack(spacing: Theme.Spacing.md) {
+            Text("Enjoying \(Bundle.main.appDisplayName)?")
+                .font(.largeTitle.weight(.bold))
+                .accessibilityAddTraits(.isHeader)
+            Text("If it earns a place on your Mac, consider supporting its development.")
+                .font(.title3)
+                .foregroundStyle(Theme.Colors.textSecondary)
+                .frame(maxWidth: Self.pitchWidth)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
+        .multilineTextAlignment(.center)
     }
-
-    // MARK: - Action
 
     private var action: some View {
-        VStack(spacing: Theme.Spacing.lg) {
-            SupportActionButton(
-                title: String(localized: "Support \(Bundle.main.appDisplayName)"), icon: "heart"
-            ) {
-                support.openCheckout()
-            }
-            Text("Secure checkout on Polar.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+        Button {
+            support.openCheckout()
+        } label: {
+            Label(String(localized: "Support \(Bundle.main.appDisplayName)"), systemImage: "heart.fill")
+                .font(.headline)
+                .padding(.horizontal, Theme.Spacing.md)
         }
-    }
-
-    // MARK: - Reminder
-
-    private func reminder(isOn: Binding<Bool>) -> some View {
-        Toggle("Remind me occasionally", isOn: isOn)
-            .toggleStyle(.checkbox)
-            .font(.callout)
-            .foregroundStyle(Theme.Colors.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .help(
-                "About once a month. Turn this off and \(Bundle.main.appDisplayName) won't ask again.")
-    }
-}
-
-private struct SupportActionButton: View {
-    let title: String
-    let icon: String
-    let action: () -> Void
-
-    @State private var hovered = false
-
-    private static let height: CGFloat = 46
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: icon)
-                    .font(.body.weight(.semibold))
-                Text(title)
-                    .font(.headline)
-            }
-            // White ink in both appearances: a saturated fill carries its own contrast.
-            .foregroundStyle(Color.white)
-            .padding(.horizontal, Theme.Spacing.xxxl)
-            .frame(height: Self.height)
-            .background(
-                Capsule()
-                    .fill(Theme.Colors.brand)
-                    .brightness(hovered ? 0.08 : 0)
-            )
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .animation(.easeOut(duration: Theme.Duration.tooltip), value: hovered)
+        .buttonStyle(.borderedProminent)
+        .buttonBorderShape(.capsule)
+        .controlSize(.extraLarge)
+        .padding(.top, Theme.Spacing.sm)
     }
 }

@@ -56,12 +56,20 @@ final class SupportReminderStore {
     private var anchor: Date { state.lastAskedAt ?? state.firstSeenAt }
 
     private func advance() -> TimeInterval {
+        if isDue(at: Date()) {
+            onDue?()
+            // A withheld ask leaves the anchor where it was: retry soon, without spinning on it.
+            if isDue(at: Date()) { return Self.retryInterval }
+        }
         let wait = SupportReminderSchedule.wait(since: anchor, now: Date())
-        guard settings.supportRemindersEnabled else { return max(wait, Self.idleInterval) }
-        guard wait <= 0 else { return wait }
-        onDue?()
-        // Floored: a withheld ask leaves the anchor where it was, and this must not spin on it.
-        return max(SupportReminderSchedule.wait(since: anchor, now: Date()), Self.retryInterval)
+        return settings.supportRemindersEnabled ? wait : max(wait, Self.idleInterval)
+    }
+
+    private func isDue(at now: Date) -> Bool {
+        guard settings.supportRemindersEnabled else {
+            return SupportReminderSchedule.isGivingWeekAskDue(since: anchor, now: now)
+        }
+        return SupportReminderSchedule.wait(since: anchor, now: now) <= 0
     }
 
     private func persist() {

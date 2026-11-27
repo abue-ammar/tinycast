@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class PlanUsageMonitor {
-    private static let interval: Duration = .seconds(300)
+    private static let interval: Duration = .seconds(180)
     private static let minimumGap: Duration = .seconds(30)
 
     private struct Read {

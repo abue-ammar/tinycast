@@ -346,7 +346,7 @@ picker. ⌘J hands a Quick AI conversation to the window.
   ChatGPT only when it is signed in with an account rather than an API key.
 - **Usage polling never holds the chat's Codex server.** `ChatGPTSubscriptionManager.readUsage()`
   and `consumeResetCredit()` each start a server of their own and stop it on return, so a poll
-  every five minutes neither keeps the chat's server resident nor relaunches it mid-turn. A chat
+  every three minutes neither keeps the chat's server resident nor relaunches it mid-turn. A chat
   turn that ends reads limits on its own server and hands them over through `onUsage`.
 
 ## Connections and routing
@@ -925,7 +925,7 @@ reset says when. **Reset ChatGPT Limits…** appears when Codex identifies an av
 Tinycast confirms that credit through `DialogController` and verifies it is still available on the
 server that redeems it.
 
-`PlanUsageMonitor` reads every ready provider every five minutes, again when the menu opens (no
+`PlanUsageMonitor` reads every ready provider every three minutes, again when the menu opens (no
 provider more than once in 30 seconds), when a provider finishes its check or is switched off, and
 on wake; it stops polling while the Mac sleeps. A failed read keeps the last numbers and says
 **Couldn't refresh**; numbers older than fifteen minutes say how old. Claude is read again when a

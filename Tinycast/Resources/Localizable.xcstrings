@@ -19452,54 +19452,54 @@
         }
       }
     },
-    "About once a month. Turn this off and %@ won't ask again." : {
+    "About once a month. Turn this off and %@ asks at most once a year." : {
       "localizations" : {
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Etwa einmal im Monat. Deaktiviere dies, dann fragt %@ nicht mehr nach."
+            "value" : "Etwa einmal im Monat. Deaktiviere dies, dann fragt %@ höchstens einmal im Jahr."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Aproximadamente una vez al mes. Desactívalo y %@ no volverá a preguntar."
+            "value" : "Aproximadamente una vez al mes. Desactívalo y %@ preguntará como mucho una vez al año."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Affiche un rappel pour soutenir %@ environ une fois par mois."
+            "value" : "Environ une fois par mois. Désactivez cette option et %@ demandera au plus une fois par an."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "月に1回程度です。これをオフにすると、%@は確認しなくなります。"
+            "value" : "月に1回程度です。これをオフにすると、%@の確認は年に1回までになります。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "한 달에 한 번 정도입니다. 이 옵션을 끄면 %@에서 다시 묻지 않습니다."
+            "value" : "한 달에 한 번 정도입니다. 이 옵션을 끄면 %@에서 1년에 최대 한 번만 묻습니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cerca de uma vez por mês. Desative isto e o %@ não perguntará novamente."
+            "value" : "Cerca de uma vez por mês. Desative isto e o %@ perguntará no máximo uma vez por ano."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Примерно раз в месяц. Отключите это, и %@ больше не будет спрашивать."
+            "value" : "Примерно раз в месяц. Отключите это, и %@ будет спрашивать не чаще раза в год."
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "大约每月一次。关闭此项后，%@ 将不再询问。"
+            "value" : "大约每月一次。关闭此项后，%@ 每年最多询问一次。"
           }
         }
       }
@@ -30605,58 +30605,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "构建一次，之后随文件变化保持最新。仅在运行时，索引才会占用额外内存。"
-          }
-        }
-      }
-    },
-    "Built with love." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Mit Liebe gemacht."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Hecho con cariño."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Conçu avec amour."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "愛を込めて作りました。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "사랑을 담아 만들었습니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Feito com carinho."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Сделано с любовью."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "用心打造。"
           }
         }
       }
@@ -55315,6 +55263,58 @@
         }
       }
     },
+    "Enjoying %@?" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gefällt dir %@?"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "¿Te gusta %@?"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vous appréciez %@ ?"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@を気に入っていただけましたか？"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@, 마음에 드시나요?"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Está gostando do %@?"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Нравится %@?"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "喜欢 %@ 吗？"
+          }
+        }
+      }
+    },
     "Enter %@" : {
       "localizations" : {
         "de" : {
@@ -61702,58 +61702,6 @@
         }
       }
     },
-    "Free and open source. Your support sustains its development." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Kostenlos und Open Source. Deine Unterstützung sichert die Weiterentwicklung."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gratis y de código abierto. Tu apoyo hace posible su desarrollo."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gratuit et open source. Votre soutien assure son développement."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "無料のオープンソースです。皆さまのご支援が開発を支えています。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "무료 오픈 소스입니다. 여러분의 후원으로 개발이 이어집니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Gratuito e de código aberto. Seu apoio sustenta o desenvolvimento."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Бесплатно, с открытым исходным кодом. Ваша поддержка обеспечивает развитие проекта."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "免费且开源。您的支持让开发得以持续。"
-          }
-        }
-      }
-    },
     "Frequency" : {
       "localizations" : {
         "de" : {
@@ -65870,6 +65818,58 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "图标样式"
+          }
+        }
+      }
+    },
+    "If it earns a place on your Mac, consider supporting its development." : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Wenn es sich einen Platz auf deinem Mac verdient hat, unterstütze gern seine Weiterentwicklung."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Si se ha ganado un lugar en tu Mac, considera apoyar su desarrollo."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "S’il a gagné sa place sur votre Mac, pensez à soutenir son développement."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Macに欠かせないアプリになったら、ぜひ開発へのご支援をご検討ください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mac에 꼭 필요한 앱이 되었다면 개발 후원을 고려해 주세요."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Se ele conquistou um lugar no seu Mac, considere apoiar o desenvolvimento dele."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Если он заслужил место на вашем Mac, подумайте о поддержке его разработки."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "如果它在您的 Mac 上赢得了一席之地，请考虑支持它的开发。"
           }
         }
       }
@@ -113483,58 +113483,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "安全键盘输入兼容性"
-          }
-        }
-      }
-    },
-    "Secure checkout on Polar." : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Sichere Bezahlung über Polar."
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Pago seguro en Polar."
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Paiement sécurisé sur Polar."
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Polarで安全に決済できます。"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Polar에서 안전하게 결제합니다."
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Checkout seguro na Polar."
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Безопасная оплата через Polar."
-          }
-        },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "通过 Polar 安全结账。"
           }
         }
       }

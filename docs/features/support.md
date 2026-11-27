@@ -14,10 +14,11 @@ hero shares the checkout page's brief offer copy from `website/src/data/support.
 - **The reminder never takes focus from something the user started.** `presentIfDue()` returns without
   presenting unless `AppCore.canInterruptUser`, which is `UpdateReadiness` over `AppCore.currentActivity`.
   A withheld ask leaves the anchor alone, so it is still owed and the pump comes back in ten minutes rather than a month.
-- **The checkbox defaults on, and off means off forever.** `AppSettings.supportRemindersEnabled` reads
-  `defaults.object(forKey:) == nil || defaults.bool(forKey:)`, so absence is on and a stored `false`
-  survives. It rides a settings backup: it grants no capability, it silences a prompt, and a user who
-  turned it off should stay off across a restore.
+- **The checkbox defaults on, and off leaves one ask a year.** `AppSettings.supportRemindersEnabled`
+  reads `defaults.object(forKey:) == nil || defaults.bool(forKey:)`, so absence is on and a stored
+  `false` survives. It rides a settings backup: it grants no capability, it silences a prompt, and a
+  user who turned it off should stay off across a restore. Off, only
+  `SupportReminderSchedule.givingWeek(in:)` asks.
 - **The schedule state is a file, not a default.** `support-reminder.json` lives under
   `AppPaths.applicationSupport()`, not `caches()`: a purged cache would reset the anchor and ask
   early. It holds `firstSeenAt` and `lastAskedAt` and nothing else; the _preference_ stays in
@@ -28,28 +29,27 @@ hero shares the checkout page's brief offer copy from `website/src/data/support.
 - **One button, one link.** `SupportCoordinator.checkout` is the only app destination. The checkout
   page owns the offer and fulfillment details; the website hero reuses its brief product copy.
   Adding a second button means adding a second thing to keep in sync.
-- **The button is the composition, not its footer.** It sits under the hero at 46pt tall, because this
-  window asks rather than reports; an actions row pinned to the bottom edge reads as a utility dialog.
-- **Brand colour appears exactly twice**: the app icon, which is violet on its own, and the button.
-- **Support's views are Support's own.** `SupportActionButton` is private to `SupportWindowView`
-  rather than reaching for Onboarding's card rows, which are that window's.
+- **The button is the composition, not its footer.** It sits under the pitch, because this window asks
+  rather than reports; an actions row pinned to the bottom edge reads as a utility dialog.
+- **Only the brand artwork is shared.** The mark and backdrop are `BrandArtwork`, as in Onboarding;
+  the button is the system's `.borderedProminent` capsule tinted brand.
 
 ## How it is put together
 
 | Piece                                 | Holds                                                       |
 | ------------------------------------- | ----------------------------------------------------------- |
-| `Model/SupportReminderSchedule.swift` | pure: seconds until the next ask, clamped at both ends      |
+| `Model/SupportReminderSchedule.swift` | pure: the wait until the next ask, and each giving week     |
 | `Service/SupportReminderStore.swift`  | the JSON state, and the one `Task` pump that offers the ask |
 | `UI/SupportCoordinator.swift`         | the window's lifecycle, the checkout link, the anchor write |
-| `UI/SupportWindowView.swift`          | the window: hero, the button, and the reminder checkbox     |
+| `UI/SupportWindowView.swift`          | the window: mark, pitch, the button, the reminder checkbox  |
 
 `SupportReminderStore.advance()` is one turn of the pump: it answers how long to sleep, and calls
-`onDue` when the wait has reached zero. `AppCore.start()` wires that closure to
+`onDue` when the ask is due. `AppCore.start()` wires that closure to
 `supportCoordinator.presentIfDue()`. The store itself never presents anything and never writes the
 anchor on its own; that write belongs to the coordinator, so there is exactly one of it.
 
-The wait after an offer is floored at the retry interval. Showing the window is what moves the anchor,
-and the floor is what stops the pump spinning if it did not.
+Showing the window is what moves the anchor; an ask still due after `onDue` was withheld, and the pump
+retries it after the retry interval rather than spinning on it.
 
 ## The window
 
@@ -57,13 +57,10 @@ and the floor is what stops the pump spinning if it did not.
 `.onGeometryChange` → `fit(height:)`. It is titled and transparent-titlebar'd, so `ActivationPolicy`
 brings the Dock icon in and out on its own, and `⌘W` or the close button dismisses it.
 
-The composition is centred: a shadowed 76pt app icon, the ask in `.title2`, one line of copy, then
-the button and the reminder switch. Nothing carries a keyboard shortcut:
-with a custom button style there is no focus ring to advertise one, and ↵ silently opening a payment
-page is a surprise rather than a convenience.
-
-The window asks, so the ask is the centrepiece. It uses `AppWindowController`, a content-measured
-height and the `sheen` gradient.
+The composition is centred: the 64pt `BrandArtwork.Mark`, the ask in `.largeTitle`, the pitch, the
+button, then the reminder checkbox. `BrandArtwork.Atmosphere` runs under the transparent titlebar.
+Nothing carries a keyboard shortcut: ↵ silently opening a payment page is a surprise rather than a
+convenience.
 
 ## Where it is reachable from
 

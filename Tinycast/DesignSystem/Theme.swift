@@ -462,7 +462,6 @@ enum Theme {
         static let pageMotion = Animation.smooth(duration: 0.28, extraBounce: 0)
 
         static let night = Color(red: 0.038, green: 0.025, blue: 0.072)
-        static let lightning = Color(red: 0.87, green: 0.79, blue: 1)
         static let importItemSelectedFill = Colors.brand.opacity(0.28)
         static let featureIconFill = Colors.brand.opacity(0.14)
         static let emblemInk = Colors.brand.mix(with: .primary, by: 0.40)
@@ -476,9 +475,6 @@ enum Theme {
         static let returnKeyBorder = Color.white.opacity(0.45)
         /// "↵" falls back to a face that seats high, so it drops as it does in `KeyCapChip`.
         static let returnGlyphDrop: CGFloat = 1.1
-        static let canvas = Colors.adaptive(
-            dark: NSColor(srgbRed: 0.051, green: 0.044, blue: 0.073, alpha: 1),
-            light: .windowBackgroundColor)
 
         /// The shortcut step's keys, in fractions of one key's height so every fitted size matches.
         enum Keycap {
@@ -657,7 +653,6 @@ enum Theme {
         static let menuSymbol = ramp(dark: 0.70, light: 0.70)
         static let noteText = ramp(dark: 0.90, light: 0.85)
         static let iconPlaceholder = ramp(dark: 0.06, light: 0.06)
-        static let sheen = ramp(dark: 0.04, light: 0.04)
         /// The Settings card: a faint surface whose border doubles as the row divider.
         static let cardFill = ramp(dark: 0.05, light: 0.04)
         static let cardStroke = ramp(dark: 0.10, light: 0.10)
@@ -684,6 +679,10 @@ enum Theme {
         static let checkerLight = Color(nsColor: .srgbInk(1, alpha: 0.22))
         static let checkerDark = Color(nsColor: .srgbInk(0, alpha: 0.22))
         static let brand = Color(red: 0.525, green: 0.231, blue: 1.0)
+        static let brandHighlight = Color(red: 0.87, green: 0.79, blue: 1)
+        static let brandCanvas = adaptive(
+            dark: NSColor(srgbRed: 0.051, green: 0.044, blue: 0.073, alpha: 1),
+            light: .windowBackgroundColor)
         /// The palette's drop guides while dragging, and once a release would snap it home.
         static let dropGuide = ramp(dark: 0.35, light: 0.35)
         static let dropGuideArmed = Color.blue

@@ -10,17 +10,6 @@ struct AboutView: View {
         return String(localized: "Version \(short) (\(build))")
     }
 
-    // Cached, and read from the bundle: the app icon is generic until LaunchServices registers.
-    @MainActor private static let appIcon: NSImage = {
-        if let name = Bundle.main.infoDictionary?["CFBundleIconFile"] as? String,
-            let url = Bundle.main.url(forResource: name, withExtension: "icns"),
-            let image = NSImage(contentsOf: url)
-        {
-            return image
-        }
-        return NSApp.applicationIconImage
-    }()
-
     private static let iconSize: CGFloat = 88
     private static let tileSize: CGFloat = 30
 
@@ -48,7 +37,7 @@ struct AboutView: View {
 
     private var hero: some View {
         VStack(spacing: Theme.Spacing.xl) {
-            Image(nsImage: Self.appIcon)
+            Image(nsImage: NSApp.applicationIconImage)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: Self.iconSize, height: Self.iconSize)
@@ -137,7 +126,7 @@ struct AboutView: View {
                 VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
                     SettingsRowTitle(.aboutLinks, "Support")
                         .font(.body.weight(.medium))
-                    Text("Free and open source. Your support sustains its development.")
+                    Text("If it earns a place on your Mac, consider supporting its development.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

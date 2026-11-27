@@ -97,7 +97,7 @@ final class OnboardingIntro {
                         .opacity(violet * (1 - mark))
                     if zoom > 0 {
                         texture.mask {
-                            OnboardingArtwork.Mark.silhouette.frame(width: height, height: height)
+                            BrandArtwork.Mark.silhouette.frame(width: height, height: height)
                                 .scaleEffect(scale)
                         }
                     } else {
@@ -105,7 +105,7 @@ final class OnboardingIntro {
                     }
                 }
                 if mark > 0, reveal.showsMark {
-                    OnboardingArtwork.Mark(height: height)
+                    BrandArtwork.Mark(height: height)
                         .scaleEffect(scale)
                         .position(
                             x: size.width / 2 + (landing.x - size.width / 2) * lift,
@@ -124,7 +124,7 @@ final class OnboardingIntro {
                         Theme.Colors.brand.opacity(Intro.violetMidOpacity), .clear
                     ],
                     center: .center, startRadius: 0, endRadius: radius)
-                OnboardingArtwork.Grain().opacity(Intro.grainOpacity)
+                BrandArtwork.Grain().opacity(Intro.grainOpacity)
             }
         }
 

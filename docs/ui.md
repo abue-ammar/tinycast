@@ -237,7 +237,6 @@ shipped. Light is the same stop with the ink inverted, and is the only column op
 | `textTertiary`    | white 0.40     | black 0.42     | placeholders, trailing kind labels                |
 | `menuSymbol`      | white 0.70     | black 0.70     | native popover-menu symbols                       |
 | `iconPlaceholder` | white 0.06     | black 0.06     | the empty tile a row paints while an icon decodes |
-| `sheen`           | white 0.04     | black 0.04     | the wash behind the Support header                |
 | `cardFill`        | white 0.05     | black 0.04     | settings/calc card fill                           |
 | `cardStroke`      | white 0.10     | black 0.10     | settings/calc card border + inset dividers        |
 | `noteText`        | white 0.90     | black 0.85     | Notes body text                                   |

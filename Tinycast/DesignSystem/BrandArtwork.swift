@@ -1,13 +1,13 @@
 import SwiftUI
 
-enum OnboardingArtwork {
+enum BrandArtwork {
     struct Atmosphere: View {
         @Environment(\.colorScheme) private var colorScheme
 
         var body: some View {
             GeometryReader { geometry in
                 ZStack {
-                    Theme.Onboarding.canvas
+                    Theme.Colors.brandCanvas
                     RadialGradient(
                         colors: [Theme.Colors.brand.opacity(colorScheme == .dark ? 0.24 : 0.10), .clear],
                         center: UnitPoint(x: 0.49, y: 0.05),
@@ -17,8 +17,6 @@ enum OnboardingArtwork {
                         .blendMode(.softLight)
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
-            .ignoresSafeArea()
             .accessibilityHidden(true)
         }
     }
@@ -37,7 +35,7 @@ enum OnboardingArtwork {
             Self.silhouette
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [Theme.Onboarding.lightning, Theme.Colors.brand],
+                        colors: [Theme.Colors.brandHighlight, Theme.Colors.brand],
                         startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .frame(width: height, height: height)

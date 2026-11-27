@@ -41,7 +41,11 @@ struct OnboardingView: View {
             .ignoresSafeArea(.container, edges: .top)
             footer
         }
-        .background { OnboardingArtwork.Atmosphere() }
+        .background {
+            BrandArtwork.Atmosphere()
+                .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
+                .ignoresSafeArea()
+        }
         .tint(Theme.Colors.brand)
         .animation(reduceMotion ? nil : Theme.Onboarding.pageMotion, value: step)
         .task(id: model.step) {
@@ -81,7 +85,7 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         VStack(spacing: Theme.Spacing.xxxl) {
-            OnboardingArtwork.Mark(height: Theme.Onboarding.markSize)
+            BrandArtwork.Mark(height: Theme.Onboarding.markSize)
                 .background { MarkAnchor(register: setMarkAnchor) }
             VStack(spacing: Theme.Spacing.md) {
                 Text("Welcome to Tinycast")
