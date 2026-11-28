@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: R2 · Remove approved candidates** (build mode)
+**Next: R3 · Remove the extension harnesses** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -15,8 +15,8 @@ the old harness.
 | P1    | Pilot: target, host, runner, 4 suites  | plan  | 4    | done   |
 | T     | Triage: find what does not belong      | build | –    | done   |
 | R1    | Remove the benchmarks                  | build | 8    | done   |
-| R2    | Remove approved candidates             | build | –    | next   |
-| R3    | Remove the extension harnesses         | build | 13   | todo   |
+| R2    | Remove approved candidates             | build | –    | done   |
+| R3    | Remove the extension harnesses         | build | 13   | next   |
 | P2    | Peer fixtures for self-run harnesses   | plan  | 3    | todo   |
 | B1    | Launcher, search, files                | build | 13   | todo   |
 | B2    | Calculator, calendar, dictionary       | build | 3    | todo   |
@@ -133,6 +133,16 @@ Done. Docs touched: `calculator.md`, `dictation.md` (the benchmark section), `fi
 Delete every **Removal candidates** row marked `approved`: the harness, or the named cases, and doc
 lines that cite it. Move rows marked `keep` back to their batch. Candidates found later,
 during a batch, are removed in F.
+
+Done. No row was `keep`. The FormInputTests undo checks went in P1 and the Snippets sweep already
+covers them. `RelaunchTests` is deleted, and so are `testLaunch`, its gate and its helpers in
+`AppInstallationTests`; `launcher.md` drops the opt-in variable. The manual sweep gains
+quit-and-relaunch under Settings and backup, and copy-aware launch, Quit, Restart, Force Quit and
+Window Layout reuse under Launcher.
+
+- [x] FormInputTests' 3 undo checks (removed in P1)
+- [x] RelaunchTests · 211
+- [x] AppInstallationTests: the 26 `testLaunch` checks
 
 ## P2 · Peer fixtures for self-run harnesses
 
@@ -314,7 +324,7 @@ exercises the changed feature by hand in the Debug app and says so in its commit
 
 ## S6 · Stand-ins: app installation
 
-- [ ] AppInstallationTests · 643 · 23; its `testLaunch` checks are removed in R2 (approved);
+- [ ] AppInstallationTests · 420 · 23; its `testLaunch` checks were removed in R2;
       `--localized-index` relaunches its own executable per language: solve it as P2 does
 
 ## F · Final

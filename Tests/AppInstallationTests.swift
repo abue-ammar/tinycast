@@ -1,8 +1,5 @@
 import AppKit
 import Observation
-import Synchronization
-
-private let receivedWorkspaceLaunch = Mutex(false)
 
 @main
 @MainActor
@@ -33,11 +30,6 @@ struct AppInstallationTests {
             try await testIndex(root)
             testFileFavorites(root)
             try await testLanguageOverride(root)
-            if ProcessInfo.processInfo.environment["TINYCAST_TEST_APP_LAUNCH"] == "1"
-                || CommandLine.arguments.contains("--launch")
-            {
-                try await testLaunch(root)
-            }
         }
         print(failures == 0 ? "ALL PASSED" : "\(failures) FAILED")
     }
@@ -302,213 +294,6 @@ struct AppInstallationTests {
         await ranking.flush()
     }
 
-    private static func testLaunch(_ root: URL) async throws {
-        let id = "com.tinycast.installation-fixture.\(UUID().uuidString.lowercased())"
-        let first = root.appendingPathComponent("First.app", isDirectory: true)
-        let second = root.appendingPathComponent("Second.app", isDirectory: true)
-        let source = root.appendingPathComponent("Fixture.swift")
-        let executable = root.appendingPathComponent("Fixture")
-        try """
-        import AppKit
-
-        final class Delegate: NSObject, NSApplicationDelegate {
-            func applicationDidFinishLaunching(_ notification: Notification) {
-                let bundle = Bundle.main.bundleURL
-                let marker = bundle.deletingLastPathComponent()
-                    .appendingPathComponent(bundle.lastPathComponent + ".ready")
-                try! Data().write(to: marker)
-            }
-
-            func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-                let bundle = Bundle.main.bundleURL
-                let marker = bundle.deletingLastPathComponent()
-                    .appendingPathComponent(bundle.lastPathComponent + ".refuse-quit")
-                if FileManager.default.fileExists(atPath: marker.path) { return .terminateCancel }
-                let delayed = bundle.deletingLastPathComponent()
-                    .appendingPathComponent(bundle.lastPathComponent + ".delay-quit")
-                if FileManager.default.fileExists(atPath: delayed.path) {
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(250))
-                        let completed = bundle.deletingLastPathComponent()
-                            .appendingPathComponent(bundle.lastPathComponent + ".quit-completed")
-                        try! Data().write(to: completed)
-                        sender.reply(toApplicationShouldTerminate: true)
-                    }
-                    return .terminateLater
-                }
-                return .terminateNow
-            }
-
-            func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-                let bundle = Bundle.main.bundleURL
-                let marker = bundle.deletingLastPathComponent()
-                    .appendingPathComponent(bundle.lastPathComponent + ".reopened")
-                try! Data().write(to: marker)
-                return true
-            }
-        }
-
-        let app = NSApplication.shared
-        let delegate = Delegate()
-        app.delegate = delegate
-        app.setActivationPolicy(.accessory)
-        app.run()
-        """.write(to: source, atomically: true, encoding: .utf8)
-        guard
-            try await runProgram(
-                "/usr/bin/xcrun", ["swiftc", "-swift-version", "6", source.path, "-o", executable.path]) == 0
-        else { throw CocoaError(.fileReadCorruptFile) }
-        for url in [first, second] {
-            try makeApp(url, id: id, version: "1.0")
-            let macOS = url.appendingPathComponent("Contents/MacOS")
-            try FileManager.default.createDirectory(at: macOS, withIntermediateDirectories: true)
-            try FileManager.default.copyItem(
-                at: executable,
-                to: macOS.appendingPathComponent("Fixture"))
-            guard try await runProgram("/usr/bin/codesign", ["--force", "--sign", "-", url.path]) == 0
-            else { throw CocoaError(.fileReadCorruptFile) }
-        }
-        defer {
-            for app in NSRunningApplication.runningApplications(withBundleIdentifier: id) {
-                app.forceTerminate()
-            }
-        }
-        func running(_ url: URL) -> NSRunningApplication? {
-            NSRunningApplication.runningApplications(withBundleIdentifier: id).first {
-                $0.bundleURL?.resolvingSymlinksInPath().standardizedFileURL == url
-            }
-        }
-        let firstEntry = AppEntry(id: first.path, name: "First", url: first, bundleID: id, kind: .application)
-        let secondEntry = AppEntry(
-            id: second.path, name: "Second", url: second, bundleID: id, kind: .application)
-        let center = NSWorkspace.shared.notificationCenter
-        receivedWorkspaceLaunch.withLock { $0 = false }
-        let observer = center.addObserver(
-            forName: NSWorkspace.didLaunchApplicationNotification, object: nil, queue: nil
-        ) { notification in
-            if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
-                app.bundleIdentifier == id
-            {
-                receivedWorkspaceLaunch.withLock { $0 = true }
-            }
-        }
-        defer { center.removeObserver(observer) }
-        AppLauncher.launch(first, allowsRunningApplicationSubstitution: false)
-        check("the first selected installation launches", await waitUntil { running(first) != nil })
-        check(
-            "the first fixture completes AppKit launch",
-            await waitUntil {
-                FileManager.default.fileExists(atPath: root.appendingPathComponent("First.app.ready").path)
-            })
-        let receivesEvents = await waitUntil(timeout: .seconds(2)) {
-            receivedWorkspaceLaunch.withLock { $0 }
-        }
-        if !receivesEvents {
-            print("SKIP: workspace lifecycle notifications are unavailable in this session")
-        }
-        let monitor = RunningAppsMonitor()
-        check(
-            "the running dot belongs to the selected path",
-            monitor.isRunning(firstEntry) && !monitor.isRunning(secondEntry))
-        AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
-        check(
-            "another running version cannot replace the selection", await waitUntil { running(second) != nil }
-        )
-        check(
-            "the second fixture completes AppKit launch",
-            await waitUntil {
-                FileManager.default.fileExists(atPath: root.appendingPathComponent("Second.app.ready").path)
-            })
-        if receivesEvents {
-            check(
-                "the monitor updates even when the bundle-ID set stays unchanged",
-                await waitUntil { monitor.isRunning(secondEntry) })
-        }
-        let bothRunning = RunningAppsMonitor()
-        check(
-            "running paths distinguish copies with one bundle ID",
-            bothRunning.isRunning(firstEntry) && bothRunning.isRunning(secondEntry))
-        let secondPID = running(second)?.processIdentifier
-        AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
-        try await Task.sleep(for: .milliseconds(300))
-        check("reopening reuses the selected installation", running(second)?.processIdentifier == secondPID)
-        let delayed = root.appendingPathComponent("Second.app.delay-quit")
-        try Data().write(to: delayed)
-        check(
-            "waiting for an accessory app to quit succeeds",
-            await AppLauncher.quitAwaitingExit(bundleID: id, url: second))
-        check(
-            "the quit wait includes the app's final writes",
-            FileManager.default.fileExists(
-                atPath: root.appendingPathComponent("Second.app.quit-completed").path))
-        try FileManager.default.removeItem(at: delayed)
-        check(
-            "waiting for an absent installation succeeds",
-            await AppLauncher.quitAwaitingExit(bundleID: id, url: second))
-        check(
-            "Quit leaves its sibling running",
-            await waitUntil { running(second) == nil && running(first) != nil })
-        if receivesEvents {
-            check(
-                "the running dot clears for only the version that quit",
-                await waitUntil { !monitor.isRunning(secondEntry) && monitor.isRunning(firstEntry) })
-        }
-        AppLauncher.launch(second, allowsRunningApplicationSubstitution: false)
-        check("the second installation can reopen", await waitUntil { running(second) != nil })
-        let siblingPID = running(second)?.processIdentifier
-        let restartedPID = running(first)?.processIdentifier
-        await AppLauncher.restart(bundleID: id, url: first)
-        check(
-            "Restart reopens the selected version without workspace notifications",
-            await waitUntil {
-                running(first).map { $0.processIdentifier != restartedPID } ?? false
-            })
-        check(
-            "Restart leaves the sibling process alone", running(second)?.processIdentifier == siblingPID)
-        let canceled = Task { await AppLauncher.restart(bundleID: id, url: second) }
-        canceled.cancel()
-        await canceled.value
-        check("a canceled restart leaves the app running", running(second)?.processIdentifier == siblingPID)
-        let refusal = root.appendingPathComponent("Second.app.refuse-quit")
-        try Data().write(to: refusal)
-        let started = ContinuousClock.now
-        check(
-            "a refused quit times out without claiming success",
-            await !AppLauncher.quitAwaitingExit(bundleID: id, url: second))
-        check("a refused quit retains the grace period", ContinuousClock.now - started >= .seconds(5))
-        check("a refused quit leaves the app alive", running(second)?.processIdentifier == siblingPID)
-        try FileManager.default.removeItem(at: refusal)
-        let canceledQuit = Task { await AppLauncher.quitAwaitingExit(bundleID: id, url: second) }
-        canceledQuit.cancel()
-        check("a canceled quit fails", await !canceledQuit.value)
-        try await Task.sleep(for: .milliseconds(300))
-        check("a canceled quit leaves the app running", running(second)?.processIdentifier == siblingPID)
-        _ = AppLauncher.quit(bundleID: id, url: second, force: true)
-        check(
-            "Force Quit targets the selected path",
-            await waitUntil { running(second) == nil && running(first) != nil })
-        let firstPID = running(first)?.processIdentifier
-        let reopened = root.appendingPathComponent("First.app.reopened")
-        try? FileManager.default.removeItem(at: reopened)
-        AppLauncher.launch(second)
-        check(
-            "ordinary app opens reach a running instance",
-            await waitUntil {
-                FileManager.default.fileExists(atPath: reopened.path) || running(second) != nil
-            })
-        check(
-            "ordinary app opens allow running-version substitution",
-            FileManager.default.fileExists(atPath: reopened.path)
-                && running(first)?.processIdentifier == firstPID && running(second) == nil)
-        _ = AppLauncher.quit(bundleID: id, url: second, force: true)
-        _ = AppLauncher.quit(bundleID: id, url: first, force: true)
-        check(
-            "fixture processes are cleaned up",
-            await waitUntil {
-                NSRunningApplication.runningApplications(withBundleIdentifier: id).isEmpty
-            })
-    }
-
     private static func runProgram(_ executable: String, _ arguments: [String]) async throws -> Int32 {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
@@ -517,14 +302,6 @@ struct AppInstallationTests {
             process.terminationHandler = { continuation.resume(returning: $0.terminationStatus) }
             do { try process.run() } catch { continuation.resume(throwing: error) }
         }
-    }
-
-    private static func waitUntil(timeout: Duration = .seconds(8), _ condition: () -> Bool) async -> Bool {
-        let deadline = ContinuousClock.now + timeout
-        while !condition(), ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(50))
-        }
-        return condition()
     }
 }
 

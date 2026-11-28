@@ -204,7 +204,6 @@ If a change touches anything in the right column, the suite on the left is manda
 | `AppNameTests`              | `Platform/AppDisplayName.swift`: every path that names a scanned bundle                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `LanguageTests`             | `AppLanguage` and both string catalogs: compile every language, load privacy prompts, and select plural forms and independent counts at runtime                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `LocalizedResourceTests`    | `Platform/LocalizedResource.swift`: `resolved()` matches `String(localized:)` in every language, for plain, contextual, interpolated, plural and missing keys                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| `RelaunchTests`             | The shipped app delegate and relaunch helper: asynchronous cleanup, repeated quit requests, and a responsive replacement process                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `CalcTests`                 | all of `Calculator/Model/`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | `CalendarTests`             | all of `Calendar/Model/` plus `EventEditorSession`: links, join window, day buckets, draft and form focus                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `ClipboardSearchTests`      | Ordinary and OCR result ordering, opt-in lifecycle, cancellation, pins and type filters                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -528,6 +527,13 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
 - Learned ranking still surfaces your habitual result for a short query
 - An application row drags onto the Dock and into a Finder window as a copy, never a move, and a
   landed drop hides the palette; a click still launches; no other kind of row drags
+- With two copies of one app indexed (same bundle ID, different folders), ↵ on each opens that
+  copy, even while the other runs, and only the copy that runs shows the dot. ↵ on a running copy
+  reopens it rather than starting a second process. A Window Layout that includes the app reuses
+  whichever copy already runs instead of opening the other
+- Quit, Restart and Force Quit act on the selected copy and leave its sibling running. Restart
+  waits for an app that takes a moment to exit, then reopens that copy; an app that refuses to quit
+  (a save sheet left standing) stays open, and Restart relaunches nothing
 
 ### Hotkeys
 
@@ -988,6 +994,10 @@ Debug answers `tinycast-dev://`; use that scheme for every link below.
   pane. Repeat after saving a shortcut and verify the shortcut is still bound.
 - Rebuild the Debug app while it runs, then open Settings: a relaunch dialog appears instead, and
   Relaunch brings back a Tinycast whose Settings opens
+- Quit Tinycast from the app menu with dictation running and a note edited a moment before: it exits
+  within a few seconds with the note saved, and a second ⌘Q during that wait changes nothing.
+  Relaunch from the update pill or the rebuild dialog brings back one responsive Tinycast after the
+  old one has gone, and the relaunch opens the palette; opening it again from Finder shows it too
 - While a shortcut records in Settings, the main app's shortcuts stay silent (⌃Space opens nothing and
   the recorder reports the conflict); `kill -9` the Settings process mid-recording and they work again
 - A palette editor opened from Settings (custom command, quicklink, snippet, room) saves, and the

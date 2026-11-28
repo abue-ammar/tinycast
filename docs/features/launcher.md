@@ -12,9 +12,9 @@ version cannot replace it. Restart also reopens the selected path. Bundle-ID-bas
 Window Layouts retain macOS's default running-application substitution. Uninstall is unavailable while
 indexed copies share the bundle ID, because their support files and preferences may be shared.
 
-`AppInstallationTests` covers the shipped index and app-wide preferences. Set
-`TEST_RUNNER_TINYCAST_TEST_APP_LAUNCH=1` for temporary native-app launch, quit and restart checks; it
-reports notification-dependent checks as skipped when the session cannot deliver workspace events.
+`AppInstallationTests` covers the shipped index and app-wide preferences. Launching, quitting and
+restarting a chosen copy is checked by hand, in the
+[manual sweep](../testing.md#launcher-and-icons).
 
 ## Invariants
 
