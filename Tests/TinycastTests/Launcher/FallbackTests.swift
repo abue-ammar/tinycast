@@ -73,7 +73,8 @@ struct FallbackTests {
     }
 
     @Test func eachFallbackHasADistinctAction() {
-        let verbs = Fallback.Builtin.allCases.map { Fallback.builtin($0).openVerb }
+        let verbs =
+            Fallback.Builtin.allCases.map { Fallback.builtin($0).openVerb }
             + [Fallback.quicklink(UUID()).openVerb]
         #expect(verbs.allSatisfy { !$0.isEmpty })
         #expect(Set(verbs).count == verbs.count)

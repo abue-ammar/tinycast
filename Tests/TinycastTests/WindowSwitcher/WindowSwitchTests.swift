@@ -8,7 +8,9 @@ struct WindowSwitchTests {
         #expect(window(7).id == "7")
     }
 
-    @Test(arguments: [("Safari", "Notes.md", "Notes.md"), ("Preview", "", "Preview"), ("Preview", "   ", "Preview")])
+    @Test(arguments: [
+        ("Safari", "Notes.md", "Notes.md"), ("Preview", "", "Preview"), ("Preview", "   ", "Preview")
+    ])
     func titleFallsBackToTheAppName(_ app: String, _ title: String, _ displayTitle: String) {
         #expect(window(0, app: app, title: title).displayTitle == displayTitle)
     }
@@ -49,8 +51,9 @@ struct WindowSwitchTests {
     func standardAndMinimizableMinimizedWindowsAreOffered(
         _ standard: Bool, _ minimized: Bool, _ canMinimize: Bool, _ offered: Bool
     ) {
-        #expect(WindowSwitchPolicy.isSwitchable(
-            isStandardWindow: standard, isMinimized: minimized, canMinimize: canMinimize) == offered)
+        #expect(
+            WindowSwitchPolicy.isSwitchable(
+                isStandardWindow: standard, isMinimized: minimized, canMinimize: canMinimize) == offered)
     }
 
     @Test(arguments: [("", [0, 1, 2]), ("Safari", [1, 2]), ("zzz", [])])
@@ -70,11 +73,15 @@ struct WindowSwitchTests {
     }
 
     private var searchableWindows: [WindowSwitchEntry] {
-        [window(0, app: "Mail", title: "Drafts"), window(1, title: "Inbox"), window(2, title: "Inbox archive")]
+        [
+            window(0, app: "Mail", title: "Drafts"), window(1, title: "Inbox"),
+            window(2, title: "Inbox archive")
+        ]
     }
 
     private func window(
-        _ handle: Int, app: String = "Safari", title: String = "Window", minimized: Bool = false, rank: Int = 0
+        _ handle: Int, app: String = "Safari", title: String = "Window", minimized: Bool = false,
+        rank: Int = 0
     ) -> WindowSwitchEntry {
         WindowSwitchEntry(
             handle: handle, appName: app, bundleID: "com.example.\(app.lowercased())",

@@ -67,7 +67,10 @@ struct AppleShortcutTests {
             AppleShortcut.entryID(for: volume), AppleShortcut.entryID(for: gone),
             "quicklink:\(gone.uuidString.lowercased())", "com.apple.Safari", "apple-shortcut:nope"
         ]
-        #expect(AppleShortcut.staleIDs(referencedBy: stored, bound: [pdf, unbound], live: listed) == [gone, unbound])
+        #expect(
+            AppleShortcut.staleIDs(referencedBy: stored, bound: [pdf, unbound], live: listed) == [
+                gone, unbound
+            ])
         #expect(AppleShortcut.staleIDs(referencedBy: stored, bound: [pdf], live: []).isEmpty)
         #expect(AppleShortcut.staleIDs(referencedBy: ["com.apple.Safari"], bound: [], live: listed).isEmpty)
     }

@@ -13,8 +13,10 @@ struct FavoritesTests {
         #expect(FavoriteSlots.index(for: digit) == index)
     }
 
-    @Test(arguments: Array(zip(
-        [18, 19, 20, 21, 23, 22, 26, 28, 25, 29] as [UInt16], 0..<10)))
+    @Test(
+        arguments: Array(
+            zip(
+                [18, 19, 20, 21, 23, 22, 26, 28, 25, 29] as [UInt16], 0..<10)))
     func physicalKeySelectsItsSlot(_ keyCode: UInt16, _ index: Int) {
         #expect(FavoriteSlots.index(forKeyCode: keyCode) == index)
     }

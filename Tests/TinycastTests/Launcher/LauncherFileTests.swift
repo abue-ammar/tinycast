@@ -29,16 +29,19 @@ struct LauncherFileTests {
 
     @Test func handEditsKeepOmissionsAndInvalidValuesAndReportEachError() throws {
         let current = Record(shortcut: "hyper+l", alias: "old", showInLauncher: false)
-        let decoded = try #require(LauncherFileFormat.records(
-            from: .object([
-                "lock-screen": .object(["alias": "lock"]),
-                "sleep": .object(["shortcut": 5, "alias": true, "showInLauncher": "no"]),
-                "log-out": .object(["shortcut": .null, "alias": .null, "showInLauncher": true]),
-                "restart": "cmd+r"
-            ])
-        ) { _ in current })
+        let decoded = try #require(
+            LauncherFileFormat.records(
+                from: .object([
+                    "lock-screen": .object(["alias": "lock"]),
+                    "sleep": .object(["shortcut": 5, "alias": true, "showInLauncher": "no"]),
+                    "log-out": .object(["shortcut": .null, "alias": .null, "showInLauncher": true]),
+                    "restart": "cmd+r"
+                ])
+            ) { _ in current })
 
-        #expect(decoded.records["lock-screen"] == Record(shortcut: "hyper+l", alias: "lock", showInLauncher: false))
+        #expect(
+            decoded.records["lock-screen"]
+                == Record(shortcut: "hyper+l", alias: "lock", showInLauncher: false))
         #expect(decoded.records["sleep"] == current)
         #expect(decoded.records["log-out"] == Record())
         #expect(decoded.records["restart"] == current)
