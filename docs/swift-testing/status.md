@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: B4 · Palette and design system** (build mode)
+**Next: B5 · Palette input** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -21,8 +21,8 @@ the old harness.
 | B1    | Launcher, search, files                | build | 13   | done a2dcde17 |
 | B2    | Calculator, calendar, dictionary       | build | 3    | done c1a0118e |
 | B3    | Clipboard, emoji                       | build | 6    | done 6a15630e |
-| B4    | Palette and design system              | build | 9    | next   |
-| B5    | Palette input                          | build | 9    | todo   |
+| B4    | Palette and design system              | build | 9    | done   |
+| B5    | Palette input                          | build | 9    | next   |
 | B6    | Dictation, hotkeys, platform           | build | 9    | todo   |
 | B7    | Window management                      | build | 8    | todo   |
 | B8    | Commands, links, quick actions         | build | 6    | todo   |
@@ -210,15 +210,22 @@ pipe to hold the copy in flight. Emoji keyword checks load the packs from the ho
 
 ## B4 · Palette and design system
 
-- [ ] PaletteSelectionTests · 420 · its 111,684-assertion count is a tripwire; keep it observable
-- [ ] AppearanceTests · 128
-- [ ] LanguageTests · 245
-- [ ] InterfaceSizeTests · 365 · also compiles `Extensions/Model/ExtensionFormMetrics.swift`
-- [ ] PalettePlacementTests · 386
-- [ ] ScrollRevealTests · 77
-- [ ] RedactionTests · 71
-- [ ] KeyboardFocusTests · 55
-- [ ] CalloutTests · 234
+Done. The focused and full decision-6 runs and lint passed. The catalog checks read the hosted app's
+compiled `.lproj` tables instead of compiling or parsing the source `.xcstrings`; the build compiles
+both catalogs. Docs: `testing.md` (the `LanguageTests` row and the tripwire baseline), `palette.md`,
+`ui.md`, and `ExtensionFormMetrics`' doc comments.
+
+- [x] PaletteSelectionTests · 420 · 4,170 cases in 38 tests, read from the result bundle; that
+      count is the tripwire now, with the 729 grid shapes and 128 small shapes as arguments
+- [x] AppearanceTests · 128
+- [x] LanguageTests · 245
+- [x] InterfaceSizeTests · 365 · rounding and growth also cover `menuRowSpacing` and
+      `clipboardPreviewPixel`, which only the identity check had
+- [x] PalettePlacementTests · 386
+- [x] ScrollRevealTests · 77
+- [x] RedactionTests · 71
+- [x] KeyboardFocusTests · 55
+- [x] CalloutTests · 234 · instructions measured in every `AppLanguage`, not only translated ones
 
 ## B5 · Palette input
 
@@ -451,6 +458,10 @@ Decisions made during the migration, beyond the brief's. Newest last.
   the exact requests it starts, including those superseded by a filter change or a hidden palette.
 - B3 follow-up: the user requested committing the formatter output for the Calculator, Calendar,
   Clipboard and Emoji suites, including the argument table indentation.
+- B4: a suite reads a language's strings from the hosted app's compiled `<code>.lproj`, never the
+  source catalog, so it needs no working directory and checks what ships.
+- B4: a count tripwire counts argument cases in the result bundle
+  (`xcrun xcresulttool get test-results tests`); Swift Testing does not count `#expect` calls.
 
 ## Open problems
 

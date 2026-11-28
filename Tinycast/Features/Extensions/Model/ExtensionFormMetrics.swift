@@ -1,8 +1,8 @@
 import Foundation
 
-/// The geometry every form control shares; pure, so a harness drives the placement rule.
+/// The geometry every form control shares; pure, so a suite drives the placement rule.
 struct ExtensionFormMetrics {
-    /// `Theme` at the default Interface Size, for the pure placement rule and its harness.
+    /// `Theme` at the default Interface Size, for the pure placement rule and its suite.
     static let base = ExtensionFormMetrics(scale: 1)
 
     /// Owned here rather than in `DesignSystem`: an extension never moves a launcher surface.
