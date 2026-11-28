@@ -97,11 +97,13 @@ extension ClipboardTests {
         #expect(ColorFormat.primary(for: color) == .hexWithAlpha)
     }
 
-    nonisolated private static let sampledColors: [ColorValue] = stride(from: 0, through: 255, by: 17).flatMap { red in
+    nonisolated private static let sampledColors: [ColorValue] = stride(from: 0, through: 255, by: 17).flatMap
+    { red in
         stride(from: 0, through: 255, by: 29).flatMap { green in
             stride(from: 0, through: 255, by: 43).flatMap { blue in
                 [255, 128].map { alpha in
-                    ColorValue(red: Double(red) / 255, green: Double(green) / 255,
+                    ColorValue(
+                        red: Double(red) / 255, green: Double(green) / 255,
                         blue: Double(blue) / 255, alpha: Double(alpha) / 255)
                 }
             }
@@ -113,7 +115,8 @@ extension ClipboardTests {
         for format in ColorFormat.offered(for: color) where format != .oklch {
             let text = format.string(for: color)
             let parsed = try #require(ColorValue.parse(text), "\(text)")
-            let differences = channelDifferences(parsed, color, includeAlpha: parsed.hasAlpha == color.hasAlpha)
+            let differences = channelDifferences(
+                parsed, color, includeAlpha: parsed.hasAlpha == color.hasAlpha)
             #expect(differences.allSatisfy { $0 < 1.0 / 255 }, "\(text)")
         }
     }
@@ -128,7 +131,9 @@ extension ClipboardTests {
     private func channelDifferences(
         _ first: ColorValue, _ second: ColorValue, includeAlpha: Bool = true
     ) -> [Double] {
-        var differences = [abs(first.red - second.red), abs(first.green - second.green), abs(first.blue - second.blue)]
+        var differences = [
+            abs(first.red - second.red), abs(first.green - second.green), abs(first.blue - second.blue)
+        ]
         if includeAlpha { differences.append(abs(first.alpha - second.alpha)) }
         return differences
     }

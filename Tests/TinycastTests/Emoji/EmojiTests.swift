@@ -90,10 +90,11 @@ struct EmojiTests {
         let lines = try String(contentsOf: pack, encoding: .utf8).split(separator: "\n")
         let glyphs = Set(catalog.map(\.glyph))
         #expect(lines.count > 1500)
-        #expect(lines.allSatisfy { line in
-            let fields = line.split(separator: "|", omittingEmptySubsequences: false)
-            return fields.count == 2 && glyphs.contains(String(fields[0])) && !fields[1].isEmpty
-        })
+        #expect(
+            lines.allSatisfy { line in
+                let fields = line.split(separator: "|", omittingEmptySubsequences: false)
+                return fields.count == 2 && glyphs.contains(String(fields[0])) && !fields[1].isEmpty
+            })
         #expect(EmojiCatalog.keywordLanguages(available: available, preferred: [language]) == [language])
     }
 
@@ -172,7 +173,8 @@ struct EmojiTests {
     func selectionFollowsTheGlyphOrItsNearestSlotWhenHistoryChanges(
         _ index: Int, _ updated: [String], _ expected: Int
     ) {
-        #expect(EmojiGridGeometry.selection(
-            index, afterSectionAt: 1, changesFrom: ["a", "b", "x", "d"], to: updated) == expected)
+        #expect(
+            EmojiGridGeometry.selection(
+                index, afterSectionAt: 1, changesFrom: ["a", "b", "x", "d"], to: updated) == expected)
     }
 }

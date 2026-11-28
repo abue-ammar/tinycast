@@ -446,10 +446,11 @@ Decisions made during the migration, beyond the brief's. Newest last.
   `#expect(try row.actual() == row.expected)`. A row's environment is data on the row: zones and
   moments as identifiers and ISO strings, resolved with `#require`.
 - B2 review: `FileSearchSession` keeps reloading Recent right after an index swap's rerun, on the
-  worker, as B1 approved. `./Scripts/format.sh` is not run over the suites: it re-nests every
-  `@Test(arguments: [` table, so the suites keep the layout they share.
+  worker, as B1 approved. That review preserved the hand-formatted argument tables.
 - B3: the user approved read access to `ClipboardStore.textSearchTask`. The search suite awaits
   the exact requests it starts, including those superseded by a filter change or a hidden palette.
+- B3 follow-up: the user requested committing the formatter output for the Calculator, Calendar,
+  Clipboard and Emoji suites, including the argument table indentation.
 
 ## Open problems
 

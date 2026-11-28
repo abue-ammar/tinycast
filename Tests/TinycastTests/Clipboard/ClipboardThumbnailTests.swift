@@ -154,9 +154,10 @@ struct ClipboardThumbnailTests {
     private func writeImage(_ name: String, color: NSColor, in directory: URL) throws -> URL {
         let url = directory.appending(path: name)
         let colorSpace = try #require(CGColorSpace(name: CGColorSpace.sRGB))
-        let context = try #require(CGContext(
-            data: nil, width: 600, height: 400, bitsPerComponent: 8, bytesPerRow: 0,
-            space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        let context = try #require(
+            CGContext(
+                data: nil, width: 600, height: 400, bitsPerComponent: 8, bytesPerRow: 0,
+                space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
         context.setFillColor(color.cgColor)
         context.fill(CGRect(x: 0, y: 0, width: 600, height: 400))
         let type = url.pathExtension == "jpg" ? UTType.jpeg : .png

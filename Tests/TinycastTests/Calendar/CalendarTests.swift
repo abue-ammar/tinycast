@@ -54,7 +54,9 @@ struct CalendarTests {
     // MARK: Where the link comes from
 
     @Test func aNamedProviderBeatsABareLinkFoundEarlier() {
-        let link = MeetingLink.detect(fields: ["https://example.com/first", "https://meet.google.com/abc-defg-hij"])
+        let link = MeetingLink.detect(fields: [
+            "https://example.com/first", "https://meet.google.com/abc-defg-hij"
+        ])
         #expect(link?.provider == .googleMeet)
     }
 
@@ -69,7 +71,8 @@ struct CalendarTests {
 
     @Test func aTelemostLinkInTheNotesBeatsTheCalendarsOwnEventPage() {
         let link = MeetingLink.detect(fields: [
-            "https://calendar.yandex.ru/event?event_id=1", nil, "Join https://telemost.yandex.ru/j/12345678901234"
+            "https://calendar.yandex.ru/event?event_id=1", nil,
+            "Join https://telemost.yandex.ru/j/12345678901234"
         ])
         #expect(link?.provider == .telemost)
     }
@@ -109,16 +112,27 @@ struct CalendarTests {
         #expect(link.appURL == nil)
     }
 
-    @Test(arguments: [
-        ("https://meet.google.com/abc-defg-hij", "user@domain.com",
-         "https://meet.google.com/abc-defg-hij?authuser=user@domain.com"),
-        ("https://meet.google.com/abc?hs=1", "user@domain.com",
-         "https://meet.google.com/abc?hs=1&authuser=user@domain.com"),
-        ("https://meet.google.com/abc?authuser=1", "user@domain.com", "https://meet.google.com/abc?authuser=1"),
-        ("https://meet.google.com/abc", "a+b@domain.com", "https://meet.google.com/abc?authuser=a%2Bb@domain.com"),
-        ("https://us02web.zoom.us/j/89", "user@domain.com", "https://us02web.zoom.us/j/89"),
-        ("https://meet.google.com/abc-defg-hij", nil, "https://meet.google.com/abc-defg-hij")
-    ] as [(String, String?, String)])
+    @Test(
+        arguments: [
+            (
+                "https://meet.google.com/abc-defg-hij", "user@domain.com",
+                "https://meet.google.com/abc-defg-hij?authuser=user@domain.com"
+            ),
+            (
+                "https://meet.google.com/abc?hs=1", "user@domain.com",
+                "https://meet.google.com/abc?hs=1&authuser=user@domain.com"
+            ),
+            (
+                "https://meet.google.com/abc?authuser=1", "user@domain.com",
+                "https://meet.google.com/abc?authuser=1"
+            ),
+            (
+                "https://meet.google.com/abc", "a+b@domain.com",
+                "https://meet.google.com/abc?authuser=a%2Bb@domain.com"
+            ),
+            ("https://us02web.zoom.us/j/89", "user@domain.com", "https://us02web.zoom.us/j/89"),
+            ("https://meet.google.com/abc-defg-hij", nil, "https://meet.google.com/abc-defg-hij")
+        ] as [(String, String?, String)])
     func aMeetLinkOpensAsTheCalendarsAccount(_ text: String, _ account: String?, _ webURL: String) throws {
         let link = try #require(MeetingLink.detect(fields: [text], account: account))
         #expect(link.webURL.absoluteString == webURL)
@@ -130,19 +144,22 @@ struct CalendarTests {
         #expect(link.url.absoluteString == "https://meet.google.com/abc-defg-hij")
     }
 
-    @Test(arguments: [(true, "https://meet.google.com/abc?authuser=user@domain.com"),
-                      (false, "https://meet.google.com/abc")])
+    @Test(arguments: [
+        (true, "https://meet.google.com/abc?authuser=user@domain.com"),
+        (false, "https://meet.google.com/abc")
+    ])
     func onlyTheCurrentUsersAddressBecomesTheAccount(_ isCurrentUser: Bool, _ webURL: String) throws {
         let account = try Self.address(of: "mailto:user@domain.com", isCurrentUser: isCurrentUser)
         let link = try #require(MeetingLink.detect(fields: ["https://meet.google.com/abc"], account: account))
         #expect(link.webURL.absoluteString == webURL)
     }
 
-    @Test(arguments: [
-        ("mailto:user%40domain.com", "user@domain.com"),
-        ("mailto:a+b@domain.com", "a+b@domain.com"),
-        ("urn:uuid:1F2A", nil)
-    ] as [(String, String?)])
+    @Test(
+        arguments: [
+            ("mailto:user%40domain.com", "user@domain.com"),
+            ("mailto:a+b@domain.com", "a+b@domain.com"),
+            ("urn:uuid:1F2A", nil)
+        ] as [(String, String?)])
     func aParticipantsAddressIsDecodedOnceFromItsMailto(_ url: String, _ address: String?) throws {
         #expect(try Self.address(of: url) == address)
     }
@@ -172,14 +189,16 @@ struct CalendarTests {
     @Test(arguments: [(-300.0, true), (-301, false), (299, true), (300, false)])
     func theCardShowsFromFiveMinutesOutToFiveMinutesIn(_ offset: TimeInterval, _ carded: Bool) {
         let meeting = Self.event("standup", start: 60, minutes: 30)
-        let card = UpcomingWindow(leadMinutes: 5).carded(from: [meeting], now: Self.at(60).addingTimeInterval(offset))
+        let card = UpcomingWindow(leadMinutes: 5).carded(
+            from: [meeting], now: Self.at(60).addingTimeInterval(offset))
         #expect(card?.id == (carded ? "standup" : nil))
     }
 
     @Test(arguments: [(179.0, true), (180, false)])
     func theGracePeriodNeverOutlivesTheMeeting(_ offset: TimeInterval, _ carded: Bool) {
         let brief = Self.event("brief", start: 60, minutes: 3)
-        let card = UpcomingWindow(leadMinutes: 5).carded(from: [brief], now: Self.at(60).addingTimeInterval(offset))
+        let card = UpcomingWindow(leadMinutes: 5).carded(
+            from: [brief], now: Self.at(60).addingTimeInterval(offset))
         #expect(card?.id == (carded ? "brief" : nil))
     }
 
@@ -202,34 +221,40 @@ struct CalendarTests {
             window.joinable(from: [running, next], now: Self.at(120).addingTimeInterval(-120))?.id == "next",
             "inside the card window it joins what is on screen")
         #expect(window.joinable(from: [], now: now) == nil, "an empty day offers nothing")
-        #expect(window.joinable(from: [Self.event("past", start: -120)], now: now) == nil, "nor does the past")
+        #expect(
+            window.joinable(from: [Self.event("past", start: -120)], now: now) == nil, "nor does the past")
     }
 
     // MARK: Countdowns
 
-    @Test(arguments: [
-        (-60.0 * 60, UpcomingWindow.RowPill(text: "in 60 min", isImminent: true)),
-        (-3 * 60 * 60, .init(text: "in 3 hr", isImminent: false)),
-        (-18 * 60 * 60, .init(text: "Wed, Sep 23", isImminent: false)),
-        (29 * 60, .init(text: "Now", isImminent: true)),
-        (30 * 60, nil)
-    ] as [(TimeInterval, UpcomingWindow.RowPill?)])
+    @Test(
+        arguments: [
+            (-60.0 * 60, UpcomingWindow.RowPill(text: "in 60 min", isImminent: true)),
+            (-3 * 60 * 60, .init(text: "in 3 hr", isImminent: false)),
+            (-18 * 60 * 60, .init(text: "Wed, Sep 23", isImminent: false)),
+            (29 * 60, .init(text: "Now", isImminent: true)),
+            (30 * 60, nil)
+        ] as [(TimeInterval, UpcomingWindow.RowPill?)])
     func aRowPillCountsDownThroughTheDayThenNamesTheDate(
         _ offset: TimeInterval, _ pill: UpcomingWindow.RowPill?
     ) throws {
         let start = try Self.date("2026-09-23T17:00:00Z")
         let meeting = Self.event("review", starting: start, minutes: 30)
         let actual = try UpcomingWindow.rowPill(
-            for: meeting, now: start.addingTimeInterval(offset), calendar: Self.calendar(), locale: Self.locale)
+            for: meeting, now: start.addingTimeInterval(offset), calendar: Self.calendar(),
+            locale: Self.locale)
         #expect(actual == pill)
     }
 
     @Test(arguments: [(-40.0 * 60, "in 40 min"), (0, "Now")])
-    func insideTheHourACountdownBeatsTheDateAndTheStartReadsAsNow(_ offset: TimeInterval, _ text: String) throws {
+    func insideTheHourACountdownBeatsTheDateAndTheStartReadsAsNow(
+        _ offset: TimeInterval, _ text: String
+    ) throws {
         let start = try Self.date("2026-09-23T17:00:00Z")
         let meeting = Self.event("review", starting: start, minutes: 30)
         let pill = try UpcomingWindow.rowPill(
-            for: meeting, now: start.addingTimeInterval(offset), calendar: Self.calendar(), locale: Self.locale)
+            for: meeting, now: start.addingTimeInterval(offset), calendar: Self.calendar(),
+            locale: Self.locale)
         #expect(pill?.text == text)
     }
 
@@ -244,18 +269,21 @@ struct CalendarTests {
     @Test func theSuppliedLocaleControlsTheUnits() {
         let french = Locale(identifier: "fr_FR")
         let start = Self.at(60)
-        let countdown = UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(-240), locale: french)
+        let countdown = UpcomingWindow.countdown(
+            to: start, now: start.addingTimeInterval(-240), locale: french)
         #expect(countdown == "in 4\u{00a0}min")
         #expect(EventDraft.label(duration: 60, locale: french) == "1\u{202f}h")
     }
 
-    @Test(arguments: [
-        (-240.0, "in 4 min"), (-60, "in 1 min"), (-1, "in 1 min"), (0, "Now"), (299, "Now"), (301, "Now"),
-        (-619 * 60, "in 10 hr")
-    ] as [(TimeInterval, String)])
+    @Test(
+        arguments: [
+            (-240.0, "in 4 min"), (-60, "in 1 min"), (-1, "in 1 min"), (0, "Now"), (299, "Now"), (301, "Now"),
+            (-619 * 60, "in 10 hr")
+        ] as [(TimeInterval, String)])
     func aCountdownRoundsUpToTheMinuteAndStaysNowOnceStarted(_ offset: TimeInterval, _ text: String) {
         let start = Self.at(60)
-        let countdown = UpcomingWindow.countdown(to: start, now: start.addingTimeInterval(offset), locale: Self.locale)
+        let countdown = UpcomingWindow.countdown(
+            to: start, now: start.addingTimeInterval(offset), locale: Self.locale)
         #expect(countdown == text)
     }
 
@@ -296,9 +324,10 @@ struct CalendarTests {
         #expect(Self.automatic.event(from: events, now: Self.at(60))?.id == "next")
     }
 
-    @Test(arguments: [
-        ([], "standup"), (["standup"], "next"), (["next"], "standup"), (["standup", "next"], nil)
-    ] as [(Set<String>, String?)])
+    @Test(
+        arguments: [
+            ([], "standup"), (["standup"], "next"), (["next"], "standup"), (["standup", "next"], nil)
+        ] as [(Set<String>, String?)])
     func dismissingTheDisplayedEventHandsTheSpaceOn(_ dismissed: Set<String>, _ shown: String?) {
         let events = [Self.event("standup", start: 60, minutes: 30), Self.event("next", start: 62)]
         let now = Self.at(60).addingTimeInterval(-60)
@@ -343,7 +372,8 @@ struct CalendarTests {
     @Test(arguments: [("2026-08-23T23:30:00Z", true), ("2026-08-23T23:29:00Z", false)])
     func todayKeepsTomorrowsEventOnlyThirtyMinutesOut(_ now: String, _ kept: Bool) throws {
         let calendar = try Self.calendar()
-        let summary = MenuBarSummary(leadMinutes: nil, hideAfterMinutes: nil, linkedOnly: false, calendar: calendar)
+        let summary = MenuBarSummary(
+            leadMinutes: nil, hideAfterMinutes: nil, linkedOnly: false, calendar: calendar)
         let midnight = try Self.event("midnight", starting: Self.date("2026-08-24T00:00:00Z"))
         let now = try Self.date(now)
         #expect(summary.event(from: [midnight], now: now)?.id == (kept ? "midnight" : nil))
@@ -361,15 +391,17 @@ struct CalendarTests {
 
     // MARK: Auto join
 
-    @Test(arguments: [
-        (-60.0, [], nil), (0, [], "standup"), (0, ["standup"], nil), (299, [], "standup"), (300, [], nil)
-    ] as [(TimeInterval, Set<String>, String?)])
+    @Test(
+        arguments: [
+            (-60.0, [], nil), (0, [], "standup"), (0, ["standup"], nil), (299, [], "standup"), (300, [], nil)
+        ] as [(TimeInterval, Set<String>, String?)])
     func autoJoinFiresOnceFromTheStartUntilTheGraceEnds(
         _ offset: TimeInterval, _ joined: Set<String>, _ fired: String?
     ) {
         let policy = AutoJoinPolicy(armedAt: Self.at(0), namedProvidersOnly: false)
         let meeting = policy.meeting(
-            from: [Self.event("standup", start: 60, minutes: 30)], now: Self.at(60).addingTimeInterval(offset),
+            from: [Self.event("standup", start: 60, minutes: 30)],
+            now: Self.at(60).addingTimeInterval(offset),
             window: UpcomingWindow(leadMinutes: 5), joined: joined)
         #expect(meeting?.id == fired)
     }
@@ -388,7 +420,9 @@ struct CalendarTests {
         let policy = AutoJoinPolicy(armedAt: Self.at(61), namedProvidersOnly: false)
         #expect(policy.meeting(from: [running], now: Self.at(61), window: window, joined: []) == nil)
         let later = Self.event("later", start: 90)
-        #expect(policy.meeting(from: [running, later], now: Self.at(90), window: window, joined: [])?.id == "later")
+        #expect(
+            policy.meeting(from: [running, later], now: Self.at(90), window: window, joined: [])?.id
+                == "later")
     }
 
     @Test func namedProvidersOnlyLeavesABareLinkToTheCard() {
@@ -398,11 +432,14 @@ struct CalendarTests {
         let anyLink = AutoJoinPolicy(armedAt: Self.at(0), namedProvidersOnly: false)
         let namedOnly = AutoJoinPolicy(armedAt: Self.at(0), namedProvidersOnly: true)
 
-        #expect(anyLink.meeting(from: [placeholder], now: Self.at(60), window: window, joined: [])?.id == "placeholder")
+        #expect(
+            anyLink.meeting(from: [placeholder], now: Self.at(60), window: window, joined: [])?.id
+                == "placeholder")
         #expect(namedOnly.meeting(from: [placeholder], now: Self.at(60), window: window, joined: []) == nil)
         let earlier = Self.event("earlier", start: 58)
         #expect(
-            namedOnly.meeting(from: [earlier, call], now: Self.at(60), window: window, joined: [])?.id == "call",
+            namedOnly.meeting(from: [earlier, call], now: Self.at(60), window: window, joined: [])?.id
+                == "call",
             "a bare link the card would pick first does not shadow a call beside it")
     }
 
@@ -485,19 +522,20 @@ struct CalendarTests {
 
     // MARK: Meeting details
 
-    @Test(arguments: [
-        ("  Agenda\n\nBring numbers  ", "Agenda\n\nBring numbers"),
-        (" \n ", nil),
-        (
-            "Join <https://teams.microsoft.com/l/meetup-join/1> now",
-            "Join <https://teams.microsoft.com/l/meetup-join/1> now"
-        ),
-        ("a < b and c > d", "a < b and c > d"),
-        ("<b>Agenda</b><br>Q&amp;A<br/><br><br>Wrap&nbsp;up", "Agenda\nQ&A\n\nWrap up"),
-        ("<ul><li>One</li><li>Two</li></ul>", "• One\n• Two"),
-        ("<p>See <a href=\"https://example.com\">https://example.com</a></p>", "See https://example.com"),
-        ("&amp;lt;b&amp;gt; <br>", "&lt;b&gt;")
-    ] as [(String, String?)])
+    @Test(
+        arguments: [
+            ("  Agenda\n\nBring numbers  ", "Agenda\n\nBring numbers"),
+            (" \n ", nil),
+            (
+                "Join <https://teams.microsoft.com/l/meetup-join/1> now",
+                "Join <https://teams.microsoft.com/l/meetup-join/1> now"
+            ),
+            ("a < b and c > d", "a < b and c > d"),
+            ("<b>Agenda</b><br>Q&amp;A<br/><br><br>Wrap&nbsp;up", "Agenda\nQ&A\n\nWrap up"),
+            ("<ul><li>One</li><li>Two</li></ul>", "• One\n• Two"),
+            ("<p>See <a href=\"https://example.com\">https://example.com</a></p>", "See https://example.com"),
+            ("&amp;lt;b&amp;gt; <br>", "&lt;b&gt;")
+        ] as [(String, String?)])
     func notesReadAsTrimmedPlainText(_ notes: String, _ text: String?) {
         #expect(MeetingDetails.plainText(fromNotes: notes) == text)
     }

@@ -73,8 +73,9 @@ struct EmojiSearchTests {
         let multilingual = EmojiIndex()
         await english.load()
         await multilingual.load(languages: ["fr-FR", "ja-JP", "en-US"])
-        #expect(multilingual.search(query, frequent: frequent).prefix(5).map(\.glyph)
-            == english.search(query, frequent: frequent).prefix(5).map(\.glyph))
+        #expect(
+            multilingual.search(query, frequent: frequent).prefix(5).map(\.glyph)
+                == english.search(query, frequent: frequent).prefix(5).map(\.glyph))
     }
 
     @Test func englishRequestsUseOnlyTheCatalogKeywords() async {
@@ -221,9 +222,11 @@ struct EmojiSearchTests {
     }
 
     @Test func aNewUseInAFullHistoryEvictsItsOldestGlyph() throws {
-        frequent.replace((0..<300).map {
-            FrequentEmoji(glyph: String($0), count: 100, lastUsed: Date(timeIntervalSince1970: Double($0)))
-        })
+        frequent.replace(
+            (0..<300).map {
+                FrequentEmoji(
+                    glyph: String($0), count: 100, lastUsed: Date(timeIntervalSince1970: Double($0)))
+            })
         frequent.record("new")
         let first = try #require(frequent.records.first)
         #expect(first.glyph == "new")

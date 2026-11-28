@@ -17,7 +17,9 @@ extension ClipboardTests {
         ("#0f0", .color), ("rgb(255, 87, 51)", .color), ("hsl(11, 100%, 60%)", .color),
         ("https://apple.com/" + String(repeating: "a", count: 4096), .plain)
     ])
-    func textFormDistinguishesLinksAddressesColorsAndProse(_ text: String, _ expected: ClipboardItem.TextForm)
+    func textFormDistinguishesLinksAddressesColorsAndProse(
+        _ text: String, _ expected: ClipboardItem.TextForm
+    )
         throws
     {
         let form = try #require(ClipboardItem(text: text, sourceBundleID: nil).textForm)
@@ -42,16 +44,22 @@ extension ClipboardTests {
         ("/a/b.pdf", false, .pdf), ("/a/b.m4a", false, .audio),
         ("/a/README", false, .other), ("/a/b", true, .folder)
     ])
-    func fileKindUsesTheExtensionAndDirectoryFlag(_ path: String, _ isDirectory: Bool, _ kind: ClipboardFileKind) {
+    func fileKindUsesTheExtensionAndDirectoryFlag(
+        _ path: String, _ isDirectory: Bool, _ kind: ClipboardFileKind
+    ) {
         #expect(ClipboardFileKind.of(path: path, isDirectory: isDirectory) == kind)
     }
 
-    @Test(arguments: [
-        (ClipboardDefaultAction.paste, [ClipboardDefaultAction?.some(.paste), .copy, .pastePlainText]),
-        (.copy, [.copy, .paste, .pastePlainText]),
-        (.pastePlainText, [.pastePlainText, .copy, .paste])
-    ], [ClipboardItem(text: "hello", sourceBundleID: nil),
-        ClipboardItem(filePath: "/Users/me/report.pdf", sourceBundleID: nil)])
+    @Test(
+        arguments: [
+            (ClipboardDefaultAction.paste, [ClipboardDefaultAction?.some(.paste), .copy, .pastePlainText]),
+            (.copy, [.copy, .paste, .pastePlainText]),
+            (.pastePlainText, [.pastePlainText, .copy, .paste])
+        ],
+        [
+            ClipboardItem(text: "hello", sourceBundleID: nil),
+            ClipboardItem(filePath: "/Users/me/report.pdf", sourceBundleID: nil)
+        ])
     func textAndFilesAssignReturnChordsAroundTheDefault(
         _ row: (ClipboardDefaultAction, [ClipboardDefaultAction?]), _ item: ClipboardItem
     ) {
@@ -63,7 +71,9 @@ extension ClipboardTests {
         (ClipboardDefaultAction.paste, ClipboardDefaultAction.paste),
         (.copy, .copy), (.pastePlainText, .paste)
     ])
-    func imageChordsFallBackFromPlainText(_ action: ClipboardDefaultAction, _ expected: ClipboardDefaultAction) {
+    func imageChordsFallBackFromPlainText(
+        _ action: ClipboardDefaultAction, _ expected: ClipboardDefaultAction
+    ) {
         let image = ClipboardItem(imagePath: "/tmp/shot.png", sourceBundleID: nil)
         let chords = ClipboardChord.allCases.map { action.action(for: $0, on: image) }
         #expect(chords.first == .some(expected))
@@ -81,8 +91,11 @@ extension ClipboardTests {
 
     @Test(arguments: [
         (ClipboardItem(imagePath: "/tmp/shot.png", sourceBundleID: nil), true),
-        (ClipboardItem(id: UUID(), kind: .image, text: nil, imagePath: nil, createdAt: .now,
-            sourceBundleID: nil), false),
+        (
+            ClipboardItem(
+                id: UUID(), kind: .image, text: nil, imagePath: nil, createdAt: .now,
+                sourceBundleID: nil), false
+        ),
         (ClipboardItem(text: "hello", sourceBundleID: nil), false),
         (ClipboardItem(filePath: "/Users/me/shot.png", sourceBundleID: nil), true),
         (ClipboardItem(filePath: "/Users/me/notes.txt", sourceBundleID: nil), false),

@@ -202,9 +202,11 @@ struct ClipboardTests {
         let history = try History()
         let store = history.store
         let base = Date().addingTimeInterval(-10_000)
-        store.importEntries([textEntry("needle in the haystack", at: base)] + (1...259).map {
-            textEntry("haystack filler \($0)", at: base + Double($0))
-        })
+        store.importEntries(
+            [textEntry("needle in the haystack", at: base)]
+                + (1...259).map {
+                    textEntry("haystack filler \($0)", at: base + Double($0))
+                })
         try history.pin("needle in the haystack")
 
         let results = store.search("haystack", filter: .all)
@@ -219,7 +221,9 @@ struct ClipboardTests {
         (3, "", .all, nil), (0, "beta", .all, "beta two"), (1, "beta", .all, "beta three"),
         (2, "beta", .all, nil), (0, "", .link, nil)
     ])
-    func pinnedSlotsCountOnlyVisiblePins(_ index: Int, _ query: String, _ filter: ClipboardFilter, _ text: String?)
+    func pinnedSlotsCountOnlyVisiblePins(
+        _ index: Int, _ query: String, _ filter: ClipboardFilter, _ text: String?
+    )
         throws
     {
         let history = try History()
@@ -258,8 +262,13 @@ struct ClipboardTests {
     }
 
     @Test(arguments: [
-        (ClipboardFilter.all, ["rgb(0 255 0 / 0.5)", "#FF5733", "second.link.dev",
-            "hi@apple.com", "https://apple.com", "just some prose"]),
+        (
+            ClipboardFilter.all,
+            [
+                "rgb(0 255 0 / 0.5)", "#FF5733", "second.link.dev",
+                "hi@apple.com", "https://apple.com", "just some prose"
+            ]
+        ),
         (.text, ["just some prose"]), (.color, ["rgb(0 255 0 / 0.5)", "#FF5733"]),
         (.link, ["second.link.dev", "https://apple.com"]), (.email, ["hi@apple.com"]), (.image, [])
     ])
@@ -504,7 +513,8 @@ struct ClipboardTests {
 
     private func typedHistory() throws -> History {
         let history = try History()
-        history.add("just some prose", "https://apple.com", "hi@apple.com", "second.link.dev",
+        history.add(
+            "just some prose", "https://apple.com", "hi@apple.com", "second.link.dev",
             "#FF5733", "rgb(0 255 0 / 0.5)")
         return history
     }

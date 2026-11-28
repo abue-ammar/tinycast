@@ -127,16 +127,18 @@ struct ClipboardSearchTests {
             store.maxAge = ClipboardRetention.forever.maxAge
             let now = Date()
             entries = (0..<2500).map { index in
-                let kind: ClipboardItem.Kind = switch index % 3 {
-                case 0: .text
-                case 1: .file
-                default: .image
-                }
-                let text: String? = switch kind {
-                case .text: "Common alphabet" + Self.suffix(at: index)
-                case .file: "/fixture/common\(index).pdf"
-                case .image: nil
-                }
+                let kind: ClipboardItem.Kind =
+                    switch index % 3 {
+                    case 0: .text
+                    case 1: .file
+                    default: .image
+                    }
+                let text: String? =
+                    switch kind {
+                    case .text: "Common alphabet" + Self.suffix(at: index)
+                    case .file: "/fixture/common\(index).pdf"
+                    case .image: nil
+                    }
                 let date = now - Double(index)
                 return ClipboardItem(
                     id: UUID(), kind: kind, text: text,
@@ -194,7 +196,9 @@ struct ClipboardSearchTests {
             }
         }
 
-        func results(for term: String, filter: ClipboardFilter) -> (
+        func results(
+            for term: String, filter: ClipboardFilter
+        ) -> (
             immediate: [ResultRow], recognized: [ResultRow]?
         ) {
             let pins = store.items.filter(\.isPinned).sorted {
