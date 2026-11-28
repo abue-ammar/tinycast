@@ -62,7 +62,8 @@ Fixed. A session never reopens one; if a decision proves wrong, stop and write i
     every doc that runs or cites them go. Performance is measured
     with Instruments and the signposts (`docs/testing.md#performance-measurement`).
 11. **History survives.** Move a file with `git mv` before rewriting it.
-12. **One PR** for the whole migration, on branch `tests/swift-testing`, one commit per batch.
+12. **One PR** for the whole migration, on branch `tests/swift-testing`. A batch ends in its own
+    commit; follow-up fixes are separate commits, never amended or squashed into it.
 13. **What does not belong in a unit-test suite is removed, never converted.** A harness or a case
     belongs only if it checks a result deterministically on any Mac. Candidates: it measures time or
     prints numbers instead of checking them; it depends on this Mac's state (installed apps, downloaded
@@ -122,7 +123,7 @@ For each harness in the batch:
 1. `xcodegen generate` if files moved. All suites (decision 6) and `./Scripts/lint.sh` pass.
 2. Update `status.md`: tick the batch's rows, set its status to `done` with the commit, mark the next
    batch **next**, add any decision, removal candidate or open problem.
-3. One commit for the batch, tracker included: `Migrate <batch title> to Swift Testing`. No push.
+3. Commit the batch, tracker included: `Migrate <batch title> to Swift Testing`. No push.
 4. If the session ends early, commit what passes, leave the rest unticked, and write where it stopped
    under **Open problems**.
 
@@ -168,14 +169,14 @@ Apple APIs only, nothing deprecated, nothing lint would flag, and never drop or 
 For a plan batch in Claude Code you can also switch to plan mode first (Shift+Tab), which enforces
 the read-only step instead of trusting the prompt to hold it.
 
-To review the batch just committed, in a fresh session (any agent):
+To review the batch just done, in a fresh session (any agent):
 
 ```text
-Review the last commit of the Swift Testing migration against docs/swift-testing/README.md and
-docs/testing.md#writing-a-suite. Check that every old input is still checked with the same expected
-value, that each suite reads as written for Swift Testing from scratch (no old helpers, main()-shaped
-tests or static state), that isolation rules hold, and that docs are updated. Report problems; change
-nothing.
+Review the last batch's commits of the Swift Testing migration against
+docs/swift-testing/README.md and docs/testing.md#writing-a-suite. Check that every old input is still
+checked with the same expected value, that each suite reads as written for Swift Testing from scratch
+(no old helpers, main()-shaped tests or static state), that isolation rules hold, and that docs are
+updated. Report problems; change nothing.
 ```
 
 After a session that added **Removal candidates** or **Open problems**, answer them in `status.md`
