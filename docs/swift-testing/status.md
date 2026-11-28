@@ -21,7 +21,7 @@ the old harness.
 | B1    | Launcher, search, files                | build | 13   | done a2dcde17 |
 | B2    | Calculator, calendar, dictionary       | build | 3    | done c1a0118e |
 | B3    | Clipboard, emoji                       | build | 6    | done 6a15630e |
-| B4    | Palette and design system              | build | 9    | done   |
+| B4    | Palette and design system              | build | 9    | done 20ad496a |
 | B5    | Palette input                          | build | 9    | next   |
 | B6    | Dictation, hotkeys, platform           | build | 9    | todo   |
 | B7    | Window management                      | build | 8    | todo   |
