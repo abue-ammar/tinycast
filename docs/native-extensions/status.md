@@ -9,7 +9,7 @@ file records what is done, what was decided on the way, and what comes next.
 | ----- | -------------------------------------- | ---------------------- | ---------------- | --------------------------- | ---------- |
 | 0     | Remove Raycast extensions              | app                    | Done, not merged | `ext/0-remove-raycast`      | 2026-11-28 |
 | 1     | The contract                           | extensions             | Done             | `main`                      | 2026-11-28 |
-| 2     | SDK, CLI and a first extension         | extensions             | Not started      |                             |            |
+| 2     | SDK, CLI and a first extension         | extensions             | In progress      | `main`                      | 2026-11-28 |
 | 3     | The host                               | app                    | Not started      | `ext/3-host`                |            |
 | 4     | Host-drawn UI                          | app                    | Not started      | `ext/4-ui`                  |            |
 | 5     | Permissions                            | app                    | Not started      | `ext/5-permissions`         |            |
@@ -22,6 +22,62 @@ App step branches come off `native-extensions` and merge back into it. The exten
 to its own `main`.
 
 ## Log
+
+### 2026-11-28 · Phase 2, part 1: TinycastKit
+
+`TinycastKit` runs a command end to end: it reads `start`, renders, handles events, calls the host
+and exits after `stop`. Four contract fixes went in first; the contract is now what `v1.0.0` will
+tag, and `api` stays `1.0`. `swift build` and `swift test` pass with warnings as errors, the schema
+check passes, and `swift format lint` is clean.
+
+**Built**
+
+- Contract fixes: `Scripts/check-schema.sh` now fails unless ajv gives every fixture exactly one
+  verdict, so a schema that is not JSON or does not compile fails it; it also checks the schema
+  accepts the `invalid-swift-only/` fixtures. `Start.arguments` is gone. `HostCall` gains
+  `openPermissionSettings`. `ExtensionWire.maximumFrameBytes` is 8 MB.
+- The public API: `Extension` (the `@main` type and its commands by name), `Command` (`.view`,
+  `.noView`, `.menuBar`), `ViewCommand` and `MenuBarCommand` (an `@Observable` class with a `body`,
+  `run()` and a handler), `CommandContext` (the start reason, locale, appearance, preferences, data
+  folder and every host call), `Preferences` (`text`, `bool`, `choice`) and `DataFolder` (JSON
+  `read`, `write` and `remove` by file name). It re-exports `TinycastProtocol` and `Observation`.
+- Inside: `CommandSession` (one run), `HostLink` (frames, reader, writer and the call table) and
+  `Framing` (the `PipeFraming` format).
+- `TinycastKitTests`: 20 tests drive sessions in-process through pipes: render, event and render
+  again; a burst of changes as one render; events handled in order; broken input; host calls and
+  their replies; `permissionOff` shown and
+  handled; cancellation by the caller, by `stop` and by the main app going away; an action just
+  before `stop`; stdio redirection; preferences, the data folder and the frame limit.
+- The plan's `hello`, written against the API in a scratch package, built and ran through real
+  pipes; it links Foundation and Swift runtime libraries only.
+
+**Decided**
+
+- Renders come from `Observations { command.body }`, so an author never asks for one. Changes in
+  one main-actor step make one render; a tree equal to the last one sent is skipped. The first
+  render goes out before `run()` starts.
+- Author code and the session run on the main actor. Reads and writes run on their own serial
+  queues, and the reader hands each reply straight to its waiting call through a `Mutex` table, so
+  a reply arrives while author code is busy, and after `stop`.
+- Two task groups own every task. In each, one task handles events one at a time in arrival
+  order, so a later search never lands before an earlier one. Events from an older render still
+  arrive; their IDs are the author's to look up. `stop` cancels updates (renders, `run()`, search,
+  selection, a no-view run) but waits for actions and submits already received, so a menu item
+  chosen as the menu closes still runs. Then every call still waiting throws `CancellationError`,
+  the writer drains and the process exits 0, or 1 if the input broke. At end of input the calls
+  are cancelled first.
+- `permissionOff` left uncaught shows one Detail whose action calls `openPermissionSettings`, for a
+  view command or a no-view command the user started. A menu-bar command or a background run logs
+  it to stderr. A new host call beat a `tinycast://` URL for `open`, a reserved action ID, and a
+  host-drawn permission tree. The view's text is English for now.
+- Frames use private copies of fd 0 and fd 1. fd 1 then points at stderr and fd 0 at `/dev/null`,
+  so `print` goes to stderr and never into a frame.
+- Host calls are methods on `CommandContext`, not a `Host` type, which Foundation already has.
+
+**Next:** Phase 2, part 2: the `tinycast` CLI and `extensions/hello`. For Phase 3, the host must read
+`maximumFrameBytes` (`ProcessLink` keeps its own limit today), answer requests until the extension
+exits, reply `failure` when a reply would pass the limit, and show a render from a no-view command
+the user started.
 
 ### 2026-11-28 · Phase 1: the contract
 

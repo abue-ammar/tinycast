@@ -259,7 +259,7 @@ standard view: the permission is off, with a link to Tinycast's Permissions sett
 adds a permission installs without asking; the PR is where a new permission is reviewed.
 
 Needing no entry: its data folder, the preferences and secrets it declares, copying, HUDs, opening
-`https` URLs and closing the palette.
+`https` URLs, opening Tinycast's Permissions settings and closing the palette.
 
 Every extension is signed with Developer ID and the hardened runtime, and carries no entitlements.
 
@@ -267,15 +267,17 @@ Every extension is signed with Developer ID and the hardened runtime, and carrie
 
 | Direction  | Message   | Carries                                                                                                                                              |
 | ---------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| main → ext | `start`   | api version, command, why it started (user, menu opened, schedule, launch), arguments, preferences, its data folder, locale, appearance              |
+| main → ext | `start`   | api version, command, why it started (user, menu opened, schedule, launch), preferences, its data folder, locale, appearance                         |
 | ext → main | `render`  | a revision and one tree (List, Grid, Detail, Form or MenuBar) with its actions; images are SF Symbols or files in `assets/`; Detail text is Markdown |
 | main → ext | `event`   | the revision it answers, and search text, a selection, an action ID or form values                                                                   |
-| ext → main | `request` | a request ID and one host call: clipboard, paste, HUD, open URL, close palette, accessibility                                                        |
+| ext → main | `request` | a request ID and one host call: clipboard, paste, HUD, open URL, open Tinycast's Permissions settings, close palette, accessibility                  |
 | main → ext | `reply`   | the request ID and a result or a typed error: `permissionOff` or a failure                                                                           |
 | ext → main | `finish`  | the command is done, with an optional HUD, shown only when the user started it                                                                       |
 | main → ext | `stop`    | the view or menu closed, the idle delay or time limit passed, the user started another command, or extensions were turned off; the process exits     |
 
-Messages are `Codable` JSON framed by `PipeFraming`, the same as every other link.
+Messages are `Codable` JSON framed by `PipeFraming`, the same as every other link, each at most
+`ExtensionWire.maximumFrameBytes`. After `stop`, the main app answers requests until the process
+exits, so an action chosen as a menu closes still completes.
 
 ### Packaged extension
 
