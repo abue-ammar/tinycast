@@ -122,8 +122,8 @@ An empty query lists **Recent**: the 20 newest files with prior 2, by modificati
 keeps those rows across closes and recomputes them in the background whenever the index is swapped in
 or a live update reaches a file Recent can list, so the screen opens on current rows at once. That
 recompute updates the kept rows while the published list holds still. When an index swap also re-runs
-the visible query, the search worker finishes before the recents refresh begins. A newer recents
-request supersedes an older one, even if the older request is still waiting for the worker.
+the visible query, the worker reloads Recent right after that query runs, ahead of anything typed
+since. A newer recents request supersedes an older one, even if the older one is still waiting.
 
 Search results follow **Pop to Root Search**: closing with **Immediately** clears the session at once.
 With a delay, results stay with the preserved query until the reset fires; reopening before it fires

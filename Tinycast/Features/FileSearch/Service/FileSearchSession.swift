@@ -22,6 +22,8 @@ final class FileSearchSession {
     /// Kept across closes, so the blank screen opens on its rows instead of on nothing.
     @ObservationIgnored private var recent: [FileSearchResult]?
     @ObservationIgnored private var recentStamp = 0
+    /// The revision an index swap re-ran; Recent reloads once the worker gets past it.
+    @ObservationIgnored private var recentRefreshDue: Int?
 
     private struct Request: Equatable {
         static let recent = Request(query: "", filter: .all)
@@ -65,22 +67,18 @@ final class FileSearchSession {
     func refresh() -> Task<Void, Never> {
         guard let request else { return refreshRecent() }
         let search = enqueue(request)
-        return request == .recent ? search : refreshRecent(after: search)
+        if request != .recent { recentRefreshDue = revision }
+        return search
     }
 
     /// Only the kept rows move, so a list on screen never shifts under the pointer.
     @discardableResult
     func refreshRecent() -> Task<Void, Never> {
-        refreshRecent(after: nil)
-    }
-
-    private func refreshRecent(after search: Task<Void, Never>?) -> Task<Void, Never> {
+        recentRefreshDue = nil
         recentStamp &+= 1
         let stamp = recentStamp
         return Task { [weak self] in
-            await search?.value
-            guard let self, stamp == self.recentStamp else { return }
-            _ = await self.loadRecent(stamp: stamp)
+            _ = await self?.loadRecent(stamp: stamp)
         }
     }
 
@@ -118,9 +116,13 @@ final class FileSearchSession {
         while let next = pending {
             pending = nil
             let found = await run(next.request)
-            guard revision == next.revision, request == next.request else { continue }
-            if results != found { results = found }
-            state = .ready
+            if revision == next.revision, request == next.request {
+                if results != found { results = found }
+                state = .ready
+            }
+            if let due = recentRefreshDue, next.revision >= due || pending == nil {
+                _ = await run(.recent)
+            }
         }
         workerTask = nil
     }
@@ -128,6 +130,7 @@ final class FileSearchSession {
     /// Recent's rows are kept whoever asked; stamped, so a late finisher never replaces newer rows.
     private func run(_ request: Request) async -> [FileSearchResult] {
         guard request == .recent else { return await searchOperation(request.query, request.filter) }
+        recentRefreshDue = nil
         recentStamp &+= 1
         return await loadRecent(stamp: recentStamp)
     }

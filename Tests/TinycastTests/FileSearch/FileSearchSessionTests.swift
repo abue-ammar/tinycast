@@ -22,7 +22,7 @@ struct FileSearchSessionTests {
     @Test func aRunningSearchKeepsOnlyTheNewestPendingQuery() async throws {
         let paused = PausedSearch()
         defer { paused.resume() }
-        let log = SearchLog(pausedQuery: "a", pause: paused)
+        let log = SearchLog(pausing: ["a": paused])
         let session = FileSearchSession(searchOperation: log.search)
         let first = try #require(session.search("a"))
         await paused.waitForStart()
@@ -40,7 +40,7 @@ struct FileSearchSessionTests {
     @Test func aSupersedingSearchWaitsForTheWorker() async throws {
         let paused = PausedSearch()
         defer { paused.resume() }
-        let log = SearchLog(pausedQuery: "first", pause: paused)
+        let log = SearchLog(pausing: ["first": paused])
         let session = FileSearchSession(searchOperation: log.search)
         let first = try #require(session.search("first"))
         await paused.waitForStart()
@@ -58,7 +58,7 @@ struct FileSearchSessionTests {
     @Test func cancelDropsPendingWorkAndDiscardsTheRunningResult() async throws {
         let paused = PausedSearch()
         defer { paused.resume() }
-        let log = SearchLog(pausedQuery: "running", pause: paused)
+        let log = SearchLog(pausing: ["running": paused])
         let session = FileSearchSession(searchOperation: log.search)
         let running = try #require(session.search("running"))
         await paused.waitForStart()
@@ -111,7 +111,7 @@ struct FileSearchSessionTests {
     @Test func aNewerRecentRefreshSupersedesOneWaitingForTheVisibleQuery() async throws {
         let paused = PausedSearch()
         defer { paused.resume() }
-        let log = SearchLog(pausedQuery: "report", pause: paused)
+        let log = SearchLog(pausing: ["report": paused])
         let session = FileSearchSession(searchOperation: log.search)
         let search = try #require(session.search("report"))
         await paused.waitForStart()
@@ -128,10 +128,29 @@ struct FileSearchSessionTests {
         await recents.value
     }
 
+    @Test func typingDuringTheRerunDoesNotHoldBackTheRecentRefresh() async throws {
+        let log = SearchLog()
+        let session = FileSearchSession(searchOperation: log.search)
+        let search = try #require(session.search("report"))
+        await search.value
+        let rerun = PausedSearch()
+        defer { rerun.resume() }
+        await log.pause("report", with: rerun)
+        let refresh = session.refresh()
+        await rerun.waitForStart()
+        let typed = try #require(session.search("reports"))
+        rerun.resume()
+        await refresh.value
+        await typed.value
+
+        #expect(await log.calls == ["report", "report", "", "reports"])
+        #expect(session.results.first?.name == "reports")
+    }
+
     @Test func keptRecentsOpenImmediatelyEvenAfterCancel() async throws {
         let paused = PausedSearch()
         defer { paused.resume() }
-        let log = SearchLog(pausedQuery: "report", pause: paused)
+        let log = SearchLog(pausing: ["report": paused])
         let session = FileSearchSession(searchOperation: log.search)
         await session.refresh().value
 
@@ -195,16 +214,17 @@ struct FileSearchSessionTests {
     }
 
     private actor SearchLog {
-        let pausedQuery: String?
-        let pause: PausedSearch?
+        private var pauses: [String: PausedSearch]
         private var active = 0
-        private var didPause = false
         private(set) var calls: [String] = []
         private(set) var maximumActive = 0
 
-        init(pausedQuery: String? = nil, pause: PausedSearch? = nil) {
-            self.pausedQuery = pausedQuery
-            self.pause = pause
+        init(pausing pauses: [String: PausedSearch] = [:]) {
+            self.pauses = pauses
+        }
+
+        func pause(_ query: String, with pause: PausedSearch) {
+            pauses[query] = pause
         }
 
         func search(_ query: String, _ filter: FileSearchFilter) async -> [FileSearchResult] {
@@ -212,8 +232,7 @@ struct FileSearchSessionTests {
             defer { active -= 1 }
             maximumActive = max(maximumActive, active)
             calls.append(filter == .all ? query : "\(query) [\(filter.title)]")
-            if query == pausedQuery, let pause, !didPause {
-                didPause = true
+            if let pause = pauses.removeValue(forKey: query) {
                 await pause.suspend()
             }
             let home = URL(filePath: "/Users/test")

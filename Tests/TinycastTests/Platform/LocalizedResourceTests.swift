@@ -12,12 +12,11 @@ struct LocalizedResourceTests {
         var key: StaticString?
         let value: String.LocalizationValue
 
-        func resource(in table: URL, language: String) -> LocalizedStringResource {
-            let locale = Locale(identifier: language)
-            guard let key else {
-                return LocalizedStringResource(value, locale: locale, bundle: .atURL(table))
-            }
-            return LocalizedStringResource(key, defaultValue: value, locale: locale, bundle: .atURL(table))
+        func resource(
+            bundle: LocalizedStringResource.BundleDescription, locale: Locale
+        ) -> LocalizedStringResource {
+            guard let key else { return LocalizedStringResource(value, locale: locale, bundle: bundle) }
+            return LocalizedStringResource(key, defaultValue: value, locale: locale, bundle: bundle)
         }
     }
 
@@ -45,7 +44,14 @@ struct LocalizedResourceTests {
     @Test(arguments: languages, resources)
     func resolvingMatchesStringLocalized(_ language: String, _ resource: Resource) throws {
         let table = try #require(Bundle.main.url(forResource: language, withExtension: "lproj"))
-        let value = resource.resource(in: table, language: language)
+        let value = resource.resource(bundle: .atURL(table), locale: Locale(identifier: language))
+        #expect(value.resolved() == String(localized: value))
+    }
+
+    /// The app's own path: `Bundle.main` in the host's process language.
+    @Test(arguments: resources)
+    func resolvingTheAppBundleMatchesStringLocalized(_ resource: Resource) {
+        let value = resource.resource(bundle: .main, locale: .current)
         #expect(value.resolved() == String(localized: value))
     }
 }
