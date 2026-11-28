@@ -296,14 +296,18 @@ struct PaletteSelectionTests {
     // MARK: Every shape
 
     @Test(arguments: namedShapes + eachSectionAlone + eachSectionHidden + smallShapes)
-    func everyIndexInvertsToItself(_ shape: Shape) throws {
+    func everyIndexInvertsToItself(_ shape: Shape) {
         let index = shape.index
         for flat in 0..<index.count {
-            switch try #require(index.row(at: flat), "index \(flat) resolves to a row") {
+            let row = index.row(at: flat)
+            #expect(row != nil, "index \(flat) resolves to a row")
+            switch row {
             case .calculator:
                 #expect(flat == 0, "the card only ever sits at index 0")
             case .element(let section, let offset):
                 #expect(index.index(section: section, offset: offset) == flat)
+            case nil:
+                continue
             }
         }
     }

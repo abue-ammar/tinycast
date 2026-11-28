@@ -38,12 +38,12 @@ struct LanguageTests {
         Reading(testDescription: "an unshipped language", stored: ["it"], language: .english)
     ]
 
-    static let windows: [(AppLanguage, String, String)] = [
-        (.english, "1 window", "2 windows"), (.german, "1 Fenster", "2 Fenster"),
-        (.spanish, "1 ventana", "2 ventanas"), (.french, "1 fenêtre", "2 fenêtres"),
-        (.japanese, "1個のウインドウ", "2個のウインドウ"), (.korean, "윈도우 1개", "윈도우 2개"),
-        (.portuguese, "1 janela", "2 janelas"), (.russian, "1 окно", "2 окна"),
-        (.chineseSimplified, "1 个窗口", "2 个窗口")
+    static let windows: [AppLanguage: (one: String, two: String)] = [
+        .english: ("1 window", "2 windows"), .german: ("1 Fenster", "2 Fenster"),
+        .spanish: ("1 ventana", "2 ventanas"), .french: ("1 fenêtre", "2 fenêtres"),
+        .japanese: ("1個のウインドウ", "2個のウインドウ"), .korean: ("윈도우 1개", "윈도우 2개"),
+        .portuguese: ("1 janela", "2 janelas"), .russian: ("1 окно", "2 окна"),
+        .chineseSimplified: ("1 个窗口", "2 个窗口")
     ]
 
     static let rootSearchTerms: [(key: String, french: String)] = [
@@ -157,8 +157,9 @@ struct LanguageTests {
 
     // MARK: The shipped catalogs
 
-    @Test(arguments: windows)
-    func pluralFormsAreSelectedAtRuntime(_ language: AppLanguage, _ one: String, _ two: String) throws {
+    @Test(arguments: AppLanguage.allCases)
+    func pluralFormsAreSelectedAtRuntime(_ language: AppLanguage) throws {
+        let (one, two) = try #require(Self.windows[language], "every language has plural forms to check")
         let bundle = try Self.strings(for: language)
         let locale = Locale(identifier: language.rawValue)
         let (single, pair) = (1, 2)

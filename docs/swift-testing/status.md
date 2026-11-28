@@ -215,12 +215,13 @@ compiled `.lproj` tables instead of compiling or parsing the source `.xcstrings`
 both catalogs. Docs: `testing.md` (the `LanguageTests` row and the tripwire baseline), `palette.md`,
 `ui.md`, and `ExtensionFormMetrics`' doc comments.
 
-- [x] PaletteSelectionTests · 420 · 4,170 cases in 38 tests, read from the result bundle; that
+- [x] PaletteSelectionTests · 420 · 4,902 cases in 39 tests, read from the result bundle; that
       count is the tripwire now, with the 729 grid shapes and 128 small shapes as arguments
 - [x] AppearanceTests · 128
 - [x] LanguageTests · 245
 - [x] InterfaceSizeTests · 365 · rounding and growth also cover `menuRowSpacing` and
-      `clipboardPreviewPixel`, which only the identity check had
+      `clipboardPreviewPixel`, which only the identity check had; the review added the six members
+      the harness never listed (`radius.codeBlock`, `actionMenuWidth`, `chat…` and `dialogTextHeight`)
 - [x] PalettePlacementTests · 386
 - [x] ScrollRevealTests · 77
 - [x] RedactionTests · 71

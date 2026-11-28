@@ -61,6 +61,11 @@ extension PaletteSelectionTests {
     }
 
     @Test(arguments: grids)
+    func aGridIndexesEveryCell(_ grid: Grid) {
+        #expect(grid.index.count == grid.counts.reduce(0, +))
+    }
+
+    @Test(arguments: grids)
     func aVerticalMoveStaysOnARow(_ grid: Grid) {
         for flat in 0..<grid.index.count {
             #expect(grid.index.row(at: grid.geometry.down(from: flat)) != nil, "down from \(flat)")

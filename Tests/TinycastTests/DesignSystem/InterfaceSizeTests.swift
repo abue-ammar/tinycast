@@ -53,6 +53,7 @@ struct InterfaceSizeTests {
         Length("radius.glyph", \.radius.glyph, Theme.Radius.glyph),
         Length("radius.attachmentChip", \.radius.attachmentChip, Theme.Radius.attachmentChip),
         Length("radius.card", \.radius.card, Theme.Radius.card),
+        Length("radius.codeBlock", \.radius.codeBlock, Theme.Radius.codeBlock),
         Length("radius.keyCap", \.radius.keyCap, Theme.Radius.keyCap),
         Length("radius.tooltip", \.radius.tooltip, Theme.Radius.tooltip),
         Length("size.panelWidth", \.size.panelWidth, Theme.Size.panelWidth),
@@ -76,6 +77,7 @@ struct InterfaceSizeTests {
         Length("size.menuButton", \.size.menuButton, Theme.Size.menuButton),
         Length("size.checkbox", \.size.checkbox, Theme.Size.checkbox),
         Length("size.menuWidth", \.size.menuWidth, Theme.Size.menuWidth),
+        Length("size.actionMenuWidth", \.size.actionMenuWidth, Theme.Size.actionMenuWidth),
         Length("size.formMenuMinimumWidth", \.size.formMenuMinimumWidth, Theme.Size.formMenuMinimumWidth),
         Length(
             "size.formMenuExtraRowsHeight", \.size.formMenuExtraRowsHeight, Theme.Size.formMenuExtraRowsHeight
@@ -105,9 +107,13 @@ struct InterfaceSizeTests {
         Length("size.markdownQuoteBar", \.size.markdownQuoteBar, Theme.Size.markdownQuoteBar),
         Length("size.chatMessageAction", \.size.chatMessageAction, Theme.Size.chatMessageAction),
         Length("size.chatImageThumb", \.size.chatImageThumb, Theme.Size.chatImageThumb),
+        Length("size.chatSourceBadge", \.size.chatSourceBadge, Theme.Size.chatSourceBadge),
+        Length("size.chatJumpToLatest", \.size.chatJumpToLatest, Theme.Size.chatJumpToLatest),
         Length("size.chatAttachmentGlyph", \.size.chatAttachmentGlyph, Theme.Size.chatAttachmentGlyph),
         Length("size.chatAttachmentThumb", \.size.chatAttachmentThumb, Theme.Size.chatAttachmentThumb),
         Length("size.chatAttachmentInset", \.size.chatAttachmentInset, Theme.Size.chatAttachmentInset),
+        Length(
+            "size.chatAttachmentRemove", \.size.chatAttachmentRemove, Theme.Size.chatAttachmentRemove),
         Length("size.quickActionPanel", \.size.quickActionPanel, Theme.Size.quickActionPanel),
         Length("size.quickActionHeaderIcon", \.size.quickActionHeaderIcon, Theme.Size.quickActionHeaderIcon),
         Length("size.quickActionScrollFade", \.size.quickActionScrollFade, Theme.Size.quickActionScrollFade),
@@ -121,6 +127,7 @@ struct InterfaceSizeTests {
         Length("size.dialogSymbol", \.size.dialogSymbol, Theme.Size.dialogSymbol),
         Length("size.dialogSymbolContainer", \.size.dialogSymbolContainer, Theme.Size.dialogSymbolContainer),
         Length("size.dialogIcon", \.size.dialogIcon, Theme.Size.dialogIcon),
+        Length("size.dialogTextHeight", \.size.dialogTextHeight, Theme.Size.dialogTextHeight),
         Length("size.hudMaxWidth", \.size.hudMaxWidth, Theme.Size.hudMaxWidth),
         Length("size.hudWidth", \.size.hudWidth, Theme.Size.hudWidth),
         Length("size.hudHeight", \.size.hudHeight, Theme.Size.hudHeight),
