@@ -116,6 +116,8 @@ Tinycast/Features/Extensions/
 ├── Service/
 │   ├── ExtensionManager.swift           processes: spawn, idle stop, one per extension, off means off
 │   ├── ExtensionSession.swift           one running extension: link, revisions, pending requests
+│   ├── ExtensionBundle.swift            one packed .tcext: its manifest, executable and origin
+│   ├── ExtensionHostCallRunner.swift    the host calls that need no macOS permission
 │   ├── ExtensionSignatureService.swift  Developer ID and team check: at install, before every run
 │   ├── ExtensionStatusItemController.swift  one menu bar item: its last snapshot and its menu
 │   ├── ExtensionRefreshScheduler.swift  background runs on each command's interval
@@ -125,6 +127,7 @@ Tinycast/Features/Extensions/
 ├── UI/                                  host-drawn List, Grid, Detail, Form, Actions, Markdown
 └── Settings/                            Extensions pane, per-extension page, Store, ExtensionLibrary
 Tests/ExtensionModelTests.swift          index decisions, version rules
+Tests/ExtensionSessionTests.swift        the session against the packed hello and a stand-in
 ```
 
 Installed extensions live in `AppPaths`' Application Support folder, under `Extensions/<id>.tcext`,

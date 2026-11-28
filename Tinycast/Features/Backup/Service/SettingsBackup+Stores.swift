@@ -65,6 +65,7 @@ extension SettingsBackup {
             quicklinkPassesSelectedText: s.quicklinkPassesSelectedText,
             quicklinkConfirmsBeforeDelete: s.quicklinkConfirmsBeforeDelete,
             appleShortcutsEnabled: s.appleShortcutsEnabled,
+            extensionsEnabled: s.extensionsEnabled,
             calendarShowInLauncher: s.calendarShowInLauncher,
             calendarLauncherLimit: s.calendarLauncherLimit.rawValue,
             calendarSpan: s.calendarSpan.rawValue,
@@ -407,6 +408,10 @@ extension SettingsBackup {
         }
         if let flag = s.appleShortcutsEnabled {
             settings.appleShortcutsEnabled = flag
+            count += 1
+        }
+        if let flag = s.extensionsEnabled {
+            settings.extensionsEnabled = flag
             count += 1
         }
         if let flag = s.quicklinkOpensNewWindow {

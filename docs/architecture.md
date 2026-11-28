@@ -208,6 +208,7 @@ Tinycast is the main app and the processes it starts, and each of those links to
 | `ClipboardTextHelper` | text recognition and the thumbnail for one clipboard item         | one item                               |
 | `FileIndexHelper`     | the File Search crawl                                             | one crawl                              |
 | Tinycast Dictation    | the dictation model adapters, as a helper app with its own bundle | until the idle delay or a model switch |
+| An extension          | one installed extension's commands, never a `ProcessRole`         | until `stop` or the idle delay         |
 
 Three rules decide where new work runs:
 
@@ -222,8 +223,9 @@ Three rules decide where new work runs:
   Swift process also costs about 4 MB before it does anything, so always-on work joins a process that is
   already running rather than starting one of its own.
 
-`ProcessLink.spawn` starts any executable with a typed link on its stdin and stdout, and
-`App/ProcessLink+Role.swift` starts this one as a role. A role speaks this build's `Codable` types, so
+`ProcessLink.spawn` starts any executable with a typed link on its stdin and stdout, its own frame
+limit and, when asked, a pipe for its stderr, and `App/ProcessLink+Role.swift` starts this one as a
+role. A role speaks this build's `Codable` types, so
 both ends must be one build: `Platform/LaunchedExecutable.swift` pins the executable's file identity at
 launch, and a role never starts once an update or a rebuild has replaced it; Settings then offers a
 relaunch.

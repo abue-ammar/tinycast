@@ -247,6 +247,17 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         core: self)
 
+    /// Main app only: Settings' process reads the switches but never runs an extension.
+    @ObservationIgnored private(set) lazy var extensions = ExtensionManager(
+        hostCalls: ExtensionHostCallRunner(
+            closePalette: { [unowned self] in paletteCoordinator.hidePalette() },
+            openPermissionSettings: { [unowned self] in
+                paletteCoordinator.hidePalette(restoreFocus: false)
+                settingsCoordinator.showSettings(tab: .permissions)
+            },
+            showMessage: { [unowned self] in showMessage($0) }),
+        showMessage: { [unowned self] in showMessage($0, tone: $1) })
+
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     /// Every pill shares this panel, so a later one replaces the earlier rather than stacking.
     @ObservationIgnored private lazy var pillPresenter = HUDPresenter(
@@ -364,6 +375,7 @@ final class AppCore {
             }
             updateCoordinator.applyEnabled()
             calendarCoordinator.applyEnabled()
+            applyExtensions()
             Task { await emojiIndex.load(languages: SystemLanguages.preferred) }
             currencyRates.start()
             updateChecker.onUpdateAvailable = { [weak self] in self?.updateCoordinator.offer($0) }
@@ -869,7 +881,21 @@ final class AppCore {
             aiSettings, { _ = $0.enabledInstalledProviders },
             reproject: { _ = $0.applyInstalledAILifecycle() })
         track({ _ = $0.notesFolder }, reproject: { $0.applyNotesFolder() })
+        track(
+            {
+                _ = $0.extensionsEnabled
+                #if DEBUG
+                    _ = $0.extensionDeveloperMode
+                #endif
+            }, reproject: { $0.applyExtensions() })
         trackChatRoute()
+    }
+
+    private func applyExtensions() {
+        extensions.setEnabled(settings.extensionsEnabled)
+        #if DEBUG
+            extensions.setDeveloperMode(settings.extensionDeveloperMode)
+        #endif
     }
 
     /// `.system` resolves to `nil`, so AppKit follows macOS with nothing polling.

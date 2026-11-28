@@ -3,7 +3,7 @@ import Foundation
 /// Clears what the removed Raycast extension runtime left behind, on this Mac and in iCloud.
 enum RaycastExtensionsMigration {
     static let retiredDefaults: Set<String> = [
-        "extensionsEnabled", "extensionsShowInLauncher", "extensionPackageManager",
+        "extensionsShowInLauncher", "extensionPackageManager",
         "extensionCustomSearchPaths", "extensionAppearances", "boundExtensionCommandEntryIDs"
     ]
     static let retiredFiles = [
@@ -17,17 +17,17 @@ enum RaycastExtensionsMigration {
             defaults.removeObject(forKey: key)
         }
         if let settingsFile, let data = try? Data(contentsOf: settingsFile),
-            let stripped = strippingRetiredSection(data)
+            let stripped = strippingRetiredKey(data)
         {
             try? stripped.write(to: settingsFile.resolvingSymlinksInPath(), options: .atomic)
         }
         Task.detached(priority: .utility) { removeFiles(in: supportDirectory) }
     }
 
-    /// Nil when the section is absent or the file has other problems, which the import must report.
-    static func strippingRetiredSection(_ data: Data) -> Data? {
+    /// Nil when the key is absent or the file has other problems, which the import must report.
+    static func strippingRetiredKey(_ data: Data) -> Data? {
         guard let parsed = try? SettingsFileFormat.parse(data),
-            parsed.issues == [.unknownSetting("extensions")]
+            parsed.issues == [.unknownSetting(retiredSettingsFileKey)]
         else { return nil }
         return SettingsFileFormat.render(parsed.values)
     }
@@ -53,6 +53,7 @@ enum RaycastExtensionsMigration {
         recordName.hasPrefix("extensions.") || recordName == retiredSettingRecord
     }
 
-    private static let retiredSettingRecord = SyncSourceID.settings.recordName(
-        for: "extensions.showInLauncher")
+    /// Native extensions own the `extensions` section now, so only the old runtime's key goes.
+    private static let retiredSettingsFileKey = "extensions.showInLauncher"
+    private static let retiredSettingRecord = SyncSourceID.settings.recordName(for: retiredSettingsFileKey)
 }

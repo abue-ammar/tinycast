@@ -765,6 +765,11 @@ run UpdateCheckTests       Tinycast/Features/Updates/Model/*.swift \
                            Tinycast/Features/Updates/Service/UpdateCheckStore.swift \
                            Tinycast/Platform/AppPaths.swift
 run SupportTests           Tinycast/Features/Support/Model/*.swift
+EXT=Tinycast/Features/Extensions
+run ExtensionModelTests    $EXT/Model/Protocol/*.swift $EXT/Model/ExtensionIndex.swift
+run ExtensionSessionTests  $EXT/Model/Protocol/*.swift $EXT/Service/ExtensionSession.swift \
+                           $EXT/Service/ExtensionSignatureService.swift Tinycast/Platform/PipeFraming.swift \
+                           Tinycast/Platform/ProcessLink.swift Tinycast/Platform/ProcessExit.swift
 run AIProviderTests        Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Settings/AISettingsStore.swift \

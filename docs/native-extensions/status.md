@@ -10,7 +10,7 @@ file records what is done, what was decided on the way, and what comes next.
 | 0     | Remove Raycast extensions              | app                    | Done, not merged | `ext/0-remove-raycast`      | 2026-11-28 |
 | 1     | The contract                           | extensions             | Done             | `main`                      | 2026-11-28 |
 | 2     | SDK, CLI and a first extension         | extensions             | Done             | `main`                      | 2026-11-28 |
-| 3     | The host                               | app                    | Not started      | `ext/3-host`                |            |
+| 3     | The host                               | app                    | In progress      | `ext/3-host`                | 2026-11-28 |
 | 4     | Host-drawn UI                          | app                    | Not started      | `ext/4-ui`                  |            |
 | 5     | Permissions                            | app                    | Not started      | `ext/5-permissions`         |            |
 | 6     | Menu bar and background refresh        | app                    | Not started      | `ext/6-menu-bar-background` |            |
@@ -22,6 +22,75 @@ App step branches come off `native-extensions` and merge back into it. The exten
 to its own `main`.
 
 ## Log
+
+### 2026-11-28 · Phase 3, part 1: the host engine
+
+The main app can vendor the protocol, decide what the Store index allows, check a bundle's signature,
+and run one extension process from spawn to exit. No palette surface yet; that is part 2. The packed
+`hello` runs through the real `ExtensionSession` in a harness. `./Scripts/run-tests.sh` passes, the
+Debug and Release builds add no warnings, `./Scripts/lint.sh` is clean and `Model/` imports no UI
+framework.
+
+**Built**
+
+- `Scripts/sync-extension-protocol.sh <tag>` clones `tinycast-extensions` over SSH and writes
+  `Model/Protocol/*.generated.swift`, each with a header naming the tag. Vendored at `v1.0.0`;
+  SwiftLint skips the folder and AGENTS.md lists it as generated.
+- `ExtensionIndex` (`Model/`): `canInstall`, `status(of:)` (current, update, pinned, needs a newer
+  Tinycast, revoked) and `updates(for:)` for auto-update and Update All. Revoked beats a pin; a revoked
+  newer version is never offered; an installed extension missing from the index needs a newer
+  Tinycast.
+- `ExtensionSignatureService`: Developer ID, `TinycastExtensionsTeamID` from Info.plist and the
+  identifier `com.abueammar.tinycast.ext.<id>`. Without the team ID it refuses everything, so Release
+  runs nothing until Phase 7.
+- `ProcessLink.spawn`: a frame limit per link (roles keep 32 MB, extensions use
+  `ExtensionWire.maximumFrameBytes`), every pipe close-on-exec, an optional stderr pipe, and
+  `terminate()`.
+- `ExtensionSession`: spawning → running → stopping → gone. Renders apply only with a newer revision;
+  requests are answered while running and stopping; `finish` calls back once and sends `stop`; the
+  idle delay counts only while no surface shows it (`isShown`); a process still alive 5 seconds after
+  `stop` is killed. A text reply too big for a frame becomes `failure`, and stderr is read all the
+  time, keeping its last 16 KiB for the log.
+- `ExtensionManager`, wired in `AppCore.start()`: off stops every process and refuses every run; one
+  process per extension, a user run stopping the current one and waiting for it to exit, a background
+  run giving way. Before every launch: the command exists, `canRun(api)`, the signature. `start`
+  carries the data folder `ExtensionData/<id>/`, the locale and the appearance. A user run's failures
+  and `finish` HUD go through `showMessage`.
+- `ExtensionHostCallRunner`: copy, read clipboard, HUD, `https` open, close palette and open
+  Permissions settings. Paste and selected text reply `failure` until Phase 5.
+- `extensionsEnabled`, off by default: `extensions.enabled` in `settings.json`, carried by backups,
+  never synced. An Extensions Settings pane holds it.
+- Developer mode, Debug only: a toggle in that pane and `DeveloperExtensions/` in Application Support,
+  whose bundles run without the Store or the signature check. No `settings.json` key, backup field or
+  sync; Release contains none of it.
+- Harnesses: `ExtensionModelTests`; `ExtensionSessionTests` (`hello` from `TINYCAST_HELLO_BUNDLE`, the
+  harness itself as a stand-in for a stale render, a request after `stop` and a process that ignores
+  it); new `PipeFramingTests` cases.
+
+**Decided**
+
+- The switch reuses `extensionsEnabled`, and `RaycastExtensionsMigration` no longer deletes it. A
+  key the migration retires is taken back, and dropped from the migration, whenever a native part
+  needs it. So a Mac whose old runtime was on starts with native extensions on, which reverses Phase
+  0's "start off for everyone".
+- `extensions` is a known `settings.json` section now, so the migration strips only the old
+  `extensions.showInLauncher` key.
+- Idle delay 30 seconds: a restart costs about 33 ms, so a longer one saves nothing and holds 2–5 MB,
+  and 30 seconds equals the background limit. Stop-to-kill 5 seconds: long enough for an action
+  chosen as a menu closes to fetch and copy. stderr tail 16 KiB.
+- A run the user didn't start gets `failure` for HUD, open, close palette and open Permissions
+  settings, rather than a success that showed nothing.
+- `Process` already closes other descriptors in its children on macOS 27: a harness check passes with
+  or without close-on-exec. The marking stays for any spawn that bypasses `Process`.
+- The harness skips the `hello` cases with a reason when no packed `hello` is beside this checkout,
+  since the extensions repo is private; no CI runs harnesses.
+- Developer-mode text is `Text(verbatim:)`, so the catalog holds only what Release ships.
+
+**Next:** Phase 3, part 2: `AppEntry.Kind.extensionCommand`, rows from manifests and the palette
+screen that shows a session. `RaycastExtensionsMigration` still deletes `hotkey.extensionCommand.*`
+defaults and `extension:` keys in favorites, aliases, hidden items and ranking: whichever of those
+native commands use, drop from the migration in the same change. Phase 8 does the same for the
+`extensions` folder in Application Support, which is `Extensions/` on a case-insensitive disk.
 
 ### 2026-11-28 · Phase 2, part 2: the `tinycast` CLI and `hello`
 

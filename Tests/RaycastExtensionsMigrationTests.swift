@@ -18,14 +18,16 @@ struct RaycastExtensionsMigrationTests {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let retired = [
-            "extensionsEnabled", "extensionsShowInLauncher", "extensionPackageManager",
+            "extensionsShowInLauncher", "extensionPackageManager",
             "extensionCustomSearchPaths",
             "extensionAppearances", "boundExtensionCommandEntryIDs",
             "hotkey.extensionCommand.extension:weather/forecast",
             "NSStatusItem Visible extension:weather/temperature",
             "NSStatusItem Preferred Position extension:weather/temperature"
         ]
-        let kept = ["hotkey.quicklink.1", "NSStatusItem Visible Item-0", "launcherAliases"]
+        let kept = [
+            "hotkey.quicklink.1", "NSStatusItem Visible Item-0", "launcherAliases", "extensionsEnabled"
+        ]
         for key in retired + kept { defaults.set(true, forKey: key) }
 
         let root = FileManager.default.temporaryDirectory
@@ -43,7 +45,7 @@ struct RaycastExtensionsMigrationTests {
 
         let settingsFile = root.appending(path: "settings.json")
         try? Data(
-            #"{"quicklinks": {"enabled": false}, "extensions": {"showInLauncher": true}}"#.utf8
+            #"{"quicklinks": {"enabled": false}, "extensions": {"enabled": true, "showInLauncher": true}}"#.utf8
         ).write(to: settingsFile)
 
         RaycastExtensionsMigration.run(
@@ -52,16 +54,17 @@ struct RaycastExtensionsMigrationTests {
         check("every unrelated key stays", kept.allSatisfy { defaults.object(forKey: $0) != nil })
         let rewritten = (try? Data(contentsOf: settingsFile)).flatMap { try? SettingsFileFormat.parse($0) }
         check(
-            "settings.json loses the extensions section and keeps the rest",
-            rewritten?.issues == [] && rewritten?.values == [.quicklinksEnabled: .bool(false)])
+            "settings.json loses the retired key and keeps the rest, native extensions' switch too",
+            rewritten?.issues == []
+                && rewritten?.values == [.quicklinksEnabled: .bool(false), .extensionsEnabled: .bool(true)])
         check(
             "a settings.json with other problems is left to the import",
-            RaycastExtensionsMigration.strippingRetiredSection(
+            RaycastExtensionsMigration.strippingRetiredKey(
                 Data(#"{"extensions": {"showInLauncher": true}, "bogus": {}}"#.utf8)) == nil)
         check(
-            "a settings.json without the section is left as written",
-            RaycastExtensionsMigration.strippingRetiredSection(
-                Data(#"{"quicklinks": {"enabled": false}}"#.utf8)) == nil)
+            "a settings.json without the retired key is left as written",
+            RaycastExtensionsMigration.strippingRetiredKey(
+                Data(#"{"quicklinks": {"enabled": false}, "extensions": {"enabled": true}}"#.utf8)) == nil)
 
         func left() -> Set<String> {
             Set((try? FileManager.default.contentsOfDirectory(atPath: root.path)) ?? [])
