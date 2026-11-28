@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: B1 · Launcher, search, files** (build mode)
+**Next: B2 · Calculator, calendar, dictionary** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -18,8 +18,8 @@ the old harness.
 | R2    | Remove approved candidates             | build | –    | done   |
 | R3    | Remove the extension harnesses         | build | 13   | done   |
 | P2    | Peer fixtures for self-run harnesses   | plan  | 3    | done   |
-| B1    | Launcher, search, files                | build | 13   | next   |
-| B2    | Calculator, calendar, dictionary       | build | 3    | todo   |
+| B1    | Launcher, search, files                | build | 13   | done (this commit) |
+| B2    | Calculator, calendar, dictionary       | build | 3    | next   |
 | B3    | Clipboard, emoji                       | build | 6    | todo   |
 | B4    | Palette and design system              | build | 9    | todo   |
 | B5    | Palette input                          | build | 9    | todo   |
@@ -163,18 +163,17 @@ pointed at a language's `.lproj` stands in for a relaunch. `Support/` gains `Nod
 
 ## B1 · Launcher, search, files
 
-Partial. The six checked suites passed the decision-6 command and lint. The remaining seven
-are still at the root of `Tests/`; see Open problems for the FileSearchSessionTests blocker.
+Done. Six suites moved in `36c67aa2` and seven in this commit. The full decision-6 run and lint passed.
 
-- [ ] FuzzTests · 556 · ran at `-O`; check its time at `-Onone`
-- [ ] FileSearchTests · 501
-- [ ] FileIndexTests · 295
-- [ ] FileSearchSessionTests · 247
-- [ ] MenuSearchTests · 525
+- [x] FuzzTests · 556 · the 20,000 seeded alignments take about 1 s in Debug at `-Onone`
+- [x] FileSearchTests · 501
+- [x] FileIndexTests · 295
+- [x] FileSearchSessionTests · 247
+- [x] MenuSearchTests · 525
 - [x] WindowSwitchTests · 147
 - [x] RankingTests · 118
-- [ ] ScopesTests · 265
-- [ ] AppNameTests · 302
+- [x] ScopesTests · 265
+- [x] AppNameTests · 302
 - [x] FavoritesTests · 51
 - [x] LauncherFileTests · 70
 - [x] AppleShortcutTests · 77
@@ -425,16 +424,12 @@ Decisions made during the migration, beyond the brief's. Newest last.
   `MCPStdioTests` again proves a bare command is looked up on PATH, a case P1 had dropped.
 - P2 review: `test_mutable_global` also catches a file-scope `var` behind attributes (`@MainActor var`).
 - B1: the user approved pinning the Xcode Test action to English. The Run action follows macOS.
+- B1: the user approved returning task handles from `FileSearchSession` and ordering an index
+  refresh's visible search before its recents refresh. Tests await completion and use streams to
+  control in-flight work.
 
 ## Open problems
 
 What a session could not settle. The user answers these; a session never guesses past one.
 
-- **B1 · FileSearchSessionTests.** The harness sleeps while waiting for a cancelled worker to
-  drain and for background refresh to populate the kept recents. Neither event is observable:
-  cancellation sets `state = .idle` synchronously, and `refreshRecent()` updates an
-  `@ObservationIgnored` cache from a task whose handle it discards. The injected search operation
-  can signal that it returned, but the session still has to consume its result. The refresh case
-  also expects a particular call order across two independent tasks. Decide whether to approve a
-  production completion seam and whether to guarantee the old refresh call order. Both are needed
-  to preserve the checks without sleeps or scheduler assumptions.
+None.

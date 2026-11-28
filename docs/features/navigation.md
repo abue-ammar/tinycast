@@ -21,8 +21,7 @@ launcher and a still-recorded shortcut for any does nothing.
   anew (`WindowSwitchCoordinator.load()`, through `PaletteCoordinator.onScreenOpening`), and a
   screen restored inside the Pop to Root window lists today's windows, not an empty snapshot.
 - **Nothing in `Model/` knows what a window is.** `WindowSwitchEntry` takes `appRank` as a number
-  someone else measured, so `WindowSwitchOrder` and `WindowSwitchQuery` stay Foundation-only and the
-  harness compiles the shipped sources.
+  someone else measured, so `WindowSwitchOrder` and `WindowSwitchQuery` stay Foundation-only.
 - **The order is total.** `(isMinimized, appRank, appName, handle)`, so a sweep that enumerated apps
   in a different order sorts identically, and minimized windows are always one run at the end rather
   than interleaved.
@@ -81,8 +80,8 @@ requiring one would hide it.
 **A minimized window changes subrole.** Finder and Transmission report their minimized windows as
 `AXDialog`, not `AXStandardWindow`, and back to `AXStandardWindow` when restored, so a subrole test
 alone drops exactly the rows a switcher exists for. A sheet cannot minimize, so the minimize button
-is what still tells a minimized window from a real dialog. The policy is Foundation-only, so the
-harness covers the rule rather than the attribute reads.
+is what still tells a minimized window from a real dialog. `WindowSwitchTests` exercises the
+Foundation-only policy using fixture attributes.
 
 Each element gets a 0.2 s messaging timeout, the same as the layout inventory and the menu walk, so
 one hung app cannot stall the summon.

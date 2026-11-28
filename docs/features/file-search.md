@@ -121,8 +121,9 @@ the live diff's date comparison, so a tool that writes under `~/.claude` all day
 An empty query lists **Recent**: the 20 newest files with prior 2, by modification date. The session
 keeps those rows across closes and recomputes them in the background whenever the index is swapped in
 or a live update reaches a file Recent can list, so the screen opens on current rows at once. That
-recompute never touches the published results, so a list on screen holds still. Each run is stamped,
-and one that finishes after a newer one is dropped.
+recompute updates the kept rows while the published list holds still. When an index swap also re-runs
+the visible query, the search worker finishes before the recents refresh begins. A newer recents
+request supersedes an older one, even if the older request is still waiting for the worker.
 
 Search results follow **Pop to Root Search**: closing with **Immediately** clears the session at once.
 With a delay, results stay with the preserved query until the reset fires; reopening before it fires

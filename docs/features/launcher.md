@@ -37,7 +37,7 @@ restarting a chosen copy is checked by hand, in the
   not name belongs to Settings › Commands and answers to that switch.
 - **The ranking lives in pure files.** `Model/LauncherMatch.swift` (the scorer),
   `Model/LauncherOrder.swift` (the comparator) and `Model/LauncherSuggestions.swift` are
-  Foundation-only and pure, so `FuzzTests` compiles the shipped code. Changing a rule means changing
+  Foundation-only and pure. `FuzzTests` exercises the shipped code. Changing a rule means changing
   [Ranking](#ranking), never adding a tuning constant.
 - **`Model/EntryNaming.swift` is the only place a name is decided, for every kind alike.** A producer
   fills `EntryNaming.Sources` (title, alternate titles, subtitle, keywords) and `profile(for:)`
@@ -416,7 +416,7 @@ with the entry's other per-entry preferences.
 for Contacts, `System Preferences` and `Settings` for System Settings, `iBooks` for Books. They index as
 alternate titles, read from the **raw** `infoDictionary`: `object(forInfoDictionaryKey:)` consults
 `InfoPlist.strings`, and Calendar's replaces its `iCal` array with the string `Calendar`.
-`EntryNaming.usable` (pure, covered by the harness) drops whatever repeats a name the entry already
+`EntryNaming.usable` (covered by `FuzzTests`) drops whatever repeats a name the entry already
 carries and the untranslated `ALTERNATE_NAME_1` placeholders several ship.
 
 **A row is labelled the way Finder labels it: the localized name if the bundle ships one, and
@@ -689,10 +689,6 @@ value), so a command may be moved between owners without migrating anything.
 entries (no new `AppEntry.Kind` and no `VisibilityStore` category), owned by Settings › Navigation
 through `SettingsTab.ownedCommands`, so `navigationEnabled` is their switch. Their invariants and
 internals live in [navigation.md](navigation.md) and [menu-search.md](menu-search.md).
-
-> **Invariant:** `Tests/FuzzTests.swift` compiles the real `Launcher/Model/LauncherMatch.swift` and
-> `LauncherOrder.swift`, so both must stay Foundation-only and pure. There is no copy of the ranking
-> to keep in sync.
 
 `RankingTests` covers the frecency curve, search-term retention and its 17-day gate, pruning,
 persistence and both reset paths. See [testing.md](../testing.md#the-test-suite) for the test command.

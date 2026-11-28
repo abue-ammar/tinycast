@@ -72,9 +72,9 @@ ranking runs in memory over it, and activating a row re-resolves the live elemen
 is checked before the menu-bar test, because Tinycast runs as an accessory and would otherwise read
 as menu-less; `excluded` is checked next, for the same reason.
 
-`MenuSearchSession` takes its walk as an injected `WalkOperation`, `(pid, showsAppleMenu)`, which
-is what lets `Tests/MenuSearchTests.swift` drive publication, supersession and cancellation without
-an AX server.
+`MenuSearchSession` takes an injected `WalkOperation`, `(pid, showsAppleMenu)`. `MenuSearchTests`
+uses it to verify publication and supersession with fixture menus. The suite also checks that a
+cancelled snapshot walk returns a prefix of the full snapshot.
 
 Ranking scores the title and the `File > Export As` display path together, but the path rides as a
 `.owner` field rather than a name one: a hierarchy string is shared by every row beneath it, so

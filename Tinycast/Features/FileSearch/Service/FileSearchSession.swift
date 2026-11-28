@@ -47,25 +47,41 @@ final class FileSearchSession {
     }
 
     /// An empty query is a request too: the blank screen lists what changed recently.
-    func search(_ rawQuery: String, filter: FileSearchFilter = .all) {
+    @discardableResult
+    func search(_ rawQuery: String, filter: FileSearchFilter = .all) -> Task<Void, Never>? {
         let query = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         let request = Request(query: query, filter: filter)
-        guard request != self.request else { return }
-        enqueue(request)
-        guard request == .recent, let recent else { return }
-        results = recent
-        state = .ready
+        guard request != self.request else { return nil }
+        let task = enqueue(request)
+        if request == .recent, let recent {
+            results = recent
+            state = .ready
+        }
+        return task
     }
 
     /// Re-runs the published request; Recent's kept rows follow even behind a typed query.
-    func refresh() {
-        if let request { enqueue(request) }
-        if request != .recent { refreshRecent() }
+    @discardableResult
+    func refresh() -> Task<Void, Never> {
+        guard let request else { return refreshRecent() }
+        let search = enqueue(request)
+        return request == .recent ? search : refreshRecent(after: search)
     }
 
     /// Only the kept rows move, so a list on screen never shifts under the pointer.
-    func refreshRecent() {
-        Task { [weak self] in await self?.run(.recent) }
+    @discardableResult
+    func refreshRecent() -> Task<Void, Never> {
+        refreshRecent(after: nil)
+    }
+
+    private func refreshRecent(after search: Task<Void, Never>?) -> Task<Void, Never> {
+        recentStamp &+= 1
+        let stamp = recentStamp
+        return Task { [weak self] in
+            await search?.value
+            guard let self, stamp == self.recentStamp else { return }
+            _ = await self.loadRecent(stamp: stamp)
+        }
     }
 
     /// Idle already means no results and nothing that can publish, so it notifies no observer.
@@ -84,15 +100,18 @@ final class FileSearchSession {
         recent?.removeAll { $0.id == result.id }
     }
 
-    private func enqueue(_ request: Request) {
+    private func enqueue(_ request: Request) -> Task<Void, Never> {
         revision &+= 1
         self.request = request
         state = .searching
         pending = (request, revision)
-        guard workerTask == nil else { return }
-        workerTask = Task { [weak self] in
-            await self?.runWorker()
+        if let workerTask { return workerTask }
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.runWorker()
         }
+        workerTask = task
+        return task
     }
 
     private func runWorker() async {
@@ -107,12 +126,14 @@ final class FileSearchSession {
     }
 
     /// Recent's rows are kept whoever asked; stamped, so a late finisher never replaces newer rows.
-    @discardableResult
     private func run(_ request: Request) async -> [FileSearchResult] {
         guard request == .recent else { return await searchOperation(request.query, request.filter) }
         recentStamp &+= 1
-        let stamp = recentStamp
-        let found = await searchOperation(request.query, request.filter)
+        return await loadRecent(stamp: recentStamp)
+    }
+
+    private func loadRecent(stamp: Int) async -> [FileSearchResult] {
+        let found = await searchOperation("", .all)
         if stamp == recentStamp { recent = found }
         return found
     }
