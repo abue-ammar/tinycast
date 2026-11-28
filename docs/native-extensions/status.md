@@ -9,7 +9,7 @@ file records what is done, what was decided on the way, and what comes next.
 | ----- | -------------------------------------- | ---------------------- | ---------------- | --------------------------- | ---------- |
 | 0     | Remove Raycast extensions              | app                    | Done, not merged | `ext/0-remove-raycast`      | 2026-11-28 |
 | 1     | The contract                           | extensions             | Done             | `main`                      | 2026-11-28 |
-| 2     | SDK, CLI and a first extension         | extensions             | In progress      | `main`                      | 2026-11-28 |
+| 2     | SDK, CLI and a first extension         | extensions             | Done             | `main`                      | 2026-11-28 |
 | 3     | The host                               | app                    | Not started      | `ext/3-host`                |            |
 | 4     | Host-drawn UI                          | app                    | Not started      | `ext/4-ui`                  |            |
 | 5     | Permissions                            | app                    | Not started      | `ext/5-permissions`         |            |
@@ -22,6 +22,69 @@ App step branches come off `native-extensions` and merge back into it. The exten
 to its own `main`.
 
 ## Log
+
+### 2026-11-28 · Phase 2, part 2: the `tinycast` CLI and `hello`
+
+`tinycast new | validate | build | pack` work, and `hello` runs packed over real pipes. A fresh
+`tinycast new demo` validated, built and packed, then was deleted. `tinycast pack hello` makes a
+universal (`x86_64 arm64`), ad-hoc signed `hello.tcext` with identifier
+`com.abueammar.tinycast.ext.hello` and the hardened runtime; the binary is 2.5 MB. `swift build` and
+`swift test` pass with warnings as errors, the schema check passes, and `swift format lint` is clean.
+
+**Built**
+
+- `TinycastCLI`: Foundation only, with `Process` for `swift`, `git`, `lipo`, `otool` and `codesign`,
+  and a hand-written parser. Each failure is one line, `<repo-relative file>: <rule>`; exit 0, 1 for a
+  failed rule, 2 for wrong usage.
+- `validate [<id>…] [--index <file>] [--base <ref>]`: every `ExtensionManifest.validated(from:)`
+  issue, id equals folder, `Package.swift` (read with `swift package dump-package`: the SDK by path
+  alone, one executable product named `<id>`, one target), a 512×512 PNG icon, README with no HTML or
+  images outside code, a `## <version>` CHANGELOG section, screenshots `1.png`…`5.png` with no gap,
+  2000×1250, at most 1 MB. With `--index`, a version not below the published one. With `--base`, a
+  higher version when `Sources/` changed since the merge base.
+- `build <id>`: `swift build -c release --arch arm64 --arch x86_64`, then the binary rules: both
+  architectures, linked libraries only Foundation, CoreFoundation, CryptoKit, `/usr/lib/swift`,
+  `libSystem` and `libobjc` (`otool -L`), and no `dlopen` import (`otool -Iv`).
+- `pack <id> [--identity <name>]`: `extensions/<id>/.build/<id>.tcext` as the Packaged extension
+  contract says, `api` stamped from `ExtensionAPIVersion.current`. It reruns the binary rules, signs
+  with `--options runtime` and the fixed identifier, and verifies the signature. `--identity` adds
+  Developer ID and a timestamp.
+- `new <id>`: manifest, `Package.swift`, one view command, a placeholder icon, README, CHANGELOG. It
+  checks the id through `validated(from:)` and that the folder is free.
+- `extensions/hello`: `greet` (List, a Wave action), `copy-greeting` (no-view, copies, HUD) and
+  `clock` (menu bar, `10m`).
+- Tests: `TinycastCLITests` has one counter-example per validate rule (a scaffold with one change),
+  every protocol manifest counter-example run through `validate`, `--index` and `--base` (a temporary
+  git repo), the binary rules on `otool` and `lipo` output, the parser and the exit codes.
+  `EndToEndTests` spawns the packed `hello` with a verbatim copy of the app's `PipeFraming`: start →
+  render → event → render → stop, a no-view command's request, reply and `finish`, a menu-bar render,
+  and the bundle's identifier, stamp and signature.
+- `ci.yml`: SDK build, tests and schema, then validate (with `--base` on PRs), build and pack every
+  extension, then the end-to-end test.
+
+**Decided**
+
+- Binary rules run in `build`, and again in `pack`, so `validate` stays fast and source only and
+  nothing unchecked gets packed. The `dlopen` check sees direct calls only; review stays the guard.
+- The end-to-end test is a Swift Testing suite skipped unless `TINYCAST_HELLO_BUNDLE` names the
+  bundle. Plain `swift test` skips it at no cost; CI runs it after `pack` in under a second. Building
+  and packing inside `swift test` would add a universal release build to every run.
+- Ad-hoc bundles get the hardened runtime too, so developer mode runs what CI ships.
+- The CHANGELOG needs the current version's section always, not only when `Sources/` changed.
+- The bundle's `Info.plist` has `CFBundlePackageType` `BNDL`, so Launch Services never lists an
+  extension as an app.
+- SwiftPM names a path dependency after its folder, so the repo folder must stay
+  `tinycast-extensions`.
+- TinycastKit fixes from review: a render too large to send leaves the revision and the last tree
+  as they were; a no-view run that returns after `stop` sends no `finish`; `ViewCommand.handle`
+  states that actions can arrive while a search is still awaiting.
+- The scaffold's target and `@main` type are `<Name>Extension`, so no id clashes with an SDK name.
+- `Process` children inherit every open descriptor, so a pipe another child holds never ends. The
+  CLI and the end-to-end test mark their pipes close-on-exec. The app's `ProcessLink.spawn` may need
+  the same once it spawns extensions side by side.
+
+**Next:** tag `v1.0.0`, then Phase 3. Phase 7's `publish.yml` calls `tinycast build` and
+`tinycast pack --identity`, and passes `--index` to `validate`.
 
 ### 2026-11-28 · Phase 2, part 1: TinycastKit
 
