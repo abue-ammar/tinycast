@@ -430,4 +430,7 @@ What a session could not settle. The user answers these; a session never guesses
   (`AIProviderTests`' refusal lines and key prompts, and later `CalcTests` and others), so they fail
   on a Mac whose language is not English. Proposed: pin the test action to English. XcodeGen's target
   `scheme.language` also changes Run, so it would mean a full `schemes:` entry with
-  `test: language: en`. Not blocking B1 unless B1 compares localized text.
+  `test: language: en`. **Blocks B1.** `FallbackTests` checks the English section header for short,
+  elided, limit-length and URL queries, and `FileSearchSessionTests` expects `report [Images]`
+  using the localized filter title. B1 stopped before any suite changes, pending a decision on the
+  test action's language.
