@@ -38,6 +38,9 @@ VS Code's Testing view with SweetPad, run the same target, down to a single test
 [development.md](development.md#tests-in-the-editor)). There is no test script: nothing wraps
 `xcodebuild`.
 
+The Test action runs the host in English so assertions on localized text use the same language
+on every Mac. The Run action uses the system language.
+
 The target is hosted by `Tinycast Dev.app` and reaches the app's code with `@testable import Tinycast`.
 A host launched for tests does not start the app: `TinycastLaunch` sees the test session and runs a
 bare `NSApplication`, so no hotkey, menu-bar item, monitor or preference load runs underneath a suite.

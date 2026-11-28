@@ -83,5 +83,5 @@ flags, since running a shortcut the user built grants no permission class. Bindi
 
 ```sh
 xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" \
-    -only-testing:TinycastTests/AppleShortcutTests
+    -derivedDataPath build/DerivedData -quiet -only-testing:TinycastTests/AppleShortcutTests
 ```

@@ -167,13 +167,12 @@ window's app quit between the sweep and the ↵.
 
 ## Testing
 
-`Tests/WindowSwitchTests.swift` covers the pure half: the handle-derived id, the untitled-window
+`WindowSwitchTests` covers the handle-derived id, the untitled-window
 fallback, the name/owner split in the search fields, the MRU order and its totality under a shuffled
 sweep, the minimized run at the end, which windows the sweep offers, ranking, and the 200-row cap
 under both an empty and a matching query.
 
-`WindowZOrder` and `WindowSwitchSweep` are not compiled into the harness and have no automated
-coverage; the AX and `CGWindowList` paths need manual verification, particularly:
+Verify the AX and `CGWindowList` paths in `WindowZOrder` and `WindowSwitchSweep` manually:
 
 1. A minimized window is listed last and ↵ un-minimizes it rather than doing nothing, for Finder
    and Transmission too, whose minimized windows read `AXDialog`.

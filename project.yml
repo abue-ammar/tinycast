@@ -42,6 +42,16 @@ settings:
       STRIP_SWIFT_SYMBOLS: YES
       DEAD_CODE_STRIPPING: YES
 
+schemes:
+  Tinycast:
+    build:
+      targets:
+        Tinycast: all
+    test:
+      language: en
+      targets:
+        - TinycastTests
+
 targets:
   Tinycast:
     type: application
@@ -109,9 +119,6 @@ targets:
         # Debug is its own channel, so a local build never corrupts the installed app's state.
         Debug:
           PRODUCT_NAME: Tinycast Dev
-    scheme:
-      testTargets:
-        - TinycastTests
 
   TinycastTests:
     type: bundle.unit-test

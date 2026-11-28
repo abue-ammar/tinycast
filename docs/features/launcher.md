@@ -694,8 +694,8 @@ internals live in [navigation.md](navigation.md) and [menu-search.md](menu-searc
 > `LauncherOrder.swift`, so both must stay Foundation-only and pure. There is no copy of the ranking
 > to keep in sync.
 
-The ranking harness covers the frecency curve, search-term retention and its 17-day gate, pruning,
-persistence and both reset paths; see the command in `development.md`.
+`RankingTests` covers the frecency curve, search-term retention and its 17-day gate, pruning,
+persistence and both reset paths. See [testing.md](../testing.md#the-test-suite) for the test command.
 
 Launcher rows ask for the point size they actually draw at, scaled by the
 view's `displayScale`: 24/26/29pt becomes 48/52/58px at 2×. `IconCache` still rasterizes through its

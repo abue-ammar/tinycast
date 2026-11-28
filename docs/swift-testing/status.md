@@ -163,19 +163,22 @@ pointed at a language's `.lproj` stands in for a relaunch. `Support/` gains `Nod
 
 ## B1 · Launcher, search, files
 
+Partial. The six checked suites passed the decision-6 command and lint. The remaining seven
+are still at the root of `Tests/`; see Open problems for the FileSearchSessionTests blocker.
+
 - [ ] FuzzTests · 556 · ran at `-O`; check its time at `-Onone`
 - [ ] FileSearchTests · 501
 - [ ] FileIndexTests · 295
 - [ ] FileSearchSessionTests · 247
 - [ ] MenuSearchTests · 525
-- [ ] WindowSwitchTests · 147
-- [ ] RankingTests · 118
+- [x] WindowSwitchTests · 147
+- [x] RankingTests · 118
 - [ ] ScopesTests · 265
 - [ ] AppNameTests · 302
-- [ ] FavoritesTests · 51
-- [ ] LauncherFileTests · 70
-- [ ] AppleShortcutTests · 77
-- [ ] FallbackTests · 126
+- [x] FavoritesTests · 51
+- [x] LauncherFileTests · 70
+- [x] AppleShortcutTests · 77
+- [x] FallbackTests · 126
 
 ## B2 · Calculator, calendar, dictionary
 
@@ -421,16 +424,17 @@ Decisions made during the migration, beyond the brief's. Newest last.
 - P2 review: `MCPServerConnection` takes a `searchEnvironment` (default: the process's), so
   `MCPStdioTests` again proves a bare command is looked up on PATH, a case P1 had dropped.
 - P2 review: `test_mutable_global` also catches a file-scope `var` behind attributes (`@MainActor var`).
+- B1: the user approved pinning the Xcode Test action to English. The Run action follows macOS.
 
 ## Open problems
 
 What a session could not settle. The user answers these; a session never guesses past one.
 
-- **Host language.** Suites compare English text resolved through the host bundle
-  (`AIProviderTests`' refusal lines and key prompts, and later `CalcTests` and others), so they fail
-  on a Mac whose language is not English. Proposed: pin the test action to English. XcodeGen's target
-  `scheme.language` also changes Run, so it would mean a full `schemes:` entry with
-  `test: language: en`. **Blocks B1.** `FallbackTests` checks the English section header for short,
-  elided, limit-length and URL queries, and `FileSearchSessionTests` expects `report [Images]`
-  using the localized filter title. B1 stopped before any suite changes, pending a decision on the
-  test action's language.
+- **B1 · FileSearchSessionTests.** The harness sleeps while waiting for a cancelled worker to
+  drain and for background refresh to populate the kept recents. Neither event is observable:
+  cancellation sets `state = .idle` synchronously, and `refreshRecent()` updates an
+  `@ObservationIgnored` cache from a task whose handle it discards. The injected search operation
+  can signal that it returned, but the session still has to consume its result. The refresh case
+  also expects a particular call order across two independent tasks. Decide whether to approve a
+  production completion seam and whether to guarantee the old refresh call order. Both are needed
+  to preserve the checks without sleeps or scheduler assumptions.
