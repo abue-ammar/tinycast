@@ -188,6 +188,9 @@ inputs and environment (fixture rates, offline, region, clock, zone, locale, num
 nested loops became cartesian `@Test(arguments:)`. Docs: `calculator.md`, `calendar.md` and
 `testing.md`'s one-test example, plus `CurrencyFeed`'s doc comment.
 
+Review fixes in `f2161d8c`: every doc's `xcodebuild test` command carries decision 6's
+`-derivedDataPath build/DerivedData -quiet`, and doc comments past 100 characters are shortened.
+
 - [x] CalcTests · 2,887 · 2,687 cases in 185 tests
 - [x] CalendarTests · 795
 - [x] DictionaryTests · 287
@@ -438,6 +441,9 @@ Decisions made during the migration, beyond the brief's. Newest last.
   query and reads back only the part it pins (`CalcTests.Case`); each test stays
   `#expect(try row.actual() == row.expected)`. A row's environment is data on the row: zones and
   moments as identifiers and ISO strings, resolved with `#require`.
+- B2 review: `FileSearchSession` keeps reloading Recent right after an index swap's rerun, on the
+  worker, as B1 approved. `./Scripts/format.sh` is not run over the suites: it re-nests every
+  `@Test(arguments: [` table, so the suites keep the layout they share.
 
 ## Open problems
 
