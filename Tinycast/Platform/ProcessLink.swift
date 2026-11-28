@@ -2,7 +2,7 @@ import Foundation
 import os
 
 /// Generous: one defaults delta after a backup import carries every library at once.
-private let maximumFrameBytes = 32 << 20
+let roleMaximumFrameBytes = 32 << 20
 
 /// Typed messages both ways between two Tinycast processes, delivered on the main actor in order.
 @MainActor
@@ -12,6 +12,7 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
     private(set) var isOpen = true
 
     private let reading: FileHandle
+    private let maximumFrameBytes: Int
     private let channel: DispatchIO
     /// Held so Foundation reaps the child; nil on the child's own side.
     private let child: Process?
@@ -21,9 +22,10 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.abueammar.tinycast", category: "ProcessLink")
 
-    private init(reading: FileHandle, writing: FileHandle, child: Process?) {
+    private init(reading: FileHandle, writing: FileHandle, child: Process?, maximumFrameBytes: Int) {
         self.reading = reading
         self.child = child
+        self.maximumFrameBytes = maximumFrameBytes
         channel = DispatchIO(type: .stream, fileDescriptor: writing.fileDescriptor, queue: writer) {
             @Sendable _ in
             try? writing.close()
@@ -37,8 +39,11 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
 
     var childProcessIdentifier: pid_t? { child?.processIdentifier }
 
-    /// The child ends itself when the link closes.
-    static func spawn(_ executable: URL, arguments: [String]) throws -> ProcessLink {
+    /// The child ends itself when the link closes. Without `standardError` it inherits this one's.
+    static func spawn(
+        _ executable: URL, arguments: [String], maximumFrameBytes: Int = roleMaximumFrameBytes,
+        standardError: Pipe? = nil
+    ) throws -> ProcessLink {
         let process = Process()
         let input = Pipe()
         let output = Pipe()
@@ -46,18 +51,30 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
         process.arguments = arguments
         process.standardInput = input
         process.standardOutput = output
+        if let standardError { process.standardError = standardError }
+        // Process already closes these in its children; this covers any spawn that bypasses it.
+        for pipe in [input, output] + [standardError].compactMap(\.self) {
+            try closeOnExec(pipe.fileHandleForReading)
+            try closeOnExec(pipe.fileHandleForWriting)
+        }
         guard fcntl(input.fileHandleForWriting.fileDescriptor, F_SETNOSIGPIPE, 1) == 0 else {
             throw POSIXError(.EIO)
         }
         _ = try process.runObservingExit()
         try? input.fileHandleForReading.close()
         try? output.fileHandleForWriting.close()
+        try? standardError?.fileHandleForWriting.close()
         return ProcessLink(
-            reading: output.fileHandleForReading, writing: input.fileHandleForWriting, child: process)
+            reading: output.fileHandleForReading, writing: input.fileHandleForWriting, child: process,
+            maximumFrameBytes: maximumFrameBytes)
+    }
+
+    private static func closeOnExec(_ handle: FileHandle) throws {
+        guard fcntl(handle.fileDescriptor, F_SETFD, FD_CLOEXEC) == 0 else { throw POSIXError(.EIO) }
     }
 
     /// The child's half; stdio then goes to /dev/null, so no print or tool can touch a frame.
-    static func standardIO() -> ProcessLink? {
+    static func standardIO(maximumFrameBytes: Int = roleMaximumFrameBytes) -> ProcessLink? {
         var status = stat()
         guard fstat(STDIN_FILENO, &status) == 0, status.st_mode & S_IFMT == S_IFIFO else { return nil }
         let reading = fcntl(STDIN_FILENO, F_DUPFD_CLOEXEC, 0)
@@ -72,12 +89,20 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
         guard fcntl(writing, F_SETNOSIGPIPE, 1) == 0,
             dup2(null, STDIN_FILENO) >= 0, dup2(null, STDOUT_FILENO) >= 0
         else { return nil }
-        return ProcessLink(reading: readHandle, writing: writeHandle, child: nil)
+        return ProcessLink(
+            reading: readHandle, writing: writeHandle, child: nil, maximumFrameBytes: maximumFrameBytes)
+    }
+
+    /// SIGKILL, for a child that outlived its stop; nothing once it has exited.
+    func terminate() {
+        guard let child, child.isRunning else { return }
+        kill(child.processIdentifier, SIGKILL)
     }
 
     func start() {
         guard isOpen, receiver == nil else { return }
         let reading = reading
+        let maximumFrameBytes = maximumFrameBytes
         let (messages, continuation) = AsyncThrowingStream.makeStream(of: Incoming.self)
         reader.async {
             do {
@@ -105,6 +130,7 @@ final class ProcessLink<Outgoing: Encodable & Sendable, Incoming: Decodable & Se
         guard isOpen else { return }
         let channel = channel
         let writer = writer
+        let maximumFrameBytes = maximumFrameBytes
         writer.async { [weak self] in
             do {
                 let frame = try PipeFraming.encode(message, maximum: maximumFrameBytes)

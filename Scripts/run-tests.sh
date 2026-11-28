@@ -165,6 +165,7 @@ run LauncherSettingsFileTests \
                            Tinycast/Features/HotKeys/Service/HotKeySettingsFile.swift \
                            Tinycast/Features/HotKeys/Service/KeyShortcut.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionCommandID.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyBinding.swift \
                            Tinycast/Features/HotKeys/Model/HotKeySpelling.swift \
                            Tinycast/Features/HotKeys/Model/DoubleTapModifier.swift \
@@ -362,6 +363,7 @@ run CompactBarTests        Tinycast/Features/Launcher/Model/CompactBarSelection.
                            Tinycast/Features/Settings/Model/*.swift \
                            Tinycast/Features/Launcher/Model/CommandID.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionCommandID.swift \
                            Tinycast/Features/QuickActions/Model/QuickAction.swift \
                            Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
                            Tinycast/Features/QuickActions/Model/CustomQuickAction.swift \
@@ -375,6 +377,7 @@ run CompactBarTests        Tinycast/Features/Launcher/Model/CompactBarSelection.
 run FallbackTests          Tinycast/Features/Launcher/Model/Fallback.swift \
                            Tinycast/Features/Launcher/Model/CommandID.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionCommandID.swift \
                            Tinycast/Features/QuickActions/Model/QuickAction.swift \
                            Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
                            Tinycast/Features/QuickActions/Model/CustomQuickAction.swift \
@@ -439,6 +442,7 @@ run HotKeyTests            Tinycast/Features/HotKeys/Model/DoubleTapModifier.swi
                            Tinycast/Platform/ASCIIKeyboardLayout.swift \
                            Tinycast/Features/HotKeys/Service/KeyShortcut.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionCommandID.swift \
                            Tinycast/Features/QuickActions/Model/QuickAction.swift \
                            Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
                            Tinycast/Features/QuickActions/Model/CustomQuickAction.swift \
@@ -509,6 +513,7 @@ run DeepLinkTests          Tinycast/Features/DeepLinks/Model/DeepLink.swift \
                            Tinycast/Features/Settings/SettingsTab.swift \
                            Tinycast/Features/Launcher/Model/CommandID.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionCommandID.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction+EntryID.swift \
                            Tinycast/Features/QuickActions/Model/QuickAction.swift \
                            Tinycast/Features/QuickActions/Model/BuiltInQuickAction.swift \
@@ -709,6 +714,7 @@ run HotKeyDispatchTests    Tinycast/Features/HotKeys/Model/DoubleTapModifier.swi
                            Tinycast/Features/HotKeys/Model/HyperKey.swift \
                            Tinycast/Features/HotKeys/Model/HIDKeyMapping.swift \
                            Tinycast/Features/HotKeys/Model/HotKeyAction.swift \
+                           Tinycast/Features/Extensions/Model/ExtensionCommandID.swift \
                            Tinycast/Features/HotKeys/Service/KeyShortcut.swift \
                            Tinycast/Features/HotKeys/Service/HotKeyManager.swift \
                            Tinycast/Platform/ASCIIKeyboardLayout.swift \
@@ -765,6 +771,11 @@ run UpdateCheckTests       Tinycast/Features/Updates/Model/*.swift \
                            Tinycast/Features/Updates/Service/UpdateCheckStore.swift \
                            Tinycast/Platform/AppPaths.swift
 run SupportTests           Tinycast/Features/Support/Model/*.swift
+EXT=Tinycast/Features/Extensions
+run ExtensionModelTests    $EXT/Model/Protocol/*.swift $EXT/Model/*.swift
+run ExtensionSessionTests  $EXT/Model/Protocol/*.swift $EXT/Service/ExtensionSession.swift \
+                           $EXT/Service/ExtensionSignatureService.swift Tinycast/Platform/PipeFraming.swift \
+                           Tinycast/Platform/ProcessLink.swift Tinycast/Platform/ProcessExit.swift
 run AIProviderTests        Tinycast/Features/Settings/AppSettingsKey.swift \
                            Tinycast/Features/AI/Model/*.swift \
                            Tinycast/Features/AI/Settings/AISettingsStore.swift \

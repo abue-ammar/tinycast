@@ -530,7 +530,7 @@ struct AppInstallationTests {
 
 // Empty feature catalogs keep this harness focused on the shipped launcher.
 enum SettingsTab: Sendable {
-    case ai, quickActions, windowManagement, quicklinks, snippets, commands, calendar
+    case ai, quickActions, windowManagement, quicklinks, snippets, commands, calendar, extensions
     var tint: IconTint { .gray }
 }
 enum EntryIcon: Hashable, Sendable {
@@ -559,7 +559,7 @@ enum HotKeyAction: Hashable, Sendable {
     case app(bundleID: String), settingsPane(bundleID: String), quickAction(id: UUID)
     case customCommand(id: UUID), systemAction(id: SystemAction.ID), windowCommand(id: WindowCommand.ID)
     case customWindowSize(id: UUID), windowLayout(id: UUID), windowRoom(id: UUID), quicklink(id: UUID)
-    case appleShortcut(id: UUID), snippet(id: UUID)
+    case appleShortcut(id: UUID), extensionCommand(entryID: String), snippet(id: UUID)
     init?(entryID: String) { nil }
 }
 struct OtherEntry<Tag: Sendable>: Sendable {

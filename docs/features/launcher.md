@@ -506,7 +506,7 @@ permission-aware failures. With the palette closed it targets the frontmost app,
 Quit All act on the same window a palette launch would have.
 
 System actions occupy their own launcher section and their own Settings pane. The empty-query publication
-order is applications, System Settings, quicklinks, snippets, system actions, window commands, custom
+order is applications, System Settings, extension commands, quicklinks, snippets, system actions, window commands, custom
 commands, then built-in commands; the sectioned view filters in that same order so the visible rows remain
 identical to the flat selection index.
 Search, favorites, visibility and learned ranking work through the normal `AppEntry` path, and every
@@ -616,6 +616,27 @@ off, so a toggle can't leave the section and its commands out of step. See
 it as its own slice right after Quicklinks, re-reading on every launcher open. Only the name is indexed,
 and the entry id is keyed on the shortcut's UUID, so an alias or binding survives a rename in
 Shortcuts. See [apple-shortcuts.md](apple-shortcuts.md).
+
+## Extension commands
+
+`AppEntry.Kind.extensionCommand` is one row per command of every extension that may run. Rows come from
+the bundles' manifests alone, so listing starts no process. `ExtensionCoordinator` reads them off-main
+when extensions turn on, on every launcher open and when the Extensions pane opens, and publishes them
+right after System Settings. A row's name is the command's title and its subtitle the extension's name,
+both as the extension wrote them; its icon is the manifest's PNG, `EntryIcon.image`.
+
+The entry ID is `extension-command:<id>/<command>`, spelled and read only by `ExtensionCommandID`.
+Favorites, aliases, hiding and learned ranking key on it like every other row; the shortcut is
+`HotKeyAction.extensionCommand`, indexed in `boundExtensionCommandIDs`. Settings › Extensions lists
+the commands with the same alias field, recorder and checkbox as every launcher pane. Extensions carry
+their own switch, so `VisibilityStore` gates no category for them and `allowsHotKeyAction` follows
+`extensionsEnabled`: off removes the rows, unregisters the chords and stops every process.
+
+`ExtensionCoordinator.run` is the one funnel for a row, a shortcut and a link. A view command opens the
+`.extensionCommand` palette screen; a second press of its shortcut closes it. A no-view command closes
+the palette first, and its HUD shows only because the user started it. A menu-bar command runs the same
+way for now: no item draws its snapshot yet, so it exits after the idle delay. Leaving the screen any way
+sends `stop(closed)`, and a hidden palette keeps it until Pop to Root Search changes the mode.
 
 ## Custom commands
 

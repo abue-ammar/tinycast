@@ -630,6 +630,18 @@ final class AppSettings {
         didSet { defaults.set(appleShortcutsEnabled, forKey: Key.appleShortcutsEnabled.rawValue) }
     }
 
+    /// Off means no extension process, schedule or index fetch.
+    var extensionsEnabled: Bool {
+        didSet { defaults.set(extensionsEnabled, forKey: Key.extensionsEnabled.rawValue) }
+    }
+
+    #if DEBUG
+        /// Runs the bundles in `ExtensionBundle.developerFolder` without the Store or a signature check.
+        var extensionDeveloperMode: Bool {
+            didSet { defaults.set(extensionDeveloperMode, forKey: Key.extensionDeveloperMode.rawValue) }
+        }
+    #endif
+
     /// Ask for a new window rather than a tab; off is the macOS default.
     var quicklinkOpensNewWindow: Bool {
         didSet {
@@ -768,6 +780,10 @@ final class AppSettings {
         case .quicklinkPassesSelectedText: adopt(\.quicklinkPassesSelectedText, from: stored)
         case .quicklinkConfirmsBeforeDelete: adopt(\.quicklinkConfirmsBeforeDelete, from: stored)
         case .appleShortcutsEnabled: adopt(\.appleShortcutsEnabled, from: stored)
+        case .extensionsEnabled: adopt(\.extensionsEnabled, from: stored)
+        #if DEBUG
+            case .extensionDeveloperMode: adopt(\.extensionDeveloperMode, from: stored)
+        #endif
         case .calendarEnabled: adopt(\.calendarEnabled, from: stored)
         case .calendarShowInLauncher: adopt(\.calendarShowInLauncher, from: stored)
         case .calendarLauncherLimit: adopt(\.calendarLauncherLimit, from: stored)
@@ -1048,6 +1064,10 @@ final class AppSettings {
             defaults.object(forKey: Key.quicklinksShowInLauncher.rawValue) == nil
             || defaults.bool(forKey: Key.quicklinksShowInLauncher.rawValue)
         appleShortcutsEnabled = defaults.bool(forKey: Key.appleShortcutsEnabled.rawValue)
+        extensionsEnabled = defaults.bool(forKey: Key.extensionsEnabled.rawValue)
+        #if DEBUG
+            extensionDeveloperMode = defaults.bool(forKey: Key.extensionDeveloperMode.rawValue)
+        #endif
         quicklinkOpensNewWindow = defaults.bool(forKey: Key.quicklinkOpensNewWindow.rawValue)
         quicklinkPassesSelectedText = defaults.bool(
             forKey: Key.quicklinkPassesSelectedText.rawValue)

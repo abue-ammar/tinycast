@@ -116,6 +116,8 @@ Tinycast/Features/Extensions/
 ├── Service/
 │   ├── ExtensionManager.swift           processes: spawn, idle stop, one per extension, off means off
 │   ├── ExtensionSession.swift           one running extension: link, revisions, pending requests
+│   ├── ExtensionBundle.swift            one packed .tcext: its manifest, executable and origin
+│   ├── ExtensionHostCallRunner.swift    the host calls that need no macOS permission
 │   ├── ExtensionSignatureService.swift  Developer ID and team check: at install, before every run
 │   ├── ExtensionStatusItemController.swift  one menu bar item: its last snapshot and its menu
 │   ├── ExtensionRefreshScheduler.swift  background runs on each command's interval
@@ -125,6 +127,7 @@ Tinycast/Features/Extensions/
 ├── UI/                                  host-drawn List, Grid, Detail, Form, Actions, Markdown
 └── Settings/                            Extensions pane, per-extension page, Store, ExtensionLibrary
 Tests/ExtensionModelTests.swift          index decisions, version rules
+Tests/ExtensionSessionTests.swift        the session against the packed hello and a stand-in
 ```
 
 Installed extensions live in `AppPaths`' Application Support folder, under `Extensions/<id>.tcext`,
@@ -329,6 +332,28 @@ Settings › Extensions
 - The toggle is an ordinary preference, so it gets a `SettingsFileKey` and rides backups. The buttons
   send `ExtensionCall`s; the list reads through `ExtensionLibrary`.
 
+### iCloud Sync
+
+What a user set up for extensions follows them to their other Macs; code never travels.
+
+- **Shortcuts and aliases** ride Hotkeys & Aliases under `extension-command:<id>/<command>`, like every
+  content row's, and wait on a Mac until that command's row exists there.
+- **Installed extensions** are their own source, `installedExtensions`, never `extensions`, which older
+  builds read as the removed runtime's installs. Its category, Extensions, sits in the Content group.
+  One record per extension `id` carries Don't Update, the per-command menu bar and background switches,
+  and every preference that is not a secret. Never: the version, the bundle, the archive, a path, a
+  secret or the data folder.
+- **Each Mac installs for itself.** An arriving `id` installs from the Store through the signed index,
+  the SHA-256 and the Developer ID check, at the newest version this build runs; that Mac's own
+  auto-update setting decides every update after it.
+- **Extensions off is each Mac's consent.** The source is paused and arrivals wait until the switch is
+  on. `extensions.enabled` and developer mode never sync, and a developer bundle never uploads.
+- **Joining merges.** Local installs upload and iCloud's install; nothing is removed. Uninstalling on one
+  Mac deletes the record, which uninstalls the extension elsewhere and moves that Mac's data folder to
+  the Trash.
+- **Revoked or needing a newer Tinycast**, the record stays, and each Mac shows the status itself.
+- The auto-update toggle rides Other Settings like any preference.
+
 ## Tasks, in order
 
 Each task names its repo and ends with when it is done. Once Phase 2 is done, Phases 3–6 and Phase 7
@@ -478,39 +503,46 @@ the hour.
 27. **`ExtensionInstaller`**: download → SHA-256 against the signed index → unpack into staging →
     Developer ID and team check → swap in while the extension isn't running. After a first install it
     sends `POST /v1/installs/<id>` without waiting for the answer, so a failed count never affects the
-    install. Updates follow the Updates contract above. Uninstall removes the bundle and its data
-    folder. A revoked version stops and is disabled.
+    install. Updates follow the Updates contract above. Uninstall removes the bundle, its data
+    folder and what its commands left: shortcuts, aliases, favorites, hidden flags and ranking, as
+    deleting a quicklink does. A scan never prunes them, since one with Developer Mode or Extensions
+    off finds nothing and means no deletion. A revoked version stops and is disabled.
 28. **Update settings**: the auto-update toggle (`SettingsFileKey` included), Check for Updates, Update
     All, per-extension Update and Don't Update, as in the Updates contract.
 29. **The Store in Settings**: browse, search, sort by popularity from `stats.json`, and a detail page
     with screenshots, README, What's New, permissions and install count. Media loads only on the detail
     page, in the Settings process, so the main app never holds images. Install, update and uninstall go
     through `ExtensionCall`. The palette's Search Extensions opens Settings on the Store.
+30. **Extensions in iCloud Sync**: `InstalledExtensionSyncSource` (`installedExtensions`) and the
+    Extensions category, as the iCloud Sync contract says; `icloud-sync.md`'s What syncs table gains
+    its row.
 
 _Done when_ install, update with auto-update on and off, a pinned extension, Update All, uninstall and
-revoke all work against the live index, and the Store shows counts from `stats.json`.
+revoke all work against the live index, and the Store shows counts from `stats.json`. Installing,
+pinning, showing a menu bar item and uninstalling on one Mac do the same on another, and a Mac with
+Extensions off holds them until it is turned on.
 
 ### Phase 9: docs, skills and launch (both repos)
 
-30. **Extensions repo docs**: getting started, manifest, Store text and screenshots, permissions, UI,
+31. **Extensions repo docs**: getting started, manifest, Store text and screenshots, permissions, UI,
     menu bar and background commands, host calls, publishing and review guidelines.
-31. **Skills**, once the SDK and CLI have settled: `new-extension`, `debug-extension` and
+32. **Skills**, once the SDK and CLI have settled: `new-extension`, `debug-extension` and
     `submit-extension` for authors, `review-extension` for maintainers reviewing third-party PRs. Each
     is a standard `SKILL.md` (`name`, `description`, plain Markdown) in `.agents/skills/`, with
     `.claude/skills` a committed symlink to it. Skills call the CLI and link to `docs/`, never restate
     them. Check each agent's current docs for where it loads skills.
-32. **App docs**: rewrite `docs/features/extensions.md` with its invariants; add the extension process
+33. **App docs**: rewrite `docs/features/extensions.md` with its invariants; add the extension process
     to `architecture.md`; update AGENTS.md, whose process rule must name the extension process as the
     one place third-party code runs with Tinycast's privacy grants, and `not-planned.md`; translate the
     new app screens' strings into all eight languages with `./Scripts/sync-strings.sh`.
-33. **Two or three first-party extensions** that together use every UI type, command mode and
+34. **Two or three first-party extensions** that together use every UI type, command mode and
     permission.
 
 ## Delivery
 
 - **Extensions repo**: commits to its `main`; `v1.0.0` after Phase 2.
 - **App**: one PR for Phase 0, merged before anything else, then one PR for native extensions
-  (Phases 3–6, 8 and task 32).
+  (Phases 3–6, 8 and task 33).
 
 ## Confirm on the prototype first
 

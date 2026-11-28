@@ -79,6 +79,22 @@ Consequences worth knowing:
   enable Hyper in one build at a time so their keyboard owners do not compete. An identical mapping
   already installed by another build is left unowned.
 
+### Developer mode for extensions
+
+Debug builds only: Settings › Extensions has a Developer Mode section. With it on, every `.tcext`
+bundle in `DeveloperExtensions/` in the Dev channel's Application Support folder runs without the
+Store or the signature check. Pack one in `tinycast-extensions`, then link it in, so each new `pack`
+is picked up:
+
+```sh
+swift run tinycast build hello && swift run tinycast pack hello
+ln -s "$PWD/extensions/hello/.build/hello.tcext" \
+  ~/Library/Application\ Support/com.abueammar.tinycast.dev/DeveloperExtensions/
+```
+
+Release builds contain none of it: the setting, the folder and the signature bypass are all
+`#if DEBUG`.
+
 ### Debugging Settings
 
 Settings runs as a second instance of the app, started with `--role=settings` and linked to the main app
@@ -203,15 +219,21 @@ PR.
 
 ## Generated data
 
-Three Swift files are emitted by scripts and must never be hand-edited. Each downloads its source, so
-run them online, then commit the result:
+Three Swift files and the extension protocol are emitted by scripts and must never be hand-edited.
+Each downloads its source, so run them online, then commit the result:
 
 ```sh
 node Scripts/gen-emoji.js            # -> Tinycast/Features/Emoji/Model/EmojiData.generated.swift
                                      #    + Tinycast/Resources/EmojiKeywords/<language>.txt
 node Scripts/gen-currencies.js       # -> Tinycast/Features/Calculator/Model/CurrencyData.generated.swift
 node Scripts/gen-countries.js        # -> Tinycast/Features/Calculator/Model/CountryZoneData.generated.swift
+./Scripts/sync-extension-protocol.sh v1.0.0
+                                     # -> Tinycast/Features/Extensions/Model/Protocol/*.generated.swift
 ```
+
+`sync-extension-protocol.sh` copies `Sources/TinycastProtocol/` from `tinycast-extensions` at the tag
+it is given, one `.generated.swift` per file with a header naming the tag. That repo is private, so
+the script clones it over SSH. Run `xcodegen generate` after it when the set of files changed.
 
 `gen-emoji.js` also writes one CLDR keyword pack per language in its `KEYWORD_LOCALES`; adding a
 language is one line there. Pass a directory to keep the downloads between runs:

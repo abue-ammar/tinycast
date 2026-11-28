@@ -61,6 +61,7 @@ enum SettingsBackupCoverage {
         "quicklinkPassesSelectedText": .quicklinkPassesSelectedText,
         "quicklinkConfirmsBeforeDelete": .quicklinkConfirmsBeforeDelete,
         "appleShortcutsEnabled": .appleShortcutsEnabled,
+        "extensionsEnabled": .extensionsEnabled,
         "calendarShowInLauncher": .calendarShowInLauncher,
         "calendarLauncherLimit": .calendarLauncherLimit,
         "calendarSpan": .calendarSpan,

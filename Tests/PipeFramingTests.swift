@@ -11,7 +11,7 @@ enum PipeFramingTests {
     static func main() async throws {
         LaunchedExecutable.pin()
         if ProcessRole.current == .settings {
-            await runPeer()
+            await runPeer(inheritedPipes: inheritedPipeCount())
             return
         }
         var failures = 0
@@ -75,8 +75,46 @@ enum PipeFramingTests {
         let refused = await waitUntil { !oversizedLink.isOpen }
         check("a stalled peer does not hide an oversized message error", refused && failure != nil)
 
-        guard let executable = Bundle.main.executablePath else { throw CocoaError(.fileNoSuchFile) }
-        try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: executable)
+        let first = try ProcessLink<Message, Message>.spawn(.settings)
+        let second = try ProcessLink<Message, Message>.spawn(.settings)
+        var counted: Message?
+        second.onReceive = { counted = $0 }
+        second.start()
+        second.send(Message(text: "inherited"))
+        let answered = await waitUntil { counted != nil }
+        check("a second child inherits no pipe of the first", answered && counted?.text == "0")
+        first.send(Message(text: "quit"))
+        second.send(Message(text: "quit"))
+
+        guard let executable = Bundle.main.executableURL else { throw CocoaError(.fileNoSuchFile) }
+        let errors = Pipe()
+        let erring = try ProcessLink<Message, Message>.spawn(
+            executable, arguments: [ProcessRole.settings.argument], standardError: errors)
+        erring.start()
+        erring.send(Message(text: "stderr"))
+        erring.send(Message(text: "quit"))
+        let written = String(bytes: errors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8)
+        check("a child's stderr reaches the pipe it was given", written == "diagnostic\n")
+
+        let bounded = try ProcessLink<Message, Message>.spawn(
+            executable, arguments: [ProcessRole.settings.argument], maximumFrameBytes: 256)
+        var boundedFailure: Error?
+        bounded.onClose = { boundedFailure = $0 }
+        bounded.start()
+        bounded.send(Message(text: String(repeating: "x", count: 512)))
+        let overLimit = await waitUntil { !bounded.isOpen }
+        check("a link's own maximum bounds what it sends", overLimit && boundedFailure != nil)
+
+        let stuck = try ProcessLink<Message, Message>.spawn(.settings)
+        stuck.start()
+        guard let stuckPeer = stuck.childProcessIdentifier, kill(stuckPeer, SIGSTOP) == 0 else {
+            throw POSIXError(.ESRCH)
+        }
+        stuck.terminate()
+        let killed = await waitUntil { !stuck.isOpen }
+        check("terminate ends a child that stopped answering", killed)
+
+        try FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: executable.path)
         do {
             _ = try ProcessLink<Message, Message>.spawn(.settings)
             check("a replaced executable is never spawned", false)
@@ -88,13 +126,25 @@ enum PipeFramingTests {
         if failures > 0 { exit(1) }
     }
 
+    /// Read before the link opens its own: any pipe above stdio now came from another child.
+    private static func inheritedPipeCount() -> Int {
+        (3..<256).count { descriptor in
+            var status = stat()
+            return fstat(Int32(descriptor), &status) == 0 && status.st_mode & S_IFMT == S_IFIFO
+        }
+    }
+
     @MainActor
-    private static func runPeer() async {
+    private static func runPeer(inheritedPipes: Int) async {
         guard let link = ProcessLink<Message, Message>.standardIO() else { exit(1) }
         await withCheckedContinuation { (completion: CheckedContinuation<Void, Never>) in
             link.onReceive = { [weak link] message in
-                if message.text == "quit" { exit(0) }
-                link?.send(message)
+                switch message.text {
+                case "quit": exit(0)
+                case "inherited": link?.send(Message(text: "\(inheritedPipes)"))
+                case "stderr": FileHandle.standardError.write(Data("diagnostic\n".utf8))
+                default: link?.send(message)
+                }
             }
             link.onClose = { _ in completion.resume() }
             link.start()

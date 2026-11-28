@@ -2,7 +2,7 @@ enum SettingsTab: CaseIterable, Identifiable {
     case general, iCloudSync, applications, systemSettings, systemActions, commands, quicklinks,
         appleShortcuts,
         fallbacks, clipboard, snippets, fileSearch, windowManagement, navigation, notes, calendar, emoji,
-        dictation, ai, quickActions, permissions, backup, about
+        dictation, ai, quickActions, extensions, permissions, backup, about
     /// The case, never an index: a selectable `List` flattens section and row IDs together.
     var id: Self { self }
 
@@ -34,6 +34,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .dictation: "dictation"
         case .ai: "ai"
         case .quickActions: "quick-actions"
+        case .extensions: "extensions"
         case .permissions: "permissions"
         case .backup: "backup"
         case .about: "about"
@@ -53,6 +54,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .fallbacks: return String(localized: "Fallbacks")
         case .ai: return String(localized: "AI")
         case .quickActions: return String(localized: "Quick Actions")
+        case .extensions: return String(localized: "Extensions")
         case .dictation: return String(localized: "Dictation")
         case .fileSearch: return String(localized: "File Search")
         case .notes: return String(localized: "Notes")
@@ -81,6 +83,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .fallbacks: return "arrow.turn.down.right"
         case .ai: return "sparkles"
         case .quickActions: return "wand.and.sparkles"
+        case .extensions: return "puzzlepiece.extension.fill"
         case .dictation: return "waveform"
         case .fileSearch: return "doc.text.magnifyingglass"
         case .notes: return "text.page.fill"
@@ -103,6 +106,7 @@ enum SettingsTab: CaseIterable, Identifiable {
         case .permissions, .quicklinks, .fileSearch: return .blue
         case .applications, .iCloudSync, .backup: return .cyan
         case .windowManagement: return .mint
+        case .extensions: return .green
         case .notes: return .yellow
         case .systemActions, .emoji: return .orange
         case .calendar: return .red
@@ -141,7 +145,7 @@ enum SettingsSection: CaseIterable, Identifiable {
             // Everyday tools first; AI is an opt-in extra.
             return [
                 .clipboard, .snippets, .fileSearch, .windowManagement, .navigation, .notes,
-                .calendar, .emoji, .dictation, .ai, .quickActions
+                .calendar, .emoji, .dictation, .ai, .quickActions, .extensions
             ]
         case .advanced: return [.backup, .about]
         }

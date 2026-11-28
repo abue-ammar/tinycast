@@ -247,6 +247,21 @@ final class AppCore {
         paletteCoordinator: paletteCoordinator, settingsCoordinator: settingsCoordinator,
         core: self)
 
+    /// Main app only: Settings' process reads the switches but never runs an extension.
+    @ObservationIgnored private(set) lazy var extensions = ExtensionManager(
+        hostCalls: ExtensionHostCallRunner(
+            closePalette: { [unowned self] in paletteCoordinator.hidePalette() },
+            openPermissionSettings: { [unowned self] in
+                paletteCoordinator.hidePalette(restoreFocus: false)
+                settingsCoordinator.showSettings(tab: .permissions)
+            },
+            showMessage: { [unowned self] in showMessage($0) }),
+        showMessage: { [unowned self] in showMessage($0, tone: $1) })
+    /// Both processes: Settings lists the commands, and only the main app runs them.
+    @ObservationIgnored private(set) lazy var extensionCoordinator = ExtensionCoordinator(
+        settings: settings, appIndex: appIndex, palette: palette,
+        paletteCoordinator: paletteCoordinator, core: self)
+
     @ObservationIgnored private lazy var windowController = PaletteWindowController(core: self)
     /// Every pill shares this panel, so a later one replaces the earlier rather than stacking.
     @ObservationIgnored private lazy var pillPresenter = HUDPresenter(
@@ -353,6 +368,7 @@ final class AppCore {
             appleShortcutCoordinator.applyPresence()
             paletteCoordinator.onLauncherShown = { [weak self] in
                 self?.appleShortcutCoordinator.refresh()
+                self?.extensionCoordinator.refresh()
             }
             paletteCoordinator.onScreenOpening = { [weak self] mode in
                 switch mode {
@@ -364,6 +380,7 @@ final class AppCore {
             }
             updateCoordinator.applyEnabled()
             calendarCoordinator.applyEnabled()
+            applyExtensions()
             Task { await emojiIndex.load(languages: SystemLanguages.preferred) }
             currencyRates.start()
             updateChecker.onUpdateAvailable = { [weak self] in self?.updateCoordinator.offer($0) }
@@ -405,6 +422,7 @@ final class AppCore {
             hotKeys.onRunAppleShortcut = { [weak self] id in
                 self?.appleShortcutCoordinator.run(id: id)
             }
+            hotKeys.onRunExtensionCommand = { [weak self] id in self?.extensionCoordinator.run(id) }
             hotKeys.onExpandSnippet = { [weak self] id in
                 self?.snippetCoordinator.expandSnippetFromHotKey(id: id)
             }
@@ -571,6 +589,7 @@ final class AppCore {
         case .quicklink(let id):
             return settings.quicklinksEnabled && quicklinks.quicklink(id: id)?.isEnabled == true
         case .appleShortcut: return settings.appleShortcutsEnabled
+        case .extensionCommand: return settings.extensionsEnabled
         case .togglePalette, .app, .settingsPane, .systemAction: return true
         }
     }
@@ -597,6 +616,8 @@ final class AppCore {
             return customWindowSizes.size(id: id)?.name
         case .appleShortcut(let id):
             return appleShortcutCoordinator.name(of: id)
+        case .extensionCommand(let id):
+            return extensionCoordinator.name(of: id)
         case .snippet(let id):
             return snippetsStore.record(id: id)?.snippet.name
         case .togglePalette, .dictation, .command, .systemAction, .windowCommand:
@@ -869,7 +890,23 @@ final class AppCore {
             aiSettings, { _ = $0.enabledInstalledProviders },
             reproject: { _ = $0.applyInstalledAILifecycle() })
         track({ _ = $0.notesFolder }, reproject: { $0.applyNotesFolder() })
+        track(
+            {
+                _ = $0.extensionsEnabled
+                #if DEBUG
+                    _ = $0.extensionDeveloperMode
+                #endif
+            }, reproject: { $0.applyExtensions() })
         trackChatRoute()
+    }
+
+    /// Processes first, so the screen the coordinator then leaves is already stopping.
+    private func applyExtensions() {
+        extensions.setEnabled(settings.extensionsEnabled)
+        #if DEBUG
+            extensions.setDeveloperMode(settings.extensionDeveloperMode)
+        #endif
+        extensionCoordinator.applyPresence()
     }
 
     /// `.system` resolves to `nil`, so AppKit follows macOS with nothing polling.

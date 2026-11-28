@@ -76,7 +76,7 @@ keeps a dropped search scope from deleting a working shortcut, and running on un
 covers LaunchServices still resolving an app for a few seconds after it is trashed.
 
 Shortcuts are also spelled as typeable chords (`ctrl+option+left`) in the opt-in
-[settings file](settings-file.md), all but those of content and Apple Shortcuts.
+[settings file](settings-file.md), all but those of content, Apple Shortcuts and extension commands.
 `HotKeySpelling` is that grammar; `HotKeySettingsFile` applies through `setBinding`, so `UserDefaults`
 stays the one store either way.
 
@@ -90,6 +90,9 @@ and to prune bindings whose record was deleted while Tinycast wasn't running. Th
 Apple Shortcuts keep the same kind of index in `boundAppleShortcutIDs`, pruned not at launch but after
 the first successful read of the library, since a failed read looks exactly like deletion
 (see [apple-shortcuts.md](apple-shortcuts.md#sweeping-deleted-shortcuts)).
+Extension commands persist under `hotkey.extensionCommand.<id>/<command>` and index their entry IDs in
+`boundExtensionCommandIDs`, never pruned at launch: with extensions off no list can say which commands
+are gone. Their chords sync with the other content rows' and stay out of backups, like Apple Shortcuts'.
 
 Snippets index `StoredSnippet.ID`, the file's path, in `boundSnippetIDs`. The store runs only while
 the feature is on, so they are swept not at launch but on every snapshot, by

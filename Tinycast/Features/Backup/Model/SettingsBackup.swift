@@ -84,6 +84,8 @@ struct SettingsBackup: Codable {
         var quicklinkConfirmsBeforeDelete: Bool?
         // Carried like quicklinks: running a shortcut the user built grants no permission class.
         var appleShortcutsEnabled: Bool?
+        // Carried, as settings.json carries it: what runs is still only what this Mac installed.
+        var extensionsEnabled: Bool?
         // `calendarEnabled` is absent: an import must not grant calendar access.
         var calendarShowInLauncher: Bool?
         var calendarLauncherLimit: Int?

@@ -193,19 +193,20 @@ final class CloudSyncSession: CKSyncEngineDelegate {
         var arrivals: [SyncSourceID: SyncChanges] = [:]
         var superseded: Set<String> = []
         for record in records {
-            if RaycastExtensionsMigration.isRetiredRecord(record.recordID.recordName) {
-                let name = record.recordID.recordName
-                store.update { _ = $0.ledger.requestDelete(name, now: .now) }
-                queue(name, .delete)
+            let name = record.recordID.recordName
+            if RaycastExtensionsMigration.isRetiredRecord(name) {
+                deleteRetired(name)
                 continue
             }
             guard CloudSyncRecordCodec.schemaVersion(of: record) <= CloudSyncRecordCodec.schemaVersion else {
                 return await pauseForUpdate()
             }
-            guard let item = CloudSyncRecordCodec.item(from: record), accepts(item.source, item.key) else {
+            guard let item = CloudSyncRecordCodec.item(from: record) else { continue }
+            if RaycastExtensionsMigration.isRetiredEntry(item.source, key: item.key) {
+                deleteRetired(name)
                 continue
             }
-            let name = record.recordID.recordName
+            guard accepts(item.source, item.key) else { continue }
             var outcome = SyncLedger.Incoming.apply
             store.update { state in
                 outcome = state.ledger.receive(
@@ -420,6 +421,12 @@ final class CloudSyncSession: CKSyncEngineDelegate {
     private func accepts(_ id: SyncSourceID, _ key: String) -> Bool {
         guard let category = id.category(of: key) else { return id == .device }
         return isEnabled(category)
+    }
+
+    /// What the removed extension runtime synced leaves iCloud, whichever Mac fetches it first.
+    private func deleteRetired(_ name: String) {
+        store.update { _ = $0.ledger.requestDelete(name, now: .now) }
+        queue(name, .delete)
     }
 
     private func queue(_ name: String, _ pending: SyncLedger.Pending) {
