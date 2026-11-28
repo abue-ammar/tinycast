@@ -129,10 +129,10 @@ With a delay, results stay with the preserved query until the reset fires; reope
 keeps them. Live updates never re-run a published query, so a file removed meanwhile still lists and
 reports the failure when opened. Icons and previews are still purged on close.
 
-The 2026-10-13 benchmark (`Tests/FileSearchPerformanceTests.swift`, `/System /Applications /Library /usr`,
-844,911 entries) crawled in 5.2 s with a 103 MB helper peak and wrote a 16.6 MB index, down from 40 MB
-before names were interned and the per-entry folder and parent columns dropped. With whole-module
-optimization, queries took 0.3–2.7 ms and single letters 3.4 ms. On 2026-11-18 (857,059 entries)
+The 2026-10-13 measurement (`/System /Applications /Library /usr`, 844,911 entries) crawled in 5.2 s
+with a 103 MB helper peak and wrote a 16.6 MB index, down from 40 MB before names were interned and
+the per-entry folder and parent columns dropped. With whole-module optimization, queries took
+0.3–2.7 ms and single letters 3.4 ms. On 2026-11-18 (857,059 entries)
 single-term and name-filled queries were unchanged by folder matching, and queries completed through
 folders (`lproj localizable`, `appkit resources`, `xcode plist`) took 2.2–3.5 ms: about 1–1.5 ms for
 the folder pass, the rest for building the rows it adds.

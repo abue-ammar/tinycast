@@ -522,7 +522,7 @@ one that does not resolve silences the whole list. Two to six places qualify.
 
 The dated, span and list forms live in `CalcZoneSchedule`, an extension of `CalcTimeZone`. Each is
 gated before it allocates (a comma, or a colon or am/pm after a digit), so a query with none of those
-costs nothing on its way past; `CalcPerformanceTests` shows no change for units, currency or arithmetic.
+costs nothing on its way past; units, currency and arithmetic measured no slower with them.
 
 `date in tokyo` and `tokyo date` answer today's date there. `local time in tokyo`, `tokyo local time`,
 `time now in tokyo` and `time in tokyo now` drop their filler word and ask `time in tokyo`; the filler is

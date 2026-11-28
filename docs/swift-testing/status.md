@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: R1 · Remove the benchmarks** (build mode)
+**Next: R2 · Remove approved candidates** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -14,8 +14,8 @@ the old harness.
 | P0    | Docs describe the end state            | build | –    | done   |
 | P1    | Pilot: target, host, runner, 4 suites  | plan  | 4    | done   |
 | T     | Triage: find what does not belong      | build | –    | done   |
-| R1    | Remove the benchmarks                  | build | 8    | next   |
-| R2    | Remove approved candidates             | build | –    | todo   |
+| R1    | Remove the benchmarks                  | build | 8    | done   |
+| R2    | Remove approved candidates             | build | –    | next   |
 | R3    | Remove the extension harnesses         | build | 13   | todo   |
 | P2    | Peer fixtures for self-run harnesses   | plan  | 3    | todo   |
 | B1    | Launcher, search, files                | build | 13   | todo   |
@@ -116,14 +116,17 @@ Delete the 8 files below, `Scripts/benchmark-dictation.sh`, and every doc line t
 'PerformanceTests\|benchmark-dictation' docs AGENTS.md`). Keep measured numbers in `docs/` that
 stand on their own; drop the command that produced them.
 
-- [ ] FileSearchPerformanceTests · 68
-- [ ] CalcPerformanceTests · 122
-- [ ] ClipboardThumbnailPerformanceTests · 130
-- [ ] EmojiSearchPerformanceTests · 96
-- [ ] DictationPerformanceTests · 146
-- [ ] NotesEditorPerformanceTests · 144
-- [ ] TextDiffPerformanceTests · 110
-- [ ] ClipboardFilePerformanceTests · 150
+Done. Docs touched: `calculator.md`, `dictation.md` (the benchmark section), `file-search.md` and
+`notes.md`; their numbers stay, and `testing.md`'s baseline row stands on its own.
+
+- [x] FileSearchPerformanceTests · 68
+- [x] CalcPerformanceTests · 122
+- [x] ClipboardThumbnailPerformanceTests · 130
+- [x] EmojiSearchPerformanceTests · 96
+- [x] DictationPerformanceTests · 146
+- [x] NotesEditorPerformanceTests · 144
+- [x] TextDiffPerformanceTests · 110
+- [x] ClipboardFilePerformanceTests · 150
 
 ## R2 · Remove approved candidates
 

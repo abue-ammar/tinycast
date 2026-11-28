@@ -362,7 +362,6 @@ undo isolation, undo and redo shortcut routing, source publication and character
 exact source after styling, hidden and revealed markers, restyling after edits and after undo, block
 decorations and layout fragments, list keys, chords, the task rule, checkbox toggles, link schemes,
 pasting a URL, and the formatting reports and `format(_:)` the formatting bar uses.
-`Tests/NotesEditorPerformanceTests.swift` times install, typing, the window fit's height read and caret
-moves on a 100,000-character note; its budget is in `docs/testing.md`. Window chrome is not automated:
-the Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher, focus restoration,
+Its timings on a 100,000-character note are a recorded baseline in `docs/testing.md`. Window chrome is
+not automated: the Notes manual sweep in `docs/testing.md` covers commands, shortcuts, switcher, focus restoration,
 Finder, Trash recovery, and accessibility.

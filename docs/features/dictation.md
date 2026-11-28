@@ -136,20 +136,3 @@ capitalization adaptation on and off,
 model switching and idle release/reload. Check both processes in Activity Monitor, and validate
 Debug and Release helper names, signatures and architecture slices. Model conversions and their
 source licences must be reviewed before distribution; swapping one requires real-audio validation.
-
-For reproducible real-model measurements, build Debug, install the models through Settings, then run:
-
-```sh
-./Scripts/benchmark-dictation.sh /path/to/sample.wav
-```
-
-The optional tool converts the supplied audio to mono 16 kHz and launches the built helper directly,
-without using the microphone, clipboard or settings. It reports load and transcription times, sampled
-helper `phys_footprint` in decimal MB and the recognized text, first with a fresh helper and then with
-its model already loaded. macOS's file and Core ML caches remain untouched; a fresh helper is not a
-cold disk-cache measurement. The 50 ms memory samples are not a guaranteed absolute peak.
-Use the same audio, build configuration and otherwise idle machine for comparisons.
-
-Optional arguments select a helper `.app`, model directory and one model's raw identifier instead of
-all four. This tool is outside the deterministic suite and app targets; it neither downloads models
-nor adds bundled resources.
