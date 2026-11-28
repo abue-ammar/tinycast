@@ -101,17 +101,10 @@ private final class StubServer {
 
     init(mode: String = "normal") async throws {
         scratch = try ScratchDirectory("mcp-stdio")
-        let bin = scratch.url.appending(path: "bin", directoryHint: .isDirectory)
-        let executable = bin.appending(path: "tinycast-mcp-stub")
-        try FileManager.default.createDirectory(at: bin, withIntermediateDirectories: true)
-        try FileManager.default.copyItem(at: Fixture.url("MCP/mcp-stub.js"), to: executable)
-        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: executable.path)
-        // A test host inherits no shell PATH; the locator puts the server's own folder first.
-        let node = try #require(await ExecutableLocator.locate("node"), "the stub server needs Node")
-        try FileManager.default.createSymbolicLink(at: bin.appending(path: "node"), withDestinationURL: node)
+        let stub = try await NodeScript("MCP/mcp-stub.js", in: scratch, named: "tinycast-mcp-stub")
         server = MCPServer(
             name: "Stub", slug: "stub",
-            transport: .stdio(command: executable.path, arguments: [], environmentKeys: []))
+            transport: .stdio(command: stub.executable.path, arguments: [], environmentKeys: []))
         connection = MCPServerConnection(
             server: server, secrets: MCPSecretStore.Secrets(environment: ["TC_MCP_MODE": mode]))
     }

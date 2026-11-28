@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: P2 · Peer fixtures for self-run harnesses** (plan mode)
+**Next: B1 · Launcher, search, files** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -17,8 +17,8 @@ the old harness.
 | R1    | Remove the benchmarks                  | build | 8    | done   |
 | R2    | Remove approved candidates             | build | –    | done   |
 | R3    | Remove the extension harnesses         | build | 13   | done   |
-| P2    | Peer fixtures for self-run harnesses   | plan  | 3    | next   |
-| B1    | Launcher, search, files                | build | 13   | todo   |
+| P2    | Peer fixtures for self-run harnesses   | plan  | 3    | done   |
+| B1    | Launcher, search, files                | build | 13   | next   |
 | B2    | Calculator, calendar, dictionary       | build | 3    | todo   |
 | B3    | Clipboard, emoji                       | build | 6    | todo   |
 | B4    | Palette and design system              | build | 9    | todo   |
@@ -151,10 +151,15 @@ Replace every self-run with a peer script in `Fixtures/`, as `MCPStdioTests` doe
 `mcp-stub.js`, launched by absolute path with its mode in its own environment. Localization reads the
 app bundle's string tables per locale, with no relaunch. No app code changes.
 
-- [ ] LocalizedResourceTests · 95 · one relaunch per language with `-AppleLanguages`
-- [ ] DictationWorkerTests · 270 · a fake worker speaking `DictationWire`, plus a competing downloader
-- [ ] AIProviderTests · 2,787 · a fake Codex app-server over stdio (`TINYCAST_TEST_CODEX_ROOT` is
-      how it finds its peer, not an opt-in gate); fixtures
+Done. `resolved(in:)` takes a bundle (default `.main`, user-approved seam), so each language's
+`.lproj` stands in for a relaunch. `Support/` gains `NodeScript` (`MCPStdioTests` uses it too) and
+`ScratchDefaults`. Docs: `testing.md` (isolation, three rows), `ai.md`, `dictation.md`.
+
+- [x] LocalizedResourceTests · 95 · 9 languages × 9 resources against each `.lproj`
+- [x] DictationWorkerTests · 270 · `Fixtures/Dictation/dictation-worker-stub.js`, run by `node`'s
+      absolute path; the competing process is `/usr/bin/lockf -t 0` on the download lock
+- [x] AIProviderTests · 2,787 · one suite over 8 files; `Fixtures/AI/codex-app-server-stub.js`
+      finds its log through `TC_CODEX_STUB_ROOT`; the captures moved to `Fixtures/AI/`
 
 ## B1 · Launcher, search, files
 
@@ -403,9 +408,23 @@ Decisions made during the migration, beyond the brief's. Newest last.
   plan batch P2 (user's choice). Localization reads the bundle's tables per locale, no relaunch.
 - T: RelaunchTests and AppInstallationTests' `testLaunch` checks are removed (user approved); R2
   deletes them and adds quit-and-relaunch and app launch to the manual sweep.
+- P2: a peer is a stub in `Fixtures/` installed by `NodeScript`; a launcher with no `PATH` of its own
+  (`DictationWorker`) runs `node` by absolute path with the script as its first argument.
+- P2: a cross-process lock is checked with `/usr/bin/lockf -t 0` (`EX_TEMPFAIL`); it takes the same
+  `flock` as the code under test, so no second copy of that code runs (user's choice).
+- P2: a `URLProtocol` fixture reads its behaviour from the request's host, never from static state,
+  so parallel tests cannot see each other's mode.
+- P2: `Task.immediate` orders writes that must be queued before the test goes on; it replaces the
+  flag-and-`Task.yield` spins.
+- P2: a test waiting on a peer's file watches it with a `DispatchSource` file-system source, never a
+  polling loop; its handlers are formed in a `nonisolated` function, or they assert the main actor.
 
 ## Open problems
 
 What a session could not settle. The user answers these; a session never guesses past one.
 
-- (none)
+- **Host language.** Suites compare English text resolved through the host bundle
+  (`AIProviderTests`' refusal lines and key prompts, and later `CalcTests` and others), so they fail
+  on a Mac whose language is not English. Proposed: pin the test action to English. XcodeGen's target
+  `scheme.language` also changes Run, so it would mean a full `schemes:` entry with
+  `test: language: en`. Not blocking B1 unless B1 compares localized text.

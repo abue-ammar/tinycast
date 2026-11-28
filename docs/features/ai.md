@@ -216,10 +216,10 @@ picker. ⌘J hands a Quick AI conversation to the window.
   treated the same way: the decoder is handed the key and header values, an Anthropic `error` event shows its message
   under its line, and an OpenAI-compatible one reads through `metadata.raw` too, or says the provider
   stopped the response when there is no sentence to show.
-- **`Model/` stays Foundation-only.** `AIProviderTests` compiles the shipped provider models and pins
+- **`Model/` stays Foundation-only.** `AIProviderTests` pins the shipped provider models'
   endpoints, request bodies, stream parsing, persistence repair, Codex protocol framing and both
   CLI routes' MCP launch encodings. Request
-  bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a harness rather than a
+  bodies are `AIRequestBody`'s, in `Model/`, precisely so a wrong shape fails a test rather than a
   conversation.
 - **Grok and Cursor are text transports, not agents, and so is Claude with no server to
   run.** Claude runs one turn with no tools, browser integration, slash commands or persisted
@@ -781,7 +781,7 @@ window, and every chat action either surface sends) is the nineteenth feature co
   to the defaults. After the first message the menu is a label and cannot be changed.
 - Delete a preset: the dialog asks first, the row leaves Settings and the composer menu, and chats it
   started keep their instructions.
-- Harnesses: `AIProviderTests` (instruction composition and its enable/disable setting, a preset's
+- Suites: `AIProviderTests` (instruction composition and its enable/disable setting, a preset's
   instructions, `ChatPresetStore`'s validation and unreadable-file refusal, endpoints,
   request bodies, stream decoding including leading
   think tags across content and SSE splits, persistence repair,
@@ -1026,7 +1026,7 @@ truncated: a silently truncated CSV is a lie the model then answers confidently.
 `AIAttachmentPolicy` is the one place deciding what may be attached and as what. It is pure and
 Foundation-only, so `AIChatTests` pins it. It uses **extension allowlists rather than
 `UTType.conforms(to:)`**: a machine's installed apps declare types, so a conformance answer differs
-between two Macs and would make a harness machine-dependent, the exact environment coupling
+between two Macs and would make a test machine-dependent, the exact environment coupling
 `Model/` exists to keep out. Adding a type is a one-line change; a type answer that differs per Mac
 is a bug you cannot reproduce.
 Images are re-encoded to PNG and bounded to 1568px on the long edge, off-main on a detached task so

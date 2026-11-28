@@ -122,10 +122,12 @@ the order of sound cues against ducking
 with synthetic capture and real AppKit editors, without recording audio or touching the shared clipboard.
 `DictationTests` checks formatting and model options; `DictationInferenceTests` checks score selection,
 byte BPE, Fourier/mel features, listening bands and audio partitioning without downloading a model. `DictationWorkerTests`
-exercises framed IPC, worker reuse/switching, removal, cancellation and broken pipes with a fixture.
+exercises framed IPC, worker reuse/switching, removal, cancellation and broken pipes against a Node
+stub worker (`Fixtures/Dictation/dictation-worker-stub.js`).
 An in-process URLProtocol fixture checks byte progress before the first file completes, combined
 progress and atomic installation for both families, including cancellation, stale staging cleanup
-and competing downloads on shared or independent cache roots, without sockets or timed waits.
+and competing downloads on shared or independent cache roots, one of them from another process
+through `/usr/bin/lockf`, without sockets or timed waits.
 `DictationVolumeTests` uses private files and injected audio controls to verify crash recovery
 before and after fade steps, user volume changes, output switching, failed writes and rapid cancellation,
 without changing the system volume or downloading a model.
