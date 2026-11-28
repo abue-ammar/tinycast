@@ -18,7 +18,7 @@ the old harness.
 | R2    | Remove approved candidates             | build | –    | done   |
 | R3    | Remove the extension harnesses         | build | 13   | done   |
 | P2    | Peer fixtures for self-run harnesses   | plan  | 3    | done   |
-| B1    | Launcher, search, files                | build | 13   | done (this commit) |
+| B1    | Launcher, search, files                | build | 13   | done a2dcde17 |
 | B2    | Calculator, calendar, dictionary       | build | 3    | next   |
 | B3    | Clipboard, emoji                       | build | 6    | todo   |
 | B4    | Palette and design system              | build | 9    | todo   |
@@ -163,7 +163,7 @@ pointed at a language's `.lproj` stands in for a relaunch. `Support/` gains `Nod
 
 ## B1 · Launcher, search, files
 
-Done. Six suites moved in `36c67aa2` and seven in this commit. The full decision-6 run and lint passed.
+Done. Six suites moved in `36c67aa2` and seven in `a2dcde17`. The full decision-6 run and lint passed.
 
 - [x] FuzzTests · 556 · the 20,000 seeded alignments take about 1 s in Debug at `-Onone`
 - [x] FileSearchTests · 501
