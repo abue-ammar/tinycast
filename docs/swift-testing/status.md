@@ -2,43 +2,43 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: R1 · Remove the benchmarks** (Codex, build mode)
+**Next: R1 · Remove the benchmarks** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
 
 ## Phases
 
-| Batch | Title                                  | Tool        | Mode  | Rows | Status |
-| ----- | -------------------------------------- | ----------- | ----- | ---- | ------ |
-| P0    | Docs describe the end state            | Claude Code | build | –    | done   |
-| P1    | Pilot: target, host, runner, 4 suites  | Claude Code | plan  | 4    | done   |
-| T     | Triage: find what does not belong      | Claude Code | build | –    | done   |
-| R1    | Remove the benchmarks                  | Codex       | build | 8    | next   |
-| R2    | Remove approved candidates             | Codex       | build | –    | todo   |
-| R3    | Remove the extension harnesses         | Codex       | build | 13   | todo   |
-| P2    | Peer fixtures for self-run harnesses   | Claude Code | plan  | 3    | todo   |
-| B1    | Launcher, search, files                | Codex       | build | 13   | todo   |
-| B2    | Calculator, calendar, dictionary       | Codex       | build | 3    | todo   |
-| B3    | Clipboard, emoji                       | Codex       | build | 6    | todo   |
-| B4    | Palette and design system              | Codex       | build | 9    | todo   |
-| B5    | Palette input                          | Codex       | build | 9    | todo   |
-| B6    | Dictation, hotkeys, platform           | Codex       | build | 9    | todo   |
-| B7    | Window management                      | Codex       | build | 8    | todo   |
-| B8    | Commands, links, quick actions         | Codex       | build | 6    | todo   |
-| B9    | Notes                                  | Codex       | build | 2    | todo   |
-| B10   | Settings, backup, sync, updates        | Codex       | build | 8    | todo   |
-| B11   | AI providers                           | Codex       | build | 4    | todo   |
-| B12   | AI chat and MCP                        | Codex       | build | 3    | todo   |
-| B13   | Raycast import                         | Codex       | build | 1    | todo   |
-| H     | Helper-only sources                    | Claude Code | plan  | 2    | todo   |
-| S1    | Stand-ins: small                       | Claude Code | plan  | 5    | todo   |
-| S2    | Stand-ins: hotkeys                     | Claude Code | plan  | 2    | todo   |
-| S3    | Stand-ins: snippets, dictation field   | Claude Code | plan  | 2    | todo   |
-| S4    | Stand-ins: clipboard, custom commands  | Claude Code | plan  | 2    | todo   |
-| S5    | Stand-ins: uninstall, quicklinks       | Claude Code | plan  | 2    | todo   |
-| S6    | Stand-ins: app installation            | Claude Code | plan  | 1    | todo   |
-| F     | Final: clean-up and sign-off           | Claude Code | build | –    | todo   |
+| Batch | Title                                  | Mode  | Rows | Status |
+| ----- | -------------------------------------- | ----- | ---- | ------ |
+| P0    | Docs describe the end state            | build | –    | done   |
+| P1    | Pilot: target, host, runner, 4 suites  | plan  | 4    | done   |
+| T     | Triage: find what does not belong      | build | –    | done   |
+| R1    | Remove the benchmarks                  | build | 8    | next   |
+| R2    | Remove approved candidates             | build | –    | todo   |
+| R3    | Remove the extension harnesses         | build | 13   | todo   |
+| P2    | Peer fixtures for self-run harnesses   | plan  | 3    | todo   |
+| B1    | Launcher, search, files                | build | 13   | todo   |
+| B2    | Calculator, calendar, dictionary       | build | 3    | todo   |
+| B3    | Clipboard, emoji                       | build | 6    | todo   |
+| B4    | Palette and design system              | build | 9    | todo   |
+| B5    | Palette input                          | build | 9    | todo   |
+| B6    | Dictation, hotkeys, platform           | build | 9    | todo   |
+| B7    | Window management                      | build | 8    | todo   |
+| B8    | Commands, links, quick actions         | build | 6    | todo   |
+| B9    | Notes                                  | build | 2    | todo   |
+| B10   | Settings, backup, sync, updates        | build | 8    | todo   |
+| B11   | AI providers                           | build | 4    | todo   |
+| B12   | AI chat and MCP                        | build | 3    | todo   |
+| B13   | Raycast import                         | build | 1    | todo   |
+| H     | Helper-only sources                    | plan  | 2    | todo   |
+| S1    | Stand-ins: small                       | plan  | 5    | todo   |
+| S2    | Stand-ins: hotkeys                     | plan  | 2    | todo   |
+| S3    | Stand-ins: snippets, dictation field   | plan  | 2    | todo   |
+| S4    | Stand-ins: clipboard, custom commands  | plan  | 2    | todo   |
+| S5    | Stand-ins: uninstall, quicklinks       | plan  | 2    | todo   |
+| S6    | Stand-ins: app installation            | plan  | 1    | todo   |
+| F     | Final: clean-up and sign-off           | build | –    | todo   |
 
 Modes are explained in the brief: _plan_ means the session proposes and you approve before it
 builds.

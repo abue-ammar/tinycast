@@ -126,32 +126,29 @@ For each harness in the batch:
 4. If the session ends early, commit what passes, leave the rest unticked, and write where it stopped
    under **Open problems**.
 
-## Who does what, and in which mode
+## Modes
 
-`status.md`'s phase table gives each batch a tool and a mode.
+Any agent takes any batch: Claude Code, Codex, or anything else that reads `AGENTS.md`. What a batch
+fixes is its **mode**, given in `status.md`'s phase table.
 
-| Batches              | Tool        | Mode  | Why                                                       |
-| -------------------- | ----------- | ----- | --------------------------------------------------------- |
-| P1, H, S1–S6         | Claude Code | plan  | design choices and app code changes: approve them first   |
-| T                    | Claude Code | build | reads and writes only `status.md`                         |
-| R1–R3, B1–B13        | Codex       | build | mechanical and fully specified here                       |
-| F                    | Claude Code | build | checks and deletions                                      |
-| review of last batch | the other   | build | a cheap second read; it reports and changes nothing       |
+| Batches                    | Mode  | Why                                                     |
+| -------------------------- | ----- | ------------------------------------------------------- |
+| P1, P2, H, S1–S6           | plan  | design choices and app code changes: approve them first |
+| T, R1–R3, B1–B13, F        | build | specified here, or checks and deletions                 |
+| review of the last batch   | build | a second read in a fresh session; it changes nothing    |
 
-**Plan mode** (Claude Code: Shift+Tab until it shows _plan mode_) makes the session read and propose
-before it touches anything. Read the plan, correct it, then accept it to let the session build. Use it
-wherever the table says so: a wrong seam in app code costs far more to undo than to read.
+**Plan mode** means the session reads and proposes before it touches anything; the prompt below makes
+any agent hold to it. In Claude Code you can also press Shift+Tab until it shows _plan mode_, which
+enforces it. Read the plan, correct it, then approve it to let the session build.
 
-**Build mode** is the default. For Claude Code, accepting edits automatically (Shift+Tab to
-_accept edits_) keeps a mechanical batch moving; commands still ask. For Codex, the default
-approval mode is right.
+**Build mode** is the default. Let the agent accept its own edits so a mechanical batch keeps moving;
+commands may still ask.
 
-Either tool may take any batch when the other is out of quota; a Codex batch done by Claude Code uses
-build mode too. Only one tool works on the branch at a time.
+Only one session works on the branch at a time.
 
 ## What to say to a fresh session
 
-Start each batch in a new session (`/clear` in Claude Code, a new `codex` run). Both tools read
+Start each batch in a new session (`/clear` in Claude Code, a new `codex` run). Agents read
 `AGENTS.md` on their own, and its pointer sends them here, so one prompt serves every batch and both
 tools. Neither tool picks a mode by itself; the prompt makes the session honour the batch's mode:
 
@@ -171,7 +168,7 @@ Apple APIs only, nothing deprecated, nothing lint would flag, and never drop or 
 For a plan batch in Claude Code you can also switch to plan mode first (Shift+Tab), which enforces
 the read-only step instead of trusting the prompt to hold it.
 
-To review the batch the other tool just committed:
+To review the batch just committed, in a fresh session (any agent):
 
 ```text
 Review the last commit of the Swift Testing migration against docs/swift-testing/README.md and
