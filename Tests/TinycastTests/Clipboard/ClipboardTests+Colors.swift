@@ -22,7 +22,7 @@ extension ClipboardTests {
 
     @Test(arguments: [
         "#FF5733 and more", "rgb(255, 87, 51) plus", "(255, 87, 51)", "#", "rgb",
-        "#GGGGGG", "#12345", "#", "report.pdf", "rgb(1, 2)", "rgb(1, 2, 3", "hsl(1, 2, 3, 4, 5)",
+        "#GGGGGG", "#12345", "report.pdf", "rgb(1, 2)", "rgb(1, 2, 3", "hsl(1, 2, 3, 4, 5)",
         "cmyk(0, 1, 1, 0)", "255, 87, 51", "#" + String(repeating: "f", count: 96),
         "rgb(nan, 0, 0)", "hsl(inf, 100%, 50%)", "rgb(1e400, 0, 0)", "rgba(0, 0, 0, nan)",
         "hsl(120, 100, 50)", "hsl(120 100 50)", "hsla(120, 100, 50, 1)",
@@ -40,7 +40,7 @@ extension ClipboardTests {
         "hsl(120, 100%, 50%, 0.5)", "hsl(120, 100%, 50%, 50%)", "rgb(0 255 0)",
         "rgb(255,\n87,\n51)", "rgb(0\n255\n0)"
     ])
-    func CSSAliasesAcceptOptionalAlphaAndMultilineWhitespace(_ text: String) {
+    func cssAliasesAcceptOptionalAlphaAndMultilineWhitespace(_ text: String) {
         #expect(ColorValue.parse(text) != nil)
     }
 

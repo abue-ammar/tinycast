@@ -443,8 +443,8 @@ A file copied in Finder is recorded as a reference, never as a copy: Tinycast wr
 disk for it, and the row's path points at the original wherever it lies. That is the whole reason
 `imagePath` stays nil for a `.file` row: `owns()` is the one ownership rule, and a path it never
 sees can never be deleted by `deleteBlob` or a retention cut. `ClipboardTests`'s
-`referencedFilesOutliveTheirRows` is the case that pins it, across `remove`, a retention cut and
-Clear History alike.
+`droppingReferencedFileRowsNeverDeletesTheFile` is the case that pins it, across `remove`, a
+retention cut and Clear History alike.
 
 **Pasting writes two flavours.** `public.file-url` so Finder, Mail and anything file-taking receive
 the _file_, and `.string` carrying the **path**, deliberately not Finder's own choice of the name,

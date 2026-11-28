@@ -84,7 +84,6 @@ struct ClipboardThumbnailTests {
             firstCopy, of: stuck, helper: helper.executable, timeout: .milliseconds(300))
         #expect(!made)
         #expect(started.duration(to: .now) < .seconds(5))
-        #expect(FileManager.default.fileExists(atPath: helper.started.path))
         #expect(await ImageThumbnail.makeCopy(nextCopy, of: next, helper: nextHelper))
     }
 

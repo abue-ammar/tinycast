@@ -239,7 +239,7 @@ struct ClipboardTests {
         (false, "", ClipboardFilter.all, 0), (true, "", .all, 2), (true, "  ", .all, 2),
         (true, "beta", .all, 0), (true, "", .text, 2), (true, "", .link, 0)
     ])
-    func landingSkipsVisiblePinsForAnEmptyQuery(
+    func landingSkipsVisiblePinsOnlyForAnEmptyQuery(
         _ hasPins: Bool, _ query: String, _ filter: ClipboardFilter, _ expected: Int
     ) throws {
         let history = try History()
