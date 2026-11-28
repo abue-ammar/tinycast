@@ -79,8 +79,9 @@ shortcut keeps working. Its filter is membership in `AppIndex.matches`, so it an
 flags, since running a shortcut the user built grants no permission class. Bindings are not in
 `HotkeyBackup`, the same as extension commands.
 
-## Standalone harness
+## Tests
 
 ```sh
-./Scripts/run-tests.sh AppleShortcutTests
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+    -only-testing:TinycastTests/AppleShortcutTests
 ```

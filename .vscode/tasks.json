@@ -4,6 +4,7 @@
     {
       // Build the .app with xcodebuild into a fixed path (build/DerivedData) so the app
       // location is stable — that's what lets F5 find it and keeps the Accessibility grant.
+      // build-for-testing also compiles TinycastTests, so its suites get code intelligence too.
       // DEVELOPER_DIR forces Xcode's toolchain (the SwiftUI macros aren't in the CLT).
       // The build log is handed to Scripts/sync-lsp.sh, which rebuilds SourceKit-LSP's flag
       // database from it — that's what keeps cross-file symbols resolving in VS Code as you
@@ -11,7 +12,7 @@
       // still blocks F5 / the run step.
       "label": "Build Tinycast.app (debug)",
       "type": "shell",
-      "command": "bash -c 'set -o pipefail; xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug -derivedDataPath build/DerivedData build 2>&1 | tee \"${TMPDIR:-/tmp}/tinycast-build.log\"; ec=$?; ./Scripts/sync-lsp.sh \"${TMPDIR:-/tmp}/tinycast-build.log\" >/dev/null 2>&1 || true; exit $ec'",
+      "command": "bash -c 'set -o pipefail; xcodebuild -project Tinycast.xcodeproj -scheme Tinycast -configuration Debug -derivedDataPath build/DerivedData build-for-testing 2>&1 | tee \"${TMPDIR:-/tmp}/tinycast-build.log\"; ec=$?; ./Scripts/sync-lsp.sh \"${TMPDIR:-/tmp}/tinycast-build.log\" >/dev/null 2>&1 || true; exit $ec'",
       "options": {
         "cwd": "${workspaceFolder}",
         "env": { "DEVELOPER_DIR": "/Applications/Xcode.app/Contents/Developer" }

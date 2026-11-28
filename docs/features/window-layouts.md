@@ -33,7 +33,7 @@ resolution-independent by construction.
 - **`Model/` stays Foundation + CoreGraphics.** `CGDisplayCreateUUIDFromDisplayID` lives in
   ColorSync, so the UUID string is produced in `Service/AXScreens` and injected. `WindowLayoutAnchor`
   maps onto `WindowPlacementEngine.Anchor` rather than doing its own arithmetic; its SwiftUI
-  `Alignment` lives in the view, not the model, or the purity grep would catch it.
+  `Alignment` lives in the view, not the model, or the purity lint rule would catch it.
 
 ## Layout
 

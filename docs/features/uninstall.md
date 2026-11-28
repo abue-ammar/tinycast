@@ -255,7 +255,8 @@ what stayed behind.
 ## Tests
 
 ```sh
-./Scripts/run-tests.sh UninstallTests
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+    -only-testing:TinycastTests/UninstallTests
 ```
 
 No filesystem, no temp directories: every input is a `String` or a `PathFacts`. `testStreamedSizes`

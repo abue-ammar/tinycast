@@ -359,8 +359,7 @@ Tinycast/
                     owns
 Tests/
   TinycastTests/    the Swift Testing suites, one per file, in folders mirroring Tinycast/
-  *.swift           the extension harnesses, until extensions leave this repository
-Scripts/            run-tests.sh, the two data generators, packaging, formatting, editor setup
+Scripts/            the data generators, packaging, linting, formatting, editor setup
 ```
 
 A larger feature splits into all four sub-folders; a small one stays flat, as `Onboarding/` does. `HotKeys/` has no `Settings/` because its Shortcuts pane is part of the Settings

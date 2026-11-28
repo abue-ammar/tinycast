@@ -51,3 +51,82 @@ line_length:
   warning: 130
   ignores_urls: true
   ignores_comments: false
+
+# The layering rule and the Swift Testing shape, which no built-in rule covers. Errors, so they block.
+custom_rules:
+  model_purity:
+    name: Model purity
+    included: 'Tinycast/Features/[^/]+/Model/.*\.swift$'
+    regex: '^\s*(@testable\s+)?import\s+(AppKit|SwiftUI|Cocoa)\b'
+    message: 'A Model/ file stays Foundation-only; take the fact it needs as a parameter.'
+    severity: error
+  test_main:
+    name: Harness entry point in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '@main\b|\bstatic\s+func\s+main\b'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'A suite is @Test functions; Swift Testing runs them, never a main().'
+    severity: error
+  test_exit:
+    name: exit in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bexit\('
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'A failed #expect fails the test; exit() kills the host and every other suite.'
+    severity: error
+  test_print:
+    name: print in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bprint\('
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'A check reports through #expect, which prints its own values.'
+    severity: error
+  test_static_var:
+    name: Mutable static state in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bstatic\s+var\s+\w+[^{\n]*$'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'Tests run in parallel; shared fixtures are static let, the rest is built in init.'
+    severity: error
+  test_xctest:
+    name: XCTest in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bXCTest\w*'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'Suites are Swift Testing only.'
+    severity: error
+  test_semaphore:
+    name: Semaphore in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bDispatchSemaphore\b'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'Await the subject, or use confirmation, instead of blocking a thread.'
+    severity: error
+  test_runloop_spin:
+    name: Run loop spin in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bRunLoop\.(main|current)\.run\b|\bCFRunLoopRun\w*'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'Await the subject, or use confirmation, instead of spinning the run loop.'
+    severity: error
+  test_shared_defaults:
+    name: Shared defaults in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bUserDefaults\.standard\b'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'The host is the real dev app; use a UserDefaults(suiteName:) unique to the test.'
+    severity: error
+  test_shared_pasteboard:
+    name: Shared pasteboard in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bNSPasteboard\.general\b'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'A running Tinycast records the general board; use NSPasteboard.withUniqueName().'
+    severity: error
+  test_check_helper:
+    name: Assertion helper in a suite
+    included: 'Tests/TinycastTests/.*\.swift$'
+    regex: '\bfunc\s+(expect|check|fail)\w*\s*[(<]'
+    excluded_match_kinds: [comment, doccomment, string]
+    message: 'The #expect stays in the test, so a failure points at its own line.'
+    severity: error

@@ -372,7 +372,7 @@ caught there rather than in the middle of a conversation.
 - Switching MCP off, then AI off, leaves no server process resident, including right after a
   Codex turn that used a local server.
 - A settings backup carries neither a server nor the flag.
-- Harnesses: `MCPTests`, `MCPStdioTests` and `MCPOAuthTests`, plus the tool halves of `AIProviderTests`
+- Suites: `MCPTests`, `MCPStdioTests` and `MCPOAuthTests`, plus the tool halves of `AIProviderTests`
   (catalog and turn encoding, fragmented argument decoding, both CLIs' launch encodings and their
   two consent channels), `AIChatTests` (the loop, its cap, its output bounds, and tool-use
   persistence).

@@ -10,7 +10,7 @@ The mechanical bar, in one place so it cannot drift. All four pass before a chan
 
 | Check                                                                  | Command                                                                            |
 | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| The test suite                                                         | `./Scripts/run-tests.sh`                                                           |
+| The test suite                                                         | `xcodebuild test -scheme Tinycast …` (below)                                       |
 | Lint, `Model/` purity, settings search, translations and migrations    | `./Scripts/lint.sh`                                                                |
 | A clean build                                                          | `xcodebuild … -configuration Debug CODE_SIGNING_ALLOWED=NO`, zero **new** warnings |
 | Docs still true                                                        | any doc your change made wrong, fixed in the same commit                           |
@@ -20,14 +20,23 @@ end of this file is the fifth, judged by what you touched.
 
 ## The test suite
 
+The suites run with Apple's own command, on the `Tinycast` scheme, whose test action is the
+`TinycastTests` target:
+
 ```sh
-./Scripts/run-tests.sh              # every suite, then the extension harnesses
-./Scripts/run-tests.sh CalcTests    # one suite, or one extension harness, while iterating
+# every suite
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+    -derivedDataPath build/DerivedData -quiet
+
+# one suite, or one test: append to the same command
+    -only-testing:TinycastTests/CalcTests
+    -only-testing:'TinycastTests/CalcTests/display(_:_:)'
 ```
 
-The script runs `xcodebuild test` on the `Tinycast` scheme, whose test action is the `TinycastTests`
-target. Xcode's test navigator, and VS Code's Testing view with SweetPad, run the same target, down
-to a single test (editor setup: [development.md](development.md#tests-in-the-editor)).
+`-quiet` leaves the build's errors and each failed check with its values. Xcode's test navigator, and
+VS Code's Testing view with SweetPad, run the same target, down to a single test (editor setup:
+[development.md](development.md#tests-in-the-editor)). There is no test script: nothing wraps
+`xcodebuild`.
 
 The target is hosted by `Tinycast Dev.app` and reaches the app's code with `@testable import Tinycast`.
 A host launched for tests does not start the app: `TinycastLaunch` sees the test session and runs a
@@ -47,12 +56,12 @@ effect leaked into a decision.
 ### Opt-in checks
 
 A check that needs something a machine may not have stays off unless its `TINYCAST_TEST_*` variable is
-set. In a suite that is `.enabled(if:)` on the variable. `xcodebuild` passes a test process only
-variables prefixed `TEST_RUNNER_`, so `run-tests.sh` forwards each `TINYCAST_TEST_*` under that prefix:
+set. In a suite that is `.enabled(if:)` on the variable. `xcodebuild` hands a test process only the
+variables prefixed `TEST_RUNNER_`, with the prefix removed, so set it under that prefix:
 
 ```sh
-TINYCAST_TEST_APPLE_INTELLIGENCE=1 ./Scripts/run-tests.sh AppleIntelligenceTests
-TINYCAST_TEST_APP_LAUNCH=1 ./Scripts/run-tests.sh AppInstallationTests
+TEST_RUNNER_TINYCAST_TEST_APPLE_INTELLIGENCE=1 xcodebuild test -project Tinycast.xcodeproj \
+    -scheme Tinycast -destination 'platform=macOS' -only-testing:TinycastTests/AppleIntelligenceTests
 ```
 
 `AppleIntelligenceTests`' real generation still skips with a reason when the Mac cannot run the
@@ -84,8 +93,9 @@ struct CalcTests {
 - **Where.** `Tests/TinycastTests/<Area>/<Subject>Tests.swift`. `<Area>` is the feature folder of what
   it guards (`Calculator`, `Clipboard`, …) or its top-level folder (`App`, `Platform`, `Palette`,
   `DesignSystem`, `Windows`). The type has the file's name. A file extending a suite is
-  `<Suite>+<Topic>.swift`; helpers shared by suites live in `Support/`, fixture files in `Fixtures/`.
-  The target takes the whole folder, so a new file needs only `xcodegen generate`.
+  `<Suite>+<Topic>.swift`; helpers shared by suites live in `Support/`, fixture files in `Fixtures/`,
+  which the bundle carries as a folder and `Fixture.url("MCP/mcp-stub.js")` reads. The target takes
+  the whole folder, so a new file needs only `xcodegen generate`.
 - **Shape.** A `struct` of `@Test` functions is a suite; write `@Suite` only to attach a trait. Make it
   `@MainActor` when what it tests is. Per-test setup goes in `init`; a suite that must clean up is a
   `final class` with a `deinit`, or holds a helper from `Support/` that cleans up after itself.
@@ -95,10 +105,37 @@ struct CalcTests {
   input. Two parallel lists go through `zip`.
 - **Checks.** `#expect` for every check; `#require` where the rest of the test cannot run without it,
   such as unwrapping. `#expect(throws:)` for errors.
-- **Waiting.** An `async` test awaits its subject. A callback is awaited with `confirmation`. A bounded
-  wait is for a subject that itself has a deadline; never `sleep` until something is probably done.
-- **Nothing of the old harness shape:** no `@main`, no `static func main`, no pass counters, no `print`
-  on success, no `exit`.
+- **Waiting.** An `async` test awaits its subject. A callback is awaited with `confirmation`, and a
+  state change on an `@Observable` subject with `for await … in Observations { … }` under a
+  `.timeLimit`. A bounded wait is for a subject that itself has a deadline; never `sleep` until
+  something is probably done.
+- **Traits, not code paths.** An environment gate is `.enabled(if:)`, a known gap
+  `.disabled("reason")`, a hang guard `.timeLimit`. A test never reads `ProcessInfo` to decide whether
+  to run.
+
+#### Rewrite, never transliterate
+
+A suite reads as if it had been written for Swift Testing from the start. What carries over from an
+old harness is its **coverage**: every input it checked, with the same expected value. Its structure,
+helpers and state do not.
+
+- **One test per behaviour.** The old `static func` list is a hint, not a template, and the order
+  `main()` ran things in means nothing: tests are independent and run in parallel. Never one `@Test`
+  that runs everything.
+- **The check sits in the test.** Assertion helpers (`expect`, `check`, `fail`, `expectDisplay` and
+  the like) go. A helper may build an input or read a result, such as `display(of:)` above; the
+  `#expect` stays at the call site, so a failure points at the test's own line and prints the values.
+- **No mutable `static` state.** Shared, immutable fixtures are `static let`. Anything a test changes is
+  its own, created in `init`.
+- **No hand-rolled waiting.** Semaphores, `RunLoop` spins and sleeps become `async`/`await` or
+  `confirmation`.
+- **`Issue.record`** only where no expression can state the check.
+
+SwiftLint enforces this with custom rules in `.swiftlint.yml`, scoped to `Tests/TinycastTests/`, which
+fail on the old shape: `@main`, `static func main`, `exit(`, `print(`, a stored `static var`, `XCTest`,
+`DispatchSemaphore`, a `RunLoop` spin, `UserDefaults.standard`, `NSPasteboard.general`, or a declared
+`expect…`/`check…`/`fail…` helper. They have no exceptions: a suite that seems to need one is
+designed wrong.
 
 A test that passed before a change passes after it. There is no "I'll fix it next commit" and no
 disabling a test. If a change genuinely invalidates a check, the check is rewritten in the same commit
@@ -112,8 +149,12 @@ channel's real state. A test must never mutate state the machine shares with the
 
 - **Preferences:** a `UserDefaults(suiteName:)` unique to the test, removed afterwards. Never
   `UserDefaults.standard`.
-- **Files:** a UUID-named directory under `temporaryDirectory`, removed afterwards. Never the real
-  `AppPaths` or Application Support.
+- **Files:** a UUID-named directory under `temporaryDirectory`, removed afterwards: a
+  `ScratchDirectory` from `Support/`, held for as long as the test uses it. Never the real `AppPaths`
+  or Application Support.
+- **Process environment:** never `setenv`. Suites run in parallel in one process, so a variable a test
+  needs travels in what it launches, as `MCPStdioTests` passes its stub's mode. The host inherits
+  `xcodebuild`'s environment, not your shell's, so it has no shell `PATH`.
 - **Pasteboard:** `NSPasteboard.withUniqueName()`. Never `NSPasteboard.general`.
 - **Keychain:** a scope unique to the run, removed on completion.
 
@@ -133,36 +174,6 @@ add the limit boundaries and the predicate call counts.
 When a test needs to control an effect (a quit, a Trash move, a Carbon registration), the type under
 test takes that effect as an injected dependency. A test never redeclares an app type to stand in for
 it, and app code never branches on whether it is under test.
-
-### Extension harnesses
-
-The extension and Raycast-import checks have not moved to the target: they are standalone harnesses at
-the root of `Tests/`, each a `@main` executable that `run-tests.sh` compiles with `swiftc` against the
-shipped sources it guards, after the suites. They leave this repository with extensions, so they take
-fixes but are not converted.
-
-Four run at a time (`TINYCAST_TEST_JOBS` overrides it), each is killed after `TINYCAST_TEST_TIMEOUT`
-seconds (default 300), and results arrive in completion order with a failure's diagnostics replayed at
-the bottom. A `run` line's `-O` marker compiles that harness optimised (`RaycastTests` spends 47 seconds
-in scrypt at `-Onone` and one second at `-O`), and `slow` dispatches it first. Never join a compile to
-its run with `&&` in a `set -e` script: `set -e` ignores a failing command in a non-final AND-OR list
-member, so `swiftc … && /tmp/x` swallows a compile error. CI once reported success over a harness that
-had not compiled for twenty-five phases because of exactly this.
-
-`ExtensionTests` exercises `SharedArrayBuffer` allocation at command load and finite waits in
-JavaScriptCore through the shipped synchronous host bridge. Two runtime areas also have standalone
-checks:
-
-```sh
-node Scripts/raycast-runtime/modules-fixtures.mjs
-node Scripts/raycast-runtime/oauth-fixtures.mjs
-```
-
-`modules-fixtures` covers shipped CommonJS packages, exports maps, relative directories, nested
-dependencies, cycles, failed-load retries and the extension-root boundary. `oauth-fixtures` signs in
-through a stand-in for the hosted redirect page and confirms that a callback whose `state` is absent,
-repeated, stale or wrong is refused, for each redirect method and for custom `{ url }` requests. The
-runtime fixture suite runs both as well.
 
 ### What to run when
 
@@ -264,8 +275,9 @@ If a change touches anything in the right column, the suite on the left is manda
 | `MCPStdioTests`             | `MCP/Service/` against a stub server: handshake, listing, calling, and every way one can go away                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | `MCPOAuthTests`             | OAuth parsing, RFC 7636 PKCE, discovery and resource binding, loopback callback validation/cancellation, dynamic registration, supplied client credentials and their token-endpoint authentication, Keychain token rotation, concurrent refresh, the wider margin for a token lent to a CLI, redirects and one-retry 401 handling                                                                                                                                                                                                                                                            |
 
-`MCPStdioTests` copies `Tests/ai-fixtures/mcp-stub.js` into a scratch directory. The stub
-reads fd 0 synchronously and writes replies with `fs.writeSync`, so a reply reaches the pipe before
+`MCPStdioTests` copies `Fixtures/MCP/mcp-stub.js` into a scratch directory, links the `node` the
+login shell finds beside it (the locator puts a server's own folder first on its `PATH`), and launches
+it by absolute path with its mode in the connection's environment. The stub reads fd 0 synchronously and writes replies with `fs.writeSync`, so a reply reaches the pipe before
 an exit mode finishes.
 
 Completion checks use bounded state waits; exclusion windows and intentional timeout cases keep their
@@ -277,11 +289,8 @@ port. Its Keychain scope is unique to each run and removed on completion.
 
 ### Purity checks
 
-The layering rule reduces to one grep, which `./Scripts/lint.sh` runs and fails on any hit:
-
-```sh
-grep -rln 'import AppKit\|import SwiftUI\|import Cocoa' Tinycast/Features/*/Model/
-```
+The layering rule is a SwiftLint custom rule in `.swiftlint.yml`: an `import AppKit`, `SwiftUI` or
+`Cocoa` in any `Tinycast/Features/*/Model/` file is a lint error.
 
 Beyond the imports, the injected-environment half is not mechanically checkable, so it is worth an eye
 when touching a pure file:
@@ -325,8 +334,11 @@ SwiftLint owns the rules that catch defects, including the two checkable comment
 formatter, deliberately; the configuration and the measurements behind that are in
 [development.md](development.md#formatting).
 
-The script then runs the `Model/` import grep from [Purity checks](#purity-checks), and
-`Scripts/check-settings-search.js`, one check SwiftLint can't: every
+Two of its custom rules guard the architecture: a `Model/` file may not import AppKit, SwiftUI or
+Cocoa ([Purity checks](#purity-checks)), and a suite may not take the old harness shape
+([Rewrite, never transliterate](#rewrite-never-transliterate)).
+
+The script then runs `Scripts/check-settings-search.js`, one check SwiftLint can't: every
 `SettingsAnchor` must be claimed by a section, and every row in `SettingsSearchCatalog` must be
 marked by a `SettingsRowTitle`. Either gap compiles and reads fine, and fails only at runtime as a
 search result that navigates and then sits there.
@@ -362,7 +374,7 @@ Measured at the end of the 2026 refactor, on `main`. Useful as orders of magnitu
 | `SettingsPaneScanner` warm scan           | 0.014 ms (16.5 ms cold), 52 panes                                                                                                                                    |
 | Largest view / owner                      | `RootPaletteView` 662 lines, `AppCore` 284 lines                                                                                                                     |
 | Comment density                           | 1,653 of 27,289 source lines (6.1%)                                                                                                                                  |
-| The harness suite                         | ~15 s wall clock, 11-way parallel (~98 s serial, ~140 s before either)                                                                                               |
+| The old harness suite                     | ~15 s wall clock, 11-way parallel (~98 s serial, ~140 s before either)                                                                                               |
 | `PaletteSelectionTests`                   | 111,684 assertions (a tripwire: a change in this count means the row-order model moved)                                                                              |
 | `SnippetKeywordPolicy` match              | 7 µs/keystroke at 50 keywords, 59 µs at 1,000; the `lowercased()` is 0.09 µs of it                                                                                   |
 | `ClipboardStore.pinnedItems`              | 27–127 µs per uncached search, 1,000-row window; no cache earns its invalidation yet                                                                                 |

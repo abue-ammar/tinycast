@@ -438,13 +438,14 @@ between revalidation and mutation, so Tinycast does not claim that impossible gu
 An editor open over a file that changed underneath it does not reconcile silently: the save is
 rejected with the conflict above, and reopening the snippet shows what is now on disk.
 
-## Standalone harness
+## Tests
 
 Run the real model, codec, template engine, repository, keyword listener with a fake tap adapter, and
 main-actor watcher against temporary roots:
 
 ```sh
-./Scripts/run-tests.sh SnippetsTests
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+    -only-testing:TinycastTests/SnippetsTests
 ```
 
 The delivery contract's two judgements, `keywordState` and `confirmsReplacement`, are pure, so the

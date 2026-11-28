@@ -9,8 +9,8 @@ nothing carries over between sessions except what is written here, in `status.md
 Replace the standalone `swiftc` harnesses in `Tests/` with an Xcode unit-test target, `TinycastTests`,
 written in Swift Testing (`@Suite`, `@Test`, `#expect`, `#require`): Apple's own pattern for an app.
 The suites show up in Xcode's test navigator, run with `xcodebuild test`, and, for whoever installs
-the SweetPad editor extension, in VS Code's Testing view. Sessions always test through
-`./Scripts/run-tests.sh`, never through an editor.
+the SweetPad editor extension, in VS Code's Testing view. Sessions always test with `xcodebuild` in
+the terminal, never through an editor or a script.
 
 The permanent docs (`AGENTS.md`, `docs/testing.md`, `docs/development.md`, `docs/architecture.md`,
 `docs/standards.md`) already describe the **end state**. Until the migration ends, `status.md` is
@@ -20,13 +20,13 @@ what says which parts of that end state exist yet.
 
 | Group    | What it is                                                         | How it moves                                                 |
 | -------- | ------------------------------------------------------------------ | ------------------------------------------------------------ |
-| `pilot`  | 4 harnesses picked to prove the target, host, runner and fixtures  | converted by hand while the infrastructure is built          |
+| `pilot`  | 4 harnesses picked to prove the target, host, lint and fixtures    | converted by hand while the infrastructure is built          |
 | `plain`  | harnesses that compile shipped sources and nothing of their own    | converted mechanically, following `docs/testing.md`          |
 | `stub`   | harnesses that declare a stand-in for a real app type              | the stand-in clashes with the real type; needs a seam        |
 | `helper` | harnesses that compile helper-only sources the app excludes        | need the helper sources compiled into a test target          |
 | `bench`  | benchmarks: CLI tools with arguments, never part of the suite      | deleted, with their scripts and docs                         |
 | `remove` | a harness or case that does not belong in a unit-test suite        | deleted once the user approves it (see decision 13)          |
-| `skip`   | extension and Raycast harnesses                                    | not converted; they leave the repo with extensions           |
+| `skip`   | extension harnesses                                                | not converted; deleted by the Phase 0 merge (see status.md)  |
 
 ## Decisions
 
@@ -46,18 +46,20 @@ Fixed. A session never reopens one; if a decision proves wrong, stop and write i
    in `Fixtures/`.
 5. **A suite keeps its harness's name.** `CalcTests` stays `CalcTests`, so every doc that names a
    harness stays true; only `Tests/<Name>.swift` paths change.
-6. **`./Scripts/run-tests.sh` stays the one entry point.** It runs `xcodebuild test` for the target,
-   then the remaining `skip` harnesses the old way. `./Scripts/run-tests.sh CalcTests` runs one suite
-   (`-only-testing:TinycastTests/CalcTests`) or one leftover harness.
-7. **Opt-in checks keep their variable.** `TINYCAST_TEST_*` gates become `.enabled(if:)`; the runner
-   forwards each as `TEST_RUNNER_TINYCAST_TEST_*`, which `xcodebuild` passes to the test process.
-8. **Model purity moves into `./Scripts/lint.sh`.** It runs the `Model/` import grep and fails on a hit,
+6. **Apple's command runs the suites, and nothing wraps it, at any point.** Every suite:
+   `xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' -derivedDataPath build/DerivedData -quiet`; one suite: add `-only-testing:TinycastTests/<Suite>`. P1 deletes `Scripts/run-tests.sh` and
+   every call to it. From then on nothing compiles or runs an unconverted harness: it is only source
+   material for the batch that rewrites it. No shell script runs a test, ever.
+7. **Opt-in checks keep their variable.** `TINYCAST_TEST_*` gates become `.enabled(if:)`; you set
+   `TEST_RUNNER_TINYCAST_TEST_*` on the command, which `xcodebuild` passes without the prefix.
+8. **Model purity becomes a SwiftLint custom rule** in `.swiftlint.yml` (an AppKit/SwiftUI/Cocoa import
+   under `Features/*/Model/` is an error),
    because one test module no longer proves a `Model/` file compiles on its own.
 9. **Stand-ins become seams.** A `stub` harness's fake app types are deleted. The real type gains an
    injected dependency (a protocol or a closure) where the test needs to control an effect, or the
    test moves down to the pure part. Never `#if DEBUG`/`#if TESTING` branches in app code for tests.
-10. **Benchmarks are deleted.** The 8 `*PerformanceTests` files, `Scripts/benchmark-dictation.sh`,
-    their `run index` lines, the `--index` mode and every doc that runs them go. Performance is measured
+10. **Benchmarks are deleted.** The 8 `*PerformanceTests` files, `Scripts/benchmark-dictation.sh` and
+    every doc that runs or cites them go. Performance is measured
     with Instruments and the signposts (`docs/testing.md#performance-measurement`).
 11. **History survives.** Move a file with `git mv` before rewriting it.
 12. **One PR** for the whole migration, on branch `tests/swift-testing`, one commit per batch.
@@ -68,6 +70,11 @@ Fixed. A session never reopens one; if a decision proves wrong, stop and write i
     apps or the real screen; or it repeats another suite's checks. A session never deletes a candidate on
     its own: it lists it under **Removal candidates** in `status.md` with the reason, and the user
     approves or rejects it there. Approved ones are deleted in batch R2.
+14. **Rewrite, never transliterate.** A suite is designed fresh for Swift Testing; only the old
+    harness's coverage (inputs and expected values) carries over. Its helpers, `main()` structure and
+    static state are discarded (`docs/testing.md#rewrite-never-transliterate`).
+    SwiftLint custom rules scoped to `Tests/TinycastTests/` fail on the old shape, with no exceptions. Mixing the two patterns in one
+    suite is the failure this migration exists to prevent.
 
 ## How a session runs
 
@@ -76,10 +83,10 @@ Fixed. A session never reopens one; if a decision proves wrong, stop and write i
 1. `git switch tests/swift-testing && git status`. A dirty tree means the last session stopped
    mid-batch: finish that batch or `git restore` it, then continue. Never start on a dirty tree.
 2. Read `AGENTS.md`, this file, `status.md`, and `docs/testing.md#writing-a-suite`.
-3. Check the tracker against the truth: every harness still listed in `run-tests.sh` is unconverted.
+3. Check the tracker against the truth: every Swift file left at the root of `Tests/` is unconverted.
 
    ```sh
-   grep -oE '^run( [a-z-]+)* [A-Za-z+]+Tests' Scripts/run-tests.sh | awk '{print $NF}' | sort
+   ls Tests/*.swift
    ```
 
    If that list and `status.md` disagree, fix `status.md` first and say so in the commit.
@@ -91,21 +98,27 @@ For each harness in the batch:
 
 1. If the harness, or one of its cases, matches decision 13, do not convert that part: add it to
    **Removal candidates** in `status.md` and go on with the rest.
-2. Run the old harness once and note that it passes: `./Scripts/run-tests.sh <Name>`.
-3. Count its checks: the calls to its `expect…`/`check…` helpers, cases in its tables included.
-4. `git mv Tests/<Name>.swift Tests/TinycastTests/<Area>/<Name>.swift` (part files too), then rewrite
-   it by `docs/testing.md#writing-a-suite`.
-5. Delete its `run` line from `Scripts/run-tests.sh`.
-6. Run the suite: `./Scripts/run-tests.sh <Name>`. It must pass with **every** old check present:
-   same inputs, same expected values, none dropped, none loosened. A table becomes
+2. List its coverage: every input its checks use and the value each expects, table rows included.
+   This list, not the old code, is what the suite must match.
+3. `git mv Tests/<Name>.swift Tests/TinycastTests/<Area>/<Name>.swift` (part files too). Then design
+   the suite from scratch by `docs/testing.md#writing-a-suite`: decide its tests by behaviour first,
+   then carry every input from the list into them. Rewrite the file; don't edit the old one into
+   shape. The pilot suites are the examples to copy: `PasteSequenceTests` (a pure `Model/` type,
+   instance fixtures), `AppleIntelligenceTests` (tables as `@Test(arguments:)`, an opt-in gate as
+   traits) and `MCPStdioTests` (a fixture, a `ScratchDirectory`, `async` tests awaiting through
+   `Observations`, a `.timeLimit`).
+4. Run the suite: the command in decision 6 with `-only-testing:TinycastTests/<Name>`. It must pass with the **whole** coverage list
+   present: same inputs, same expected values, none dropped, none loosened. A table becomes
    `@Test(arguments:)`, not fewer cases.
-7. Fix every doc that names the old path or calls it a harness: `grep -rn '<Name>' docs AGENTS.md`.
-   In `docs/features/ai.md`, "harness" can also mean an AI coding CLI; leave those alone.
+5. Fix every doc that names the old path, calls it a harness or runs it with `run-tests.sh`:
+   `grep -rn '<Name>' docs AGENTS.md`, then `grep -n harness` in the feature docs of the batch's
+   areas, where "the harness" means these tests without naming them. A doc says "suite" or names the
+   suite, and runs one with the decision-6 command. In `docs/features/ai.md` and `mcp.md`, "harness"
+   can also mean an AI coding CLI; leave those alone.
 
 ### End
 
-1. `xcodegen generate` if files moved. `./Scripts/run-tests.sh` (the whole suite) and
-   `./Scripts/lint.sh` both pass.
+1. `xcodegen generate` if files moved. All suites (decision 6) and `./Scripts/lint.sh` pass.
 2. Update `status.md`: tick the batch's rows, set its status to `done` with the commit, mark the next
    batch **next**, add any decision, removal candidate or open problem.
 3. One commit for the batch, tracker included: `Migrate <batch title> to Swift Testing`. No push.
@@ -155,8 +168,10 @@ To review the batch the other tool just committed:
 
 ```text
 Review the last commit of the Swift Testing migration against docs/swift-testing/README.md and
-docs/testing.md#writing-a-suite: every old check kept with the same values, isolation rules followed,
-docs updated. Report problems; change nothing.
+docs/testing.md#writing-a-suite. Check that every old input is still checked with the same expected
+value, that each suite reads as written for Swift Testing from scratch (no old helpers, main()-shaped
+tests or static state), that isolation rules hold, and that docs are updated. Report problems; change
+nothing.
 ```
 
 After a session that added **Removal candidates** or **Open problems**, answer them in `status.md`
@@ -184,7 +199,8 @@ starts a batch while an open problem it depends on is unanswered.
 ## Definition of done for the migration
 
 - `status.md` shows every batch done, and every removal candidate approved and deleted or kept.
-- `run-tests.sh` lists only `skip` harnesses; `--index` and `run index` are gone.
-- `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a Debug build with no new warnings all pass.
+- `Tests/` holds only `TinycastTests/`; no script compiles or runs a test; `git grep -n run-tests`
+  finds nothing.
+- All suites, `./Scripts/lint.sh` and a Debug build with no new warnings pass.
 - The tests appear in Xcode's test navigator, and in VS Code's Testing view with SweetPad.
 - Last commit: delete `docs/swift-testing/` and the `AGENTS.md` pointer.

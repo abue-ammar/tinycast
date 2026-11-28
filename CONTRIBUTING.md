@@ -39,7 +39,7 @@ Read the [Code of Conduct](CODE_OF_CONDUCT.md) too. It covers notifications, spa
   approved issue.
 - The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes: tests, lint,
   purity, a clean build. Engine changes come with new cases. There is no CI, so **run
-  `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally**.
+  the tests (`xcodebuild test`), `./Scripts/lint.sh` and a build locally**.
 - Leak-tested and memory-measured. Numbers in the PR.
 - You actually used the app, on your path and the ones next to it.
 - Rebased on `main`, squashed into logical commits.

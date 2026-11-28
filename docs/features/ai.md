@@ -797,8 +797,8 @@ window, and every chat action either surface sends) is the nineteenth feature co
   `AIChatSurfacesState`'s one-live-place rule),
   and `AppleIntelligenceTests` (status copy, snapshot deltas,
   transcript assembly and error mapping, plus an optional real generation enabled with
-  `TINYCAST_TEST_APPLE_INTELLIGENCE=1` when this Mac can run one), all in
-  `run-tests.sh`.
+  `TINYCAST_TEST_APPLE_INTELLIGENCE=1` when this Mac can run one), all in the `TinycastTests`
+  target.
 
 ## Installed commands
 

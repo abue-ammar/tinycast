@@ -126,7 +126,7 @@ Xcode's test navigator lists and runs the suites with no setup. VS Code's Swift 
 tests only in SwiftPM packages, so for an Xcode target its Testing view needs SweetPad, an editor
 extension that drives `xcodebuild` (recommended in `.vscode/extensions.json`; the app itself depends on
 nothing). Select the `Tinycast` scheme in it. Without it, run a suite with
-`./Scripts/run-tests.sh <Suite>`.
+`xcodebuild test … -only-testing:TinycastTests/<Suite>` ([testing.md](testing.md#the-test-suite)).
 
 ## Linting
 

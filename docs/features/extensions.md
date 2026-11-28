@@ -859,8 +859,7 @@ Both receive `props.arguments` and `props.launchType`. A `no-view` command decla
 Launch contexts also carry JSON `props.launchContext`.
 
 Measured against the 37 extensions installed in a real Raycast on the development machine: **32
-extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` and
-`Scripts/run-tests.sh ExtensionTests` reproduce that measurement.
+extensions / 114 of 147 view commands** boot and render. `Scripts/raycast-runtime/test.mjs <dir>` reproduces that measurement.
 
 ## What isn't supported yet
 
@@ -892,10 +891,6 @@ node fixtures.mjs
 
 # 2. any prebuilt extension, printing the render tree it produces
 node test.mjs ~/.config/raycast/extensions/<uuid> [command]
-
-# 3. the real Swift engine, against JavaScriptCore
-Scripts/run-tests.sh ExtensionTests
-"${TMPDIR:-/tmp}"/tinycast-harness/ExtensionTests ~/Library/Application\ Support/com.abueammar.tinycast.dev/extensions/<name> [command]
 ```
 
 `ExtensionTests` compiles the real engine sources; there is no copy to keep in sync. `EXT_TEST_VERBOSE=1`
@@ -906,17 +901,11 @@ harnesses read the same three variables.
 
 For OpenCodex Usage, the native harness also exercises the actual menu renderer, three Refresh
 round-trips and the Provider Usage action, with live fetches but a recorded `launchCommand`. Harness
-status items stay hidden so a test run cannot interfere with the running app's menus:
-
-```sh
-EXT_TEST_MENU_BAR=1 "${TMPDIR:-/tmp}/tinycast-harness/ExtensionTests" \
-  "$HOME/Library/Application Support/com.abueammar.tinycast.dev/extensions/opencodex-usage" usage-menu-bar
-```
+status items stay hidden so a test run cannot interfere with the running app's menus.
 
 ### Debugging a failing extension
 
-1. Run it through `node test.mjs <dir>` for a full render-tree dump, then through `/tmp/ExtensionTests <dir>`
-   to confirm the same behaviour under JavaScriptCore.
+1. Run it through `node test.mjs <dir>` for a full render-tree dump.
 2. `EXT_TEST_VERBOSE=1` surfaces the extension's `console.error`, which is usually where an extension
    explains itself.
 3. Build the runtime with `--dev` to get unminified React errors instead of `Minified React error #130`.

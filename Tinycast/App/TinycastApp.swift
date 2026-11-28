@@ -3,6 +3,10 @@ import SwiftUI
 @main
 enum TinycastLaunch {
     static func main() {
+        // A test host starts no app, so no suite ever runs under its hotkeys, monitors or prefs.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else {
+            return NSApplication.shared.run()
+        }
         LaunchedExecutable.pin()
         AppSettings.pinLanguage()
         switch ProcessRole.current {

@@ -103,10 +103,38 @@ targets:
         LD_RUNPATH_SEARCH_PATHS:
           - "$(inherited)"
           - "@executable_path/../Frameworks"
+        # Pinned: Debug's product name and release.yml's PRODUCT_NAME would rename the module.
+        PRODUCT_MODULE_NAME: Tinycast
       configs:
         # Debug is its own channel, so a local build never corrupts the installed app's state.
         Debug:
           PRODUCT_NAME: Tinycast Dev
+    scheme:
+      testTargets:
+        - TinycastTests
+
+  TinycastTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/TinycastTests
+        excludes:
+          - Fixtures
+      # A folder reference keeps fixtures at their own paths inside the bundle.
+      - path: Tests/TinycastTests/Fixtures
+        type: folder
+        buildPhase: resources
+    dependencies:
+      - target: Tinycast
+    configFiles:
+      Debug: Config/Tinycast.xcconfig
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: "$(TINYCAST_BUNDLE_IDENTIFIER).tests"
+        GENERATE_INFOPLIST_FILE: YES
+        # Explicit: the host is named after Debug's product, not after its target.
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Tinycast Dev.app/Contents/MacOS/Tinycast Dev"
+        BUNDLE_LOADER: "$(TEST_HOST)"
 
   ClipboardTextHelper:
     type: tool

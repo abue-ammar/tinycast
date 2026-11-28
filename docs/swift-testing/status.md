@@ -28,6 +28,7 @@ the old harness.
 | B10   | Settings, backup, sync, updates        | Codex       | build | 8    | todo   |
 | B11   | AI providers                           | Codex       | build | 5    | todo   |
 | B12   | AI chat and MCP                        | Codex       | build | 3    | todo   |
+| B13   | Raycast import                         | Codex       | build | 2    | todo   |
 | H     | Helper-only sources                    | Claude Code | plan  | 2    | todo   |
 | S1    | Stand-ins: small                       | Claude Code | plan  | 6    | todo   |
 | S2    | Stand-ins: hotkeys                     | Claude Code | plan  | 2    | todo   |
@@ -44,33 +45,49 @@ builds.
 
 Infrastructure, in this order. Each item is a decision in the brief; this list is the work.
 
-- [ ] `project.yml`: `TinycastTests` (`bundle.unit-test`, sources `Tests/TinycastTests`, depends on
+- [x] `project.yml`: `TinycastTests` (`bundle.unit-test`, sources `Tests/TinycastTests`, depends on
       `Tinycast`, hosted by the Debug app); `PRODUCT_MODULE_NAME: Tinycast` on the app; the `Tinycast`
       scheme's test action runs it. `xcodegen generate`.
-- [ ] Test host: `TinycastLaunch.main()` runs a bare `NSApplication` when hosting tests.
-- [ ] Signing works for the hosted bundle with the local self-signed identity and with
+- [x] Test host: `TinycastLaunch.main()` runs a bare `NSApplication` when hosting tests.
+      Done: the host sees `XCTestConfigurationFilePath` and runs `NSApplication.shared.run()`, before
+      `pinLanguage()` can write the dev app's prefs.
+- [x] Signing works for the hosted bundle with the local self-signed identity and with
       `CODE_SIGNING_ALLOWED=NO`; write down whichever the runner needs.
-- [ ] `Tests/TinycastTests/Support/`: the fixture-loading and scratch-directory helpers
+      Both pass. The decision-6 command signs with `Tinycast Self-Signed` like any local build, so it
+      never replaces the signed dev app in `build/DerivedData` with an unsigned one.
+- [x] `Tests/TinycastTests/Support/`: the fixture-loading and scratch-directory helpers
       `docs/testing.md#writing-a-suite` names.
-- [ ] `Scripts/run-tests.sh`: `xcodebuild test` first, then the remaining harnesses; one name runs
-      one suite or one harness; `TINYCAST_TEST_*` forwarded as `TEST_RUNNER_TINYCAST_TEST_*`.
-- [ ] `Scripts/lint.sh`: the `Model/` purity grep.
-- [ ] `Scripts/sync-lsp.sh` and the VS Code build task index the test target (`build-for-testing`);
-      `--index` stays until R1 removes it.
+      `ScratchDirectory` (removed in `deinit`) and `Fixture.url(_:)` (the bundle's `Fixtures/` folder).
+- [x] Delete `Scripts/run-tests.sh`, its call in `Scripts/sync-lsp.sh`, and any task or doc that runs
+      it. Unconverted harnesses stay in `Tests/` uncompiled, as source for their batch.
+- [x] `.swiftlint.yml` custom rules, no new script: the `Model/` purity rule, and the old-shape rules
+      from `docs/testing.md#rewrite-never-transliterate` scoped to `Tests/TinycastTests/`. Prove each
+      fails on a deliberately bad file, then delete that file. Remove `Scripts/check-tests.sh` and
+      its call in `lint.sh`.
+      Proved: probe files under `Model/` and `Tests/TinycastTests/` hit all 11 rules, comments and
+      strings hit none; both probes deleted, lint clean.
+- [x] `Scripts/sync-lsp.sh` and the VS Code build task index the test target (`build-for-testing`).
 - [ ] Xcode's test navigator lists and runs the suites, down to one test.
+      `-enumerate-tests` lists every test and `-only-testing:'…/newCopyEndsTheWalk()'` runs one;
+      the navigator itself is for the user to look at.
 - [ ] Add SweetPad to `.vscode/extensions.json`'s recommendations. The user confirms it lists and runs
       the suites in VS Code's Testing view; write any setting it needs into `.vscode/settings.json`
       and `docs/development.md#tests-in-the-editor`.
-- [ ] Measure one full `./Scripts/run-tests.sh` and write the wall time here.
-- [ ] Confirm `docs/testing.md#writing-a-suite` matches what the pilot found; fix it, not the code,
+      Recommended; the Testing view awaits the user's check.
+- [x] Measure one full run of the decision-6 command and write the wall time here.
+      69 s cold (first build of the app and target), 5 s warm, 3 suites.
+- [x] Confirm `docs/testing.md#writing-a-suite` matches what the pilot found; fix it, not the code,
       where they differ.
+- [ ] The 4 pilot suites are the reference every later batch copies: each is a from-scratch design,
+      not a converted harness. Name them in the brief's Work section as the examples to follow.
+      Three are named there; FormInputTests joins once its open problem is settled.
 
 Suites:
 
-- [ ] PasteSequenceTests · 159 · pure `Model/`
-- [ ] FormInputTests · 305 · AppKit on the main actor
-- [ ] MCPStdioTests · 172 · fixtures (`Tests/ai-fixtures/mcp-stub.js`)
-- [ ] AppleIntelligenceTests · 180 · opt-in `TINYCAST_TEST_APPLE_INTELLIGENCE`
+- [x] PasteSequenceTests · 159 · pure `Model/`
+- [ ] FormInputTests · 305 · AppKit on the main actor · blocked, see Open problems
+- [x] MCPStdioTests · 172 · fixtures (`Tests/ai-fixtures/mcp-stub.js`)
+- [x] AppleIntelligenceTests · 180 · opt-in `TINYCAST_TEST_APPLE_INTELLIGENCE`
 
 ## T · Triage
 
@@ -89,8 +106,7 @@ Then stop: the user answers each candidate before R2.
 
 ## R1 · Remove the benchmarks
 
-Delete the 8 files below, their `run index` lines, `--index` in `run-tests.sh` and `sync-lsp.sh`,
-`Scripts/benchmark-dictation.sh`, and every doc line that runs or cites them (`grep -rn
+Delete the 8 files below, `Scripts/benchmark-dictation.sh`, and every doc line that runs or cites them (`grep -rn
 'PerformanceTests\|benchmark-dictation' docs AGENTS.md`). Keep measured numbers in `docs/` that
 stand on their own; drop the command that produced them.
 
@@ -105,8 +121,8 @@ stand on their own; drop the command that produced them.
 
 ## R2 · Remove approved candidates
 
-Delete every **Removal candidates** row marked `approved`: the harness, or the named cases, its `run`
-line, and doc lines that cite it. Move rows marked `keep` back to their batch. Candidates found later,
+Delete every **Removal candidates** row marked `approved`: the harness, or the named cases, and doc
+lines that cite it. Move rows marked `keep` back to their batch. Candidates found later,
 during a batch, are removed in F.
 
 ## B1 · Launcher, search, files
@@ -228,6 +244,15 @@ during a batch, are removed in F.
 - [ ] MCPTests · 326
 - [ ] MCPOAuthTests · 632 · fixtures; fixed ports 4962/4963: `.serialized`
 
+## B13 · Raycast import
+
+Not extensions: these guard "Import from Raycast" (`.rayconfig`), which ships after Phase 0, and its
+one-release clean-up. The second exists only once Phase 0 has merged.
+
+- [ ] RaycastTests · 393 · scrypt takes ~47 s at `-Onone`: needs a cheaper derive in the test, or an
+      opt-in gate for the slow case
+- [ ] RaycastExtensionsMigrationTests · 99 · arrives with Phase 0
+
 ## H · Helper-only sources
 
 The app target excludes these sources, so `@testable import Tinycast` cannot reach them. Decide how a
@@ -239,7 +264,10 @@ itself), record it under Decisions, then convert.
 
 ## S1 · Stand-ins: small
 
-The number is how many app types the harness redeclares.
+The number is how many app types the harness redeclares. Every S batch's plan shows the app-code
+change before anything is written: the smallest seam that works, injected at `init` with the shipped
+behaviour as its default, never on a hot path (search, ranking, calculation, drawing). The batch then
+exercises the changed feature by hand in the Debug app and says so in its commit.
 
 - [ ] PaletteMenuClickTests · 267 · 3
 - [ ] MicrophoneMuteTests · 192 · 1
@@ -274,23 +302,31 @@ The number is how many app types the harness redeclares.
 
 ## F · Final
 
-- [ ] `run-tests.sh` lists only the harnesses below.
+- [ ] `Tests/` holds only `TinycastTests/`, and `git grep -n run-tests` finds nothing but this folder.
 - [ ] Full suite, lint and a Debug build with no new warnings pass.
+- [ ] Release build, compared with `main` built the same way (`docs/testing.md#build-and-size-checks`):
+      binary growth under 2%; no `.xctest` or test file inside the `.app`; `ENABLE_TESTABILITY` is
+      `NO` for Release; the test-host check never fires outside a test run.
+- [ ] Launch and palette-open time no worse than `main`, read from the `AppCore.start` and
+      `PaletteWindowController.show` signposts in Instruments (three runs each, median).
+- [ ] Manual regression sweep (`docs/testing.md#manual-regression-sweep`) on the Release build: Core,
+      plus every feature whose app code an S or H batch changed.
 - [ ] Suites listed and runnable in Xcode's test navigator and, with SweetPad, in VS Code.
 - [ ] Removal candidates approved since R2 are deleted.
-- [ ] `grep -rn 'harness' docs AGENTS.md CONTRIBUTING.md` shows only the extension harnesses and AI
-      CLI harnesses.
+- [ ] `git grep -n harness -- docs AGENTS.md CONTRIBUTING.md` finds only AI coding-CLI harnesses
+      (`ai.md`, `mcp.md`) and the old baseline row in `testing.md`.
 - [ ] Delete `docs/swift-testing/` and the pointer in `AGENTS.md`.
 
 ## Not migrated
 
-They stay on the old runner and leave the repo with extensions.
+Deleted, not converted: `ext/0-remove-raycast` (Phase 0) removes every one of them. Merge Phase 0
+into `main`, then `main` into this branch, **before B1**: Phase 0 also edits about 15 harnesses these
+batches convert. F cannot start until it has merged.
 
 ExtensionTests (3,153, with `ExtensionTests+MenuBar` and `ExtensionFetchTests`), ExtensionStoreTests,
 ExtensionFormTests (with `ExtensionListKeyTests`), ExtensionAccessoryTests, ExtensionIconTests,
 ExtensionCleanupTests, ExtensionRefreshTests, ExtensionMetadataTests, ExtensionVersionTests,
-ExtensionSignInTests, ExtensionImageSizeTests, SymbolsTests (`Extensions/Service/SymbolCatalog`),
-RaycastTests.
+ExtensionSignInTests, ExtensionImageSizeTests, SymbolsTests (`Extensions/Service/SymbolCatalog`).
 
 ## Removal candidates
 
@@ -303,10 +339,25 @@ One row per candidate. The user writes `approved` or `keep` in the last column.
 
 Decisions made during the migration, beyond the brief's. Newest last.
 
-- (none yet)
+- P1: the test host is detected by `XCTestConfigurationFilePath`, which Xcode 27 sets for Swift
+  Testing too; it is the one branch app code takes on being under test, as decision 3 requires.
+- P1: a test never calls `setenv`. `MCPStdioTests` launches its stub by absolute path and passes the
+  mode in `MCPSecretStore.Secrets(environment:)`, so its tests run in parallel (user's choice (a)).
+- P1: the host inherits `xcodebuild`'s environment, with no shell `PATH`; a stub run by `env node`
+  gets the login shell's `node` linked beside it, which the locator puts first.
 
 ## Open problems
 
 What a session could not settle. The user answers these; a session never guesses past one.
 
-- (none)
+- **FormInputTests (P1): the text area's undo group never closes in the test host.** Its 3 undo
+  checks (undo restores the typed text, undo reaches the binding, placeholder insertion undoable
+  after a menu takes focus) see the typed text and the programmatic insertion as one undo step.
+  `FormTextArea.InputView` owns a private `UndoManager` with `groupsByEvent`; under the host's running
+  `NSApp` its group stays at level 1 across a run-loop turn, 50 ms of awaiting and a posted
+  `.applicationDefined` event AppKit dispatched. The old harness never ran `NSApp`, so a run-loop pass
+  closed it. Ending the group by hand (`endUndoGrouping`) crashes the host in a later layout;
+  `breakUndoCoalescing()` does not separate the steps. Every other check passed in a from-scratch,
+  wait-free rewrite (SwiftUI applies a binding on `layoutSubtreeIfNeeded()`). The harness is back in
+  `Tests/` unconverted. Needed: how a suite should end a simulated keystroke's undo group, or a seam
+  on `FormTextArea` (an injected `UndoManager`, for example) that the test can drive.

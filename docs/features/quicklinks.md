@@ -295,8 +295,9 @@ path through `openWithPlatforms` when the field is a platform id. Invalid entrie
 entries merge into the existing library the same way **Import Quicklinks** does. Importing at least
 one turns the feature on; the switch grants no permission class.
 
-## Standalone harness
+## Tests
 
 ```sh
-./Scripts/run-tests.sh QuicklinkTests
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+    -only-testing:TinycastTests/QuicklinkTests
 ```

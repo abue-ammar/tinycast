@@ -50,8 +50,7 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 | `Tinycast/Features/`     | one folder per feature; larger ones split `Model/` `Service/` `UI/` `Settings/`         |
 | `Tinycast/Migrations/`   | one-shot repairs of state an older release left behind, each deleted after one release  |
 | `Tests/TinycastTests/`   | the `TinycastTests` target: Swift Testing suites, one per file, mirroring `Tinycast/`   |
-| `Tests/`                 | at its root, the extension harnesses, until extensions leave this repo                  |
-| `Scripts/`               | every executable script: test runner, data generators, packaging, linting, editor setup |
+| `Scripts/`               | every executable script: data generators, packaging, linting, editor setup              |
 
 | Read it before you                                         | Doc                                                          |
 | ---------------------------------------------------------- | ------------------------------------------------------------ |
@@ -155,7 +154,8 @@ feature's doc, under its own `## Invariants`.
 - **Tests are Swift Testing suites** (`@Suite`, `@Test`, `#expect`) in the `TinycastTests` target, hosted
   by the Debug app. They run inside a real app process, so a suite never touches state the machine
   shares: no `UserDefaults.standard`, `NSPasteboard.general` or real `AppPaths`; scratch state is the
-  suite's own. See [testing.md](docs/testing.md#writing-a-suite).
+  suite's own. A converted harness is rewritten, never transliterated: its coverage carries over, its
+  helpers, structure and state do not. See [testing.md](docs/testing.md#writing-a-suite).
 - **XcodeGen owns the project.** `Tinycast.xcodeproj` is committed but generated from `project.yml`;
   after editing it, run `xcodegen generate` and commit both. No SwiftPM, and never `Bundle.module`.
 
@@ -163,7 +163,7 @@ feature's doc, under its own `## Invariants`.
 
 Each item is explained in [testing.md](docs/testing.md#definition-of-done).
 
-- `./Scripts/run-tests.sh` passes.
+- The suites pass: `xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS'`.
 - The Debug build compiles with **no new warnings**.
-- `./Scripts/lint.sh` is clean, which includes the `Model/` purity check.
+- `./Scripts/lint.sh` is clean, which includes the `Model/` purity check and the test-shape check.
 - Any doc your change made wrong is fixed in the same commit.
