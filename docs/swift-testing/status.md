@@ -17,21 +17,22 @@ the old harness.
 | R1    | Remove the benchmarks                  | Codex       | build | 8    | next   |
 | R2    | Remove approved candidates             | Codex       | build | –    | todo   |
 | R3    | Remove the extension harnesses         | Codex       | build | 13   | todo   |
+| P2    | Peer fixtures for self-run harnesses   | Claude Code | plan  | 3    | todo   |
 | B1    | Launcher, search, files                | Codex       | build | 13   | todo   |
 | B2    | Calculator, calendar, dictionary       | Codex       | build | 3    | todo   |
 | B3    | Clipboard, emoji                       | Codex       | build | 6    | todo   |
-| B4    | Palette and design system              | Codex       | build | 10   | todo   |
+| B4    | Palette and design system              | Codex       | build | 9    | todo   |
 | B5    | Palette input                          | Codex       | build | 9    | todo   |
-| B6    | Dictation, hotkeys, platform           | Codex       | build | 10   | todo   |
+| B6    | Dictation, hotkeys, platform           | Codex       | build | 9    | todo   |
 | B7    | Window management                      | Codex       | build | 8    | todo   |
 | B8    | Commands, links, quick actions         | Codex       | build | 6    | todo   |
 | B9    | Notes                                  | Codex       | build | 2    | todo   |
 | B10   | Settings, backup, sync, updates        | Codex       | build | 8    | todo   |
-| B11   | AI providers                           | Codex       | build | 5    | todo   |
+| B11   | AI providers                           | Codex       | build | 4    | todo   |
 | B12   | AI chat and MCP                        | Codex       | build | 3    | todo   |
 | B13   | Raycast import                         | Codex       | build | 1    | todo   |
 | H     | Helper-only sources                    | Claude Code | plan  | 2    | todo   |
-| S1    | Stand-ins: small                       | Claude Code | plan  | 6    | todo   |
+| S1    | Stand-ins: small                       | Claude Code | plan  | 5    | todo   |
 | S2    | Stand-ins: hotkeys                     | Claude Code | plan  | 2    | todo   |
 | S3    | Stand-ins: snippets, dictation field   | Claude Code | plan  | 2    | todo   |
 | S4    | Stand-ins: clipboard, custom commands  | Claude Code | plan  | 2    | todo   |
@@ -130,6 +131,18 @@ Delete every **Removal candidates** row marked `approved`: the harness, or the n
 lines that cite it. Move rows marked `keep` back to their batch. Candidates found later,
 during a batch, are removed in F.
 
+## P2 · Peer fixtures for self-run harnesses
+
+Each of these runs its own executable as a peer process; hosted, that executable is the Debug app.
+Replace every self-run with a peer script in `Fixtures/`, as `MCPStdioTests` does with
+`mcp-stub.js`, launched by absolute path with its mode in its own environment. Localization reads the
+app bundle's string tables per locale, with no relaunch. No app code changes.
+
+- [ ] LocalizedResourceTests · 95 · one relaunch per language with `-AppleLanguages`
+- [ ] DictationWorkerTests · 270 · a fake worker speaking `DictationWire`, plus a competing downloader
+- [ ] AIProviderTests · 2,787 · a fake Codex app-server over stdio (`TINYCAST_TEST_CODEX_ROOT` is
+      how it finds its peer, not an opt-in gate); fixtures
+
 ## B1 · Launcher, search, files
 
 - [ ] FuzzTests · 556 · ran at `-O`; check its time at `-Onone`
@@ -166,7 +179,6 @@ during a batch, are removed in F.
 - [ ] PaletteSelectionTests · 420 · its 111,684-assertion count is a tripwire; keep it observable
 - [ ] AppearanceTests · 128
 - [ ] LanguageTests · 245
-- [ ] LocalizedResourceTests · 95 · relaunches its own executable per language: see Open problems
 - [ ] InterfaceSizeTests · 365 · also compiles `Extensions/Model/ExtensionFormMetrics.swift`
 - [ ] PalettePlacementTests · 386
 - [ ] ScrollRevealTests · 77
@@ -191,7 +203,6 @@ during a batch, are removed in F.
 - [ ] DictationTests · 102
 - [ ] DictationCueTests · 42
 - [ ] DictationVolumeTests · 196
-- [ ] DictationWorkerTests · 270 · runs its own executable as the worker peer: see Open problems
 - [ ] PipeFramingTests · 112
 - [ ] SharedStateMirrorTests · 97
 - [ ] HotKeyTests · 748
@@ -237,8 +248,6 @@ during a batch, are removed in F.
 
 ## B11 · AI providers
 
-- [ ] AIProviderTests · 2,787 · fixtures; `TINYCAST_TEST_CODEX_ROOT` is no gate: it runs its own
-      executable as a fake Codex peer, see Open problems
 - [ ] PlanUsageTests · 393
 - [ ] AIResponsesTests · 378
 - [ ] ChatMarkdownTests · 295
@@ -277,7 +286,6 @@ exercises the changed feature by hand in the Debug app and says so in its commit
 - [ ] PaletteMenuClickTests · 267 · 3
 - [ ] MicrophoneMuteTests · 192 · 1
 - [ ] OpenCodeMCPTests · 242 · 1
-- [ ] RelaunchTests · 211 · 2
 - [ ] LauncherSettingsFileTests · 265 · 3
 - [ ] PasteboardTests · 402 · 3
 
@@ -303,8 +311,8 @@ exercises the changed feature by hand in the Debug app and says so in its commit
 
 ## S6 · Stand-ins: app installation
 
-- [ ] AppInstallationTests · 643 · 23; opt-in `TINYCAST_TEST_APP_LAUNCH` (a removal candidate);
-      `--localized-index` relaunches its own executable per language
+- [ ] AppInstallationTests · 643 · 23; its `testLaunch` checks are removed in R2 (approved);
+      `--localized-index` relaunches its own executable per language: solve it as P2 does
 
 ## F · Final
 
@@ -359,8 +367,8 @@ One row per candidate. The user writes `approved` or `keep` in the last column.
 | Harness or case | Reason (decision 13) | Found in | Answer |
 | --------------- | -------------------- | -------- | ------ |
 | FormInputTests: undo restores the text typed before a programmatic insertion; that undo reaches the binding; a placeholder insertion stays undoable after a menu takes focus | They depend on AppKit's event-loop undo grouping, which the test host doesn't reproduce: under its running `NSApp` the group stays open across run-loop passes and events. Removed in P1; now in the manual sweep's Snippets section | P1 | approved |
-| RelaunchTests (whole harness) | Drives real apps: it ad-hoc signs a copy of its own executable as a fixture app, launches it and reopens it through LaunchServices (`/usr/bin/open`), and waits up to 6 s of wall clock for each process event. The fixture's role is the harness's own `main()`; hosted by the app, it would need a test branch in app code, which decision 9 forbids. If approved, quit-and-relaunch belongs in the manual sweep | T | |
-| AppInstallationTests: the 26 launch checks in `testLaunch` (opt-in `TINYCAST_TEST_APP_LAUNCH`), from "the first selected installation launches" to "fixture processes are cleaned up" | Drives real apps: it compiles a fixture app with `swiftc` at test time, launches, reopens, quits and force-quits it through LaunchServices, depends on workspace notifications a session may not deliver (it already skips two checks without them), and asserts a 5 s wall-clock grace period. The index, file-favourite, language-override and localized-index checks stay in S6. `keep` means an `.enabled(if:)` gate (decision 7) | T | |
+| RelaunchTests (whole harness) | Drives real apps: it ad-hoc signs a copy of its own executable as a fixture app, launches it and reopens it through LaunchServices (`/usr/bin/open`), and waits up to 6 s of wall clock for each process event. The fixture's role is the harness's own `main()`; hosted by the app, it would need a test branch in app code, which decision 9 forbids. If approved, quit-and-relaunch belongs in the manual sweep | T | approved |
+| AppInstallationTests: the 26 launch checks in `testLaunch` (opt-in `TINYCAST_TEST_APP_LAUNCH`), from "the first selected installation launches" to "fixture processes are cleaned up" | Drives real apps: it compiles a fixture app with `swiftc` at test time, launches, reopens, quits and force-quits it through LaunchServices, depends on workspace notifications a session may not deliver (it already skips two checks without them), and asserts a 5 s wall-clock grace period. The index, file-favourite, language-override and localized-index checks stay in S6. `keep` means an `.enabled(if:)` gate (decision 7) | T | approved |
 
 ## Decisions log
 
@@ -374,17 +382,13 @@ Decisions made during the migration, beyond the brief's. Newest last.
   gets the login shell's `node` linked beside it, which the locator puts first.
 - P1: a suite never waits for SwiftUI. `layoutSubtreeIfNeeded()` on the host applies a changed binding
   to its AppKit view synchronously (`FormInputTests`).
+- T: harnesses that run their own executable as a peer get peer scripts in `Fixtures/`, designed in
+  plan batch P2 (user's choice). Localization reads the bundle's tables per locale, no relaunch.
+- T: RelaunchTests and AppInstallationTests' `testLaunch` checks are removed (user approved); R2
+  deletes them and adds quit-and-relaunch and app launch to the manual sweep.
 
 ## Open problems
 
 What a session could not settle. The user answers these; a session never guesses past one.
 
-- **T: harnesses that run their own executable as a peer.** Hosted, `CommandLine.arguments[0]` and
-  `Bundle.main.executableURL` are the Debug app, which starts as a bare test host (decision 3), not
-  the harness's peer `main()`. Three build-mode batches hit this:
-  `AIProviderTests` (B11, a fake Codex app-server over stdio), `DictationWorkerTests` (B6, a fake
-  worker speaking `DictationWire`, plus a competing downloader), and `LocalizedResourceTests` (B4,
-  one relaunch per language with `-AppleLanguages`). `AppInstallationTests`' `--localized-index`
-  does the same, but S6 is a plan batch. Options: (a) a peer script in `Fixtures/`, as
-  `MCPStdioTests` does with `mcp-stub.js`, and for localization resolve against the host bundle's
-  tables per locale without a relaunch; (b) move these three to a plan batch. Answer before B4.
+- (none)
