@@ -137,6 +137,12 @@ final class LauncherCoordinator {
             core.appleShortcutCoordinator.run(id: id)
             return
         }
+        // Before the palette hides: a view command opens its screen over this one.
+        if app.kind == .extensionCommand {
+            guard let id = ExtensionCommandID(entryID: app.id) else { return }
+            core.extensionCoordinator.run(id)
+            return
+        }
         let previous = windowController.previousTarget
         paletteCoordinator.hidePalette(restoreFocus: false)
         switch app.kind {
@@ -149,7 +155,7 @@ final class LauncherCoordinator {
             guard let snippetID = StoredSnippet.id(fromEntryID: app.id) else { return }
             snippetCoordinator.expandSnippet(id: snippetID, target: previous)
         case .command, .quickAction, .customCommand, .systemAction, .windowCommand, .windowLayout,
-            .windowRoom, .quicklink, .appleShortcut, .meeting:
+            .windowRoom, .quicklink, .appleShortcut, .extensionCommand, .meeting:
             break  // handled above
         }
     }

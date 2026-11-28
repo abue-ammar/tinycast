@@ -338,7 +338,10 @@ enum SettingsSearchCatalog {
 
     private static let extensions: [SettingsSearchEntry] = [
         .init(pane: .extensions, keywords: ["plugins", "add-ons", "store"]),
-        .init(.extensionsExtensions, "Enable Extensions", keywords: ["plugins", "add-ons"])
+        .init(.extensionsExtensions, "Enable Extensions", keywords: ["plugins", "add-ons"]),
+        .init(
+            group: .extensionsCommands, "Aliases and shortcuts",
+            keywords: ["alias", "hotkey", "hide"])
     ]
 
     private static let quickActions: [SettingsSearchEntry] = [

@@ -6,6 +6,8 @@ enum RaycastExtensionsMigration {
         "extensionsShowInLauncher", "extensionPackageManager",
         "extensionCustomSearchPaths", "extensionAppearances", "boundExtensionCommandEntryIDs"
     ]
+    /// Every launcher key the runtime wrote; native extension commands use `extension-command:`.
+    static let retiredEntryPrefix = "extension:"
     static let retiredFiles = [
         "extensions", "extension-data", "extension-support", "extension-commands.json",
         "extension-versions.json"
@@ -33,8 +35,8 @@ enum RaycastExtensionsMigration {
     }
 
     static func isRetiredDefault(_ key: String) -> Bool {
-        retiredDefaults.contains(key) || key.hasPrefix("hotkey.extensionCommand.")
-            || (key.hasPrefix("NSStatusItem ") && key.contains(" extension:"))
+        retiredDefaults.contains(key) || key.hasPrefix("hotkey.extensionCommand." + retiredEntryPrefix)
+            || (key.hasPrefix("NSStatusItem ") && key.contains(" " + retiredEntryPrefix))
     }
 
     nonisolated static func removeFiles(in supportDirectory: URL) {
@@ -45,12 +47,17 @@ enum RaycastExtensionsMigration {
 
     /// The launcher keys an extension command left in favorites, aliases, hidden items and ranking.
     static func retiredEntries(in lists: [String]...) -> Set<String> {
-        Set(lists.joined().filter { $0.hasPrefix("extension:") })
+        Set(lists.joined().filter { $0.hasPrefix(retiredEntryPrefix) })
     }
 
     /// Every record the runtime synced is named after its source, `extensions`, but its one setting.
     static func isRetiredRecord(_ recordName: String) -> Bool {
         recordName.hasPrefix("extensions.") || recordName == retiredSettingRecord
+    }
+
+    /// Its commands' aliases and chords rode the shared shortcut source, known only by their key.
+    static func isRetiredEntry(_ source: SyncSourceID, key: String) -> Bool {
+        source == .launcherShortcuts && key.hasPrefix(retiredEntryPrefix)
     }
 
     /// Native extensions own the `extensions` section now, so only the old runtime's key goes.

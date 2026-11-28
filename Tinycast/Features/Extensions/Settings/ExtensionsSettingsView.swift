@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ExtensionsSettingsView: View {
+    @Environment(ExtensionCoordinator.self) private var coordinator
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
@@ -15,6 +16,14 @@ struct ExtensionsSettingsView: View {
             }
             .settingsAnchor(.extensionsExtensions)
 
+            if settings.extensionsEnabled {
+                Section {
+                    LauncherItemsList(entries: coordinator.entries, query: "", isEnabled: true)
+                } header: {
+                    SettingsSectionHeader(.extensionsCommands)
+                }
+            }
+
             #if DEBUG
                 ExtensionDeveloperModeSection()
                     .disabled(!settings.extensionsEnabled)
@@ -22,6 +31,17 @@ struct ExtensionsSettingsView: View {
         }
         .formStyle(.grouped)
         .settingsScrollTarget(.extensions)
+        .releasesFocusOnOutsideClick()
+        // Bundles change while Settings sits closed, so the pane reads the manifests fresh.
+        .task(id: listingKey) { coordinator.refresh() }
+    }
+
+    private var listingKey: [Bool] {
+        #if DEBUG
+            [settings.extensionsEnabled, settings.extensionDeveloperMode]
+        #else
+            [settings.extensionsEnabled]
+        #endif
     }
 }
 

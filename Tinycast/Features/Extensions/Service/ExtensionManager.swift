@@ -49,17 +49,6 @@ final class ExtensionManager {
         }
     #endif
 
-    /// What can run now. Listing reads manifests and starts nothing.
-    func bundles() -> [ExtensionBundle] {
-        guard isEnabled else { return [] }
-        #if DEBUG
-            if isDeveloperModeOn {
-                return ExtensionBundle.scan(ExtensionBundle.developerFolder, origin: .developer)
-            }
-        #endif
-        return []
-    }
-
     /// A run the user starts stops the extension's current one; any other run gives way to it.
     @discardableResult
     func run(

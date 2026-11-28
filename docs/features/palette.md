@@ -106,6 +106,7 @@ every screen but two: the clipboard lands past its pins
 | `.snippets`            | `SnippetsScreen`            | `SnippetsList` + preview (see [snippets.md](snippets.md#search-snippets))                                |
 | `.snippetEditor`       | `SnippetEditorScreen`       | `SnippetEditorView` (see [snippets.md](snippets.md#launcher-editor))                                     |
 | `.dictionary`          | `DictionaryScreen`          | `DictionaryEntryView` (see [dictionary.md](dictionary.md))                                               |
+| `.extensionCommand`    | `ExtensionScreen`           | `ExtensionScreenView` (see [launcher.md](launcher.md#extension-commands))                                |
 
 **Tab rings the three surfaces a reader opens directly: launcher → AI chat → clipboard → launcher**,
 unless the screen claims it through `tab(at:backwards:)` (native editors walk their own fields), or

@@ -26,7 +26,8 @@ struct RaycastExtensionsMigrationTests {
             "NSStatusItem Preferred Position extension:weather/temperature"
         ]
         let kept = [
-            "hotkey.quicklink.1", "NSStatusItem Visible Item-0", "launcherAliases", "extensionsEnabled"
+            "hotkey.quicklink.1", "NSStatusItem Visible Item-0", "launcherAliases", "extensionsEnabled",
+            "boundExtensionCommandIDs", "hotkey.extensionCommand.hello/greet"
         ]
         for key in retired + kept { defaults.set(true, forKey: key) }
 
@@ -45,7 +46,8 @@ struct RaycastExtensionsMigrationTests {
 
         let settingsFile = root.appending(path: "settings.json")
         try? Data(
-            #"{"quicklinks": {"enabled": false}, "extensions": {"enabled": true, "showInLauncher": true}}"#.utf8
+            #"{"quicklinks": {"enabled": false}, "extensions": {"enabled": true, "showInLauncher": true}}"#
+                .utf8
         ).write(to: settingsFile)
 
         RaycastExtensionsMigration.run(
@@ -76,11 +78,19 @@ struct RaycastExtensionsMigrationTests {
         check("a second run changes nothing", left() == others)
 
         check(
-            "only extension commands' launcher keys are retired",
+            "only the runtime's launcher keys are retired, never a native command's",
             RaycastExtensionsMigration.retiredEntries(
-                in: ["extension:weather/forecast", "/Applications/Safari.app"],
+                in: [
+                    "extension:weather/forecast", "/Applications/Safari.app", "extension-command:hello/greet"
+                ],
                 ["quicklink:1", "extension:weather/forecast", "extension:notes/new"])
                 == ["extension:weather/forecast", "extension:notes/new"])
+        check(
+            "its synced aliases and chords are retired, a native command's stay",
+            RaycastExtensionsMigration.isRetiredEntry(.launcherShortcuts, key: "extension:weather/forecast")
+                && !RaycastExtensionsMigration.isRetiredEntry(
+                    .launcherShortcuts, key: "extension-command:hello/greet")
+                && !RaycastExtensionsMigration.isRetiredEntry(.notes, key: "extension:weather/forecast"))
         check(
             "the runtime's synced records are retired",
             RaycastExtensionsMigration.isRetiredRecord("extensions.0a1b2c"))

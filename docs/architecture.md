@@ -97,7 +97,7 @@ app: the stores (`AppIndex`, `ClipboardStore`, `SnippetsStore`, `QuicklinkStore`
 `HotKeyManager`, `HyperKeyManager`, `RunningAppsMonitor`,
 `SnippetKeywordListener`), the shared state
 (`AppSettings`, `PaletteState`, `FileSearchSession`, `MenuSearchSession`, `UninstallSession`,
-`MeetingClock`), `NotesStore`, the twenty-one feature coordinators (`CloudSyncCoordinator` owns the
+`MeetingClock`), `NotesStore`, the twenty-two feature coordinators (`CloudSyncCoordinator` owns the
 opt-in iCloud Sync session) and the
 window controllers.
 

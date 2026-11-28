@@ -126,6 +126,9 @@ struct RootPaletteView: View {
                 vm: vm, openActions: openActions, metrics: metrics)
         case .dictionary:
             return DictionaryScreen(session: dictionary, core: core, vm: vm)
+        case .extensionCommand:
+            return ExtensionScreen(
+                coordinator: core.extensionCoordinator, query: vm.query, selection: vm.selection)
         case .calculatorHistory:
             return CalculatorHistoryScreen(
                 history: calcHistory, currencyRates: currencyRates, core: core, vm: vm,
@@ -448,6 +451,7 @@ struct RootPaletteView: View {
                 if vm.mode != .switchWindows { windowSwitch.reset() }
                 if vm.mode != .meetingDetails { calendarStore.clearDetails() }
                 if vm.mode != .rooms, vm.mode != .roomWindows { core.roomCoordinator.screensDidClose() }
+                if vm.mode != .extensionCommand { core.extensionCoordinator.closeScreen() }
             }
             // `prepare` may change nothing else, so this still lands the list as freshly opened.
             .onChange(of: vm.resetToken) {
@@ -886,6 +890,11 @@ struct RootPaletteView: View {
     private var searchPrompt: String {
         // Squeezed to the caret, the field has no room for a prompt; beside one it keeps it.
         if headerAccessory?.placement == .afterQuery, vm.mode != .ai { return "" }
+        if vm.mode == .extensionCommand,
+            let placeholder = core.extensionCoordinator.shown?.session.ui?.searchPlaceholder
+        {
+            return placeholder
+        }
         return vm.mode.placeholder
     }
 
@@ -947,6 +956,7 @@ struct RootPaletteView: View {
                 appMenuButton
                 UpdatePill()
             }
+            Spacer()
             if showActionGroup {
                 actionGroup(
                     pillLabel: pillLabel, formPrimaryShortcut: formPrimaryShortcut,

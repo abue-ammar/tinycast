@@ -33,6 +33,7 @@ final class HotKeyManager {
     var onOpenQuicklink: ((UUID) -> Void)?
     var onRunQuickAction: ((UUID) -> Void)?
     var onRunAppleShortcut: ((UUID) -> Void)?
+    var onRunExtensionCommand: ((ExtensionCommandID) -> Void)?
     var onExpandSnippet: ((StoredSnippet.ID) -> Void)?
     /// Names what only the stores know; the fixed catalogs resolve here. Set in `AppCore.start()`.
     var displayName: ((HotKeyAction) -> String?)?
@@ -106,6 +107,7 @@ final class HotKeyManager {
     private let boundWindowRoomKey = "boundWindowRoomIDs"
     private let boundCustomWindowSizeKey = "boundCustomWindowSizeIDs"
     private let boundAppleShortcutKey = "boundAppleShortcutIDs"
+    private let boundExtensionCommandKey = "boundExtensionCommandIDs"
     private let boundSnippetKey = "boundSnippetIDs"
 
     init(defaults: UserDefaults = .standard) {
@@ -171,6 +173,12 @@ final class HotKeyManager {
 
     /// Pruned by `AppleShortcutCoordinator` after a successful read, never here at launch.
     var boundAppleShortcutIDs: [UUID] { boundIDs(key: boundAppleShortcutKey) }
+
+    /// Never pruned at launch: with extensions off, no list can say which commands are gone.
+    var boundExtensionCommandIDs: [ExtensionCommandID] {
+        (defaults.stringArray(forKey: boundExtensionCommandKey) ?? [])
+            .compactMap(ExtensionCommandID.init(entryID:))
+    }
 
     /// Swept by `removeSnippetBindings` on each load, never at launch: the store may be off.
     var boundSnippetIDs: [StoredSnippet.ID] {
@@ -277,6 +285,8 @@ final class HotKeyManager {
             index(id, bound: binding != nil, key: boundCustomWindowSizeKey)
         case .appleShortcut(let id):
             index(id, bound: binding != nil, key: boundAppleShortcutKey)
+        case .extensionCommand(let id):
+            index(id.entryID, bound: binding != nil, key: boundExtensionCommandKey)
         case .snippet(let id):
             index(id, bound: binding != nil, key: boundSnippetKey)
         case .togglePalette, .dictation, .command, .systemAction, .windowCommand:
@@ -419,6 +429,7 @@ final class HotKeyManager {
         actions += boundWindowRoomIDs.map { .windowRoom(id: $0) }
         actions += boundCustomWindowSizeIDs.map { .customWindowSize(id: $0) }
         actions += boundAppleShortcutIDs.map { .appleShortcut(id: $0) }
+        actions += boundExtensionCommandIDs.map { .extensionCommand($0) }
         actions += boundSnippetIDs.map { .snippet(id: $0) }
         actions += SystemAction.ID.allCases.map { .systemAction(id: $0) }
         actions += WindowCommand.ID.allCases.map { .windowCommand(id: $0) }
@@ -454,6 +465,8 @@ final class HotKeyManager {
             return displayName?(action) ?? String(localized: "Quick Action")
         case .appleShortcut:
             return displayName?(action) ?? String(localized: "Apple Shortcut")
+        case .extensionCommand:
+            return displayName?(action) ?? String(localized: "Extension Command")
         case .snippet:
             return displayName?(action) ?? String(localized: "Snippet")
         }
@@ -512,6 +525,7 @@ final class HotKeyManager {
         case .quicklink(let id): onOpenQuicklink?(id)
         case .quickAction(let id): onRunQuickAction?(id)
         case .appleShortcut(let id): onRunAppleShortcut?(id)
+        case .extensionCommand(let id): onRunExtensionCommand?(id)
         case .snippet(let id): onExpandSnippet?(id)
         }
     }

@@ -12,7 +12,7 @@ final class EntryShortcutSyncSource: SyncSource {
     private static let logger = Logger(subsystem: "com.tinycast", category: "CloudSync")
     private static let prefixes = [
         Quicklink.entryIDPrefix, CustomQuickAction.entryIDPrefix, StoredSnippet.entryIDPrefix,
-        AppleShortcut.entryIDPrefix
+        AppleShortcut.entryIDPrefix, ExtensionCommandID.entryIDPrefix
     ]
 
     let id = SyncSourceID.launcherShortcuts
@@ -92,6 +92,7 @@ final class EntryShortcutSyncSource: SyncSource {
         ids.formUnion(hotKeys.boundQuickActionIDs.compactMap { HotKeyAction.quickAction(id: $0).entryID })
         ids.formUnion(hotKeys.boundAppleShortcutIDs.compactMap { HotKeyAction.appleShortcut(id: $0).entryID })
         ids.formUnion(hotKeys.boundSnippetIDs.compactMap { HotKeyAction.snippet(id: $0).entryID })
+        ids.formUnion(hotKeys.boundExtensionCommandIDs.map(\.entryID))
         return ids
     }
 

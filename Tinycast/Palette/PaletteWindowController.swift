@@ -197,6 +197,8 @@ final class PaletteWindowController: NSObject, NSWindowDelegate {
     /// The screen only: a conversation is not a typed query, and `Opens To` decides its lifetime.
     private func popToRoot() {
         core.fileSearch.cancel()
+        // The panel is ordered out, so this can't wait for the view's own mode change.
+        core.extensionCoordinator.closeScreen()
         core.palette.prepare(mode: .launcher)
         isPoppedToRoot = true
     }

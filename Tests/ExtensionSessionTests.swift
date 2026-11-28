@@ -44,7 +44,9 @@ enum ExtensionSessionTests {
         let bundle = helloExecutable().deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent()
         let unconfigured = ExtensionSignatureService(teamID: nil)
-        check("no team ID runs nothing", failure(of: { try unconfigured.verify(bundle, id: "hello") }) == .noTeamID)
+        check(
+            "no team ID runs nothing",
+            failure(of: { try unconfigured.verify(bundle, id: "hello") }) == .noTeamID)
         let configured = ExtensionSignatureService(teamID: "ABCDE12345")
         check(
             "an id that could leave the requirement is refused",
@@ -144,7 +146,8 @@ enum ExtensionSessionTests {
     ) -> ExtensionSession {
         let start = ExtensionWire.Start(
             api: .current, command: command, reason: .user, preferences: [:],
-            dataFolder: FileManager.default.temporaryDirectory.appending(path: "session-\(UUID().uuidString)"),
+            dataFolder: FileManager.default.temporaryDirectory.appending(
+                path: "session-\(UUID().uuidString)"),
             locale: "en-US", appearance: .dark)
         return ExtensionSession(
             extensionID: "hello", executable: executable, start: start, idleDelay: idleDelay,

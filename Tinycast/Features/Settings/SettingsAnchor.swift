@@ -63,6 +63,7 @@ extension SettingsAnchor {
     static let quickActionsTranslate = Self(tab: .quickActions, title: "Translate")
 
     static let extensionsExtensions = Self(tab: .extensions, title: "Extensions")
+    static let extensionsCommands = Self(tab: .extensions, title: "Commands")
 
     static let dictationDictation = Self(tab: .dictation, title: "Dictation")
     static let dictationCommands = Self(tab: .dictation, title: "Commands")

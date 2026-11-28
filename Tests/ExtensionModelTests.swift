@@ -1,6 +1,6 @@
 import Foundation
 
-/// The Store index decisions and the version rules, against the vendored protocol.
+/// The Store index decisions, the version rules, command entry IDs and screen rows.
 @main
 @MainActor
 struct ExtensionModelTests {
@@ -25,6 +25,8 @@ struct ExtensionModelTests {
         needsANewerTinycastWhenMissingOrNewer()
         updatesSkipPinnedAndNewer()
         try dropsAnEntryItCannotRead()
+        spellsAndReadsCommandEntryIDs()
+        rowsFollowTheTree()
 
         print("\(passes) passed, \(failures) failed")
         if failures > 0 { exit(1) }
@@ -76,7 +78,8 @@ struct ExtensionModelTests {
         let newer = entry("notes", "1.0.0", api: ExtensionAPIVersion(major: 1, minor: 3))
         let pulled = entry("clock", "1.0.0")
         let index = index(
-            [runnable, newer, pulled], revoked: [ExtensionIndexFile.Revocation(id: "clock", versions: ["1.0.0"])])
+            [runnable, newer, pulled],
+            revoked: [ExtensionIndexFile.Revocation(id: "clock", versions: ["1.0.0"])])
         expect(index.canInstall(runnable), "a runnable entry installs")
         expect(!index.canInstall(newer), "an entry for a newer api does not install")
         expect(!index.canInstall(pulled), "a revoked version does not install")
@@ -85,12 +88,16 @@ struct ExtensionModelTests {
     static func offersAnUpdateOrHoldsAPinnedOne() {
         let update = entry("weather", "1.3.0")
         let index = index([update])
-        expect(index.status(of: installed("weather", "1.2.0")) == .update(update), "a newer version is offered")
+        expect(
+            index.status(of: installed("weather", "1.2.0")) == .update(update), "a newer version is offered")
         expect(
             index.status(of: installed("weather", "1.2.0", pinned: true)) == .pinned(update),
             "a pinned extension holds, the newer version still listed")
-        expect(index.status(of: installed("weather", "1.3.0")) == .current, "the published version is current")
-        expect(index.status(of: installed("weather", "1.4.0")) == .current, "a version ahead of the index is current")
+        expect(
+            index.status(of: installed("weather", "1.3.0")) == .current, "the published version is current")
+        expect(
+            index.status(of: installed("weather", "1.4.0")) == .current,
+            "a version ahead of the index is current")
     }
 
     static func revokedBeatsEverything() {
@@ -148,5 +155,51 @@ struct ExtensionModelTests {
         expect(
             index.status(of: installed("notes", "1.0.0")) == .needsNewerTinycast,
             "the dropped entry's install reads as needing a newer Tinycast")
+    }
+
+    static func spellsAndReadsCommandEntryIDs() {
+        let id = ExtensionCommandID(extensionID: "hello", command: "copy-greeting")
+        expect(
+            id.entryID == "extension-command:hello/copy-greeting",
+            "an entry ID names the extension, then the command")
+        expect(ExtensionCommandID(entryID: id.entryID) == id, "an entry ID reads back as its command")
+        let malformed = [
+            "extension-command:hello", "extension-command:/greet", "extension-command:hello/",
+            "extension-command:a/b/c", "hello/greet", "extension:hello/greet"
+        ]
+        for malformed in malformed {
+            expect(ExtensionCommandID(entryID: malformed) == nil, "\(malformed) is not a command's entry ID")
+        }
+    }
+
+    static func rowsFollowTheTree() {
+        let wave = ExtensionUI.Action(id: "wave", title: "Wave")
+        let list = ExtensionUI.list(
+            ExtensionUI.List(
+                sections: [
+                    ExtensionUI.List.Section(items: [
+                        ExtensionUI.List.Item(id: "a", title: "A", actions: [wave])
+                    ]),
+                    ExtensionUI.List.Section(
+                        title: "More", items: [ExtensionUI.List.Item(id: "b", title: "B")])
+                ], handlesSearch: true, searchPlaceholder: "Find…"))
+        expect(list.rows.map(\.id) == ["a", "b"], "a list's rows run through its sections in order")
+        expect(list.rows.first?.actions == [wave], "a row carries its item's actions")
+        expect(list.handlesSearch && list.searchPlaceholder == "Find…", "a list states its own search")
+        let grid = ExtensionUI.grid(
+            ExtensionUI.Grid(
+                sections: [
+                    ExtensionUI.Grid.Section(items: [ExtensionUI.Grid.Item(id: "g", image: .symbol("star"))])
+                ],
+                columns: 4))
+        expect(
+            grid.rows.map(\.id) == ["g"] && !grid.handlesSearch,
+            "a grid's items are rows, filtered by the host")
+        let detail = ExtensionUI.detail(ExtensionUI.Detail(markdown: "# Hi", actions: [wave]))
+        expect(
+            detail.rows.count == 1 && detail.rows[0].actions == [wave], "a detail is one row with its actions"
+        )
+        let form = ExtensionUI.form(ExtensionUI.Form(fields: [], actions: [wave]))
+        expect(form.rows.isEmpty && form.typeName == "form", "a form has no rows")
     }
 }

@@ -67,6 +67,8 @@ enum EntryIcon: Hashable, Sendable {
     case tile(symbol: String, tint: IconTint)
     /// A declared type's icon, for a bundle whose own file icon is a placeholder.
     case contentType(String)
+    /// A picture file drawn as the icon itself, such as an extension's PNG; the stamp as for `file`.
+    case image(path: String, stamp: Int)
 }
 
 struct IconSize: Hashable, Sendable {
@@ -349,6 +351,33 @@ enum IconCache {
         key("type:\(identifier)")
     }
 
+    /// Fitted like an app icon, so a picture with its own margin sits the size its neighbours do.
+    static func image(atPath path: String, stamp: Int) -> NSImage {
+        let key = imageKey(path, stamp)
+        if let cached = cache.object(forKey: key) { return cached }
+        guard let source = NSImage(contentsOfFile: path) else {
+            return symbolIcon(named: "questionmark.square.dashed")
+        }
+        let (icon, cost) = fittedToArtwork(source)
+        cache.setObject(icon, forKey: key, cost: cost)
+        return icon
+    }
+
+    static func cachedImage(atPath path: String, stamp: Int) -> NSImage? {
+        cache.object(forKey: imageKey(path, stamp))
+    }
+
+    static func loadImageAsync(atPath path: String, stamp: Int) async -> NSImage? {
+        if let cached = cachedImage(atPath: path, stamp: stamp) { return cached }
+        return await Task.detached(priority: .userInitiated) {
+            Decoded(image: image(atPath: path, stamp: stamp))
+        }.value.image
+    }
+
+    private static func imageKey(_ path: String, _ stamp: Int) -> NSString {
+        key("image:\(stamp):\(path)")
+    }
+
     // MARK: - Drawing an `EntryIcon`
 
     /// One switch, so a row never has to know which of these paths its entry wants.
@@ -357,6 +386,7 @@ enum IconCache {
         case .file(let stamp): return icon(forFile: fileURL.path, stamp: stamp)
         case .symbol(let name), .tile(let name, _): return symbolIcon(named: name)
         case .contentType(let identifier): return contentTypeIcon(identifier)
+        case .image(let path, let stamp): return image(atPath: path, stamp: stamp)
         }
     }
 
@@ -365,6 +395,7 @@ enum IconCache {
         case .file(let stamp): return cached(forFile: fileURL.path, stamp: stamp, size: size)
         case .symbol(let name), .tile(let name, _): return cachedSymbol(named: name)
         case .contentType(let identifier): return cachedContentTypeIcon(identifier)
+        case .image(let path, let stamp): return cachedImage(atPath: path, stamp: stamp)
         }
     }
 
@@ -373,6 +404,7 @@ enum IconCache {
         case .file(let stamp): return await loadAsync(forFile: fileURL.path, stamp: stamp, size: size)
         case .symbol(let name), .tile(let name, _): return await loadSymbolAsync(named: name)
         case .contentType(let identifier): return await loadContentTypeIconAsync(identifier)
+        case .image(let path, let stamp): return await loadImageAsync(atPath: path, stamp: stamp)
         }
     }
 
