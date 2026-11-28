@@ -35,5 +35,5 @@ Leak-tested:
 
 ## Tests & validation
 
-<!-- Which Tests/ harnesses you ran and any cases you added, plus what you exercised by hand.
-     Commands: docs/development.md § Tests. -->
+<!-- Which test suites you ran and any tests you added, plus what you exercised by hand.
+     Commands: docs/testing.md § The test suite. -->

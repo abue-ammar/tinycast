@@ -37,7 +37,7 @@ Read the [Code of Conduct](CODE_OF_CONDUCT.md) too. It covers notifications, spa
 - **A linked issue marked `approved`.** Put `Closes #<number>` in the PR description. Anyone may
   open the PR, not only the issue's author. Docs-only changes (`*.md`, `docs/`, `website/`) need no
   approved issue.
-- The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes: harnesses, lint,
+- The whole bar in [`docs/testing.md`](docs/testing.md#definition-of-done) passes: tests, lint,
   purity, a clean build. Engine changes come with new cases. There is no CI, so **run
   `./Scripts/run-tests.sh`, `./Scripts/lint.sh` and a build locally**.
 - Leak-tested and memory-measured. Numbers in the PR.

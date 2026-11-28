@@ -10,7 +10,7 @@ contradicts the code is a defect, so fix it in the commit that made it wrong.
 | ---------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
 | [architecture.md](architecture.md) | How the app is wired: the layers, who owns what, the windows, the Observation model, the folder tree    | a layer boundary, an owner, or the tree changes |
 | [standards.md](standards.md)       | How code here is written: posture, naming, style, concurrency, performance budgets, comments            | a convention changes, or a check is added       |
-| [testing.md](testing.md)           | How to verify a change: the definition of done, the harnesses, purity checks, budgets, the manual sweep | a harness moves, or a budget changes            |
+| [testing.md](testing.md)           | How to verify a change: the definition of done, the test suite, purity checks, budgets, the manual sweep | a suite moves, or a budget changes             |
 | [development.md](development.md)   | The local loop: setup, build, dev channel, editor, format/lint, generated data                          | the local toolchain changes                     |
 | [release.md](release.md)           | How a build reaches a user: packaging, PR review, releases, the Homebrew casks                          | the pipeline changes                            |
 | [signing.md](signing.md)           | The local self-signed identity, the release Developer ID and notary secrets                             | the signing setup changes                       |

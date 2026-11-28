@@ -6,6 +6,10 @@ and an emoji picker. It also **runs Raycast extensions** natively, in JavaScript
 SwiftUI + AppKit, running as an accessory with no Dock icon (`LSUIElement`). Zero third-party
 dependencies.
 
+> **Migration in progress.** The tests are moving to Swift Testing. Before any work, read
+> [docs/swift-testing/README.md](docs/swift-testing/README.md) and its `status.md`. (Temporary: the
+> migration's last commit deletes this note.)
+
 ## Posture: modern-first, always
 
 **Tinycast supports macOS 26 and later, with macOS 27 strongly preferred.** Swift 6+ with complete
@@ -45,7 +49,8 @@ system-wide chord, and HIToolbox's TIS APIs remain the public input-source mecha
 | `Tinycast/Windows/`      | the non-palette AppKit surfaces: `Dialog/`, `HUD/`, `About/`, `AppWindowController`     |
 | `Tinycast/Features/`     | one folder per feature; larger ones split `Model/` `Service/` `UI/` `Settings/`         |
 | `Tinycast/Migrations/`   | one-shot repairs of state an older release left behind, each deleted after one release  |
-| `Tests/`                 | the standalone harnesses: one Swift file each, no XCTest target                         |
+| `Tests/TinycastTests/`   | the `TinycastTests` target: Swift Testing suites, one per file, mirroring `Tinycast/`   |
+| `Tests/`                 | at its root, the extension harnesses, until extensions leave this repo                  |
 | `Scripts/`               | every executable script: test runner, data generators, packaging, linting, editor setup |
 
 | Read it before you                                         | Doc                                                          |
@@ -73,8 +78,8 @@ feature's doc, under its own `## Invariants`.
   pane writes outside `UserDefaults` is a `SharedDomain`, or the main app writes its stale copy back.
   See [architecture.md](docs/architecture.md#processes).
 - **A file under `Features/*/Model/` may not import AppKit or SwiftUI**, and takes every environment
-  fact (clock, filesystem, home directory, rates) as an injected parameter. The harnesses compile the
-  shipped sources, so this is enforced by compilation rather than convention.
+  fact (clock, filesystem, home directory, rates) as an injected parameter. `./Scripts/lint.sh` fails
+  on such an import, and the injected environment is what lets a suite test the file deterministically.
 - **Swift 6 language mode: data-race violations are hard errors.** `@MainActor` is the default,
   model values shared across isolation boundaries are `Sendable`, and exclusive ownership transfer
   uses `sending`. Heavy or IO-bound work goes off-main. Prefer `@concurrent` async functions when work
@@ -147,6 +152,10 @@ feature's doc, under its own `## Invariants`.
 - **Debug builds are their own channel** (`Tinycast Dev.app` / `com.abueammar.tinycast.dev`), so a
   local run never shares prefs, caches, TCC grants or the login item with an installed copy. Anything
   newly persisted must stay keyed by `Bundle.main.bundleIdentifier`.
+- **Tests are Swift Testing suites** (`@Suite`, `@Test`, `#expect`) in the `TinycastTests` target, hosted
+  by the Debug app. They run inside a real app process, so a suite never touches state the machine
+  shares: no `UserDefaults.standard`, `NSPasteboard.general` or real `AppPaths`; scratch state is the
+  suite's own. See [testing.md](docs/testing.md#writing-a-suite).
 - **XcodeGen owns the project.** `Tinycast.xcodeproj` is committed but generated from `project.yml`;
   after editing it, run `xcodegen generate` and commit both. No SwiftPM, and never `Bundle.module`.
 
@@ -156,6 +165,5 @@ Each item is explained in [testing.md](docs/testing.md#definition-of-done).
 
 - `./Scripts/run-tests.sh` passes.
 - The Debug build compiles with **no new warnings**.
-- `./Scripts/lint.sh` is clean.
-- `grep -rln 'import AppKit\|import SwiftUI\|import Cocoa' Tinycast/Features/*/Model/` returns nothing.
+- `./Scripts/lint.sh` is clean, which includes the `Model/` purity check.
 - Any doc your change made wrong is fixed in the same commit.

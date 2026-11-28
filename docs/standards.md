@@ -61,7 +61,7 @@ Full detail in [architecture.md](architecture.md); the rules a new feature has t
 
 Feature work reaches the app through a **coordinator**, called by `AppCore` and by views via
 `@Environment`. Confirmation gates live in the coordinator, never in the runner, which is what lets
-`ShellCommandRunner` and `SystemActionRunner` stay harness-compilable while the "are you sure?" step
+`ShellCommandRunner` and `SystemActionRunner` stay testable without a UI while the "are you sure?" step
 remains unbypassable.
 
 ## Naming
@@ -293,7 +293,7 @@ names, emoji keywords) reads macOS's own list through `SystemLanguages.preferred
 
 ## What is actually checked
 
-Everything above is guidance. The mechanical bar (the harnesses, the purity grep, lint and a
+Everything above is guidance. The mechanical bar (the test suite, lint with its purity check, and a
 clean build) is one list, in [testing.md](testing.md#definition-of-done), so that it cannot drift by
 being written down twice. Anything not on it is a judgement call: make it, and say why in the PR if it
 is not obvious.

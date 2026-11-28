@@ -9,7 +9,7 @@ verifying a change is [testing.md](testing.md).
 - Xcode 27: it provides the SwiftUI macro plugin and the SDK.
 - [XcodeGen](https://github.com/yonaskolb/XcodeGen), and for linting:
   `brew install swiftlint`.
-- Node, for the generators and the local test stub servers `run-tests.sh` drives. It is the only
+- Node, for the generators and the local stub servers some test suites start. It is the only
   scripting runtime here; building the app still needs none of it.
 
 ## First-time setup
@@ -115,30 +115,18 @@ file added since reads _cannot find type X in scope_, in every file, until you r
 also mixes Release entries in with Debug and lets them win. `Scripts/sync-lsp.sh` keeps the mode
 `manual`, where `.compile` is the single source of truth.
 
-### Symbols in `Tests/`
+### Tests in the editor
 
-`xcodebuild` never compiles the harnesses (they are not in the Xcode project), so nothing emits a
-compile command for them, and without one an open harness reports every shipped type it uses as _cannot
-find in scope_. Measured on `FuzzTests.swift`: 60 errors with no entry, 0 with one.
-
-```sh
-./Scripts/run-tests.sh --index    # merge the harness compile commands into .compile
-```
-
-It reads the source lists from `run-tests.sh` itself, so they cannot drift from what the suite actually
-compiles. `Scripts/sync-lsp.sh` runs it too. Three things it has to get right, all of which fail
-silently otherwise: every path is absolute, because `sourcekit-lsp` resolves the command itself and does
-not apply `directory` to relative arguments; the command carries an explicit `-sdk`; and each entry
-claims **only files under `Tests/`**: its harness plus any helper compiled beside it. The command
-still lists every shipped source it compiles, so symbols resolve inside the harness, but claiming a
-shipped source too would hand it this three-file command instead of the app's, and `.compile` is
-last-wins.
-
-A benchmark that stays out of the suite still needs flags, so `run-tests.sh` registers it as
-`run index <name> <source...>`: `--index` emits its compile command and the runner never queues it.
-
-Re-run it after adding a harness, then **Swift: Restart LSP Server** from the Command Palette; an
+`TinycastTests` is an ordinary target of the project, so `.compile` covers the suites once a build has
+compiled them: the **Build Tinycast.app (debug)** task builds with `build-for-testing` for that reason.
+Re-run it after adding a suite, then **Swift: Restart LSP Server** from the Command Palette; an
 already-running server does not re-read `.compile`.
+
+Xcode's test navigator lists and runs the suites with no setup. VS Code's Swift extension discovers
+tests only in SwiftPM packages, so for an Xcode target its Testing view needs SweetPad, an editor
+extension that drives `xcodebuild` (recommended in `.vscode/extensions.json`; the app itself depends on
+nothing). Select the `Tinycast` scheme in it. Without it, run a suite with
+`./Scripts/run-tests.sh <Suite>`.
 
 ## Linting
 

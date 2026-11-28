@@ -20,8 +20,8 @@ so the codebase never carries a history of its past formats.
 ## Adding one
 
 Write the type in `Migrations/` and call it from `AppCore.start()` before anything reads the state it
-repairs. Cover it with a harness of its own, so deleting it removes a whole file, one `run-tests.sh` entry and
-one row in [testing.md](testing.md). Then add its row here.
+repairs. Cover it with a suite of its own, so deleting it removes a whole file and one row in
+[testing.md](testing.md). Then add its row here.
 
 ## Deleting one
 

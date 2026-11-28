@@ -968,7 +968,7 @@ shortcut"), live held keys with their reported side, a pending second modifier t
   lenses them together. The caret is two straight edges meeting at an arc: a rounded-tip triangle,
   not a dome. Stock `.regular` glass, no hand-tuned shadow, as in `PopoverMenu`.
 - **Placement is pure.** `CalloutPlacement` (`HotKeys/UI/`) picks above-vs-below, clamps, and walks the caret;
-  the harness compiles it against the real `Theme` so a retuned token can't outdate the assertions.
+  its suite runs it against the real `Theme` so a retuned token can't outdate the assertions.
 - **`KeyCapChip.Scale`** is `compact` / `standard` / `hero`: three tokenised sizes, no stray frames.
 - `allowsHitTesting(false)`: clicks reach the capture session's mouse monitor; a click on the active
   recorder toggles it off, and a click elsewhere closes it.
@@ -988,7 +988,7 @@ an IME's marked text. See
 
 ## Rules for agents working on the UI
 
-- **Restyle from rendered screenshots, not guessed values.** Compare rendered screenshots over a light desktop. There's no screen-recording from the shell here; verify AppKit rendering with a `swiftc` harness that prints layer state, and let the user do visual sign-off.
+- **Restyle from rendered screenshots, not guessed values.** Compare rendered screenshots over a light desktop. There's no screen-recording from the shell here; verify AppKit rendering with a test that reads layer state, and let the user do visual sign-off.
 - **Don't add behavior that wasn't requested.** A restyle changes appearance, not interaction; keep selection/scroll/dismiss/focus flows exactly as they are unless the task is about them.
 - **New tokens go in `Theme`**, referenced everywhere. No magic numbers in views.
 - **Keep the shared grammar shared.** If you change row insets, the `fill` precedence, section-header style, or keycap style, change it for _all_ lists; divergence is the bug, not the feature.

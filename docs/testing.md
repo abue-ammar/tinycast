@@ -1,39 +1,157 @@
 # Testing and verification
 
-How to check that a change holds up. Tinycast has no XCTest target and no UI tests: the automated half
-is a set of standalone harnesses, and the manual half is the sweep at the bottom of this file.
+How to check that a change holds up. The automated half is the `TinycastTests` target, Swift Testing
+suites hosted by the Debug app; the manual half is the sweep at the bottom of this file. There are no
+UI tests.
 
 ## Definition of done
 
-The mechanical bar, in one place so it cannot drift. All five pass before a change is finished.
+The mechanical bar, in one place so it cannot drift. All four pass before a change is finished.
 
-| Check                                              | Command                                                                              |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| The harnesses                                      | `./Scripts/run-tests.sh`                                                             |
-| Lint, settings search, translations and migrations | `./Scripts/lint.sh`                                                                  |
-| Pure-layer purity                                  | `grep -rln 'import AppKit\|import SwiftUI\|import Cocoa' Tinycast/Features/*/Model/` |
-| A clean build                                      | `xcodebuild … -configuration Debug CODE_SIGNING_ALLOWED=NO`, zero **new** warnings   |
-| Docs still true                                    | any doc your change made wrong, fixed in the same commit                             |
+| Check                                                                  | Command                                                                            |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| The test suite                                                         | `./Scripts/run-tests.sh`                                                           |
+| Lint, `Model/` purity, settings search, translations and migrations    | `./Scripts/lint.sh`                                                                |
+| A clean build                                                          | `xcodebuild … -configuration Debug CODE_SIGNING_ALLOWED=NO`, zero **new** warnings |
+| Docs still true                                                        | any doc your change made wrong, fixed in the same commit                           |
 
 There is no CI: every item is on you, run locally. Each is expanded below; the manual sweep at the
-end of this file is the sixth, judged by what you touched.
+end of this file is the fifth, judged by what you touched.
 
-## The harnesses
+## The test suite
 
 ```sh
-./Scripts/run-tests.sh              # all of them
-./Scripts/run-tests.sh CalcTests    # just one, while iterating
+./Scripts/run-tests.sh              # every suite, then the extension harnesses
+./Scripts/run-tests.sh CalcTests    # one suite, or one extension harness, while iterating
 ```
 
-`AppleIntelligenceTests` runs deterministic checks by default. Its real model generation is opt-in:
+The script runs `xcodebuild test` on the `Tinycast` scheme, whose test action is the `TinycastTests`
+target. Xcode's test navigator, and VS Code's Testing view with SweetPad, run the same target, down
+to a single test (editor setup: [development.md](development.md#tests-in-the-editor)).
+
+The target is hosted by `Tinycast Dev.app` and reaches the app's code with `@testable import Tinycast`.
+A host launched for tests does not start the app: `TinycastLaunch` sees the test session and runs a
+bare `NSApplication`, so no hotkey, menu-bar item, monitor or preference load runs underneath a suite.
+
+Swift Testing runs tests in parallel, within a suite and across suites. That is safe because each test
+roots its scratch state somewhere of its own (see [Isolation](#isolation)). `.serialized` is for a suite
+whose tests share something none of them can own alone, such as `MCPOAuthTests`' fixed ports, and
+carries a one-line comment naming it.
+
+Suites test the **shipped sources**, never a copy. The pure layer's boundary is held by
+`./Scripts/lint.sh`, which fails when a `Model/` file imports AppKit, SwiftUI or Cocoa, and by the
+injected environment: a `Model/` type handed its clock, filesystem and rates is one a suite can test
+deterministically. A `Model/` type a suite cannot build without the running app is the signal that an
+effect leaked into a decision.
+
+### Opt-in checks
+
+A check that needs something a machine may not have stays off unless its `TINYCAST_TEST_*` variable is
+set. In a suite that is `.enabled(if:)` on the variable. `xcodebuild` passes a test process only
+variables prefixed `TEST_RUNNER_`, so `run-tests.sh` forwards each `TINYCAST_TEST_*` under that prefix:
 
 ```sh
 TINYCAST_TEST_APPLE_INTELLIGENCE=1 ./Scripts/run-tests.sh AppleIntelligenceTests
+TINYCAST_TEST_APP_LAUNCH=1 ./Scripts/run-tests.sh AppInstallationTests
 ```
 
-The opt-in check still skips with a reason if the Mac cannot run the on-device model.
+`AppleIntelligenceTests`' real generation still skips with a reason when the Mac cannot run the
+on-device model.
 
-Two runtime areas also have standalone checks:
+### Writing a suite
+
+```swift
+import Foundation
+import Testing
+
+@testable import Tinycast
+
+struct CalcTests {
+    @Test(arguments: [("2+2", "4"), ("2^3^2", "512"), ("5!", "120")])
+    func display(_ query: String, _ expected: String) throws {
+        let display = try #require(Self.display(of: query))
+        #expect(display == expected)
+    }
+
+    @Test func tooDeepAnExpressionHasNoResult() {
+        #expect(Self.display(of: String(repeating: "1+", count: 128) + "1") == nil)
+    }
+
+    private static func display(of query: String) -> String? { … }
+}
+```
+
+- **Where.** `Tests/TinycastTests/<Area>/<Subject>Tests.swift`. `<Area>` is the feature folder of what
+  it guards (`Calculator`, `Clipboard`, …) or its top-level folder (`App`, `Platform`, `Palette`,
+  `DesignSystem`, `Windows`). The type has the file's name. A file extending a suite is
+  `<Suite>+<Topic>.swift`; helpers shared by suites live in `Support/`, fixture files in `Fixtures/`.
+  The target takes the whole folder, so a new file needs only `xcodegen generate`.
+- **Shape.** A `struct` of `@Test` functions is a suite; write `@Suite` only to attach a trait. Make it
+  `@MainActor` when what it tests is. Per-test setup goes in `init`; a suite that must clean up is a
+  `final class` with a `deinit`, or holds a helper from `Support/` that cleans up after itself.
+- **Names.** A test's name says the behaviour it pins: `tooDeepAnExpressionHasNoResult`. Add a
+  display string only when a name cannot carry it.
+- **Tables.** A list of cases is `@Test(arguments:)`, one argument per case, so a failure names its
+  input. Two parallel lists go through `zip`.
+- **Checks.** `#expect` for every check; `#require` where the rest of the test cannot run without it,
+  such as unwrapping. `#expect(throws:)` for errors.
+- **Waiting.** An `async` test awaits its subject. A callback is awaited with `confirmation`. A bounded
+  wait is for a subject that itself has a deadline; never `sleep` until something is probably done.
+- **Nothing of the old harness shape:** no `@main`, no `static func main`, no pass counters, no `print`
+  on success, no `exit`.
+
+A test that passed before a change passes after it. There is no "I'll fix it next commit" and no
+disabling a test. If a change genuinely invalidates a check, the check is rewritten in the same commit
+with the reason in the message.
+
+### Isolation
+
+The suites run inside a real app process, in your own login session, against the real system: no
+sandbox and no fixture world. `Bundle.main` is `Tinycast Dev.app`, so anything keyed by it is the dev
+channel's real state. A test must never mutate state the machine shares with the apps you use:
+
+- **Preferences:** a `UserDefaults(suiteName:)` unique to the test, removed afterwards. Never
+  `UserDefaults.standard`.
+- **Files:** a UUID-named directory under `temporaryDirectory`, removed afterwards. Never the real
+  `AppPaths` or Application Support.
+- **Pasteboard:** `NSPasteboard.withUniqueName()`. Never `NSPasteboard.general`.
+- **Keychain:** a scope unique to the run, removed on completion.
+
+`NSPasteboard.general` is the trap: a running Tinycast records every write to it as a genuine copy, so
+a fixture left there lands in clipboard history looking like something the user copied. `NotesEditorTests`
+seeded one on every run from #232 onward by calling the native `copy:`/`cut:`/`paste:` actions; it now
+drives the `writeSelection(to:types:)` and `readSelection(from:)` primitives those actions delegate to,
+against `NSPasteboard.withUniqueName()`. Same AppKit path, no shared side effect. `PasteboardTests` is
+the second case, and it is why `ClipboardManager.fileURLs(on:volatileRoots:)` and
+`Paster.write(_:store:to:)` each take the thing they act on as a parameter: a seam that exists so the
+test never has to reach for the shared board. Its scratch tree lives under `temporaryDirectory`, which
+is itself a volatile root, so the cases about _reading_ files inject an empty root list and the one case
+about durability is the one that runs against the shipped roots. File URL boards also cover the capture
+cap, exact ordering, rejected prefixes, duplicates and symlinks using private fixtures. The reader cases
+add the limit boundaries and the predicate call counts.
+
+When a test needs to control an effect (a quit, a Trash move, a Carbon registration), the type under
+test takes that effect as an injected dependency. A test never redeclares an app type to stand in for
+it, and app code never branches on whether it is under test.
+
+### Extension harnesses
+
+The extension and Raycast-import checks have not moved to the target: they are standalone harnesses at
+the root of `Tests/`, each a `@main` executable that `run-tests.sh` compiles with `swiftc` against the
+shipped sources it guards, after the suites. They leave this repository with extensions, so they take
+fixes but are not converted.
+
+Four run at a time (`TINYCAST_TEST_JOBS` overrides it), each is killed after `TINYCAST_TEST_TIMEOUT`
+seconds (default 300), and results arrive in completion order with a failure's diagnostics replayed at
+the bottom. A `run` line's `-O` marker compiles that harness optimised (`RaycastTests` spends 47 seconds
+in scrypt at `-Onone` and one second at `-O`), and `slow` dispatches it first. Never join a compile to
+its run with `&&` in a `set -e` script: `set -e` ignores a failing command in a non-final AND-OR list
+member, so `swiftc … && /tmp/x` swallows a compile error. CI once reported success over a harness that
+had not compiled for twenty-five phases because of exactly this.
+
+`ExtensionTests` exercises `SharedArrayBuffer` allocation at command load and finite waits in
+JavaScriptCore through the shipped synchronous host bridge. Two runtime areas also have standalone
+checks:
 
 ```sh
 node Scripts/raycast-runtime/modules-fixtures.mjs
@@ -46,67 +164,11 @@ through a stand-in for the hosted redirect page and confirms that a callback who
 repeated, stale or wrong is refused, for each redirect method and for custom `{ url }` requests. The
 runtime fixture suite runs both as well.
 
-`ExtensionTests` exercises `SharedArrayBuffer` allocation at command load and finite waits in JavaScriptCore
-through the shipped synchronous host bridge.
-
-The suite runs four harnesses at a time by default to reduce CPU usage. `TINYCAST_TEST_JOBS` overrides
-that limit; `TINYCAST_TEST_JOBS=1` runs one at a time. Each result is numbered
-against the total and shows its run and compile time, a quiet stretch names the harnesses still running, and a harness that runs longer
-than `TINYCAST_TEST_TIMEOUT` seconds (default 300) is killed and reported as timed out. Parallelism is safe
-because each harness already roots its scratch state somewhere of its own (a UUID-suffixed
-`temporaryDirectory`, a `UserDefaults(suiteName:)`, or `NSPasteboard.withUniqueName()`), and a new
-harness must keep doing that rather than reach for a fixed path. The runner's own queue, logs and
-verdicts do live at a fixed path, so a second suite started in the same `$TMPDIR` waits for the first,
-and a run that reports fewer results than it queued fails rather than passing.
-
-Two consequences worth knowing. Status lines arrive in **completion order**, not the order the `run`
-lines are written; and a failing harness's compiler diagnostics or assertion output are replayed
-together at the bottom, under its name, rather than streamed where they happened. That is deliberate:
-a compiler diagnostic is far longer than `PIPE_BUF`, so eleven workers streaming at once would
-interleave into nonsense.
-
-A `run` line takes optional markers before the harness name. `-O` compiles that harness optimised,
-which is worth it only where the run dominates the compile: `RaycastTests` spends 47 seconds in
-scrypt at `-Onone` and one second at `-O`. `slow` dispatches it in the first wave, so the longest
-harnesses are not still running after everything else has finished.
-
-The script is the **only** place the harness set is written down. Nothing runs it for you, so run it
-before you open a PR. Adding a harness means adding one `run` line.
-
-A harness is `Tests/<Subject>Tests.swift`, and its `@main` type has the same name, which is also what
-`run` and `./Scripts/run-tests.sh` call it. A benchmark is `<Subject>PerformanceTests`, stubs shared
-by harnesses are `<Subject>Fixtures`, and a file that extends another harness is `<Harness>+<Topic>`.
-
-Each harness compiles the **shipped sources** it guards rather than a copy of them, which is what makes
-the pure-layer boundary real: a harness that stops _compiling_ means AppKit or SwiftUI has leaked into a
-`Model/` folder, or an effect has leaked into a decision. That is a more common failure than a broken
-assertion, and it is the more important one.
-
-A harness also runs in your own login session against the real system, with no sandbox and no fixture
-world, so it must never mutate state the machine shares with the apps you use. `NSPasteboard.general`
-is the trap: a running Tinycast records every write to it as a genuine copy, so a fixture left there
-lands in clipboard history looking like something the user copied. `NotesEditorTests` seeded one on
-every run from #232 onward by calling the native `copy:`/`cut:`/`paste:` actions; it now drives the
-`writeSelection(to:types:)` and `readSelection(from:)` primitives those actions delegate to, against
-`NSPasteboard.withUniqueName()`. Same AppKit path, no shared side effect. `PasteboardTests` is the
-second case, and it is why `ClipboardManager.fileURLs(on:volatileRoots:)` and `Paster.write(_:store:to:)`
-each take the thing they act on as a parameter: a seam that exists so the harness never has to reach
-for the shared board. Its scratch tree lives under `temporaryDirectory`, which is itself a volatile
-root, so the cases about _reading_ files inject an empty root list and the one case about durability
-is the one that runs against the shipped roots. File URL boards also cover the capture cap, exact
-ordering, rejected prefixes, duplicates and symlinks using private fixtures. The reader cases add
-the limit boundaries and the predicate call counts.
-
-Never join a compile to its run with `&&` in a `set -e` script. `set -e` is specified to ignore a
-failing command in a non-final AND-OR list member, so `swiftc … && /tmp/x` swallows a compile error and
-the script sails on. CI reported success over a harness that had not compiled for twenty-five phases
-because of exactly this; `run-tests.sh` keeps the two steps separate and records both kinds of failure.
-
 ### What to run when
 
-If a change touches anything in the right column, the harness on the left is mandatory.
+If a change touches anything in the right column, the suite on the left is mandatory.
 
-| Harness                     | Guards                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Suite                       | Guards                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `FuzzTests`                 | `Launcher/Model/LauncherMatch.swift`, `LauncherOrder.swift`, `LauncherSuggestions.swift`, `EntryNaming.swift`, `ScriptRomanization.swift`, `SearchRelevance.swift`, `LauncherRankingStore.swift`: **a new ranking complaint is a new case in its `denseIndex`**                                                                                                                                                                                                                                                                                                                              |
 | `FileSearchTests`           | `FileSearch/Model/`: folding, masks, scoring, ignore rules, priors, scopes                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
@@ -210,16 +272,12 @@ Completion checks use bounded state waits; exclusion windows and intentional tim
 observation delays.
 
 `MCPOAuthTests` starts `Tests/ai-fixtures/mcp-oauth-stub.js` on `127.0.0.1:4963` and tests the
-single-use callback on `127.0.0.1:4962`. Both ports must be free; the harness never chooses another
+single-use callback on `127.0.0.1:4962`. Both ports must be free; the suite never chooses another
 port. Its Keychain scope is unique to each run and removed on completion.
-
-A harness that passed before a change passes after it. There is no "I'll fix it next commit" and no
-commenting out a case. If a change genuinely invalidates an assertion, the assertion is rewritten in the
-same commit with the reason in the message.
 
 ### Purity checks
 
-The layering rule reduces to one grep, and it must return nothing:
+The layering rule reduces to one grep, which `./Scripts/lint.sh` runs and fails on any hit:
 
 ```sh
 grep -rln 'import AppKit\|import SwiftUI\|import Cocoa' Tinycast/Features/*/Model/
@@ -267,7 +325,8 @@ SwiftLint owns the rules that catch defects, including the two checkable comment
 formatter, deliberately; the configuration and the measurements behind that are in
 [development.md](development.md#formatting).
 
-The script then runs `Scripts/check-settings-search.js`, one check SwiftLint can't: every
+The script then runs the `Model/` import grep from [Purity checks](#purity-checks), and
+`Scripts/check-settings-search.js`, one check SwiftLint can't: every
 `SettingsAnchor` must be claimed by a section, and every row in `SettingsSearchCatalog` must be
 marked by a `SettingsRowTitle`. Either gap compiles and reads fine, and fails only at runtime as a
 search result that navigates and then sits there.
@@ -282,119 +341,12 @@ cue to delete it. See [migrations.md](migrations.md).
 `UninstallScanner.measure`, `Notes.search` and `FileIndexer.update`. Open the Time Profiler or
 `os_signpost` instrument in Instruments and filter to that subsystem; nothing needs recompiling.
 
-None of the benchmarks below join the suite, so each is registered in `run-tests.sh` as `run index`
-instead: `--index` hands it editor flags without queueing it, and without that entry nothing in the
-file resolves. Keep the entry's source list matching the command beside it.
-
-Run the file-index benchmark separately from the deterministic harnesses. With no arguments it crawls
-`/System /Applications /Library /usr`, which never raise a privacy prompt; pass other roots to measure
-them:
-
-```sh
-swiftc -O -wmo -swift-version 6 Tinycast/Features/FileSearch/Model/*.swift \
-    Tinycast/Features/FileSearch/Service/FileIndex.swift \
-    Tinycast/Features/FileSearch/Service/FileIndexSnapshot.swift \
-    Tinycast/Features/FileSearch/Service/FileIndexCrawler.swift \
-    Tests/FileSearchPerformanceTests.swift -o /tmp/FileSearchPerformanceTests
-/tmp/FileSearchPerformanceTests
-```
-
-It prints the crawl and write times, the index size, and first and median latency per query.
-
-The calculator benchmark is deterministic (an injected clock, calendar and rate table), so it is a
-timing harness rather than an assertion one, and stays out of `run-tests.sh` for that reason:
-
-```sh
-swiftc -O -swift-version 6 Tinycast/Features/Calculator/Model/*.swift \
-    Tests/CalcPerformanceTests.swift -o /tmp/CalcPerformanceTests
-/tmp/CalcPerformanceTests          # µs per query, by grammar
-/tmp/CalcPerformanceTests --probe  # every answer as JSON, to diff two builds
-/tmp/CalcPerformanceTests --cold "10kg to lb"   # first query, including catalog decode
-```
-
-`Tests/TextDiffPerformanceTests.swift` is the same shape for `TextDiffEngine`: build it with `-O`
-against the engine, pass a token count, a workload (`dense`, `sparse`, `equal`, `empty`) and an
-iteration count for timings, or `--probe` to diff every chunk between two builds.
-
-`Tests/ClipboardFilePerformanceTests.swift` measures file capture with private pasteboards and temporary
-fixtures. It reports wall and process CPU time as JSON, including 32/1,000/10,000 durable files,
-rejected-input controls and an uncapped-reader control that guards the attachment path against the
-bounded reader it now delegates to. Compare three fresh processes
-per build with identical `-O` settings:
-
-```sh
-swiftc -O -swift-version 6 Tinycast/Platform/PasteboardFiles.swift \
-    Tinycast/Features/Clipboard/Model/{ClipboardStore,ClipboardFilter,ClipboardFileKind,ColorValue,ColorFormat,ColorSpaces}.swift \
-    Tinycast/Features/Clipboard/Service/ClipboardManager.swift \
-    Tests/ClipboardFilePerformanceTests.swift -o /tmp/ClipboardFilePerformanceTests
-/tmp/ClipboardFilePerformanceTests
-```
-
-`Tests/ClipboardThumbnailPerformanceTests.swift` draws 10 image rows at once, then 10 previews one by one,
-as Clipboard History does, and prints the times with the footprint and its peak as JSON. `--fixtures`
-writes 10 seeded synthetic Display P3 screenshots up to 3456 × 2234, so no real clipboard is needed.
-`--original` decodes the blobs as before the copies existed; `--copies` makes and reads the
-`ImageDerivative` copies, so its first run measures a first view and later runs every other one. The
-helper must sit at `Contents/Helpers` beside the benchmark:
-
-```sh
-D=/tmp/ClipboardThumbnailPerformanceTests; mkdir -p $D/Contents/Helpers
-swiftc -O -swift-version 6 -parse-as-library \
-    Tinycast/Features/Clipboard/Service/{ClipboardTextExtractor,ClipboardTextHelper}.swift \
-    -o $D/Contents/Helpers/ClipboardTextHelper
-swiftc -O -swift-version 6 Tinycast/Platform/ProcessExit.swift \
-    Tinycast/Platform/Images/{ImageThumbnail,ImageDerivative,ThumbnailCache}.swift \
-    Tests/ClipboardThumbnailPerformanceTests.swift -o $D/ClipboardThumbnailPerformanceTests
-$D/ClipboardThumbnailPerformanceTests /tmp/ctp --fixtures
-$D/ClipboardThumbnailPerformanceTests /tmp/ctp --original
-$D/ClipboardThumbnailPerformanceTests /tmp/ctp --copies
-```
-
-`Tests/EmojiSearchPerformanceTests.swift` times uncached queries, typing prefixes and memo hits against
-the loaded catalog, with process RSS and footprint as JSON; `--names` also lists every catalog name
-missing from its own top five results, and `--languages fr,ja` loads those keyword packs first (run it
-from the repo root):
-
-```sh
-swiftc -O -swift-version 6 Tinycast/Features/Emoji/Model/{EmojiCatalog,EmojiData.generated}.swift \
-    Tinycast/Features/Emoji/Service/{EmojiIndex,FrequentEmojiStore}.swift \
-    Tinycast/Features/Launcher/Model/SearchRelevance.swift Tinycast/Platform/{AppPaths,Memo}.swift \
-    Tests/EmojiSearchPerformanceTests.swift -o /tmp/EmojiSearchPerformanceTests
-/tmp/EmojiSearchPerformanceTests --names
-/tmp/EmojiSearchPerformanceTests --languages fr,ja
-```
-
-`Tests/NotesEditorPerformanceTests.swift` installs a 100,000-character note in a real rendered editor and
-prints, as JSON, the median over 30 runs of the install with its full restyle, one typed character at
-the end, middle and start, the window fit's height read after an install and after each of those
-characters, and a caret move between distant lines. The budget is 150 ms, 8 ms (end and middle) and
-4 ms, and the fit's read gets 10 ms after an install and 1 ms after a character. The read after a
-character runs once the edit has laid out the caret's screen, so it is the fit's cost on top of the
-keystroke. Inside `didChange`, near the top of the note, the read does that layout itself, in about
-2 ms:
-
-```sh
-N=Tinycast/Features/Notes
-swiftc -O -swift-version 6 Tinycast/Platform/{Signposts,Appearance,NotificationToken}.swift \
-    Tinycast/DesignSystem/{Theme,InterfaceMetrics}.swift \
-    Tinycast/Features/TextInjection/Service/InjectableTextView.swift \
-    $N/Model/{NoteDocument,NoteMarkdown,NoteMarkdownParser,NoteInlineScanner}.swift \
-    $N/Model/{NoteEditPlan,NoteEditAction,NoteFormatting,NoteMarkdownEditing,NoteRevealPolicy}.swift \
-    $N/UI/{NoteMarkdownTypography,NoteBlockDecoration,NoteMarkdownStyler,NoteMarkdownRenderer}.swift \
-    $N/UI/{NoteCheckboxGeometry,NoteBlockLayoutFragment,NoteLayoutFragmentProvider}.swift \
-    $N/UI/{NoteTextViewEditing,NoteTextView,NoteEditorView}.swift \
-    Tests/NotesEditorPerformanceTests.swift -o /tmp/NotesEditorPerformanceTests
-/tmp/NotesEditorPerformanceTests
-```
+There are no benchmark tools in the repository. Measure a change with Instruments and these signposts,
+on the build that ships it.
 
 `Signposts.interval` owns an explicit `defer` around the wrapped work on purpose. The obvious spelling
 leaks the interval when the work throws, because the `.end` emit is skipped on the throw path and the
 instrument then shows an interval that never closes.
-
-`./Scripts/benchmark-dictation.sh AUDIO` measures all four installed dictation models with fresh and
-reused helpers, reporting load time, transcription time, sampled helper footprint and recognized text.
-It uses only the supplied audio and already downloaded models, outside the app and deterministic suite.
-See [Dictation validation](features/dictation.md#validation) for comparison limits and optional arguments.
 
 Measure before optimising, and measure the same way twice. For cold launch: quit fully, relaunch, time
 it three times, take the median.

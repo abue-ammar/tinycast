@@ -6,13 +6,13 @@ conventions for writing new code live in [standards.md](standards.md).
 ## The layering
 
 Independently of the folder tree, every mature subsystem has converged on the same four layers, and the
-`Tests/` harnesses are what hold them apart.
+test suites and the purity check in `./Scripts/lint.sh` are what hold them apart.
 
 ```
 ┌─ PURE ─────────────────────────────────────────────────────────────────────┐
 │ Foundation only. No AppKit, no clock, no network, no filesystem. Every     │
 │ environment fact is an injected parameter.                                 │
-│ ⇒ Compiled verbatim by a harness, so it cannot drift.                      │
+│ ⇒ Tested as shipped by a suite, so it cannot drift.                        │
 │                                                                            │
 │ SearchRelevance · LauncherMatch · EntryNaming · ScriptRomanization ·       │
 │ LauncherOrder · LauncherSuggestions · LauncherRankingStore · SearchScopes · │
@@ -74,13 +74,13 @@ in whichever of the two owns it.
 - **`UI/` and `Settings/`: views**, plus the feature's coordinator. Declarative, thin, holding no policy.
 
 The rule is checkable, which is the point: **a file under `Model/` may not import AppKit or SwiftUI**,
-because the harnesses compile the shipped sources rather than a copy. A harness that stops compiling is
-the signal that a decision leaked into the effect layer, or an effect into the decision layer.
+and `./Scripts/lint.sh` fails when one does. A `Model/` type that a suite cannot build without the
+running app is the signal that an effect leaked into the decision layer.
 
 The boundary keeps effects out of decisions: `CalcEngine.evaluate` is handed a finished
 `CurrencyRates?` rather than reaching for one, which is what keeps it Foundation-only and testable.
 Confirmation gates live in the coordinator, never in the runner, which is why `ShellCommandRunner`
-and `SystemActionRunner` stay harness-compilable while the "are you sure?" step still cannot be bypassed.
+and `SystemActionRunner` stay testable without a UI while the "are you sure?" step still cannot be bypassed.
 
 Two things sit deliberately outside a feature folder: `Features/PaletteRowIndex.swift`, because the
 palette rather than any one feature owns the flat selection index, and `DesignSystem/` + `Platform/`,
@@ -348,7 +348,7 @@ Tinycast/
     Quicklinks/ Snippets/ Uninstall/ SystemActions/ CustomCommands/ HotKeys/ Backup/
     WindowManagement/ Onboarding/ Updates/ Support/ AI/ Settings/
     Extensions/
-        Model/      pure: the harness inputs
+        Model/      pure: what the suites pin hardest
         Service/    effects: stores, monitors, runners, AppKit glue
         UI/         screens, views, and the feature's coordinator
         Settings/   the feature's own panes
@@ -357,7 +357,9 @@ Tinycast/
                     navigation types, SettingsTab, AppSettings, AppSettingsKey, the settings file
                     (Model/, Service/, SettingsFileSchema), and Panes/ for the two panes no feature
                     owns
-Tests/              the standalone harnesses, one Swift file each
+Tests/
+  TinycastTests/    the Swift Testing suites, one per file, in folders mirroring Tinycast/
+  *.swift           the extension harnesses, until extensions leave this repository
 Scripts/            run-tests.sh, the two data generators, packaging, formatting, editor setup
 ```
 
@@ -372,4 +374,4 @@ feature owns (General, Permissions) lives in `Settings/Panes/`. The four launche
 
 `SettingsTab` and `SettingsSection` both identify by the case itself, never by an index. A selectable
 `List` flattens section and row IDs into one namespace, so overlapping `Int` IDs make SwiftUI drop
-whole sidebar groups; `Tests/SettingsHistoryTests.swift` pins the two namespaces apart.
+whole sidebar groups; `SettingsHistoryTests` pins the two namespaces apart.
