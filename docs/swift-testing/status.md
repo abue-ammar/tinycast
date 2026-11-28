@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: B2 · Calculator, calendar, dictionary** (build mode)
+**Next: B3 · Clipboard, emoji** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -19,8 +19,8 @@ the old harness.
 | R3    | Remove the extension harnesses         | build | 13   | done   |
 | P2    | Peer fixtures for self-run harnesses   | plan  | 3    | done   |
 | B1    | Launcher, search, files                | build | 13   | done a2dcde17 |
-| B2    | Calculator, calendar, dictionary       | build | 3    | next   |
-| B3    | Clipboard, emoji                       | build | 6    | todo   |
+| B2    | Calculator, calendar, dictionary       | build | 3    | done   |
+| B3    | Clipboard, emoji                       | build | 6    | next   |
 | B4    | Palette and design system              | build | 9    | todo   |
 | B5    | Palette input                          | build | 9    | todo   |
 | B6    | Dictation, hotkeys, platform           | build | 9    | todo   |
@@ -181,9 +181,16 @@ Done. Six suites moved in `36c67aa2` and seven in `a2dcde17`. The full decision-
 
 ## B2 · Calculator, calendar, dictionary
 
-- [ ] CalcTests · 2,887 · mostly tables: `@Test(arguments:)`
-- [ ] CalendarTests · 795
-- [ ] DictionaryTests · 287
+Done. The full decision-6 run and lint passed. `CalcTests` is one suite over eight files: the core,
+`+Units`, `+Currency`, `+Dates`, `+TimeZones`, `+Phrases`, `+Wording` and `+NumberFormat`, each test a
+table named for the old harness's section. All 1,941 top-level checks are rows, in their old
+inputs and environment (fixture rates, offline, region, clock, zone, locale, number format); the
+nested loops became cartesian `@Test(arguments:)`. Docs: `calculator.md`, `calendar.md` and
+`testing.md`'s one-test example, plus `CurrencyFeed`'s doc comment.
+
+- [x] CalcTests · 2,887 · 2,687 cases in 185 tests
+- [x] CalendarTests · 795
+- [x] DictionaryTests · 287
 
 ## B3 · Clipboard, emoji
 
@@ -427,6 +434,10 @@ Decisions made during the migration, beyond the brief's. Newest last.
 - B1: the user approved returning task handles from `FileSearchSession` and ordering an index
   refresh's visible search before its recents refresh. Tests await completion and use streams to
   control in-flight work.
+- B2: a table whose rows pin different parts of one result takes a row type that evaluates its
+  query and reads back only the part it pins (`CalcTests.Case`); each test stays
+  `#expect(try row.actual() == row.expected)`. A row's environment is data on the row: zones and
+  moments as identifiers and ISO strings, resolved with `#require`.
 
 ## Open problems
 

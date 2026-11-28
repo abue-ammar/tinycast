@@ -1,22 +1,10 @@
-import Foundation
+import Testing
 
-@main
-@MainActor
+@testable import Tinycast
+
 struct DictionaryTests {
     typealias Block = DictionaryEntry.Block
     typealias Run = DictionaryEntry.Run
-
-    static var failures = 0
-    static var passes = 0
-
-    static func expect<T: Equatable>(_ actual: T, _ expected: T, _ message: String) {
-        if actual == expected {
-            passes += 1
-        } else {
-            failures += 1
-            print("FAIL: \(message)\n  got  \(actual)\n  want \(expected)")
-        }
-    }
 
     /// Trimmed from the New Oxford American record for `mango`, classes and whitespace intact.
     static let mango = """
@@ -121,51 +109,47 @@ struct DictionaryTests {
         <span class="trg"><span class="trans">the god of love</span></span></span></span></span></d:entry>
         """
 
-    static func main() {
-        let blocks = DictionaryMarkup.blocks(fromXHTML: mango)
-        let expected: [Block] = [
-            .headword("man·go", homograph: nil, pronunciation: "ˈmaNGɡō"),
-            .partOfSpeech([
-                Run(text: "noun ", style: .label), Run(text: "(", style: .plain),
-                Run(text: "plural ", style: .label), Run(text: "mangoes", style: .strong),
-                Run(text: ")", style: .plain)
-            ]),
-            .sense(
-                number: "1",
-                [
-                    Run(text: "a tropical fruit: ", style: .plain),
-                    Run(text: "a ripe mango.", style: .example)
-                ]),
-            .subsense([
-                Run(text: "informal ", style: .label), Run(text: "a mango tree", style: .plain)
-            ]),
-            .sense(number: "2", [Run(text: "a hummingbird.", style: .plain)]),
-            .note([Run(text: "Genus ", style: .plain), Run(text: "Anthracothorax", style: .italic)]),
-            .section("ORIGIN"),
-            .paragraph([
-                Run(text: "late 16th century: from Portuguese ", style: .plain),
-                Run(text: "manga", style: .italic), Run(text: ".", style: .plain)
-            ])
-        ]
-        expect(blocks.count, expected.count, "every structural span becomes one block")
-        for (index, pair) in zip(blocks, expected).enumerated() {
-            expect(pair.0, pair.1, "block \(index)")
-        }
-        expect(DictionaryMarkup.blocks(fromXHTML: "<html><body"), [], "broken markup reads as nothing")
+    static let mangoBlocks: [Block] = [
+        .headword("man·go", homograph: nil, pronunciation: "ˈmaNGɡō"),
+        .partOfSpeech([
+            Run(text: "noun ", style: .label), Run(text: "(", style: .plain),
+            Run(text: "plural ", style: .label), Run(text: "mangoes", style: .strong),
+            Run(text: ")", style: .plain)
+        ]),
+        .sense(
+            number: "1",
+            [Run(text: "a tropical fruit: ", style: .plain), Run(text: "a ripe mango.", style: .example)]),
+        .subsense([Run(text: "informal ", style: .label), Run(text: "a mango tree", style: .plain)]),
+        .sense(number: "2", [Run(text: "a hummingbird.", style: .plain)]),
+        .note([Run(text: "Genus ", style: .plain), Run(text: "Anthracothorax", style: .italic)]),
+        .section("ORIGIN"),
+        .paragraph([
+            Run(text: "late 16th century: from Portuguese ", style: .plain),
+            Run(text: "manga", style: .italic), Run(text: ".", style: .plain)
+        ])
+    ]
 
-        let homograph = DictionaryMarkup.blocks(
+    @Test func everyStructuralSpanBecomesOneBlock() {
+        #expect(DictionaryMarkup.blocks(fromXHTML: Self.mango) == Self.mangoBlocks)
+    }
+
+    @Test func brokenMarkupReadsAsNothing() {
+        #expect(DictionaryMarkup.blocks(fromXHTML: "<html><body").isEmpty)
+    }
+
+    @Test func aHomographNumberAndEveryPronunciationStayOnTheHeadword() {
+        let blocks = DictionaryMarkup.blocks(
             fromXHTML: """
                 <d:entry xmlns:d="x" class="entry"><span class="hg"><span class="hw">light\
                 <span class="gp ty_hom tg_hw"> 1 </span></span><span class="pr"> | \
                 <span class="ph">līt</span>, <span class="ph">lite</span> | </span></span></d:entry>
                 """)
-        expect(
-            homograph, [.headword("light", homograph: "1", pronunciation: "līt, lite")],
-            "a homograph number and every pronunciation stay on the headword")
+        #expect(blocks == [.headword("light", homograph: "1", pronunciation: "līt, lite")])
+    }
 
-        expect(
-            DictionaryMarkup.blocks(fromXHTML: bilingual),
-            [
+    @Test func aBilingualEntrySplitsIntoOneLinePerExample() {
+        #expect(
+            DictionaryMarkup.blocks(fromXHTML: Self.bilingual) == [
                 .headword("good", homograph: nil, pronunciation: "BrE ɡʊd, AmE ɡʊd"),
                 .partOfSpeech([
                     Run(text: "A. ", style: .plain), Run(text: "adjective", style: .label),
@@ -178,110 +162,98 @@ struct DictionaryTests {
                         Run(text: "(enjoyable)", style: .label), Run(text: " 好的 ", style: .plain),
                         Run(text: "hǎo de ‹book›", style: .label)
                     ]),
-                .example([
-                    Run(text: "a good joke", style: .example), Run(text: " 有趣的笑话", style: .plain)
-                ]),
+                .example([Run(text: "a good joke", style: .example), Run(text: " 有趣的笑话", style: .plain)]),
                 .paragraph([Run(text: "→ riddance", style: .plain)])
-            ],
-            "a bilingual entry splits into headword, part of speech, sense and one line per example")
+            ])
+    }
 
-        expect(
-            DictionaryMarkup.blocks(fromXHTML: nestedSenses),
-            [
+    @Test func aNestedSenseSharesItsParentsNumberUntilItsParentHasText() {
+        #expect(
+            DictionaryMarkup.blocks(fromXHTML: Self.nestedSenses) == [
                 .partOfSpeech([Run(text: "f", style: .label)]),
                 .sense(
-                    number: "1 a",
-                    [Run(text: "(vivienda) ", style: .label), Run(text: "house", style: .plain)]),
+                    number: "1 a", [Run(text: "(vivienda) ", style: .label), Run(text: "house", style: .plain)]),
                 .sense(number: "b", [Run(text: "home", style: .plain)])
-            ],
-            "a nested sense shares its parent's number until its parent has text")
+            ])
+    }
 
-        expect(
-            DictionaryMarkup.blocks(fromXHTML: abutting),
-            [
+    @Test func abuttingSpansGetAWordBreakNeverOneAheadOfPunctuation() {
+        #expect(
+            DictionaryMarkup.blocks(fromXHTML: Self.abutting) == [
                 .paragraph([Run(text: "love; affection", style: .plain)]),
-                .example([
-                    Run(text: "사랑의 신", style: .example), Run(text: " the god of love", style: .plain)
-                ])
-            ],
-            "abutting spans get a word break, never one ahead of punctuation")
+                .example([Run(text: "사랑의 신", style: .example), Run(text: " the god of love", style: .plain)])
+            ])
+    }
 
-        expect(
-            DictionaryMarkup.blocks(fromXHTML: bulletedExamples),
-            [
+    @Test func anExamplesBulletNeverReadsAsASenseNumber() {
+        #expect(
+            DictionaryMarkup.blocks(fromXHTML: Self.bulletedExamples) == [
                 .partOfSpeech([Run(text: "tính từ", style: .label)]),
                 .sense(number: "1", [Run(text: "tốt; hay", style: .plain)]),
                 .example([
                     Run(text: "It’s good to talk. ", style: .example), Run(text: "Nên nói.", style: .plain)
                 ])
-            ],
-            "an example's bullet never reads as a sense number")
+            ])
+    }
 
-        expect(
-            DictionaryMarkup.blocks(fromXHTML: thesaurus),
-            [
+    @Test func aThesaurusSenseTakesItsLabelAsItsNumber() {
+        #expect(
+            DictionaryMarkup.blocks(fromXHTML: Self.thesaurus) == [
                 .partOfSpeech([Run(text: "adjective", style: .label)]),
                 .sense(
                     number: "1",
-                    [
-                        Run(text: "a good product: ", style: .example),
-                        Run(text: "fine, superior", style: .plain)
-                    ])
-            ],
-            "a thesaurus sense takes its label as its number")
+                    [Run(text: "a good product: ", style: .example), Run(text: "fine, superior", style: .plain)])
+            ])
+    }
 
-        expect(
-            DictionaryMarkup.blocks(fromXHTML: definitionThenExamples),
-            [
+    @Test func examplesAfterADefinitionWithNoColonStartTheirOwnLine() {
+        #expect(
+            DictionaryMarkup.blocks(fromXHTML: Self.definitionThenExamples) == [
                 .sense(number: nil, [Run(text: "Gebäude, das Menschen zum Wohnen dient", style: .plain)]),
                 .example([Run(text: "ein großes Haus | das Haus seiner Eltern", style: .example)])
-            ],
-            "examples after a definition with no colon start their own line")
+            ])
+    }
 
-        expect(
-            DictionaryMarkup.blocks(fromXHTML: plainTemplate),
-            [
+    @Test func thePlainTemplateReadsItsHeadingAndParagraphs() {
+        #expect(
+            DictionaryMarkup.blocks(fromXHTML: Self.plainTemplate) == [
                 .headword("Siri", homograph: nil, pronunciation: nil),
                 .paragraph([Run(text: "An intelligent personal assistant.", style: .plain)]),
                 .paragraph([Run(text: "See also Apple TV.", style: .plain)])
-            ],
-            "the plain template reads its h1 as the headword and each p as a paragraph")
+            ])
+    }
 
-        let plain = DictionaryEntry(
-            term: "hello",
-            plainText: "hello hel·lo | həˈlō | used as a greeting. • used to attract attention.")
-        expect(
-            plain.blocks,
-            [
+    @Test func plainTextSplitsIntoPronunciationAndOneParagraphPerBullet() {
+        let entry = DictionaryEntry(
+            term: "hello", plainText: "hello hel·lo | həˈlō | used as a greeting. • used to attract attention.")
+        #expect(
+            entry.blocks == [
                 .headword("hello", homograph: nil, pronunciation: "həˈlō"),
                 .paragraph([Run(text: "used as a greeting.", style: .plain)]),
                 .paragraph([Run(text: "used to attract attention.", style: .plain)])
-            ],
-            "plain text splits into pronunciation and one paragraph per bullet")
-        expect(
-            DictionaryEntry(term: "x", plainText: "a letter").blocks,
-            [
+            ])
+    }
+
+    @Test func plainTextWithNoPipesIsAllBody() {
+        #expect(
+            DictionaryEntry(term: "x", plainText: "a letter").blocks == [
                 .headword("x", homograph: nil, pronunciation: nil),
                 .paragraph([Run(text: "a letter", style: .plain)])
-            ],
-            "plain text with no pipes is all body")
+            ])
+    }
 
-        expect(
-            DictionaryEntry(term: "mango", blocks: expected).text,
-            """
-            man·go | ˈmaNGɡō |
-            noun (plural mangoes)
-            1 a tropical fruit: a ripe mango.
-            • informal a mango tree
-            2 a hummingbird.
-            Genus Anthracothorax
+    @Test func theCopyKeepsOneLinePerBlock() {
+        #expect(
+            DictionaryEntry(term: "mango", blocks: Self.mangoBlocks).text == """
+                man·go | ˈmaNGɡō |
+                noun (plural mangoes)
+                1 a tropical fruit: a ripe mango.
+                • informal a mango tree
+                2 a hummingbird.
+                Genus Anthracothorax
 
-            ORIGIN
-            late 16th century: from Portuguese manga.
-            """,
-            "the copy keeps one line per block")
-
-        print("\(passes) passed, \(failures) failed")
-        if failures > 0 { exit(1) }
+                ORIGIN
+                late 16th century: from Portuguese manga.
+                """)
     }
 }

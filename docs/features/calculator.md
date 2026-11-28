@@ -1,15 +1,14 @@
 # Inline calculator
 
 `Features/Calculator/Model/` is a **Foundation-only** engine (no AppKit / SwiftUI imports) fronted by
-`CalcMemo`, a one-deep memo mirroring `AppIndex`'s. It must stay Foundation-only because the
-`Tests/CalcTests.swift` harness compiles the real engine sources, including `CalcDateTime`. It is
-also **pure**: the inputs it can't compute (the FX rate table and the Mac's own currency) are passed
-in (see Currency below).
+`CalcMemo`, a one-deep memo mirroring `AppIndex`'s. `./Scripts/lint.sh` holds it Foundation-only, and
+`CalcTests` tests the shipped engine, `CalcDateTime` included. It is also **pure**: the inputs it
+can't compute (the FX rate table and the Mac's own currency) are passed in (see Currency below).
 
 ## Invariants
 
 - **`Model/` (including `CalcDateTime`) stays Foundation-only _and pure_**: no AppKit or SwiftUI, no
-  clock read, no network, **no `Locale`**. `CalcTests` compiles the real engine sources. Every
+  clock read, no network, **no `Locale`**. `CalcTests` tests the shipped engine. Every
   externally-sourced input is injected: the clock via `now`/`calendar`, the FX table via `rates`,
   the Mac's own currency via `region`, which `RegionCurrency` reads and `CalcMemo` passes down, and
   the number format via `format`, which `RegionNumberFormatMonitor` reads from Language & Region.
@@ -20,13 +19,13 @@ in (see Currency below).
   text, so history re-renders in whatever format is chosen later.
 - **`CalcEngine.evaluate` never fetches**: it takes a finished `CurrencyRates?`, nil meaning no
   snapshot has landed yet. `CurrencyRateStore` owns the fetch and the cacheless `.ephemeral` session,
-  and `CurrencyFeed` (pure, so the harness covers it) turns the payloads into that snapshot.
+  and `CurrencyFeed` (pure, so `CalcTests` covers it) turns the payloads into that snapshot.
 - **The time-zone table is Foundation's, never generated and never hand-listed.**
   `TimeZone.knownTimeZoneIdentifiers` already carries the whole IANA database, so `CalcTimeZone`
   builds its city index from that on first use rather than shipping a copy that would rot every time
   IANA moves a zone. `TimeZone.abbreviationDictionary` stays deliberately unused; it holds 51
   entries and its `BDT` is the Bangladeshi taka. The home zone is read off the **injected calendar**,
-  never `TimeZone.current`, which is what keeps the path pure and the harness deterministic.
+  never `TimeZone.current`, which is what keeps the path pure and `CalcTests` deterministic.
   `localizedName` needs a `Locale`, so a badge is the identifier's own city component instead.
   Countries are the one exception: Foundation carries no country for a zone, so
   `CountryZoneData.generated.swift` comes from `node Scripts/gen-countries.js` and is never hand-edited.
@@ -132,7 +131,7 @@ Typed arithmetic precedes simple conversion so `1 / 20ms to hz` divides by a dur
 not a scalar subsequently labeled milliseconds. Simple conversions still own their source badges.
 
 Date/time takes an injected `now` / `calendar`. `CalcMemo` supplies the live clock and calendar at the
-UI boundary; the model and harness perform no ambient clock reads. Date arithmetic requires a moment
+UI boundary; the model and its suite perform no ambient clock reads. Date arithmetic requires a moment
 signal, so ordinary numeric expressions skip calendar parsing. Numeric date components share one
 parser, while the separator still chooses ISO, month-first or day-first interpretation.
 

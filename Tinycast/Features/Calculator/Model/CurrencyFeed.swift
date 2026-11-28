@@ -1,6 +1,6 @@
 import Foundation
 
-/// Decodes the rate feeds into one snapshot. Pure, so the harness covers it; the store does the IO.
+/// Decodes the rate feeds into one snapshot. Pure, so `CalcTests` covers it; the store does the IO.
 enum CurrencyFeed {
     /// Fiat quotes are keyed `<base><code>` and omit the base's own row.
     private struct FiatPayload: Decodable {

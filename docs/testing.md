@@ -30,7 +30,7 @@ xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platf
 
 # one suite, or one test: append to the same command
     -only-testing:TinycastTests/CalcTests
-    -only-testing:'TinycastTests/CalcTests/display(_:_:)'
+    -only-testing:'TinycastTests/CalcTests/tooDeepAnExpressionHasNoResult()'
 ```
 
 `-quiet` leaves the build's errors and each failed check with its values. Xcode's test navigator, and
