@@ -298,6 +298,6 @@ one turns the feature on; the switch grants no permission class.
 ## Tests
 
 ```sh
-xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" \
     -only-testing:TinycastTests/QuicklinkTests
 ```

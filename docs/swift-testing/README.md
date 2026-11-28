@@ -47,7 +47,7 @@ Fixed. A session never reopens one; if a decision proves wrong, stop and write i
 5. **A suite keeps its harness's name.** `CalcTests` stays `CalcTests`, so every doc that names a
    harness stays true; only `Tests/<Name>.swift` paths change.
 6. **Apple's command runs the suites, and nothing wraps it, at any point.** Every suite:
-   `xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' -derivedDataPath build/DerivedData -quiet`; one suite: add `-only-testing:TinycastTests/<Suite>`. P1 deletes `Scripts/run-tests.sh` and
+   `xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath build/DerivedData -quiet`; one suite: add `-only-testing:TinycastTests/<Suite>`. P1 deletes `Scripts/run-tests.sh` and
    every call to it. From then on nothing compiles or runs an unconverted harness: it is only source
    material for the batch that rewrites it. No shell script runs a test, ever.
 7. **Opt-in checks keep their variable.** `TINYCAST_TEST_*` gates become `.enabled(if:)`; you set
@@ -158,8 +158,14 @@ tools. Neither tool picks a mode by itself; the prompt makes the session honour 
 ```text
 Continue the Swift Testing migration. Follow docs/swift-testing/README.md exactly: take the batch
 status.md marks next. If its mode is plan, read what you need, present a plan, and change no file
-until I approve it. Then convert it, run the tests, update status.md, and commit. Stop and write
-under Open problems instead of guessing.
+until I approve it. Then do the batch, run the suites with the decision-6 xcodebuild command and
+./Scripts/lint.sh, update status.md, and commit. Stop and write under Open problems instead of
+guessing.
+
+Quality bar: write every suite from scratch as idiomatic Swift 6 and Swift Testing, modelled on the
+pilot suites. Tables are @Test(arguments:), optionals unwrap with #require, asynchronous work is
+async/await or confirmation, conditions are traits, and each test builds its own state. Use current
+Apple APIs only, nothing deprecated, nothing lint would flag, and never drop or weaken a case.
 ```
 
 For a plan batch in Claude Code you can also switch to plan mode first (Shift+Tab), which enforces

@@ -444,7 +444,7 @@ Run the real model, codec, template engine, repository, keyword listener with a 
 main-actor watcher against temporary roots:
 
 ```sh
-xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" \
     -only-testing:TinycastTests/SnippetsTests
 ```
 

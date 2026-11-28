@@ -10,6 +10,11 @@ command -v swiftlint >/dev/null || {
 
 [ "${1:-}" = "--fix" ] && swiftlint --fix --quiet
 
+# SwiftLint lets a comment switch any rule off, this check included, so it runs outside SwiftLint.
+if git grep -n --untracked 'swiftlint:\(disable\|enable\)' -- Tinycast Tests/TinycastTests; then
+    echo "A lint rule is switched off in source above; fix the code instead." >&2
+    exit 1
+fi
 if ! swiftlint lint --quiet; then
     echo
     echo "Lint errors above. Warnings do not block; errors do." >&2

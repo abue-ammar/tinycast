@@ -25,7 +25,7 @@ The suites run with Apple's own command, on the `Tinycast` scheme, whose test ac
 
 ```sh
 # every suite
-xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination 'platform=macOS' \
+xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" \
     -derivedDataPath build/DerivedData -quiet
 
 # one suite, or one test: append to the same command
@@ -61,7 +61,7 @@ variables prefixed `TEST_RUNNER_`, with the prefix removed, so set it under that
 
 ```sh
 TEST_RUNNER_TINYCAST_TEST_APPLE_INTELLIGENCE=1 xcodebuild test -project Tinycast.xcodeproj \
-    -scheme Tinycast -destination 'platform=macOS' -only-testing:TinycastTests/AppleIntelligenceTests
+    -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" -only-testing:TinycastTests/AppleIntelligenceTests
 ```
 
 `AppleIntelligenceTests`' real generation still skips with a reason when the Mac cannot run the
@@ -109,9 +109,9 @@ struct CalcTests {
   state change on an `@Observable` subject with `for await … in Observations { … }` under a
   `.timeLimit`. A bounded wait is for a subject that itself has a deadline; never `sleep` until
   something is probably done.
-- **Traits, not code paths.** An environment gate is `.enabled(if:)`, a known gap
-  `.disabled("reason")`, a hang guard `.timeLimit`. A test never reads `ProcessInfo` to decide whether
-  to run.
+- **Traits, not code paths.** An environment gate is `.enabled(if:)` and a hang guard `.timeLimit`.
+  A test body never reads `ProcessInfo` to decide whether to run. A failing test is fixed or deleted,
+  never hidden behind `.disabled` or `withKnownIssue`.
 
 #### Rewrite, never transliterate
 
@@ -131,11 +131,22 @@ helpers and state do not.
   `confirmation`.
 - **`Issue.record`** only where no expression can state the check.
 
-SwiftLint enforces this with custom rules in `.swiftlint.yml`, scoped to `Tests/TinycastTests/`, which
-fail on the old shape: `@main`, `static func main`, `exit(`, `print(`, a stored `static var`, `XCTest`,
-`DispatchSemaphore`, a `RunLoop` spin, `UserDefaults.standard`, `NSPasteboard.general`, or a declared
-`expect…`/`check…`/`fail…` helper. They have no exceptions: a suite that seems to need one is
-designed wrong.
+SwiftLint enforces this with custom rules in `.swiftlint.yml`, scoped to `Tests/TinycastTests/`. They
+fail on the old shape and on what hides a failure:
+
+- an entry point: `@main`, `static func main`;
+- stopping the host: `exit`, `fatalError`, `precondition`, `assert` and their `…Failure` forms;
+- printing: `print`, `debugPrint`, `dump`, `NSLog`, `FileHandle.standardError`/`standardOutput`
+  (a child `Process`'s own `standardError` pipe is fine);
+- shared mutable state: a stored `static var`, or a `var` at file scope;
+- blocking waits: `DispatchSemaphore`, `DispatchGroup`, a `RunLoop` or `CFRunLoop` spin,
+  `Thread.sleep`, `sleep`, `usleep`;
+- shared system state: `UserDefaults.standard`, `UserDefaults()`, the general pasteboard;
+- hidden failures: `.disabled(`, `withKnownIssue`;
+- `XCTest`, and a declared assertion helper: `expect`, `check`, `fail`, `verify` or `assert`, alone or
+  followed by a capital (`checkDisplay`). A table of cases is `@Test(arguments:)` instead.
+
+They have no exceptions: a suite that seems to need one is designed wrong.
 
 A test that passed before a change passes after it. There is no "I'll fix it next commit" and no
 disabling a test. If a change genuinely invalidates a check, the check is rewritten in the same commit
@@ -300,7 +311,6 @@ when touching a pure file:
 - `Uninstall/Model/`'s deciding half still receives directory **names** and a `PathFacts`, never URLs
 - `HotKeys/Model/DoubleTap*` still take the clock as a parameter
 - `WindowManagement/Model/` still touches no `NSScreen` and makes no AX call, layouts included
-- `Features/PaletteRowIndex.swift` still imports Foundation alone, despite living under `Features/`
 - `Quicklinks/Model/` is still handed the home directory rather than reading it
 - `FileSearch/Model/` is still handed the home directory rather than reading it
 
@@ -334,9 +344,11 @@ SwiftLint owns the rules that catch defects, including the two checkable comment
 formatter, deliberately; the configuration and the measurements behind that are in
 [development.md](development.md#formatting).
 
-Two of its custom rules guard the architecture: a `Model/` file may not import AppKit, SwiftUI or
-Cocoa ([Purity checks](#purity-checks)), and a suite may not take the old harness shape
-([Rewrite, never transliterate](#rewrite-never-transliterate)).
+Its custom rules guard the architecture: a `Model/` file (and `Features/PaletteRowIndex.swift`) may
+not import AppKit, SwiftUI or Cocoa in any spelling ([Purity checks](#purity-checks)), and a suite
+may not take the old harness shape ([Rewrite, never transliterate](#rewrite-never-transliterate)).
+SwiftLint lets a comment switch any rule off, so before SwiftLint runs, the script fails on any
+`swiftlint:disable` or `swiftlint:enable` in `Tinycast/` or `Tests/TinycastTests/`.
 
 The script then runs `Scripts/check-settings-search.js`, one check SwiftLint can't: every
 `SettingsAnchor` must be claimed by a section, and every row in `SettingsSearchCatalog` must be
