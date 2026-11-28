@@ -20,7 +20,7 @@ the old harness.
 | P2    | Peer fixtures for self-run harnesses   | plan  | 3    | done   |
 | B1    | Launcher, search, files                | build | 13   | done a2dcde17 |
 | B2    | Calculator, calendar, dictionary       | build | 3    | done c1a0118e |
-| B3    | Clipboard, emoji                       | build | 6    | done   |
+| B3    | Clipboard, emoji                       | build | 6    | done 6a15630e |
 | B4    | Palette and design system              | build | 9    | next   |
 | B5    | Palette input                          | build | 9    | todo   |
 | B6    | Dictation, hotkeys, platform           | build | 9    | todo   |
