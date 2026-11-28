@@ -215,6 +215,10 @@ compiled `.lproj` tables instead of compiling or parsing the source `.xcstrings`
 both catalogs. Docs: `testing.md` (the `LanguageTests` row and the tripwire baseline), `palette.md`,
 `ui.md`, and `ExtensionFormMetrics`' doc comments.
 
+Review fixes in `ddcbfea3`: plural forms are checked for every `AppLanguage`, each grid's row count
+is pinned, the round trip keeps checking after an unresolved index, and `testing.md` explains how to
+read the case count and lists the four suites that had no row.
+
 - [x] PaletteSelectionTests · 420 · 4,902 cases in 39 tests, read from the result bundle; that
       count is the tripwire now, with the 729 grid shapes and 128 small shapes as arguments
 - [x] AppearanceTests · 128
