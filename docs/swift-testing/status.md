@@ -16,6 +16,7 @@ the old harness.
 | T     | Triage: find what does not belong      | Claude Code | build | –    | todo   |
 | R1    | Remove the benchmarks                  | Codex       | build | 8    | todo   |
 | R2    | Remove approved candidates             | Codex       | build | –    | todo   |
+| R3    | Remove the extension harnesses         | Codex       | build | 13   | todo   |
 | B1    | Launcher, search, files                | Codex       | build | 13   | todo   |
 | B2    | Calculator, calendar, dictionary       | Codex       | build | 3    | todo   |
 | B3    | Clipboard, emoji                       | Codex       | build | 6    | todo   |
@@ -28,7 +29,7 @@ the old harness.
 | B10   | Settings, backup, sync, updates        | Codex       | build | 8    | todo   |
 | B11   | AI providers                           | Codex       | build | 5    | todo   |
 | B12   | AI chat and MCP                        | Codex       | build | 3    | todo   |
-| B13   | Raycast import                         | Codex       | build | 2    | todo   |
+| B13   | Raycast import                         | Codex       | build | 1    | todo   |
 | H     | Helper-only sources                    | Claude Code | plan  | 2    | todo   |
 | S1    | Stand-ins: small                       | Claude Code | plan  | 6    | todo   |
 | S2    | Stand-ins: hotkeys                     | Claude Code | plan  | 2    | todo   |
@@ -246,12 +247,10 @@ during a batch, are removed in F.
 
 ## B13 · Raycast import
 
-Not extensions: these guard "Import from Raycast" (`.rayconfig`), which ships after Phase 0, and its
-one-release clean-up. The second exists only once Phase 0 has merged.
+Not an extension test: it guards "Import from Raycast" (`.rayconfig`), which stays in the app.
 
 - [ ] RaycastTests · 393 · scrypt takes ~47 s at `-Onone`: needs a cheaper derive in the test, or an
       opt-in gate for the slow case
-- [ ] RaycastExtensionsMigrationTests · 99 · arrives with Phase 0
 
 ## H · Helper-only sources
 
@@ -317,16 +316,34 @@ exercises the changed feature by hand in the Debug app and says so in its commit
       (`ai.md`, `mcp.md`) and the old baseline row in `testing.md`.
 - [ ] Delete `docs/swift-testing/` and the pointer in `AGENTS.md`.
 
-## Not migrated
+## R3 · Remove the extension harnesses
 
-Deleted, not converted: `ext/0-remove-raycast` (Phase 0) removes every one of them. Merge Phase 0
-into `main`, then `main` into this branch, **before B1**: Phase 0 also edits about 15 harnesses these
-batches convert. F cannot start until it has merged.
+Deleted, not converted. The Raycast extension runtime is on its way out (`ext/0-remove-raycast`
+deletes it and these harnesses), so a Swift Testing rewrite would be thrown away, and keeping them
+unrun would leave the old pattern in the tree. Delete each file, `Tests/ext-fixtures/`, their rows in
+`docs/testing.md#what-to-run-when`, and doc lines that cite them (`docs/features/extensions.md`).
+The extension code itself stays untouched.
 
-ExtensionTests (3,153, with `ExtensionTests+MenuBar` and `ExtensionFetchTests`), ExtensionStoreTests,
-ExtensionFormTests (with `ExtensionListKeyTests`), ExtensionAccessoryTests, ExtensionIconTests,
-ExtensionCleanupTests, ExtensionRefreshTests, ExtensionMetadataTests, ExtensionVersionTests,
-ExtensionSignInTests, ExtensionImageSizeTests, SymbolsTests (`Extensions/Service/SymbolCatalog`).
+- [ ] ExtensionTests · 3,153 · with `ExtensionTests+MenuBar` and `ExtensionFetchTests`
+- [ ] ExtensionStoreTests · 284
+- [ ] ExtensionFormTests · 309 · with `ExtensionListKeyTests`
+- [ ] ExtensionAccessoryTests · 236
+- [ ] ExtensionIconTests · 235
+- [ ] ExtensionCleanupTests · 234
+- [ ] ExtensionRefreshTests · 239
+- [ ] ExtensionMetadataTests · 119
+- [ ] ExtensionVersionTests · 98
+- [ ] ExtensionSignInTests · 134
+- [ ] ExtensionImageSizeTests · 56
+- [ ] SymbolsTests · 112 · `Extensions/Service/SymbolCatalog`
+- [ ] `Tests/ext-fixtures/`
+
+## After this PR: native-extensions
+
+Not part of this migration; recorded so it is not lost. Native-extensions development is paused until
+this PR merges. Then merge `main` into `native-extensions` and its `ext/*` branches. Phase 0 edits about
+15 harnesses this migration rewrites (`FuzzTests`, `PaletteEscapeTests`, `SettingsFileTests`, …):
+redo those edits in the suites, and write Phase 0's `RaycastExtensionsMigrationTests` as a suite.
 
 ## Removal candidates
 

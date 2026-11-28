@@ -26,7 +26,7 @@ what says which parts of that end state exist yet.
 | `helper` | harnesses that compile helper-only sources the app excludes        | need the helper sources compiled into a test target          |
 | `bench`  | benchmarks: CLI tools with arguments, never part of the suite      | deleted, with their scripts and docs                         |
 | `remove` | a harness or case that does not belong in a unit-test suite        | deleted once the user approves it (see decision 13)          |
-| `skip`   | extension harnesses                                                | not converted; deleted by the Phase 0 merge (see status.md)  |
+| `skip`   | extension harnesses                                                | not converted; deleted in batch R3                           |
 
 ## Decisions
 
@@ -133,7 +133,7 @@ For each harness in the batch:
 | -------------------- | ----------- | ----- | --------------------------------------------------------- |
 | P1, H, S1–S6         | Claude Code | plan  | design choices and app code changes: approve them first   |
 | T                    | Claude Code | build | reads and writes only `status.md`                         |
-| R1, R2, B1–B12       | Codex       | build | mechanical and fully specified here                       |
+| R1–R3, B1–B13        | Codex       | build | mechanical and fully specified here                       |
 | F                    | Claude Code | build | checks and deletions                                      |
 | review of last batch | the other   | build | a cheap second read; it reports and changes nothing       |
 
