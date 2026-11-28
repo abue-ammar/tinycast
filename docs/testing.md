@@ -64,7 +64,8 @@ variables prefixed `TEST_RUNNER_`, with the prefix removed, so set it under that
 
 ```sh
 TEST_RUNNER_TINYCAST_TEST_APPLE_INTELLIGENCE=1 xcodebuild test -project Tinycast.xcodeproj \
-    -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" -only-testing:TinycastTests/AppleIntelligenceTests
+    -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath build/DerivedData -quiet \
+    -only-testing:TinycastTests/AppleIntelligenceTests
 ```
 
 `AppleIntelligenceTests`' real generation still skips with a reason when the Mac cannot run the

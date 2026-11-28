@@ -163,7 +163,7 @@ feature's doc, under its own `## Invariants`.
 
 Each item is explained in [testing.md](docs/testing.md#definition-of-done).
 
-- The suites pass: `xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)"`.
+- The suites pass: `xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" -derivedDataPath build/DerivedData -quiet`.
 - The Debug build compiles with **no new warnings**.
 - `./Scripts/lint.sh` is clean, which includes the `Model/` purity check and the test-shape check.
 - Any doc your change made wrong is fixed in the same commit.

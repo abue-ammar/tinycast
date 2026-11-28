@@ -256,7 +256,7 @@ what stayed behind.
 
 ```sh
 xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" \
-    -only-testing:TinycastTests/UninstallTests
+    -derivedDataPath build/DerivedData -quiet -only-testing:TinycastTests/UninstallTests
 ```
 
 No filesystem, no temp directories: every input is a `String` or a `PathFacts`. `testStreamedSizes`

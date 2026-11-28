@@ -4,7 +4,7 @@ import Testing
 @testable import Tinycast
 
 struct CalcTests {
-    /// Friday 24 July 2026, 12:18 AM in UTC: the clock every case is asked at unless it says otherwise.
+    /// Friday 24 July 2026, 12:18 AM UTC: the clock every case is asked at unless it names one.
     static let now = "2026-07-24T00:18:00Z"
     static let septemberNoon = "2026-09-15T12:00:00Z"
     static let homeZones = ["UTC", "Asia/Shanghai", "America/Los_Angeles"]

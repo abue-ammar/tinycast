@@ -225,7 +225,7 @@ extension AIProviderTests {
         #expect(throws: Never.self) { try AIEndpointPolicy.validate(endpoint) }
     }
 
-    /// A loopback host does not excuse a scheme the transport cannot speak, and a file is no provider.
+    /// A loopback host does not excuse a scheme the transport cannot speak; a file is no provider.
     @Test(arguments: ["http://example.com/v1", "not a url", "ftp://localhost/v1", "file:///etc/hosts"])
     func plaintextRemoteMalformedAndForeignSchemeEndpointsAreRejected(_ endpoint: String) {
         #expect(throws: (any Error).self) { try AIEndpointPolicy.validate(endpoint) }

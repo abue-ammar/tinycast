@@ -299,5 +299,5 @@ one turns the feature on; the switch grants no permission class.
 
 ```sh
 xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" \
-    -only-testing:TinycastTests/QuicklinkTests
+    -derivedDataPath build/DerivedData -quiet -only-testing:TinycastTests/QuicklinkTests
 ```

@@ -52,7 +52,7 @@ extension AIProviderTests {
         #expect(received.contains("bulk\nbarrier"))
     }
 
-    /// Codex's input is full while it holds, so the write still waits its turn when the time runs out.
+    /// Codex's input is full while it holds, so the write waits its turn when the time runs out.
     @MainActor
     @Test(.timeLimit(.minutes(1)))
     func aQueuedWriteTimesOutAndNeverReachesCodex() async throws {

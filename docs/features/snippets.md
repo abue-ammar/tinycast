@@ -445,7 +445,7 @@ main-actor watcher against temporary roots:
 
 ```sh
 xcodebuild test -project Tinycast.xcodeproj -scheme Tinycast -destination "platform=macOS,arch=$(uname -m)" \
-    -only-testing:TinycastTests/SnippetsTests
+    -derivedDataPath build/DerivedData -quiet -only-testing:TinycastTests/SnippetsTests
 ```
 
 The delivery contract's two judgements, `keywordState` and `confirmsReplacement`, are pure, so the

@@ -35,7 +35,7 @@ struct DictionaryTests {
         </d:entry></body></html>
         """
 
-    /// Trimmed from the Oxford Chinese record for `good`: the bilingual schema every Oxford pair shares.
+    /// Trimmed from the Oxford Chinese record for `good`: the schema every Oxford pair shares.
     static let bilingual = """
         <d:entry xmlns:d="x" id="e_20131" d:title="good" class="entry"><span class="hwg">\
         <span d:dhw="1" role="text" class="hw">good<span class="gp tg_hw"> </span></span>\
@@ -56,7 +56,7 @@ struct DictionaryTests {
         <span class="xr">riddance</span> </span></span></span></d:entry>
         """
 
-    /// Trimmed from the Oxford Spanish record for `casa`: a sense nested before any text of its own.
+    /// Trimmed from the Oxford Spanish record for `casa`: a sense nested before its own text.
     static let nestedSenses = """
         <d:entry xmlns:d="x" class="entry"><span class="gramb"><span class="ps"> f  </span>\
         <span class="semb hasSn"><span class="gp ty_label tg_semb">1 </span>\
@@ -94,7 +94,7 @@ struct DictionaryTests {
         <span class="ex">das Haus seiner Eltern</span></span></span></span></d:entry>
         """
 
-    /// The Apple Dictionary's record for `Siri`: the plain template, with no classes and no entry span.
+    /// The Apple Dictionary's record for `Siri`: the plain template, with no classes or entry span.
     static let plainTemplate = """
         <html xmlns:d="x"><body><d:entry id="Siri"><h1>Siri</h1>\
         <p>An intelligent personal assistant.</p><p>See also <a href="x"><b>Apple TV</b></a>.</p>\
@@ -172,7 +172,8 @@ struct DictionaryTests {
             DictionaryMarkup.blocks(fromXHTML: Self.nestedSenses) == [
                 .partOfSpeech([Run(text: "f", style: .label)]),
                 .sense(
-                    number: "1 a", [Run(text: "(vivienda) ", style: .label), Run(text: "house", style: .plain)]),
+                    number: "1 a",
+                    [Run(text: "(vivienda) ", style: .label), Run(text: "house", style: .plain)]),
                 .sense(number: "b", [Run(text: "home", style: .plain)])
             ])
     }
@@ -202,7 +203,10 @@ struct DictionaryTests {
                 .partOfSpeech([Run(text: "adjective", style: .label)]),
                 .sense(
                     number: "1",
-                    [Run(text: "a good product: ", style: .example), Run(text: "fine, superior", style: .plain)])
+                    [
+                        Run(text: "a good product: ", style: .example),
+                        Run(text: "fine, superior", style: .plain)
+                    ])
             ])
     }
 
@@ -225,7 +229,8 @@ struct DictionaryTests {
 
     @Test func plainTextSplitsIntoPronunciationAndOneParagraphPerBullet() {
         let entry = DictionaryEntry(
-            term: "hello", plainText: "hello hel·lo | həˈlō | used as a greeting. • used to attract attention.")
+            term: "hello",
+            plainText: "hello hel·lo | həˈlō | used as a greeting. • used to attract attention.")
         #expect(
             entry.blocks == [
                 .headword("hello", homograph: nil, pronunciation: "həˈlō"),
