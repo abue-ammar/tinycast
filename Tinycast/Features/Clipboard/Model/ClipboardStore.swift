@@ -192,7 +192,7 @@ final class ClipboardStore {
     private var searchRevision = 0
     @ObservationIgnored private(set) var textSearchEnabled = false
     @ObservationIgnored private var textSearchActive = true
-    @ObservationIgnored private var textSearchTask: Task<Void, Never>?
+    @ObservationIgnored private(set) var textSearchTask: Task<Void, Never>?
     @ObservationIgnored private var textSearchNeedsRefresh = false
     @ObservationIgnored private var textSearchQuery: String?
     @ObservationIgnored private var textSearchFilter: ClipboardFilter?

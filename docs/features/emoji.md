@@ -4,8 +4,8 @@ A palette sub-screen (reached like Clipboard / Calculator History) presenting a 
 
 ## Invariants
 
-- **`Model/` stays Foundation-only**: `EmojiCatalog`, `EmojiGridGeometry` and the generated dataset are
-  compiled by `EmojiTests`, so an `import AppKit` there breaks the test suite.
+- **`Model/` stays Foundation-only.** Lint guards the import boundary. `EmojiTests` checks the
+  catalog, grid geometry, generated dataset and the keyword packs bundled with the app.
 - **`EmojiData.generated.swift` and `Resources/EmojiKeywords/` are emitted by `node Scripts/gen-emoji.js`**
   (Node 18+ for global `fetch`) and are never edited by hand. Regenerate and commit instead.
 - **Keyword packs are plain files, never `.lproj` folders.** Search loads packs for the user's

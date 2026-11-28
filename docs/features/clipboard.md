@@ -25,8 +25,8 @@
 - **Paste Sequentially never promotes, and its walk is frozen at the first press.** `PasteSequence`
   keeps every entry's id, newest first, and resolves each against the live history, so a promotion
   cannot repeat or skip an entry and a deleted one is passed over rather than pasted.
-- **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3 and no other app source**, so
-  `ClipboardTests` can compile it standalone. It uses `isolated deinit` for its SQLite teardown.
+- **`Model/ClipboardStore.swift` keeps to Foundation plus SQLite3.** Lint guards the model import
+  boundary, and `ClipboardTests` exercises the shipped store. Its SQLite teardown uses `isolated deinit`.
 - **An image capture keeps the generation from its pasteboard poll.** Clear History and store close
   retire it across conversion and file writing; a stale capture inserts nothing and leaves no blob.
 - A database that cannot be opened is deleted and recreated. That is sound because a history is
@@ -432,7 +432,7 @@ uses the current query and type filter, so its first entry is the first visible 
 a no-op. They are fixed to the physical number row, with ⌘1…⌘9 then ⌘0 as their labels.
 
 `load` reads every pinned row plus the newest 1000 unpinned ones as two indexed branches over a
-partial index on `pinned_at` (`Tests/ClipboardTests.swift` covers the shape). The single
+partial index on `pinned_at` (`ClipboardTests` covers the shape). The single
 `pinned_at IS NOT NULL OR rowid >= ?` form reads better but cannot be driven from an index while
 holding row order, so it scans the whole table: ~12ms against ~1ms at 200k rows, on the main actor
 at launch.

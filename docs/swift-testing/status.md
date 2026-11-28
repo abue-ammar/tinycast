@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: B3 · Clipboard, emoji** (build mode)
+**Next: B4 · Palette and design system** (build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -20,8 +20,8 @@ the old harness.
 | P2    | Peer fixtures for self-run harnesses   | plan  | 3    | done   |
 | B1    | Launcher, search, files                | build | 13   | done a2dcde17 |
 | B2    | Calculator, calendar, dictionary       | build | 3    | done c1a0118e |
-| B3    | Clipboard, emoji                       | build | 6    | next   |
-| B4    | Palette and design system              | build | 9    | todo   |
+| B3    | Clipboard, emoji                       | build | 6    | done   |
+| B4    | Palette and design system              | build | 9    | next   |
 | B5    | Palette input                          | build | 9    | todo   |
 | B6    | Dictation, hotkeys, platform           | build | 9    | todo   |
 | B7    | Window management                      | build | 8    | todo   |
@@ -197,12 +197,16 @@ Review fixes in `f2161d8c`: every doc's `xcodebuild test` command carries decisi
 
 ## B3 · Clipboard, emoji
 
-- [ ] ClipboardTests · 1,051
-- [ ] ClipboardSyncTests · 219
-- [ ] ClipboardThumbnailTests · 226 · a stand-in script plays the helper
-- [ ] ClipboardSearchTests · 155
-- [ ] EmojiTests · 177
-- [ ] EmojiSearchTests · 242
+Done. The focused and full decision-6 runs and lint passed. Clipboard search covers 14 queries ×
+7 filters across 10 history states. The thumbnail helper signals after reading the source and uses a
+pipe to hold the copy in flight. Emoji keyword checks load the packs from the hosted app bundle.
+
+- [x] ClipboardTests · 1,051 · store, classification and color coverage across three files
+- [x] ClipboardSyncTests · 219
+- [x] ClipboardThumbnailTests · 226 · `Fixtures/Clipboard/thumbnail-helper.sh`
+- [x] ClipboardSearchTests · 155
+- [x] EmojiTests · 177
+- [x] EmojiSearchTests · 242
 
 ## B4 · Palette and design system
 
@@ -444,6 +448,8 @@ Decisions made during the migration, beyond the brief's. Newest last.
 - B2 review: `FileSearchSession` keeps reloading Recent right after an index swap's rerun, on the
   worker, as B1 approved. `./Scripts/format.sh` is not run over the suites: it re-nests every
   `@Test(arguments: [` table, so the suites keep the layout they share.
+- B3: the user approved read access to `ClipboardStore.textSearchTask`. The search suite awaits
+  the exact requests it starts, including those superseded by a filter change or a hidden palette.
 
 ## Open problems
 
