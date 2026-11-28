@@ -374,13 +374,11 @@ screens hold (see [palette.md](palette.md)).
   `ExtensionListKey` handles list navigation and search editing. A stack of
   separate `onKeyPress` modifiers let a character rule shadow ⌫, and ⌫ arrives carrying U+007F
   rather than the U+0008 SwiftUI's `.delete` names, so nothing was ever deleted from a search.
-  Both spellings are answered before characters are considered at all, and the rules are pure so
-  `ExtensionFormTests` drives them.
+  Both spellings are answered before characters are considered at all, and the rules are pure.
 
   `ExtensionDateField` is the same shape over `ExtensionDateExpression`, which parses what Raycast's
   date field parses ("tomorrow at 10am", "in 3 days", "next friday", "25 dec") and offers the same
-  presets. It is pure and takes its clock and calendar as parameters, so `ExtensionFormTests` drives it
-  and the popover's flip-up rule directly.
+  presets. It is pure and takes its clock and calendar as parameters.
 
   A picker opens downward, or upward when the form's bottom edge would cut the list off, which is
   `ExtensionFormMetrics.placement` applied by `ExtensionListPlacement` against the palette's own
@@ -399,9 +397,9 @@ screens hold (see [palette.md](palette.md)).
   so both share one selection, and clicking a control takes focus as well as acting, which is what
   lets the two be mixed mid-form.
 
-  `Tests/ExtensionFormTests.swift` drives activation rules, geometry and the parser; earlier interaction checks used
-  a Form Lab extension covering every control, sectioned and empty and 40-option lists, validation
-  errors, wrapping labels, and forms taller than the palette, in both appearances.
+  Interaction is checked with a Form Lab extension covering every control, sectioned and empty
+  and 40-option lists, validation errors, wrapping labels, and forms taller than the palette, in
+  both appearances.
 
 - **ActionPanel**: flattened (sections and submenus included) into `ExtensionActionsPanel`, the
   feature's own scrolling ⌘K panel. A separator marks each change of `ActionPanel.Section` node,
@@ -652,8 +650,7 @@ owner is a hint: a scoped install matches by `owner/extension` first and falls b
 slug, so short links keep working. Anything else on a Raycast scheme just reopens the palette, and
 an unknown command says so rather than failing silently. Every other `tinycast://` link is a
 built-in's, and never reaches `ExtensionDeepLink`. `ExtensionDeepLink` owns the claimed schemes and
-the parsing,
-covered by `Tests/ExtensionTests.swift`. Two-segment links without `source=webstore` keep running commands
+the parsing. Two-segment links without `source=webstore` keep running commands
 as `<extension>/<command>`; three-segment command links keep running even with that parameter.
 An extension's own `open("raycast://…")` resolves through the same
 `ExtensionManager.resolve(_:)` instead of launching Raycast. Copy Deeplink on a command's launcher
@@ -695,8 +692,7 @@ with nothing due costs a comparison. Three guards keep it cheap:
 - A hung run dies before its successor is due, and a background run shows no toast, HUD, alert or
   window call, since those would fire on a timer.
 
-`ExtensionRefreshPolicy` is where the parsing, due dates and backoff live, driven by
-`Tests/ExtensionRefreshTests.swift`; `Tests/ExtensionMetadataTests.swift` covers the store behind it. Menu-bar
+`ExtensionRefreshPolicy` is where the parsing, due dates and backoff live. Menu-bar
 commands run on their own lane in `ExtensionMenuBarManager` but read the same policy (`nextDue`,
 its failure backoff and its per-command phase), measured from the same `lastRun`, with a ten-second
 interval floor instead of sixty.
@@ -893,21 +889,16 @@ node fixtures.mjs
 node test.mjs ~/.config/raycast/extensions/<uuid> [command]
 ```
 
-`ExtensionTests` compiles the real engine sources; there is no copy to keep in sync. `EXT_TEST_VERBOSE=1`
-prints the extension's own console output; `EXT_TEST_SETTLE_MS=8000` gives a slow command longer;
-`EXT_TEST_PREFS='{"version":"v8"}'` stands in for preferences the user set in Settings, which is the
-only way to reach a code path an extension gates on a preference with no manifest default. Both
-harnesses read the same three variables.
-
-For OpenCodex Usage, the native harness also exercises the actual menu renderer, three Refresh
-round-trips and the Provider Usage action, with live fetches but a recorded `launchCommand`. Harness
-status items stay hidden so a test run cannot interfere with the running app's menus.
+`test.mjs` prints the extension's own console output; `EXT_TEST_SETTLE_MS=8000` gives a slow
+command longer; `EXT_TEST_PREFS='{"version":"v8"}'` stands in for preferences the user set in
+Settings, which is the only way to reach a code path an extension gates on a preference with no
+manifest default.
 
 ### Debugging a failing extension
 
 1. Run it through `node test.mjs <dir>` for a full render-tree dump.
-2. `EXT_TEST_VERBOSE=1` surfaces the extension's `console.error`, which is usually where an extension
-   explains itself.
+2. Read the extension's `console.error` in that output, which is usually where an extension explains
+   itself.
 3. Build the runtime with `--dev` to get unminified React errors instead of `Minified React error #130`.
 
 Two JavaScriptCore differences that have already bitten and are worth remembering: `Error.stack`
@@ -984,9 +975,9 @@ change size depending on where it came from. An inline `data:` image is the one 
 fitted: the extension that drew it has already sized it, and rasterizing would cost the vector.
 
 Change the number only against a rendered strip of real icons; it means nothing on its own.
-`ExtensionIconTests` guards the invariant: padding in the source cannot change the drawn size, and a
-`data:` payload decodes in either encoding, and one naming a `raycast-*` colour draws ink, in the
-stroke that appearance calls for.
+The invariant: padding in the source cannot change the drawn size, a `data:` payload decodes in
+either encoding, and one naming a `raycast-*` colour draws ink, in the stroke that appearance
+calls for.
 
 - `ExtensionAppearance` (a symbol) is stored per extension by manifest name in
   `ExtensionAppearanceStore`, and applies to **every command** of that extension, the same inheritance
@@ -1017,6 +1008,3 @@ None of this is API, so every read is optional and `SymbolCatalog.fallback` (the
 `SymbolCatalog.suggested`) stands in if the bundle ever moves. That curated set is also what the picker
 opens on, since scrolling six thousand icons is not a way to choose one; a search reaches the whole
 catalog regardless of the selected category.
-
-`Tests/SymbolsTests.swift` compiles the real source and asserts those invariants against this machine's
-CoreGlyphs (shapes and rules, not counts; those move every release).

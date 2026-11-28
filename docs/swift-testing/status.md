@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: R3 · Remove the extension harnesses** (build mode)
+**Next: P2 · Peer fixtures for self-run harnesses** (plan mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -16,8 +16,8 @@ the old harness.
 | T     | Triage: find what does not belong      | build | –    | done   |
 | R1    | Remove the benchmarks                  | build | 8    | done   |
 | R2    | Remove approved candidates             | build | –    | done   |
-| R3    | Remove the extension harnesses         | build | 13   | next   |
-| P2    | Peer fixtures for self-run harnesses   | plan  | 3    | todo   |
+| R3    | Remove the extension harnesses         | build | 13   | done   |
+| P2    | Peer fixtures for self-run harnesses   | plan  | 3    | next   |
 | B1    | Launcher, search, files                | build | 13   | todo   |
 | B2    | Calculator, calendar, dictionary       | build | 3    | todo   |
 | B3    | Clipboard, emoji                       | build | 6    | todo   |
@@ -352,19 +352,23 @@ unrun would leave the old pattern in the tree. Delete each file, `Tests/ext-fixt
 `docs/testing.md#what-to-run-when`, and doc lines that cite them (`docs/features/extensions.md`).
 The extension code itself stays untouched.
 
-- [ ] ExtensionTests · 3,153 · with `ExtensionTests+MenuBar` and `ExtensionFetchTests`
-- [ ] ExtensionStoreTests · 284
-- [ ] ExtensionFormTests · 309 · with `ExtensionListKeyTests`
-- [ ] ExtensionAccessoryTests · 236
-- [ ] ExtensionIconTests · 235
-- [ ] ExtensionCleanupTests · 234
-- [ ] ExtensionRefreshTests · 239
-- [ ] ExtensionMetadataTests · 119
-- [ ] ExtensionVersionTests · 98
-- [ ] ExtensionSignInTests · 134
-- [ ] ExtensionImageSizeTests · 56
-- [ ] SymbolsTests · 112 · `Extensions/Service/SymbolCatalog`
-- [ ] `Tests/ext-fixtures/`
+Done. `testing.md` drops 8 rows; `extensions.md` keeps every fact the cited tests guarded but no
+longer names them, and its runtime section now credits `test.mjs` alone (it always prints console
+output, so `EXT_TEST_VERBOSE` is gone); `test.mjs` drops its pointer to `ExtensionTests`.
+
+- [x] ExtensionTests · 3,153 · with `ExtensionTests+MenuBar` and `ExtensionFetchTests`
+- [x] ExtensionStoreTests · 284
+- [x] ExtensionFormTests · 309 · with `ExtensionListKeyTests`
+- [x] ExtensionAccessoryTests · 236
+- [x] ExtensionIconTests · 235
+- [x] ExtensionCleanupTests · 234
+- [x] ExtensionRefreshTests · 239
+- [x] ExtensionMetadataTests · 119
+- [x] ExtensionVersionTests · 98
+- [x] ExtensionSignInTests · 134
+- [x] ExtensionImageSizeTests · 56
+- [x] SymbolsTests · 112 · `Extensions/Service/SymbolCatalog`
+- [x] `Tests/ext-fixtures/`
 
 ## After this PR: native-extensions
 
