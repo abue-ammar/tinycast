@@ -105,8 +105,9 @@ For each harness in the batch:
    then carry every input from the list into them. Rewrite the file; don't edit the old one into
    shape. The pilot suites are the examples to copy: `PasteSequenceTests` (a pure `Model/` type,
    instance fixtures), `AppleIntelligenceTests` (tables as `@Test(arguments:)`, an opt-in gate as
-   traits) and `MCPStdioTests` (a fixture, a `ScratchDirectory`, `async` tests awaiting through
-   `Observations`, a `.timeLimit`).
+   traits), `MCPStdioTests` (a fixture, a `ScratchDirectory`, `async` tests awaiting through
+   `Observations`, a `.timeLimit`) and `FormInputTests` (AppKit on the main actor: a fixture class
+   that mounts a view and closes its window, and layout instead of waiting).
 4. Run the suite: the command in decision 6 with `-only-testing:TinycastTests/<Name>`. It must pass with the **whole** coverage list
    present: same inputs, same expected values, none dropped, none loosened. A table becomes
    `@Test(arguments:)`, not fewer cases.

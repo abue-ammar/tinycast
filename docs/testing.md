@@ -763,6 +763,11 @@ prefs, caches, TCC grants and login item, so this cannot disturb an installed co
 - A `{selection}` snippet inserted from Search Snippets or its shortcut wraps text selected in an app
   Accessibility can't read, and the clipboard is restored afterwards
 - Editing a snippet file externally reloads it
+- In the snippet editor's text area (the same field as the quicklink and custom command editors), type
+  a word, then insert a placeholder from its menu: ⌘Z removes only the placeholder, and the snippet
+  keeps the typed word. Insert one again after clicking the menu away from the field: ⌘Z still
+  removes just it. `FormInputTests` can't check this, because the test host doesn't reproduce
+  AppKit's per-event undo grouping
 
 ### Calculator and currency
 

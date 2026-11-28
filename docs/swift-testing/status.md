@@ -2,7 +2,7 @@
 
 Temporary; deleted with [README.md](README.md) in the last commit. Read the brief first.
 
-**Next: P1 · Pilot** (Claude Code, plan mode)
+**Next: T · Triage** (Claude Code, build mode)
 
 Statuses: `todo`, `next`, `done <commit>`. Exactly one batch is `next`. Numbers are line counts of
 the old harness.
@@ -12,8 +12,8 @@ the old harness.
 | Batch | Title                                  | Tool        | Mode  | Rows | Status |
 | ----- | -------------------------------------- | ----------- | ----- | ---- | ------ |
 | P0    | Docs describe the end state            | Claude Code | build | –    | done   |
-| P1    | Pilot: target, host, runner, 4 suites  | Claude Code | plan  | 4    | next   |
-| T     | Triage: find what does not belong      | Claude Code | build | –    | todo   |
+| P1    | Pilot: target, host, runner, 4 suites  | Claude Code | plan  | 4    | done   |
+| T     | Triage: find what does not belong      | Claude Code | build | –    | next   |
 | R1    | Remove the benchmarks                  | Codex       | build | 8    | todo   |
 | R2    | Remove approved candidates             | Codex       | build | –    | todo   |
 | R3    | Remove the extension harnesses         | Codex       | build | 13   | todo   |
@@ -79,14 +79,14 @@ Infrastructure, in this order. Each item is a decision in the brief; this list i
       69 s cold (first build of the app and target), 5 s warm, 3 suites.
 - [x] Confirm `docs/testing.md#writing-a-suite` matches what the pilot found; fix it, not the code,
       where they differ.
-- [ ] The 4 pilot suites are the reference every later batch copies: each is a from-scratch design,
+- [x] The 4 pilot suites are the reference every later batch copies: each is a from-scratch design,
       not a converted harness. Name them in the brief's Work section as the examples to follow.
-      Three are named there; FormInputTests joins once its open problem is settled.
+      All four are named there.
 
 Suites:
 
 - [x] PasteSequenceTests · 159 · pure `Model/`
-- [ ] FormInputTests · 305 · AppKit on the main actor · blocked, see Open problems
+- [x] FormInputTests · 305 · AppKit on the main actor · 3 undo checks removed, see Removal candidates
 - [x] MCPStdioTests · 172 · fixtures (`Tests/ai-fixtures/mcp-stub.js`)
 - [x] AppleIntelligenceTests · 180 · opt-in `TINYCAST_TEST_APPLE_INTELLIGENCE`
 
@@ -351,6 +351,7 @@ One row per candidate. The user writes `approved` or `keep` in the last column.
 
 | Harness or case | Reason (decision 13) | Found in | Answer |
 | --------------- | -------------------- | -------- | ------ |
+| FormInputTests: undo restores the text typed before a programmatic insertion; that undo reaches the binding; a placeholder insertion stays undoable after a menu takes focus | They depend on AppKit's event-loop undo grouping, which the test host doesn't reproduce: under its running `NSApp` the group stays open across run-loop passes and events. Removed in P1; now in the manual sweep's Snippets section | P1 | approved |
 
 ## Decisions log
 
@@ -362,19 +363,11 @@ Decisions made during the migration, beyond the brief's. Newest last.
   mode in `MCPSecretStore.Secrets(environment:)`, so its tests run in parallel (user's choice (a)).
 - P1: the host inherits `xcodebuild`'s environment, with no shell `PATH`; a stub run by `env node`
   gets the login shell's `node` linked beside it, which the locator puts first.
+- P1: a suite never waits for SwiftUI. `layoutSubtreeIfNeeded()` on the host applies a changed binding
+  to its AppKit view synchronously (`FormInputTests`).
 
 ## Open problems
 
 What a session could not settle. The user answers these; a session never guesses past one.
 
-- **FormInputTests (P1): the text area's undo group never closes in the test host.** Its 3 undo
-  checks (undo restores the typed text, undo reaches the binding, placeholder insertion undoable
-  after a menu takes focus) see the typed text and the programmatic insertion as one undo step.
-  `FormTextArea.InputView` owns a private `UndoManager` with `groupsByEvent`; under the host's running
-  `NSApp` its group stays at level 1 across a run-loop turn, 50 ms of awaiting and a posted
-  `.applicationDefined` event AppKit dispatched. The old harness never ran `NSApp`, so a run-loop pass
-  closed it. Ending the group by hand (`endUndoGrouping`) crashes the host in a later layout;
-  `breakUndoCoalescing()` does not separate the steps. Every other check passed in a from-scratch,
-  wait-free rewrite (SwiftUI applies a binding on `layoutSubtreeIfNeeded()`). The harness is back in
-  `Tests/` unconverted. Needed: how a suite should end a simulated keystroke's undo group, or a seam
-  on `FormTextArea` (an injected `UndoManager`, for example) that the test can drive.
+- (none)
