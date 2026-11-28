@@ -103,7 +103,8 @@ struct AppleIntelligenceTests {
 
     @Test(
         .enabled(if: ProcessInfo.processInfo.environment["TINYCAST_TEST_APPLE_INTELLIGENCE"] == "1"),
-        .enabled(if: AppleIntelligenceProvider.status().isAvailable, "this Mac cannot run the on-device model"),
+        .enabled(
+            if: AppleIntelligenceProvider.status().isAvailable, "this Mac cannot run the on-device model"),
         .timeLimit(.minutes(1))
     )
     func onDeviceModelAnswers() async throws {

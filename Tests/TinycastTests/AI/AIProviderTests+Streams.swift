@@ -9,7 +9,9 @@ extension AIProviderTests {
     @Test func sseFramesSurviveSplitsAndTheLastFlushesAtFinish() {
         var parser = SSEParser()
         #expect(parser.feed(Data("data: hel".utf8)).isEmpty, "a partial frame waits")
-        #expect(parser.feed(Data("lo\n\ndata: world\r\n\r\n".utf8)) == ["hello", "world"], "LF and CRLF reassemble")
+        #expect(
+            parser.feed(Data("lo\n\ndata: world\r\n\r\n".utf8)) == ["hello", "world"],
+            "LF and CRLF reassemble")
         #expect(parser.feed(Data(": keepalive\n\ndata: final".utf8)).isEmpty, "a comment is ignored")
         #expect(parser.finish() == ["final"])
     }
@@ -54,7 +56,9 @@ extension AIProviderTests {
         #expect(events.contains(.text("Hi")))
         #expect(events.contains(.reasoning("Hmm")), "thinking is reasoning")
         #expect(!events.contains(.text("Hmm")), "never answer text")
-        #expect(events.contains(.usage(AIUsage(inputTokens: 4, outputTokens: 1))), "usage accumulates across events")
+        #expect(
+            events.contains(.usage(AIUsage(inputTokens: 4, outputTokens: 1))),
+            "usage accumulates across events")
         #expect(events.last == .finished)
     }
 
@@ -171,7 +175,8 @@ extension AIProviderTests {
     @Test func doneFlushesReasoningBeforeCompletionAndEndOfFileAddsNothing() throws {
         var decoder = AIStreamDecoder(shape: .openAICompatible)
         _ = try decoder.feed(StreamFixtures.contentFrame("<think>r</thi"))
-        #expect(try decoder.feed(Data("data: [DONE]\n\n".utf8)) == [.thinking, .reasoning("</thi"), .finished])
+        #expect(
+            try decoder.feed(Data("data: [DONE]\n\n".utf8)) == [.thinking, .reasoning("</thi"), .finished])
         #expect(try decoder.finish() == [])
     }
 
@@ -187,7 +192,8 @@ extension AIProviderTests {
             data: [DONE]
 
             """.utf8)
-        let events = StreamFixtures.decodeAll(StreamFixtures.contentFrame("<think>r</think>") + tools, slice: 7)
+        let events = StreamFixtures.decodeAll(
+            StreamFixtures.contentFrame("<think>r</think>") + tools, slice: 7)
         #expect(
             events == [
                 .thinking, .reasoning("r"),
@@ -207,7 +213,9 @@ extension AIProviderTests {
 
             """.utf8)
         #expect(
-            StreamFixtures.decodeAll(native, slice: 7) == [.thinking, .reasoning("native"), .text("answer"), .finished])
+            StreamFixtures.decodeAll(native, slice: 7) == [
+                .thinking, .reasoning("native"), .text("answer"), .finished
+            ])
     }
 
     // MARK: Refusals
@@ -216,7 +224,8 @@ extension AIProviderTests {
     @Test(arguments: Refusal.all)
     func aRefusalShowsTheProvidersOwnWordsUnderItsStatusLine(_ refusal: Refusal) {
         let shown = AIProviderFailure.description(
-            status: refusal.status, body: Data(refusal.body.utf8), retryAfter: refusal.retryAfter, secrets: [])
+            status: refusal.status, body: Data(refusal.body.utf8), retryAfter: refusal.retryAfter, secrets: []
+        )
         #expect(shown == refusal.expected)
     }
 
@@ -236,16 +245,20 @@ extension AIProviderTests {
                 testDescription: "OpenAI's error shape", status: 400,
                 body: #"{"error":{"object":"error","type":"invalid_request_error","message":"#
                     + #""Model accounts/fireworks/models/glm-5p3-flash does not support image input."}}"#,
-                expected: "\(general)\n\nModel accounts/fireworks/models/glm-5p3-flash does not support image input."),
+                expected:
+                    "\(general)\n\nModel accounts/fireworks/models/glm-5p3-flash does not support image input."
+            ),
             Refusal(
-                testDescription: "OpenRouter's nested upstream body, read through its raw string", status: 400,
+                testDescription: "OpenRouter's nested upstream body, read through its raw string",
+                status: 400,
                 body: #"{"error":{"message":"Provider returned error","code":400,"metadata":"#
                     + #"{"raw":"{\"error\":{\"message\":\"Maximum context length is 8192 tokens\"}}","#
                     + #""provider_name":"Fireworks"}}}"#,
                 expected: "\(general)\n\nMaximum context length is 8192 tokens"),
             Refusal(
                 testDescription: "Anthropic's shape", status: 400,
-                body: #"{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long"}}"#,
+                body:
+                    #"{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long"}}"#,
                 expected: "\(general)\n\nprompt is too long"),
             Refusal(
                 testDescription: "Gemini's array", status: 400,
@@ -254,7 +267,8 @@ extension AIProviderTests {
             Refusal(
                 testDescription: "vLLM's shape", status: 404,
                 body: #"{"object":"error","message":"The model `x` does not exist.","code":404}"#,
-                expected: "The provider rejected the model or request (HTTP 404).\n\nThe model `x` does not exist."),
+                expected:
+                    "The provider rejected the model or request (HTTP 404).\n\nThe model `x` does not exist."),
             Refusal(
                 testDescription: "a status keeps its own line, with the reason under it", status: 429,
                 body: #"{"error":{"message":"You exceeded your current quota."}}"#, retryAfter: "12",
@@ -270,7 +284,8 @@ extension AIProviderTests {
                 body: "", expected: "API key rejected — check it in Settings."),
             Refusal(
                 testDescription: "a nested HTML page gives way to the message beside it", status: 502,
-                body: #"{"error":{"message":"Upstream timed out","metadata":{"raw":"<html>Bad gateway</html>"}}}"#,
+                body:
+                    #"{"error":{"message":"Upstream timed out","metadata":{"raw":"<html>Bad gateway</html>"}}}"#,
                 expected: "\(unavailable)\n\nUpstream timed out"),
             Refusal(
                 testDescription: "a nested HTML page is left out when it is all there is", status: 502,
@@ -284,7 +299,8 @@ extension AIProviderTests {
                 body: #""Bad request""#, expected: "\(general)\n\nBad request"),
             Refusal(
                 testDescription: "text that only starts like JSON is still text", status: 400,
-                body: "[Errno 111] Connection refused", expected: "\(general)\n\n[Errno 111] Connection refused"),
+                body: "[Errno 111] Connection refused",
+                expected: "\(general)\n\n[Errno 111] Connection refused"),
             Refusal(
                 testDescription: "a body cut inside its message shows no fragment of JSON", status: 400,
                 body: #"{"error":{"message":"Half a mess"#, expected: general),
@@ -295,9 +311,11 @@ extension AIProviderTests {
                 testDescription: "a cut list of strings is not shown raw", status: 400,
                 body: #"["first error", "second"#, expected: general),
             Refusal(
-                testDescription: "nor a cut list of anything else", status: 400, body: "[1, 2,", expected: general),
+                testDescription: "nor a cut list of anything else", status: 400, body: "[1, 2,",
+                expected: general),
             Refusal(
-                testDescription: "a sentence that opens with a bracket and closes it is a sentence", status: 400,
+                testDescription: "a sentence that opens with a bracket and closes it is a sentence",
+                status: 400,
                 body: #"["model"] is not supported"#, expected: "\(general)\n\n[\"model\"] is not supported"),
             Refusal(
                 testDescription: "whichever bracket it is", status: 400,
@@ -311,11 +329,14 @@ extension AIProviderTests {
                 expected: "\(general)\n\nReduce your prompt"),
             Refusal(
                 testDescription: "a cut upstream body falls back to the wrapper's message", status: 400,
-                body: #"{"error":{"message":"Provider returned error","metadata":{"raw":"{\"error\":{\"mess"}}}"#,
+                body:
+                    #"{"error":{"message":"Provider returned error","metadata":{"raw":"{\"error\":{\"mess"}}}"#,
                 expected: "\(general)\n\nProvider returned error"),
             Refusal(
-                testDescription: "an `error` echoed back in the request does not pass for the message", status: 422,
-                body: #"{"detail":[{"input":{"error":"boom from a tool"},"msg":"Input should be a valid string","x":"#,
+                testDescription: "an `error` echoed back in the request does not pass for the message",
+                status: 422,
+                body:
+                    #"{"detail":[{"input":{"error":"boom from a tool"},"msg":"Input should be a valid string","x":"#,
                 expected: "\(unprocessable)\n\nInput should be a valid string")
         ]
     }
@@ -325,7 +346,8 @@ extension AIProviderTests {
         let oversized =
             #"{"detail":[{"type":"string_type","msg":"Input should be a valid string","input":"\#(echo)"}]}"#
         let shown = AIProviderFailure.description(
-            status: 422, body: Data(oversized.utf8).prefix(AIProviderFailure.bodyLimit), retryAfter: nil, secrets: [])
+            status: 422, body: Data(oversized.utf8).prefix(AIProviderFailure.bodyLimit), retryAfter: nil,
+            secrets: [])
         #expect(shown == "\(Refusal.unprocessable)\n\nInput should be a valid string")
     }
 
@@ -341,7 +363,8 @@ extension AIProviderTests {
         let key = "fw_3c8a7b2e91d04f5a"
         let shown = AIProviderFailure.description(
             status: 400,
-            body: Data(#"{"error":{"message":"Bad header: Bearer \#(key), also sk-proj-abcdefghijklmnop"}}"#.utf8),
+            body: Data(
+                #"{"error":{"message":"Bad header: Bearer \#(key), also sk-proj-abcdefghijklmnop"}}"#.utf8),
             retryAfter: nil, secrets: [key])
         #expect(!shown.contains(key))
         #expect(!shown.contains("sk-proj-abcdef"))
@@ -421,23 +444,27 @@ extension AIProviderTests {
 
     @Test func anAnthropicErrorEventShowsWhatItSaidUnderTheLine() throws {
         let error = try StreamFixtures.anthropicError(#"{"type":"overloaded_error","message":"Overloaded"}"#)
-        #expect(error.localizedDescription == "The provider stopped the response with an error.\n\nOverloaded")
+        #expect(
+            error.localizedDescription == "The provider stopped the response with an error.\n\nOverloaded")
     }
 
     @Test func anAnthropicErrorEventNeverShowsTheConnectionsKey() throws {
         let error = try StreamFixtures.anthropicError(
-            #"{"type":"api_error","message":"Bad key hunter2-gateway-key"}"#, secrets: ["hunter2-gateway-key"])
+            #"{"type":"api_error","message":"Bad key hunter2-gateway-key"}"#, secrets: ["hunter2-gateway-key"]
+        )
         #expect(error.localizedDescription.hasSuffix("Bad key [redacted]"))
     }
 
     @Test func anAnthropicErrorEventNeverShowsAnHTMLPageForAMessage() throws {
-        let error = try StreamFixtures.anthropicError(#"{"type":"api_error","message":"<html>Bad gateway</html>"}"#)
+        let error = try StreamFixtures.anthropicError(
+            #"{"type":"api_error","message":"<html>Bad gateway</html>"}"#)
         #expect(error.localizedDescription == "The provider stopped the response with an error.")
     }
 
     @Test func textBeforeACutOffIsDeliveredAndTheStreamStaysOpenForTheCallerToFail() throws {
         var decoder = AIStreamDecoder(shape: .openAICompatible)
-        let partial = try decoder.feed(Data("data: {\"choices\":[{\"delta\":{\"content\":\"half\"}}]}\n\n".utf8))
+        let partial = try decoder.feed(
+            Data("data: {\"choices\":[{\"delta\":{\"content\":\"half\"}}]}\n\n".utf8))
         #expect(partial == [.text("half")])
         #expect(!decoder.isTerminal)
     }
@@ -474,7 +501,8 @@ extension AIProviderTests {
 
     @Test func openCodeReasoningOpensItsOwnBlock() {
         let data = Data(#"{"type":"reasoning","sessionID":"ses_1","part":{"text":"Weighing it"}}"#.utf8)
-        #expect(InstalledAIStreamDecoder.decode(data, kind: .openCode).events == [.reasoning("\n\nWeighing it")])
+        #expect(
+            InstalledAIStreamDecoder.decode(data, kind: .openCode).events == [.reasoning("\n\nWeighing it")])
     }
 
     @Test func anOpenCodeStepReportsUsageAndLeavesTheFinishToTheCleanExit() {
@@ -486,13 +514,17 @@ extension AIProviderTests {
         let frame = InstalledAIStreamDecoder.decode(data, kind: .openCode)
         #expect(
             frame.events == [
-                .usage(AIUsage(inputTokens: 12, outputTokens: 7, cachedInputTokens: 6, reasoningTokens: 3, costUSD: 0.25))
+                .usage(
+                    AIUsage(
+                        inputTokens: 12, outputTokens: 7, cachedInputTokens: 6, reasoningTokens: 3,
+                        costUSD: 0.25))
             ])
         #expect(!frame.completed)
     }
 
     @Test func anOpenCodeErrorBeforeAnySessionFailsTheTurnWithNothingToDelete() {
-        let data = Data(#"{"type":"error","sessionID":"","error":{"type":"unknown","message":"No provider"}}"#.utf8)
+        let data = Data(
+            #"{"type":"error","sessionID":"","error":{"type":"unknown","message":"No provider"}}"#.utf8)
         let frame = InstalledAIStreamDecoder.decode(data, kind: .openCode)
         #expect(frame.error == "No provider")
         #expect(frame.sessionID == nil)
@@ -513,7 +545,8 @@ extension AIProviderTests {
             """#)
         #expect(catalog.map(\.id) == ["anthropic/claude-sonnet-4-5", "openai/gpt-5", "zai/glm-4.6"])
         try #require(catalog.count == 3)
-        #expect(catalog[1].efforts.map(\.id) == ["minimal", "low", "high"], "variants become efforts in order")
+        #expect(
+            catalog[1].efforts.map(\.id) == ["minimal", "low", "high"], "variants become efforts in order")
         #expect(catalog.map(\.acceptsImages) == [true, true, false])
         #expect(catalog.allSatisfy { $0.supportsTools })
     }
@@ -537,7 +570,8 @@ extension AIProviderTests {
     }
 
     @Test func claudeResultUsageEndsTheStream() {
-        let data = Data(#"{"type":"result","is_error":false,"usage":{"input_tokens":8,"output_tokens":3}}"#.utf8)
+        let data = Data(
+            #"{"type":"result","is_error":false,"usage":{"input_tokens":8,"output_tokens":3}}"#.utf8)
         let frame = InstalledAIStreamDecoder.decode(data, kind: .claude)
         #expect(frame.events == [.usage(AIUsage(inputTokens: 8, outputTokens: 3))])
         #expect(frame.completed)
@@ -545,7 +579,8 @@ extension AIProviderTests {
 
     @Test func cursorLiveDeltasDecodeAndBufferedFlushesAreIgnored() {
         let delta = Data(
-            #"{"type":"assistant","timestamp_ms":1,"message":{"content":[{"type":"text","text":"Hi"}]}}"#.utf8)
+            #"{"type":"assistant","timestamp_ms":1,"message":{"content":[{"type":"text","text":"Hi"}]}}"#.utf8
+        )
         #expect(InstalledAIStreamDecoder.decode(delta, kind: .cursor).events == [.text("Hi")])
         let flush = Data(#"{"type":"assistant","message":{"content":[{"type":"text","text":"Hi"}]}}"#.utf8)
         #expect(InstalledAIStreamDecoder.decode(flush, kind: .cursor).events.isEmpty, "no timestamp_ms")
@@ -560,7 +595,8 @@ extension AIProviderTests {
 
     @Test func grokPartialTextReusesTheClaudeShapeAndKeepsTheSession() {
         let data = Data(
-            #"{"type":"stream_event","session_id":"ses_g","event":{"delta":{"type":"text_delta","text":"Yo"}}}"#.utf8)
+            #"{"type":"stream_event","session_id":"ses_g","event":{"delta":{"type":"text_delta","text":"Yo"}}}"#
+                .utf8)
         let frame = InstalledAIStreamDecoder.decode(data, kind: .grok)
         #expect(frame.events == [.text("Yo")])
         #expect(frame.sessionID == "ses_g")
@@ -568,7 +604,8 @@ extension AIProviderTests {
 
     @Test func grokResultUsageEndsTheStreamAndNamesTheSessionToDelete() {
         let data = Data(
-            #"{"type":"result","is_error":false,"session_id":"ses_g","usage":{"input_tokens":5,"output_tokens":1}}"#.utf8)
+            #"{"type":"result","is_error":false,"session_id":"ses_g","usage":{"input_tokens":5,"output_tokens":1}}"#
+                .utf8)
         let frame = InstalledAIStreamDecoder.decode(data, kind: .grok)
         #expect(frame.events == [.usage(AIUsage(inputTokens: 5, outputTokens: 1))])
         #expect(frame.completed)
@@ -588,7 +625,8 @@ extension AIProviderTests {
 
     @Test func aGrokErrorWithNoCauseStillNamesGrok() {
         let data = Data(#"{"type":"result","is_error":true}"#.utf8)
-        #expect(InstalledAIStreamDecoder.decode(data, kind: .grok).error == "Grok could not finish the response.")
+        #expect(
+            InstalledAIStreamDecoder.decode(data, kind: .grok).error == "Grok could not finish the response.")
     }
 }
 

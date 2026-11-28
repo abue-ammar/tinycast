@@ -138,7 +138,8 @@ fail on the old shape and on what hides a failure:
 - stopping the host: `exit`, `fatalError`, `precondition`, `assert` and their `…Failure` forms;
 - printing: `print`, `debugPrint`, `dump`, `NSLog`, `FileHandle.standardError`/`standardOutput`
   (a child `Process`'s own `standardError` pipe is fine);
-- shared mutable state: a stored `static var`, or a `var` at file scope;
+- shared mutable state: a stored `static var`, or a `var` at file scope, attributes such as
+  `@MainActor` included;
 - blocking waits: `DispatchSemaphore`, `DispatchGroup`, a `RunLoop` or `CFRunLoop` spin,
   `Thread.sleep`, `sleep`, `usleep`;
 - shared system state: `UserDefaults.standard`, `UserDefaults()`, the general pasteboard;
@@ -282,7 +283,8 @@ If a change touches anything in the right column, the suite on the left is manda
 
 `MCPStdioTests` copies `Fixtures/MCP/mcp-stub.js` into a scratch directory, links the `node` the
 login shell finds beside it (the locator puts a server's own folder first on its `PATH`), and launches
-it by absolute path with its mode in the connection's environment. The stub reads fd 0 synchronously and writes replies with `fs.writeSync`, so a reply reaches the pipe before
+it by absolute path with its mode in the connection's environment. One test names it bare and hands
+the connection a search `PATH` of that folder, so a name like `npx` is still proven to be looked up. The stub reads fd 0 synchronously and writes replies with `fs.writeSync`, so a reply reaches the pipe before
 an exit mode finishes.
 
 Completion checks use bounded state waits; exclusion windows and intentional timeout cases keep their

@@ -33,15 +33,17 @@ extension AIProviderTests {
     }
 
     @Test func reasoningLeftAloneSendsNoThinkingKey() {
-        let body = EffortFixtures.body(AIHTTPConfiguration(
-            provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m"))
+        let body = EffortFixtures.body(
+            AIHTTPConfiguration(
+                provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m"))
         #expect(body["thinking"] == nil)
     }
 
     @Test func noneAsksTheGatewayToAnswerDirectlyWithNoEffortBesideIt() {
-        let body = EffortFixtures.body(AIHTTPConfiguration(
-            provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m", effort: "none",
-            disablesThinking: true))
+        let body = EffortFixtures.body(
+            AIHTTPConfiguration(
+                provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m", effort: "none",
+                disablesThinking: true))
         #expect((body["thinking"] as? [String: String])?["type"] == "disabled")
         #expect(body["reasoning_effort"] == nil)
     }
@@ -67,15 +69,17 @@ extension AIProviderTests {
     }
 
     @Test func aDeclaredLevelGoesOutAsOpenAIsOwnReasoningEffort() {
-        let body = EffortFixtures.body(AIHTTPConfiguration(
-            provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m", effort: "low"))
+        let body = EffortFixtures.body(
+            AIHTTPConfiguration(
+                provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m", effort: "low"))
         #expect(body["reasoning_effort"] as? String == "low")
         #expect(body["reasoning"] == nil, "not as OpenRouter's reasoning object")
     }
 
     @Test func defaultOnAGatewaySendsNoEffortField() {
-        let body = EffortFixtures.body(AIHTTPConfiguration(
-            provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m", effort: "default"))
+        let body = EffortFixtures.body(
+            AIHTTPConfiguration(
+                provider: .openAI, baseURL: EffortFixtures.gatewayURL, model: "m", effort: "default"))
         #expect(body["reasoning_effort"] == nil)
     }
 
@@ -206,7 +210,10 @@ extension AIProviderTests {
         var saved = AIConnection(provider: .anthropic, models: ["claude-a", "claude-b", "claude-c"])
         saved.declareLevels(["high"], for: "claude-c")
         saved.adoptCatalog(
-            models + [.init(id: "claude-c", name: "C", reasoningOptions: .init(efforts: ["low"], defaultEffort: nil))])
+            models + [
+                .init(
+                    id: "claude-c", name: "C", reasoningOptions: .init(efforts: ["low"], defaultEffort: nil))
+            ])
         #expect(
             saved.declaredLevels(for: "claude-a") == ["low", "max"],
             "a model saved before its catalog was read takes the catalog's levels")

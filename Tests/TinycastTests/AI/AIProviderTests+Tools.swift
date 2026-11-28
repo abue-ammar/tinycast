@@ -85,7 +85,8 @@ extension AIProviderTests {
                 baseURL: URL(string: "https://generativelanguage.googleapis.com/v1beta/openai")!,
                 model: "gemini-3.5-flash-lite"))
         let messages = try #require(body["messages"] as? [[String: Any]])
-        let encoded = try #require(messages.first { $0["tool_calls"] != nil }?["tool_calls"] as? [[String: Any]])
+        let encoded = try #require(
+            messages.first { $0["tool_calls"] != nil }?["tool_calls"] as? [[String: Any]])
         try #require(encoded.count == 2)
         let google = (encoded[0]["extra_content"] as? [String: Any])?["google"] as? [String: Any]
         #expect(google?["thought_signature"] as? String == "sig==", "it goes back exactly as it arrived")
@@ -153,7 +154,10 @@ extension AIProviderTests {
         var decoder = AIStreamDecoder(shape: .anthropic)
         let events = try decoder.feed(Data(payloads.map { "data: \($0)\n\n" }.joined().utf8))
         let link = " ([swift.org](https://swift.org/a_%28b%29))"
-        #expect(events == [.searching(nil), .searched("swift 6"), .text("Swift 6 shipped."), .text(link), .finished])
+        #expect(
+            events == [
+                .searching(nil), .searched("swift 6"), .text("Swift 6 shipped."), .text(link), .finished
+            ])
         #expect(
             ChatReferences.extract(from: "Swift 6 shipped." + link).map(\.url.absoluteString)
                 == ["https://swift.org/a_%28b%29"],
@@ -278,8 +282,10 @@ private enum ToolsFixtures {
             AIMessage(
                 role: .assistant, text: "",
                 toolCalls: [AIToolCall(id: "c1", name: "fs__read", arguments: #"{"path":"/tmp"}"#)]),
-            AIMessage(role: .tool, text: "", toolResult: AIToolResult(callID: "c1", content: "hi", isError: false)),
-            AIMessage(role: .tool, text: "", toolResult: AIToolResult(callID: "c2", content: "no", isError: true))
+            AIMessage(
+                role: .tool, text: "", toolResult: AIToolResult(callID: "c1", content: "hi", isError: false)),
+            AIMessage(
+                role: .tool, text: "", toolResult: AIToolResult(callID: "c2", content: "no", isError: true))
         ],
         tools: [
             AITool(

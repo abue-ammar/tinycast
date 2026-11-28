@@ -137,7 +137,9 @@ struct DictationWorkerTests {
         let staging = try contents(of: downloads)
         let attempt = await InstalledAIProbe.run(
             executable: URL(filePath: "/usr/bin/lockf"),
-            arguments: ["-s", "-k", "-n", "-t", "0", downloads.appending(path: ".download-lock").path, "/usr/bin/true"],
+            arguments: [
+                "-s", "-k", "-n", "-t", "0", downloads.appending(path: ".download-lock").path, "/usr/bin/true"
+            ],
             workspace: scratch.url)
         #expect(attempt.status == EX_TEMPFAIL)
         #expect(try contents(of: downloads) == staging)
@@ -149,7 +151,9 @@ struct DictationWorkerTests {
         try #require(held.firstProgress != nil)
         let other = scratch.url.appending(path: "other-channel", directoryHint: .isDirectory)
         try await DownloadFixture.download(.redux, into: other, mode: .plain)
-        #expect(FileManager.default.fileExists(atPath: other.appending(path: DictationModel.redux.folderName).path))
+        #expect(
+            FileManager.default.fileExists(
+                atPath: other.appending(path: DictationModel.redux.folderName).path))
         await held.cancel()
     }
 
@@ -163,7 +167,8 @@ struct DictationWorkerTests {
         let stagingNamedFile = ".\(UUID())", stagingNamedLink = ".\(UUID())"
         try Data([1]).write(to: downloads.appending(path: ".keep"))
         try Data([1]).write(to: downloads.appending(path: stagingNamedFile))
-        try manager.createDirectory(at: downloads.appending(path: "installed-model"), withIntermediateDirectories: false)
+        try manager.createDirectory(
+            at: downloads.appending(path: "installed-model"), withIntermediateDirectories: false)
         try manager.createSymbolicLink(
             at: downloads.appending(path: stagingNamedLink),
             withDestinationURL: downloads.appending(path: "installed-model"))
@@ -226,7 +231,8 @@ struct DictationWorkerTests {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             for name in model.requiredFiles { try Data([0]).write(to: directory.appending(path: name)) }
         }
-        let stub = try await NodeScript("Dictation/dictation-worker-stub.js", in: scratch, named: "dictation-worker")
+        let stub = try await NodeScript(
+            "Dictation/dictation-worker-stub.js", in: scratch, named: "dictation-worker")
         let workers = WorkerCount()
         let store = DictationModelStore(idleRelease: .never, root: root) {
             workers.count += 1
@@ -302,8 +308,9 @@ private final class DownloadFixture: URLProtocol {
     override static func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        guard let url = request.url, let response = HTTPURLResponse(
-            url: url, statusCode: 200, httpVersion: nil, headerFields: nil)
+        guard let url = request.url,
+            let response = HTTPURLResponse(
+                url: url, statusCode: 200, httpVersion: nil, headerFields: nil)
         else { return }
         let mode = url.host()?.split(separator: ".").first.flatMap { Mode(rawValue: String($0)) } ?? .plain
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)

@@ -57,7 +57,8 @@ struct FormInputTests {
         let tab = #selector(NSResponder.insertTab(_:))
         #expect(delegate.control?(field.input, textView: editor, doCommandBy: tab) == true)
         #expect(field.movedBackwards == false)
-        _ = delegate.control?(field.input, textView: editor, doCommandBy: #selector(NSResponder.insertBacktab(_:)))
+        _ = delegate.control?(
+            field.input, textView: editor, doCommandBy: #selector(NSResponder.insertBacktab(_:)))
         #expect(field.movedBackwards == true)
     }
 

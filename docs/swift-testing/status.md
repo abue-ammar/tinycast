@@ -151,8 +151,8 @@ Replace every self-run with a peer script in `Fixtures/`, as `MCPStdioTests` doe
 `mcp-stub.js`, launched by absolute path with its mode in its own environment. Localization reads the
 app bundle's string tables per locale, with no relaunch. No app code changes.
 
-Done. `resolved(in:)` takes a bundle (default `.main`, user-approved seam), so each language's
-`.lproj` stands in for a relaunch. `Support/` gains `NodeScript` (`MCPStdioTests` uses it too) and
+Done. `resolved()` reads the resource's own bundle (user-approved app change), so a resource
+pointed at a language's `.lproj` stands in for a relaunch. `Support/` gains `NodeScript` (`MCPStdioTests` uses it too) and
 `ScratchDefaults`. Docs: `testing.md` (isolation, three rows), `ai.md`, `dictation.md`.
 
 - [x] LocalizedResourceTests · 95 · 9 languages × 9 resources against each `.lproj`
@@ -418,6 +418,9 @@ Decisions made during the migration, beyond the brief's. Newest last.
   flag-and-`Task.yield` spins.
 - P2: a test waiting on a peer's file watches it with a `DispatchSource` file-system source, never a
   polling loop; its handlers are formed in a `nonisolated` function, or they assert the main actor.
+- P2 review: `MCPServerConnection` takes a `searchEnvironment` (default: the process's), so
+  `MCPStdioTests` again proves a bare command is looked up on PATH, a case P1 had dropped.
+- P2 review: `test_mutable_global` also catches a file-scope `var` behind attributes (`@MainActor var`).
 
 ## Open problems
 

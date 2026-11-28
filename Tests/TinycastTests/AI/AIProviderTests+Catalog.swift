@@ -13,7 +13,9 @@ extension AIProviderTests {
         (.openRouter, "https://openrouter.ai/api/v1/chat/completions"),
         (.openAICompatible, "https://api.openai.com/v1/chat/completions")
     ])
-    func eachPresetResolvesItsDocumentedStreamingEndpoint(_ provider: AIProviderKind, _ endpoint: String) throws {
+    func eachPresetResolvesItsDocumentedStreamingEndpoint(
+        _ provider: AIProviderKind, _ endpoint: String
+    ) throws {
         let configuration = AIHTTPConfiguration(
             provider: provider, baseURL: try #require(URL(string: provider.defaultBaseURL)), model: "model")
         #expect(configuration.endpointURL.absoluteString == endpoint)
@@ -36,7 +38,8 @@ extension AIProviderTests {
         (.openAICompatible, "https://api.openai.com/v1/models")
     ])
     func eachProviderQueriesItsModelCatalogEndpoint(_ provider: AIProviderKind, _ endpoint: String) throws {
-        let request = try CatalogFixtures.discovery(provider, baseURL: provider.defaultBaseURL, apiKey: "secret")
+        let request = try CatalogFixtures.discovery(
+            provider, baseURL: provider.defaultBaseURL, apiKey: "secret")
         #expect(request.url?.absoluteString == endpoint)
     }
 
@@ -61,7 +64,8 @@ extension AIProviderTests {
         let request = try CatalogFixtures.discovery(
             .anthropic, baseURL: "https://gateway.example.com",
             headers: ["anthropic-version": "2024-01-01", "X-Tenant": "acme"])
-        #expect(request.value(forHTTPHeaderField: "x-api-key") == nil, "an empty key sends no credential header")
+        #expect(
+            request.value(forHTTPHeaderField: "x-api-key") == nil, "an empty key sends no credential header")
         #expect(request.value(forHTTPHeaderField: "Anthropic-Version") == "2024-01-01")
         #expect(request.value(forHTTPHeaderField: "x-tenant") == "acme")
     }
@@ -132,12 +136,15 @@ extension AIProviderTests {
             try AIModelDiscovery.decode(gateway, shape: .openAI) == [
                 .init(id: "model-c", name: "Model C", inputModalities: ["text", "image"]),
                 .init(id: "model-d", name: "model-d"),
-                .init(id: "model-e", name: "model-e", reasoningOptions: .init(efforts: ["low"], defaultEffort: "low"))
+                .init(
+                    id: "model-e", name: "model-e",
+                    reasoningOptions: .init(efforts: ["low"], defaultEffort: "low"))
             ])
     }
 
     @Test func openRouterGatesImagesByTheCatalogAndSearchesForEveryModel() {
-        let router = AIConnection(provider: .openRouter, models: ["model-a", "model-b"], visionModels: ["model-b"])
+        let router = AIConnection(
+            provider: .openRouter, models: ["model-a", "model-b"], visionModels: ["model-b"])
         #expect(!router.capabilities(for: "model-a").images)
         #expect(router.capabilities(for: "model-b").images)
         #expect(router.capabilities(for: "model-a").webSearch)
@@ -159,7 +166,10 @@ extension AIProviderTests {
                  "supportedGenerationMethods":["embedContent"]}
             ]}
             """.utf8)
-        #expect(try AIModelDiscovery.decode(gemini, shape: .gemini) == [.init(id: "gemini-chat", name: "Gemini Chat")])
+        #expect(
+            try AIModelDiscovery.decode(gemini, shape: .gemini) == [
+                .init(id: "gemini-chat", name: "Gemini Chat")
+            ])
     }
 
     // MARK: Model search
@@ -175,7 +185,9 @@ extension AIProviderTests {
     }
 
     @Test func anExactDisplayNameMatchRanksFirst() {
-        #expect(AIModelDiscovery.search(CatalogFixtures.searchable, query: "GPT Large").first?.id == "openai/gpt-large")
+        #expect(
+            AIModelDiscovery.search(CatalogFixtures.searchable, query: "GPT Large").first?.id
+                == "openai/gpt-large")
     }
 
     @Test func searchExcludesSelectedModelsAndCapsVisibleResults() {
@@ -221,11 +233,14 @@ extension AIProviderTests {
 
     @Test func anUntouchedOrRelabelledConnectionKeepsItsDestination() {
         let saved = CatalogFixtures.openAIConnection
-        #expect(AIEndpointPolicy.sameDestination(saved, saved), "an untouched connection points where its key was issued")
+        #expect(
+            AIEndpointPolicy.sameDestination(saved, saved),
+            "an untouched connection points where its key was issued")
         var renamed = saved
         renamed.name = "Work key"
         renamed.models = ["gpt-5.4-mini"]
-        #expect(AIEndpointPolicy.sameDestination(renamed, saved), "a label or model list edit is not a retarget")
+        #expect(
+            AIEndpointPolicy.sameDestination(renamed, saved), "a label or model list edit is not a retarget")
     }
 
     /// The OpenAI key must not go to Anthropic, whatever the provider preset still says.

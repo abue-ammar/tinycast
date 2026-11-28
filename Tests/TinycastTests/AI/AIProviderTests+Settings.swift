@@ -176,7 +176,8 @@ extension AIProviderTests {
         let store = AISettingsStore(defaults: scratch.defaults)
         let (firstID, _) = SettingsFixtures.saveTwoConnections(in: store)
         #expect(store.connections.first?.name == "Work", "connection names are normalized")
-        #expect(store.connections.first?.models == ["model-a", "model-b"], "models are trimmed and deduplicated")
+        #expect(
+            store.connections.first?.models == ["model-a", "model-b"], "models are trimmed and deduplicated")
         #expect(store.defaultModel == .api(connection: firstID, model: "model-a", effort: nil))
     }
 
@@ -282,7 +283,8 @@ extension AIProviderTests {
     }
 
     static let commandCases: [CommandCase] = [
-        CommandCase(testDescription: "no path looks up", path: "", everythingRuns: false, command: .automatic),
+        CommandCase(
+            testDescription: "no path looks up", path: "", everythingRuns: false, command: .automatic),
         CommandCase(
             testDescription: "a path under the home folder may be written with a tilde",
             path: "~/bin/codex", everythingRuns: false,
@@ -382,7 +384,9 @@ extension AIProviderTests {
         #expect(!reopened.isRouteEnabled(.api(first.id)))
         #expect(reopened.isRouteEnabled(.api(second.id)))
         reopened.setRoute(.appleIntelligence, enabled: false)
-        #expect(!reopened.isRouteEnabled(.appleIntelligence), "the on-device model switches off like a connection")
+        #expect(
+            !reopened.isRouteEnabled(.appleIntelligence), "the on-device model switches off like a connection"
+        )
     }
 
     @MainActor
@@ -419,8 +423,11 @@ extension AIProviderTests {
         let reopened = AISettingsStore(defaults: scratch.defaults)
         #expect(reopened.isModelShown("a", in: .openCode))
         #expect(!reopened.isModelShown("b", in: .openCode))
-        #expect(!reopened.isModelShown("d", in: .openCode), "a trimmed route does not list a model it adds later")
-        #expect(reopened.isModelShown("b", in: .claude), "trimming one route leaves the others listing everything")
+        #expect(
+            !reopened.isModelShown("d", in: .openCode), "a trimmed route does not list a model it adds later")
+        #expect(
+            reopened.isModelShown("b", in: .claude), "trimming one route leaves the others listing everything"
+        )
     }
 
     @MainActor
@@ -517,7 +524,8 @@ private enum SettingsFixtures {
     }
 
     @MainActor
-    static func saveRouteConnections(in store: AISettingsStore) -> (first: AIConnection, second: AIConnection) {
+    static func saveRouteConnections(in store: AISettingsStore) -> (first: AIConnection, second: AIConnection)
+    {
         let first = AIConnection(provider: .openRouter, models: ["first-model"])
         let second = AIConnection(provider: .gemini, models: ["second-model"])
         store.save(first)

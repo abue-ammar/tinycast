@@ -94,7 +94,8 @@ extension AIProviderTests {
 
     @Test func aReadersServerNamedLikeAnArmedOneOfOursIsCaughtBeforeLaunch() {
         let servers = [LaunchFixtures.stdio]
-        #expect(CodexMCPLaunch.takenName(servers: servers, foreignNames: ["tinycast-files"]) == "tinycast-files")
+        #expect(
+            CodexMCPLaunch.takenName(servers: servers, foreignNames: ["tinycast-files"]) == "tinycast-files")
         #expect(CodexMCPLaunch.takenName(servers: servers, foreignNames: ["files"]) == nil)
     }
 
@@ -170,7 +171,8 @@ extension AIProviderTests {
             for key in values.keys.sorted() {
                 let launch = CodexMCPLaunch.command(
                     path: path, arguments: [key], environment: values, server: index)
-                delivered.append(await LaunchFixtures.run(launch, environment: environment, in: scratch).output)
+                delivered.append(
+                    await LaunchFixtures.run(launch, environment: environment, in: scratch).output)
             }
         }
         #expect(delivered == ["one\n", "two\n", "four\n", "three\n", "six\n", "seven\n", "eight\n"])
@@ -179,7 +181,8 @@ extension AIProviderTests {
     @Test func aKeySpelledLikeADerivedNameStillReadsItsOwnValueAsDoTheKeysAfterIt() async throws {
         let scratch = try ScratchDirectory("codex-launch")
         let shadowing = ["TC_MCP_0_0": "zero", "TC_MCP_0_1": "one", "Z": "zed"]
-        let derived = try #require(CodexMCPLaunch.environment(servers: [LaunchFixtures.local("s", shadowing)]))
+        let derived = try #require(
+            CodexMCPLaunch.environment(servers: [LaunchFixtures.local("s", shadowing)]))
         var reads: [InstalledAIProbe.Result] = []
         for key in ["TC_MCP_0_0", "TC_MCP_0_1", "Z", "TC_MCP_0_2"] {
             let launch = CodexMCPLaunch.command(
@@ -244,7 +247,8 @@ extension AIProviderTests {
 
     /// Claude has no cap without `--max-turns`.
     @Test func unlimitedRoundsPassNoMaxTurnsAtAll() {
-        let uncapped = ClaudeMCPLaunch.arguments(configurationPath: "/tmp/m.json", handles: ["files"], rounds: nil)
+        let uncapped = ClaudeMCPLaunch.arguments(
+            configurationPath: "/tmp/m.json", handles: ["files"], rounds: nil)
         #expect(uncapped.contains("--mcp-config"))
         #expect(!uncapped.contains("--max-turns"))
     }
@@ -256,7 +260,8 @@ extension AIProviderTests {
 
     /// A reader's bypassPermissions default would otherwise skip the question.
     @Test func thePermissionModeIsPinned() {
-        #expect(LaunchFixtures.value(after: "--permission-mode", in: LaunchFixtures.claudeArguments) == "default")
+        #expect(
+            LaunchFixtures.value(after: "--permission-mode", in: LaunchFixtures.claudeArguments) == "default")
     }
 
     /// An ask rule outranks any allow rule of the reader's.
@@ -264,7 +269,8 @@ extension AIProviderTests {
         let text = try #require(LaunchFixtures.value(after: "--settings", in: LaunchFixtures.claudeArguments))
         let settings = try #require(
             try JSONSerialization.jsonObject(with: Data(text.utf8)) as? [String: Any])
-        #expect((settings["permissions"] as? [String: Any])?["ask"] as? [String] == ["mcp__files", "mcp__linear"])
+        #expect(
+            (settings["permissions"] as? [String: Any])?["ask"] as? [String] == ["mcp__files", "mcp__linear"])
         #expect(settings.count == 1)
     }
 
@@ -315,7 +321,9 @@ extension AIProviderTests {
 
     @Test func aFormIsNotAToolCallAndIsNeverAskedAbout() {
         let form = CodexElicitation(
-            params: ["serverName": .string("files"), "_meta": .object(["codex_approval_kind": .string("form")])])
+            params: [
+                "serverName": .string("files"), "_meta": .object(["codex_approval_kind": .string("form")])
+            ])
         #expect(form == nil)
     }
 
@@ -384,7 +392,8 @@ private enum LaunchFixtures {
             environment: ["API_KEY": "s3cret"]))
     static let oauth = AIToolServer(
         handle: "linear", title: "Linear",
-        transport: .url("https://mcp.linear.app/mcp", headerName: "Authorization", headerValue: "Bearer tok-123"))
+        transport: .url(
+            "https://mcp.linear.app/mcp", headerName: "Authorization", headerValue: "Bearer tok-123"))
     static let custom = AIToolServer(
         handle: "notes", title: "Notes",
         transport: .url("https://notes.example/mcp", headerName: "X-Api-Key", headerValue: "k1"))
@@ -438,7 +447,8 @@ private enum LaunchFixtures {
             transport: .command(path: "/bin/node", arguments: ["s.js"], environment: ["API_KEY": "s3cret"])),
         AIToolServer(
             handle: "linear", title: "Linear",
-            transport: .url("https://mcp.linear.app/mcp", headerName: "Authorization", headerValue: "Bearer tok-123"))
+            transport: .url(
+                "https://mcp.linear.app/mcp", headerName: "Authorization", headerValue: "Bearer tok-123"))
     ]
 
     static let claudeArguments = ClaudeMCPLaunch.arguments(

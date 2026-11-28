@@ -14,6 +14,7 @@ final class MCPStdioTransport: MCPTransport {
     private let command: String
     private let arguments: [String]
     private let environment: [String: String]
+    private let searchEnvironment: [String: String]
     private var process: Process?
     private var input: FileHandle?
     private var outputBuffer = Data()
@@ -25,17 +26,22 @@ final class MCPStdioTransport: MCPTransport {
     private static let outputLimit = 8 * 1_048_576
     private static let stderrLimit = 8_192
 
-    init(command: String, arguments: [String], environment: [String: String]) {
+    init(
+        command: String, arguments: [String], environment: [String: String],
+        searchEnvironment: [String: String]
+    ) {
         self.command = command
         self.arguments = arguments
         self.environment = environment
+        self.searchEnvironment = searchEnvironment
     }
 
     var isRunning: Bool { process?.isRunning == true }
 
     func connect() async throws {
         if isRunning { return }
-        guard let executable = await ExecutableLocator.locate(command) else {
+        guard let executable = await ExecutableLocator.locate(command, environment: searchEnvironment)
+        else {
             throw MCPTransportError.launchFailed(
                 String(localized: "`\(command)` was not found on this Mac."))
         }

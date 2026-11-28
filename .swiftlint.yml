@@ -86,7 +86,7 @@ custom_rules:
   test_mutable_global:
     name: Mutable shared state in a suite
     included: 'Tests/TinycastTests/.*\.swift$'
-    regex: '\bstatic\s+var\s+\w+[^{\n]*$|^([\w()]+[ \t]+)*var[ \t]'
+    regex: '\bstatic\s+var\s+\w+[^{\n]*$|^((@\w+(\([^)\n]*\))?|[\w()]+)[ \t]+)*var[ \t]'
     excluded_match_kinds: [comment, doccomment, string]
     message: 'Tests run in parallel; shared fixtures are static let, the rest is built in init.'
     severity: error

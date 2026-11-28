@@ -6,9 +6,19 @@ import Testing
 struct LocalizedResourceTests {
     static let languages = ["en", "de", "es", "fr", "ja", "ko", "pt", "ru", "zh-Hans"]
 
+    /// Built per language, since a resource's bundle and locale are fixed when it is made.
     struct Resource: CustomTestStringConvertible, Sendable {
         let testDescription: String
-        let value: LocalizedStringResource
+        var key: StaticString?
+        let value: String.LocalizationValue
+
+        func resource(in table: URL, language: String) -> LocalizedStringResource {
+            let locale = Locale(identifier: language)
+            guard let key else {
+                return LocalizedStringResource(value, locale: locale, bundle: .atURL(table))
+            }
+            return LocalizedStringResource(key, defaultValue: value, locale: locale, bundle: .atURL(table))
+        }
     }
 
     static let resources: [Resource] = {
@@ -16,12 +26,10 @@ struct LocalizedResourceTests {
         return [
             Resource(testDescription: "a translated key", value: "Cancel"),
             Resource(testDescription: "a key the catalog lacks", value: "Tinycast missing key"),
+            Resource(testDescription: "a contextual key", key: "apple-shortcuts-section", value: "Shortcuts"),
             Resource(
-                testDescription: "a contextual key",
-                value: LocalizedStringResource("apple-shortcuts-section", defaultValue: "Shortcuts")),
-            Resource(
-                testDescription: "a contextual key the catalog lacks",
-                value: LocalizedStringResource("tinycast-missing-key", defaultValue: "Cancel")),
+                testDescription: "a contextual key the catalog lacks", key: "tinycast-missing-key",
+                value: "Cancel"),
             Resource(testDescription: "an interpolated key", value: "Customize \(name)"),
             Resource(testDescription: "a literal percent sign", value: "Set Volume to 25%")
         ] + [1, 2, 5].map { Resource(testDescription: "a plural of \($0)", value: "\($0) hidden items") }
@@ -37,9 +45,7 @@ struct LocalizedResourceTests {
     @Test(arguments: languages, resources)
     func resolvingMatchesStringLocalized(_ language: String, _ resource: Resource) throws {
         let table = try #require(Bundle.main.url(forResource: language, withExtension: "lproj"))
-        let bundle = try #require(Bundle(url: table))
-        var value = resource.value
-        value.locale = Locale(identifier: language)
-        #expect(value.resolved(in: bundle) == String(localized: value))
+        let value = resource.resource(in: table, language: language)
+        #expect(value.resolved() == String(localized: value))
     }
 }

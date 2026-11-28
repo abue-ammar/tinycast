@@ -76,14 +76,37 @@ struct MCPStdioTests {
         let manager = MCPServerManager(secrets: MCPSecretStore(keychain: keychain))
         manager.reconcile([stub.server])
         let id = stub.server.id
-        for await ready in Observations({ @MainActor in manager.status(of: id).isReady }) where ready {
+        for await status in Observations({ @MainActor in manager.status(of: id) }) where hasSettled(status) {
             break
         }
+        #expect(manager.status(of: id).isReady, "the manager starts what Settings holds")
         #expect(manager.tools.count == 2)
 
         manager.stop()
         #expect(manager.tools.isEmpty)
         #expect(manager.status(of: stub.server.id) == .stopped)
+    }
+
+    /// A bare name like `npx` is how Settings usually names a server, so it is looked up, not run.
+    @Test func aBareCommandIsFoundOnTheSearchPath() async throws {
+        let scratch = try ScratchDirectory("mcp-stdio")
+        let stub = try await NodeScript("MCP/mcp-stub.js", in: scratch, named: "tinycast-mcp-stub")
+        let server = MCPServer(
+            name: "Stub", slug: "stub",
+            transport: .stdio(command: "tinycast-mcp-stub", arguments: [], environmentKeys: []))
+        let connection = MCPServerConnection(
+            server: server, secrets: MCPSecretStore.Secrets(environment: ["TC_MCP_MODE": "normal"]),
+            searchEnvironment: ["PATH": stub.executable.deletingLastPathComponent().path])
+        defer { connection.stop() }
+        await connection.start()
+        #expect(connection.status == .ready(tools: 2))
+    }
+
+    private func hasSettled(_ status: MCPServerStatus) -> Bool {
+        switch status {
+        case .ready, .failed: true
+        case .stopped, .signInRequired, .connecting: false
+        }
     }
 
     private func refusal(in status: MCPServerStatus) -> String? {

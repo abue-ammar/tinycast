@@ -11,14 +11,20 @@ final class MCPServerConnection {
     @ObservationIgnored private let oauth: MCPOAuthManager?
     @ObservationIgnored let server: MCPServer
     @ObservationIgnored private let secrets: MCPSecretStore.Secrets
+    /// Where a stdio server's bare command is looked for once the login shell has no answer.
+    @ObservationIgnored private let searchEnvironment: [String: String]
     @ObservationIgnored private var transport: (any MCPTransport)?
     @ObservationIgnored private var generation = UUID()
     @ObservationIgnored private var listTask: Task<Void, Never>?
 
-    init(server: MCPServer, secrets: MCPSecretStore.Secrets, oauth: MCPOAuthManager? = nil) {
+    init(
+        server: MCPServer, secrets: MCPSecretStore.Secrets, oauth: MCPOAuthManager? = nil,
+        searchEnvironment: [String: String] = ProcessInfo.processInfo.environment
+    ) {
         self.oauth = oauth
         self.server = server
         self.secrets = secrets
+        self.searchEnvironment = searchEnvironment
     }
 
     /// A failed server is startable again: the next visit to chat is where a blip gets retried.
@@ -108,7 +114,8 @@ final class MCPServerConnection {
             return transport
         case .stdio(let command, let arguments, _):
             let transport = MCPStdioTransport(
-                command: command, arguments: arguments, environment: secrets.environment)
+                command: command, arguments: arguments, environment: secrets.environment,
+                searchEnvironment: searchEnvironment)
             transport.onNotification = { [weak self] method, _ in self?.received(method) }
             transport.onExit = { [weak self] message in self?.fail(message) }
             return transport

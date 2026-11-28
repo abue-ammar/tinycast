@@ -155,7 +155,8 @@ private final class PausedCodex {
     nonisolated private static func waitForLastLine(_ line: String, in log: URL) async throws {
         let descriptor = open(log.path, O_EVTONLY)
         guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
-        let (writes, continuation) = AsyncStream.makeStream(of: Void.self, bufferingPolicy: .bufferingNewest(1))
+        let (writes, continuation) = AsyncStream.makeStream(
+            of: Void.self, bufferingPolicy: .bufferingNewest(1))
         let source = DispatchSource.makeFileSystemObjectSource(
             fileDescriptor: descriptor, eventMask: [.write, .extend], queue: .global())
         source.setEventHandler { continuation.yield() }
